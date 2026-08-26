@@ -25,7 +25,11 @@ export interface HistogramOptionOptions {
      * break the bar ↔ slider alignment.
      */
     showAxes?: boolean;
+    /** Whether bin heights show raw counts or their share of the histogram total. */
+    valueMode?: HistogramValueMode;
 }
+
+export type HistogramValueMode = 'number' | 'percentage';
 
 /** A single bar: the half-open value interval `[start, end)` and its count. */
 interface HistogramBin {
@@ -51,6 +55,7 @@ interface HistogramSeriesOptions {
     bins: HistogramBin[];
     /** Selected value range; bins outside it render dimmed. Omit to highlight all. */
     range?: HistogramRange;
+    valueMode: HistogramValueMode;
 }
 
 /**
@@ -131,6 +136,7 @@ export function buildHistogramOption(
 ): EChartsCoreOption {
     const bins = buildBins(data);
     const showAxes = options.showAxes ?? false;
+    const valueMode = options.valueMode ?? 'number';
     const axisOptions = {
         binCount: data.counts.length,
         domainMin: data.binEdges[0],
@@ -143,8 +149,8 @@ export function buildHistogramOption(
         tooltip: buildTooltip(bins),
         grid: buildGrid(showAxes),
         xAxis: buildXAxis(axisOptions),
-        yAxis: buildYAxis(showAxes),
-        series: buildSeries({ bins, range })
+        yAxis: buildYAxis(showAxes, valueMode),
+        series: buildSeries({ bins, range, valueMode })
     };
 }
 
@@ -208,13 +214,17 @@ function buildXAxis(options: HistogramAxisOptions): Record<string, unknown> {
 }
 
 /** Value y-axis for counts, with whole-number ticks. */
-function buildYAxis(showAxes: boolean): Record<string, unknown> {
+function buildYAxis(showAxes: boolean, valueMode: HistogramValueMode): Record<string, unknown> {
     return {
         type: 'value',
         show: showAxes,
         // Counts are whole numbers; avoid fractional tick labels.
-        minInterval: 1,
-        axisLabel: CHART_AXIS_LABEL,
+        minInterval: valueMode === 'number' ? 1 : undefined,
+        max: valueMode === 'percentage' ? 100 : undefined,
+        axisLabel:
+            valueMode === 'percentage'
+                ? { ...CHART_AXIS_LABEL, formatter: (value: number) => `${value}%` }
+                : CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
 }
@@ -224,6 +234,9 @@ function buildYAxis(showAxes: boolean): Record<string, unknown> {
  * `renderHistogramBin`), each colored by whether it falls in the range.
  */
 function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[] {
+    const totalCount = options.bins.reduce((sum, bin) => sum + bin.count, 0);
+    const toChartValue = (count: number): number =>
+        options.valueMode === 'percentage' && totalCount > 0 ? (count / totalCount) * 100 : count;
     return [
         {
             type: 'custom',
@@ -235,7 +248,7 @@ function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[]
                 // actually over. A left-edge point would snap to the next bin once
                 // the cursor passed a bar's midpoint. `renderHistogramBin` steps
                 // back half a band to recover the left edge for drawing.
-                value: [index + 0.5, bin.count],
+                value: [index + 0.5, toChartValue(bin.count)],
                 itemStyle: {
                     color:
                         !options.range || isBinInRange(bin.start, bin.end, options.range)

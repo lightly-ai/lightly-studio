@@ -1,13 +1,12 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { Maximize2 as Maximize2Icon, X } from '@lucide/svelte';
+    import { X } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { BarChart, type CategoryCount } from '$lib/components/BarChart';
     import type { CategoryCountSeries } from '$lib/components/BarChart/types';
     import { Histogram, type HistogramRange } from '$lib/components/Histogram';
-    import { formatFloat, formatInteger } from '$lib/utils';
     import DistributionConfigDialog from './DistributionConfigDialog/DistributionConfigDialog.svelte';
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
     import HistogramExpandDialog from './HistogramExpandDialog/HistogramExpandDialog.svelte';
@@ -23,6 +22,8 @@
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
     import { MetadataCategoricalFilter } from './MetadataCategoricalFilter';
+    import HistogramToolbar from './HistogramToolbar/HistogramToolbar.svelte';
+    import type { ValueMode } from './PanelHeader/ValueModeSelect';
     import type { CategoricalMetadataValue } from '$lib/services/types';
 
     interface Props {
@@ -222,6 +223,7 @@
         valueMode: 'number'
     };
     let categoricalConfigs = $state<Record<string, DistributionConfig>>({});
+    let histogramValueModes = $state<Record<string, ValueMode>>({});
     const categoricalConfig = $derived<DistributionConfig>(
         activeGroup
             ? (categoricalConfigs[activeGroup.id] ?? {
@@ -229,6 +231,10 @@
                   n: Math.max(categoricalData.length, 1)
               })
             : defaultCategoricalConfig
+    );
+    const activeHistogramId = $derived(activeGroup?.id ?? activeSource.id);
+    const activeHistogramValueMode = $derived<ValueMode>(
+        histogramValueModes[activeHistogramId] ?? 'number'
     );
     let wasComparingTags = $state(false);
     let configDialogOpen = $state(false);
@@ -290,6 +296,10 @@
                 countMode: AnnotationCountMode.SAMPLES
             }
         };
+    };
+
+    const setHistogramValueMode = (valueMode: ValueMode) => {
+        histogramValueModes = { ...histogramValueModes, [activeHistogramId]: valueMode };
     };
 
     function applyConfig(next: DistributionConfig) {
@@ -381,42 +391,17 @@
         </div>
     {/if}
     {#if activeHistogram}
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <span
-                class="text-xs text-muted-foreground"
-                data-testid="dataset-distribution-histogram-summary"
-            >
-                {formatInteger(histogramTotal)}
-                {valueNoun} · {activeHistogram.counts.length}
-                {activeHistogram.counts.length === 1 ? 'bin' : 'bins'} · {formatFloat(
-                    activeHistogram.binEdges[0]
-                )}–{formatFloat(activeHistogram.binEdges[activeHistogram.binEdges.length - 1])}
-            </span>
-            <div class="flex items-center gap-1">
-                {#if onHistogramBinCountChange}
-                    <Select
-                        items={binCountItems}
-                        value={String(histogramBinCount)}
-                        size="xs"
-                        class="w-24"
-                        testId="dataset-distribution-bin-count"
-                        selectProps={{ 'aria-label': 'Histogram bin count' }}
-                        onValueChange={(value) => onHistogramBinCountChange(Number(value))}
-                    />
-                {/if}
-                <Button
-                    variant="ghost"
-                    icon={Maximize2Icon}
-                    ariaLabel="Expand distribution"
-                    buttonProps={{
-                        size: 'sm',
-                        class: 'h-8 w-8 p-0',
-                        onclick: () => (histogramExpandOpen = true),
-                        'data-testid': 'dataset-distribution-histogram-expand'
-                    }}
-                />
-            </div>
-        </div>
+        <HistogramToolbar
+            histogram={activeHistogram}
+            {histogramTotal}
+            {valueNoun}
+            {histogramBinCount}
+            {binCountItems}
+            {onHistogramBinCountChange}
+            valueMode={activeHistogramValueMode}
+            onValueModeChange={setHistogramValueMode}
+            onExpand={() => (histogramExpandOpen = true)}
+        />
     {:else if activeCategorical && activeGroup}
         <MetadataCategoricalFilter
             buckets={activeCategorical.buckets}
@@ -471,6 +456,9 @@
                                     ? 'vertical'
                                     : 'horizontal'
                         })}
+                    valueMode={categoricalConfig.valueMode}
+                    onValueModeChange={(valueMode) =>
+                        setCategoricalConfig({ ...categoricalConfig, valueMode })}
                     onExpand={() => (expandOpen = true)}
                 />
             </div>
@@ -508,6 +496,7 @@
                 selectedRange={activeHistogramRange}
                 heightPx={chartHeight || 240}
                 showAxes
+                valueMode={activeHistogramValueMode}
                 onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
             />
         {:else if activeCategorical?.loading && activeCategorical.buckets.length === 0}
@@ -552,7 +541,7 @@
                 maxWidthPx={clientWidth || undefined}
                 {totalCount}
                 series={activeCategorical ? [] : visibleSeries}
-                valueMode={activeCategorical ? 'number' : config.valueMode}
+                valueMode={activeViewConfig.valueMode}
                 onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
                 emptyState={activeCategorical ? categoricalEmptyState : undefined}
                 gridTopPx={4}
@@ -595,6 +584,8 @@
         {valueNoun}
         binCount={histogramBinCount}
         onBinCountChange={onHistogramBinCountChange}
+        valueMode={activeHistogramValueMode}
+        onValueModeChange={setHistogramValueMode}
         onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
     />
 {/if}

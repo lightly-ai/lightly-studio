@@ -4,6 +4,7 @@
     import { Select, type SelectItem } from '$lib/components/Select';
     import { formatFloat, formatInteger } from '$lib/utils';
     import { HISTOGRAM_BIN_COUNT_ITEMS } from '../types';
+    import { ValueModeSelect, type ValueMode } from '../PanelHeader/ValueModeSelect';
 
     interface Props {
         /** Two-way bound flag controlling dialog visibility. */
@@ -20,6 +21,10 @@
         binCount: number;
         /** Invoked when the user picks a new bin count. Omit to hide the selector. */
         onBinCountChange?: (binCount: number) => void;
+        /** Whether bin heights show raw counts or percentages. */
+        valueMode?: ValueMode;
+        /** Keeps the expanded and regular histogram views in sync. */
+        onValueModeChange?: (mode: ValueMode) => void;
         /** Invoked when the user selects a value range on the chart. */
         onRangeSelect?: (range: HistogramRange) => void;
     }
@@ -32,6 +37,8 @@
         valueNoun = 'samples',
         binCount,
         onBinCountChange,
+        valueMode = 'number',
+        onValueModeChange,
         onRangeSelect
     }: Props = $props();
 
@@ -60,23 +67,32 @@
                 class="text-xs text-muted-foreground"
                 data-testid="dataset-distribution-expanded-histogram-summary"
             >
-                {formatInteger(totalCount)}
+                {valueMode === 'percentage' ? '100% of ' : ''}{formatInteger(totalCount)}
                 {valueNoun} · {data.counts.length}
                 {data.counts.length === 1 ? 'bin' : 'bins'} · {formatFloat(
                     data.binEdges[0]
                 )}–{formatFloat(data.binEdges[data.binEdges.length - 1])}
             </span>
-            {#if onBinCountChange}
-                <Select
-                    items={binCountItems}
-                    value={String(binCount)}
-                    size="xs"
-                    class="w-28"
-                    testId="dataset-distribution-expanded-bin-count"
-                    selectProps={{ 'aria-label': 'Histogram bin count' }}
-                    onValueChange={(value) => onBinCountChange(Number(value))}
-                />
-            {/if}
+            <div class="flex items-center gap-1">
+                {#if onValueModeChange}
+                    <ValueModeSelect
+                        value={valueMode}
+                        testId="dataset-distribution-expanded-histogram-value-mode"
+                        onChange={onValueModeChange}
+                    />
+                {/if}
+                {#if onBinCountChange}
+                    <Select
+                        items={binCountItems}
+                        value={String(binCount)}
+                        size="xs"
+                        class="w-28"
+                        testId="dataset-distribution-expanded-bin-count"
+                        selectProps={{ 'aria-label': 'Histogram bin count' }}
+                        onValueChange={(value) => onBinCountChange(Number(value))}
+                    />
+                {/if}
+            </div>
         </div>
         <div class="min-h-0 flex-1 dark:[color-scheme:dark]" bind:clientHeight={chartHeight}>
             <Histogram
@@ -84,6 +100,7 @@
                 {selectedRange}
                 heightPx={chartHeight || 480}
                 showAxes
+                {valueMode}
                 {onRangeSelect}
             />
         </div>

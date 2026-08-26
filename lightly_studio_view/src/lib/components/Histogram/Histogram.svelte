@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ECharts } from 'echarts/core';
-    import { buildHistogramOption } from './buildHistogramOption';
+    import { buildHistogramOption, type HistogramValueMode } from './buildHistogramOption';
     import { createHistogramChart } from './createHistogramChart';
     import type { HistogramData, HistogramRange } from './types';
 
@@ -20,6 +20,8 @@
          * underneath provides the scale.
          */
         showAxes?: boolean;
+        /** Whether bin heights show raw counts or percentages (default 'number'). */
+        valueMode?: HistogramValueMode;
         /**
          * Called with the value interval spanned by the user's selection:
          * press on a bin and release on another to select the range across
@@ -29,7 +31,14 @@
         onRangeSelect?: (range: HistogramRange) => void;
     }
 
-    const { data, selectedRange, heightPx = 48, showAxes = false, onRangeSelect }: Props = $props();
+    const {
+        data,
+        selectedRange,
+        heightPx = 48,
+        showAxes = false,
+        valueMode = 'number',
+        onRangeSelect
+    }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: ECharts | null = $state(null);
@@ -78,7 +87,10 @@
     $effect(() => {
         if (!chart) return;
         // While dragging, preview the prospective selection.
-        chart.setOption(buildHistogramOption(data, dragRange ?? selectedRange, { showAxes }), true);
+        chart.setOption(
+            buildHistogramOption(data, dragRange ?? selectedRange, { showAxes, valueMode }),
+            true
+        );
     });
 </script>
 
