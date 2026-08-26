@@ -455,6 +455,54 @@ def test_connect__cleanup_existing(
     db_manager.close()
 
 
+def test_database_engine__postgres_sets_keepalive_and_pool_options(
+    mocker: MockerFixture,
+) -> None:
+    create_engine_mock = mocker.patch.object(db_manager, "create_engine")
+    mocker.patch.object(db_manager, "_database_exists", return_value=True)
+    mocker.patch.object(db_manager, "_initialize_postgres_schema")
+
+    DatabaseEngine(engine_url="postgresql://user:pass@host:5432/db")
+
+    kwargs = create_engine_mock.call_args.kwargs
+    assert kwargs["pool_pre_ping"] is True
+    assert kwargs["pool_recycle"] == 1800
+    assert kwargs["connect_args"] == {
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    }
+
+
+def test_database_engine__duckdb_omits_postgres_pool_options(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    create_engine_mock = mocker.patch.object(db_manager, "create_engine")
+    mocker.patch.object(db_manager, "_create_duckdb_schema")
+
+    DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'test.db'}")
+
+    kwargs = create_engine_mock.call_args.kwargs
+    assert "connect_args" not in kwargs
+    assert "pool_pre_ping" not in kwargs
+    assert "pool_recycle" not in kwargs
+
+
+@pytest.mark.postgres_only
+def test_database_engine__postgres_pool_options_applied_on_real_engine(
+    postgres_url: str | None,
+) -> None:
+    assert postgres_url is not None
+    engine = DatabaseEngine(engine_url=postgres_url)
+    try:
+        assert engine._engine.pool._pre_ping is True
+        assert engine._engine.pool._recycle == 1800
+    finally:
+        engine.close()
+
+
 def test_get_backend(
     tmp_path: Path,
     patch_engine_singleton: None,  # noqa: ARG001

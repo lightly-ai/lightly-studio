@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
 - Python SDK: Order video queries by `VideoSampleField.created_at`.
 - Python SDK: Continue sampling from an existing tagged selection with the
-  `preselected_tag_name` parameter.
+  `preselected_tag_name` parameter. Passing the same name as `sampling_result_tag_name`
+  grows that tag with the newly selected samples instead of requiring a fresh tag.
 - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
 - Compare the annotation class distribution of any sample tag against the current view in the Distribution panel.
 - Azure Blob Storage is supported in the LightlyStudio Enterprise version.
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Speed up cloud storage (S3, GCS, Azure blob) indexing by enabling parallel requests.
 - Stepping to the previous or next image now drives an index range scan instead of scanning the
   sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
   to 0.03ms.
@@ -39,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
 - Hide every bounding box and its annotation counts when all annotation sources are unchecked, instead of showing them all.
+- Keep long-lived PostgreSQL connections alive.
 
 ### Security
 

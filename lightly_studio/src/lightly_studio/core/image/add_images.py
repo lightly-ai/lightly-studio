@@ -22,16 +22,17 @@ from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core import path_utils
 from lightly_studio.core.file_outcome_report import (
     BROKEN_IMAGE_ERRORS,
     AlreadyPresentInputFileError,
-    BrokenInputFileError,
     FileOutcome,
     FileOutcomeReport,
     MissingInputFileError,
 )
 from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.dataset import remote_storage
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
@@ -41,6 +42,7 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
+from lightly_studio.utils import parallelize
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +78,7 @@ def load_into_dataset_from_paths(
     root_collection_id: UUID,
     image_paths: Iterable[str],
     show_progress: bool = True,
-) -> list[UUID]:
+) -> dict[str, UUID]:
     """Load images from file paths into the dataset.
 
     Args:
@@ -86,7 +88,9 @@ def load_into_dataset_from_paths(
         show_progress: Whether to display a progress bar and final summary of loading results.
 
     Returns:
-        A list of UUIDs of the created samples.
+        A mapping from normalized `file_path_abs` to the UUID of the created sample. A
+        path that was skipped (already present, missing, or broken) has no entry, so the
+        mapping is not guaranteed to cover every input path.
 
     Raises:
         AllInputFilesFailedError: If at least one file was attempted and every
@@ -94,9 +98,7 @@ def load_into_dataset_from_paths(
     """
     # Normalize all paths up front so the database check can happen once, before the
     # main processing loop, instead of once per batch.
-    normalized_paths = [
-        add_annotations.normalize_images_root(image_path) for image_path in image_paths
-    ]
+    normalized_paths = [path_utils.normalize_path_root(image_path) for image_path in image_paths]
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped before batching.
     seen_or_existing_paths = _get_existing_paths_set(
@@ -106,68 +108,67 @@ def load_into_dataset_from_paths(
     )
 
     samples_to_create: list[ImageCreate] = []
-    created_sample_ids: list[UUID] = []
+    created_path_to_id: dict[str, UUID] = {}
 
     report = FileOutcomeReport()
 
-    # TODO(Malte, 07/2026): Parallelize image indexing across images with
-    # parallelize.thread_imap_lazy (one task per image; workers and prefetch stay
-    # bounded) to overlap the per-image reads, especially for remote (e.g. S3) inputs.
-    # Keep DB writes on a single thread.
-    for normalized_path in tqdm(
-        normalized_paths,
+    paths_to_probe: list[str] = []
+    for normalized_path in normalized_paths:
+        if normalized_path in seen_or_existing_paths:
+            report.record(path=normalized_path, outcome=FileOutcome.ALREADY_PRESENT)
+        else:
+            paths_to_probe.append(normalized_path)
+
+    probe_results = _probe_images(paths=paths_to_probe)
+
+    for path, probe_result in tqdm(
+        iterable=probe_results,
+        total=len(paths_to_probe),
         desc="Processing images",
         unit=" images",
         disable=not show_progress,
     ):
-        with report.track(path=normalized_path):
-            # Skip paths already in the database or already seen in this call.
-            if normalized_path in seen_or_existing_paths:
-                raise AlreadyPresentInputFileError()
+        if path in seen_or_existing_paths:
+            report.record(path=path, outcome=FileOutcome.ALREADY_PRESENT)
+            continue
+        if isinstance(probe_result, FileOutcome):
+            report.record(path=path, outcome=probe_result)
+            continue
 
-            # Detect a missing path proactively: FileNotFoundError is unreliable across
-            # fsspec backends and is a subclass of OSError, which we treat as broken.
-            if not _file_exists(normalized_path):
-                raise MissingInputFileError()
-
-            # Translate a failed header read into a broken-file signal at this I/O
-            # boundary; any other exception propagates rather than being recorded.
-            fs, fs_path = fsspec.core.url_to_fs(normalized_path)
-            try:
-                with fs.open(fs_path, "rb") as file:
-                    image = PIL.Image.open(file)
-                    width, height = image.size
-                    image.close()
-            except BROKEN_IMAGE_ERRORS as e:
-                raise BrokenInputFileError() from e
+        with report.track(path=path):
+            width, height = probe_result
 
             sample = ImageCreate(
-                file_name=Path(normalized_path).name,
-                file_path_abs=normalized_path,
+                file_name=Path(path).name,
+                file_path_abs=path,
                 width=width,
                 height=height,
             )
-            seen_or_existing_paths.add(normalized_path)
+            seen_or_existing_paths.add(path)
             samples_to_create.append(sample)
 
             # Process batch when it reaches SAMPLE_BATCH_SIZE
             if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-                created_path_to_id = _create_batch_samples(
-                    session=session, collection_id=root_collection_id, samples=samples_to_create
+                created_path_to_id.update(
+                    _create_batch_samples(
+                        session=session,
+                        collection_id=root_collection_id,
+                        samples=samples_to_create,
+                    )
                 )
-                created_sample_ids.extend(created_path_to_id.values())
                 samples_to_create = []
 
     # Handle remaining samples
     if samples_to_create:
-        created_path_to_id = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
+        created_path_to_id.update(
+            _create_batch_samples(
+                session=session, collection_id=root_collection_id, samples=samples_to_create
+            )
         )
-        created_sample_ids.extend(created_path_to_id.values())
 
     report.log_summary()
     report.raise_if_all_failed()
-    return created_sample_ids
+    return created_path_to_id
 
 
 def load_into_dataset_from_labelformat(  # noqa: PLR0913
@@ -199,7 +200,7 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
             attempted file was missing or broken.
 
     """
-    images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
+    images_root_abs = path_utils.normalize_path_root(images_path)
 
     # Some formats open images to read the dimensions during the get_images() and get_labels() scans
     # Collector is used to record BROKEN images and skip, preventing abort of the ingest. Pascal VOC
@@ -429,7 +430,7 @@ def tag_samples_by_directory(
     if tag_depth == 0:
         return
 
-    input_path_abs = add_annotations.normalize_images_root(input_path)
+    input_path_abs = path_utils.normalize_path_root(input_path)
 
     newly_created_images = image_resolver.get_many_by_id(
         session=session,
@@ -488,6 +489,46 @@ def _group_captions_by_image_id(
             continue
         captions_by_image_id[image_id].append(caption_text)
     return captions_by_image_id
+
+
+def _probe_images(
+    paths: list[str],
+) -> Iterable[tuple[str, tuple[int, int] | FileOutcome]]:
+    """Probe paths serially for local input or concurrently for remote input."""
+    remote_storage.configure_connections(paths=paths)
+    max_workers = remote_storage.image_probe_workers(paths=paths)
+    probe_inputs = map(_resolve_probe_input, paths)
+    if max_workers == 1:
+        return map(_probe_image, probe_inputs)
+    return parallelize.thread_imap_lazy(
+        function=_probe_image,
+        iterable=probe_inputs,
+        max_workers=max_workers,
+        buffer_size=max_workers,
+    )
+
+
+def _resolve_probe_input(
+    path: str,
+) -> tuple[str, fsspec.AbstractFileSystem, str]:
+    """Resolve a filesystem on the caller thread so workers share cached clients."""
+    filesystem, filesystem_path = fsspec.core.url_to_fs(path)
+    return path, filesystem, filesystem_path
+
+
+def _probe_image(
+    probe_input: tuple[str, fsspec.AbstractFileSystem, str],
+) -> tuple[str, tuple[int, int] | FileOutcome]:
+    """Read one image's dimensions without touching shared mutable state."""
+    path, filesystem, filesystem_path = probe_input
+    if not filesystem.exists(filesystem_path):
+        return path, FileOutcome.MISSING
+    try:
+        with filesystem.open(filesystem_path, "rb") as file, PIL.Image.open(file) as image:
+            dimensions = image.size
+    except BROKEN_IMAGE_ERRORS:
+        return path, FileOutcome.BROKEN
+    return path, dimensions
 
 
 def _file_exists(path: str) -> bool:
