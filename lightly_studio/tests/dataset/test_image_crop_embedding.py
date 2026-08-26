@@ -1,15 +1,23 @@
+from __future__ import annotations
+
+import io
+import threading
+import time
 from pathlib import Path
 
+import fsspec
 import numpy as np
 import pytest
 import torch
 from numpy.typing import NDArray
 from PIL import Image
+from pytest_mock import MockerFixture
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.dataset import image_crop_embedding
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.utils import executor
 
 
 def test_embed_image_crops_batched__empty_input_returns_empty_array() -> None:
@@ -73,6 +81,56 @@ def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
     assert result.kept_indices == [0, 1, 2, 3]
     # Each embedding equals its crop width, in input order.
     assert result.embeddings[:, 0].tolist() == [5.0, 6.0, 7.0, 8.0]
+
+
+def test_embed_image_crops_batched__parallelizes_source_image_preprocessing(
+    mocker: MockerFixture,
+) -> None:
+    image_buffer = io.BytesIO()
+    Image.new("RGB", (100, 100)).save(image_buffer, format="PNG")
+    image_bytes = image_buffer.getvalue()
+    in_flight = 0
+    peak_in_flight = 0
+    lock = threading.Lock()
+
+    class RemoteFile(io.BytesIO):
+        def read(self, size: int | None = -1) -> bytes:
+            nonlocal in_flight, peak_in_flight
+            with lock:
+                in_flight += 1
+                peak_in_flight = max(peak_in_flight, in_flight)
+            time.sleep(0.02)
+            contents = super().read(size)
+            with lock:
+                in_flight -= 1
+            return contents
+
+    open_file = mocker.patch.object(
+        fsspec,
+        "open",
+        side_effect=lambda _path, _mode: RemoteFile(image_bytes),
+    )
+    mocker.patch.object(executor, "get_media_worker_count", return_value=3)
+    paths = [f"s3://bucket/image_{index}.png" for index in range(4)]
+    image_crops = [ImageCrop(filepath=path, x=0, y=0, width=5, height=10) for path in paths]
+    image_crops.append(ImageCrop(filepath=paths[0], x=0, y=0, width=7, height=10))
+
+    result = image_crop_embedding.embed_image_crops_batched(
+        image_crops=image_crops,
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
+        ),
+        show_progress=False,
+    )
+
+    assert 1 < peak_in_flight <= 3
+    assert open_file.call_count == len(paths)
+    assert result.kept_indices == list(range(len(image_crops)))
+    assert result.embeddings[:, 0].tolist() == [5.0, 5.0, 5.0, 5.0, 7.0]
 
 
 def test_embed_image_crops_batched__skips_broken_file(tmp_path: Path) -> None:
