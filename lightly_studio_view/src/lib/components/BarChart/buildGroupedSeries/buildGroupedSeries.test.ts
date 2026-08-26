@@ -136,6 +136,25 @@ describe('buildGroupedSeries', () => {
         expect(b.itemStyle.color).toBe('#0000ff');
     });
 
+    it('dims unselected categories in every grouped series', () => {
+        const selectedCategories = categories.map((category) => ({
+            ...category,
+            selected: category.label === 'dog'
+        }));
+        const [a, b] = buildGroupedSeries(selectedCategories, series, colors, identity);
+
+        expect(a.data).toEqual([
+            { value: 6, itemStyle: { opacity: 0.25 } },
+            { value: 2, itemStyle: { opacity: 1 } },
+            { value: 0, itemStyle: { opacity: 0.25 } }
+        ]);
+        expect(b.data).toEqual([
+            { value: 4, itemStyle: { opacity: 0.25 } },
+            { value: 0, itemStyle: { opacity: 1 } },
+            { value: 3, itemStyle: { opacity: 0.25 } }
+        ]);
+    });
+
     it('uses id-based key over label when id is present', () => {
         const categoriesWithId: CategoryCount[] = [{ id: 'c-1', label: 'car', count: 10 }];
         const seriesWithId: CategoryCountSeries[] = [

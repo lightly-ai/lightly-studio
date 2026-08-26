@@ -230,7 +230,10 @@ describe('DatasetDistributionPanel', () => {
                     {
                         id: 'classes',
                         label: 'Annotation classes',
-                        data: [{ label: 'car', count: 10 }],
+                        data: [
+                            { label: 'car', count: 10 },
+                            { label: 'dog', count: 5, selected: true }
+                        ],
                         comparisonData
                     }
                 ],
@@ -240,12 +243,19 @@ describe('DatasetDistributionPanel', () => {
 
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
             yAxis: { data: string[] };
-            series: { name: string; data: number[] }[];
+            series: {
+                name: string;
+                data: (number | { value: number; itemStyle: { opacity: number } })[];
+            }[];
         };
         // dog has the highest aggregate (0+5=5), car second (2+1=3).
         expect(option.yAxis.data).toEqual(['dog', 'car']);
         // Series names are preserved; each tag is independent (not merged).
         expect(option.series).toMatchObject([{ name: 'Reviewed' }, { name: 'Priority' }]);
+        expect(option.series[0].data).toEqual([
+            { value: 0, itemStyle: { opacity: 1 } },
+            { value: 100, itemStyle: { opacity: 0.25 } }
+        ]);
         expect(screen.getByText(/2 sample tags/)).toBeInTheDocument();
         expect(screen.queryByText(/annotations/)).not.toBeInTheDocument();
 
