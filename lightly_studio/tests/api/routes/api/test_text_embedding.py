@@ -8,10 +8,11 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManager,
-    EmbeddingManagerProvider,
+from lightly_studio.embed.manager import (
+    EmbedderManager,
+    EmbedderManagerProvider,
 )
+from lightly_studio.embed.random_embedder import RandomEmbedder
 from tests import helpers_resolvers
 
 
@@ -19,16 +20,16 @@ def test_embed_text(db_session: Session, mocker: MockerFixture, test_client: Tes
     # Create a db as the text_embeddings defaults to root_collection
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
-    # Initialize the embedding_manager with a mock variant so it does not update
+    # Initialize the embedder_manager with a mock variant so it does not update
     # the singleton.
     mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
+        EmbedderManagerProvider,
+        "get_embedder_manager",
+        return_value=EmbedderManager(),
     )
-    # Mock the EmbeddingManager return value.
+    # Mock the EmbedderManager return value.
     mocker.patch.object(
-        EmbeddingManager,
+        EmbedderManager,
         "embed_text",
         return_value=[0.1, 0.2, 0.3],
     )
@@ -46,28 +47,57 @@ def test_embed_text(db_session: Session, mocker: MockerFixture, test_client: Tes
     assert response.json() == [0.1, 0.2, 0.3]
 
 
-def test_embed_text_embedding_invalid_model_id(
+def test_embed_text_ignores_embedding_model_id(
     db_session: Session,
     mocker: MockerFixture,
     test_client: TestClient,
 ) -> None:
-    # Make the request to the `/samples` endpoint
-    # Create a db as the text_embeddings defaults to root_collection
+    # The new manager holds a single default text embedder, so embedding_model_id
+    # is accepted for API compatibility but no longer selects the model.
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
     mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
+        EmbedderManagerProvider,
+        "get_embedder_manager",
+        return_value=EmbedderManager(),
     )
-    test_uuid = uuid4()
 
     response = test_client.get(
         f"/api/text_embedding/for_collection/{collection_id!s}",
         params={
             "query_text": "sample",
-            "embedding_model_id": str(test_uuid),
+            "embedding_model_id": str(uuid4()),
         },
     )
+
+    # The default RandomEmbedder answers regardless of the model id, producing a
+    # vector of its fixed dimension.
+    assert response.status_code == HTTP_STATUS_OK
+    assert len(response.json()) == RandomEmbedder().load().dimension
+
+
+def test_embed_text_no_embedder_registered(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+
+    mocker.patch.object(
+        EmbedderManagerProvider,
+        "get_embedder_manager",
+        return_value=EmbedderManager(),
+    )
+    mocker.patch.object(
+        EmbedderManager,
+        "embed_text",
+        side_effect=ValueError("No text embedder registered."),
+    )
+
+    response = test_client.get(
+        f"/api/text_embedding/for_collection/{collection_id!s}",
+        params={"query_text": "sample"},
+    )
+
     assert response.status_code == 500
-    assert response.json() == {"detail": f"No embedding model found with ID {test_uuid}"}
+    assert response.json() == {"detail": "No text embedder registered."}

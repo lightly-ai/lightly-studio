@@ -183,6 +183,24 @@ class TestDataset:
         assert "Examples 'already_present':" in log_text
         assert f"{images_path}" in log_text
 
+    def test_dataset_add_images_from_path__embeds_through_embedder_manager(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        _create_sample_images([tmp_path / "image1.jpg", tmp_path / "image2.png"])
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_images_from_path(path=tmp_path, embed=True)
+
+        samples = dataset.query().to_list()
+        assert len(samples) == 2
+        # The new EmbedderManager path uses the default RandomEmbedder (dimension 3).
+        for sample in samples:
+            embeddings = sample.sample_table.embeddings
+            assert len(embeddings) == 1
+            assert embeddings[0].embedding.shape == (3,)
+
     def test_dataset_add_images_from_path__dont_embed(
         self,
         patch_collection: None,  # noqa: ARG002
