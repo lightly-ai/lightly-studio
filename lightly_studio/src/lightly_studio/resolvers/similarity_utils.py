@@ -22,7 +22,7 @@ def get_distance_expression(
     """Get distance expression for similarity search if text_embedding is provided.
 
     Returns a tuple of (embedding_model_id, distance_expr). Both are None if
-    no text_embedding is provided or the collection has no default embedding space.
+    no text_embedding is provided or the collection has no default embedding model.
     """
     if not text_embedding:
         return None, None
