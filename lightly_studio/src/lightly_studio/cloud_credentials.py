@@ -115,6 +115,9 @@ def _parse_fsspec_config(credentials: dict[str, str]) -> dict[str, dict[str, Any
     config: dict[str, dict[str, Any]] = {}
     try:
         for key, value in credentials.items():
+            # FSSPEC_<PROTOCOL> keys (exactly one underscore) carry a full JSON config blob
+            # for that protocol. fsspec.config.set_conf_env handles per-key vars like
+            # FSSPEC_S3_KEY itself, but the blob form must be pre-parsed into conf_dict.
             if key.startswith("FSSPEC_") and key.count("_") == 1:
                 protocol_config = json.loads(value)
                 if not isinstance(protocol_config, dict):
