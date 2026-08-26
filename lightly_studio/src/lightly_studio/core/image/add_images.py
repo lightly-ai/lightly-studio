@@ -526,11 +526,14 @@ def _probe_image(
     if not filesystem.exists(filesystem_path):
         return path, FileOutcome.MISSING
     try:
-        with filesystem.open(
-            filesystem_path,
-            mode="rb",
-            block_size=_IMAGE_PROBE_BLOCK_SIZE,
-        ) as file, PIL.Image.open(file) as image:
+        with (
+            filesystem.open(
+                filesystem_path,
+                mode="rb",
+                block_size=_IMAGE_PROBE_BLOCK_SIZE,
+            ) as file,
+            PIL.Image.open(file) as image,
+        ):
             dimensions = image.size
     except BROKEN_IMAGE_ERRORS:
         return path, FileOutcome.BROKEN
