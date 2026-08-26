@@ -55,7 +55,7 @@
         };
     };
 
-    const { filterParams, updateFilterParams } = useVideoFilters();
+    const { filterParams, videoSortBy, updateFilterParams } = useVideoFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local videos parameters
@@ -118,7 +118,8 @@
     const { data, query, loadMore, totalCount } = useVideos(() => ({
         collection_id: collectionId,
         filter: currentVideoFilter,
-        text_embedding: $textEmbedding?.embedding
+        text_embedding: $textEmbedding?.embedding,
+        sort_by: $textEmbedding ? undefined : ($videoSortBy ?? undefined)
     }));
     const { setfilteredSampleCount } = useGlobalStorage();
 
@@ -160,7 +161,7 @@
         handleSampleSelect({ sampleId, index, shiftKey: event.shiftKey });
     }
 
-    const filterHash = $derived(JSON.stringify($filterParams));
+    const filterHash = $derived(JSON.stringify({ filters: $filterParams, sortBy: $videoSortBy }));
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
         initialize();
