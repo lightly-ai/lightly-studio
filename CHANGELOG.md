@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   grows that tag with the newly selected samples instead of requiring a fresh tag.
 - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
 - Compare the annotation class distribution of any sample tag against the current view in the Distribution panel.
+- Make annotation classes selectable in distribution plot.
 
 ### Changed
 
