@@ -133,7 +133,8 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_id(
             session=session, embedding_model_id=embedding_model_id
         )
-        assert embedding_model is not None, "Default embedding space references a missing model."
+        if embedding_model is None:
+            raise ValueError("Default embedding space references a missing model.")
         classifier = RandomForest(
             name=name,
             classes=class_list,
@@ -632,7 +633,8 @@ def _get_embedding_model_by_hash(
         default_embedding_model = embedding_model_resolver.get_by_id(
             session=session, embedding_model_id=default_embedding_model_id
         )
-        assert default_embedding_model is not None
+        if default_embedding_model is None:
+            raise ValueError("Default embedding space references a missing model.")
         if default_embedding_model.embedding_model_hash == embedding_model_hash:
             return default_embedding_model
 
