@@ -43,6 +43,7 @@ const defaultProps = {
     canSelectAll: false,
     isSelectionActive: false,
     isImages: false,
+    isVideos: false,
     isAnnotations: false,
     hasMediaWithEmbeddings: false,
     collectionDatasetId: 'dataset-1',
