@@ -21,6 +21,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
@@ -110,6 +111,10 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
         "embedding_model": count(
             EmbeddingModelTable, col(EmbeddingModelTable.collection_id).in_(collection_ids)
         ),
+        "default_embedding_space": count(
+            DefaultEmbeddingSpaceTable,
+            col(DefaultEmbeddingSpaceTable.collection_id).in_(collection_ids),
+        ),
         "annotation_collection_coverage": count(
             AnnotationCollectionCoverageTable,
             col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(collection_ids),
@@ -154,6 +159,7 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
         collection_id=root.collection_id,
         embedding_model_name=f"{name}_model",
         embedding_dimension=3,
+        set_as_default=True,
     )
     create_sample_embedding(
         session=session,
@@ -264,6 +270,7 @@ def test_deep_copy_then_delete_round_trip(db_session: Session) -> None:
         "tag",
         "sample_tag_link",
         "embedding_model",
+        "default_embedding_space",
         "annotation_label",
         "object_track",
         "evaluation_run",
