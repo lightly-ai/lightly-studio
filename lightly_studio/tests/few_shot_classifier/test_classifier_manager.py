@@ -966,13 +966,7 @@ class TestClassifierManager:
             )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Dataset-scoped lookup returns the oldest row for a hash; while the write path "
-    "still deduplicates per collection this can be another collection's row and match no "
-    "embeddings. Fixed when the readers move to dataset scope with the unique constraint.",
-)
-def test_get_embedding_model_by_hash__prefers_collection_local(db_session: Session) -> None:
+def test_get_embedding_model_by_hash__prefers_default(db_session: Session) -> None:
     # A child collection shares its parent's dataset, so both can hold a row for the same
     # hash while the write path deduplicates per collection. Sample embeddings are keyed to
     # the collection's own row, so the lookup must return that row and not the oldest one in
@@ -994,6 +988,11 @@ def test_get_embedding_model_by_hash__prefers_collection_local(db_session: Sessi
         collection_id=child.collection_id,
         embedding_model_name="model_in_child",
         embedding_model_hash="same_hash",
+    )
+    default_embedding_space_resolver.set_default(
+        session=db_session,
+        collection_id=child.collection_id,
+        embedding_model_id=child_model.embedding_model_id,
     )
 
     result = classifier_manager_module._get_embedding_model_by_hash(
