@@ -1789,11 +1789,11 @@ html .md-typeset :is(.admonition, details) > :last-child {
   padding: 0.5rem !important;
 }
 
-.md-typeset .grid.cards.small > :is(ol, ul) > li > strong {
-  font-family: var(--ls-font-display);
-  font-size: 0.72rem;
-  letter-spacing: -0.01em;
-}
+/* No separate title rule for the small grid. A card's lead-in is
+   `li > p > strong`, never `li > strong` — python-markdown wraps a loose list
+   item's content in a paragraph — so the rule that used to sit here matched
+   nothing. The generic rule above does match, and its 1.05em of the 0.7rem set
+   just above lands within a third of a pixel of what that rule asked for. */
 
 /* Wide card grid: up to 2 columns; a lone card keeps a reserved empty column
    instead of stretching to fill the full row width */
