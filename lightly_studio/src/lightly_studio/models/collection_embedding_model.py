@@ -1,4 +1,4 @@
-"""This module defines the DefaultEmbeddingSpace model for the application."""
+"""This module defines the CollectionEmbeddingModel model for the application."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlmodel import Field, SQLModel
 
 
-class DefaultEmbeddingSpaceTable(SQLModel, table=True):
+class CollectionEmbeddingModelTable(SQLModel, table=True):
     """Link table: the default embedding space of a collection.
 
     One row per collection (the ``collection_id`` primary key enforces this). The

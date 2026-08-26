@@ -20,8 +20,8 @@ from lightly_studio.models.annotation_collection_coverage import AnnotationColle
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
@@ -112,8 +112,8 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
             EmbeddingModelTable, col(EmbeddingModelTable.collection_id).in_(collection_ids)
         ),
         "default_embedding_space": count(
-            DefaultEmbeddingSpaceTable,
-            col(DefaultEmbeddingSpaceTable.collection_id).in_(collection_ids),
+            CollectionEmbeddingModelTable,
+            col(CollectionEmbeddingModelTable.collection_id).in_(collection_ids),
         ),
         "annotation_collection_coverage": count(
             AnnotationCollectionCoverageTable,
