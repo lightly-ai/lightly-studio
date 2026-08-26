@@ -79,6 +79,84 @@ def test_delete_embedding_model(db_session: Session) -> None:
     assert embedding_model_deleted is None
 
 
+def test_get_by_model_hash_deprecated(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model_1 = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="embedding_model_1",
+        embedding_model_hash="hash_1",
+    )
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="embedding_model_2",
+        embedding_model_hash="hash_2",
+    )
+
+    embedding_model = embedding_model_resolver.get_by_model_hash_deprecated(
+        session=db_session, embedding_model_hash="hash_1", collection_id=collection_id
+    )
+    assert embedding_model is not None
+    assert embedding_model.name == embedding_model_1.name
+
+    embedding_model = embedding_model_resolver.get_by_model_hash_deprecated(
+        session=db_session, embedding_model_hash="hash_3", collection_id=collection_id
+    )
+    assert embedding_model is None
+
+
+def test_get_by_model_hash_deprecated__with_collection_id(db_session: Session) -> None:
+    collection_1 = create_collection(session=db_session, collection_name="collection_1")
+    collection_2 = create_collection(session=db_session, collection_name="collection_2")
+
+    # Create models with same hash in different collections
+    model_1 = create_embedding_model(
+        session=db_session,
+        collection_id=collection_1.collection_id,
+        embedding_model_name="model_in_collection_1",
+        embedding_model_hash="same_hash",
+    )
+    model_2 = create_embedding_model(
+        session=db_session,
+        collection_id=collection_2.collection_id,
+        embedding_model_name="model_in_collection_2",
+        embedding_model_hash="same_hash",
+    )
+
+    # With collection_id, returns the correct model
+    result = embedding_model_resolver.get_by_model_hash_deprecated(
+        session=db_session,
+        embedding_model_hash="same_hash",
+        collection_id=collection_1.collection_id,
+    )
+    assert result is not None
+    assert result.embedding_model_id == model_1.embedding_model_id
+    assert result.embedding_model_hash == "same_hash"
+    assert result.collection_id == collection_1.collection_id
+
+    result = embedding_model_resolver.get_by_model_hash_deprecated(
+        session=db_session,
+        embedding_model_hash="same_hash",
+        collection_id=collection_2.collection_id,
+    )
+    assert result is not None
+    assert result.embedding_model_id == model_2.embedding_model_id
+    assert result.embedding_model_hash == "same_hash"
+    assert result.collection_id == collection_2.collection_id
+
+    # With non-matching collection_id, returns None
+    collection_3 = create_collection(session=db_session, collection_name="collection_3")
+    result_3 = embedding_model_resolver.get_by_model_hash_deprecated(
+        session=db_session,
+        embedding_model_hash="same_hash",
+        collection_id=collection_3.collection_id,
+    )
+    assert result_3 is None
+
+
 def test_get_by_model_hash(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
