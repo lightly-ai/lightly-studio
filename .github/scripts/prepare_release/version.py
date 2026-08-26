@@ -1,60 +1,19 @@
-"""Version bump math and pyproject.toml / Labelformat guards."""
+"""Labelformat git-pin guard.
+
+Reading, bumping, and writing the `[project]` version is left to
+`uv version --bump` (see the Prepare Release workflow) rather than
+reimplemented here - it already parses/writes real TOML and handles more
+than plain X.Y.Z (alpha/beta/rc/post/dev), which regex-based text editing
+kept getting subtly wrong in review. This module keeps only the guard that
+`uv` has no way to know about: whether Labelformat itself needs a release
+first.
+"""
 
 from __future__ import annotations
 
 import re
 
 from prepare_release.errors import PrepareReleaseError
-
-_PROJECT_SECTION_RE = re.compile(r"^\[project\]\r?\n(?:(?!^\[).*(?:\r?\n|\Z))*", re.MULTILINE)
-_PYPROJECT_VERSION_RE = re.compile(
-    r"^[ \t]*version[ \t]*=[ \t]*(?P<quote>[\"'])(?P<version>[^\"']+)(?P=quote)"
-    r"(?=[ \t]*(?:#.*)?\r?$)",
-    re.MULTILINE,
-)
-_SEMVER_PART_RE = re.compile(r"(?:0|[1-9][0-9]*)")
-_SEMVER_PART_COUNT = 3
-
-
-def current_pyproject_version(pyproject_text: str) -> str:
-    """Reads the `[project] version` from a `pyproject.toml`'s text."""
-    section = _project_section(pyproject_text).group(0)
-    match = _PYPROJECT_VERSION_RE.search(section)
-    if match is None:
-        raise PrepareReleaseError(
-            'no `version = "..."` line found in the `[project]` table of pyproject.toml'
-        )
-    return match.group("version")
-
-
-def bump_semver(version: str, bump: str) -> str:
-    """Bumps a plain `X.Y.Z` version.
-
-    Args:
-        version: The current version. Must be exactly `X.Y.Z` with integer
-            parts and no leading zeroes (per semver.org's grammar);
-            anything else (e.g. an already-released release candidate) has
-            no well-defined next bump and should be overridden explicitly
-            instead.
-        bump: One of "patch", "minor", "major".
-
-    Returns:
-        The bumped version, still in plain `X.Y.Z` form.
-    """
-    parts = version.split(".")
-    if len(parts) != _SEMVER_PART_COUNT or not all(_SEMVER_PART_RE.fullmatch(p) for p in parts):
-        raise PrepareReleaseError(
-            f"current version {version!r} is not a plain X.Y.Z semver; "
-            "pass --version explicitly instead of a --bump"
-        )
-    major, minor, patch = (int(p) for p in parts)
-    if bump == "major":
-        return f"{major + 1}.0.0"
-    if bump == "minor":
-        return f"{major}.{minor + 1}.0"
-    if bump == "patch":
-        return f"{major}.{minor}.{patch + 1}"
-    raise PrepareReleaseError(f"unknown bump kind {bump!r}")
 
 
 def check_labelformat_pin(pyproject_text: str) -> None:
@@ -76,36 +35,6 @@ def check_labelformat_pin(pyproject_text: str) -> None:
                     "https://www.notion.so/Release-Labelformat-or-Lightly-Insights-"
                     "039ffe75cd8b4dd89dcb45a7338533b2?source=copy_link"
                 )
-
-
-def bump_pyproject_version(pyproject_text: str, new_version: str) -> str:
-    """Returns `pyproject_text` with the `[project] version` replaced."""
-    section_match = _project_section(pyproject_text)
-    new_section, count = _PYPROJECT_VERSION_RE.subn(
-        f'version = "{new_version}"', section_match.group(0), count=1
-    )
-    if count == 0:
-        raise PrepareReleaseError(
-            'no `version = "..."` line found in the `[project]` table of pyproject.toml'
-        )
-    return (
-        pyproject_text[: section_match.start()]
-        + new_section
-        + pyproject_text[section_match.end() :]
-    )
-
-
-def _project_section(pyproject_text: str) -> re.Match[str]:
-    """Locates the `[project]` table's text span, header included.
-
-    Scoping to this span (rather than searching the whole file) keeps a
-    `version = "..."` line in some other table, e.g. `[tool.foo]`, from
-    being mistaken for the release version.
-    """
-    match = _PROJECT_SECTION_RE.search(pyproject_text)
-    if match is None:
-        raise PrepareReleaseError("no `[project]` table found in pyproject.toml")
-    return match
 
 
 def _strip_comment(line: str) -> str:
