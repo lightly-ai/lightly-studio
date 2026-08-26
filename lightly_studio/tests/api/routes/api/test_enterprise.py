@@ -2,6 +2,7 @@ import json
 import os
 
 import fsspec
+from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
 from fastapi.testclient import TestClient
 from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture
@@ -59,6 +60,27 @@ def test_refresh_cloud_credentials__applies_gcs_config(
 
     assert response.status_code == 204
     assert fsspec.config.conf["gcs"] == storage_options
+    clear_cache.assert_called_once_with()
+
+
+def test_refresh_cloud_credentials__applies_azure_config(
+    test_client: TestClient,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch.dict(os.environ, clear=False)
+    mocker.patch.dict(fsspec.config.conf, {}, clear=True)
+    clear_cache = mocker.spy(AzureBlobFileSystem, "clear_instance_cache")
+    storage_options = {"account_name": "test-account", "account_key": "test-key"}
+    serialized_options = json.dumps(storage_options)
+
+    response = test_client.put(
+        "/api/cloud-credentials",
+        json={"FSSPEC_ABFS": serialized_options},
+    )
+
+    assert response.status_code == 204
+    assert os.environ["FSSPEC_ABFS"] == serialized_options
+    assert fsspec.config.conf["abfs"] == storage_options
     clear_cache.assert_called_once_with()
 
 

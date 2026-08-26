@@ -29,7 +29,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.dataset import fsspec_lister
+from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
@@ -163,6 +163,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
         else:
             allowed_extensions_set = None
+        # Configure clients before discovery creates and caches a filesystem.
+        remote_storage.configure_connections(paths=[str(path)])
         image_paths = list(
             fsspec_lister.iter_files_from_path(
                 path=str(path), allowed_extensions=allowed_extensions_set, limit=limit

@@ -217,6 +217,23 @@ def test_load_into_dataset_from_paths__records_decompression_bomb_as_broken(
     assert "broken=1" in caplog.text
 
 
+def test_probe_image__limits_read_ahead(tmp_path: Path, mocker: MockerFixture) -> None:
+    image_path = tmp_path / "image.png"
+    PILImage.new("RGB", (8, 6)).save(image_path)
+    filesystem = mocker.MagicMock()
+    filesystem.exists.return_value = True
+    filesystem.open.return_value = image_path.open("rb")
+
+    result = add_images._probe_image(("s3://bucket/image.png", filesystem, "image.png"))
+
+    assert result == ("s3://bucket/image.png", (8, 6))
+    filesystem.open.assert_called_once_with(
+        "image.png",
+        mode="rb",
+        block_size=256 * 1024,
+    )
+
+
 def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
     db_session: Session, tmp_path: Path
 ) -> None:
