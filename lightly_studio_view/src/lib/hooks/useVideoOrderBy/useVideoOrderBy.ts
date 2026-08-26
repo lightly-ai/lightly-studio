@@ -1,12 +1,8 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type { VideoSortFieldExpr } from '$lib/api/lightly_studio_local';
-import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-import { usePostHog } from '$lib/hooks';
-import {
-    useVideoSortFields,
-    type SortField
-} from '$lib/hooks/useVideoSortFields/useVideoSortFields';
+import { usePostHog, useVideoFilters, useVideoSortFields } from '$lib/hooks';
+import type { SortField } from '$lib/hooks/useVideoSortFields/useVideoSortFields';
 
 interface UseVideoOrderByParams {
     collectionId: () => string;

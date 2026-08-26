@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { useVideoOrderBy } from '$lib/hooks/useVideoOrderBy/useVideoOrderBy';
-    import { useGlobalStorage, usePostHog } from '$lib/hooks';
+    import { useGlobalStorage, usePostHog, useVideoOrderBy } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
     import OrderByControl from './OrderByControl.svelte';
 
