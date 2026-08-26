@@ -48,7 +48,9 @@ def upgrade() -> None:
         sa.Column("is_default", sa.Boolean(), nullable=False),
     )
     _backfill_defaults()
-    # At most one default embedding model per collection.
+    # At most one default embedding model per collection. Postgres-only: DuckDB cannot
+    # create partial indexes, so on DuckDB the invariant is not enforced at the database
+    # level and callers must maintain it.
     op.create_index(
         "uq_collection_embedding_model_default",
         "collection_embedding_model",

@@ -15,9 +15,11 @@ class CollectionEmbeddingModelTable(SQLModel, table=True):
     e.g. the 2D projection endpoints and similarity search. ``is_default`` flags that
     model as the collection's default.
 
-    A partial unique index enforces at most one default per collection. It is Postgres-only
-    (DuckDB cannot create partial indexes), so it lives in the migration rather than here,
-    and ``_include_object`` in ``migrations/env.py`` keeps autogenerate from dropping it.
+    A partial unique index enforces at most one default per collection, but only on
+    Postgres. DuckDB cannot create partial indexes, so the index lives in the migration
+    rather than here (``_include_object`` in ``migrations/env.py`` keeps autogenerate from
+    dropping it). On DuckDB the invariant is not enforced at the database level; callers
+    must maintain it.
     """
 
     __tablename__ = "collection_embedding_model"
