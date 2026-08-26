@@ -88,6 +88,14 @@ def get_by_model_hash(
     per collection (see :func:`get_by_model_hash_deprecated`), so a dataset can hold
     duplicates. The oldest match is returned so they resolve deterministically to the
     canonical row.
+
+    Args:
+        session: The database session.
+        dataset_id: The dataset in which to search for the embedding model.
+        embedding_model_hash: The hash identifying the embedding model.
+
+    Returns:
+        The oldest matching embedding model, or None if no matching model exists.
     """
     query = (
         select(EmbeddingModelTable)
