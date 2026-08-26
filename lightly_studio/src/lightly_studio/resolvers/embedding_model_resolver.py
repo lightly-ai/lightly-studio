@@ -23,7 +23,7 @@ def create(session: Session, embedding_model: EmbeddingModelCreate) -> Embedding
 
 def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> EmbeddingModelTable:
     """Retrieve an existing EmbeddingModel by hash or create a new one if it does not exist."""
-    db_model = get_by_model_hash(
+    db_model = get_by_model_hash_deprecated(
         session=session,
         collection_id=embedding_model.collection_id,
         embedding_model_hash=embedding_model.embedding_model_hash,
@@ -62,15 +62,51 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
     ).one_or_none()
 
 
-def get_by_model_hash(
+# TODO(Michal, 08/2026): Remove once the write path deduplicates per dataset and the readers
+# no longer resolve embedding models by collection.
+def get_by_model_hash_deprecated(
     session: Session, collection_id: UUID, embedding_model_hash: str
 ) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash and collection."""
+    """Retrieve a single embedding model by hash and collection.
+
+    Kept for the write path, which still deduplicates per collection until the readers move
+    to dataset scope. Prefer :func:`get_by_model_hash` for new reads.
+    """
     query = select(EmbeddingModelTable).where(
         EmbeddingModelTable.embedding_model_hash == embedding_model_hash
     )
     query = query.where(EmbeddingModelTable.collection_id == collection_id)
     return session.exec(query).one_or_none()
+
+
+def get_by_model_hash(
+    session: Session, dataset_id: UUID, embedding_model_hash: str
+) -> EmbeddingModelTable | None:
+    """Retrieve a single embedding model by hash within a dataset.
+
+    The same hash can appear once per collection because the write path still deduplicates
+    per collection (see :func:`get_by_model_hash_deprecated`), so a dataset can hold
+    duplicates. The oldest match is returned so they resolve deterministically to the
+    canonical row.
+
+    Args:
+        session: The database session.
+        dataset_id: The dataset in which to search for the embedding model.
+        embedding_model_hash: The hash identifying the embedding model.
+
+    Returns:
+        The oldest matching embedding model, or None if no matching model exists.
+    """
+    query = (
+        select(EmbeddingModelTable)
+        .where(EmbeddingModelTable.embedding_model_hash == embedding_model_hash)
+        .where(EmbeddingModelTable.dataset_id == dataset_id)
+        .order_by(
+            col(EmbeddingModelTable.created_at).asc(),
+            col(EmbeddingModelTable.embedding_model_id).asc(),
+        )
+    )
+    return session.exec(query).first()
 
 
 def get_by_name(
