@@ -15,6 +15,7 @@ from lightly_studio.few_shot_classifier.classifier_manager import (
     LOW_CONFIDENCE_SAMPLES_NEEDED,
     ClassifierEntry,
     ClassifierManager,
+    _get_embedding_model_by_hash,
 )
 from lightly_studio.few_shot_classifier.random_forest_classifier import (
     RandomForest,
@@ -38,6 +39,10 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
+)
+from tests.helpers_resolvers import (
+    create_collection,
+    create_embedding_model,
 )
 
 
@@ -960,3 +965,56 @@ class TestClassifierManager:
                 classifier_id=classifier.classifier_id,
                 collection_id=collection_id,
             )
+
+
+def test_get_embedding_model_by_hash__prefers_collection_local(db_session: Session) -> None:
+    # A child collection shares its parent's dataset, so both can hold a row for the same
+    # hash while the write path deduplicates per collection. Sample embeddings are keyed to
+    # the collection's own row, so the lookup must return that row and not the oldest one in
+    # the dataset.
+    parent = create_collection(session=db_session, collection_name="parent")
+    child = create_collection(
+        session=db_session, collection_name="child", parent_collection_id=parent.collection_id
+    )
+    assert child.dataset_id == parent.dataset_id
+    # The parent's row is created first, so it is the oldest in the dataset.
+    create_embedding_model(
+        session=db_session,
+        collection_id=parent.collection_id,
+        embedding_model_name="model_in_parent",
+        embedding_model_hash="same_hash",
+    )
+    child_model = create_embedding_model(
+        session=db_session,
+        collection_id=child.collection_id,
+        embedding_model_name="model_in_child",
+        embedding_model_hash="same_hash",
+    )
+
+    result = _get_embedding_model_by_hash(
+        session=db_session, embedding_model_hash="same_hash", collection_id=child.collection_id
+    )
+    assert result is not None
+    assert result.embedding_model_id == child_model.embedding_model_id
+
+
+def test_get_embedding_model_by_hash__falls_back_to_dataset(db_session: Session) -> None:
+    # When the collection has no row of its own, the lookup falls back to the dataset-scoped
+    # row. This is how a deduplicated dataset resolves once the write path stops creating a
+    # row per collection.
+    parent = create_collection(session=db_session, collection_name="parent")
+    child = create_collection(
+        session=db_session, collection_name="child", parent_collection_id=parent.collection_id
+    )
+    parent_model = create_embedding_model(
+        session=db_session,
+        collection_id=parent.collection_id,
+        embedding_model_name="model_in_parent",
+        embedding_model_hash="same_hash",
+    )
+
+    result = _get_embedding_model_by_hash(
+        session=db_session, embedding_model_hash="same_hash", collection_id=child.collection_id
+    )
+    assert result is not None
+    assert result.embedding_model_id == parent_model.embedding_model_id
