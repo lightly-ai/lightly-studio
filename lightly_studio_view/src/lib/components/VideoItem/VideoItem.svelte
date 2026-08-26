@@ -9,8 +9,10 @@
         type VideoView
     } from '$lib/api/lightly_studio_local';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
+    import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
     import { routeHelpers } from '$lib/routes';
-    import { cn, getSimilarityColor, isWholeVideoClassificationAnnotation } from '$lib/utils';
+    import { isWholeVideoClassificationAnnotation } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { goto } from '$app/navigation';
     import Video from '../Video/Video.svelte';
@@ -148,19 +150,6 @@
     const videoClassificationAnnotations = $derived(
         (video.sample.annotations ?? []).filter(isWholeVideoClassificationAnnotation)
     );
-
-    const orderValue = $derived(video.order_value ?? undefined);
-    const shouldShowOrderValue = $derived(orderValue !== undefined);
-    const orderValueLabel = $derived(
-        orderValue !== undefined
-            ? Number.isInteger(orderValue)
-                ? String(orderValue)
-                : orderValue.toFixed(2)
-            : ''
-    );
-    const hasSimilarityScore = $derived(
-        video.similarity_score !== undefined && video.similarity_score !== null
-    );
 </script>
 
 <div
@@ -195,32 +184,14 @@
     <SampleClassificationPills
         sample={{ annotations: videoClassificationAnnotations }}
         hasBottomOverlay={Boolean(caption)}
-        hasRightOverlay={shouldShowOrderValue || hasSimilarityScore}
+        hasRightOverlay={hasValueBadge(video.order_value, video.similarity_score)}
         showAllSources
     />
-    {#if shouldShowOrderValue}
-        <div
-            class={cn(
-                'absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm',
-                caption ? 'bottom-8' : 'bottom-1'
-            )}
-        >
-            {orderValueLabel}
-        </div>
-    {:else if video.similarity_score != null}
-        <div
-            class={cn(
-                'absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm',
-                caption ? 'bottom-8' : 'bottom-1'
-            )}
-        >
-            <span
-                class="mr-1.5 block h-2 w-2 rounded-full"
-                style="background-color: {getSimilarityColor(video.similarity_score)}"
-            ></span>
-            {video.similarity_score.toFixed(2)}
-        </div>
-    {/if}
+    <SampleValueBadge
+        orderValue={video.order_value}
+        similarityScore={video.similarity_score}
+        hasBottomOverlay={Boolean(caption)}
+    />
     {#if caption}
         <div
             class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
