@@ -65,6 +65,7 @@ class TestGetDistanceExpression:
             collection_id=collection.collection_id,
             embedding_model_name="test_model",
             embedding_dimension=3,
+            set_as_default=True,
         )
 
         embedding_model_id, distance_expr = get_distance_expression(
