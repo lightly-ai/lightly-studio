@@ -23,13 +23,14 @@ from lightly_studio.resolvers import (
     metadata_resolver,
     tag_resolver,
 )
-from lightly_studio.sampling import sampling_helpers, sequence_sampling
+from lightly_studio.sampling import metadata_balancing, sampling_helpers, sequence_sampling
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
+    MetadataBalancingStrategy,
     MetadataWeightingStrategy,
     SamplingConfig,
 )
@@ -456,6 +457,18 @@ def _add_strategy_to_mundig(
         mundig.add_class_balancing(
             class_distributions=class_distributions,
             target=target_values,
+            strength=strat.strength,
+        )
+    elif isinstance(strat, MetadataBalancingStrategy):
+        value_distributions, value_targets = metadata_balancing.get_metadata_balancing_data(
+            session=session,
+            strat=strat,
+            collection_id=context.collection_id,
+            input_sample_ids=context.input_sample_ids,
+        )
+        mundig.add_class_balancing(
+            class_distributions=value_distributions,
+            target=value_targets,
             strength=strat.strength,
         )
     else:

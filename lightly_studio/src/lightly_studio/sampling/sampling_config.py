@@ -11,6 +11,9 @@ from pydantic import BaseModel, Field
 AnnotationsClassName = str
 AnnotationClassToTarget = dict[AnnotationsClassName, float]
 
+MetadataValueName = str
+MetadataValueToTarget = dict[MetadataValueName, float]
+
 
 class SamplingConfig(BaseModel):
     """Configuration for the sampling process."""
@@ -79,3 +82,17 @@ class AnnotationClassBalancingStrategy(SamplingStrategy):
     strategy_name: Literal["balance"] = "balance"
     target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
     annotation_source_id: UUID | None = None
+
+
+class MetadataBalancingStrategy(SamplingStrategy):
+    """Sampling strategy that balances the selection over one categorical metadata key.
+
+    Balances a single ``string`` or ``boolean`` metadata key. Balance several keys by
+    combining one strategy per key; each key is balanced on its own rather than over
+    the combinations of their values. Samples without a value for the key are not
+    influenced by this strategy, but stay available for selection.
+    """
+
+    strategy_name: Literal["metadata_balance"] = "metadata_balance"
+    metadata_key: str
+    target_distribution: MetadataValueToTarget | Literal["uniform"] | Literal["input"]
