@@ -28,7 +28,9 @@ def set_default(
     default = _get_by_collection_id(session=session, collection_id=collection_id)
     if default is None:
         default = CollectionEmbeddingModelTable(
-            collection_id=collection_id, embedding_model_id=embedding_model_id
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            is_default=True,
         )
     else:
         default.embedding_model_id = embedding_model_id
