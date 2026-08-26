@@ -368,7 +368,7 @@ combine them.
 
 ### In Python
 
-Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`sampling()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.sampling). This works for image datasets, video datasets, and video-frame datasets returned by [`VideoDataset.frames()`](../api/dataset.md#lightly_studio.VideoDataset.frames). The sampled items are stored under the tag passed as `sampling_result_tag_name`, so you can filter or export them later. `sampling_result_tag_name` must be a tag name that does not yet exist in the dataset.
+Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`sampling()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.sampling). This works for image datasets, video datasets, and video-frame datasets returned by [`VideoDataset.frames()`](../api/dataset.md#lightly_studio.VideoDataset.frames). The sampled items are stored under the tag passed as `sampling_result_tag_name`, so you can filter or export them later. `sampling_result_tag_name` must be a tag name that does not yet exist in the dataset, unless it is the `preselected_tag_name` of the same run (see [Continuing from preselected samples](#continuing-from-preselected-samples)).
 
 ### Filtering before sampling
 
@@ -431,6 +431,27 @@ sampling.diverse(
 The preselected tag must belong to the sampled collection, and all of its samples must
 be part of the query being sampled. The option is available on every sampling method,
 including `multi_strategies()`.
+
+To grow one tag instead of creating a new one per batch, pass the same name as both
+`preselected_tag_name` and `sampling_result_tag_name`. The newly selected samples are
+added to the existing tag, so it holds the whole selection after every run:
+
+```py
+sampling = dataset.query().sampling()
+
+sampling.diverse(
+    n_samples_to_select=100,
+    sampling_result_tag_name="training_set",
+)
+# "training_set" holds 100 samples.
+
+sampling.diverse(
+    n_samples_to_select=100,
+    sampling_result_tag_name="training_set",
+    preselected_tag_name="training_set",
+)
+# "training_set" holds 200 samples.
+```
 
 ### Video sequence sampling
 

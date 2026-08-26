@@ -12,7 +12,6 @@ so ingestion uses your generator instead of the environment default.
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
 
 import numpy as np
 import torch
@@ -26,7 +25,7 @@ from lightly_studio.dataset import file_utils, image_crop_embedding, image_embed
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.dataset.image_embedding import EmbeddingContext
-from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 from lightly_studio.vendor import mobileclip
 
 MODEL_NAME = "mobileclip_s0"
@@ -66,17 +65,16 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
         self._model_hash = file_utils.get_file_xxhash(model_path)
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
         """Describe the model so it can be recorded in the database.
 
         The name shows up in the GUI and the hash lets Lightly Studio detect when
         the same model has been used before.
         """
-        return EmbeddingModelCreate(
+        return EmbeddingSpaceDescription(
             name="Custom Embedding Model",
             embedding_model_hash=self._model_hash,
             embedding_dimension=EMBEDDING_DIMENSION,
-            collection_id=collection_id,
         )
 
     def embed_text(self, text: str) -> list[float]:

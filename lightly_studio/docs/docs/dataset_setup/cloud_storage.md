@@ -1,6 +1,6 @@
 # Cloud Storage
 
-To load images or videos directly from a cloud storage provider (like AWS S3, GCS, etc.), first install the required dependencies:
+To load images or videos directly from AWS S3, Google Cloud Storage, or Azure Blob Storage, first install the required dependencies:
 
 ```shell
 pip install "lightly-studio[cloud-storage]"
@@ -29,6 +29,7 @@ import lightly_studio as ls
 dataset = ls.ImageDataset.load_or_create()
 dataset.add_images_from_path(path="s3://my-bucket/images/")
 dataset.add_images_from_path(path="gcs://other-bucket/more-images/")
+dataset.add_images_from_path(path="abfs://my-container/azure-images/")
 dataset.add_images_from_path(path="/data/images/not-in-the-cloud-yet")
 ```
 

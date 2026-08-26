@@ -31,6 +31,7 @@ from lightly_studio.sampling.sampling_config import (
 )
 from lightly_studio.sampling.sampling_via_db import (
     _aggregate_class_distributions,
+    _check_result_tag_name_free,
     sampling_via_database,
 )
 from tests.helpers_resolvers import (
@@ -556,6 +557,56 @@ def test_sampling_via_database__preselection_matches_single_sampling(
 
     assert set(first_batch).isdisjoint(second_batch)
     assert set(first_batch + second_batch) == set(single_batch)
+
+
+def test_sampling_via_database__result_tag_name_equals_preselected_tag_name(
+    db_session: Session,
+) -> None:
+    """Reusing the preselected tag name grows that tag instead of raising."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=10, embedding_model_names=["embedding_model_1"]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    strategy = EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")
+
+    sampling_via_database(
+        session=db_session,
+        config=SamplingConfig(
+            collection_id=collection_id,
+            n_samples_to_select=2,
+            sampling_result_tag_name="growing_batch",
+            strategies=[strategy],
+        ),
+        input_sample_ids=sample_ids,
+    )
+    tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="growing_batch", collection_id=collection_id
+    )
+    assert tag is not None
+    first_batch = _sample_ids_by_tag(
+        session=db_session, collection_id=collection_id, tag_id=tag.tag_id
+    )
+    assert len(first_batch) == 2
+
+    sampling_via_database(
+        session=db_session,
+        config=SamplingConfig(
+            collection_id=collection_id,
+            n_samples_to_select=2,
+            sampling_result_tag_name="growing_batch",
+            preselected_tag_name="growing_batch",
+            strategies=[strategy],
+        ),
+        input_sample_ids=sample_ids,
+    )
+
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
+    assert [existing_tag.name for existing_tag in tags] == ["growing_batch"]
+    grown_batch = _sample_ids_by_tag(
+        session=db_session, collection_id=collection_id, tag_id=tag.tag_id
+    )
+    assert set(first_batch) < set(grown_batch)
+    assert len(grown_batch) == 4
 
 
 def test_sampling_via_database__preselected_tag_name_not_found(
@@ -1165,6 +1216,28 @@ def test_sampling_via_database_with_annotation_class_balancing_input(
     assert len(samples_in_tag) == 1
     # Pick the first sample, because it resembles the input distribution the best.
     assert samples_in_tag[0].sample_id == sample_ids[0]
+
+
+def test_check_result_tag_name_free__existing_tag_is_not_the_preselected_one(
+    db_session: Session,
+) -> None:
+    """Raises when the result tag exists and a different tag is preselected."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=1, embedding_model_names=[]
+    )
+    create_tag(session=db_session, collection_id=collection_id, tag_name="result")
+
+    with pytest.raises(ValueError, match="Tag with name result already exists"):
+        _check_result_tag_name_free(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=collection_id,
+                n_samples_to_select=1,
+                sampling_result_tag_name="result",
+                preselected_tag_name="preselected",
+                strategies=[],
+            ),
+        )
 
 
 def test_sampling_via_database__metadata_balancing_uniform(

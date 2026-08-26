@@ -31,7 +31,9 @@ class Sampling:
     combined to form more complex sampling strategies.
 
     The result of a sampling is stored as a tag on the selected samples in the database.
-    The `sampling_result_tag_name` must be a unique tag name that is not used yet.
+    The `sampling_result_tag_name` must be a tag name that is not used yet, with one
+    exception: reusing the `preselected_tag_name` adds the newly selected samples to
+    that tag, which lets a selection grow over repeated runs.
 
     # Creation of a Sampling instance.
 
@@ -154,6 +156,8 @@ class Sampling:
             metadata_key: Metadata key used as weights (float or int values).
             preselected_tag_name: Optional tag containing samples that should be treated
                 as already selected. These samples are excluded from the result tag.
+                Pass the same name as `sampling_result_tag_name` to instead grow that
+                tag with the newly selected samples.
         """
         strategy = MetadataWeightingStrategy(metadata_key=metadata_key)
         self.multi_strategies(
@@ -180,6 +184,8 @@ class Sampling:
                 available model or raises if multiple exist.
             preselected_tag_name: Optional tag containing samples that should be treated
                 as already selected. These samples are excluded from the result tag.
+                Pass the same name as `sampling_result_tag_name` to instead grow that
+                tag with the newly selected samples.
             selected_sequence_length: Number of frames per selected sequence, at least
                 2. ``None`` selects individual samples. When set, selection happens over
                 video-frame sequences formed per video from the candidate frames in
@@ -221,6 +227,8 @@ class Sampling:
                 available model or raises if multiple exist.
             preselected_tag_name: Optional tag containing samples that should be treated
                 as already selected. These samples are excluded from the result tag.
+                Pass the same name as `sampling_result_tag_name` to instead grow that
+                tag with the newly selected samples.
         """
         strategy = EmbeddingDeduplicationStrategy(
             embedding_model_name=embedding_model_name,
@@ -249,6 +257,8 @@ class Sampling:
                 or a dictionary mapping class names to target ratios.
             preselected_tag_name: Optional tag containing samples that should be treated
                 as already selected. These samples are excluded from the result tag.
+                Pass the same name as `sampling_result_tag_name` to instead grow that
+                tag with the newly selected samples.
         """
         strategy = AnnotationClassBalancingStrategy(target_distribution=target_distribution)
         self.multi_strategies(
@@ -277,6 +287,8 @@ class Sampling:
                 or a dictionary mapping metadata values to target ratios.
             preselected_tag_name: Optional tag containing samples that should be treated
                 as already selected. These samples are excluded from the result tag.
+                Pass the same name as `sampling_result_tag_name` to instead grow that
+                tag with the newly selected samples.
         """
         strategy = MetadataBalancingStrategy(
             metadata_key=metadata_key,
@@ -305,6 +317,8 @@ class Sampling:
             sampling_strategies: Strategies to compose for sampling.
             preselected_tag_name: Optional tag containing samples that should be treated
                 as already selected. These samples are excluded from the result tag.
+                Pass the same name as `sampling_result_tag_name` to instead grow that
+                tag with the newly selected samples.
             selected_sequence_length: Number of frames per selected sequence, at least
                 2. ``None`` selects individual samples. When set, selection happens over
                 video-frame sequences formed per video from the candidate frames in
