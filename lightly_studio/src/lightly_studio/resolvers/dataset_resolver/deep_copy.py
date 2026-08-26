@@ -44,6 +44,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricTable,
@@ -139,6 +140,7 @@ def deep_copy(
     _copy_sample_tag_links(session=session)
     _copy_sample_group_links(session=session)
     _copy_annotation_collection_coverage(session=session)
+    _copy_default_embedding_spaces(session=session)
 
     # Commit so the ON COMMIT DROP map tables are released and a subsequent deep_copy in
     # the same session can recreate them.
@@ -194,7 +196,8 @@ def _build_id_maps(session: Session, old_dataset_id: UUID) -> None:
         session=session,
         source_table="embedding_model",
         id_column="embedding_model_id",
-        where_sql=in_collection_map,
+        where_sql="dataset_id = :old_dataset_id",
+        params=dataset_params,
     )
     _create_id_map(
         session=session,
@@ -774,6 +777,31 @@ def _copy_annotation_collection_coverage(session: Session) -> None:
     _copy_table(
         session=session,
         target=AnnotationCollectionCoverageTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_default_embedding_spaces(session: Session) -> None:
+    """Copy default embedding spaces, remapping collection_id and embedding_model_id.
+
+    The inner joins on the collection and embedding-model maps drop any row whose
+    collection or model is not part of the dataset.
+    """
+    src = _table(DefaultEmbeddingSpaceTable).alias("src")
+    map_collection = _map(_MAP_COLLECTION)
+    map_model = _map(_MAP_EMBEDDING_MODEL)
+    from_clause = src.join(map_collection, map_collection.c.old_id == src.c["collection_id"]).join(
+        map_model, map_model.c.old_id == src.c["embedding_model_id"]
+    )
+    overrides = {
+        "collection_id": map_collection.c.new_id,
+        "embedding_model_id": map_model.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=DefaultEmbeddingSpaceTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,
