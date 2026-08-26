@@ -11,6 +11,7 @@ from sqlmodel import Session
 
 from lightly_studio.database import db_json
 from lightly_studio.models.metadata import (
+    CATEGORICAL_TYPE_NAMES,
     MetadataValueCountsView,
     MetadataValueCountView,
     SampleMetadataTable,
@@ -19,7 +20,6 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
 
-_CATEGORICAL_TYPES = ("string", "boolean")
 _TOP_VALUE_COUNT = 20
 
 
@@ -50,7 +50,7 @@ def get_metadata_value_counts(
     schema = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
     result: dict[str, MetadataValueCountsView] = {}
     for key, metadata_type in schema.items():
-        if metadata_type not in _CATEGORICAL_TYPES:
+        if metadata_type not in CATEGORICAL_TYPE_NAMES:
             continue
         if fields is not None and key not in fields:
             continue
