@@ -341,6 +341,91 @@ describe('DatasetDistributionPanel', () => {
         );
     });
 
+    it('switches a numerical metadata histogram between numbers and percentages', async () => {
+        const user = userEvent.setup();
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [1, 3] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const valueMode = screen.getByTestId('dataset-distribution-histogram-value-mode');
+        expect(valueMode).toHaveTextContent('Number');
+        await user.click(valueMode);
+        await user.click(await screen.findByRole('option', { name: 'Percentage' }));
+
+        await waitFor(() => {
+            const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+                series: { data: { value: [number, number] }[] }[];
+                yAxis: { max?: number };
+            };
+            expect(option.series[0].data.map((item) => item.value[1])).toEqual([25, 75]);
+            // The axis is left unpinned so it scales to the tallest bin, not to 100%.
+            expect(option.yAxis.max).toBeUndefined();
+        });
+        expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
+            '100% of 4 samples'
+        );
+
+        await user.click(screen.getByTestId('dataset-distribution-histogram-expand'));
+        expect(
+            screen.getByTestId('dataset-distribution-expanded-histogram-value-mode')
+        ).toHaveTextContent('Percentage');
+    });
+
+    it('keeps histogram value modes independent for matching group ids across sources', async () => {
+        const user = userEvent.setup();
+        const sources: DistributionSource[] = [
+            {
+                id: 'predictions',
+                label: 'Predictions',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [1, 3] }
+                    }
+                ]
+            },
+            {
+                id: 'annotations',
+                label: 'Annotations',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [2, 2] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const valueMode = screen.getByTestId('dataset-distribution-histogram-value-mode');
+        await user.click(valueMode);
+        await user.click(await screen.findByRole('option', { name: 'Percentage' }));
+        expect(valueMode).toHaveTextContent('Percentage');
+
+        const sourceSelect = screen.getByTestId('dataset-distribution-source-select');
+        await user.click(sourceSelect);
+        await user.click(await screen.findByRole('option', { name: 'Annotations' }));
+        expect(valueMode).toHaveTextContent('Number');
+
+        await user.click(sourceSelect);
+        await user.click(await screen.findByRole('option', { name: 'Predictions' }));
+        expect(valueMode).toHaveTextContent('Percentage');
+    });
+
     it('preserves categorical endpoint order and toggles typed buckets but not Other', () => {
         const onCategoricalValueToggle = vi.fn();
         const sources: DistributionSource[] = [
@@ -495,6 +580,66 @@ describe('DatasetDistributionPanel', () => {
         await fireEvent.click(expandedOrientationToggle);
         await waitFor(() =>
             expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars')
+        );
+        await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('switches categorical metadata between numbers and percentages in both views', async () => {
+        const user = userEvent.setup({ pointerEventsCheck: 0 });
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: [
+                                {
+                                    id: 'zurich',
+                                    kind: 'value',
+                                    value: 'Zurich',
+                                    label: 'Zurich',
+                                    count: 4
+                                },
+                                {
+                                    id: 'bern',
+                                    kind: 'value',
+                                    value: 'Bern',
+                                    label: 'Bern',
+                                    count: 1
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const valueMode = screen.getByTestId('dataset-distribution-value-mode');
+        expect(valueMode).toHaveTextContent('Number');
+        await user.click(valueMode);
+        await user.click(await screen.findByRole('option', { name: 'Percentage' }));
+
+        await waitFor(() => {
+            const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+                series: { data: { value: number }[] }[];
+                xAxis: { max?: number };
+            };
+            expect(option.series[0].data.map((item) => item.value)).toEqual([80, 20]);
+            // The axis is left unpinned so it scales to the tallest bar, not to 100%.
+            expect(option.xAxis.max).toBeUndefined();
+        });
+        expect(screen.getByText(/100% of 5 samples/)).toBeInTheDocument();
+
+        await user.click(screen.getByTestId('dataset-distribution-expand'));
+        expect(screen.getByTestId('dataset-distribution-expanded-value-mode')).toHaveTextContent(
+            'Percentage'
         );
     });
 

@@ -75,7 +75,7 @@
         {/if}
         · sorted by {sortLabels[config.sortBy].toLowerCase()}
         {#if totalCount !== undefined}
-            · {totalCount.toLocaleString('en-US')}
+            · {valueMode === 'percentage' ? '100% of ' : ''}{totalCount.toLocaleString('en-US')}
             {valueNoun}
         {/if}
         {#if seriesCount !== undefined}
