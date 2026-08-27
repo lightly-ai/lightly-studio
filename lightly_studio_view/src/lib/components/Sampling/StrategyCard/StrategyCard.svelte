@@ -15,8 +15,7 @@
         type StrategyInstance,
         type StrategyParams,
         type StrategySummaryTag,
-        type ClassBalancingParams,
-        type SubpartDiversityParams
+        type ClassBalancingParams
     } from '$lib/hooks/useStrategyBuilder';
     import DeduplicationForm from '../forms/DeduplicationForm/DeduplicationForm.svelte';
     import MetadataBalancingForm from '../forms/MetadataBalancingForm/MetadataBalancingForm.svelte';
@@ -37,6 +36,7 @@
         tags: StrategySummaryTag[];
         annotationLabels: string[];
         annotationSourceOptions?: { id: string; name: string }[];
+        croppableAnnotationSourceOptions?: { id: string; name: string }[];
         metadataFieldNames?: string[];
         categoricalMetadataFieldNames?: string[];
         metadataValuesByKey?: Record<string, string[]>;
@@ -51,6 +51,7 @@
         tags,
         annotationLabels,
         annotationSourceOptions = [],
+        croppableAnnotationSourceOptions = [],
         metadataFieldNames = [],
         categoricalMetadataFieldNames = [],
         metadataValuesByKey = {},
@@ -170,8 +171,8 @@
                     {:else if instance.type === 'subpart_diversity'}
                         <SubpartDiversityForm
                             instanceId={instance.id}
-                            params={instance.params as SubpartDiversityParams}
-                            {annotationSourceOptions}
+                            params={instance.params}
+                            annotationSourceOptions={croppableAnnotationSourceOptions}
                             {onUpdate}
                         />
                     {/if}

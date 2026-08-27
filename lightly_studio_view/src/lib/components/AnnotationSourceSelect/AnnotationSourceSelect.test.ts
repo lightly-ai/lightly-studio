@@ -54,7 +54,12 @@ describe('AnnotationSourceSelect', () => {
     it('calls onSelect with empty string when deselecting with allowDeselect', async () => {
         const onSelect = vi.fn();
         render(AnnotationSourceSelect, {
-            props: { ...defaultProps, onSelect, allowDeselect: true, selectedSource: 'predictions-id' }
+            props: {
+                ...defaultProps,
+                onSelect,
+                allowDeselect: true,
+                selectedSource: 'predictions-id'
+            }
         });
 
         await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), { key: 'Enter' });

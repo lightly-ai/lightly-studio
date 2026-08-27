@@ -176,6 +176,7 @@
                                         tags={$tags}
                                         annotationLabels={strategyOptions.annotationLabels}
                                         annotationSourceOptions={strategyOptions.annotationSourceOptions}
+                                        croppableAnnotationSourceOptions={strategyOptions.croppableAnnotationSourceOptions}
                                         metadataFieldNames={strategyOptions.metadataFieldNames}
                                         categoricalMetadataFieldNames={strategyOptions.categoricalMetadataFieldNames}
                                         metadataValuesByKey={strategyOptions.metadataValuesByKey}

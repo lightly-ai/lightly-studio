@@ -1,9 +1,14 @@
 <script lang="ts">
-    import type { SubpartDiversityParams, StrategyParams } from '$lib/hooks/useStrategyBuilder';
+    import type { StrategyInstance, StrategyParams } from '$lib/hooks/useStrategyBuilder';
     import StrengthField from '$lib/components/Sampling/forms/StrengthField/StrengthField.svelte';
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import { Label } from '$lib/components/ui/label';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
+
+    type SubpartDiversityParams = Extract<
+        StrategyInstance,
+        { type: 'subpart_diversity' }
+    >['params'];
 
     interface Props {
         instanceId: string;
