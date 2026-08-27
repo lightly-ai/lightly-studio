@@ -91,6 +91,9 @@ class MetadataBalancingStrategy(SamplingStrategy):
     combining one strategy per key; each key is balanced on its own rather than over
     the combinations of their values. Samples without a value for the key are not
     influenced by this strategy, but stay available for selection.
+
+    At most 100 values are balanced: a ``target_distribution`` mapping holds at most 100
+    values, and ``"uniform"`` and ``"input"`` group the rarest values beyond that.
     """
 
     strategy_name: Literal["metadata_balance"] = "metadata_balance"
