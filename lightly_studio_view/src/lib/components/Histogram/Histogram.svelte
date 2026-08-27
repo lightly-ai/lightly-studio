@@ -2,11 +2,13 @@
     import type { ECharts } from 'echarts/core';
     import { buildHistogramOption } from './buildHistogramOption';
     import { createHistogramChart } from './createHistogramChart';
-    import type { HistogramData, HistogramRange } from './types';
+    import type { HistogramData, HistogramRange, HistogramSeries } from './types';
 
     interface Props {
         /** Bin edges and per-bin counts (see `HistogramData`). */
         data: HistogramData;
+        /** Optional named histograms rendered on the same bin axis. */
+        series?: HistogramSeries[];
         /**
          * Selected value range. Bins overlapping it render in the accent
          * color, the rest dimmed. Omit to render all bins in the accent color.
@@ -29,7 +31,14 @@
         onRangeSelect?: (range: HistogramRange) => void;
     }
 
-    const { data, selectedRange, heightPx = 48, showAxes = false, onRangeSelect }: Props = $props();
+    const {
+        data,
+        series = [],
+        selectedRange,
+        heightPx = 48,
+        showAxes = false,
+        onRangeSelect
+    }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: ECharts | null = $state(null);
@@ -78,7 +87,10 @@
     $effect(() => {
         if (!chart) return;
         // While dragging, preview the prospective selection.
-        chart.setOption(buildHistogramOption(data, dragRange ?? selectedRange, { showAxes }), true);
+        chart.setOption(
+            buildHistogramOption(data, dragRange ?? selectedRange, { showAxes, series }),
+            true
+        );
     });
 </script>
 

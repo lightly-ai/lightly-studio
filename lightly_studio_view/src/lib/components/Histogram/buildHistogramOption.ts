@@ -6,7 +6,9 @@ import {
     formatInteger,
     formatPercent
 } from '$lib/utils';
-import type { HistogramData, HistogramRange } from './types';
+import escape from 'lodash-es/escape';
+import { assignSeriesColors } from '$lib/components/BarChart/seriesColors';
+import type { HistogramData, HistogramRange, HistogramSeries } from './types';
 
 // Same accent as BarChart (the Lightly primary green, --color-lightly-primary).
 const BAR_COLOR = '#3bd99f';
@@ -25,6 +27,8 @@ export interface HistogramOptionOptions {
      * break the bar ↔ slider alignment.
      */
     showAxes?: boolean;
+    /** Named histograms rendered side-by-side on the same bin axis. */
+    series?: HistogramSeries[];
 }
 
 /** A single bar: the half-open value interval `[start, end)` and its count. */
@@ -51,6 +55,7 @@ interface HistogramSeriesOptions {
     bins: HistogramBin[];
     /** Selected value range; bins outside it render dimmed. Omit to highlight all. */
     range?: HistogramRange;
+    comparisonSeries?: HistogramSeries[];
 }
 
 /**
@@ -94,14 +99,22 @@ interface RenderItemApi {
  * left edge `i`; bin `i` spans `[i, i + 1]` and `api.coord` maps it to pixels.
  */
 export function renderHistogramBin(_params: unknown, api: RenderItemApi): Record<string, unknown> {
+    return renderHistogramBinForSeries(api, 0, 1);
+}
+
+function renderHistogramBinForSeries(
+    api: RenderItemApi,
+    seriesIndex: number,
+    seriesCount: number
+): Record<string, unknown> {
     const index = api.value(0) - 0.5;
     const count = api.value(1);
     const [leftX, topY] = api.coord([index, count]);
     const [, baseY] = api.coord([index, 0]);
     const [bandWidth] = api.size([1, 0]);
 
-    const left = Math.round(leftX);
-    const right = Math.round(leftX + bandWidth) - BIN_GAP_PX;
+    const left = Math.round(leftX + (bandWidth * seriesIndex) / seriesCount);
+    const right = Math.round(leftX + (bandWidth * (seriesIndex + 1)) / seriesCount) - BIN_GAP_PX;
     const top = Math.round(topY);
 
     return {
@@ -131,6 +144,8 @@ export function buildHistogramOption(
 ): EChartsCoreOption {
     const bins = buildBins(data);
     const showAxes = options.showAxes ?? false;
+    const comparisonSeries = options.series ?? [];
+    const isGrouped = comparisonSeries.length > 0;
     const axisOptions = {
         binCount: data.counts.length,
         domainMin: data.binEdges[0],
@@ -140,11 +155,14 @@ export function buildHistogramOption(
 
     return {
         backgroundColor: 'transparent',
-        tooltip: buildTooltip(bins),
-        grid: buildGrid(showAxes),
+        tooltip: buildTooltip(bins, comparisonSeries),
+        legend: isGrouped
+            ? { type: 'scroll', top: 0, textStyle: { color: CHART_AXIS_LABEL.color } }
+            : undefined,
+        grid: buildGrid(showAxes, isGrouped),
         xAxis: buildXAxis(axisOptions),
         yAxis: buildYAxis(showAxes),
-        series: buildSeries({ bins, range })
+        series: buildSeries({ bins, range, comparisonSeries })
     };
 }
 
@@ -158,16 +176,30 @@ function buildBins(data: HistogramData): HistogramBin[] {
 }
 
 /** Tooltip showing the hovered bin's interval, count, and share of the total. */
-function buildTooltip(bins: HistogramBin[]): Record<string, unknown> {
+function buildTooltip(
+    bins: HistogramBin[],
+    comparisonSeries: HistogramSeries[]
+): Record<string, unknown> {
     const totalCount = bins.reduce((sum, bin) => sum + bin.count, 0);
     return {
         trigger: 'axis',
         axisPointer: { type: 'line' },
         // Let the tooltip escape the short inline canvas instead of being clipped.
         confine: false,
-        formatter: (params: { dataIndex: number }[]) => {
+        formatter: (params: { dataIndex: number; marker?: string; seriesName?: string }[]) => {
             const bin = bins[params[0]?.dataIndex];
             if (!bin) return '';
+            if (comparisonSeries.length > 0) {
+                const values = comparisonSeries
+                    .map((series, index) => {
+                        const count = series.data.counts[params[0].dataIndex] ?? 0;
+                        const total = series.data.counts.reduce((sum, value) => sum + value, 0);
+                        const percent = total > 0 ? ` (${formatPercent(count / total)})` : '';
+                        return `${params[index]?.marker ?? ''}${escape(series.label)}: <b>${formatInteger(count)}</b>${percent}`;
+                    })
+                    .join('<br/>');
+                return `<b>${formatFloat(bin.start)} – ${formatFloat(bin.end)}</b><br/>${values}`;
+            }
             const percent = totalCount > 0 ? ` (${formatPercent(bin.count / totalCount)})` : '';
             return (
                 `<b>${formatFloat(bin.start)} – ${formatFloat(bin.end)}</b><br/>` +
@@ -178,10 +210,10 @@ function buildTooltip(bins: HistogramBin[]): Record<string, unknown> {
 }
 
 /** Plot padding: gutters for labels when axes show, flush to the edges when not. */
-function buildGrid(showAxes: boolean): Record<string, unknown> {
+function buildGrid(showAxes: boolean, isGrouped: boolean): Record<string, unknown> {
     // containLabel reserves gutters for labels; right padding avoids clipping.
     return showAxes
-        ? { left: 4, right: 16, top: 8, bottom: 4, containLabel: true }
+        ? { left: 4, right: 16, top: isGrouped ? 48 : 8, bottom: 4, containLabel: true }
         : { left: 0, right: 0, top: 2, bottom: 0 };
 }
 
@@ -224,6 +256,31 @@ function buildYAxis(showAxes: boolean): Record<string, unknown> {
  * `renderHistogramBin`), each colored by whether it falls in the range.
  */
 function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[] {
+    const comparisonSeries = options.comparisonSeries ?? [];
+    if (comparisonSeries.length > 0) {
+        const colors = assignSeriesColors(comparisonSeries.map(({ id }) => id));
+        return comparisonSeries.map((series, seriesIndex) => ({
+            type: 'custom',
+            name: series.label,
+            renderItem: (_params: unknown, api: RenderItemApi) =>
+                renderHistogramBinForSeries(api, seriesIndex, comparisonSeries.length),
+            encode: { x: 0, y: 1 },
+            data: series.data.counts.map((count, index) => ({
+                value: [index + 0.5, count],
+                itemStyle: {
+                    color:
+                        !options.range ||
+                        isBinInRange(
+                            options.bins[index].start,
+                            options.bins[index].end,
+                            options.range
+                        )
+                            ? colors.get(series.id)
+                            : BAR_COLOR_DIMMED
+                }
+            }))
+        }));
+    }
     return [
         {
             type: 'custom',

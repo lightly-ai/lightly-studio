@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import * as echarts from 'echarts/core';
 import { CustomChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent } from 'echarts/components';
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
 import { buildHistogramOption, isBinInRange, renderHistogramBin } from './buildHistogramOption';
 import { normal, singleBin } from './fixtures';
 
-echarts.use([CustomChart, GridComponent, TooltipComponent, SVGRenderer]);
+echarts.use([CustomChart, GridComponent, LegendComponent, TooltipComponent, SVGRenderer]);
 
 // echarts measures label text through a canvas 2d context that jsdom doesn't
 // implement; stub the one method it needs so `setOption` stays quiet. Text
@@ -27,8 +27,16 @@ interface BarDatum {
 
 const getBars = (option: Option): BarDatum[] => (option.series as { data: BarDatum[] }[])[0].data;
 const getColors = (option: Option): string[] => getBars(option).map((bar) => bar.itemStyle.color);
-const getTooltipFormatter = (option: Option): ((params: { dataIndex: number }[]) => string) =>
-    (option.tooltip as { formatter: (params: { dataIndex: number }[]) => string }).formatter;
+const getTooltipFormatter = (
+    option: Option
+): ((params: { dataIndex: number; marker?: string; seriesName?: string }[]) => string) =>
+    (
+        option.tooltip as {
+            formatter: (
+                params: { dataIndex: number; marker?: string; seriesName?: string }[]
+            ) => string;
+        }
+    ).formatter;
 
 describe('isBinInRange', () => {
     it('includes bins fully inside the range', () => {
@@ -128,6 +136,31 @@ describe('buildHistogramOption', () => {
         expect(xAxis.axisLabel.formatter(0)).toBe('0');
         expect(xAxis.axisLabel.formatter(10)).toBe('50');
         expect(xAxis.axisLabel.formatter(20)).toBe('100');
+    });
+
+    it('renders named comparison series on the same bin axis with stable colors', () => {
+        const option = buildHistogramOption(normal, undefined, {
+            showAxes: true,
+            series: [
+                { id: 'tag-a', label: 'Reviewed', data: normal },
+                {
+                    id: 'tag-b',
+                    label: 'Priority',
+                    data: { binEdges: normal.binEdges, counts: normal.counts.map(() => 1) }
+                }
+            ]
+        });
+        const series = option.series as {
+            name: string;
+            data: BarDatum[];
+        }[];
+
+        expect(series.map(({ name }) => name)).toEqual(['Reviewed', 'Priority']);
+        expect(series[0].data.map(({ value }) => value[0])).toEqual(
+            normal.counts.map((_, index) => index + 0.5)
+        );
+        expect(series[0].data[0].itemStyle.color).not.toBe(series[1].data[0].itemStyle.color);
+        expect((option.legend as { type: string }).type).toBe('scroll');
     });
 });
 

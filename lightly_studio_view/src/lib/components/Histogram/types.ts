@@ -10,6 +10,13 @@ export interface HistogramData {
     counts: number[];
 }
 
+/** A named histogram rendered on the same bin axis as sibling series. */
+export interface HistogramSeries {
+    id: string;
+    label: string;
+    data: HistogramData;
+}
+
 /** Inclusive value range used to highlight the selected bins. */
 export interface HistogramRange {
     min: number;
