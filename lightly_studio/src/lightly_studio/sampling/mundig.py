@@ -163,6 +163,52 @@ class Mundig:
             strength=strength,
         )
 
+    def add_subpart_diversity(
+        self,
+        embeddings: Iterable[Iterable[Iterable[float]]],
+        strength: float = 1.0,
+        stopping_condition_minimum_distance: float | None = None,
+    ) -> None:
+        """Add subpart diversity-based sampling using per-sample subpart embeddings.
+
+        Each sample may have zero or more subpart embeddings (e.g. annotation crops).
+        Diversity is computed across all subparts rather than whole-sample embeddings.
+
+        Args:
+            embeddings:
+                Ragged per-sample list of subpart embeddings.
+                The outer dimension is over samples. Each inner list contains
+                the embeddings of the subparts (crops) for that sample.
+                Samples with no subparts produce an empty inner list and remain
+                eligible for selection; they simply contribute no embedding signal.
+            strength:
+                The strength of the subpart diversity strategy.
+            stopping_condition_minimum_distance:
+                When a sample would be closer than this distance to the already
+                selected samples, selection stops. ``None`` disables the stopping
+                condition.
+        """
+        # Materialise the ragged input so we can iterate it multiple times.
+        subpart_embeddings_per_sample = [list(subparts) for subparts in embeddings]
+        self._check_consistent_input_size(len(subpart_embeddings_per_sample))
+
+        # Flatten subpart embeddings and build the sample → subpart index mapping.
+        flat_embeddings: list[Iterable[float]] = []
+        sample_to_subpart_indices: list[list[int]] = []
+        offset = 0
+        for subparts in subpart_embeddings_per_sample:
+            sample_to_subpart_indices.append(list(range(offset, offset + len(subparts))))
+            flat_embeddings.extend(subparts)
+            offset += len(subparts)
+
+        embeddings_ndarray = np.array(flat_embeddings, dtype=np.float32)
+        self.mundig.add_subpart_diversifying_strategy(
+            embeddings=embeddings_ndarray,
+            sample_to_subpart_indices=sample_to_subpart_indices,
+            strength=strength,
+            stopping_condition_minimum_distance=stopping_condition_minimum_distance,
+        )
+
     def _check_consistent_input_size(self, n_input_samples_strategy: int) -> None:
         """Assert that input samples count is consistent across strategies.
 

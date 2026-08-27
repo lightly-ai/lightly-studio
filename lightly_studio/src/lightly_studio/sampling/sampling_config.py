@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal, Union
+from typing import Annotated, Literal, Union
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -102,3 +102,23 @@ class MetadataBalancingStrategy(SamplingStrategy):
     strategy_name: Literal["metadata_balance"] = "metadata_balance"
     metadata_key: str
     target_distribution: MetadataValueToTarget | Literal["uniform"] | Literal["input"]
+
+class SubpartDiversityStrategy(SamplingStrategy):
+    """Sampling strategy based on diversity of annotation subparts (crops)."""
+
+    strategy_name: Literal["subpart_diversity"] = "subpart_diversity"
+    embedding_model_name: str | None = None
+    annotation_source_id: UUID | None = None
+
+
+Strategy = Annotated[
+    Union[
+        AnnotationClassBalancingStrategy,
+        EmbeddingDeduplicationStrategy,
+        EmbeddingDiversityStrategy,
+        EmbeddingSimilarityStrategy,
+        MetadataWeightingStrategy,
+        SubpartDiversityStrategy,
+    ],
+    Field(discriminator="strategy_name"),
+]
