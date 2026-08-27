@@ -452,48 +452,87 @@ body {
   padding: 0.05rem 0.25rem;
 }
 
+/* -- Search ---------------------------------------------------------------- */
+
+.md-search__form {
+  background-color: var(--ls-surface-mut);
+  border: 1px solid var(--ls-line);
+  border-radius: 7px;
+  box-shadow: none;
+  height: 1.6rem;
+  position: relative;
+}
+
+.md-search__form:hover {
+  background-color: var(--ls-surface-mut);
+  border-color: var(--ls-line-strong);
+}
+
+.md-search__input {
+  color: var(--ls-ink);
+  font-size: 0.65rem;
+}
+
+/* `--ls-muted`, not `--ls-faint`: the field is filled with the muted surface,
+   and the faint grey is only 4.3:1 against it. */
+.md-search__input::placeholder {
+  color: var(--ls-muted);
+}
+
+.md-search__icon {
+  color: var(--ls-faint);
+}
+
+.md-search__output {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+}
+
+.md-search-result__meta {
+  background-color: var(--ls-surface-sub);
+  color: var(--ls-muted);
+}
+
+/* Keyboard shortcut hint inside the search input */
+.search-shortcut-hint {
+  align-items: center;
+  display: flex;
+  opacity: 1;
+  pointer-events: none;
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: opacity 0.2s;
+}
+
+.search-shortcut-hint kbd {
+  align-items: center;
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius-sm);
+  box-shadow: none;
+  color: var(--ls-faint);
+  display: inline-flex;
+  font-family: var(--ls-font-mono);
+  font-size: 0.5rem;
+  font-weight: 500;
+  justify-content: center;
+  line-height: 1.4;
+  padding: 0.05rem 0.25rem;
+}
+
+/* Hide hint while search overlay is open */
+input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
+  display: none;
+}
+
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is
    restyled. Last in the file so anything not yet themed keeps its old look.
    ========================================================================== */
-
-/* Keyboard shortcut hint inside the search input */
-.md-search__form {
-    position: relative;
-}
-
-.search-shortcut-hint {
-    position: absolute;
-    right: 0.6rem;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    pointer-events: none;
-    opacity: 0.55;
-    transition: opacity 0.2s;
-}
-
-.search-shortcut-hint kbd {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.1rem 0.35rem;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 0.25rem;
-    font-family: inherit;
-    font-size: 0.6rem;
-    line-height: 1.4;
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
-}
-
-/* Hide hint while search overlay is open */
-input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
-    display: none;
-}
 
 /* Card styling with rounded corners */
 .md-typeset .grid.cards > ol > li,
