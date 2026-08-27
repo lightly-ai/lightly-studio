@@ -141,7 +141,7 @@
                 </div>
             </section>
 
-            <EvaluationRunConfusionMatrixSection evaluationRunId={run.id} />
+            <EvaluationRunConfusionMatrixSection datasetId={datasetId ?? ''} evaluationRunId={run.id} />
         </div>
     {/if}
 </li>

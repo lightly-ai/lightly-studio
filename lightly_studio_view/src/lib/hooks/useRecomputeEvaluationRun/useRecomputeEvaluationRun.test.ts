@@ -26,7 +26,7 @@ describe('useRecomputeEvaluationRun', () => {
         } as unknown as ReturnType<typeof useQueryClient>);
     });
 
-    it('invalidates evaluation runs and sample metrics queries on success', () => {
+    it('invalidates evaluation runs, sample metrics, and confusion matrix queries on success', () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
                 opts.onSuccess();
@@ -44,6 +44,9 @@ describe('useRecomputeEvaluationRun', () => {
         });
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: getEvaluationSampleMetricsInfoQueryKey({ path: { dataset_id: 'dataset-1' } })
+        });
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: ['getEvaluationConfusionMatrix', 'dataset-1', 'run-1']
         });
         expect(toast.success).toHaveBeenCalledWith('Evaluation recomputed');
     });
