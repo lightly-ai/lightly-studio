@@ -186,16 +186,22 @@ function buildTooltip(
         axisPointer: { type: 'line' },
         // Let the tooltip escape the short inline canvas instead of being clipped.
         confine: false,
-        formatter: (params: { dataIndex: number; marker?: string; seriesName?: string }[]) => {
-            const bin = bins[params[0]?.dataIndex];
+        formatter: (params: { dataIndex: number; marker?: string; seriesIndex?: number }[]) => {
+            const dataIndex = params[0]?.dataIndex;
+            const bin = bins[dataIndex];
             if (!bin) return '';
             if (comparisonSeries.length > 0) {
+                // echarts drops series that have no value at the hovered bin, so
+                // `params` is not positionally aligned with `comparisonSeries`.
+                const markers = new Map(
+                    params.map((param) => [param.seriesIndex, param.marker ?? ''])
+                );
                 const values = comparisonSeries
                     .map((series, index) => {
-                        const count = series.data.counts[params[0].dataIndex] ?? 0;
+                        const count = series.data.counts[dataIndex] ?? 0;
                         const total = series.data.counts.reduce((sum, value) => sum + value, 0);
                         const percent = total > 0 ? ` (${formatPercent(count / total)})` : '';
-                        return `${params[index]?.marker ?? ''}${escape(series.label)}: <b>${formatInteger(count)}</b>${percent}`;
+                        return `${markers.get(index) ?? ''}${escape(series.label)}: <b>${formatInteger(count)}</b>${percent}`;
                     })
                     .join('<br/>');
                 return `<b>${formatFloat(bin.start)} – ${formatFloat(bin.end)}</b><br/>${values}`;
@@ -259,27 +265,31 @@ function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[]
     const comparisonSeries = options.comparisonSeries ?? [];
     if (comparisonSeries.length > 0) {
         const colors = assignSeriesColors(comparisonSeries.map(({ id }) => id));
-        return comparisonSeries.map((series, seriesIndex) => ({
-            type: 'custom',
-            name: series.label,
-            renderItem: (_params: unknown, api: RenderItemApi) =>
-                renderHistogramBinForSeries(api, seriesIndex, comparisonSeries.length),
-            encode: { x: 0, y: 1 },
-            data: series.data.counts.map((count, index) => ({
-                value: [index + 0.5, count],
-                itemStyle: {
-                    color:
-                        !options.range ||
-                        isBinInRange(
-                            options.bins[index].start,
-                            options.bins[index].end,
-                            options.range
-                        )
-                            ? colors.get(series.id)
-                            : BAR_COLOR_DIMMED
-                }
-            }))
-        }));
+        return comparisonSeries.map((series, seriesIndex) => {
+            const seriesColor = colors.get(series.id);
+            return {
+                type: 'custom',
+                name: series.label,
+                // The legend swatch and the axis-tooltip markers are drawn from the
+                // series colour, not from the per-bin `itemStyle` below. Without both
+                // of these echarts falls back to its own palette and the labels stop
+                // matching the bars.
+                color: seriesColor,
+                itemStyle: { color: seriesColor },
+                renderItem: (_params: unknown, api: RenderItemApi) =>
+                    renderHistogramBinForSeries(api, seriesIndex, comparisonSeries.length),
+                encode: { x: 0, y: 1 },
+                data: series.data.counts.map((count, index) => {
+                    const bin = options.bins[index];
+                    const dimmed =
+                        options.range && bin && !isBinInRange(bin.start, bin.end, options.range);
+                    return {
+                        value: [index + 0.5, count],
+                        itemStyle: { color: dimmed ? BAR_COLOR_DIMMED : seriesColor }
+                    };
+                })
+            };
+        });
     }
     return [
         {

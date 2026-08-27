@@ -152,6 +152,8 @@ describe('buildHistogramOption', () => {
         });
         const series = option.series as {
             name: string;
+            color: string;
+            itemStyle: { color: string };
             data: BarDatum[];
         }[];
 
@@ -161,6 +163,50 @@ describe('buildHistogramOption', () => {
         );
         expect(series[0].data[0].itemStyle.color).not.toBe(series[1].data[0].itemStyle.color);
         expect((option.legend as { type: string }).type).toBe('scroll');
+    });
+
+    it('colors each comparison series at the series level so the legend matches the bars', () => {
+        const option = buildHistogramOption(normal, undefined, {
+            showAxes: true,
+            series: [
+                { id: 'tag-a', label: 'Reviewed', data: normal },
+                {
+                    id: 'tag-b',
+                    label: 'Priority',
+                    data: { binEdges: normal.binEdges, counts: normal.counts.map(() => 1) }
+                }
+            ]
+        });
+        const series = option.series as {
+            color: string;
+            itemStyle: { color: string };
+            data: BarDatum[];
+        }[];
+
+        // The legend swatch and tooltip markers read `color`/`itemStyle.color`; the
+        // bars read the per-bin `itemStyle`. All three must agree.
+        for (const entry of series) {
+            expect(entry.color).toBe(entry.itemStyle.color);
+            for (const bar of entry.data) {
+                expect(bar.itemStyle.color).toBe(entry.color);
+            }
+        }
+        expect(series[0].color).not.toBe(series[1].color);
+    });
+
+    it('dims comparison bars outside the selected range but keeps the legend color', () => {
+        const option = buildHistogramOption(
+            normal,
+            { min: normal.binEdges[0], max: normal.binEdges[1] },
+            { showAxes: true, series: [{ id: 'tag-a', label: 'Reviewed', data: normal }] }
+        );
+        const [series] = option.series as {
+            color: string;
+            data: BarDatum[];
+        }[];
+
+        expect(series.data[0].itemStyle.color).toBe(series.color);
+        expect(series.data[series.data.length - 1].itemStyle.color).not.toBe(series.color);
     });
 });
 
@@ -185,6 +231,43 @@ describe('axis tooltip snapping', () => {
             const [nearest] = series.indicesOfNearest('x', 'x', axisValue, null);
             expect(nearest).toBe(Math.floor(axisValue));
         }
+
+        chart.dispose();
+    });
+});
+
+describe('comparison series legend', () => {
+    // The legend swatch is painted from the series' resolved visual style, not
+    // from the per-bin itemStyle we set on the data. Exercise real ECharts so a
+    // regression in how the colour is declared is caught here.
+    it('gives each series the same visual colour that its bars use', () => {
+        const dom = document.createElement('div');
+        const chart = echarts.init(dom, null, { renderer: 'svg', width: 800, height: 300 });
+        const option = buildHistogramOption(normal, undefined, {
+            showAxes: true,
+            series: [
+                { id: 'tag-a', label: 'Reviewed', data: normal },
+                {
+                    id: 'tag-b',
+                    label: 'Priority',
+                    data: { binEdges: normal.binEdges, counts: normal.counts.map(() => 1) }
+                }
+            ]
+        });
+        chart.setOption(option);
+
+        const declared = (option.series as { data: BarDatum[] }[]).map(
+            (series) => series.data[0].itemStyle.color
+        );
+        const resolved = declared.map(
+            (_color, index) =>
+                // getModel/getSeriesByIndex are internal, untyped echarts APIs.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (chart as any).getModel().getSeriesByIndex(index).getData().getVisual('style').fill
+        );
+
+        expect(resolved).toEqual(declared);
+        expect(resolved[0]).not.toBe(resolved[1]);
 
         chart.dispose();
     });
