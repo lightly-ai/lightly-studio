@@ -162,9 +162,10 @@ export function buildHistogramOption(
     return {
         backgroundColor: 'transparent',
         tooltip: buildTooltip(bins, comparisonSeries),
-        legend: isGrouped
-            ? { type: 'scroll', top: 0, textStyle: { color: CHART_AXIS_LABEL.color } }
-            : undefined,
+        legend:
+            isGrouped && showAxes
+                ? { type: 'scroll', top: 0, textStyle: { color: CHART_AXIS_LABEL.color } }
+                : undefined,
         grid: buildGrid(showAxes, isGrouped),
         xAxis: buildXAxis(axisOptions),
         yAxis: buildYAxis(showAxes),

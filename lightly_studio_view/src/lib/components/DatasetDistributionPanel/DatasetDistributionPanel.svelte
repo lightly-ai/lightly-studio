@@ -201,8 +201,10 @@
     const activeData = $derived.by<CategoryCount[]>(() => {
         const baseData = activeCategorical ? categoricalData : activeSingleSeriesData;
         if (activeSeries.length === 0) return baseData;
-        const totals = new Map<string, number>();
         const baseByKey = new Map(baseData.map((item) => [item.id ?? item.label, item]));
+        // Seed totals with every current-view bucket at 0 so keys that no comparison
+        // tag contains are still included in the shared categorical axis.
+        const totals = new Map<string, number>(baseData.map((item) => [item.id ?? item.label, 0]));
         for (const series of activeSeries) {
             for (const item of series.data) {
                 const key = item.id ?? item.label;
