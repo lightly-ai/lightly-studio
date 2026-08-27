@@ -109,6 +109,7 @@ def test_get_all_with_payload__text_embedding_takes_precedence_over_order_by(
         session=db_session,
         collection_id=fixture.gt_collection_id,
         embedding_dimension=2,
+        set_as_default=True,
     )
     # Similarity orders these differently than the metric does in either direction, so the
     # expected order only holds if similarity wins.
