@@ -15,9 +15,9 @@ from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetri
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     dataset_resolver,
-    default_embedding_space_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
@@ -211,7 +211,7 @@ def test_delete_dataset__with_default_embedding_space(db_session: Session) -> No
     # Assert - collection and its default embedding space deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
     assert (
-        default_embedding_space_resolver.get_by_collection_id(
+        collection_embedding_model_resolver.get_by_collection_id(
             session=db_session, collection_id=collection_id
         )
         is None

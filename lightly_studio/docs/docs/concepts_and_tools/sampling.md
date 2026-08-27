@@ -26,6 +26,7 @@ Each strategy optimizes for a different goal. Start from what you are trying to 
 | Rank images by a number I have and keep the top ones (e.g. model confidence) | [Metadata weighting](#metadata-weighting) |
 | Find more images based on failure cases | [Similarity](#similarity) |
 | Balance how many objects of each class I have | [Class balancing](#class-balancing) |
+| Balance the selection over a metadata field | [Metadata balancing](#metadata-balancing) |
 
 You are not limited to one strategy. See
 [Combining multiple strategies](#combining-multiple-strategies) to weight several in a single run.
@@ -288,9 +289,79 @@ The three `target_distribution` options are:
 
 | Value | Behavior |
 |---|---|
-| `"uniform"` | Equal share for every class present in the dataset |
+| `"uniform"` | Equal share for every class present in the candidate input set |
 | `"input"` | Mirrors the class distribution of the candidate input set |
-| `{class: ratio, ...}` | Explicit target ratios; must sum to 1.0 |
+| `{class: ratio, ...}` | Explicit target ratios. Give a ratio to only some classes; the other classes then share the remainder to 1.0 |
+
+### Metadata balancing
+
+!!! tip "When to use"
+    Your data is concentrated on a few conditions and you want the selection spread over them
+    evenly, for example equal amounts of every weather or every recording city. Unlike
+    [class balancing](#class-balancing), this needs no annotations: it balances a metadata field
+    you already have.
+
+Metadata balancing selects samples based on the distribution of the values of one metadata field.
+The field must be categorical, which means its values are strings or booleans. To rank samples by a
+numeric field instead, use [metadata weighting](#metadata-weighting).
+
+```py
+import lightly_studio as ls
+
+# Load your dataset
+dataset = ls.ImageDataset.load_or_create()
+
+# Option 1: Balance the values uniformly (e.g. equal amounts of every weather)
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_uniform",
+    metadata_key="weather",
+    target_distribution="uniform",
+)
+
+# Option 2: Mirror the value distribution of the input set
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_input",
+    metadata_key="weather",
+    target_distribution="input",
+)
+
+# Option 3: Define a specific target distribution (e.g. 30% sunny, 70% rainy)
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_custom",
+    metadata_key="weather",
+    target_distribution={"sunny": 0.3, "rainy": 0.7},
+)
+```
+
+The `target_distribution` options are the same as for [class balancing](#class-balancing), but they
+apply to the values of the metadata field:
+
+| Value | Behavior |
+|---|---|
+| `"uniform"` | Equal share for every value present in the candidate input set |
+| `"input"` | Mirrors the value distribution of the candidate input set |
+| `{value: ratio, ...}` | Explicit target ratios. Give a ratio to only some values; the other values then share the remainder to 1.0 |
+
+A boolean field is balanced over its two values. Name them with `True` and `False`, or with
+the lowercase strings `"true"` and `"false"`:
+
+```py
+# Select 20% blurry images and 80% sharp ones.
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_blur",
+    metadata_key="is_blurry",
+    target_distribution={True: 0.2, False: 0.8},
+)
+```
+
+Samples that have no value for the field stay available for selection, but the strategy does not
+move the selection towards or away from them. To balance more than one field, combine one strategy
+per field with [multiple strategies](#combining-multiple-strategies). Each field is then balanced on
+its own, not over the combinations of their values.
 
 ## Running a sampling
 

@@ -18,9 +18,9 @@ from lightly_studio.models.image import ImageCreate
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     dataset_resolver,
-    default_embedding_space_resolver,
     embedding_model_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
@@ -383,7 +383,7 @@ def test_deep_copy__with_default_embedding_space(db_session: Session) -> None:
     copied_model_id = copied_models[0].embedding_model_id
     assert copied_model_id != embedding_model.embedding_model_id
 
-    copied_default_id = default_embedding_space_resolver.get_by_collection_id(
+    copied_default_id = collection_embedding_model_resolver.get_by_collection_id(
         session=db_session, collection_id=copied.collection_id
     )
     assert copied_default_id == copied_model_id

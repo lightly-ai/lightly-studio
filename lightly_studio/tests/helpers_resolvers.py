@@ -37,8 +37,8 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
-    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -310,8 +310,8 @@ def create_embedding_model(  # noqa: PLR0913
     """Helper function to create a embedding model.
 
     With ``set_as_default`` the model is recorded as the collection's default embedding
-    model, so ``default_embedding_space_resolver.get_by_collection_id`` resolves to it. It
-    is off by default to avoid the ``default_embedding_space`` foreign key blocking model
+    model, so ``collection_embedding_model_resolver.get_by_collection_id`` resolves to it. It
+    is off by default to avoid the ``collection_embedding_model`` foreign key blocking model
     or collection deletes in tests that do not need a default.
     """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
@@ -330,7 +330,7 @@ def create_embedding_model(  # noqa: PLR0913
         ),
     )
     if set_as_default:
-        default_embedding_space_resolver.set_default(
+        collection_embedding_model_resolver.set_default(
             session=session,
             collection_id=collection_id,
             embedding_model_id=model.embedding_model_id,
