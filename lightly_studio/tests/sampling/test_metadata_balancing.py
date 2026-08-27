@@ -170,6 +170,49 @@ def test_get_metadata_balancing_data__more_values_than_balanced(db_session: Sess
     )
 
 
+def test_get_metadata_balancing_data__target_values_at_limit(db_session: Session) -> None:
+    """Accepts an explicit target that holds exactly as many values as are balanced."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session, metadata=["sunny", "rainy"], metadata_key="weather"
+    )
+    target_distribution = {
+        f"value_{index:03d}": 0.0 for index in range(metadata_balancing.MAX_BALANCED_VALUES)
+    }
+
+    value_distributions, target_values = metadata_balancing.get_metadata_balancing_data(
+        session=db_session,
+        strat=MetadataBalancingStrategy(
+            metadata_key="weather", target_distribution=target_distribution
+        ),
+        collection_id=collection_id,
+        input_sample_ids=_all_sample_ids(session=db_session, collection_id=collection_id),
+    )
+
+    # No sample matches a target value, so both fall into the appended "other" column.
+    assert value_distributions.shape == (2, metadata_balancing.MAX_BALANCED_VALUES + 1)
+    assert len(target_values) == metadata_balancing.MAX_BALANCED_VALUES + 1
+
+
+def test_get_metadata_balancing_data__too_many_target_values(db_session: Session) -> None:
+    """Rejects an explicit target that holds more values than are balanced."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session, metadata=["sunny", "rainy"], metadata_key="weather"
+    )
+    target_distribution = {
+        f"value_{index:03d}": 0.0 for index in range(metadata_balancing.MAX_BALANCED_VALUES + 1)
+    }
+
+    with pytest.raises(ValueError, match="supports at most"):
+        metadata_balancing.get_metadata_balancing_data(
+            session=db_session,
+            strat=MetadataBalancingStrategy(
+                metadata_key="weather", target_distribution=target_distribution
+            ),
+            collection_id=collection_id,
+            input_sample_ids=_all_sample_ids(session=db_session, collection_id=collection_id),
+        )
+
+
 @pytest.mark.parametrize(
     ("metadata", "metadata_key", "balanced_key", "expected_error"),
     [
