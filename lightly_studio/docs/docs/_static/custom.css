@@ -782,6 +782,74 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   padding-left: 0.7rem;
 }
 
+@media screen and (max-width: 76.234375em) {
+  /* Material colors the drawer's current page with the link accent at (0,3,0),
+     which is the right color but on the wrong element — it paints every
+     ancestor section of the current page, not the page. Restate it so only the
+     accent pill below carries the mark. */
+  .md-sidebar--primary .md-nav--primary .md-nav__item--active > .md-nav__link {
+    color: var(--ls-body);
+  }
+
+  .md-sidebar--primary .md-nav--primary .md-nav__link--active {
+    color: var(--ls-accent);
+  }
+
+  /* In the drawer, a section's pages show inline instead of as a separate
+     slide-in panel, mirroring the desktop sidebar.
+
+     Both levels, not just the second. Material stacks every nested panel over
+     the whole drawer and slides in the one whose toggle is checked, and
+     `navigation.expand` checks all of them — so the section the reader is in
+     covers the root panel, and with it the tab strip, which is the one control
+     that gets them out of that section. */
+  .md-sidebar--primary .md-nav[data-md-level="1"],
+  .md-sidebar--primary .md-nav[data-md-level="2"]:not(.md-nav--secondary) {
+    height: auto;
+    opacity: 1;
+    position: static;
+    transform: none;
+    z-index: auto;
+  }
+
+  /* Material makes every list that follows a `.md-nav__title` its own scroller
+     with `scroll-snap-type: y mandatory`, on the assumption that only one panel
+     is ever on screen. Inlined, each of those nested lists captures the snap
+     points of the links inside it — a snap target belongs to its nearest
+     scroll container — leaving the drawer's own list snapping only to the
+     handful of section headings. Mandatory snap then refuses to rest anywhere
+     between them, so on a short viewport whole runs of links cannot be scrolled
+     to at all. The nested lists are not scrollers any more, so say so. */
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list,
+  .md-sidebar--primary .md-nav[data-md-level="2"] > .md-nav__list {
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  /* The inline panels no longer need their slide-in back-button title, nor the
+     drill-down chevron on the heading that used to open them. A level-1 heading
+     is a `.md-nav__container` when the section has an index page and a plain
+     `.md-nav__link` when it does not, so the chevron is matched as a descendant
+     of either. */
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__title,
+  .md-sidebar--primary .md-nav[data-md-level="2"] > .md-nav__title,
+  .md-sidebar--primary
+    .md-nav[data-md-level="0"]
+    > .md-nav__list
+    > .md-nav__item:has(> .md-nav[data-md-level="1"])
+    > :is(.md-nav__link, .md-nav__container)
+    .md-nav__icon,
+  .md-sidebar--primary
+    .md-nav[data-md-level="1"]
+    > .md-nav__list
+    > .md-nav__item:has(> .md-nav[data-md-level="2"])
+    > .md-nav__link
+    > .md-nav__icon {
+    display: none;
+  }
+}
+
+/* ==========================================================================
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is
@@ -878,32 +946,6 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 .md-footer-meta {
     display: none !important;
 }
-
-  /* Once a top-level tab is opened, show its section level (and the pages
-     underneath) expanded inline, mirroring the desktop left menu. The tab
-     panels (level 1) still slide in on tap; only the level-2 section panels are
-     flattened from a separate drill-down into a static, always-visible block. */
-  .md-sidebar--primary .md-nav[data-md-level="2"]:not(.md-nav--secondary) {
-    height: auto;
-    opacity: 1;
-    position: static;
-    transform: none;
-    z-index: auto;
-  }
-
-  /* The inline section panels no longer need their slide-in back-button title
-     or the drill-down chevron on the section heading. */
-  .md-sidebar--primary .md-nav[data-md-level="2"] > .md-nav__title,
-  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:has(> .md-nav[data-md-level="2"]) > .md-nav__link > .md-nav__icon {
-    display: none;
-  }
-}
-
-.md-sidebar--primary .md-nav__item--section:has(> .md-nav__container) ~ .md-nav__item--section:has(> .md-nav__container),
-.md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested ~ .md-nav__item--nested {
-  margin-top: 1.3rem;
-}
-
 
 /* Bold the active top-level menu item in the header navigation tabs */
 .md-tabs__item--active .md-tabs__link {
