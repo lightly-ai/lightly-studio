@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal
+from typing import Literal, Union
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 AnnotationsClassName = str
 AnnotationClassToTarget = dict[AnnotationsClassName, float]
+
+# Values of a boolean key can be named either as booleans or as their lowercase names.
+MetadataValueName = Union[str, bool]
+MetadataValueToTarget = dict[MetadataValueName, float]
 
 
 class SamplingConfig(BaseModel):
@@ -79,3 +83,22 @@ class AnnotationClassBalancingStrategy(SamplingStrategy):
     strategy_name: Literal["balance"] = "balance"
     target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
     annotation_source_id: UUID | None = None
+
+
+class MetadataBalancingStrategy(SamplingStrategy):
+    """Sampling strategy that balances the selection over one categorical metadata key.
+
+    Balances a single ``string`` or ``boolean`` key over at most 100 values. Combine one
+    strategy per key to balance several keys, each on its own rather than over the
+    combinations of their values. Samples without a value for the key are unaffected but
+    stay available for selection.
+
+    An explicit target distribution names the values of a ``boolean`` key either as
+    ``True`` and ``False`` or as the lowercase strings ``"true"`` and ``"false"``. It may
+    give a target to only some values; the remaining values then share the target left
+    to 1.0.
+    """
+
+    strategy_name: Literal["metadata_balance"] = "metadata_balance"
+    metadata_key: str
+    target_distribution: MetadataValueToTarget | Literal["uniform"] | Literal["input"]
