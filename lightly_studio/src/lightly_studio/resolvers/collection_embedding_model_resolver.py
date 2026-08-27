@@ -6,12 +6,12 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 
 
 def set_default(
     session: Session, collection_id: UUID, embedding_model_id: UUID
-) -> DefaultEmbeddingSpaceTable:
+) -> CollectionEmbeddingModelTable:
     """Set (or replace) the default embedding space of a collection.
 
     A collection has at most one default, so an existing row is updated in place rather
@@ -27,7 +27,7 @@ def set_default(
     """
     default = _get_by_collection_id(session=session, collection_id=collection_id)
     if default is None:
-        default = DefaultEmbeddingSpaceTable(
+        default = CollectionEmbeddingModelTable(
             collection_id=collection_id, embedding_model_id=embedding_model_id
         )
     else:
@@ -62,10 +62,10 @@ def delete_by_collection_id(session: Session, collection_id: UUID) -> bool:
 
 def _get_by_collection_id(
     session: Session, collection_id: UUID
-) -> DefaultEmbeddingSpaceTable | None:
+) -> CollectionEmbeddingModelTable | None:
     """Return the collection's default embedding space row, or None if it has none."""
     return session.exec(
-        select(DefaultEmbeddingSpaceTable).where(
-            DefaultEmbeddingSpaceTable.collection_id == collection_id
+        select(CollectionEmbeddingModelTable).where(
+            CollectionEmbeddingModelTable.collection_id == collection_id
         )
     ).one_or_none()
