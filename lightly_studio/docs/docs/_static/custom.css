@@ -1,3 +1,230 @@
+/* ==========================================================================
+   LightlyStudio docs theme
+
+   Two schemes over Material for MkDocs, both taken from the design mock:
+     default — "Paper", neutral greys on white
+     slate   — "Console", the same page in near-blacks
+
+   The mock's own accent is a royal blue. The accent here is the mark's instead:
+   `_static/lightly_mark.svg` is a #3ad9c6 to #1aa3e4 gradient, and the blue end
+   of it is what links, the current page and the active tab are drawn in. Both
+   ends are too bright to set text in — #1aa3e4 is 2.8:1 on white — so the text
+   accent is that hue darkened to clear 4.5:1 and `--ls-accent-solid` keeps the
+   mark's own value for fills and rules, which carry no text.
+
+   Structure: full-bleed, three columns. Navigation lives in one tall left
+   panel, scoped by three tabs in the header; the contents list mirrors it on
+   the right. Both panels are a shade off the article and closed by a hairline.
+   Small mono caps are the label register throughout — sidebar groups, the
+   contents caption, table headers, code block headers, footer columns — and
+   nothing else uses that face. The accent marks links and the current page,
+   and nothing else uses that color.
+
+   Section order: tokens, Material variable mapping, then components in the
+   order they appear on a page (header, sidebar, article, TOC, footer).
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Design tokens
+   ========================================================================== */
+
+:root {
+  --ls-font-display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
+  --ls-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --ls-radius-sm: 5px;
+  --ls-radius: 9px;
+  --ls-radius-lg: 10px;
+
+  /* The sidebars are pinned below the header and sized against it, so the two
+     have to stay in step. */
+  --ls-header-height: 2.7rem;
+  --ls-sidebar-width: 13.2rem;
+  --ls-toc-width: 10.4rem;
+
+  /* Code panels are the same near-black in both schemes, so they do not flip.
+     The slate scheme overrides `surface` and `edge` further down: against a
+     near-black page the panel needs an edge to exist at all. */
+  --ls-code-surface: #0d0d0d;
+  --ls-code-head: #1a1a1a;
+  --ls-code-edge: #262626;
+  --ls-code-ink: #dedede;
+  --ls-code-label: #767676;
+  /* Lighter than `label`, because the header strip it sits on is lighter than
+     the panel. #767676 drops below 4.5:1 there. */
+  --ls-code-head-ink: #949494;
+}
+
+[data-md-color-scheme="default"] {
+  --ls-surface: #ffffff;
+  --ls-surface-sub: #fafafa;
+  --ls-surface-mut: #f6f6f6;
+
+  --ls-line: #e4e4e4;
+  --ls-line-hair: #eeeeee;
+  --ls-line-strong: #dcdcdc;
+
+  --ls-ink: #0d0d0d;
+  --ls-ink-soft: #2b2b2b;
+  --ls-body: #4a4a4a;
+  --ls-muted: #6e6e6e;
+  --ls-faint: #767676;
+
+  /* The mark's #1aa3e4 at 36% lightness, same hue. 5.0:1 on the page and 4.6:1
+     on the tint below, which is the pair that has to hold: the current page in
+     the sidebar is accent text on that tint, at 13px. */
+  --ls-accent: #1277a5;
+  --ls-accent-hover: #0d5b7e;
+  --ls-accent-solid: #1aa3e4;
+  --ls-accent-surface: #eaf7fd;
+  --ls-on-accent: #ffffff;
+
+  --ls-warn: #a8681a;
+  --ls-danger: #cf3b28;
+  --ls-danger-surface: #fdf3f1;
+
+  /* What a callout's fill and edge are mixed from, and how much of the type
+     color goes in. See section 7. */
+  --ls-adm-base: var(--ls-surface);
+  --ls-adm-tint: 8%;
+  --ls-adm-tint-loud: 12%;
+  --ls-adm-edge: 26%;
+  --ls-adm-edge-loud: 40%;
+}
+
+[data-md-color-scheme="slate"] {
+  --ls-surface: #0a0a0a;
+  --ls-surface-sub: #0d0d0d;
+  --ls-surface-mut: #151515;
+
+  /* The default panel is #0d0d0d on this #0a0a0a page: 1.02:1, which reads as
+     no panel at all. Lifting the fill barely helps — WCAG's +0.05 floor
+     compresses ratios between two near-blacks. The border is what draws the
+     boundary. */
+  --ls-code-surface: #151515;
+  --ls-code-head: #1c1c1c;
+  --ls-code-edge: #2e2e2e;
+
+  --ls-line: #262626;
+  --ls-line-hair: #1c1c1c;
+  --ls-line-strong: #3a3a3a;
+
+  --ls-ink: #ffffff;
+  --ls-ink-soft: #c9c9c9;
+  --ls-body: #a8a8a8;
+  --ls-muted: #8c8c8c;
+  /* The mock's faintest grey is #6e6e6e, which is 3.9:1 on this page — under
+     the floor for the small print it is used on. #808080 is 4.9:1 and still
+     reads as the quietest of the four. */
+  --ls-faint: #808080;
+
+  /* The mark's blue lifted rather than darkened — on a near-black page the
+     brightness that made it unusable for text is what makes it readable. */
+  --ls-accent: #4fc0f0;
+  --ls-accent-hover: #9adcf7;
+  --ls-accent-solid: #1aa3e4;
+  --ls-accent-surface: #0e2b39;
+  --ls-on-accent: #0a0a0a;
+
+  --ls-warn: #e0a83a;
+  --ls-danger: #ef6a55;
+  --ls-danger-surface: #2a1310;
+
+  /* Mixed from the page itself here, which is already a neutral near-black —
+     13% of the accent into #0a0a0a lands on the mock's #0e1b2e, and 40% on its
+     #1b3a6b edge.
+
+     Both tints are roughly double the light scheme's, and the edges higher
+     again: two near-blacks 5% apart are the same near-black — the WCAG floor
+     that flattens the code panel above flattens a callout fill too — so here
+     the border is most of what draws the box. */
+  --ls-adm-base: var(--ls-surface);
+  --ls-adm-tint: 13%;
+  --ls-adm-tint-loud: 20%;
+  --ls-adm-edge: 40%;
+  --ls-adm-edge-loud: 56%;
+}
+
+/* ==========================================================================
+   2. Material variable mapping
+   ========================================================================== */
+
+/* Qualified with `body` so these outrank Material's own scheme blocks, which
+   use a bare attribute selector. `--md-typeset-a-color` in particular is
+   redefined per scheme and otherwise wins. */
+body[data-md-color-scheme="default"],
+body[data-md-color-scheme="slate"] {
+  --md-default-bg-color: var(--ls-surface);
+  --md-default-bg-color--light: var(--ls-surface-sub);
+  --md-default-bg-color--lighter: var(--ls-surface-mut);
+  --md-default-fg-color: var(--ls-ink);
+  --md-default-fg-color--light: var(--ls-body);
+  --md-default-fg-color--lighter: var(--ls-muted);
+  --md-default-fg-color--lightest: var(--ls-line);
+
+  --md-typeset-color: var(--ls-body);
+  --md-typeset-a-color: var(--ls-accent);
+  --md-typeset-mark-color: var(--ls-accent-surface);
+  --md-typeset-table-color: var(--ls-line);
+  --md-typeset-del-color: var(--ls-danger-surface);
+  --md-typeset-ins-color: var(--ls-accent-surface);
+
+  /* The header reads as page chrome, not as a brand slab. */
+  --md-primary-fg-color: var(--ls-surface);
+  --md-primary-fg-color--light: var(--ls-surface-sub);
+  --md-primary-fg-color--dark: var(--ls-surface-mut);
+  --md-primary-bg-color: var(--ls-ink);
+  --md-primary-bg-color--light: var(--ls-muted);
+
+  --md-accent-fg-color: var(--ls-accent);
+  --md-accent-fg-color--transparent: var(--ls-accent-surface);
+  --md-accent-bg-color: var(--ls-on-accent);
+
+  /* Inline code only. Fenced blocks are restyled dark further down. */
+  --md-code-bg-color: var(--ls-surface-mut);
+  --md-code-fg-color: var(--ls-ink);
+
+  --md-footer-bg-color: var(--ls-surface);
+  --md-footer-bg-color--dark: var(--ls-surface-sub);
+  --md-footer-fg-color: var(--ls-ink);
+  --md-footer-fg-color--light: var(--ls-muted);
+  --md-footer-fg-color--lighter: var(--ls-faint);
+
+  --md-shadow-z1: none;
+  --md-shadow-z2: none;
+  --md-shadow-z3: none;
+}
+
+/* Syntax colors for the near-black code panel, which both schemes use. The
+   mock's own snippets are a flat #dedede; a real code block needs more than
+   that, so the set is deliberately short and comes off the mark: its blue for
+   the language's own words, its teal for literals, one warm hue for numbers so
+   they do not read as either, and grey for everything structural. Three hues
+   and two of them are the logo. */
+body[data-md-color-scheme="default"],
+body[data-md-color-scheme="slate"] {
+  --md-code-hl-color: rgba(26, 163, 228, 0.22);
+  --md-code-hl-number-color: #e0a87a;
+  --md-code-hl-special-color: #5cc8f0;
+  --md-code-hl-function-color: #5cc8f0;
+  --md-code-hl-constant-color: #8fd8f5;
+  --md-code-hl-keyword-color: #5cc8f0;
+  --md-code-hl-string-color: #3ad9c6;
+  --md-code-hl-name-color: #dedede;
+  --md-code-hl-operator-color: #8c8c8c;
+  --md-code-hl-punctuation-color: #8c8c8c;
+  --md-code-hl-comment-color: #767676;
+  --md-code-hl-generic-color: #8c8c8c;
+  --md-code-hl-variable-color: #dedede;
+}
+
+/* ==========================================================================
+
+/* ==========================================================================
+   Legacy rules carried from the previous theme, removed as each region is
+   restyled. Last in the file so anything not yet themed keeps its old look.
+   ========================================================================== */
+
 /* Keyboard shortcut hint inside the search input */
 .md-search__form {
     position: relative;
@@ -92,33 +319,6 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     box-shadow: 0 2px 8px rgba(9, 28, 30, 0.2) !important; /* Subtle shadow */
     background-color: #091c1e !important; /* Use header dark color on hover */
     border-color: #091c1e !important; /* Match border color */
-}
-
-/* Custom menu bar color */
-:root {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-    --lightly-nav-active-color: #0a6f99;
-}
-
-/* Override Material theme primary colors */
-[data-md-color-scheme="default"] {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-}
-
-[data-md-color-scheme="slate"] {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
 }
 
 /* Custom logo styling - increased size */
