@@ -31,6 +31,7 @@ from lightly_studio.models.embedding_model import (
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
     collection_resolver,
     embedding_model_resolver,
     sample_embedding_resolver,
@@ -150,6 +151,21 @@ def test_register_multiple_models(
     # Verify both models are associated with the same collection and dataset
     assert all(model.collection_id == collection.collection_id for model in stored_models)
     assert all(model.dataset_id == collection.dataset_id for model in stored_models)
+
+    # Both models are linked to the collection, not only the default one.
+    linked_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert set(linked_model_ids) == {model_id1, model_id2}
+
+    # The DB default is the model registered with set_as_default=True. The second model,
+    # registered with set_as_default=False, must not override the existing default.
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        == model_id1
+    )
 
 
 def test_embed_text_with_default_model(
@@ -704,9 +720,15 @@ def test_default_model(
         collection_id=collection.collection_id,
         set_as_default=False,
     ).embedding_model_id
-    # The first model is always set as default.
+    # The first model is always set as default, both in memory and in the database.
     assert (
         embedding_manager._collection_id_to_default_model_id[collection.collection_id]
+        == first_model_id
+    )
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
         == first_model_id
     )
 
