@@ -634,6 +634,154 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 /* ==========================================================================
+   5. Left sidebar
+
+   A panel, not a column of links in the page: tinted a shade off the article
+   and closed by a rule down its right edge, so the reader's eye has a boundary
+   to stop at rather than a run of text that happens to end.
+
+   Group captions are small mono caps — the same label register as the code
+   block header strip, the TOC title and the footer columns. Pages sit under
+   them in the body face. The current page is the one accented thing in the
+   panel: accent text on an accent tint.
+   ========================================================================== */
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary {
+    background-color: var(--ls-surface-sub);
+    border-right: 1px solid var(--ls-line);
+    padding-top: 0.5rem;
+  }
+}
+
+.md-sidebar--primary .md-nav {
+  font-size: 0.65rem;
+}
+
+/* The full nav overflows on most screens; the scrollbar should not compete
+   with it. */
+.md-sidebar__scrollwrap {
+  scrollbar-color: var(--ls-line) transparent;
+  scrollbar-width: thin;
+}
+
+/* The site name already sits in the header; the drawer still needs it. */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary .md-nav--primary > .md-nav__title {
+    display: none;
+  }
+}
+
+.md-sidebar--primary .md-nav__list {
+  padding-left: 0;
+}
+
+.md-sidebar--primary .md-nav__item {
+  padding: 0;
+}
+
+.md-sidebar--primary .md-nav__link {
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-body);
+  font-weight: 400;
+  gap: 0.3rem;
+  margin-top: 0;
+  padding: 0.25rem 0.4rem;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.md-sidebar--primary .md-nav__link:hover {
+  background-color: var(--ls-surface-mut);
+  color: var(--ls-ink);
+}
+
+.md-sidebar--primary .md-nav__link--active,
+.md-sidebar--primary .md-nav__link--active:hover {
+  background-color: var(--ls-accent-surface);
+  color: var(--ls-accent);
+  font-weight: 600;
+}
+
+/* Material's default active marker; the pill replaces it. */
+.md-sidebar--primary .md-nav__link--active::before {
+  display: none;
+}
+
+/* -- Group captions -------------------------------------------------------- */
+
+/* Level 1 ("Concepts & Tools", "Python API"): the primary grouping, set as
+   mono caps. Uppercasing in CSS rather than in `nav:` keeps the section title
+   itself readable everywhere else it is used — the breadcrumb, the drawer's
+   back button, the tab mapping in mkdocs.yml. */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item--section
+  > :is(.md-nav__link, .md-nav__container) {
+  background-color: transparent;
+  color: var(--ls-muted);
+  cursor: default;
+  font-family: var(--ls-font-mono);
+  font-size: 0.525rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  margin: 0;
+  padding: 0 0.4rem 0.5rem;
+  text-transform: uppercase;
+}
+
+/* Level 2 ("Core Concepts", "Python API"): a run of pages inside a section that
+   is long enough to want a heading of its own. It reads as one of the items
+   around it, a half-step heavier, with its children indented under it and a
+   chevron to collapse them — not as a third label register. The section caption
+   above is what does the grouping; this only says where a run starts. */
+.md-sidebar--primary
+  .md-nav[data-md-level="1"]
+  > .md-nav__list
+  > .md-nav__item--nested
+  > :is(.md-nav__link, .md-nav__container) {
+  color: var(--ls-ink);
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+/* A section caption is a label, not a destination; nothing to hover. */
+.md-sidebar--primary .md-nav__item--section > .md-nav__link:hover,
+.md-sidebar--primary .md-nav__item--section > .md-nav__container:hover {
+  background-color: transparent;
+  color: inherit;
+}
+
+/* Under `navigation.indexes` a section that has an index page renders that
+   page's link *inside* the caption, so it inherits the caption's mono caps —
+   and, when it is the current page, takes the accent pill on top of them. A
+   filled pill of small caps reads as a banner, not as "you are here". The
+   accent on its own says the same thing and leaves the caption a caption.
+   (0,6,0), over the pill's (0,2,0). */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item--section
+  > .md-nav__container
+  > :is(.md-nav__link--active, .md-nav__link:hover) {
+  background-color: transparent;
+  color: var(--ls-accent);
+}
+
+/* Air between top-level groups. */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item
+  ~ .md-nav__item {
+  margin-top: 0.8rem;
+}
+
+/* Nested pages indent under their caption rather than sitting flush. */
+.md-sidebar--primary .md-nav[data-md-level="2"] .md-nav__link {
+  padding-left: 0.7rem;
+}
+
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is
@@ -731,50 +879,6 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     display: none !important;
 }
 
-/* Highlight the current page in the left and right navigation */
-.md-nav__link--active {
-  position: relative;
-}
-
-/* Set highlight color for the current page in the left navigation */
-.md-sidebar--primary .md-nav__link--active {
-  color: var(--lightly-nav-active-color);
-}
-
-.md-nav__link--active::before {
-  background-color: currentcolor;
-  border-radius: 999px;
-  bottom: 0.15em;
-  content: "";
-  left: -0.5rem;
-  position: absolute;
-  top: 0.15em;
-  width: 0.1rem;
-}
-
-/* Underline section headings in the left navigation */
-.md-sidebar--primary .md-nav__title {
-  color: var(--md-default-fg-color);
-}
-
-.md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested > .md-nav__link,
-.md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__link,
-.md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__container,
-.md-sidebar--primary .md-nav__item--section > .md-nav__container {
-  border-bottom: 0.05rem solid var(--md-default-fg-color--lightest);
-  color: var(--md-default-fg-color);
-  font-size: 0.75rem;
-  margin-top: 0;
-  padding-bottom: 0.2rem;
-}
-
-@media screen and (min-width: 76.25em) {
-  .md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__link {
-    display: none;
-  }
-}
-
-@media screen and (max-width: 76.234375em) {
   /* Once a top-level tab is opened, show its section level (and the pages
      underneath) expanded inline, mirroring the desktop left menu. The tab
      panels (level 1) still slide in on tap; only the level-2 section panels are
