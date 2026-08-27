@@ -173,9 +173,10 @@ def _landing_url(item: StructureItem) -> str | None:
         cannot read as a guard.
     """
     if isinstance(item, Page):
-        # `mypy .` runs without the `docs` dependency group, where every mkdocs
-        # symbol is `Any`; the annotation is what keeps `--warn-return-any` quiet
-        # there. See the `mkdocs.*` override in `pyproject.toml`.
+        # A local `uv run mypy .` resolves the default groups only, so mkdocs is
+        # absent and every symbol from it is `Any`; the annotation is what keeps
+        # `--warn-return-any` quiet there. See the `mkdocs.*` override in
+        # `pyproject.toml`. CI installs all groups and types this properly.
         page_url: str = item.url
         return page_url
     if isinstance(item, Section):
