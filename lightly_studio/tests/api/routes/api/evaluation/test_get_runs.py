@@ -5,64 +5,43 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
-from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
-from lightly_studio.models.collection import SampleType
-from tests.api.routes.api.evaluation import helpers
-from tests.helpers_resolvers import create_collection
+from lightly_studio.models.evaluation_run import EvaluationRunView
 
 
-def test_get_evaluation_runs(
-    test_client: TestClient, db_session: Session, mocker: MockerFixture
-) -> None:
-    collection_ids = {
-        name: create_collection(
-            session=db_session,
-            collection_name=name,
-            sample_type=SampleType.ANNOTATION,
-        ).collection_id
-        for name in ("gt_v1", "pred_v1", "gt_v2", "pred_v2")
-    }
-    gt_1_id = collection_ids["gt_v1"]
-    pred_1_id = collection_ids["pred_v1"]
-    gt_2_id = collection_ids["gt_v2"]
-    pred_2_id = collection_ids["pred_v2"]
-
+def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> None:
     run_1_id = uuid4()
     run_2_id = uuid4()
-    run_1_created_at = datetime(2026, 5, 18, 10, 0, 0, tzinfo=timezone.utc)
-    run_2_created_at = datetime(2026, 5, 17, 9, 30, 0, tzinfo=timezone.utc)
-    mock_runs = [
-        helpers.make_evaluation_run(
-            run_id=run_1_id,
+    views = [
+        EvaluationRunView(
+            id=run_1_id,
             name="run_1",
-            config_json={"iou_threshold": 0.5, "classwise": True},
-            created_at=run_1_created_at,
-            gt_annotation_collection_id=gt_1_id,
-            pred_annotation_collection_id=pred_1_id,
+            evaluation_run_configuration={"iou_threshold": 0.5, "classwise": True},
+            created_at=datetime(2026, 5, 18, 10, 0, 0, tzinfo=timezone.utc),
+            gt_annotation_source="gt_v1",
+            pred_annotation_source="pred_v1",
         ),
-        helpers.make_evaluation_run(
-            run_id=run_2_id,
+        EvaluationRunView(
+            id=run_2_id,
             name="run_2",
-            config_json={},
-            created_at=run_2_created_at,
-            gt_annotation_collection_id=gt_2_id,
-            pred_annotation_collection_id=pred_2_id,
+            evaluation_run_configuration={},
+            created_at=datetime(2026, 5, 17, 9, 30, 0, tzinfo=timezone.utc),
+            gt_annotation_source="gt_v2",
+            pred_annotation_source="pred_v2",
         ),
     ]
-    get_all_by_dataset_id = mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.get_runs.evaluation_run_resolver.get_all_by_dataset_id",
-        return_value=mock_runs,
+    list_views = mocker.patch(
+        "lightly_studio.api.routes.api.evaluation.get_runs.evaluation_run_resolver.list_views_by_dataset_id",
+        return_value=views,
     )
 
     dataset_id = uuid4()
     response = test_client.get(f"/api/datasets/{dataset_id}/evaluation/runs")
 
-    assert get_all_by_dataset_id.call_args.kwargs["dataset_id"] == dataset_id
+    assert list_views.call_args.kwargs["dataset_id"] == dataset_id
     assert response.status_code == HTTP_STATUS_OK
-    data = response.json()
-    assert data == [
+    assert response.json() == [
         {
             "id": str(run_1_id),
             "name": "run_1",
@@ -87,7 +66,7 @@ def test_get_evaluation_runs__empty_response(
 ) -> None:
     dataset_id = uuid4()
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.get_runs.evaluation_run_resolver.get_all_by_dataset_id",
+        "lightly_studio.api.routes.api.evaluation.get_runs.evaluation_run_resolver.list_views_by_dataset_id",
         return_value=[],
     )
 
