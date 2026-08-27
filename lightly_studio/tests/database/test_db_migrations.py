@@ -75,6 +75,26 @@ def _reset_postgres_database(engine_url: str) -> None:
         raw_engine.dispose()
 
 
+def _restore_shared_database_to_head(engine: Engine, engine_url: str) -> None:
+    """Return the session-scoped Postgres database to a clean schema at head.
+
+    These migration tests run against the ``postgres_url`` database, which is session
+    scoped and shared with every data test on the same xdist worker. A test that
+    downgrades or resets that database leaves the schema off head, so the data tests find
+    the wrong tables and their ``TRUNCATE`` teardown fails. Upgrading to head first
+    normalizes the table names (a downgrade may have renamed one), then a drop and a fresh
+    upgrade leave an empty schema matching the session engine's initial state.
+    """
+    config = db_migrations.get_alembic_config(engine_url=engine_url)
+    db_migrations._run_alembic_command(
+        engine=engine, config=config, fn=command.upgrade, revision="head"
+    )
+    _reset_postgres_database(engine_url=engine_url)
+    db_migrations._run_alembic_command(
+        engine=engine, config=config, fn=command.upgrade, revision="head"
+    )
+
+
 def test_postgres_fresh_database__upgrade_head(
     postgres_url: str | None,
 ) -> None:
@@ -98,6 +118,7 @@ def test_postgres_fresh_database__upgrade_head(
             ).scalar_one()
         assert version == head_revision
     finally:
+        _restore_shared_database_to_head(engine=engine._engine, engine_url=postgres_url)
         engine.close()
 
 
@@ -173,6 +194,7 @@ def test_postgres_embedding_model_dataset_id__backfilled(
         config.attributes.pop("connection", None)
         command.check(config)
     finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()
 
 
@@ -282,4 +304,5 @@ def test_postgres_collection_embedding_model__backfills_all_models(
             ).all()
         assert [str(model_id) for (model_id,) in remaining] == [older_model_id]
     finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()
