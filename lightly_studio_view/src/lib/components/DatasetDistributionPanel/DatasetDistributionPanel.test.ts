@@ -367,10 +367,11 @@ describe('DatasetDistributionPanel', () => {
         await waitFor(() => {
             const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
                 series: { data: { value: [number, number] }[] }[];
-                yAxis: { max: number };
+                yAxis: { max?: number };
             };
             expect(option.series[0].data.map((item) => item.value[1])).toEqual([25, 75]);
-            expect(option.yAxis.max).toBe(100);
+            // The axis is left unpinned so it scales to the tallest bin, not to 100%.
+            expect(option.yAxis.max).toBeUndefined();
         });
         expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
             '100% of 4 samples'
@@ -631,7 +632,8 @@ describe('DatasetDistributionPanel', () => {
                 xAxis: { max?: number };
             };
             expect(option.series[0].data.map((item) => item.value)).toEqual([80, 20]);
-            expect(option.xAxis.max).toBe(100);
+            // The axis is left unpinned so it scales to the tallest bar, not to 100%.
+            expect(option.xAxis.max).toBeUndefined();
         });
         expect(screen.getByText(/100% of 5 samples/)).toBeInTheDocument();
 
