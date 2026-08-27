@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.resolvers import collection_resolver
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     AnnotationClassToTarget,
@@ -309,7 +310,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         embedding_model_name: str | None = None,
-        annotation_source_id: UUID | None = None,
+        annotation_source: str | None = None,
         preselected_tag_name: str | None = None,
     ) -> None:
         """Select a diverse subset based on the embeddings of annotated subparts (crops).
@@ -319,22 +320,35 @@ class Sampling:
         images collectively cover a broad range of objects, not just a broad range
         of scene-level appearance.
 
-        When `annotation_source_id` is omitted, crops from all annotation sources
-        are merged. Pass `annotation_source_id` to restrict to one specific annotation source.
+        When `annotation_source` is omitted, crops from all annotation sources
+        are merged. Pass `annotation_source` to restrict to one specific annotation source.
 
         Args:
             n_samples_to_select: Number of samples to select.
             sampling_result_tag_name: Tag name for the sampling result.
             embedding_model_name: Name of the embedding model to use for crop samples.
                 If None, uses the only available model or raises if multiple exist.
-            annotation_source_id: Optional annotation source ID. When set, only
+            annotation_source: Optional annotation source name. When set, only
                 crops from that annotation source contribute embeddings. When omitted, crops
                 from all annotation sources are merged.
             preselected_tag_name: Optional tag containing samples that should be treated
                 as already selected. These samples are excluded from the result tag.
                 Pass the same name as `sampling_result_tag_name` to instead grow that
                 tag with the newly selected samples.
+
+        Raises:
+            ValueError: If `annotation_source` is given but no annotation source with
+                that name exists in the dataset.
         """
+        annotation_source_id = None
+        if annotation_source is not None:
+            annotation_source_id = collection_resolver.get_by_name(
+                session=self._session,
+                name=annotation_source,
+                parent_collection_id=self._dataset_id,
+            )
+            if annotation_source_id is None:
+                raise ValueError(f"Annotation source {annotation_source!r} not found.")
         strategy = SubpartDiversityStrategy(
             embedding_model_name=embedding_model_name,
             annotation_source_id=annotation_source_id,

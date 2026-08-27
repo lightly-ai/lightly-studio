@@ -403,15 +403,13 @@ dataset.query().sampling().subpart_diversity(
 ```
 
 By default, crop embeddings from all annotation sources are merged. To restrict diversity
-to a specific annotation source, pass `annotation_source_id`:
+to a specific annotation source, pass `annotation_source`:
 
 ```py
-from uuid import UUID
-
 dataset.query().sampling().subpart_diversity(
     n_samples_to_select=20,
     sampling_result_tag_name="diverse_objects_from_one_source",
-    annotation_source_id=UUID("your-annotation-source-id"),
+    annotation_source="ground_truth",
 )
 ```
 
