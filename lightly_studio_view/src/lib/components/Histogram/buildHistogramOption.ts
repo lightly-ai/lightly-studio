@@ -35,6 +35,8 @@ export interface HistogramOptionOptions {
      * edges, the x-axis domain and the tooltip's interval labels.
      */
     series?: HistogramSeries[];
+    /** Whether bin heights show raw counts or their share of the histogram total. */
+    valueMode?: 'number' | 'percentage';
 }
 
 /** A single bar: the half-open value interval `[start, end)` and its count. */
@@ -62,6 +64,7 @@ interface HistogramSeriesOptions {
     /** Selected value range; bins outside it render dimmed. Omit to highlight all. */
     range?: HistogramRange;
     comparisonSeries?: HistogramSeries[];
+    valueMode: NonNullable<HistogramOptionOptions['valueMode']>;
 }
 
 /**
@@ -152,6 +155,7 @@ export function buildHistogramOption(
     const showAxes = options.showAxes ?? false;
     const comparisonSeries = options.series ?? [];
     const isGrouped = comparisonSeries.length > 0;
+    const valueMode = options.valueMode ?? 'number';
     const axisOptions = {
         binCount: data.counts.length,
         domainMin: data.binEdges[0],
@@ -168,8 +172,8 @@ export function buildHistogramOption(
                 : undefined,
         grid: buildGrid(showAxes, isGrouped),
         xAxis: buildXAxis(axisOptions),
-        yAxis: buildYAxis(showAxes),
-        series: buildSeries({ bins, range, comparisonSeries })
+        yAxis: buildYAxis(showAxes, valueMode),
+        series: buildSeries({ bins, range, comparisonSeries, valueMode })
     };
 }
 
@@ -259,13 +263,22 @@ function buildXAxis(options: HistogramAxisOptions): Record<string, unknown> {
 }
 
 /** Value y-axis for counts, with whole-number ticks. */
-function buildYAxis(showAxes: boolean): Record<string, unknown> {
+function buildYAxis(
+    showAxes: boolean,
+    valueMode: NonNullable<HistogramOptionOptions['valueMode']>
+): Record<string, unknown> {
     return {
         type: 'value',
         show: showAxes,
         // Counts are whole numbers; avoid fractional tick labels.
-        minInterval: 1,
-        axisLabel: CHART_AXIS_LABEL,
+        minInterval: valueMode === 'number' ? 1 : undefined,
+        // Percentage mode is *not* pinned to 100%: ECharts scales the axis to the
+        // tallest bin (rounded up to a nice tick), so a flat distribution whose
+        // biggest bin is 12% fills the plot instead of hugging the baseline.
+        axisLabel:
+            valueMode === 'percentage'
+                ? { ...CHART_AXIS_LABEL, formatter: (value: number) => `${formatFloat(value)}%` }
+                : CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
 }
@@ -276,6 +289,9 @@ function buildYAxis(showAxes: boolean): Record<string, unknown> {
  */
 function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[] {
     const comparisonSeries = options.comparisonSeries ?? [];
+    const totalCount = options.bins.reduce((sum, bin) => sum + bin.count, 0);
+    const toChartValue = (count: number): number =>
+        options.valueMode === 'percentage' && totalCount > 0 ? (count / totalCount) * 100 : count;
     if (comparisonSeries.length > 0) {
         const colors = assignSeriesColors(comparisonSeries.map(({ id }) => id));
         return comparisonSeries.map((series, seriesIndex) => {
@@ -297,7 +313,7 @@ function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[]
                     const dimmed =
                         options.range && bin && !isBinInRange(bin.start, bin.end, options.range);
                     return {
-                        value: [index + 0.5, count],
+                        value: [index + 0.5, toChartValue(count)],
                         itemStyle: { color: dimmed ? BAR_COLOR_DIMMED : seriesColor }
                     };
                 })
@@ -315,7 +331,7 @@ function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[]
                 // actually over. A left-edge point would snap to the next bin once
                 // the cursor passed a bar's midpoint. `renderHistogramBin` steps
                 // back half a band to recover the left edge for drawing.
-                value: [index + 0.5, bin.count],
+                value: [index + 0.5, toChartValue(bin.count)],
                 itemStyle: {
                     color:
                         !options.range || isBinInRange(bin.start, bin.end, options.range)

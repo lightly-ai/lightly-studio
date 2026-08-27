@@ -74,6 +74,28 @@ describe('buildHistogramOption', () => {
         );
     });
 
+    it('normalizes bin heights to percentages of the histogram total', () => {
+        const option = buildHistogramOption(
+            { binEdges: [0, 0.5, 1], counts: [30, 70] },
+            undefined,
+            { showAxes: true, valueMode: 'percentage' }
+        );
+
+        expect(getBars(option).map((bar) => bar.value)).toEqual([
+            [0.5, 30],
+            [1.5, 70]
+        ]);
+        const yAxis = option.yAxis as {
+            max?: number;
+            axisLabel: { formatter: (value: number) => string };
+        };
+        // The axis is left unpinned so it scales to the tallest bin, not to 100%.
+        expect(yAxis.max).toBeUndefined();
+        expect(yAxis.axisLabel.formatter(25)).toBe('25%');
+        // Float artifacts from the auto-scaled ticks are rounded away.
+        expect(yAxis.axisLabel.formatter(0.30000000000000004)).toBe('0.3%');
+    });
+
     it('renders all bins in the accent color when no range is given', () => {
         expect(getColors(buildHistogramOption(normal)).every((c) => c === ACCENT)).toBe(true);
     });
@@ -109,6 +131,7 @@ describe('buildHistogramOption', () => {
         const html = getTooltipFormatter(buildHistogramOption(normal))([{ dataIndex: 9 }]);
         expect(html).toContain('45');
         expect(html).toContain('50');
+        expect(html).toContain('Count:');
         expect(html).toContain('%');
     });
 

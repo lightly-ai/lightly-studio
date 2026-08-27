@@ -25,6 +25,7 @@ from lightly_studio.sampling.sampling_config import EmbeddingDiversityStrategy
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 from tests.resolvers.video import helpers as video_helpers
+from tests.sampling import helpers_sampling
 
 
 def test_create_combination_sampling__diversity_success(
@@ -570,6 +571,76 @@ def test_create_combination_sampling__annotation_class_balancing_success(
         for annotation in selected_annotations
     )
     assert selected_class_frequencies == {"class_a": 1, "class_b": 1}
+
+
+def test_create_combination_sampling__metadata_balancing_success(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test successful metadata balancing sampling."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=["sunny", "sunny", "rainy"],
+        metadata_key="weather",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json={
+            "n_samples_to_select": 2,
+            "sampling_result_tag_name": "balanced_weather",
+            "strategies": [
+                {
+                    "strategy_name": "metadata_balance",
+                    "metadata_key": "weather",
+                    "target_distribution": "uniform",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 204
+    assert response.text == ""
+
+    created_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="balanced_weather", collection_id=collection_id
+    )
+    assert created_tag is not None
+
+    tag_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id]))
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id, filters=tag_filter
+    )
+    assert len(result.samples) == 2
+    assert "sample_2.jpg" in [sample.file_name for sample in result.samples]
+
+
+def test_create_combination_sampling__metadata_balancing_non_categorical_key(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test that balancing a non-categorical metadata key is rejected."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session,
+        metadata=[0.1, 0.2, 0.3],
+        metadata_key="sharpness",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json={
+            "n_samples_to_select": 2,
+            "sampling_result_tag_name": "balanced_sharpness",
+            "strategies": [
+                {
+                    "strategy_name": "metadata_balance",
+                    "metadata_key": "sharpness",
+                    "target_distribution": "uniform",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert "balancing requires" in response.json()["error"]
 
 
 def test_create_combination_sampling__image_filter_success(
