@@ -223,7 +223,7 @@ describe('DatasetDistributionPanel', () => {
         expect(screen.queryByTestId('dataset-distribution-source-select')).not.toBeInTheDocument();
     });
 
-    it('ranks comparison classes by aggregate counts and keeps tag series independent', async () => {
+    it('preserves base-view order when tags are selected and keeps tag series independent', async () => {
         render(DatasetDistributionPanel, {
             props: {
                 sources: [
@@ -248,13 +248,13 @@ describe('DatasetDistributionPanel', () => {
                 data: (number | { value: number; itemStyle: { opacity: number } })[];
             }[];
         };
-        // dog has the highest aggregate (0+5=5), car second (2+1=3).
-        expect(option.yAxis.data).toEqual(['dog', 'car']);
+        // Base-view order is preserved: car (10) before dog (5).
+        expect(option.yAxis.data).toEqual(['car', 'dog']);
         // Series names are preserved; each tag is independent (not merged).
         expect(option.series).toMatchObject([{ name: 'Reviewed' }, { name: 'Priority' }]);
         expect(option.series[0].data).toEqual([
-            { value: 0, itemStyle: { opacity: 1 } },
-            { value: 100, itemStyle: { opacity: 0.25 } }
+            { value: 100, itemStyle: { opacity: 0.25 } },
+            { value: 0, itemStyle: { opacity: 1 } }
         ]);
         expect(screen.getByText(/2 sample tags/)).toBeInTheDocument();
         expect(screen.queryByText(/annotations/)).not.toBeInTheDocument();
@@ -439,10 +439,10 @@ describe('DatasetDistributionPanel', () => {
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
             yAxis: { data: string[] };
         };
-        // Ranked by aggregate across tags: Bern (6) before Zurich (4).
-        expect(option.yAxis.data).toEqual(['bern', 'zurich']);
+        // Base-view order: Zurich first, Bern (comparison-only) appended.
+        expect(option.yAxis.data).toEqual(['zurich', 'bern']);
 
-        echartsMock.getClickHandler()?.({ dataIndex: 0 });
+        echartsMock.getClickHandler()?.({ dataIndex: 1 });
         expect(onCategoricalValueToggle).toHaveBeenCalledWith('city', 'Bern');
     });
 
@@ -456,7 +456,8 @@ describe('DatasetDistributionPanel', () => {
             }
         });
 
-        echartsMock.getClickHandler()?.({ dataIndex: 0 });
+        // Bern (comparison-only, no bucket) is at index 1 after base-view Zurich.
+        echartsMock.getClickHandler()?.({ dataIndex: 1 });
         expect(onCategoricalValueToggle).not.toHaveBeenCalled();
     });
 

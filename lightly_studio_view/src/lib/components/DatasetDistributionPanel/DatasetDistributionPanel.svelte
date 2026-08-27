@@ -198,7 +198,8 @@
             };
         })
     );
-    // Rank the shared axis by the aggregate across tags; individual series stay independent.
+    // Build the shared categorical axis; base-view order is preserved so bars
+    // don't jump when tags are toggled.
     const activeData = $derived.by<CategoryCount[]>(() => {
         const baseData = activeCategorical ? categoricalData : activeSingleSeriesData;
         if (activeSeries.length === 0) return baseData;
@@ -223,7 +224,8 @@
                 }
             }
         }
-        return [...totals].map(([key, count]) => ({ ...baseByKey.get(key)!, count }));
+        // Preserve base-view count so sorting stays stable when tags are toggled.
+        return [...totals.keys()].map((key) => baseByKey.get(key)!);
     });
     const displayedData = $derived(activeData);
     const configurationItems = $derived(
