@@ -2051,14 +2051,37 @@ html .md-typeset :is(.admonition, details) > :last-child {
 }
 
 /* ==========================================================================
-   Legacy rules carried from the previous theme, removed as each region is
-   restyled. Last in the file so anything not yet themed keeps its old look.
+   9. Python API reference (mkdocstrings)
    ========================================================================== */
 
-/* Indentation. doc strings */
+/* Indentation, doc strings */
 div.doc-contents:not(.first) {
-  padding-left: 50px;
-  border-left: .15rem solid var(--md-typeset-table-color);
+  border-left: 1px solid var(--ls-line);
+  padding-left: 1.2rem;
+}
+
+/* Signatures are code blocks too, but they are not snippets: each one sits
+   directly under a heading that already names it, so the "python" header strip
+   is 82 repetitions of something the reader can see. Drop the strip, tighten
+   the padding to a one-line block, and hold the copy control until hover so it
+   does not sit on the signature. */
+.md-typeset .highlight.doc-signature::before {
+  display: none;
+}
+
+.md-typeset .highlight.doc-signature > pre > code {
+  padding: 0.7rem 1.05rem;
+}
+
+.md-typeset .highlight.doc-signature .md-code__nav {
+  inset-block-start: 0.3rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.md-typeset .highlight.doc-signature:hover .md-code__nav,
+.md-typeset .highlight.doc-signature:focus-within .md-code__nav {
+  opacity: 1;
 }
 
 /* Hide mkdocstrings module badges */
@@ -2068,11 +2091,11 @@ code.doc-symbol-module {
 
 /* Smaller docstring section labels (Parameters, Returns, etc.) */
 .doc-contents .doc-section-title {
-  font-size: 0.75rem;
-  font-weight: 500;
+  color: var(--ls-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
-  color: inherit;
 }
 
 /* Make headings use python case instead of allcaps */
@@ -2090,56 +2113,62 @@ code.doc-symbol-module {
 /* inline-flex + align-items: center centers the icon and the label inside the
    pill. */
 .md-typeset .doc-badge {
-  display: inline-flex;
   align-items: center;
-  gap: 0.28em;
-  padding: 0.2rem 0.45rem;
   border-radius: 999px;
+  display: inline-flex;
+  font-family: var(--ls-font-mono);
   font-size: 0.5rem;
-  font-weight: 700;
+  font-weight: 600;
+  gap: 0.28em;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
   line-height: 1;
+  padding: 0.2rem 0.45rem;
+  text-transform: uppercase;
 }
 
 /* Pin the badge to the left of its member heading so it sits before the
    class/method name. The badge is anchored to its own `.doc-object` wrapper
    (see below), so class and method badges each align to their own heading. */
 .md-typeset .doc-badge--beta {
+  background-color: var(--ls-accent);
+  color: var(--ls-on-accent);
+  left: 0;
   position: absolute;
   top: 0.35rem;
-  left: 0;
-  color: #fff;
-  background-color: var(--md-accent-fg-color);
 }
 
 .md-typeset .doc-badge--beta::before {
-  content: "";
-  width: 0.9em;
-  height: 0.9em;
   background-color: currentcolor;
-  -webkit-mask-image: var(--doc-badge-icon--beta);
+  content: "";
+  height: 0.9em;
   mask-image: var(--doc-badge-icon--beta);
-  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
   mask-size: contain;
+  width: 0.9em;
+  -webkit-mask-image: var(--doc-badge-icon--beta);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
 }
 
 /* Each member has its own `.doc-object` positioning context, so the absolutely
    positioned badge aligns to that member's heading rather than the page. The
-   heading is indented to make room; the signature and body stay full width. */
+   heading is indented to make room; the signature and body stay full width.
+
+   Only the members that carry a badge. Twelve docstrings across the package do,
+   and indenting every heading in the reference by 68px on their account left
+   several hundred of them hanging off the article's left margin — and the ones
+   nested two levels deep hanging off it twice. */
 .md-typeset .doc-object {
   position: relative;
 }
 
-.md-typeset .doc-heading {
+.md-typeset .doc-object:has(> .doc-contents > p > .doc-badge--beta) > .doc-heading {
   padding-left: 3.4rem;
 }
 
 /* The badge is now out of flow, so collapse the otherwise-empty paragraph it
    used to occupy and avoid a blank line between the summary and the body. */
 .md-typeset .doc-contents > p:has(> .doc-badge--beta:only-child) {
-  margin: 0;
   line-height: 0;
+  margin: 0;
 }
