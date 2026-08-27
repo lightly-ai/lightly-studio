@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { ClassBalancingParams, StrategyParams } from '$lib/hooks/useStrategyBuilder';
-    import TargetDistributionModeSelect from './TargetDistributionModeSelect/TargetDistributionModeSelect.svelte';
+    import TargetDistributionModeSelect from '$lib/components/Sampling/forms/TargetDistributionModeSelect/TargetDistributionModeSelect.svelte';
     import StrengthField from '$lib/components/Sampling/forms/StrengthField/StrengthField.svelte';
-    import TargetDistribution from './TargetDistribution/TargetDistribution.svelte';
+    import TargetDistribution from '$lib/components/Sampling/forms/TargetDistribution/TargetDistribution.svelte';
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import { Label } from '$lib/components/ui/label';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
@@ -53,7 +53,7 @@
     {#if params.target_distribution_mode === 'dictionary'}
         <TargetDistribution
             targetDistribution={params.target_distribution}
-            {annotationLabels}
+            options={annotationLabels}
             onUpdate={(rows) => onUpdate({ target_distribution: rows })}
         />
     {/if}

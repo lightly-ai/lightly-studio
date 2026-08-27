@@ -85,6 +85,20 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     })
 }));
 
+let categoricalMetadataData: Record<string, { kind: string; value?: string }[]> | undefined =
+    undefined;
+
+vi.mock(
+    '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte',
+    () => ({
+        useCategoricalMetadataDistribution: () => ({
+            get data() {
+                return categoricalMetadataData;
+            }
+        })
+    })
+);
+
 const submitMock = vi.fn();
 let isSubmittingStore: Writable<boolean>;
 let loadingMessageStore: Writable<string>;
@@ -111,6 +125,7 @@ describe('SamplingCombinationDialog', () => {
         tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag', kind: 'sample' as const }]);
         annotationLabelsData = [];
         annotationCollectionsData = [];
+        categoricalMetadataData = undefined;
         submitMock.mockResolvedValue(undefined);
     });
 
