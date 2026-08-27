@@ -5,11 +5,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
+from sqlalchemy.orm import joinedload
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.annotations import annotation_ordering
 
@@ -44,5 +46,6 @@ def get_all_by_parent_sample_ids(
                 annotation_sample_id=col(AnnotationBaseTable.sample_id),
             )
         )
+        .options(joinedload(AnnotationBaseTable.sample).load_only(SampleTable.collection_id))  # type: ignore[arg-type]
     )
     return session.exec(annotations_statement).all()

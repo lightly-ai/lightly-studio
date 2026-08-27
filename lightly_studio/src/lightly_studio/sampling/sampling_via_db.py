@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 import numpy as np
 import sqlalchemy
 from numpy.typing import NDArray
+from sqlalchemy.orm import contains_eager
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_array
@@ -504,6 +505,7 @@ def _get_annotations_for_subpart_source(
             )
         )
         .where(col(SampleTable.collection_id) == annotation_source_id)
+        .options(contains_eager(AnnotationBaseTable.sample).load_only(SampleTable.collection_id))  # type: ignore[arg-type]
     )
     return list(session.exec(statement).all())
 
