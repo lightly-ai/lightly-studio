@@ -210,7 +210,7 @@ def test_delete_dataset__with_default_embedding_space(db_session: Session) -> No
     # Assert - collection and its default embedding space deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
     assert (
-        collection_embedding_model_resolver.get_by_collection_id(
+        collection_embedding_model_resolver.get_default_by_collection_id(
             session=db_session, collection_id=collection_id
         )
         is None

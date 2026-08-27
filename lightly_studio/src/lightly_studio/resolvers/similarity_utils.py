@@ -27,7 +27,7 @@ def get_distance_expression(
     if not text_embedding:
         return None, None
 
-    embedding_model_id = collection_embedding_model_resolver.get_by_collection_id(
+    embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=session, collection_id=collection_id
     )
 
