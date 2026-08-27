@@ -528,6 +528,112 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   display: none;
 }
 
+/* -- Repository link -------------------------------------------------------
+
+   The mark, the star count and the fork count. Material renders two more things
+   in the same block and both are already in this header: the repository name,
+   which is the wordmark at the other end of the row, and a version fact, which
+   is the release chip beside it.
+
+   `.md-source` carries its own `color: var(--md-primary-bg-color)`, mapped to
+   `--ls-ink` in section 1. Legible either way, but header chrome sits a step
+   below the ink.
+
+   Every rule is scoped to `.md-header__source`. The drawer renders the same
+   block through `partials/nav.html`, where the repository name is the only
+   thing naming the repository and has to stay.
+
+   Material builds this block as two stacked lines — an inline-block icon, an
+   inline-block name pulled back over it with `margin-left: -2rem`, and a
+   `width: 100%` flex list of facts that wraps under the name. Drop the name and
+   that collapses: the facts line has no height and the icon lands on top of the
+   first counter. So the row is rebuilt as flex here rather than patched.
+
+   `[dir]` stands in for Material's `[dir=ltr]` on the three rules that carry it,
+   which are (0,3,0) and (0,2,1) — a bare class chain loses to them. Matching the
+   specificity and loading later is what wins.
+   ------------------------------------------------------------------------- */
+
+.md-header__source {
+  margin-left: 0.4rem;
+  max-width: none;
+  width: auto;
+}
+
+.md-header__source .md-source {
+  align-items: center;
+  color: var(--ls-body);
+  display: flex;
+  font-size: 0.6rem;
+  gap: 0.35rem;
+}
+
+.md-header__source .md-source:hover {
+  color: var(--ls-ink);
+}
+
+.md-header__source .md-source__icon {
+  align-items: center;
+  display: flex;
+  height: auto;
+  width: auto;
+}
+
+[dir] .md-header__source .md-source__icon svg {
+  height: 0.9rem;
+  margin: 0;
+  width: 0.9rem;
+}
+
+/* `font-size: 0` is what drops the repository name; the facts list below sets
+   its own size, so the counters survive it. */
+[dir] .md-header__source .md-source__icon + .md-source__repository,
+[dir] .md-header__source .md-source__repository {
+  display: flex;
+  font-size: 0;
+  margin: 0;
+  max-width: none;
+  overflow: visible;
+  padding: 0;
+}
+
+.md-header__source .md-source__facts {
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  margin: 0;
+  opacity: 1;
+  width: auto;
+}
+
+/* Material hangs each count's icon off `vertical-align: text-top`, which lines
+   the 12px glyph up with the top of an 11px content box — so it rides high over
+   the digits. Centre the two on each other instead, and let the row's own gap
+   do the spacing the icon's margin was doing. */
+.md-header__source .md-source__fact {
+  align-items: center;
+  display: flex;
+  gap: 0.1rem;
+}
+
+[dir] .md-header__source .md-source__fact::before {
+  margin: 0;
+}
+
+/* The counts get their height from a keyframe that animates 0 → .65rem once, on
+   load, with no fill mode — paired with `overflow: hidden`. A drawer that opens
+   on demand can afford that; a header that is always on screen cannot, and it
+   leaves the row measuring zero. The counts are not an entrance here. */
+.md-header__source .md-source__facts,
+.md-header__source .md-source__fact {
+  animation: none;
+  overflow: visible;
+}
+
+.md-header__source .md-source__fact--version {
+  display: none;
+}
+
+/* ==========================================================================
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is

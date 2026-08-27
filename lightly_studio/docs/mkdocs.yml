@@ -28,6 +28,11 @@ theme:
   font:
     text: IBM Plex Sans
     code: IBM Plex Mono
+  icon:
+    # The mark next to the star and fork counts in the header. Material defaults
+    # to `fontawesome/brands/git-alt`, a generic git mark; the repository is on
+    # GitHub and the rest of this theme's icons are Octicons.
+    repo: octicons/mark-github-16
   # `custom` opts out of Material's built-in color rules so the palette in
   # _static/custom.css is the only thing setting colors. Without it Material
   # falls back to `indigo` and its `[scheme][primary]` rules outrank ours.
