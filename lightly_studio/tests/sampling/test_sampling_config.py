@@ -18,7 +18,7 @@ class _StrategyWrapper(BaseModel):
     strategy: Strategy
 
 
-def test_subpart_diversity_strategy__unknown_strategy_name_rejected() -> None:
+def test_strategy__unknown_strategy_name_rejected() -> None:
     with pytest.raises(ValidationError):
         _StrategyWrapper.model_validate({"strategy": {"strategy_name": "unknown_subpart"}})
 
