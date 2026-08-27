@@ -12,7 +12,7 @@ from sqlmodel import SQLModel
 #   before the collection is deleted); deep_copy intentionally leaves it alone since a job
 #   is a transient download token, not data worth duplicating.
 # - default_embedding_space is handled by both deep_copy and delete_dataset.
-_HANDLED_TABLES_COUNT = 26
+_HANDLED_TABLES_COUNT = 27
 
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
