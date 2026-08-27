@@ -557,4 +557,28 @@ describe('SamplingCombinationDialog', () => {
         const duplicateButton = await screen.findByTestId(/strategy-card-duplicate-/);
         expect(duplicateButton).toBeDisabled();
     });
+
+    it('disables subpart diversity in the add strategy menu for video collections', async () => {
+        pageMock.data.collection.sample_type = 'video';
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
+    it('disables subpart diversity in the add strategy menu for video_frame collections', async () => {
+        pageMock.data.collection.sample_type = 'video_frame';
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
 });

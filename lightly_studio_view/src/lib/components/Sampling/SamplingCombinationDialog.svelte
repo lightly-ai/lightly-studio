@@ -157,9 +157,11 @@
                                 metadataBalancingDisabledReason={!strategyOptions.hasCategoricalMetadataFields
                                     ? 'No categorical metadata fields found. Index string or boolean metadata on your samples to enable this strategy.'
                                     : undefined}
-                                subpartDiversityDisabledReason={hasSubpartDiversity
-                                    ? 'Only one subpart diversity strategy can be added per selection.'
-                                    : undefined}
+                                subpartDiversityDisabledReason={isVideoCollection
+                                    ? 'Not available for video collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
+                                    : hasSubpartDiversity
+                                      ? 'Only one subpart diversity strategy can be added per selection.'
+                                      : undefined}
                                 onAdd={handleAddStrategy}
                                 onMenuOpen={handleMenuOpen}
                             />
