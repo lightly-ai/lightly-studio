@@ -134,7 +134,6 @@ jobs:
             --changelog CHANGELOG.md \
             --version "${{ steps.resolved.outputs.version }}" \
             --coverage-file /tmp/coverage_checklist.md \
-            --drafting-skipped-reason "automated LLM drafting is not wired in yet" \
             --output /tmp/pr_body.md
 
       - name: Commit changes

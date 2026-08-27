@@ -149,8 +149,6 @@ def test_main__render_pr_body__writes_file(tmp_path: Path):
                 str(changelog_file),
                 "--version",
                 "1.1.0",
-                "--drafting-skipped-reason",
-                "automated drafting is not wired in yet",
                 "--coverage-file",
                 str(tmp_path / "missing_coverage_file.md"),
                 "--output",
@@ -161,4 +159,3 @@ def test_main__render_pr_body__writes_file(tmp_path: Path):
     )
     body = output.read_text()
     assert "Added thing one" in body
-    assert "automated drafting is not wired in yet" in body
