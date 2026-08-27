@@ -1249,7 +1249,7 @@ def test_sampling_via_database__metadata_balancing(db_session: Session) -> None:
         metadata=["sunny", "sunny", "rainy"],
         metadata_key="weather",
     )
-    sample_ids = _all_sample_ids(db_session, collection_id)
+    sample_ids = _all_sample_ids(session=db_session, collection_id=collection_id)
     config = SamplingConfig(
         n_samples_to_select=2,
         collection_id=collection_id,
@@ -1262,7 +1262,9 @@ def test_sampling_via_database__metadata_balancing(db_session: Session) -> None:
     sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
     tags = tag_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
-    selected = _sample_ids_by_tag(db_session, collection_id, tags[0].tag_id)
+    selected = _sample_ids_by_tag(
+        session=db_session, collection_id=collection_id, tag_id=tags[0].tag_id
+    )
     # One sunny and one rainy sample give the uniform distribution, so the only rainy
     # sample must be selected.
     assert len(selected) == 2
@@ -1281,7 +1283,7 @@ def test_sampling_via_database__metadata_balancing_missing_values_not_dropped(
     )
     # A third sample that has no "weather" value at all.
     create_image(session=db_session, collection_id=collection_id, file_path_abs="no_weather.jpg")
-    sample_ids = _all_sample_ids(db_session, collection_id)
+    sample_ids = _all_sample_ids(session=db_session, collection_id=collection_id)
     config = SamplingConfig(
         n_samples_to_select=3,
         collection_id=collection_id,
@@ -1294,7 +1296,10 @@ def test_sampling_via_database__metadata_balancing_missing_values_not_dropped(
     sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
     tags = tag_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
-    assert len(_sample_ids_by_tag(db_session, collection_id, tags[0].tag_id)) == 3
+    selected = _sample_ids_by_tag(
+        session=db_session, collection_id=collection_id, tag_id=tags[0].tag_id
+    )
+    assert len(selected) == 3
 
 
 def test_sampling_via_database__metadata_balancing_two_keys(
@@ -1312,7 +1317,7 @@ def test_sampling_via_database__metadata_balancing_two_keys(
         metadata=["day", "night", "night"],
         metadata_key="time_of_day",
     )
-    sample_ids = _all_sample_ids(db_session, collection_id)
+    sample_ids = _all_sample_ids(session=db_session, collection_id=collection_id)
     config = SamplingConfig(
         n_samples_to_select=2,
         collection_id=collection_id,
