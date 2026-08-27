@@ -11,7 +11,7 @@ After you have your changes ready, and you create a new pull request, a maintain
 
 ## Requirements
 - Python **3.9–3.14** (3.9 recommended)
-- Uv version **0.8.17+**
+- Uv version **0.12.6** (pinned exactly, see `required-version` in `lightly_studio/pyproject.toml`)
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 
 ## Development Quickstart
