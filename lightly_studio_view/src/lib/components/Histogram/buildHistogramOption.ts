@@ -7,7 +7,7 @@ import {
     formatPercent
 } from '$lib/utils';
 import escape from 'lodash-es/escape';
-import { assignSeriesColors } from '$lib/components/BarChart/seriesColors';
+import { assignSeriesColors, GROUPED_GRID_TOP_PX } from '$lib/components/BarChart';
 import type { HistogramData, HistogramRange, HistogramSeries } from './types';
 
 // Same accent as BarChart (the Lightly primary green, --color-lightly-primary).
@@ -219,7 +219,13 @@ function buildTooltip(
 function buildGrid(showAxes: boolean, isGrouped: boolean): Record<string, unknown> {
     // containLabel reserves gutters for labels; right padding avoids clipping.
     return showAxes
-        ? { left: 4, right: 16, top: isGrouped ? 48 : 8, bottom: 4, containLabel: true }
+        ? {
+              left: 4,
+              right: 16,
+              top: isGrouped ? GROUPED_GRID_TOP_PX : 8,
+              bottom: 4,
+              containLabel: true
+          }
         : { left: 0, right: 0, top: 2, bottom: 0 };
 }
 

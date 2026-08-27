@@ -200,7 +200,12 @@
             for (const item of series.data) {
                 const key = item.id ?? item.label;
                 totals.set(key, (totals.get(key) ?? 0) + item.count);
-                if (!baseByKey.has(key)) baseByKey.set(key, item);
+                // A category only a comparison tag has. The current view holds no
+                // bucket for it, so there is no value to toggle a filter on and
+                // the bar must not offer the click.
+                // TODO(Kondrat, 08/2026): carry the bucket value on the comparison
+                // series so these stay filterable.
+                if (!baseByKey.has(key)) baseByKey.set(key, { ...item, selectable: false });
             }
         }
         return [...totals].map(([key, count]) => ({ ...baseByKey.get(key)!, count }));

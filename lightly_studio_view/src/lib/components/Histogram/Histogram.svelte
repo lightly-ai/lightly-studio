@@ -2,6 +2,7 @@
     import type { ECharts } from 'echarts/core';
     import { buildHistogramOption } from './buildHistogramOption';
     import { createHistogramChart } from './createHistogramChart';
+    import { createHistogramDragRange } from './createHistogramDragRange.svelte';
     import type { HistogramData, HistogramRange, HistogramSeries } from './types';
 
     interface Props {
@@ -45,15 +46,9 @@
 
     const isEmpty = $derived(data.counts.length === 0 || data.binEdges.length < 2);
 
-    // Drag selection state: bin indices under the press and the current pointer.
-    let dragStartIndex = $state<number | null>(null);
-    let dragCurrentIndex = $state<number | null>(null);
-
-    const dragRange = $derived.by<HistogramRange | undefined>(() => {
-        if (dragStartIndex === null || dragCurrentIndex === null) return undefined;
-        const lower = Math.min(dragStartIndex, dragCurrentIndex);
-        const upper = Math.max(dragStartIndex, dragCurrentIndex);
-        return { min: data.binEdges[lower], max: data.binEdges[upper + 1] };
+    const drag = createHistogramDragRange({
+        getBinEdges: () => data.binEdges,
+        getOnRangeSelect: () => onRangeSelect
     });
 
     $effect(() => {
@@ -61,21 +56,9 @@
         const setup = createHistogramChart({
             container,
             getBinCount: () => data.counts.length,
-            onDragStart: (binIndex) => {
-                if (!onRangeSelect) return;
-                dragStartIndex = binIndex;
-                dragCurrentIndex = binIndex;
-            },
-            onDragMove: (binIndex) => {
-                if (dragStartIndex === null) return;
-                dragCurrentIndex = binIndex;
-            },
-            onDragEnd: () => {
-                const range = dragRange;
-                dragStartIndex = null;
-                dragCurrentIndex = null;
-                if (range) onRangeSelect?.(range);
-            }
+            onDragStart: drag.start,
+            onDragMove: drag.move,
+            onDragEnd: drag.end
         });
         chart = setup.chart;
         return () => {
@@ -88,7 +71,7 @@
         if (!chart) return;
         // While dragging, preview the prospective selection.
         chart.setOption(
-            buildHistogramOption(data, dragRange ?? selectedRange, { showAxes, series }),
+            buildHistogramOption(data, drag.range ?? selectedRange, { showAxes, series }),
             true
         );
     });

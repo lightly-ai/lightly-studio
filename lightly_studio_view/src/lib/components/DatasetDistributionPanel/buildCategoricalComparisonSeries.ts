@@ -1,5 +1,5 @@
 import type { CategoryCountSeries } from '$lib/components/BarChart';
-import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
+import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution';
 
 interface CategoricalComparison {
     id: string;
