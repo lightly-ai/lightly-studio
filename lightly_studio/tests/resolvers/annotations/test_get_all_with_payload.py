@@ -246,6 +246,7 @@ def test_get_all_with_payload__orders_by_text_embedding_similarity(
         session=db_session,
         collection_id=annotation_collection_id,
         embedding_dimension=2,
+        set_as_default=True,
     )
     create_sample_embedding(
         session=db_session,

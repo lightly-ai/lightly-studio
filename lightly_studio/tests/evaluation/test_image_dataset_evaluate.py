@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from sqlmodel import Session
@@ -12,14 +12,23 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.evaluation_run import EvaluationTaskType
+from lightly_studio.models.evaluation_confusion_matrix import (
+    NO_GROUND_TRUTH_ROW_LABEL,
+    NO_PREDICTION_COL_LABEL,
+)
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import (
     collection_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
-from tests.helpers_resolvers import create_annotation, create_annotation_label, create_image
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+)
 
 
 def test_object_detection_evaluation(
@@ -524,6 +533,169 @@ def test_segmentation_evaluation__raises_on_wrong_annotation_type(
             gt_annotation_source="gt",
             pred_annotation_source="pred",
         )
+
+
+def test_list_runs(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Returns a view per run, with resolved source names and the run configuration."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name=source_name,
+        )
+    for run_name in ("run-a", "run-b"):
+        dataset.evaluate().object_detection(
+            name=run_name,
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+        )
+
+    views = dataset.evaluate().list_runs()
+
+    assert len(views) == 2
+    assert {view.name for view in views} == {"run-a", "run-b"}
+    view = next(view for view in views if view.name == "run-a")
+    assert view.gt_annotation_source == "gt"
+    assert view.pred_annotation_source == "pred"
+    assert set(view.evaluation_run_configuration) == {"iou_threshold", "classwise"}
+
+
+def test_list_runs__no_runs_returns_empty(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Returns an empty list when the dataset has no evaluation runs."""
+    dataset = ImageDataset.create(name="test_dataset")
+
+    assert dataset.evaluate().list_runs() == []
+
+
+def test_confusion_matrix(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Returns the confusion matrix for a run from its persisted annotation pairings."""
+    dataset = ImageDataset.create(name="test_dataset")
+    gt_label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="cat",
+    )
+    pred_label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="dog",
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=gt_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name="gt",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=pred_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name="pred",
+    )
+    dataset.evaluate().classification(
+        name="run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+    )
+    run_id = dataset.evaluate().list_runs()[0].id
+
+    matrix = dataset.evaluate().confusion_matrix(run_id=run_id)
+
+    assert matrix.row_labels == ["cat", "dog", NO_GROUND_TRUTH_ROW_LABEL]
+    assert matrix.col_labels == ["cat", "dog", NO_PREDICTION_COL_LABEL]
+    assert matrix.counts == [[0, 1, 0], [0, 0, 0], [0, 0, 0]]
+
+
+def test_confusion_matrix__run_not_found_raises(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Raises ValueError when the run does not exist."""
+    dataset = ImageDataset.create(name="test_dataset")
+
+    with pytest.raises(ValueError, match="not found"):
+        dataset.evaluate().confusion_matrix(run_id=uuid4())
+
+
+def test_confusion_matrix__unsupported_task_type_raises(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Raises NotImplementedError for a task type without a confusion matrix."""
+    dataset = ImageDataset.create(name="test_dataset")
+    gt_collection = create_collection(
+        session=dataset.session,
+        parent_collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    pred_collection = create_collection(
+        session=dataset.session,
+        parent_collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    run = evaluation_run_resolver.create(
+        session=dataset.session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="seg-run",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            dataset_id=dataset.dataset_id,
+            task_type=EvaluationTaskType.SEMANTIC_SEGMENTATION,
+        ),
+    )
+
+    with pytest.raises(NotImplementedError, match="semantic_segmentation"):
+        dataset.evaluate().confusion_matrix(run_id=run.id)
+
+
+def test_confusion_matrix__run_from_another_dataset_raises(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Rejects a run that belongs to a different dataset."""
+    other_dataset = ImageDataset.create(name="other_dataset")
+    gt_collection = create_collection(
+        session=other_dataset.session,
+        parent_collection_id=other_dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    pred_collection = create_collection(
+        session=other_dataset.session,
+        parent_collection_id=other_dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    run = evaluation_run_resolver.create(
+        session=other_dataset.session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run-1",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            dataset_id=other_dataset.dataset_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+    dataset = ImageDataset.create(name="test_dataset")
+
+    with pytest.raises(ValueError, match="not found in this dataset"):
+        dataset.evaluate().confusion_matrix(run_id=run.id)
 
 
 def _create_gt_and_pred_collections(session: Session, collection_id: UUID) -> None:

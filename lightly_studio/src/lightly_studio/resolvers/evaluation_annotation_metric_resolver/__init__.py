@@ -10,10 +10,14 @@ from lightly_studio.resolvers.evaluation_annotation_metric_resolver.get_confusio
 from lightly_studio.resolvers.evaluation_annotation_metric_resolver.get_metrics_info_by_collection_id import (  # noqa: E501
     get_metrics_info_by_collection_id,
 )
+from lightly_studio.resolvers.evaluation_annotation_metric_resolver.supports_confusion_matrix import (  # noqa: E501
+    supports_confusion_matrix,
+)
 
 __all__ = [
     "create_many",
     "get_all_by_evaluation_run_id",
     "get_confusion_matrix",
     "get_metrics_info_by_collection_id",
+    "supports_confusion_matrix",
 ]
