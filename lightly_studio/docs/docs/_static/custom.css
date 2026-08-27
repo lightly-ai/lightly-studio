@@ -324,6 +324,134 @@ body {
 }
 
 /* ==========================================================================
+   4. Header
+
+   One row: mark, wordmark, section tabs, scheme toggle, search, repo. The tabs
+   are inline in that row rather than in a second one under it.
+   ========================================================================== */
+
+/* Translucent and blurred over the content, as on the landing page. */
+.md-header {
+  backdrop-filter: blur(14px);
+  background-color: color-mix(in srgb, var(--ls-surface) 90%, transparent);
+  border-bottom: 1px solid var(--ls-line);
+  box-shadow: none;
+  color: var(--ls-ink);
+  height: var(--ls-header-height);
+}
+
+.md-header__inner {
+  height: var(--ls-header-height);
+  padding-inline: 1.3rem;
+}
+
+.md-header__button {
+  color: var(--ls-body);
+  opacity: 1;
+}
+
+.md-header__button:hover {
+  color: var(--ls-ink);
+  opacity: 1;
+}
+
+/* The mark's own padding is the whole gap to the wordmark — see the margin
+   reset further down. lightly.ai sets that gap at 8.4px against a 25.1px mark
+   (`Logo.svg`, measured on its paths), so 0.335 of the mark's width; this mark
+   renders at 20px, which puts it at 6.7px. 0.35rem is 7. */
+.md-header__button.md-logo {
+  margin: 0;
+  padding: 0.35rem;
+}
+
+.md-header__button.md-logo :is(img, svg) {
+  height: 1.1rem;
+  width: auto;
+}
+
+/* Wordmark. The logo is the mark alone, so the site name carries the name. */
+.md-header__title {
+  align-items: center;
+  display: flex;
+  font-family: var(--ls-font-display);
+  font-size: 0.83rem;
+  font-weight: 600;
+  height: var(--ls-header-height);
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  visibility: visible;
+}
+
+/* Material stacks the two topics absolutely to cross-fade them on scroll.
+   Only the brand is kept, so it goes back in flow and centres with the mark
+   instead of pinning to the top of a taller header. The `__ellipsis` wrapper
+   sits between the two, so it has to centre as well. */
+.md-header__title .md-header__ellipsis {
+  align-items: center;
+  display: flex;
+  height: 100%;
+}
+
+/* `--active` is Material's scroll state: it fades the site name out and slides
+   it 25px left to make room for the page title. That title is hidden below, so
+   the swap left the wordmark dissolving into an empty header. Pin it. */
+.md-header__title .md-header__topic,
+.md-header__title--active .md-header__topic {
+  color: var(--ls-ink);
+  opacity: 1;
+  pointer-events: auto;
+  position: relative;
+  transform: none;
+  transition: none;
+  z-index: 0;
+}
+
+.md-header__topic + .md-header__topic {
+  display: none;
+}
+
+/* Release chip, rendered next to the wordmark by `overrides/partials/header.html`
+   and set from the installed package by `mkdocs_hooks.py`. */
+/* The chip labels the wordmark, so it sits against it. Material grows
+   `.md-header__title` to fill the row, which pushed the chip 37px clear of the
+   wordmark and hard up against the first tab — reading as a prefix to "Docs"
+   rather than as the version of the thing to its left. The title is sized by
+   its content instead and the chip carries the slack: `auto` here is what keeps
+   search and the palette toggle pinned to the right edge.
+
+   Only the site name is ever in that title — the second `.md-header__topic`,
+   which is the page title Material cross-fades in on scroll, is hidden above —
+   so there is nothing long enough for a fixed-size title to clip. */
+[dir] .md-header__title {
+  flex-grow: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* The chip is only rendered when the package is installed, and the tab strip
+   that takes over from it is hidden below 76.25em — so on a narrow viewport of
+   a build without the package, nothing in the row carries the slack and search
+   slides in against the wordmark. Hand it back to the title there. */
+@media screen and (max-width: 76.234375em) {
+  .md-header__inner:not(:has(.ls-version)) .md-header__title {
+    margin-inline-end: auto;
+  }
+}
+
+.ls-version {
+  align-self: center;
+  border: 1px solid var(--ls-line);
+  border-radius: 4px;
+  color: var(--ls-faint);
+  flex: none;
+  font-family: var(--ls-font-mono);
+  font-size: 0.5rem;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-inline: 0.45rem auto;
+  padding: 0.05rem 0.25rem;
+}
+
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is
@@ -451,22 +579,6 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     --md-primary-fg-color--dark: #051315;
     --md-accent-fg-color: #13a6e6;
     --md-accent-fg-color--transparent: #13a6e61a;
-}
-
-/* Custom logo styling - increased size */
-.md-header__button.md-logo {
-    margin: 0.2rem;
-}
-
-.md-header__button.md-logo img,
-.md-header__button.md-logo svg {
-    height: 1.8rem; /* Reduced size */
-    width: auto;
-}
-
-/* Hide site name next to logo (logo already contains the name) */
-.md-header__title {
-    visibility: hidden;
 }
 
 /* Hide Material for MkDocs footer */

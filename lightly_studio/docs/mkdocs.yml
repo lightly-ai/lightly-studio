@@ -21,7 +21,9 @@ theme:
   # files between releases and shadowing them is silent, so re-diff them against
   # `material/templates/partials/` whenever mkdocs-material is bumped.
   custom_dir: overrides
-  logo: _static/lightly_logo.svg
+  # Mark only. The full logo carries a white wordmark, which is invisible on the
+  # light header; the wordmark is rendered as text instead (see custom.css).
+  logo: _static/lightly_mark.svg
   favicon: _static/lightly_logo_fav.svg
   font:
     text: IBM Plex Sans
