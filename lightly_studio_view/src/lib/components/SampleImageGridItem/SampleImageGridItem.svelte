@@ -1,8 +1,9 @@
 <script lang="ts">
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
+    import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { getSimilarityColor } from '$lib/utils';
     import { SampleAnnotations, SampleImage } from '..';
     import type { SampleImageObjectFit } from '../SampleImage/types';
 
@@ -21,19 +22,6 @@
     } = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
-
-    const sampleOrderValue = $derived(sample.order_value ?? undefined);
-    const shouldShowOrderValue = $derived(sampleOrderValue !== undefined);
-    const orderValueLabel = $derived(
-        sampleOrderValue !== undefined
-            ? Number.isInteger(sampleOrderValue)
-                ? String(sampleOrderValue)
-                : sampleOrderValue.toFixed(2)
-            : ''
-    );
-    const hasSimilarityScore = $derived(
-        sample.similarity_score !== undefined && sample.similarity_score !== null
-    );
 </script>
 
 <SampleImage
@@ -46,31 +34,15 @@
 <SampleClassificationPills
     {sample}
     hasBottomOverlay={Boolean(displayTextOnImage)}
-    hasRightOverlay={shouldShowOrderValue || hasSimilarityScore}
+    hasRightOverlay={hasValueBadge(sample.order_value, sample.similarity_score)}
 />
 <SampleAnnotations {sample} {objectFit} outputWidth={tileWidth} outputHeight={tileHeight} />
 
-{#if shouldShowOrderValue}
-    <div
-        class="absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
-            ? 'bottom-8'
-            : 'bottom-1'}"
-    >
-        {orderValueLabel}
-    </div>
-{:else if sample.similarity_score !== undefined && sample.similarity_score !== null}
-    <div
-        class="absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
-            ? 'bottom-8'
-            : 'bottom-1'}"
-    >
-        <span
-            class="mr-1.5 block h-2 w-2 rounded-full"
-            style="background-color: {getSimilarityColor(sample.similarity_score)}"
-        ></span>
-        {sample.similarity_score.toFixed(2)}
-    </div>
-{/if}
+<SampleValueBadge
+    orderValue={sample.order_value}
+    similarityScore={sample.similarity_score}
+    hasBottomOverlay={Boolean(displayTextOnImage)}
+/>
 {#if displayTextOnImage}
     <div
         class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
