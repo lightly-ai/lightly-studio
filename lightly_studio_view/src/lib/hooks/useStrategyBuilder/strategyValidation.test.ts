@@ -343,6 +343,22 @@ describe('isStrategyInstanceValid', () => {
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
         });
+
+        it('returns true for dictionary when class names differ only by surrounding whitespace', () => {
+            const instance: StrategyInstance = {
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [
+                        { class_name: 'cat', weight: 0.4 },
+                        { class_name: 'cat ', weight: 0.6 }
+                    ]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(true);
+        });
     });
 
     describe('metadata_balancing', () => {

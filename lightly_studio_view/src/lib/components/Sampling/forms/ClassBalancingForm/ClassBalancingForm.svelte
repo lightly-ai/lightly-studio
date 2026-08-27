@@ -22,14 +22,6 @@
         annotationSourceOptions = [],
         onUpdate
     }: Props = $props();
-
-    function selectAnnotationSource(annotationSourceId: string) {
-        if (annotationSourceId === params.annotation_source_id) {
-            return;
-        }
-        // The rows hold classes of the previously selected source, so they no longer apply.
-        onUpdate({ annotation_source_id: annotationSourceId, target_distribution: [] });
-    }
 </script>
 
 <div class="grid gap-3" data-testid="class-balancing-form">
@@ -44,7 +36,7 @@
             id={`class-balancing-annotation-source-${instanceId}`}
             sourceOptions={annotationSourceOptions}
             selectedSource={params.annotation_source_id}
-            onSelect={selectAnnotationSource}
+            onSelect={(id) => onUpdate({ annotation_source_id: id })}
         />
     </div>
     <TargetDistributionModeSelect

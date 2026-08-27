@@ -28,8 +28,8 @@ function isTargetDistributionValid(params: {
         return false;
     }
     // Duplicate rows collapse into a single target on submit, dropping part of
-    // the distribution the user entered.
-    const names = params.target_distribution.map((row) => row.class_name.trim());
+    // the distribution the user entered. Compared raw, like the API mapping keys them.
+    const names = params.target_distribution.map((row) => row.class_name);
     return new Set(names).size === names.length;
 }
 
