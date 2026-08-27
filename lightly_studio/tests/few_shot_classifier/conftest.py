@@ -21,7 +21,10 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,
 )
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers import embedding_model_resolver
+from lightly_studio.resolvers import (
+    default_embedding_space_resolver,
+    embedding_model_resolver,
+)
 
 
 @pytest.fixture
@@ -61,7 +64,14 @@ def embedding_model(db_session: Session, collection: CollectionTable) -> Embeddi
         dataset_id=collection.dataset_id,
         embedding_dimension=3,
     )
-    return embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
+    created = embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
+    # Register it as the collection's default so it resolves as the collection's model.
+    default_embedding_space_resolver.set_default(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=created.embedding_model_id,
+    )
+    return created
 
 
 @pytest.fixture

@@ -150,12 +150,19 @@
     const activeData = $derived.by<CategoryCount[]>(() => {
         if (activeSeries.length === 0) return activeSingleSeriesData;
         const totals = new Map<string, number>();
+        const selectedLabels = new Set(
+            activeSingleSeriesData.filter((item) => item.selected).map((item) => item.label)
+        );
         for (const series of activeSeries) {
             for (const item of series.data) {
                 totals.set(item.label, (totals.get(item.label) ?? 0) + item.count);
             }
         }
-        return [...totals].map(([label, count]) => ({ label, count }));
+        return [...totals].map(([label, count]) => ({
+            label,
+            count,
+            selected: selectedLabels.has(label)
+        }));
     });
     // A group/source carrying bins renders as a histogram instead of a bar
     // chart; the categorical controls (sort, top-N, orientation) don't apply.

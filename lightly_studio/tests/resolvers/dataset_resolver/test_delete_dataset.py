@@ -16,6 +16,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
     dataset_resolver,
+    default_embedding_space_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
@@ -186,6 +187,34 @@ def test_delete_dataset__with_embeddings(db_session: Session) -> None:
         embedding_model_id=embedding_model_id,
     )
     assert len(embeddings) == 0
+
+
+def test_delete_dataset__with_default_embedding_space(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="test_model",
+        embedding_dimension=512,
+        set_as_default=True,
+    )
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - collection and its default embedding space deleted
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert (
+        default_embedding_space_resolver.get_by_collection_id(
+            session=db_session, collection_id=collection_id
+        )
+        is None
+    )
 
 
 def test_delete_dataset__with_tags(db_session: Session) -> None:

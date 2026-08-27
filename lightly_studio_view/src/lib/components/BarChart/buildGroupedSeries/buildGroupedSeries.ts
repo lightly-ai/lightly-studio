@@ -11,6 +11,7 @@ export function buildGroupedSeries(
     toChartValue: (count: number, denominator: number) => number
 ) {
     const categoryKeys = data.map(categoryKey);
+    const hasAnySelected = data.some((item) => item.selected === true);
 
     return groupedSeries.map((series) => {
         const countsByKey = new Map(series.data.map((entry) => [categoryKey(entry), entry.count]));
@@ -20,7 +21,12 @@ export function buildGroupedSeries(
             id: series.id,
             name: series.label,
             type: 'bar',
-            data: categoryKeys.map((key) => toChartValue(countsByKey.get(key) ?? 0, seriesTotal)),
+            data: categoryKeys.map((key, index) => {
+                const value = toChartValue(countsByKey.get(key) ?? 0, seriesTotal);
+                return hasAnySelected
+                    ? { value, itemStyle: { opacity: data[index].selected ? 1 : 0.25 } }
+                    : value;
+            }),
             itemStyle: {
                 color: groupedColors.get(series.id),
                 borderColor: 'rgba(255,255,255,0.75)',

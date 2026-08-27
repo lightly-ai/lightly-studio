@@ -17,10 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   grows that tag with the newly selected samples instead of requiring a fresh tag.
 - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
 - Compare the annotation class distribution of any sample tag against the current view in the Distribution panel.
+- Azure Blob Storage is supported in the LightlyStudio Enterprise version.
+- Make annotation classes selectable in distribution plot.
 - Switch categorical and numerical metadata distributions between sample counts and percentages.
 
 ### Changed
 
+- Speed up cloud storage (S3, GCS, Azure blob) indexing by enabling parallel requests.
+- Speed up cloud image indexing by reading image dimensions in small chunks instead of downloading most of each image.
+- Speed up object embeddings by loading input images in parallel.
 - Stepping to the previous or next image now drives an index range scan instead of scanning the
   sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
   to 0.03ms.
