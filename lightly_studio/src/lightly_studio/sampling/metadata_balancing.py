@@ -63,7 +63,8 @@ def get_metadata_balancing_data(
 
     Raises:
         ValueError: If the key does not exist in the collection, is not categorical, or an
-            explicit target distribution has more than `MAX_BALANCED_VALUES` values.
+            explicit target distribution has more than `MAX_BALANCED_VALUES` values or two
+            keys that name the same value.
     """
     if (
         isinstance(strat.target_distribution, dict)
@@ -172,20 +173,33 @@ def _get_balanced_counts(value_counts: Mapping[str, int]) -> dict[_ColumnKey, in
 
 
 def _get_explicit_target(
-    target_distribution: Mapping[str, float],
+    target_distribution: Mapping[str | bool, float],
     value_counts: Mapping[str, int],
 ) -> tuple[list[_ColumnKey], list[float]]:
     """Resolve an explicit target distribution.
 
-    Values with a target keep it. All other values of the key are grouped as "other"
-    and share the target remaining to 1.0.
-    """
-    target_keys: list[_ColumnKey] = list(target_distribution)
-    target_values = list(target_distribution.values())
+    Boolean keys are formatted like the values they target. Values with a target keep it.
+    All other values of the key are grouped as "other" and share the target remaining
+    to 1.0.
 
-    if set(value_counts) - set(target_distribution):
+    Raises:
+        ValueError: If two keys name the same value.
+    """
+    targets: dict[str, float] = {}
+    for value, target in target_distribution.items():
+        formatted_value = _format_value(value)
+        if formatted_value in targets:
+            raise ValueError(
+                f"Metadata balancing got two targets for the value '{formatted_value}'."
+            )
+        targets[formatted_value] = target
+
+    target_keys: list[_ColumnKey] = list(targets)
+    target_values = list(targets.values())
+
+    if set(value_counts) - set(targets):
         target_keys.append(_OTHER)
-        target_values.append(max(1.0 - sum(target_distribution.values()), 0.0))
+        target_values.append(max(1.0 - sum(targets.values()), 0.0))
     return target_keys, target_values
 
 

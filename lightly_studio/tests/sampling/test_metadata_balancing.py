@@ -71,6 +71,16 @@ from tests.sampling import helpers_sampling
             [0.5, 0.5, 0.0],
             id="target_value_not_present",
         ),
+        pytest.param(
+            [True, True, False],
+            "is_blurry",
+            # A boolean key is targeted with booleans or with their lowercase names.
+            {True: 0.75},
+            # Columns are ["true", other], and the false sample falls into "other".
+            [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+            [0.75, 0.25],
+            id="boolean_explicit_target",
+        ),
     ],
 )
 def test_get_metadata_balancing_data(  # noqa: PLR0913
@@ -175,7 +185,7 @@ def test_get_metadata_balancing_data__target_values_at_limit(db_session: Session
     collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
         session=db_session, metadata=["sunny", "rainy"], metadata_key="weather"
     )
-    target_distribution = {
+    target_distribution: MetadataValueToTarget = {
         f"value_{index:03d}": 0.0 for index in range(metadata_balancing.MAX_BALANCED_VALUES)
     }
 
@@ -198,7 +208,7 @@ def test_get_metadata_balancing_data__too_many_target_values(db_session: Session
     collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
         session=db_session, metadata=["sunny", "rainy"], metadata_key="weather"
     )
-    target_distribution = {
+    target_distribution: MetadataValueToTarget = {
         f"value_{index:03d}": 0.0 for index in range(metadata_balancing.MAX_BALANCED_VALUES + 1)
     }
 
@@ -207,6 +217,23 @@ def test_get_metadata_balancing_data__too_many_target_values(db_session: Session
             session=db_session,
             strat=MetadataBalancingStrategy(
                 metadata_key="weather", target_distribution=target_distribution
+            ),
+            collection_id=collection_id,
+            input_sample_ids=_all_sample_ids(session=db_session, collection_id=collection_id),
+        )
+
+
+def test_get_metadata_balancing_data__duplicate_target_value(db_session: Session) -> None:
+    """Rejects an explicit target that names the same boolean value twice."""
+    collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+        session=db_session, metadata=[True, False], metadata_key="is_blurry"
+    )
+
+    with pytest.raises(ValueError, match="two targets for the value 'true'"):
+        metadata_balancing.get_metadata_balancing_data(
+            session=db_session,
+            strat=MetadataBalancingStrategy(
+                metadata_key="is_blurry", target_distribution={True: 0.5, "true": 0.5}
             ),
             collection_id=collection_id,
             input_sample_ids=_all_sample_ids(session=db_session, collection_id=collection_id),
