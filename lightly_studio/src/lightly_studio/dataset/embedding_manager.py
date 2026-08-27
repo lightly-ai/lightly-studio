@@ -182,15 +182,19 @@ class EmbeddingManager:
 
         self._models[model_id] = embedding_generator
 
-        # Register the model with the collection
-        collection_embedding_model_resolver.get_or_add_collection_model(
+        # Register the model with the collection.
+        collection_model_link = collection_embedding_model_resolver.get_or_add_collection_model(
             session=session, collection_id=collection_id, embedding_model_id=model_id
         )
+        if collection_model_link.is_default:
+            self._collection_id_to_default_model_id[collection_id] = model_id
 
         # Determine if the model should be set as default.
         # TODO(Michal, 08/2026): Currently there are two places storing the defaults:
         # the `_collection_id_to_default_model_id` dict and the database. The source
-        # of truth should completely move to the database.
+        # of truth is the database. The dictionary does not 100% match the db, it contains
+        # only models loaded during the runtime. These responsibilities should split after
+        # EmbeddingMagager refactor.
         has_no_default_in_db = (
             collection_embedding_model_resolver.get_default_by_collection_id(
                 session=session, collection_id=collection_id

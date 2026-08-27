@@ -746,6 +746,40 @@ def test_default_model(
     )
 
 
+def test_register_embedding_model__seeds_default_cache_from_db(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A fresh manager caches an existing DB default even when set_as_default is False.
+
+    The default lives in the database. A new manager starts with an empty cache, so
+    re-registering a model that is already the collection's default must seed the cache
+    from the database rather than leave it empty.
+    """
+    # A first manager registers the model and makes it the DB default.
+    first_manager = EmbeddingManager()
+    model_id = first_manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=collection.collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    # A fresh manager (empty cache) re-registers the same model without asking for default.
+    second_manager = EmbeddingManager()
+    second_manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=collection.collection_id,
+        set_as_default=False,
+    )
+
+    # The existing DB default is mirrored into the fresh manager's cache.
+    assert (
+        second_manager._collection_id_to_default_model_id[collection.collection_id] == model_id
+    )
+
+
 def test_embed_videos(
     db_session: Session,
 ) -> None:
