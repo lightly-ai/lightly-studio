@@ -17,15 +17,18 @@ from lightly_studio.evaluation import (
 )
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
+    EvaluationRunView,
     EvaluationTaskType,
 )
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
     collection_resolver,
+    evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
 )
 
@@ -211,6 +214,57 @@ class ImageDatasetEvaluate:
         )
         return EvaluationResult.from_evaluation_data(data)
 
+    def list_runs(self) -> list[EvaluationRunView]:
+        """List the evaluation runs stored for this dataset, newest first.
+
+        Returns:
+            A view per run, with its id, name, configuration, creation time, and
+            resolved ground-truth and prediction source names.
+        """
+        return evaluation_run_resolver.list_views_by_dataset_id(
+            session=self.session,
+            dataset_id=self._dataset_id(),
+        )
+
+    def confusion_matrix(self, run_id: UUID) -> ConfusionMatrix:
+        """Return the confusion matrix of an evaluation run.
+
+        The matrix aggregates the run's persisted ground-truth/prediction
+        annotation pairings by label. Object detection and classification are
+        supported; segmentation tasks do not produce a confusion matrix.
+
+        Args:
+            run_id: ID of the evaluation run.
+
+        Returns:
+            The confusion matrix, with a shared class axis and synthetic
+            false-positive and false-negative axes.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run's task type has no confusion matrix.
+        """
+        run = evaluation_run_resolver.get_by_id(session=self.session, evaluation_id=run_id)
+        if run is None or run.dataset_id != self._dataset_id():
+            raise ValueError(f"Evaluation run {run_id} not found in this dataset.")
+        if not evaluation_annotation_metric_resolver.supports_confusion_matrix(run.task_type):
+            raise NotImplementedError(
+                f"Evaluation task type {run.task_type.value!r} has no confusion matrix."
+            )
+        return evaluation_annotation_metric_resolver.get_confusion_matrix(
+            session=self.session,
+            evaluation_run_id=run_id,
+        )
+
+    def _dataset_id(self) -> UUID:
+        """Resolve the dataset ID of the evaluated collection."""
+        collection = collection_resolver.get_by_id(
+            session=self.session, collection_id=self.collection_id
+        )
+        if collection is None:
+            raise ValueError(f"Collection {self.collection_id} not found.")
+        return collection.dataset_id
+
     def _prepare_evaluation_data(
         self,
         name: str,
@@ -312,19 +366,13 @@ class ImageDatasetEvaluate:
             collection_name=pred_annotation_source,
             task_type=task_type,
         )
-        collection = collection_resolver.get_by_id(
-            session=self.session, collection_id=self.collection_id
-        )
-        if collection is None:
-            raise ValueError(f"Collection {self.collection_id} not found")
-
         evaluation_run = evaluation_run_resolver.create(
             session=self.session,
             evaluation_run_input=EvaluationRunCreate(
                 name=name,
                 gt_annotation_collection_id=gt_collection_id,
                 pred_annotation_collection_id=pred_collection_id,
-                dataset_id=collection.dataset_id,
+                dataset_id=self._dataset_id(),
                 task_type=task_type,
                 config_json=config_json,
             ),
