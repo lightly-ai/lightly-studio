@@ -460,6 +460,58 @@ describe('DatasetDistributionPanel', () => {
         expect(onCategoricalValueToggle).not.toHaveBeenCalled();
     });
 
+    it('keeps current-view-only buckets in the shared categorical axis', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'metadata',
+                        label: 'Metadata',
+                        groups: [
+                            {
+                                id: 'city',
+                                label: 'city',
+                                categorical: {
+                                    // 'london' has no entry in any comparison tag.
+                                    buckets: [
+                                        {
+                                            id: 'zurich',
+                                            kind: 'value',
+                                            value: 'Zurich',
+                                            label: 'Zurich',
+                                            count: 5
+                                        },
+                                        {
+                                            id: 'london',
+                                            kind: 'value',
+                                            value: 'London',
+                                            label: 'London',
+                                            count: 3
+                                        }
+                                    ],
+                                    selectedValues: []
+                                },
+                                comparisonSeries: [
+                                    {
+                                        id: 'tag-a',
+                                        label: 'Reviewed',
+                                        data: [{ id: 'zurich', label: 'Zurich', count: 4 }]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                ...comparisonProps
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+        };
+        expect(option.yAxis.data).toContain('london');
+    });
+
     it('reports a failed tag comparison instead of showing fewer tags silently', () => {
         render(DatasetDistributionPanel, {
             props: {
