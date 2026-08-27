@@ -19,10 +19,8 @@ from lightly_studio.sampling.sampling_config import MetadataBalancingStrategy
 
 logger = logging.getLogger(__name__)
 
-# Upper bound on the number of balanced values. The distribution matrix holds one column
+# Upper bound on the number of balanced values: the distribution matrix holds one column
 # per value, so an unbounded key such as a file path would allocate a column per sample.
-# The "uniform" and "input" targets balance the most frequent values and group the rest as
-# "other". An explicit target with more values is rejected instead of grouped.
 MAX_BALANCED_VALUES = 100
 
 
@@ -67,7 +65,6 @@ def get_metadata_balancing_data(
         ValueError: If the key does not exist in the collection, is not categorical, or an
             explicit target distribution has more than `MAX_BALANCED_VALUES` values.
     """
-    # Checked first because every target value becomes a column of the distribution matrix.
     if (
         isinstance(strat.target_distribution, dict)
         and len(strat.target_distribution) > MAX_BALANCED_VALUES
@@ -86,7 +83,6 @@ def get_metadata_balancing_data(
     )
     value_counts = Counter(sample_id_to_value.values())
     if not value_counts:
-        # No input sample has a value for the key, so there is nothing to balance.
         return np.zeros((len(input_sample_ids), 0), dtype=np.float32), []
 
     if strat.target_distribution == "uniform":
@@ -123,8 +119,6 @@ def _get_categorical_values(
     Raises:
         ValueError: If the key does not exist in the collection or is not categorical.
     """
-    # TODO(Nauryzbay, 08/2026): This resolves the values of the whole collection. Scope the
-    # query to `input_sample_ids` if it becomes a bottleneck for heavily filtered samplings.
     all_values, metadata_type = sample_metadata_resolver.get_metadata_values_for_key(
         session=session,
         collection_id=collection_id,

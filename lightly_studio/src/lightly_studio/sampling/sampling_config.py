@@ -87,13 +87,10 @@ class AnnotationClassBalancingStrategy(SamplingStrategy):
 class MetadataBalancingStrategy(SamplingStrategy):
     """Sampling strategy that balances the selection over one categorical metadata key.
 
-    Balances a single ``string`` or ``boolean`` metadata key. Balance several keys by
-    combining one strategy per key; each key is balanced on its own rather than over
-    the combinations of their values. Samples without a value for the key are not
-    influenced by this strategy, but stay available for selection.
-
-    At most 100 values are balanced: a ``target_distribution`` mapping holds at most 100
-    values, and ``"uniform"`` and ``"input"`` group the rarest values beyond that.
+    Balances a single ``string`` or ``boolean`` key over at most 100 values. Combine one
+    strategy per key to balance several keys, each on its own rather than over the
+    combinations of their values. Samples without a value for the key are unaffected but
+    stay available for selection.
     """
 
     strategy_name: Literal["metadata_balance"] = "metadata_balance"

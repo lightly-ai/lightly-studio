@@ -1240,10 +1240,7 @@ def test_check_result_tag_name_free__existing_tag_is_not_the_preselected_one(
 
 
 def test_sampling_via_database__metadata_balancing(db_session: Session) -> None:
-    """Balances a categorical metadata key towards a uniform distribution.
-
-    The distributions themselves are covered by `tests/sampling/test_metadata_balancing.py`.
-    """
+    """Balances a categorical metadata key towards a uniform distribution."""
     collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
         session=db_session,
         metadata=["sunny", "sunny", "rainy"],
@@ -1265,8 +1262,6 @@ def test_sampling_via_database__metadata_balancing(db_session: Session) -> None:
     selected = _sample_ids_by_tag(
         session=db_session, collection_id=collection_id, tag_id=tags[0].tag_id
     )
-    # One sunny and one rainy sample give the uniform distribution, so the only rainy
-    # sample must be selected.
     assert len(selected) == 2
     rainy_sample_id = sample_ids[2]
     assert rainy_sample_id in selected

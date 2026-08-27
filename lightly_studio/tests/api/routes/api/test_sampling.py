@@ -610,7 +610,6 @@ def test_create_combination_sampling__metadata_balancing_success(
     result = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection_id, filters=tag_filter
     )
-    # One sunny and one rainy sample give the uniform distribution.
     assert len(result.samples) == 2
     assert "sample_2.jpg" in [sample.file_name for sample in result.samples]
 
