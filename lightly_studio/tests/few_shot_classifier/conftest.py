@@ -22,7 +22,7 @@ from lightly_studio.models.embedding_model import (
 )
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
-    default_embedding_space_resolver,
+    collection_embedding_model_resolver,
     embedding_model_resolver,
 )
 
@@ -66,7 +66,7 @@ def embedding_model(db_session: Session, collection: CollectionTable) -> Embeddi
     )
     created = embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
     # Register it as the collection's default so it resolves as the collection's model.
-    default_embedding_space_resolver.set_default(
+    collection_embedding_model_resolver.set_default(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=created.embedding_model_id,

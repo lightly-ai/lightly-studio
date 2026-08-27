@@ -2,7 +2,7 @@
     import type { ECharts } from 'echarts/core';
     import { buildHistogramOption } from '../buildHistogramOption';
     import { createHistogramChart } from '../createHistogramChart';
-    import type { HistogramData, HistogramRange } from '../types';
+    import type { HistogramData, HistogramRange, HistogramSeries } from '../types';
 
     type ValueMode = NonNullable<
         NonNullable<Parameters<typeof buildHistogramOption>[2]>['valueMode']
@@ -10,6 +10,7 @@
 
     interface Props {
         data: HistogramData;
+        series?: HistogramSeries[];
         selectedRange?: HistogramRange;
         heightPx: number;
         showAxes: boolean;
@@ -17,7 +18,15 @@
         onRangeSelect?: (range: HistogramRange) => void;
     }
 
-    const { data, selectedRange, heightPx, showAxes, valueMode, onRangeSelect }: Props = $props();
+    const {
+        data,
+        series = [],
+        selectedRange,
+        heightPx,
+        showAxes,
+        valueMode,
+        onRangeSelect
+    }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: ECharts | null = $state(null);
@@ -62,7 +71,7 @@
     $effect(() => {
         if (!chart) return;
         chart.setOption(
-            buildHistogramOption(data, dragRange ?? selectedRange, { showAxes, valueMode }),
+            buildHistogramOption(data, dragRange ?? selectedRange, { showAxes, valueMode, series }),
             true
         );
     });
