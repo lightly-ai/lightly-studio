@@ -62,7 +62,10 @@
     } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter, ImageFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-    import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
+    import {
+        buildCategoricalComparisonSeries,
+        type DistributionSource
+    } from '$lib/components/DatasetDistributionPanel';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { buildDistributionSources } from './distributionSources';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
@@ -80,6 +83,7 @@
         useNumericMetadataDistribution,
         usePostHog,
         useCategoricalMetadataDistribution,
+        useMetadataDistributionsBySampleTags,
         useTags,
         useSeedAnnotationSourceFilter
     } from '$lib/hooks';
@@ -749,6 +753,20 @@
         categoricalMetadataFilteredQuery.data
     );
 
+    const selectedDistributionSampleTags = $derived(
+        distributionSampleTagItems
+            .filter(({ value }) => distributionSampleTagIds.includes(value))
+            .map(({ value, label }) => ({ id: value, label }))
+    );
+    const metadataTagDistributionsQuery = useMetadataDistributionsBySampleTags(() => ({
+        collectionId,
+        sampleTags: selectedDistributionSampleTags,
+        filter: distributionBaseFilter,
+        binCount: histogramBinCount,
+        enabled: distributionPanelVisible && distributionSampleTagIds.length > 0
+    }));
+    const metadataTagDistributions = $derived(metadataTagDistributionsQuery.data ?? []);
+
     const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
         const numericKeys = Object.keys(metadataDistributions);
         const categoricalKeys = ($metadataInfo ?? [])
@@ -765,6 +783,12 @@
                     id: key,
                     label: key,
                     histogram: metadataDistributions[key],
+                    histogramSeries: metadataTagDistributions.flatMap((comparison) => {
+                        const histogram = comparison.histograms[key];
+                        return histogram
+                            ? [{ id: comparison.id, label: comparison.label, data: histogram }]
+                            : [];
+                    }),
                     // Highlight the active filter range; bins outside it dim.
                     selectedRange: $metadataValues[key]
                 })),
@@ -779,7 +803,11 @@
                         selectedValues: $categoricalMetadataValues[key] ?? [],
                         loading: categoricalMetadataQuery.isFetching,
                         error: categoricalMetadataQuery.error?.message
-                    }
+                    },
+                    comparisonSeries: buildCategoricalComparisonSeries(
+                        metadataTagDistributions,
+                        key
+                    )
                 }))
             ]
         };

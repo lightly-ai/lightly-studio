@@ -316,6 +316,63 @@ describe('DatasetDistributionPanel', () => {
         await waitFor(() => expect(screen.getByText(/2 sample tags/)).toBeInTheDocument());
     });
 
+    it('renders categorical metadata as grouped tag series on a shared value axis', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'metadata',
+                        label: 'Metadata',
+                        groups: [
+                            {
+                                id: 'city',
+                                label: 'city',
+                                categorical: {
+                                    buckets: [
+                                        {
+                                            id: 'zurich',
+                                            kind: 'value',
+                                            value: 'Zurich',
+                                            label: 'Zurich',
+                                            count: 10
+                                        }
+                                    ],
+                                    selectedValues: []
+                                },
+                                comparisonSeries: [
+                                    {
+                                        id: 'tag-a',
+                                        label: 'Reviewed',
+                                        data: [{ id: 'zurich', label: 'Zurich', count: 4 }]
+                                    },
+                                    {
+                                        id: 'tag-b',
+                                        label: 'Priority',
+                                        data: [{ id: 'missing', label: 'Missing', count: 2 }]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                comparisonTagItems: [
+                    { value: 'tag-a', label: 'Reviewed' },
+                    { value: 'tag-b', label: 'Priority' }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b'],
+                onComparisonTagIdsChange: vi.fn()
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+            series: { name: string }[];
+        };
+        expect(option.yAxis.data).toEqual(['zurich', 'missing']);
+        expect(option.series).toMatchObject([{ name: 'Reviewed' }, { name: 'Priority' }]);
+        expect(screen.getByText('Compare by')).toBeInTheDocument();
+    });
+
     it('defaults to the first source with content when a leading source is empty', () => {
         const sources: DistributionSource[] = [
             { id: 'all', label: 'All types', data: [], valueNoun: 'annotations' },
@@ -850,6 +907,53 @@ describe('DatasetDistributionPanel', () => {
             ]
         }
     ];
+
+    it('renders numerical metadata as comparable histogram tag series', () => {
+        const sources: DistributionSource[] = [
+            {
+                ...histogramSources[0],
+                groups: [
+                    {
+                        ...histogramSources[0].groups![0],
+                        histogramSeries: [
+                            {
+                                id: 'tag-a',
+                                label: 'Reviewed',
+                                data: { binEdges: [0, 0.5, 1], counts: [4, 2] }
+                            },
+                            {
+                                id: 'tag-b',
+                                label: 'Priority',
+                                data: { binEdges: [0, 0.5, 1], counts: [1, 5] }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, {
+            props: {
+                sources,
+                comparisonTagItems: [
+                    { value: 'tag-a', label: 'Reviewed' },
+                    { value: 'tag-b', label: 'Priority' }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b'],
+                onComparisonTagIdsChange: vi.fn()
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            xAxis: { max: number };
+            series: { name: string; data: { value: [number, number] }[] }[];
+        };
+        expect(option.xAxis.max).toBe(2);
+        expect(option.series).toMatchObject([{ name: 'Reviewed' }, { name: 'Priority' }]);
+        expect(option.series[0].data.map(({ value }) => value)).toEqual([
+            [0.5, 4],
+            [1.5, 2]
+        ]);
+    });
 
     it('shows the bin-count select only when a change handler is provided', () => {
         render(DatasetDistributionPanel, { props: { sources: histogramSources } });

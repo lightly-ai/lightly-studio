@@ -6,6 +6,8 @@ import type {
     SampleTagAnnotationCountsView
 } from '$lib/api/lightly_studio_local/types.gen';
 import type { HistogramData, HistogramRange } from '$lib/components/Histogram';
+import type { HistogramSeries } from '$lib/components/Histogram';
+import type { CategoryCountSeries } from '$lib/components/BarChart';
 import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
 import type { CategoricalMetadataValue } from '$lib/services/types';
 
@@ -63,8 +65,12 @@ export interface DistributionSourceGroup {
     data?: CategoryCount[];
     /** Counts grouped by the sample tags selected for comparison. */
     comparisonData?: SampleTagAnnotationCountsView[];
+    /** Generic grouped-bar series, used by categorical metadata comparisons. */
+    comparisonSeries?: CategoryCountSeries[];
     /** Numeric bin distribution rendered as a histogram. Mutually exclusive with `data`. */
     histogram?: HistogramData;
+    /** Named histograms sharing the base histogram's bin edges. */
+    histogramSeries?: HistogramSeries[];
     /**
      * Currently selected value range for a histogram group (e.g. the active
      * metadata filter). Bins outside it render dimmed.
@@ -99,8 +105,12 @@ export interface DistributionSource {
     data?: CategoryCount[];
     /** Counts grouped by the sample tags selected for comparison. */
     comparisonData?: SampleTagAnnotationCountsView[];
+    /** Generic grouped-bar series, used by categorical metadata comparisons. */
+    comparisonSeries?: CategoryCountSeries[];
     /** Numeric bin distribution rendered as a histogram. Mutually exclusive with `data`. */
     histogram?: HistogramData;
+    /** Named histograms sharing the base histogram's bin edges. */
+    histogramSeries?: HistogramSeries[];
     /**
      * Currently selected value range for a source-level histogram (e.g. the active
      * filter). Bins outside it render dimmed.
