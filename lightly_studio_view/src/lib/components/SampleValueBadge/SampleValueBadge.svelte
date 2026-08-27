@@ -3,8 +3,11 @@
     import { formatOrderValue } from './SampleValueBadge.helpers';
 
     interface Props {
+        /** Primary sort value for the active grid sort, when set. Takes precedence over `similarityScore`. */
         orderValue?: number | null;
+        /** Similarity to a text/embedding query, when search is active. Shown with a color dot when there is no `orderValue`. */
         similarityScore?: number | null;
+        /** Whether a caption/text overlay occupies the bottom edge; lifts the badge (`bottom-8` vs `bottom-1`) so they don't overlap. */
         hasBottomOverlay?: boolean;
     }
 
