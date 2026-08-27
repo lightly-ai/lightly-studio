@@ -21,6 +21,11 @@ from pathlib import Path
 from prepare_release import changelog, lock, pr_body, version
 from prepare_release.errors import PrepareReleaseError
 
+CHECK_LABELFORMAT_PIN = "check-labelformat-pin"
+PROMOTE_CHANGELOG = "promote-changelog"
+ASSERT_LOCK_DIFF = "assert-lock-diff"
+RENDER_PR_BODY = "render-pr-body"
+
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point: parses `argv`, dispatches to the matching subcommand."""
@@ -28,25 +33,25 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     check_pin = subparsers.add_parser(
-        "check-labelformat-pin", help="fail if labelformat is pinned by git sha"
+        CHECK_LABELFORMAT_PIN, help="fail if labelformat is pinned by git sha"
     )
     check_pin.add_argument("--pyproject", type=Path, required=True)
 
     promote = subparsers.add_parser(
-        "promote-changelog", help="promote [Unreleased] to a released version block"
+        PROMOTE_CHANGELOG, help="promote [Unreleased] to a released version block"
     )
     promote.add_argument("--changelog", type=Path, required=True)
     promote.add_argument("--version", required=True)
     promote.add_argument("--date", required=True, help="YYYY-MM-DD")
 
     lock_diff = subparsers.add_parser(
-        "assert-lock-diff", help="fail if uv sync changed more than the version bump"
+        ASSERT_LOCK_DIFF, help="fail if uv sync changed more than the version bump"
     )
     lock_diff.add_argument("--before", type=Path, required=True)
     lock_diff.add_argument("--after", type=Path, required=True)
     lock_diff.add_argument("--package", required=True)
 
-    pr_body_parser = subparsers.add_parser("render-pr-body", help="assemble the release PR body")
+    pr_body_parser = subparsers.add_parser(RENDER_PR_BODY, help="assemble the release PR body")
     pr_body_parser.add_argument("--changelog", type=Path, required=True)
     pr_body_parser.add_argument("--version", required=True)
     pr_body_parser.add_argument("--drafting-skipped-reason", required=True)
@@ -64,10 +69,10 @@ def main(argv: list[str] | None = None) -> int:
 
 def _dispatch(args: argparse.Namespace) -> int:
     handlers = {
-        "check-labelformat-pin": _cmd_check_labelformat_pin,
-        "promote-changelog": _cmd_promote_changelog,
-        "assert-lock-diff": _cmd_assert_lock_diff,
-        "render-pr-body": _cmd_render_pr_body,
+        CHECK_LABELFORMAT_PIN: _cmd_check_labelformat_pin,
+        PROMOTE_CHANGELOG: _cmd_promote_changelog,
+        ASSERT_LOCK_DIFF: _cmd_assert_lock_diff,
+        RENDER_PR_BODY: _cmd_render_pr_body,
     }
     handlers[args.command](args)
     return 0
