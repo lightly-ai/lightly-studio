@@ -436,6 +436,7 @@ def test_get_all_by_collection_id_with_embedding_sort(
         collection_id=collection_id,
         embedding_model_name="example_embedding_model",
         embedding_dimension=3,
+        set_as_default=True,
     )
     # create samples
     image1 = create_image(

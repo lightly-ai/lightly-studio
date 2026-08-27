@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Azure Blob Storage is supported in the LightlyStudio Enterprise version.
 - Make annotation classes selectable in distribution plot.
 - Switch categorical and numerical metadata distributions between sample counts and percentages.
+- Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
+
 
 ### Changed
 

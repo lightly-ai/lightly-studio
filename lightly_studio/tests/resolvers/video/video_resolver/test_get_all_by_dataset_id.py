@@ -450,6 +450,7 @@ def test_get_all_by_collection_id__with_embedding_sort(db_session: Session) -> N
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
         embedding_dimension=3,
+        set_as_default=True,
     )
 
     # Create videos with frames.
