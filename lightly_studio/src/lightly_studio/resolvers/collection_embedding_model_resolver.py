@@ -1,4 +1,8 @@
-"""Handler for database operations related to a collection's default embedding space."""
+"""Handler for database operations related to a collection's default embedding space.
+
+TODO(Michal, 08/2026): Rename the functions and change the interface so that it reflects
+the new "all collection models" semantics, not the old "only default model" semantics.
+"""
 
 from __future__ import annotations
 
