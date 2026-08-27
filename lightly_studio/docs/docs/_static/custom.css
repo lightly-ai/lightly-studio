@@ -850,6 +850,88 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 /* ==========================================================================
+   6. Right sidebar (table of contents)
+
+   The mirror of the left panel: same tint, same rule, same mono caps caption.
+   Each entry carries a 2px bar at its left edge — hairline until the entry is
+   the one on screen, accent when it is. A bar rather than a pill because the
+   entries are one long unbroken column here, and the run of bars is what makes
+   the nesting legible.
+   ========================================================================== */
+
+/* The panel needs the left sidebar opposite it to read as one of a pair, and
+   that only exists as a column above 76.25em. */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--secondary {
+    background-color: var(--ls-surface-sub);
+    border-left: 1px solid var(--ls-line);
+    padding-top: 0.9rem;
+  }
+}
+
+/* The caption, from where the list stops being a collapsible drawer with a back
+   button in its title and becomes a column beside the article.
+
+   The wording itself is Material's `toc` string, reworded in
+   `overrides/partials/languages/custom.html`. Setting it there rather than as
+   `::after` content keeps it the same string as the `aria-label` on the list,
+   which is drawn from the same key. */
+@media screen and (min-width: 60em) {
+  .md-nav--secondary .md-nav__title {
+    background: transparent;
+    box-shadow: none;
+    color: var(--ls-muted);
+    font-family: var(--ls-font-mono);
+    font-size: 0.525rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    padding: 0 0 0.6rem 0.5rem;
+    text-transform: uppercase;
+  }
+}
+
+.md-nav--secondary .md-nav__list {
+  padding-left: 0;
+}
+
+.md-nav--secondary .md-nav__link {
+  border-inline-start: 2px solid var(--ls-line-hair);
+  border-radius: 0;
+  color: var(--ls-muted);
+  font-size: 0.625rem;
+  line-height: 1.45;
+  margin-top: 0;
+  padding: 0.2rem 0 0.2rem 0.5rem;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.md-nav--secondary .md-nav__link:hover {
+  background-color: transparent;
+  border-inline-start-color: var(--ls-line-strong);
+  color: var(--ls-ink);
+}
+
+.md-nav--secondary .md-nav__link--active,
+.md-nav--secondary .md-nav__link--active:hover {
+  border-inline-start-color: var(--ls-accent);
+  color: var(--ls-accent);
+}
+
+.md-nav--secondary .md-nav__link--active::before {
+  display: none;
+}
+
+/* Material indents nested entries with padding on the list, which would push
+   the bar in with the text and break the column the bars form. Indent the text
+   instead and leave every bar on the same line. */
+.md-nav--secondary .md-nav__item .md-nav__item .md-nav__link {
+  padding-left: 1rem;
+}
+
+.md-nav--secondary .md-nav__item .md-nav__item .md-nav__item .md-nav__link {
+  padding-left: 1.5rem;
+}
+
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is
