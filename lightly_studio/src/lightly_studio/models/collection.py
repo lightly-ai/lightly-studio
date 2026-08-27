@@ -55,9 +55,7 @@ class CollectionTable(CollectionBase, table=True):
         back_populates="parent",
         sa_relationship_kwargs={"lazy": "select"},
     )
-    group_component_definition: Optional["GroupComponentDefinitionTable"] = Relationship(
-        back_populates="collection",
-    )
+    group_component_definition: Optional["GroupComponentDefinitionTable"] = Relationship()
     # TODO(lukas, 3/2026): add a relationship to DatasetTable
 
 

@@ -2,9 +2,7 @@
 
 from uuid import UUID
 
-from sqlmodel import Field, Relationship, SQLModel
-
-from lightly_studio.models.collection import CollectionTable
+from sqlmodel import Field, SQLModel
 
 
 class GroupComponentDefinitionBase(SQLModel):
@@ -25,8 +23,6 @@ class GroupComponentDefinitionTable(GroupComponentDefinitionBase, table=True):
     __tablename__ = "group_component_definition"
 
     collection_id: UUID = Field(foreign_key="collection.collection_id", primary_key=True)
-
-    collection: CollectionTable = Relationship(back_populates="group_component_definition")
 
 
 class GroupComponentDefinitionView(GroupComponentDefinitionBase):
