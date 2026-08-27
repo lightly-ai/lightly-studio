@@ -71,6 +71,7 @@ theme:
     - content.tabs.link
     - toc.follow
     - search.highlight
+    - search.suggest
 
 repo_url: https://github.com/lightly-ai/lightly-studio
 repo_name: LightlyStudio
