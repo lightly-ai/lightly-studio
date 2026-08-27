@@ -1144,6 +1144,191 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 /* ==========================================================================
+   7. Article
+   ========================================================================== */
+
+.md-typeset {
+  color: var(--ls-body);
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.md-typeset :is(h1, h2, h3, h4) {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+}
+
+/* Space Grotesk is drawn wide and open, so it takes more negative tracking
+   than a text face at the same size before it stops reading as a display line —
+   heavily at 38px, barely at 16px. */
+.md-typeset h1 {
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+  margin-bottom: 0.7rem;
+}
+
+.md-typeset h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  margin-top: 2.2rem;
+}
+
+.md-typeset h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.md-typeset h4 {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* The opening paragraph is the page's summary, so it is set a size up and
+   closed by a rule — the mock's 17px standfirst over 15px body. Selected as
+   `> p:first-of-type` rather than by a class, because it holds on every page
+   without an author marking it up.
+
+   The rule runs the full article width while the text keeps the reading
+   measure, which needs those two to come from different boxes. So the box is
+   full width and the measure is cut out of it with padding: a percentage
+   padding resolves against the containing block's width, so the content box
+   lands at exactly 32rem and the border spans the 873px behind it. `max()`
+   floors it at zero for the viewports where the article is already narrower
+   than the measure, where the paragraph should just fill the column. */
+.md-typeset > p:first-of-type {
+  border-bottom: 1px solid var(--ls-line-hair);
+  color: var(--ls-body);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 1.3rem;
+  max-width: none;
+  padding-bottom: 1.1rem;
+  padding-inline-end: max(0px, 100% - 32rem);
+}
+
+/* An `h2` straight after the standfirst would put its own top margin under
+   that rule and open a 3rem gap. */
+.md-typeset > p:first-of-type + :is(h2, h3) {
+  margin-top: 0;
+}
+
+/* Reading measure, ~75 characters. */
+.md-typeset :is(p, ul, ol, blockquote) {
+  max-width: 32rem;
+}
+
+/* Anything that is not running prose keeps the full content width: figures,
+   card grids, and lists that wrap a code sample, table or tab set. Without
+   this a fenced block inside a numbered step gets clipped to the measure. */
+.md-typeset p:has(> :is(img, video, iframe)),
+.md-typeset .grid,
+.md-typeset :is(ul, ol):has(:is(pre, table, .highlight, .tabbed-set, .grid, img)) {
+  max-width: none;
+}
+
+/* A caption under a figure is centred by the author but still clipped to the
+   measure above, which pins its box to the left edge — so its axis lands 61px
+   short of the full-width figure it belongs to. Centre the box instead of
+   widening it: the axes line up and the text keeps a readable measure. */
+.md-typeset p[align="center"] {
+  margin-inline: auto;
+}
+
+.md-typeset a {
+  color: var(--ls-accent);
+  text-decoration: none;
+}
+
+.md-typeset a:hover,
+.md-typeset a:focus {
+  color: var(--ls-accent-hover);
+  text-decoration: underline;
+}
+
+.md-typeset a code {
+  color: inherit;
+}
+
+.md-typeset hr {
+  border-bottom-color: var(--ls-line-hair);
+}
+
+.md-typeset :is(img, video, iframe) {
+  border-radius: var(--ls-radius-lg);
+}
+
+/* A screenshot is framed, as in the mock: a hairline box on the subtle surface,
+   so a light UI shot has an edge instead of bleeding into the page.
+
+   Only images that stand alone in their own paragraph. An inline badge or an
+   emoji is also an `img` and does not want a border round it. */
+.md-typeset p:has(> img:only-child) > img,
+.md-typeset figure > img {
+  background-color: var(--ls-surface-sub);
+  border: 1px solid var(--ls-line);
+  display: block;
+}
+
+/* Material centres a figure's caption and sets it in the body color; here it is
+   the same mono caps as every other label. */
+.md-typeset figure > figcaption {
+  color: var(--ls-muted);
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.07em;
+  margin-top: 0.6rem;
+  max-width: none;
+  text-transform: uppercase;
+}
+
+/* -- Breadcrumbs ----------------------------------------------------------- */
+
+.md-path {
+  color: var(--ls-muted);
+  font-size: 0.625rem;
+  margin-bottom: 0.9rem;
+}
+
+/* The trail is a sibling of `.md-content__inner`, not a child, so it needs the
+   same bound and the same centring or it drifts out of line with the `h1`
+   under it. Material's own margin here is a flat 1.2rem. */
+.md-content > .md-path {
+  margin-inline: auto;
+  max-width: 44rem;
+}
+
+.md-path__item a {
+  color: var(--ls-muted);
+}
+
+.md-path__item a:hover {
+  color: var(--ls-accent);
+}
+
+/* The last crumb is where the reader is. It carries no link (see
+   `overrides/partials/path.html`) and reads a step darker than the trail. */
+.md-path__item--current {
+  color: var(--ls-body);
+}
+
+/* A slash, as in the mock and as in the URL the trail describes. Material's own
+   separator is a chevron drawn as a masked SVG, so unsetting the mask is not
+   enough — the box it reserves has to go too, or the slash lands next to a
+   0.8rem gap. (0,3,1) to clear its (0,2,1). */
+.md-path .md-path__item:not(:first-child)::before {
+  background-color: transparent;
+  color: var(--ls-line-strong);
+  content: "/";
+  height: auto;
+  mask-image: none;
+  width: auto;
+  -webkit-mask-image: none;
+}
+
    8. Footer
 
    Two bands. Material's `.md-footer` carries the prev/next pager; `.ls-footer`
@@ -1463,36 +1648,6 @@ code.doc-symbol-module {
 /* Make headings use python case instead of allcaps */
 .doc-contents .doc-heading {
   text-transform: none;
-}
-
-/* Make links visually distinguishable with a blue tint - only in main content */
-.md-content .md-typeset > p a,
-.md-content .md-typeset > ul a,
-.md-content .md-typeset > ol a,
-.md-content .md-typeset > blockquote a,
-.md-content .md-typeset details a,
-.md-content .md-typeset .admonition a {
-  color: #13a6e6;
-}
-
-.md-content .md-typeset a code {
-  color: inherit;
-}
-
-.md-content .md-typeset > p a:hover,
-.md-content .md-typeset > ul a:hover,
-.md-content .md-typeset > ol a:hover,
-.md-content .md-typeset > blockquote a:hover,
-.md-content .md-typeset details a:hover,
-.md-content .md-typeset .admonition a:hover {
-  color: #0d8abf;
-}
-
-/* Rounded corners for images and videos in the main docs content */
-.md-content .md-typeset img,
-.md-content .md-typeset video,
-.md-content .md-typeset iframe {
-  border-radius: 8px;
 }
 
 /* Inline status badges rendered inside a docstring (see the API reference).
