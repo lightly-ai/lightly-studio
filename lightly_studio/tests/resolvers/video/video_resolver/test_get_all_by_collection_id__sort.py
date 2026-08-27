@@ -28,6 +28,7 @@ def test_get_all_by_collection_id__embedding_sort_overrides_order_by(db_session:
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
         embedding_dimension=3,
+        set_as_default=True,
     )
 
     video1_data = create_video_with_frames(
@@ -81,6 +82,7 @@ def test_get_all_by_collection_id__similarity_ties_broken_by_file_path(
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
         embedding_dimension=3,
+        set_as_default=True,
     )
 
     video_ids = create_videos(

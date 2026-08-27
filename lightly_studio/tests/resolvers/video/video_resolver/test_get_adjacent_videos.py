@@ -166,6 +166,7 @@ def test_get_adjacent_videos__with_similarity(db_session: Session) -> None:
         collection_id=collection_id,
         embedding_model_name="embedding-for-adjacency",
         embedding_dimension=2,
+        set_as_default=True,
     )
 
     video_a = video_helpers.create_video(
