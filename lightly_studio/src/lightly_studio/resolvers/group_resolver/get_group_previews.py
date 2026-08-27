@@ -44,7 +44,9 @@ def get_group_previews(
     first_component = min(
         component_collections.values(),
         key=lambda c: (
-            c.group_component_index if c.group_component_index is not None else float("inf")
+            c.group_component_definition.group_component_index
+            if c.group_component_definition is not None
+            else float("inf")
         ),
     )
     first_component_type = first_component.sample_type
