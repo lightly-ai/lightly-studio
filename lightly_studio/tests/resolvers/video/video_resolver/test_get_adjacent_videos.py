@@ -317,6 +317,7 @@ def test_get_adjacent_videos__similarity_ignores_order_by(db_session: Session) -
         collection_id=collection_id,
         embedding_model_name="embedding-for-adjacency",
         embedding_dimension=2,
+        set_as_default=True,
     )
 
     # Widths are chosen so a width-desc sort (a, b, c) disagrees with the similarity
