@@ -28,11 +28,13 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
 )
 from lightly_studio.models.classifier import EmbeddingClassifier
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
+    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -122,17 +124,17 @@ class ClassifierManager:
         Returns:
             The created classifier name and ID.
         """
-        embedding_models = embedding_model_resolver.get_all_by_collection_id(
+        embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
             session=session,
             collection_id=collection_id,
         )
-        if len(embedding_models) == 0:
+        if embedding_model_id is None:
             raise ValueError("No embedding model found for the given collection ID.")
-        # TODO(Horatiu, 05/2025): Handle multiple models correctly when
-        # available
-        if len(embedding_models) > 1:
-            raise ValueError("Multiple embedding models found for the given collection ID.")
-        embedding_model = embedding_models[0]
+        embedding_model = embedding_model_resolver.get_by_id(
+            session=session, embedding_model_id=embedding_model_id
+        )
+        if embedding_model is None:
+            raise ValueError("Default embedding space references a missing model.")
         classifier = RandomForest(
             name=name,
             classes=class_list,
@@ -165,7 +167,7 @@ class ClassifierManager:
         if classifier is None:
             raise ValueError(f"Classifier with ID {classifier_id} not found.")
 
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = _get_embedding_model_by_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
             collection_id=classifier.collection_id,
@@ -255,7 +257,7 @@ class ClassifierManager:
         classifier = random_forest_classifier.load_random_forest_classifier(
             classifier_path=file_path, buffer=None
         )
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = _get_embedding_model_by_hash(
             session=session,
             embedding_model_hash=classifier.embedding_model_hash,
             collection_id=collection_id,
@@ -390,7 +392,7 @@ class ClassifierManager:
         annotations = classifier.annotations
         used_samples = {sample_id for samples in annotations.values() for sample_id in samples}
 
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = _get_embedding_model_by_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
             collection_id=classifier.collection_id,
@@ -453,7 +455,7 @@ class ClassifierManager:
             raise ValueError(
                 f"Classifier with ID {classifier_id} is not active and cannot be used."
             )
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = _get_embedding_model_by_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
             collection_id=classifier.collection_id,
@@ -589,7 +591,7 @@ class ClassifierManager:
         classifier = random_forest_classifier.load_random_forest_classifier(
             buffer=buffer, classifier_path=None
         )
-        embedding_model = embedding_model_resolver.get_by_model_hash(
+        embedding_model = _get_embedding_model_by_hash(
             session=session,
             embedding_model_hash=classifier.embedding_model_hash,
             collection_id=collection_id,
@@ -609,6 +611,38 @@ class ClassifierManager:
             annotations={class_name: [] for class_name in classifier.classes},
         )
         return self._classifiers[classifier_id]
+
+
+def _get_embedding_model_by_hash(
+    session: Session, embedding_model_hash: str, collection_id: UUID
+) -> EmbeddingModelTable | None:
+    """Resolve the embedding model with the given hash within the collection's dataset.
+
+    The default is preferred while a dataset can contain one model row per collection.
+    The dataset-scoped fallback supports the final deduplicated state.
+    """
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {collection_id} not found.")
+
+    # TODO(Michal, 08/2026): Remove once embedding models are unique per dataset and hash.
+    default_embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if default_embedding_model_id is not None:
+        default_embedding_model = embedding_model_resolver.get_by_id(
+            session=session, embedding_model_id=default_embedding_model_id
+        )
+        if default_embedding_model is None:
+            raise ValueError("Default embedding space references a missing model.")
+        if default_embedding_model.embedding_model_hash == embedding_model_hash:
+            return default_embedding_model
+
+    return embedding_model_resolver.get_by_model_hash(
+        session=session,
+        dataset_id=collection.dataset_id,
+        embedding_model_hash=embedding_model_hash,
+    )
 
 
 def _create_annotation_labels_for_classifier(

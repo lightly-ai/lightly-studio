@@ -20,6 +20,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     dataset_resolver,
+    default_embedding_space_resolver,
     embedding_model_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
@@ -353,6 +354,39 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     original_sample_ids = {img1.sample_id, img2.sample_id}
     copied_sample_ids = {emb.sample_id for emb in copied_embeddings}
     assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+
+def test_deep_copy__with_default_embedding_space(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=original.collection_id,
+        embedding_model_name="test_model",
+        embedding_dimension=512,
+        set_as_default=True,
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copied collection's default resolves to the copied model, not the original.
+    copied_models = embedding_model_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=copied.collection_id,
+    )
+    assert len(copied_models) == 1
+    copied_model_id = copied_models[0].embedding_model_id
+    assert copied_model_id != embedding_model.embedding_model_id
+
+    copied_default_id = default_embedding_space_resolver.get_by_collection_id(
+        session=db_session, collection_id=copied.collection_id
+    )
+    assert copied_default_id == copied_model_id
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:

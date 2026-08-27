@@ -63,6 +63,8 @@ export {
 } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 export { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 export { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+export { useVideoOrderBy } from '$lib/hooks/useVideoOrderBy/useVideoOrderBy';
+export { useVideoSortFields } from '$lib/hooks/useVideoSortFields/useVideoSortFields';
 export {
     createOperatorFromMetadata,
     type Operator,

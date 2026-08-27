@@ -170,6 +170,7 @@ def test_get_adjacent_images__with_similarity(db_session: Session) -> None:
         collection_id=collection_id,
         embedding_model_name="embedding-for-adjacency",
         embedding_dimension=2,
+        set_as_default=True,
     )
 
     image_a = helpers_resolvers.create_image(

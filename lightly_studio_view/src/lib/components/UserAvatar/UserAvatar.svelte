@@ -1,7 +1,7 @@
 <script lang="ts">
     import * as Popover from '$lib/components/ui/popover';
     import { Button } from '$lib/components';
-    import { LogOut, Users } from '@lucide/svelte';
+    import { KeyRound, LogOut, Users } from '@lucide/svelte';
     import { cn } from '$lib/utils/shadcn';
     import { useLogout } from '$lib/hooks/useLogout/useLogout';
     import { Separator } from '../ui/separator';
@@ -62,6 +62,16 @@
                 >
                     <Users class="size-4" />
                     Users
+                </Button>
+                <Button
+                    variant="ghost"
+                    buttonProps={{
+                        class: 'w-full justify-start gap-2',
+                        href: '/workspace/api-keys'
+                    }}
+                >
+                    <KeyRound class="size-4" />
+                    API keys
                 </Button>
             {/if}
             <Separator />
