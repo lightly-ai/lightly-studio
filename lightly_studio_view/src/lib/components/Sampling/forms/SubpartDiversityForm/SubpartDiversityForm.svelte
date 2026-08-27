@@ -22,13 +22,14 @@
                 Annotation Source
             </Label>
             <FieldTooltip
-                content="Optional annotation collection used to identify subparts (crops). When left blank, the strategy uses the default embedding space."
+                content="Optional annotation source used to identify subparts (crops). When left blank, crop embeddings from all annotation sources are merged."
             />
         </div>
         <AnnotationSourceSelect
             id={`subpart-diversity-annotation-source-${instanceId}`}
             sourceOptions={annotationSourceOptions}
             selectedSource={params.annotation_source_id}
+            allowDeselect
             onSelect={(id) => onUpdate({ annotation_source_id: id })}
         />
     </div>
