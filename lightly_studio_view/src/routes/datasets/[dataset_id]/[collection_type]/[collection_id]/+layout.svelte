@@ -62,10 +62,12 @@
     } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter, ImageFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import {
-        buildCategoricalComparisonSeries,
-        type DistributionSource
-    } from '$lib/components/DatasetDistributionPanel';
+        buildMetadataDistributionSource,
+        selectCategoricalMetadataKeys,
+        selectComparisonSampleTags
+    } from './metadataDistributionSource';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { buildDistributionSources } from './distributionSources';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
@@ -88,7 +90,7 @@
         useSeedAnnotationSourceFilter
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
-    import { isInputElement } from '$lib/utils';
+    import { isEditableTarget, isSelectAllShortcut } from './selectAllShortcut';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     import { readAnnotationEmbedding } from '$lib/api/lightly_studio_local/sdk.gen';
@@ -165,9 +167,7 @@
     let selectAllHandle = $derived(useSelectAll(collectionId, gridType));
 
     function handleSelectAllKeydown(event: KeyboardEvent) {
-        if (isInputElement(event.target) || (event.target as HTMLElement)?.isContentEditable)
-            return;
-        if (event.key !== 'a' || (!event.ctrlKey && !event.metaKey)) return;
+        if (isEditableTarget(event.target) || !isSelectAllShortcut(event)) return;
         if (!isImages && !isVideos && !isVideoFrames && !isAnnotations) return;
 
         event.preventDefault();
@@ -432,24 +432,27 @@
         enabled: !isVideos && !isVideoFrames
     }));
 
+    // Annotations of video frames are counted against the frame collection, which
+    // is the parent of the annotation collection the route points at.
+    const isVideoFrameAnnotations = $derived(
+        isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME
+    );
+    const videoFrameCountsCollectionId = $derived(
+        isVideoFrameAnnotations ? (parentCollection?.collectionId ?? collectionId) : collectionId
+    );
+
     const annotationCounts = $derived.by(() => {
-        if (
-            isVideoFrames ||
-            (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-        ) {
-            let videoFrameCollectionId = collectionId;
-            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME) {
-                videoFrameCollectionId = parentCollection?.collectionId ?? collectionId;
-            }
+        if (isVideoFrames || isVideoFrameAnnotations) {
             return useVideoFrameAnnotationCounts({
-                collectionId: videoFrameCollectionId,
+                collectionId: videoFrameCountsCollectionId,
                 filter: buildVideoFrameAnnotationCountsFilter({
                     metadataFilters,
                     annotationFilter: $annotationFilterStore,
                     videoFramesBoundsValues: $videoFramesBoundsValues
                 })
             });
-        } else if (isVideos) {
+        }
+        if (isVideos) {
             return useVideoAnnotationCounts({
                 collectionId,
                 filter: buildVideoAnnotationCountsFilter({
@@ -754,9 +757,7 @@
     );
 
     const selectedDistributionSampleTags = $derived(
-        distributionSampleTagItems
-            .filter(({ value }) => distributionSampleTagIds.includes(value))
-            .map(({ value, label }) => ({ id: value, label }))
+        selectComparisonSampleTags(distributionSampleTagItems, distributionSampleTagIds)
     );
     const metadataTagDistributionsQuery = useMetadataDistributionsBySampleTags(() => ({
         collectionId,
@@ -767,51 +768,22 @@
     }));
     const metadataTagDistributions = $derived(metadataTagDistributionsQuery.data ?? []);
 
-    const metadataDistributionSource = $derived.by<DistributionSource | null>(() => {
-        const numericKeys = Object.keys(metadataDistributions);
-        const categoricalKeys = ($metadataInfo ?? [])
-            .filter((info) => info.type === 'string' || info.type === 'boolean')
-            .map((info) => info.name);
-        if (numericKeys.length === 0 && categoricalKeys.length === 0) return null;
-        return {
-            id: 'metadata',
-            label: 'Metadata',
-            groupLabel: 'Metadata key',
-            valueNoun: 'samples',
-            groups: [
-                ...numericKeys.map((key) => ({
-                    id: key,
-                    label: key,
-                    histogram: metadataDistributions[key],
-                    histogramSeries: metadataTagDistributions.flatMap((comparison) => {
-                        const histogram = comparison.histograms[key];
-                        return histogram
-                            ? [{ id: comparison.id, label: comparison.label, data: histogram }]
-                            : [];
-                    }),
-                    // Highlight the active filter range; bins outside it dim.
-                    selectedRange: $metadataValues[key]
-                })),
-                ...categoricalKeys.map((key) => ({
-                    id: key,
-                    label: key,
-                    categorical: {
-                        buckets: categoricalMetadataDistributions[key] ?? [],
-                        // undefined until the filtered query has returned so the
-                        // distribution panel waits before showing background bars.
-                        filteredBuckets: categoricalMetadataFilteredDistributions?.[key],
-                        selectedValues: $categoricalMetadataValues[key] ?? [],
-                        loading: categoricalMetadataQuery.isFetching,
-                        error: categoricalMetadataQuery.error?.message
-                    },
-                    comparisonSeries: buildCategoricalComparisonSeries(
-                        metadataTagDistributions,
-                        key
-                    )
-                }))
-            ]
-        };
-    });
+    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
+    const metadataDistributionSource = $derived(
+        buildMetadataDistributionSource({
+            histograms: metadataDistributions,
+            categoricalKeys: categoricalMetadataKeys,
+            categorical: categoricalMetadataDistributions,
+            filteredCategorical: categoricalMetadataFilteredDistributions,
+            selectedRanges: $metadataValues,
+            selectedValues: $categoricalMetadataValues,
+            tagDistributions: metadataTagDistributions,
+            categoricalLoading: categoricalMetadataQuery.isFetching,
+            categoricalError: categoricalMetadataQuery.error?.message,
+            comparisonLoading: metadataTagDistributionsQuery.isFetching,
+            comparisonError: metadataTagDistributionsQuery.error?.message
+        })
+    );
 
     // Selecting a histogram range (bin click or press-drag-release) narrows
     // the metadata filter for that key; re-selecting the current range resets it.

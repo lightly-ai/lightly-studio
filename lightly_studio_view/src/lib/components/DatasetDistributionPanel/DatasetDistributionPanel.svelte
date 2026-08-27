@@ -163,7 +163,14 @@
             selectedComparisonTagIds.includes(series.id)
         )
     );
+    // The comparison request belongs to the source whose series it feeds, so the
+    // status line follows the selected source rather than the panel as a whole.
+    const comparisonLoading = $derived(activeSource.comparisonLoading ?? false);
+    const comparisonError = $derived(activeSource.comparisonError);
     const activeCategorical = $derived(activeGroup?.categorical ?? null);
+    const comparisonBuckets = $derived(activeCategorical?.comparisonBuckets ?? []);
+    const findComparisonBucket = (id: string | undefined) =>
+        comparisonBuckets.find((candidate) => candidate.id === id);
     const categoricalData = $derived<CategoryCount[]>(
         (activeCategorical?.buckets ?? []).map((bucket) => {
             // When filteredBuckets is defined (query has returned) look up the
@@ -201,11 +208,16 @@
                 const key = item.id ?? item.label;
                 totals.set(key, (totals.get(key) ?? 0) + item.count);
                 // A category only a comparison tag has. The current view holds no
-                // bucket for it, so there is no value to toggle a filter on and
-                // the bar must not offer the click.
-                // TODO(Kondrat, 08/2026): carry the bucket value on the comparison
-                // series so these stay filterable.
-                if (!baseByKey.has(key)) baseByKey.set(key, { ...item, selectable: false });
+                // bucket for it, so the value to filter on comes from the tags'
+                // own buckets; without one there is nothing to toggle and the bar
+                // must not offer the click.
+                if (!baseByKey.has(key)) {
+                    const bucket = findComparisonBucket(item.id);
+                    baseByKey.set(key, {
+                        ...item,
+                        selectable: bucket !== undefined && bucket.kind !== 'other'
+                    });
+                }
             }
         }
         return [...totals].map(([key, count]) => ({ ...baseByKey.get(key)!, count }));
@@ -300,7 +312,9 @@
     const totalCount = $derived(displayedData.reduce((sum, item) => sum + item.count, 0));
 
     const handleCategoricalBarClick = (item: CategoryCount) => {
-        const bucket = activeCategorical?.buckets.find((candidate) => candidate.id === item.id);
+        const bucket =
+            activeCategorical?.buckets.find((candidate) => candidate.id === item.id) ??
+            findComparisonBucket(item.id);
         if (!bucket || bucket.kind === 'other' || !activeGroup) return;
         onCategoricalValueToggle?.(activeGroup.id, bucket.value);
     };
@@ -403,6 +417,23 @@
                 onChange={onComparisonTagIdsChange}
             />
         </div>
+        {#if comparisonError}
+            <p
+                class="mt-1 text-xs text-destructive"
+                role="alert"
+                data-testid="dataset-distribution-comparison-error"
+            >
+                Could not load the tag comparison. Some selected tags may be missing.
+            </p>
+        {:else if comparisonLoading}
+            <p
+                class="mt-1 text-xs text-muted-foreground"
+                role="status"
+                data-testid="dataset-distribution-comparison-loading"
+            >
+                Loading tag comparison…
+            </p>
+        {/if}
     {/if}
     {#if activeHistogram}
         <div class="mt-2 flex flex-wrap items-center justify-between gap-2">

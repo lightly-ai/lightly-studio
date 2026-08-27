@@ -80,6 +80,13 @@ export interface DistributionSourceGroup {
     categorical?: {
         buckets: CategoricalMetadataBucket[];
         /**
+         * Buckets contributed by the comparison tags. A tag can hold a value the
+         * current view has filtered away, so `buckets` alone cannot describe every
+         * bar on the shared axis; the panel falls back to these when resolving a
+         * click, keeping comparison-only bars filterable.
+         */
+        comparisonBuckets?: CategoricalMetadataBucket[];
+        /**
          * Buckets from the same query with all sidebar filters applied.
          * When provided, each bar shows a grey background at the full `count`
          * with a coloured foreground at the filtered count, giving context for
@@ -116,6 +123,18 @@ export interface DistributionSource {
      * filter). Bins outside it render dimmed.
      */
     selectedRange?: HistogramRange;
+    /**
+     * Whether the request backing `comparisonSeries` / `histogramSeries` is in
+     * flight. Surfaced as a status line so an empty chart is not read as
+     * "no samples".
+     */
+    comparisonLoading?: boolean;
+    /**
+     * Message for a failed comparison request. A tag whose request failed
+     * contributes no series at all, so without this the chart would silently
+     * show fewer tags than the user selected.
+     */
+    comparisonError?: string;
     /** Sub-groups for a source that fans out into fields (e.g. metadata keys). */
     groups?: DistributionSourceGroup[];
     /** Noun for the header summary and value axis (default 'annotations'). */

@@ -27,16 +27,14 @@ interface BarDatum {
 
 const getBars = (option: Option): BarDatum[] => (option.series as { data: BarDatum[] }[])[0].data;
 const getColors = (option: Option): string[] => getBars(option).map((bar) => bar.itemStyle.color);
-const getTooltipFormatter = (
-    option: Option
-): ((params: { dataIndex: number; marker?: string; seriesName?: string }[]) => string) =>
-    (
-        option.tooltip as {
-            formatter: (
-                params: { dataIndex: number; marker?: string; seriesName?: string }[]
-            ) => string;
-        }
-    ).formatter;
+type TooltipParam = {
+    dataIndex: number;
+    marker?: string;
+    seriesName?: string;
+    seriesIndex?: number;
+};
+const getTooltipFormatter = (option: Option): ((params: TooltipParam[]) => string) =>
+    (option.tooltip as { formatter: (params: TooltipParam[]) => string }).formatter;
 
 describe('isBinInRange', () => {
     it('includes bins fully inside the range', () => {
@@ -192,6 +190,101 @@ describe('buildHistogramOption', () => {
             }
         }
         expect(series[0].color).not.toBe(series[1].color);
+    });
+
+    it('formats the grouped tooltip with one row per comparison series', () => {
+        const option = buildHistogramOption(normal, undefined, {
+            showAxes: true,
+            series: [
+                { id: 'tag-a', label: 'Reviewed', data: normal },
+                {
+                    id: 'tag-b',
+                    label: 'Priority',
+                    data: { binEdges: normal.binEdges, counts: normal.counts.map(() => 1) }
+                }
+            ]
+        });
+        const html = getTooltipFormatter(option)([
+            { dataIndex: 9, marker: '<a>', seriesIndex: 0 },
+            { dataIndex: 9, marker: '<b>', seriesIndex: 1 }
+        ]);
+
+        // Bin 9 spans [45, 50); each series contributes its own count and share.
+        expect(html).toContain('45');
+        expect(html).toContain('Reviewed');
+        expect(html).toContain('Priority');
+        expect(html).toContain('<a>');
+        expect(html).toContain('<b>');
+    });
+
+    it('keeps a series row when echarts omits it from the hovered params', () => {
+        // echarts drops series with no value at the hovered bin, so `params` is
+        // not positionally aligned with the series list; the row must still be
+        // attributed to the right tag.
+        const option = buildHistogramOption(normal, undefined, {
+            showAxes: true,
+            series: [
+                { id: 'tag-a', label: 'Reviewed', data: normal },
+                {
+                    id: 'tag-b',
+                    label: 'Priority',
+                    data: { binEdges: normal.binEdges, counts: [] }
+                }
+            ]
+        });
+        const html = getTooltipFormatter(option)([{ dataIndex: 0, marker: '<a>', seriesIndex: 0 }]);
+
+        expect(html).toContain('Reviewed');
+        // No counts at all: the share is omitted rather than shown as NaN%.
+        expect(html).toContain('Priority: <b>0</b>');
+    });
+
+    it('escapes series labels in the grouped tooltip', () => {
+        const option = buildHistogramOption(normal, undefined, {
+            series: [{ id: 'tag-a', label: '<img onerror>', data: normal }]
+        });
+        const html = getTooltipFormatter(option)([{ dataIndex: 0, seriesIndex: 0 }]);
+
+        expect(html).not.toContain('<img');
+        expect(html).toContain('&lt;img');
+    });
+
+    it('reserves headroom for the legend only when grouped', () => {
+        const grouped = buildHistogramOption(normal, undefined, {
+            showAxes: true,
+            series: [{ id: 'tag-a', label: 'Reviewed', data: normal }]
+        });
+        const single = buildHistogramOption(normal, undefined, { showAxes: true });
+
+        expect((grouped.grid as { top: number }).top).toBeGreaterThan(
+            (single.grid as { top: number }).top
+        );
+        expect(single.legend).toBeUndefined();
+    });
+
+    it('lays comparison bars out side by side within each bin', () => {
+        const option = buildHistogramOption(normal, undefined, {
+            series: [
+                { id: 'tag-a', label: 'Reviewed', data: normal },
+                { id: 'tag-b', label: 'Priority', data: normal }
+            ]
+        });
+        const [first, second] = option.series as {
+            renderItem: (params: unknown, api: unknown) => { shape: { x: number; width: number } };
+        }[];
+        // A 100px-wide grid over 20 bins: bin 0 spans [0, 5) and is split in two.
+        const api = {
+            value: (dimension: number) => (dimension === 1 ? 10 : 0.5),
+            coord: ([index, value]: [number, number]): [number, number] => [index * 5, 50 - value],
+            size: (): [number, number] => [5, 0],
+            visual: () => ACCENT
+        };
+
+        const left = first.renderItem(null, api).shape;
+        const right = second.renderItem(null, api).shape;
+        expect(left.x).toBe(0);
+        expect(right.x).toBeGreaterThanOrEqual(left.x + left.width);
+        expect(right.width).toBeGreaterThan(0);
     });
 
     it('dims comparison bars outside the selected range but keeps the legend color', () => {

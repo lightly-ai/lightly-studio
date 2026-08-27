@@ -27,7 +27,13 @@ export interface HistogramOptionOptions {
      * break the bar ↔ slider alignment.
      */
     showAxes?: boolean;
-    /** Named histograms rendered side-by-side on the same bin axis. */
+    /**
+     * Named histograms rendered side-by-side on the same bin axis, *instead of*
+     * `data`'s own bars - the same substitution `BarChart` makes for grouped
+     * category series, so a metadata panel comparing tags reads the same whether
+     * the key is numeric or categorical. `data` still defines the shared bin
+     * edges, the x-axis domain and the tooltip's interval labels.
+     */
     series?: HistogramSeries[];
 }
 

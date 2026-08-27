@@ -373,6 +373,126 @@ describe('DatasetDistributionPanel', () => {
         expect(screen.getByText('Compare by')).toBeInTheDocument();
     });
 
+    const comparisonOnlySources = (
+        comparisonBuckets?: {
+            id: string;
+            kind: 'value';
+            value: string;
+            label: string;
+            count: number;
+        }[]
+    ): DistributionSource[] => [
+        {
+            id: 'metadata',
+            label: 'Metadata',
+            groups: [
+                {
+                    id: 'city',
+                    label: 'city',
+                    categorical: {
+                        buckets: [
+                            {
+                                id: 'zurich',
+                                kind: 'value',
+                                value: 'Zurich',
+                                label: 'Zurich',
+                                count: 10
+                            }
+                        ],
+                        ...(comparisonBuckets ? { comparisonBuckets } : {}),
+                        selectedValues: []
+                    },
+                    // 'bern' exists only in the tag, never in the current view.
+                    comparisonSeries: [
+                        {
+                            id: 'tag-a',
+                            label: 'Reviewed',
+                            data: [
+                                { id: 'zurich', label: 'Zurich', count: 4 },
+                                { id: 'bern', label: 'Bern', count: 6 }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ];
+
+    const comparisonProps = {
+        comparisonTagItems: [{ value: 'tag-a', label: 'Reviewed' }],
+        selectedComparisonTagIds: ['tag-a'],
+        onComparisonTagIdsChange: vi.fn()
+    };
+
+    it('toggles a filter for a value only a comparison tag holds', () => {
+        const onCategoricalValueToggle = vi.fn();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: comparisonOnlySources([
+                    { id: 'bern', kind: 'value', value: 'Bern', label: 'Bern', count: 6 }
+                ]),
+                onCategoricalValueToggle,
+                ...comparisonProps
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+        };
+        // Ranked by aggregate across tags: Bern (6) before Zurich (4).
+        expect(option.yAxis.data).toEqual(['bern', 'zurich']);
+
+        echartsMock.getClickHandler()?.({ dataIndex: 0 });
+        expect(onCategoricalValueToggle).toHaveBeenCalledWith('city', 'Bern');
+    });
+
+    it('leaves a comparison-only bar unclickable when no bucket describes it', () => {
+        const onCategoricalValueToggle = vi.fn();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: comparisonOnlySources(),
+                onCategoricalValueToggle,
+                ...comparisonProps
+            }
+        });
+
+        echartsMock.getClickHandler()?.({ dataIndex: 0 });
+        expect(onCategoricalValueToggle).not.toHaveBeenCalled();
+    });
+
+    it('reports a failed tag comparison instead of showing fewer tags silently', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: comparisonOnlySources().map((source) => ({
+                    ...source,
+                    comparisonLoading: true,
+                    comparisonError: 'Request failed'
+                })),
+                ...comparisonProps
+            }
+        });
+
+        expect(screen.getByTestId('dataset-distribution-comparison-error')).toBeInTheDocument();
+        // The error wins over the in-flight refetch behind it.
+        expect(
+            screen.queryByTestId('dataset-distribution-comparison-loading')
+        ).not.toBeInTheDocument();
+    });
+
+    it('marks an in-flight tag comparison so an empty chart is not read as no data', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: comparisonOnlySources().map((source) => ({
+                    ...source,
+                    comparisonLoading: true
+                })),
+                ...comparisonProps
+            }
+        });
+
+        expect(screen.getByTestId('dataset-distribution-comparison-loading')).toBeInTheDocument();
+    });
+
     it('defaults to the first source with content when a leading source is empty', () => {
         const sources: DistributionSource[] = [
             { id: 'all', label: 'All types', data: [], valueNoun: 'annotations' },

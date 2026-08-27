@@ -1,3 +1,7 @@
 export { default as DatasetDistributionPanel } from './DatasetDistributionPanel.svelte';
-export { buildCategoricalComparisonSeries } from './buildCategoricalComparisonSeries';
+export {
+    buildCategoricalComparisonBuckets,
+    buildCategoricalComparisonSeries
+} from './buildCategoricalComparisonSeries';
+export { buildTagHistogramSeries } from './buildTagHistogramSeries';
 export type { DistributionConfig, DistributionSource, DistributionSourceGroup } from './types';

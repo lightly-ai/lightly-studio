@@ -10,7 +10,10 @@ export interface HistogramData {
     counts: number[];
 }
 
-/** A named histogram rendered on the same bin axis as sibling series. */
+/**
+ * A named histogram rendered on the same bin axis as sibling series. Passing any
+ * of these replaces the base histogram's bars (see `HistogramOptionOptions`).
+ */
 export interface HistogramSeries {
     id: string;
     label: string;
