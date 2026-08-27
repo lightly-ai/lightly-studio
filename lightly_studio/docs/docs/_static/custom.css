@@ -1067,6 +1067,50 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   padding-left: 1.5rem;
 }
 
+/* -- Page actions ----------------------------------------------------------
+
+   Edit / report / ask, under the contents list. From
+   `overrides/partials/toc.html`; the edit link is the one Material would
+   otherwise draw as a bare pencil icon floating over the first paragraph.
+   ------------------------------------------------------------------------- */
+
+.ls-actions {
+  border-top: 1px solid var(--ls-line-hair);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding: 0.8rem 0 0 0.5rem;
+}
+
+.ls-actions__link {
+  color: var(--ls-body);
+  font-size: 0.625rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.ls-actions__link:hover,
+.ls-actions__link:focus-visible {
+  color: var(--ls-accent);
+}
+
+/* The pencil the actions list replaces. */
+.md-content__button.md-icon[rel="edit"] {
+  display: none;
+}
+
+/* Below the TOC breakpoint the actions ride along inside the collapsed
+   contents drawer, which is the wrong place for them — they are page-level, not
+   part of the heading list. */
+@media screen and (max-width: 59.984375em) {
+  .ls-actions {
+    display: none;
+  }
+}
+
+/* ==========================================================================
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is

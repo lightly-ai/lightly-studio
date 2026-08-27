@@ -1,5 +1,12 @@
 {#-
-  This file was automatically generated - do not edit
+  A copy of Material 9.7.5's `partials/toc.html`, with a page-actions list added
+  under the heading list and nothing else changed. The one insertion is marked
+  below. Re-diff it against upstream when bumping mkdocs-material.
+
+  The actions are what Material otherwise renders as `partials/actions.html`: a
+  bare pencil icon floating over the first paragraph of the article, which reads
+  as an editing control for the page rather than a link to its source.
+  `custom.css` hides that copy.
 -#}
 {% set title = lang.t("toc") %}
 {% if config.mdx_configs.toc and config.mdx_configs.toc.title %}
@@ -21,5 +28,26 @@
         {% include "partials/toc-item.html" %}
       {% endfor %}
     </ul>
+  {% endif %}
+  {#- ADDED: page actions. `actions` is a list of {label, href} declared under
+      `extra.page_actions` in mkdocs.yml; the edit link is prepended from
+      `page.edit_url`, which only exists once `repo_url` and `edit_uri` resolve
+      for this page. -#}
+  {% set actions = config.extra.page_actions or [] %}
+  {% if page.edit_url or actions %}
+    <div class="ls-actions">
+      {% if page.edit_url %}
+        <a class="ls-actions__link" href="{{ page.edit_url }}" rel="edit">
+          {{ lang.t("action.edit") }}
+        </a>
+      {% endif %}
+      {% for action in actions %}
+        {% if "://" in action.href %}
+          <a class="ls-actions__link" href="{{ action.href }}">{{ action.label }}</a>
+        {% else %}
+          <a class="ls-actions__link" href="{{ action.href | url }}">{{ action.label }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
   {% endif %}
 </nav>
