@@ -83,7 +83,38 @@ def test_embed_image_crops_batched__preserves_input_order_across_filepaths(
     assert result.embeddings[:, 0].tolist() == [5.0, 6.0, 7.0, 8.0]
 
 
-def test_embed_image_crops_batched__parallelizes_source_image_preprocessing(
+def test_embed_image_crops_batched__splits_many_crops_into_embedding_batches(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "image.png"
+    Image.new("RGB", (100, 100)).save(image_path)
+    image_crops = [
+        ImageCrop(filepath=str(image_path), x=0, y=0, width=width, height=10)
+        for width in range(5, 10)
+    ]
+    encode_calls: list[int] = []
+
+    def encode_batch(images_tensor: torch.Tensor) -> NDArray[np.float32]:
+        encode_calls.append(images_tensor.size(0))
+        return images_tensor.numpy().astype(np.float32)
+
+    result = image_crop_embedding.embed_image_crops_batched(
+        image_crops=image_crops,
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=encode_batch,
+        ),
+        show_progress=False,
+    )
+
+    assert encode_calls == [2, 2, 1]
+    assert result.embeddings[:, 0].tolist() == [5.0, 6.0, 7.0, 8.0, 9.0]
+
+
+def test_embed_image_crops_batched__parallelizes_source_image_loading(
     mocker: MockerFixture,
 ) -> None:
     image_buffer = io.BytesIO()
@@ -92,6 +123,8 @@ def test_embed_image_crops_batched__parallelizes_source_image_preprocessing(
     in_flight = 0
     peak_in_flight = 0
     lock = threading.Lock()
+    caller_thread = threading.get_ident()
+    preprocess_threads: list[int] = []
 
     class RemoteFile(io.BytesIO):
         def read(self, size: int | None = -1) -> bytes:
@@ -115,13 +148,17 @@ def test_embed_image_crops_batched__parallelizes_source_image_preprocessing(
     image_crops = [ImageCrop(filepath=path, x=0, y=0, width=5, height=10) for path in paths]
     image_crops.append(ImageCrop(filepath=paths[0], x=0, y=0, width=7, height=10))
 
+    def preprocess(image: Image.Image) -> torch.Tensor:
+        preprocess_threads.append(threading.get_ident())
+        return torch.tensor([float(image.size[0])])
+
     result = image_crop_embedding.embed_image_crops_batched(
         image_crops=image_crops,
         context=EmbeddingContext(
             embedding_dimension=1,
             max_batch_size=2,
             device=torch.device("cpu"),
-            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            preprocess=preprocess,
             encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
         ),
         show_progress=False,
@@ -129,6 +166,7 @@ def test_embed_image_crops_batched__parallelizes_source_image_preprocessing(
 
     assert 1 < peak_in_flight <= 3
     assert open_file.call_count == len(paths)
+    assert set(preprocess_threads) == {caller_thread}
     assert result.kept_indices == list(range(len(image_crops)))
     assert result.embeddings[:, 0].tolist() == [5.0, 5.0, 5.0, 5.0, 7.0]
 
