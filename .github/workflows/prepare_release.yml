@@ -1,0 +1,138 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: >-
+          Semver bump to apply. Nothing is inferred from the changelog -
+          pick "minor" deliberately when you know the [Unreleased] entries
+          add or change something notable, "patch" otherwise.
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: >-
+          Explicit version override, e.g. for a release candidate such as
+          1.0.0rc1. Takes precedence over "bump" when set.
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/.github/scripts
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Lint and test the prepare_release tooling
+        working-directory: .github/scripts
+        run: |
+          uv run --with ruff --no-project ruff format --check .
+          uv run --with ruff --no-project ruff check .
+          uv run --with mypy --no-project mypy prepare_release
+          uv run --with pytest --no-project pytest -q
+
+      - name: Guard against a git-pinned Labelformat
+        run: |
+          python3 -m prepare_release check-labelformat-pin \
+            --pyproject lightly_studio/pyproject.toml
+
+      - name: Resolve inputs
+        id: resolved
+        working-directory: lightly_studio
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BUMP: ${{ inputs.bump }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            version="$(uv version "$INPUT_VERSION" --dry-run --frozen --short)"
+          else
+            version="$(uv version --bump "$INPUT_BUMP" --dry-run --frozen --short)"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "### Preparing release v$version" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create release branch
+        run: git checkout -b "release-v${{ steps.resolved.outputs.version }}"
+
+      - name: Promote changelog
+        run: |
+          python3 -m prepare_release promote-changelog \
+            --changelog CHANGELOG.md \
+            --version "${{ steps.resolved.outputs.version }}" \
+            --date "$(date -u +%F)"
+
+      - name: Bump pyproject.toml version
+        working-directory: lightly_studio
+        run: uv version "${{ steps.resolved.outputs.version }}" --frozen
+
+      - name: Snapshot uv.lock before sync
+        run: cp lightly_studio/uv.lock /tmp/uv.lock.before
+
+      - name: uv sync
+        working-directory: lightly_studio
+        run: uv sync
+
+      - name: Assert uv.lock diff is narrow
+        run: |
+          python3 -m prepare_release assert-lock-diff \
+            --before /tmp/uv.lock.before \
+            --after lightly_studio/uv.lock \
+            --package lightly-studio
+
+      - name: Confirm exactly the expected files changed
+        run: |
+          changed="$(git status --porcelain | awk '{print $2}' | sort)"
+          expected="$(printf '%s\n' CHANGELOG.md lightly_studio/pyproject.toml lightly_studio/uv.lock | sort)"
+          if [ "$changed" != "$expected" ]; then
+            echo "::error::Unexpected file set changed. Got:"
+            echo "$changed"
+            exit 1
+          fi
+
+      - name: Render PR body
+        run: |
+          python3 -m prepare_release render-pr-body \
+            --changelog CHANGELOG.md \
+            --version "${{ steps.resolved.outputs.version }}" \
+            --output /tmp/pr_body.md
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md lightly_studio/pyproject.toml lightly_studio/uv.lock
+          git commit -m "Bump version to ${{ steps.resolved.outputs.version }}"
+          git push origin "release-v${{ steps.resolved.outputs.version }}"
+
+      - name: Open release PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Bump version to ${{ steps.resolved.outputs.version }}" \
+            --body-file /tmp/pr_body.md \
+            --base main \
+            --head "release-v${{ steps.resolved.outputs.version }}"
