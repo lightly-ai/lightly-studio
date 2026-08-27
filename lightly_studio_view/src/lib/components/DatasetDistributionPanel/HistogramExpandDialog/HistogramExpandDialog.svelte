@@ -1,6 +1,11 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Histogram, type HistogramData, type HistogramRange } from '$lib/components/Histogram';
+    import {
+        Histogram,
+        type HistogramData,
+        type HistogramRange,
+        type HistogramSeries
+    } from '$lib/components/Histogram';
     import type { ValueMode } from '../PanelHeader/ValueModeSelect';
     import HistogramExpandToolbar from './HistogramExpandToolbar/HistogramExpandToolbar.svelte';
 
@@ -9,6 +14,8 @@
         open: boolean;
         /** Bin edges and per-bin counts. */
         data: HistogramData;
+        /** Optional comparison histograms sharing the same bin edges. */
+        series?: HistogramSeries[];
         /** Label of the charted field (e.g. the metadata key). */
         label: string;
         /** Active filter range; bins outside it render dimmed. */
@@ -30,6 +37,7 @@
     let {
         open = $bindable(),
         data,
+        series = [],
         label,
         selectedRange,
         valueNoun = 'samples',
@@ -64,6 +72,7 @@
         <div class="min-h-0 flex-1 dark:[color-scheme:dark]" bind:clientHeight={chartHeight}>
             <Histogram
                 {data}
+                {series}
                 {selectedRange}
                 heightPx={chartHeight || 480}
                 showAxes

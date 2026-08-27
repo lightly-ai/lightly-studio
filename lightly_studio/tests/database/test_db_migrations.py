@@ -75,6 +75,26 @@ def _reset_postgres_database(engine_url: str) -> None:
         raw_engine.dispose()
 
 
+def _restore_shared_database_to_head(engine: Engine, engine_url: str) -> None:
+    """Return the session-scoped Postgres database to a clean schema at head.
+
+    These migration tests run against the ``postgres_url`` database, which is session
+    scoped and shared with every data test on the same xdist worker. A test that
+    downgrades or resets that database leaves the schema off head, so the data tests find
+    the wrong tables and their ``TRUNCATE`` teardown fails. Upgrading to head first
+    normalizes the table names (a downgrade may have renamed one), then a drop and a fresh
+    upgrade leave an empty schema matching the session engine's initial state.
+    """
+    config = db_migrations.get_alembic_config(engine_url=engine_url)
+    db_migrations._run_alembic_command(
+        engine=engine, config=config, fn=command.upgrade, revision="head"
+    )
+    _reset_postgres_database(engine_url=engine_url)
+    db_migrations._run_alembic_command(
+        engine=engine, config=config, fn=command.upgrade, revision="head"
+    )
+
+
 def test_postgres_fresh_database__upgrade_head(
     postgres_url: str | None,
 ) -> None:
@@ -98,6 +118,7 @@ def test_postgres_fresh_database__upgrade_head(
             ).scalar_one()
         assert version == head_revision
     finally:
+        _restore_shared_database_to_head(engine=engine._engine, engine_url=postgres_url)
         engine.close()
 
 
@@ -173,4 +194,115 @@ def test_postgres_embedding_model_dataset_id__backfilled(
         config.attributes.pop("connection", None)
         command.check(config)
     finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
+def test_postgres_collection_embedding_model__backfills_all_models(
+    postgres_url: str | None,
+) -> None:
+    """The rename migration seeds every embedding model, the oldest one as default."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    collection_id = "00000000-0000-0000-0000-000000000002"
+    older_model_id = "00000000-0000-0000-0000-000000000010"
+    newer_model_id = "00000000-0000-0000-0000-000000000011"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="c2d3e4f5a6b7",
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, dataset_id, created_at, updated_at
+                    ) VALUES (
+                        'collection', 'IMAGE', :collection_id, :dataset_id, NOW(), NOW()
+                    )
+                    """
+                ),
+                parameters={"collection_id": collection_id, "dataset_id": dataset_id},
+            )
+            # Two models for the same collection; the older one must become the default.
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO embedding_model (
+                        name, embedding_dimension, collection_id, dataset_id,
+                        embedding_model_id, created_at
+                    ) VALUES (
+                        'older', 128, :collection_id, :dataset_id,
+                        :older_model_id, '2020-01-01 00:00:00+00'
+                    ), (
+                        'newer', 128, :collection_id, :dataset_id,
+                        :newer_model_id, '2021-01-01 00:00:00+00'
+                    )
+                    """
+                ),
+                parameters={
+                    "collection_id": collection_id,
+                    "dataset_id": dataset_id,
+                    "older_model_id": older_model_id,
+                    "newer_model_id": newer_model_id,
+                },
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="d4e5f6a7b8c9",
+        )
+        with engine.connect() as connection:
+            rows = connection.execute(
+                statement=text(
+                    """
+                    SELECT embedding_model_id, is_default
+                    FROM collection_embedding_model
+                    WHERE collection_id = :collection_id
+                    ORDER BY embedding_model_id
+                    """
+                ),
+                parameters={"collection_id": collection_id},
+            ).all()
+
+        defaults = {str(model_id): is_default for model_id, is_default in rows}
+        assert defaults == {older_model_id: True, newer_model_id: False}
+
+        # Downgrade must keep only the default row so the collection-only key holds.
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.downgrade,
+            revision="c2d3e4f5a6b7",
+        )
+        with engine.connect() as connection:
+            remaining = connection.execute(
+                statement=text(
+                    """
+                    SELECT embedding_model_id
+                    FROM default_embedding_space
+                    WHERE collection_id = :collection_id
+                    """
+                ),
+                parameters={"collection_id": collection_id},
+            ).all()
+        assert [str(model_id) for (model_id,) in remaining] == [older_model_id]
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()

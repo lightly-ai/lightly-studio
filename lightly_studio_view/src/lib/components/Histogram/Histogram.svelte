@@ -1,7 +1,7 @@
 <script lang="ts">
     import { buildHistogramOption } from './buildHistogramOption';
     import HistogramChart from './HistogramChart/HistogramChart.svelte';
-    import type { HistogramData, HistogramRange } from './types';
+    import type { HistogramData, HistogramRange, HistogramSeries } from './types';
 
     type ValueMode = NonNullable<
         NonNullable<Parameters<typeof buildHistogramOption>[2]>['valueMode']
@@ -10,6 +10,8 @@
     interface Props {
         /** Bin edges and per-bin counts (see `HistogramData`). */
         data: HistogramData;
+        /** Optional named histograms rendered on the same bin axis. */
+        series?: HistogramSeries[];
         /**
          * Selected value range. Bins overlapping it render in the accent
          * color, the rest dimmed. Omit to render all bins in the accent color.
@@ -36,6 +38,7 @@
 
     const {
         data,
+        series = [],
         selectedRange,
         heightPx = 48,
         showAxes = false,
@@ -47,5 +50,13 @@
 </script>
 
 {#if !isEmpty}
-    <HistogramChart {data} {selectedRange} {heightPx} {showAxes} {valueMode} {onRangeSelect} />
+    <HistogramChart
+        {data}
+        {series}
+        {selectedRange}
+        {heightPx}
+        {showAxes}
+        {valueMode}
+        {onRangeSelect}
+    />
 {/if}
