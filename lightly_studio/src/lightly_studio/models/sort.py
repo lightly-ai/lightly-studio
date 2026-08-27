@@ -7,11 +7,8 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
+from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.dataset_query.query_translation import (
-    evaluation_metric_sort_to_order_by,
-    sort_to_order_by,
-)
 from lightly_studio.models.sort_direction import SortDirection
 
 
@@ -79,6 +76,20 @@ ImageSortExpr = Annotated[
 ]
 
 
+# Image and video field expressions both allow ``source="metadata"``, so a
+# discriminated union on ``source`` cannot build. Match left to right instead: a
+# metadata expression resolves to ``ImageSortFieldExpr``, which is harmless since
+# both translate through the same ``(source, field_name)`` key.
+# TODO(gabriel, 08/2026): Replace this left-to-right union with a source-discriminated one;
+# tracked in LIG-10605. Safe only while ImageSortFieldExpr and VideoSortFieldExpr stay
+# structurally identical, guarded by
+# tests/models/test_sort.py::test_image_and_video_sort_field_exprs_stay_structurally_identical.
+AdjacentSortExpr = Annotated[
+    Union[ImageSortFieldExpr, VideoSortFieldExpr, EvaluationMetricSortExpr],
+    Field(union_mode="left_to_right"),
+]
+
+
 def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
     """Translate a single-field sort expression to an OrderByExpression.
 
@@ -88,7 +99,7 @@ def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
     Returns:
         An OrderByExpression ready to be applied to a database query.
     """
-    return sort_to_order_by(
+    return query_translation.sort_to_order_by(
         key=(expr.source, expr.field_name),
         direction=expr.direction,
     )
@@ -103,8 +114,24 @@ def image_sort_expr_to_order_by(expr: ImageSortExpr) -> OrderByExpression:
     Returns:
         An OrderByExpression ready to be applied to a database query.
     """
+    # ImageSortExpr is a subset of AdjacentSortExpr, so the shared translator handles it.
+    return adjacent_sort_expr_to_order_by(expr)
+
+
+def adjacent_sort_expr_to_order_by(expr: AdjacentSortExpr) -> OrderByExpression:
+    """Translate an adjacency sort expression to an OrderByExpression.
+
+    Handles image, video, metadata, and evaluation-metric expressions, so the
+    shared adjacent-samples request can carry the sort of either grid.
+
+    Args:
+        expr: The sort expression from the API request.
+
+    Returns:
+        An OrderByExpression ready to be applied to a database query.
+    """
     if isinstance(expr, EvaluationMetricSortExpr):
-        return evaluation_metric_sort_to_order_by(
+        return query_translation.evaluation_metric_sort_to_order_by(
             evaluation_run_name=expr.evaluation_run_name,
             metric_name=expr.metric_name,
             direction=expr.direction,
