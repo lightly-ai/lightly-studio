@@ -289,7 +289,7 @@ The three `target_distribution` options are:
 
 | Value | Behavior |
 |---|---|
-| `"uniform"` | Equal share for every class present in the dataset |
+| `"uniform"` | Equal share for every class present in the candidate input set |
 | `"input"` | Mirrors the class distribution of the candidate input set |
 | `{class: ratio, ...}` | Explicit target ratios. Give a ratio to only some classes; the other classes then share the remainder to 1.0 |
 
@@ -341,7 +341,7 @@ apply to the values of the metadata field:
 
 | Value | Behavior |
 |---|---|
-| `"uniform"` | Equal share for every value present in the dataset |
+| `"uniform"` | Equal share for every value present in the candidate input set |
 | `"input"` | Mirrors the value distribution of the candidate input set |
 | `{value: ratio, ...}` | Explicit target ratios. Give a ratio to only some values; the other values then share the remainder to 1.0 |
 
