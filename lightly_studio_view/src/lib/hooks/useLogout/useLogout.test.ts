@@ -2,17 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import TestUseLogout from './useLogout.test.svelte';
 import { AUTHENTICATION_SESSION_STORAGE_KEY } from '$lib/constants';
-import * as navigation from '$app/navigation';
+import * as navigation from '$lib/utils/navigation';
+
+const LOGOUT_ENDPOINT = '/auth/api/v1/logout';
 
 describe('useLogout', () => {
-    let gotoSpy: ReturnType<typeof vi.spyOn>;
+    let redirectSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
         vi.clearAllMocks();
         vi.resetAllMocks();
 
-        // Spy on goto function
-        gotoSpy = vi.spyOn(navigation, 'goto').mockImplementation(() => Promise.resolve());
+        // Spy on the navigation helper so the test never touches window.location.
+        redirectSpy = vi.spyOn(navigation, 'redirectTo').mockImplementation(() => {});
 
         // Mock sessionStorage
         Object.defineProperty(window, 'sessionStorage', {
@@ -24,9 +26,6 @@ describe('useLogout', () => {
             },
             writable: true
         });
-
-        // Clear cookies before each test
-        document.cookie = 'token=; path=/; max-age=0';
     });
 
     const renderComponent = () => {
@@ -41,47 +40,18 @@ describe('useLogout', () => {
     it('removes authentication token from sessionStorage on logout', async () => {
         renderComponent();
 
-        const logoutButton = screen.getByTestId('logout-button');
-        await fireEvent.click(logoutButton);
+        await fireEvent.click(screen.getByTestId('logout-button'));
 
         expect(window.sessionStorage.removeItem).toHaveBeenCalledWith(
             AUTHENTICATION_SESSION_STORAGE_KEY
         );
     });
 
-    it('redirects to login page on logout', async () => {
+    it('navigates to the backend logout endpoint on logout', async () => {
         renderComponent();
 
-        const logoutButton = screen.getByTestId('logout-button');
-        await fireEvent.click(logoutButton);
+        await fireEvent.click(screen.getByTestId('logout-button'));
 
-        expect(gotoSpy).toHaveBeenCalledWith('/workspace/login');
-    });
-
-    it('clears authentication cookie on logout', async () => {
-        // Set a cookie first
-        document.cookie = 'token=test-token; path=/';
-        expect(document.cookie).toContain('token=test-token');
-
-        renderComponent();
-
-        const logoutButton = screen.getByTestId('logout-button');
-        await fireEvent.click(logoutButton);
-
-        // Cookie should be cleared (max-age=0)
-        expect(document.cookie).not.toContain('token=test-token');
-    });
-
-    it('does not execute logout in non-browser environment', async () => {
-        // This test verifies the browser check, but since we're in a browser environment
-        // during tests, we can only test the happy path. The browser check is for SSR safety.
-        renderComponent();
-
-        const logoutButton = screen.getByTestId('logout-button');
-        await fireEvent.click(logoutButton);
-
-        // In browser environment, both operations should occur
-        expect(window.sessionStorage.removeItem).toHaveBeenCalled();
-        expect(gotoSpy).toHaveBeenCalledWith('/workspace/login');
+        expect(redirectSpy).toHaveBeenCalledWith(LOGOUT_ENDPOINT);
     });
 });
