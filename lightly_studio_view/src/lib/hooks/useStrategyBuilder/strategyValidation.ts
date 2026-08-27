@@ -19,12 +19,18 @@ function isTargetDistributionValid(params: {
     if (params.target_distribution_mode !== 'dictionary') {
         return true;
     }
-    return (
-        params.target_distribution.length > 0 &&
-        params.target_distribution.every(
+    if (
+        params.target_distribution.length === 0 ||
+        !params.target_distribution.every(
             (row) => row.class_name.trim().length > 0 && isPositiveNumber(row.weight)
         )
-    );
+    ) {
+        return false;
+    }
+    // Duplicate rows collapse into a single target on submit, dropping part of
+    // the distribution the user entered.
+    const names = params.target_distribution.map((row) => row.class_name.trim());
+    return new Set(names).size === names.length;
 }
 
 export function isStrategyInstanceValid(instance: StrategyInstance): boolean {

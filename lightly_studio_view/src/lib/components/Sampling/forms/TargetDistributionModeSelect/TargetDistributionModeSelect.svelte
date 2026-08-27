@@ -8,9 +8,15 @@
         targetDistributionMode: ClassBalancingTargetDistributionMode;
         onUpdate: (mode: ClassBalancingTargetDistributionMode) => void;
         testIdPrefix?: string;
+        tooltipContent?: string;
     }
 
-    let { targetDistributionMode, onUpdate, testIdPrefix = 'class-balancing' }: Props = $props();
+    let {
+        targetDistributionMode,
+        onUpdate,
+        testIdPrefix = 'class-balancing',
+        tooltipContent = 'The target annotation class distribution to optimize toward.'
+    }: Props = $props();
 
     const items = $derived([
         {
@@ -30,7 +36,7 @@
 <div class="grid gap-2">
     <div class="flex items-center gap-1.5">
         <Label>Target distribution</Label>
-        <FieldTooltip content="The target class distribution to optimize toward." />
+        <FieldTooltip content={tooltipContent} />
     </div>
     <Select
         {items}

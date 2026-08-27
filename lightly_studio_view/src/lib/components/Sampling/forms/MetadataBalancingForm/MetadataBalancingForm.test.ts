@@ -34,16 +34,41 @@ describe('MetadataBalancingForm', () => {
         expect(screen.queryByTestId('metadata-balancing-test-key')).not.toBeInTheDocument();
     });
 
-    it('calls onUpdate with the selected metadata key', async () => {
+    it('clears the target distribution when another metadata key is selected', async () => {
         const onUpdate = vi.fn();
-        render(MetadataBalancingForm, { props: { ...defaultProps, onUpdate } });
+        render(MetadataBalancingForm, {
+            props: {
+                ...defaultProps,
+                params: {
+                    ...defaultProps.params,
+                    target_distribution_mode: 'dictionary' as const,
+                    target_distribution: [{ class_name: 'sunny', weight: 1 }]
+                },
+                onUpdate
+            }
+        });
 
         await fireEvent.keyDown(screen.getByTestId('metadata-balancing-test-key'), {
             key: 'Enter'
         });
         await fireEvent.pointerUp(await screen.findByText('city'));
 
-        expect(onUpdate).toHaveBeenCalledWith({ metadata_key: 'city' });
+        expect(onUpdate).toHaveBeenCalledWith({
+            metadata_key: 'city',
+            target_distribution: []
+        });
+    });
+
+    it('does not call onUpdate when the selected metadata key is unchanged', async () => {
+        const onUpdate = vi.fn();
+        render(MetadataBalancingForm, { props: { ...defaultProps, onUpdate } });
+
+        await fireEvent.keyDown(screen.getByTestId('metadata-balancing-test-key'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByRole('option', { name: 'weather' }));
+
+        expect(onUpdate).not.toHaveBeenCalled();
     });
 
     it('hides the target distribution rows unless the mode is dictionary', () => {

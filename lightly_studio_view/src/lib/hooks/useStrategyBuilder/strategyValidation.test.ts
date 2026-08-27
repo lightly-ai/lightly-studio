@@ -327,6 +327,22 @@ describe('isStrategyInstanceValid', () => {
 
             expect(isStrategyInstanceValid(instance)).toBe(true);
         });
+
+        it('returns false for dictionary when two rows share a class_name', () => {
+            const instance: StrategyInstance = {
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [
+                        { class_name: 'cat', weight: 0.4 },
+                        { class_name: 'cat', weight: 0.6 }
+                    ]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
     });
 
     describe('metadata_balancing', () => {
@@ -405,6 +421,22 @@ describe('isStrategyInstanceValid', () => {
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(true);
+        });
+
+        it('returns false for dictionary when two rows share a metadata value', () => {
+            const instance: StrategyInstance = {
+                ...defaultMetadataBalancing,
+                params: {
+                    ...defaultMetadataBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [
+                        { class_name: 'sunny', weight: 0.3 },
+                        { class_name: 'sunny', weight: 0.7 }
+                    ]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
         });
     });
 });

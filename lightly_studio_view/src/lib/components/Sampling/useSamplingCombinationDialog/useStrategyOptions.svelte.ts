@@ -1,9 +1,11 @@
 import { get } from 'svelte/store';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
-import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
-import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-import { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
-import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import {
+    useAnnotationCollections,
+    useAnnotationLabels,
+    useCategoricalMetadataDistribution,
+    useMetadataFilters
+} from '$lib/hooks';
 
 export function useStrategyOptions(getCollectionId: () => string) {
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId: getCollectionId() }));

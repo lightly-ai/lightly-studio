@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { ClassBalancingParams, StrategyParams } from '$lib/hooks/useStrategyBuilder';
-    import TargetDistributionModeSelect from './TargetDistributionModeSelect/TargetDistributionModeSelect.svelte';
+    import TargetDistributionModeSelect from '$lib/components/Sampling/forms/TargetDistributionModeSelect/TargetDistributionModeSelect.svelte';
     import StrengthField from '$lib/components/Sampling/forms/StrengthField/StrengthField.svelte';
-    import TargetDistribution from './TargetDistribution/TargetDistribution.svelte';
+    import TargetDistribution from '$lib/components/Sampling/forms/TargetDistribution/TargetDistribution.svelte';
     import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
     import { Label } from '$lib/components/ui/label';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
@@ -22,6 +22,14 @@
         annotationSourceOptions = [],
         onUpdate
     }: Props = $props();
+
+    function selectAnnotationSource(annotationSourceId: string) {
+        if (annotationSourceId === params.annotation_source_id) {
+            return;
+        }
+        // The rows hold classes of the previously selected source, so they no longer apply.
+        onUpdate({ annotation_source_id: annotationSourceId, target_distribution: [] });
+    }
 </script>
 
 <div class="grid gap-3" data-testid="class-balancing-form">
@@ -36,7 +44,7 @@
             id={`class-balancing-annotation-source-${instanceId}`}
             sourceOptions={annotationSourceOptions}
             selectedSource={params.annotation_source_id}
-            onSelect={(id) => onUpdate({ annotation_source_id: id })}
+            onSelect={selectAnnotationSource}
         />
     </div>
     <TargetDistributionModeSelect
@@ -53,7 +61,7 @@
     {#if params.target_distribution_mode === 'dictionary'}
         <TargetDistribution
             targetDistribution={params.target_distribution}
-            {annotationLabels}
+            options={annotationLabels}
             onUpdate={(rows) => onUpdate({ target_distribution: rows })}
         />
     {/if}

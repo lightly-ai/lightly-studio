@@ -11,8 +11,7 @@ export {
     type DeduplicationParams,
     type SimilarityParams,
     type StrategySummaryTag,
-    type MetadataWeightingParams,
-    type MetadataBalancingParams
+    type MetadataWeightingParams
 } from './types';
 export { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
 export { isStrategyInstanceValid } from './strategyValidation';

@@ -15,8 +15,7 @@
         type StrategyInstance,
         type StrategyParams,
         type StrategySummaryTag,
-        type ClassBalancingParams,
-        type MetadataBalancingParams
+        type ClassBalancingParams
     } from '$lib/hooks/useStrategyBuilder';
     import DeduplicationForm from '../forms/DeduplicationForm/DeduplicationForm.svelte';
     import MetadataBalancingForm from '../forms/MetadataBalancingForm/MetadataBalancingForm.svelte';
@@ -25,6 +24,12 @@
     import ClassBalancingForm from '../forms/ClassBalancingForm/ClassBalancingForm.svelte';
     import StrengthField from '../forms/StrengthField/StrengthField.svelte';
     import Typography from '$lib/components/Typography/Typography.svelte';
+
+    type MetadataBalancingParams = Extract<
+        StrategyInstance,
+        { type: 'metadata_balancing' }
+    >['params'];
+
     interface Props {
         instance: StrategyInstance;
         tags: StrategySummaryTag[];
