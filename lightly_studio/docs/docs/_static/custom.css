@@ -1689,6 +1689,40 @@ html .md-typeset :is(.admonition, details) > :last-child {
   --ls-adm-icon: var(--md-admonition-icon--bug);
 }
 
+/* -- Tables ---------------------------------------------------------------- */
+
+.md-typeset table:not([class]) {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius-lg);
+  box-shadow: none;
+  font-size: 0.65rem;
+}
+
+/* The header row is the table's own caption, so it takes the same mono caps as
+   every other label in the theme.
+
+   Only the header. The mock also sets the first *body* column in mono, which
+   works for the reference tables it mocks up and not for the ones these docs
+   actually have — `concepts_and_tools/sampling.md` opens its first column with
+   "Pick a diverse subset that covers the whole dataset". Mono is for a column
+   of identifiers, and nothing declares which columns those are. */
+.md-typeset table:not([class]) th {
+  background-color: var(--ls-surface-sub);
+  color: var(--ls-muted);
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 0.8rem;
+  text-transform: uppercase;
+}
+
+.md-typeset table:not([class]) td {
+  border-top: 1px solid var(--ls-line-hair);
+  padding: 0.55rem 0.8rem;
+  vertical-align: top;
+}
+
    8. Footer
 
    Two bands. Material's `.md-footer` carries the prev/next pager; `.ls-footer`
