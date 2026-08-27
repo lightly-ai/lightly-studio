@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make annotation classes selectable in distribution plot.
 - Switch categorical and numerical metadata distributions between sample counts and percentages.
 - Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
+- Python SDK: Balance a sampling over the values of a categorical metadata field with
+  `Sampling.metadata_balancing()`, using the same `uniform`, `input`, and explicit target
+  distributions as annotation class balancing.
 
 
 ### Changed
