@@ -2,9 +2,7 @@ name: Prepare Release
 
 # Creates a release branch, promotes the changelog, bumps the version, and
 # opens a review-ready release PR - the mechanical half of preparing a
-# LightlyStudio release, in one manual dispatch. Public repo, ubuntu-latest,
-# no secrets beyond the default token used to push the branch and open the
-# PR. Publishes nothing.
+# LightlyStudio release. Publishes nothing.
 on:
   workflow_dispatch:
     inputs:
@@ -35,10 +33,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # The prepare_release tooling lives outside the lightly_studio package -
-  # it's CI-internal, not something shipped or user-facing - so it's run
-  # as `python3 -m prepare_release` with this on PYTHONPATH rather than
-  # from inside lightly_studio's own environment.
+  # prepare_release lives outside lightly_studio (CI-internal, not shipped);
+  # run as `python3 -m prepare_release` with this on PYTHONPATH.
   PYTHONPATH: ${{ github.workspace }}/.github/scripts
 
 jobs:
@@ -77,19 +73,16 @@ jobs:
       - name: Resolve inputs
         id: resolved
         working-directory: lightly_studio
-        # Read the workflow_dispatch inputs via env instead of interpolating them
-        # into the script - INPUT_VERSION is a free-form string, and substituting
-        # it directly into `run:` would let it inject shell commands.
+        # Passed via env, not interpolated into the script: inputs.version is
+        # free-form, and used raw it would let a crafted value inject shell code.
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_BUMP: ${{ inputs.bump }}
         run: |
+          # --dry-run --frozen: validate/normalize only, no write, no re-lock.
           if [ -n "$INPUT_VERSION" ]; then
-            # --dry-run --frozen: validate/normalize the explicit override only,
-            # no write, no re-lock. Also rejects a version that isn't valid semver.
             version="$(uv version "$INPUT_VERSION" --dry-run --frozen --short)"
           else
-            # --dry-run --frozen: compute the bumped version only, no write, no re-lock.
             version="$(uv version --bump "$INPUT_BUMP" --dry-run --frozen --short)"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
