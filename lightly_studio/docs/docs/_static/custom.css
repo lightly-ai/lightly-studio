@@ -219,6 +219,111 @@ body[data-md-color-scheme="slate"] {
 }
 
 /* ==========================================================================
+   3. Base and layout
+   ========================================================================== */
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The mock is full-bleed: both sidebars are panels flush to the window edge,
+   with the article between them. So the shell is the window at every width. A
+   `max-width` here — Material ships 61rem — leaves the panels floating a
+   hundred-odd pixels in from the edge on a wide monitor, with a strip of page
+   showing outside each one. A panel that does not reach the edge stops reading
+   as chrome and starts reading as a card that failed to stretch. */
+.md-grid {
+  max-width: none;
+}
+
+/* The two bands under the article are the exception. They have no panels to
+   anchor and their contents are laid out `space-between`, so at 2560px the
+   footer's three link columns end up a screen apart. The band still runs edge
+   to edge; only what sits in it is bounded. */
+.md-footer__inner,
+.ls-footer__inner {
+  max-width: 84rem;
+}
+
+@media screen and (min-width: 76.25em) {
+  /* Material opens the row 1.5rem below the header. Both panels are pinned at
+     `top: var(--ls-header-height)`, so that margin shows as a 30px strip of
+     page above each of them — but only at the top of a page, because the first
+     scroll takes them up to the pin and closes it. A panel that meets the
+     header only once you scroll is worse than one that never does.
+
+     The article gets its air from the breadcrumb's own 1.2rem of padding, and
+     from `.md-content__inner` on the pages that have no breadcrumb. */
+  .md-main__inner {
+    margin-top: 0;
+  }
+
+  .md-sidebar--primary {
+    width: var(--ls-sidebar-width);
+  }
+
+  .md-sidebar--secondary {
+    width: var(--ls-toc-width);
+  }
+
+  .md-content {
+    min-width: 0;
+    padding-inline: 2rem;
+  }
+
+  /* The article is bounded and centred in whatever the panels leave it. Pinned
+     to the left instead — which is what the mock does, being a fixed-width
+     mock — it parts company with the contents list opposite it: at 1920 the
+     column is 1433px wide and the text would stop 250px short of the panel,
+     leaving a hole down the right of every page.
+
+     The long selector is Material's own, at (0,5,0), with `[dir]` standing in
+     for its `[dir=ltr]` so the rule is direction-neutral. A bare
+     `.md-content__inner` loses the margin to it by four classes. */
+  [dir] .md-sidebar--primary:not([hidden]) ~ .md-content > .md-content__inner,
+  [dir] .md-sidebar--secondary:not([hidden]) ~ .md-content > .md-content__inner {
+    margin-inline: auto;
+    max-width: 44rem;
+    padding-top: 0.9rem;
+  }
+}
+
+/* Material sizes a sticky sidebar from how much of `.md-main` is still on
+   screen, so every pixel of footer that scrolls up takes a pixel off it and the
+   nav ends up cut off mid-item. Pin them to the viewport instead: each stays a
+   fixed-height panel below the header, scrolls its own overflow, and once the
+   article column ends it scrolls away with the page like any other content.
+
+   `!important` because Material writes both values inline from its script.
+   Nothing else is needed to keep a sidebar out of the footer: sticky is bounded
+   by `.md-main__inner`, a flex row that is already at least as tall as its
+   tallest item.
+
+   Two breakpoints, because the TOC turns sticky at 60em while the nav is still
+   a full-height drawer up to 76.25em, and the drawer keeps Material's sizing. */
+@media screen and (min-width: 60em) {
+  .md-sidebar--secondary {
+    height: calc(100vh - var(--ls-header-height)) !important;
+    top: var(--ls-header-height) !important;
+  }
+
+  .md-sidebar--secondary .md-sidebar__scrollwrap {
+    height: 100% !important;
+  }
+}
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary {
+    height: calc(100vh - var(--ls-header-height)) !important;
+    top: var(--ls-header-height) !important;
+  }
+
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    height: 100% !important;
+  }
+}
+
+/* ==========================================================================
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is
@@ -321,6 +426,33 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     border-color: #091c1e !important; /* Match border color */
 }
 
+/* Custom menu bar color */
+:root {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
+    --lightly-nav-active-color: #0a6f99;
+}
+
+/* Override Material theme primary colors */
+[data-md-color-scheme="default"] {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
+}
+
+[data-md-color-scheme="slate"] {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
+}
+
 /* Custom logo styling - increased size */
 .md-header__button.md-logo {
     margin: 0.2rem;
@@ -409,6 +541,12 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 .md-sidebar--primary .md-nav__item--section:has(> .md-nav__container) ~ .md-nav__item--section:has(> .md-nav__container),
 .md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested ~ .md-nav__item--nested {
   margin-top: 1.3rem;
+}
+
+
+/* Bold the active top-level menu item in the header navigation tabs */
+.md-tabs__item--active .md-tabs__link {
+  font-weight: 700;
 }
 
 
