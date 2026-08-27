@@ -1329,6 +1329,137 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   -webkit-mask-image: none;
 }
 
+/* -- Code ------------------------------------------------------------------ */
+
+/* A bordered chip rather than a tinted run of text. The tint alone is 1.03:1
+   against the article at these greys — visible on white, gone the moment the
+   code sits inside a callout or a table cell, which is most of where it sits. */
+.md-typeset code {
+  border: 1px solid var(--ls-line);
+  border-radius: 4px;
+  color: var(--ls-ink-soft);
+  font-size: 0.82em;
+  padding: 0.05em 0.35em;
+}
+
+/* A heading is display type; a bordered chip inside one reads as a button. */
+.md-typeset :is(h1, h2, h3, h4) code {
+  background-color: transparent;
+  border: 0;
+  font-size: 0.9em;
+  padding: 0;
+}
+
+/* Fenced blocks are the same near-black panel in both schemes, with the
+   generous padding of the landing page's terminal block. */
+.md-typeset pre > code,
+.md-typeset .highlight :is(pre, code),
+.md-typeset .highlighttable {
+  background-color: var(--ls-code-surface);
+  border: 0;
+  color: var(--ls-code-ink);
+}
+
+/* ~1.6 leading. The mock sets its two-line snippets at 1.9, which is fine for
+   two lines and breaks a thirty-line one into stripes. */
+.md-typeset pre > code {
+  border-radius: var(--ls-radius);
+  font-size: 0.65rem;
+  line-height: 1.6;
+  padding: 0.9rem 1rem;
+}
+
+/* Every fenced block is a framed card: a header strip naming it, the code
+   under a hairline, the copy control in the strip rather than on top of the
+   first line. Bun, Next.js, Tailwind and Stripe all land here. */
+.md-typeset .highlight {
+  background-color: var(--ls-code-surface);
+  border: 1px solid var(--ls-code-edge);
+  border-radius: var(--ls-radius);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Material puts `nav.md-code__nav` inside the `pre`. Taking the `pre` out of
+   the positioning flow hands the anchor to `.highlight`, so the control lands
+   in the header strip. */
+.md-typeset .highlight > pre {
+  margin: 0;
+  position: static;
+}
+
+/* Filled by `labelCodeBlocks` in custom.js: the fence `title=` when there is
+   one, the language otherwise. Until the attribute lands the strip does not
+   exist, so first paint shows a plain panel rather than an empty bar — and a
+   page where the script never runs degrades to the same. */
+.md-typeset .highlight:not([data-code-label])::before {
+  display: none;
+}
+
+.md-typeset .highlight::before {
+  background-color: var(--ls-code-head);
+  border-bottom: 1px solid var(--ls-code-edge);
+  color: var(--ls-code-head-ink);
+  content: attr(data-code-label);
+  display: block;
+  font-family: var(--ls-font-mono);
+  font-size: 0.53rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  line-height: 1;
+  padding: 0.45rem 0.75rem;
+  text-transform: uppercase;
+}
+
+/* The filename is read by the header strip above, not rendered on its own. */
+.md-typeset .highlight span.filename {
+  display: none;
+}
+
+.md-typeset .highlight > pre > code {
+  border-radius: 0;
+  padding: 0.85rem 1rem;
+}
+
+.md-typeset .highlight [data-linenos]::before {
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--ls-faint);
+}
+
+/* Copy control. Material 9.7 renders this as `nav.md-code__nav` wrapping
+   `button.md-code__button` — not the older `.md-clipboard`. Its icon inherits
+   `--md-code-fg-color`, which is the light-scheme ink and so disappears
+   against the near-black panel.
+
+   It sits in the header strip and stays flat until the block is hovered. */
+.md-typeset .md-code__nav {
+  background-color: transparent;
+  border-radius: var(--ls-radius-sm);
+  inset-block-start: 0.26rem;
+  inset-inline-end: 0.4rem;
+  padding: 0.1rem;
+  transition: background-color 0.15s;
+}
+
+.md-typeset .highlight:hover .md-code__nav,
+.md-typeset .md-code__nav:hover {
+  background-color: rgba(222, 222, 222, 0.14);
+}
+
+.md-typeset .md-code__button {
+  color: var(--ls-code-label);
+  transition: color 0.15s;
+}
+
+.md-typeset .md-code__button::after {
+  background-color: currentcolor;
+}
+
+.md-typeset .md-code__button:hover {
+  color: var(--ls-code-ink);
+}
+
    8. Footer
 
    Two bands. Material's `.md-footer` carries the prev/next pager; `.ls-footer`

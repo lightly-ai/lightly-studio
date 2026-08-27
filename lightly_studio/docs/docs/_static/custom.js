@@ -54,9 +54,41 @@ function syncSectionTabs() {
     });
 }
 
+// What a fence language is called in the header bar. Anything missing here is
+// printed as written, so a new language needs an entry only when the tag and
+// the name differ. `mysql` is the Pygments lexer the query-language pages
+// borrow for highlighting; it is not SQL.
+const CODE_LABELS = {
+    py: 'python',
+    bash: 'terminal',
+    shell: 'terminal',
+    console: 'terminal',
+    powershell: 'terminal',
+    mysql: 'lightly query language',
+};
+
+// Fill the header bar that `.md-typeset .highlight::before` renders: the
+// `title=` on the fence if there is one, the language otherwise.
+function labelCodeBlocks() {
+    document.querySelectorAll('.md-typeset .highlight').forEach(function (block) {
+        const filename = block.querySelector('span.filename');
+        if (filename) {
+            block.setAttribute('data-code-label', filename.textContent.trim());
+            return;
+        }
+        const languageClass = Array.from(block.classList).find(function (name) {
+            return name.startsWith('language-');
+        });
+        const language = languageClass ? languageClass.slice('language-'.length) : '';
+        block.setAttribute('data-code-label', CODE_LABELS[language] || language || 'code');
+    });
+}
+
 document.addEventListener('DOMContentLoaded', addSearchShortcutHint);
 
-// `navigation.instant` swaps the article without a page load, so the header copy
-// of the strip has to be re-synced per navigation. `document$` is Material's
-// observable for exactly that.
+// `navigation.instant` swaps the article without a page load, so anything that
+// decorates article content — or that reads it, as the tab sync does — has to
+// run per navigation rather than once on DOMContentLoaded. `document$` is
+// Material's observable for exactly that.
+document$.subscribe(labelCodeBlocks);
 document$.subscribe(syncSectionTabs);
