@@ -1786,6 +1786,89 @@ html .md-typeset :is(.admonition, details) > :last-child {
    specificity the muted default above cannot reach. It also runs to twenty
    tabs rather than the ten this file can practically list. */
 
+/* -- Cards and buttons ----------------------------------------------------- */
+
+.md-typeset .grid.cards > :is(ol, ul) > li {
+  background-color: var(--ls-surface-sub);
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  font-size: 0.68rem;
+  transition: border-color 0.15s;
+}
+
+/* A card leads with its subject in bold; the mock sets that line in the display
+   face, at the size of an `h4`. */
+.md-typeset .grid.cards > :is(ol, ul) > li > p:first-child > strong:only-child,
+.md-typeset .grid.cards > :is(ol, ul) > li > p:first-child > :is(a, em) > strong {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-size: 1.05em;
+  letter-spacing: -0.01em;
+}
+
+.md-typeset .grid.cards > :is(ol, ul) > li:hover {
+  border-color: var(--ls-ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.md-typeset .grid.cards {
+  gap: 1rem !important;
+}
+
+/* Small card grid: up to 3 columns, responsive */
+.md-typeset .grid.cards.small {
+  gap: 0.75rem !important;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)) !important;
+}
+
+.md-typeset .grid.cards.small > :is(ol, ul) > li {
+  font-size: 0.7rem;
+  padding: 0.5rem !important;
+}
+
+/* No separate title rule for the small grid. A card's lead-in is
+   `li > p > strong`, never `li > strong` — python-markdown wraps a loose list
+   item's content in a paragraph — so the rule that used to sit here matched
+   nothing. The generic rule above does match, and its 1.05em of the 0.7rem set
+   just above lands within a third of a pixel of what that rule asked for. */
+
+/* Wide card grid: up to 2 columns; a lone card keeps a reserved empty column
+   instead of stretching to fill the full row width */
+.md-typeset .grid.cards.wide {
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)) !important;
+}
+
+.md-typeset .md-button {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  color: var(--ls-ink);
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 0.4rem 0.9rem;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.md-typeset .md-button:hover {
+  background-color: var(--ls-surface-mut);
+  border-color: var(--ls-ink);
+  color: var(--ls-ink);
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--ls-ink);
+  border-color: var(--ls-ink);
+  color: var(--ls-surface);
+}
+
+.md-typeset .md-button--primary:hover {
+  background-color: var(--ls-accent);
+  border-color: var(--ls-accent);
+  color: var(--ls-on-accent);
+}
+
+/* ==========================================================================
    8. Footer
 
    Two bands. Material's `.md-footer` carries the prev/next pager; `.ls-footer`
@@ -1971,65 +2054,6 @@ html .md-typeset :is(.admonition, details) > :last-child {
    Legacy rules carried from the previous theme, removed as each region is
    restyled. Last in the file so anything not yet themed keeps its old look.
    ========================================================================== */
-
-/* Card styling with rounded corners */
-.md-typeset .grid.cards > ol > li,
-.md-typeset .grid.cards > ul > li {
-    border-radius: 8px; /* Slightly rounded corners */
-    transition: all 0.2s ease-in-out; /* Smooth hover effect */
-    background-color: #fafafa; /* Light background for cards */
-}
-
-/* Increase spacing between cards */
-.md-typeset .grid.cards {
-    gap: 1.25rem !important; /* More horizontal and vertical spacing */
-}
-
-/* Small card grid: up to 3 columns, responsive */
-.md-typeset .grid.cards.small {
-    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)) !important;
-    gap: 0.75rem !important;
-}
-
-.md-typeset .grid.cards.small > ol > li,
-.md-typeset .grid.cards.small > ul > li {
-    padding: 0.5rem !important;
-    font-size: 0.75rem;
-}
-
-.md-typeset .grid.cards.small > ul > li > strong {
-    font-size: 0.7rem;
-}
-
-/* Wide card grid: up to 2 columns; a lone card keeps a reserved empty column
-   instead of stretching to fill the full row width */
-.md-typeset .grid.cards.wide {
-    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)) !important;
-}
-
-/* Optional: subtle hover effect for cards */
-.md-typeset .grid.cards > ol > li:hover,
-.md-typeset .grid.cards > ul > li:hover {
-    transform: translateY(-2px); /* Slight lift on hover */
-    box-shadow: 0 4px 12px rgba(9, 28, 30, 0.15); /* Subtle shadow */
-}
-
-/* Button styling with rounded corners */
-.md-button {
-    border-radius: 8px !important; /* Rounded corners for buttons */
-    transition: all 0.2s ease-in-out !important; /* Smooth transitions */
-    padding: 0.25rem 0.8rem !important; /* Slimmer buttons */
-    line-height: 1.4 !important; /* Decrease line height for thinner appearance */
-    border-width: 0.0625rem !important; /* Thinner border */
-}
-
-/* Enhanced button hover effects */
-.md-button:hover {
-    transform: translateY(-1px) !important; /* Slight lift on hover */
-    box-shadow: 0 2px 8px rgba(9, 28, 30, 0.2) !important; /* Subtle shadow */
-    background-color: #091c1e !important; /* Use header dark color on hover */
-    border-color: #091c1e !important; /* Match border color */
-}
 
 /* Indentation. doc strings */
 div.doc-contents:not(.first) {
