@@ -1,8 +1,11 @@
 <script lang="ts">
-    import type { ECharts } from 'echarts/core';
-    import { buildHistogramOption, type HistogramValueMode } from './buildHistogramOption';
-    import { createHistogramChart } from './createHistogramChart';
+    import { buildHistogramOption } from './buildHistogramOption';
+    import HistogramChart from './HistogramChart/HistogramChart.svelte';
     import type { HistogramData, HistogramRange } from './types';
+
+    type ValueMode = NonNullable<
+        NonNullable<Parameters<typeof buildHistogramOption>[2]>['valueMode']
+    >;
 
     interface Props {
         /** Bin edges and per-bin counts (see `HistogramData`). */
@@ -21,7 +24,7 @@
          */
         showAxes?: boolean;
         /** Whether bin heights show raw counts or percentages (default 'number'). */
-        valueMode?: HistogramValueMode;
+        valueMode?: ValueMode;
         /**
          * Called with the value interval spanned by the user's selection:
          * press on a bin and release on another to select the range across
@@ -40,66 +43,9 @@
         onRangeSelect
     }: Props = $props();
 
-    let container: HTMLDivElement | undefined = $state();
-    let chart: ECharts | null = $state(null);
-
     const isEmpty = $derived(data.counts.length === 0 || data.binEdges.length < 2);
-
-    // Drag selection state: bin indices under the press and the current pointer.
-    let dragStartIndex = $state<number | null>(null);
-    let dragCurrentIndex = $state<number | null>(null);
-
-    const dragRange = $derived.by<HistogramRange | undefined>(() => {
-        if (dragStartIndex === null || dragCurrentIndex === null) return undefined;
-        const lower = Math.min(dragStartIndex, dragCurrentIndex);
-        const upper = Math.max(dragStartIndex, dragCurrentIndex);
-        return { min: data.binEdges[lower], max: data.binEdges[upper + 1] };
-    });
-
-    $effect(() => {
-        if (!container) return;
-        const setup = createHistogramChart({
-            container,
-            getBinCount: () => data.counts.length,
-            onDragStart: (binIndex) => {
-                if (!onRangeSelect) return;
-                dragStartIndex = binIndex;
-                dragCurrentIndex = binIndex;
-            },
-            onDragMove: (binIndex) => {
-                if (dragStartIndex === null) return;
-                dragCurrentIndex = binIndex;
-            },
-            onDragEnd: () => {
-                const range = dragRange;
-                dragStartIndex = null;
-                dragCurrentIndex = null;
-                if (range) onRangeSelect?.(range);
-            }
-        });
-        chart = setup.chart;
-        return () => {
-            setup.destroy();
-            chart = null;
-        };
-    });
-
-    $effect(() => {
-        if (!chart) return;
-        // While dragging, preview the prospective selection.
-        chart.setOption(
-            buildHistogramOption(data, dragRange ?? selectedRange, { showAxes, valueMode }),
-            true
-        );
-    });
 </script>
 
 {#if !isEmpty}
-    <div
-        bind:this={container}
-        class="w-full select-none dark:[color-scheme:dark]"
-        class:cursor-crosshair={onRangeSelect}
-        style="height: {heightPx}px"
-        data-testid="histogram"
-    ></div>
+    <HistogramChart {data} {selectedRange} {heightPx} {showAxes} {valueMode} {onRangeSelect} />
 {/if}

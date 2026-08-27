@@ -223,7 +223,7 @@
         valueMode: 'number'
     };
     let categoricalConfigs = $state<Record<string, DistributionConfig>>({});
-    let histogramValueModes = $state<Record<string, ValueMode>>({});
+    let histogramValueModes = $state<Record<string, Record<string, ValueMode>>>({});
     const categoricalConfig = $derived<DistributionConfig>(
         activeGroup
             ? (categoricalConfigs[activeGroup.id] ?? {
@@ -234,7 +234,7 @@
     );
     const activeHistogramId = $derived(activeGroup?.id ?? activeSource.id);
     const activeHistogramValueMode = $derived<ValueMode>(
-        histogramValueModes[activeHistogramId] ?? 'number'
+        histogramValueModes[activeSource.id]?.[activeHistogramId] ?? 'number'
     );
     let wasComparingTags = $state(false);
     let configDialogOpen = $state(false);
@@ -299,7 +299,13 @@
     };
 
     const setHistogramValueMode = (valueMode: ValueMode) => {
-        histogramValueModes = { ...histogramValueModes, [activeHistogramId]: valueMode };
+        histogramValueModes = {
+            ...histogramValueModes,
+            [activeSource.id]: {
+                ...histogramValueModes[activeSource.id],
+                [activeHistogramId]: valueMode
+            }
+        };
     };
 
     function applyConfig(next: DistributionConfig) {

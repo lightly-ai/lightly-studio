@@ -372,6 +372,49 @@ describe('DatasetDistributionPanel', () => {
         ).toHaveTextContent('Percentage');
     });
 
+    it('keeps histogram value modes independent for matching group ids across sources', async () => {
+        const user = userEvent.setup();
+        const sources: DistributionSource[] = [
+            {
+                id: 'predictions',
+                label: 'Predictions',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [1, 3] }
+                    }
+                ]
+            },
+            {
+                id: 'annotations',
+                label: 'Annotations',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [2, 2] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const valueMode = screen.getByTestId('dataset-distribution-histogram-value-mode');
+        await user.click(valueMode);
+        await user.click(await screen.findByRole('option', { name: 'Percentage' }));
+        expect(valueMode).toHaveTextContent('Percentage');
+
+        const sourceSelect = screen.getByTestId('dataset-distribution-source-select');
+        await user.click(sourceSelect);
+        await user.click(await screen.findByRole('option', { name: 'Annotations' }));
+        expect(valueMode).toHaveTextContent('Number');
+
+        await user.click(sourceSelect);
+        await user.click(await screen.findByRole('option', { name: 'Predictions' }));
+        expect(valueMode).toHaveTextContent('Percentage');
+    });
+
     it('preserves categorical endpoint order and toggles typed buckets but not Other', () => {
         const onCategoricalValueToggle = vi.fn();
         const sources: DistributionSource[] = [

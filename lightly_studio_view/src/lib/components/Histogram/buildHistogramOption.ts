@@ -26,10 +26,8 @@ export interface HistogramOptionOptions {
      */
     showAxes?: boolean;
     /** Whether bin heights show raw counts or their share of the histogram total. */
-    valueMode?: HistogramValueMode;
+    valueMode?: 'number' | 'percentage';
 }
-
-export type HistogramValueMode = 'number' | 'percentage';
 
 /** A single bar: the half-open value interval `[start, end)` and its count. */
 interface HistogramBin {
@@ -55,7 +53,7 @@ interface HistogramSeriesOptions {
     bins: HistogramBin[];
     /** Selected value range; bins outside it render dimmed. Omit to highlight all. */
     range?: HistogramRange;
-    valueMode: HistogramValueMode;
+    valueMode: NonNullable<HistogramOptionOptions['valueMode']>;
 }
 
 /**
@@ -214,7 +212,10 @@ function buildXAxis(options: HistogramAxisOptions): Record<string, unknown> {
 }
 
 /** Value y-axis for counts, with whole-number ticks. */
-function buildYAxis(showAxes: boolean, valueMode: HistogramValueMode): Record<string, unknown> {
+function buildYAxis(
+    showAxes: boolean,
+    valueMode: NonNullable<HistogramOptionOptions['valueMode']>
+): Record<string, unknown> {
     return {
         type: 'value',
         show: showAxes,
