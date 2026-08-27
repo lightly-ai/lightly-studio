@@ -1,0 +1,43 @@
+{#-
+  The section tab strip: Docs / Tutorials / Enterprise.
+
+  One macro, rendered twice. `header` is the design — inline in the header row,
+  next to the wordmark. `drawer` exists because below 76.25em the sidebar these
+  tabs scope is a slide-in drawer, and a header-only strip would leave a phone
+  reader stuck in whichever section they arrived in. `custom.css` shows exactly
+  one of the two at any width.
+
+  Links in a `nav`, not `role="tablist"`. Activating one loads a page rather
+  than swapping a panel in place, so the ARIA tabs pattern describes the wrong
+  widget: it would take two of the three links out of the tab order, bind the
+  arrow keys, and have a screen reader announce "selected" for something that is
+  about to navigate. Material's own tab row is the same markup for the same
+  reason.
+
+  `extra.tab_links` and `ls_active_tab` are set by `mkdocs_hooks.py`. Neither
+  exists on 404.html, which MkDocs builds without a page, so the strip draws
+  there with nothing marked.
+-#}
+
+{% macro strip(variant) %}
+  {% set active = ls_active_tab if ls_active_tab is defined else none %}
+  <nav class="ls-tabs ls-tabs--{{ variant }}" aria-label="Sections">
+    <ul class="ls-tabs__list">
+      {% for tab in config.extra.tab_links or [] %}
+        {% set is_active = tab.name == active %}
+        <li class="ls-tabs__item">
+          {#- `aria-current` says what is true. The tab is always the current
+              item of the three; it is only the current *page* on the one page
+              it actually links to. Claiming `page` anywhere else tells a screen
+              reader the link leads nowhere. -#}
+          <a
+            class="ls-tabs__link{{ ' ls-tabs__link--active' if is_active }}"
+            href="{{ tab.url | url }}"
+            data-ls-tab="{{ tab.name }}"
+            {%- if is_active %} aria-current="{{ 'page' if page and page.url == tab.url else 'true' }}"{% endif %}
+          >{{ tab.name }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </nav>
+{% endmacro %}

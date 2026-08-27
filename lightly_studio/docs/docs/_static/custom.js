@@ -34,4 +34,29 @@ function addSearchShortcutHint() {
     searchForm.appendChild(hint);
 }
 
+// Instant navigation replaces `[data-md-component=container]`, which the header
+// sits outside of — so the header copy of the section tabs still marks whichever
+// tab was active when the page was first loaded. The drawer copy is inside that
+// region and is re-rendered per page, so it is the one telling the truth; copy
+// its state across after every navigation.
+function syncSectionTabs() {
+    const source = document.querySelector('.ls-tabs--drawer .ls-tabs__link--active');
+    const activeTab = source ? source.dataset.lsTab : null;
+
+    document.querySelectorAll('.ls-tabs--header .ls-tabs__link').forEach(function (link) {
+        const isActive = link.dataset.lsTab === activeTab;
+        link.classList.toggle('ls-tabs__link--active', isActive);
+        if (isActive) {
+            link.setAttribute('aria-current', source.getAttribute('aria-current') || 'true');
+        } else {
+            link.removeAttribute('aria-current');
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', addSearchShortcutHint);
+
+// `navigation.instant` swaps the article without a page load, so the header copy
+// of the strip has to be re-synced per navigation. `document$` is Material's
+// observable for exactly that.
+document$.subscribe(syncSectionTabs);

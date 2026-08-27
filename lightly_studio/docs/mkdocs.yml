@@ -277,6 +277,31 @@ plugins:
 
 extra:
   homepage: https://lightly.ai/lightly-studio
+  # The header tab strip. Each tab claims top-level `nav:` sections and scopes
+  # the sidebar to them, so a reader in Tutorials sees the tutorials and nothing
+  # else. `nav:` itself is untouched: the mapping is by section title, and a
+  # section no tab claims joins the one marked `default` rather than falling out
+  # of the site. Where each tab lands is derived from `nav:` at build time, not
+  # written down here, so it follows a section that moves.
+  #
+  # `mkdocs_hooks.py` resolves this into `extra.tab_links` and
+  # `extra.tab_sections`, and warns — fatally, under `--strict` — when a tab
+  # claims a section `nav:` no longer has.
+  tabs:
+    - name: Docs
+      default: true
+      sections:
+        - Get Started
+        - Workflows
+        - Core Concepts
+        - Ecosystem
+        - Resources
+    - name: Tutorials
+      sections:
+        - Tutorials
+    - name: Enterprise
+      sections:
+        - Enterprise
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/lightly-ai/lightly-studio
