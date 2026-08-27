@@ -40,6 +40,9 @@ export interface MetadataBalancingParams {
     metadata_key: string;
     target_distribution_mode: ClassBalancingTargetDistributionMode;
     target_distribution: ClassBalancingTargetRow[];
+}
+export interface SubpartDiversityParams {
+    annotation_source_id: string;
     strength: number;
 }
 
@@ -51,6 +54,7 @@ export interface StrategyParamsByType {
     metadata_weighting: MetadataWeightingParams;
     class_balancing: ClassBalancingParams;
     metadata_balancing: MetadataBalancingParams;
+    subpart_diversity: SubpartDiversityParams;
 }
 
 export type StrategyType = keyof StrategyParamsByType;
@@ -110,6 +114,12 @@ export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description:
         label: 'Metadata Balancing',
         description:
             'Selects samples to reach a target distribution over a categorical metadata field such as weather or city. Use to even out a dataset skewed by a recorded condition.'
+    },
+    {
+        type: 'subpart_diversity',
+        label: 'Subpart Diversity',
+        description:
+            'Selects samples based on the diversity of their annotation subparts (crops). Use to build varied training sets at the sub-image level.'
     }
 ] satisfies Array<{ type: StrategyType; label: string; description: string }>;
 
@@ -133,6 +143,9 @@ export const STRATEGY_DEFAULTS: { [K in StrategyType]: StrategyParamsByType[K] }
         metadata_key: '',
         target_distribution_mode: 'uniform',
         target_distribution: [],
+    },
+    subpart_diversity: {
+        annotation_source_id: '',
         strength: 1
     }
 };

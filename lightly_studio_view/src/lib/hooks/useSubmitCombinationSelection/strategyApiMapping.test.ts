@@ -58,6 +58,11 @@ const defaultMetadataBalancing: StrategyInstance = {
         target_distribution: [],
         strength: 1
     },
+}
+const defaultSubpartDiversity: StrategyInstance = {
+    id: 'sd-1',
+    type: 'subpart_diversity',
+    params: { annotation_source_id: '', strength: 1 },
     isExpanded: true
 };
 
@@ -206,6 +211,14 @@ describe('toApiStrategy', () => {
             strategy_name: 'metadata_balance',
             metadata_key: 'weather',
             target_distribution: 'uniform',
+        })
+    });
+
+    it('maps subpart_diversity with null annotation source to subpart_diversity strategy with null annotation_source_id and null embedding_model_name', () => {
+        expect(toApiStrategy(defaultSubpartDiversity)).toEqual({
+            strategy_name: 'subpart_diversity',
+            embedding_model_name: null,
+            annotation_source_id: null,
             strength: 1
         });
     });
@@ -246,6 +259,20 @@ describe('toApiStrategy', () => {
             metadata_key: 'weather',
             target_distribution: { sunny: 0.3, rainy: 0.7 },
             strength: 2
+        })
+    });
+
+    it('maps subpart_diversity with annotation source id to subpart_diversity strategy with annotation_source_id', () => {
+        expect(
+            toApiStrategy({
+                ...defaultSubpartDiversity,
+                params: { annotation_source_id: 'source-uuid-2', strength: 0.8 }
+            })
+        ).toEqual({
+            strategy_name: 'subpart_diversity',
+            embedding_model_name: null,
+            annotation_source_id: 'source-uuid-2',
+            strength: 0.8
         });
     });
 });

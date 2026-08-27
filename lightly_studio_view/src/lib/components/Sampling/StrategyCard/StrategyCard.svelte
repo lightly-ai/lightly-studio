@@ -15,13 +15,15 @@
         type StrategyInstance,
         type StrategyParams,
         type StrategySummaryTag,
-        type ClassBalancingParams
+        type ClassBalancingParams,
+        type SubpartDiversityParams
     } from '$lib/hooks/useStrategyBuilder';
     import DeduplicationForm from '../forms/DeduplicationForm/DeduplicationForm.svelte';
     import MetadataBalancingForm from '../forms/MetadataBalancingForm/MetadataBalancingForm.svelte';
     import MetadataWeightingForm from '../forms/MetadataWeightingForm/MetadataWeightingForm.svelte';
     import SimilarityForm from '../forms/SimilarityForm/SimilarityForm.svelte';
     import ClassBalancingForm from '../forms/ClassBalancingForm/ClassBalancingForm.svelte';
+    import SubpartDiversityForm from '../forms/SubpartDiversityForm/SubpartDiversityForm.svelte';
     import StrengthField from '../forms/StrengthField/StrengthField.svelte';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
@@ -162,6 +164,13 @@
                             instanceId={instance.id}
                             params={instance.params as ClassBalancingParams}
                             {annotationLabels}
+                            {annotationSourceOptions}
+                            {onUpdate}
+                        />
+                    {:else if instance.type === 'subpart_diversity'}
+                        <SubpartDiversityForm
+                            instanceId={instance.id}
+                            params={instance.params as SubpartDiversityParams}
                             {annotationSourceOptions}
                             {onUpdate}
                         />
