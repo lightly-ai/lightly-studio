@@ -156,7 +156,7 @@ class EmbeddingManager:
             collection_id: The ID of the collection to associate with the model.
                 And to register as default, if requested.
             embedding_generator: The model implementation used for embeddings.
-            set_as_default: Whether to set this model as the default.
+            set_as_default: If True, make this model the collection's default.
 
         Returns:
             The created EmbeddingModel.
