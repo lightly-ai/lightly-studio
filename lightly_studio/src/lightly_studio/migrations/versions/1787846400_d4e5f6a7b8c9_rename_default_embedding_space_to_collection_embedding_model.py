@@ -80,6 +80,9 @@ def downgrade() -> None:
     op.drop_constraint(
         "collection_embedding_model_pkey", "collection_embedding_model", type_="primary"
     )
+    # The old table held one row per collection (its default). Drop the non-default rows
+    # so the collection-only primary key has no duplicate collection_id values.
+    op.get_bind().execute(sa.text("DELETE FROM collection_embedding_model WHERE NOT is_default"))
     op.create_primary_key(
         "default_embedding_space_pkey", "collection_embedding_model", ["collection_id"]
     )

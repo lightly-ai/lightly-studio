@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 
@@ -12,10 +12,12 @@ from lightly_studio.models.collection_embedding_model import CollectionEmbedding
 def set_default(
     session: Session, collection_id: UUID, embedding_model_id: UUID
 ) -> CollectionEmbeddingModelTable:
-    """Set (or replace) the default embedding space of a collection.
+    """Set the default embedding model of a collection.
 
-    A collection has at most one default, so an existing row is updated in place rather
-    than inserted a second time.
+    A collection may link several embedding models but has at most one default. The
+    current default (if any) is cleared and the target model is flagged instead. The
+    target keeps its existing link row when it already has one, so the composite primary
+    key is never mutated.
 
     Args:
         session: The database session.
@@ -23,22 +25,33 @@ def set_default(
         embedding_model_id: The embedding model to record as the default.
 
     Returns:
-        The persisted default embedding space row.
+        The persisted default embedding model row.
     """
-    default = _get_by_collection_id(session=session, collection_id=collection_id)
-    if default is None:
-        default = CollectionEmbeddingModelTable(
+    current_default = _get_by_collection_id(session=session, collection_id=collection_id)
+    if current_default is not None and current_default.embedding_model_id == embedding_model_id:
+        return current_default
+
+    # Clear the old default first so the one-default-per-collection unique index (Postgres)
+    # never sees two defaults at once.
+    if current_default is not None:
+        current_default.is_default = False
+        session.add(current_default)
+        session.flush()
+
+    target = session.get(CollectionEmbeddingModelTable, (collection_id, embedding_model_id))
+    if target is None:
+        target = CollectionEmbeddingModelTable(
             collection_id=collection_id,
             embedding_model_id=embedding_model_id,
             is_default=True,
         )
     else:
-        default.embedding_model_id = embedding_model_id
+        target.is_default = True
 
-    session.add(default)
+    session.add(target)
     session.commit()
-    session.refresh(default)
-    return default
+    session.refresh(target)
+    return target
 
 
 def get_by_collection_id(session: Session, collection_id: UUID) -> UUID | None:
@@ -65,9 +78,10 @@ def delete_by_collection_id(session: Session, collection_id: UUID) -> bool:
 def _get_by_collection_id(
     session: Session, collection_id: UUID
 ) -> CollectionEmbeddingModelTable | None:
-    """Return the collection's default embedding space row, or None if it has none."""
+    """Return the collection's default embedding model row, or None if it has none."""
     return session.exec(
         select(CollectionEmbeddingModelTable).where(
-            CollectionEmbeddingModelTable.collection_id == collection_id
+            CollectionEmbeddingModelTable.collection_id == collection_id,
+            col(CollectionEmbeddingModelTable.is_default).is_(True),
         )
     ).one_or_none()

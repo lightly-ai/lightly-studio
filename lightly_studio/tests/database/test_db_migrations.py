@@ -261,5 +261,25 @@ def test_postgres_collection_embedding_model__backfills_all_models(
 
         defaults = {str(model_id): is_default for model_id, is_default in rows}
         assert defaults == {older_model_id: True, newer_model_id: False}
+
+        # Downgrade must keep only the default row so the collection-only key holds.
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.downgrade,
+            revision="c2d3e4f5a6b7",
+        )
+        with engine.connect() as connection:
+            remaining = connection.execute(
+                statement=text(
+                    """
+                    SELECT embedding_model_id
+                    FROM default_embedding_space
+                    WHERE collection_id = :collection_id
+                    """
+                ),
+                parameters={"collection_id": collection_id},
+            ).all()
+        assert [str(model_id) for (model_id,) in remaining] == [older_model_id]
     finally:
         engine.dispose()
