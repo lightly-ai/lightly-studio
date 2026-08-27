@@ -181,6 +181,14 @@ class TestMundig:
         sampled = mundig.run(n_samples=2)
         assert sampled == [0, 2]
 
+    def test_add_subpart_diversity__all_empty_subpart_lists(self) -> None:
+        """Test subpart diversity when every sample has no subparts."""
+        mundig = Mundig()
+        mundig.add_subpart_diversity([[], [], []])
+        mundig.add_weighting([1.0, 3.0, 2.0])
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [1, 2]
+
     def test_mundig_rust_error(self) -> None:
         """Test the error handling for Rust exceptions.
 

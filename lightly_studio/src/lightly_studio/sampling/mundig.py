@@ -201,6 +201,9 @@ class Mundig:
             flat_embeddings.extend(subparts)
             offset += len(subparts)
 
+        if not flat_embeddings:
+            return
+
         embeddings_ndarray = np.array(flat_embeddings, dtype=np.float32)
         self.mundig.add_subpart_diversifying_strategy(
             embeddings=embeddings_ndarray,
