@@ -1,5 +1,17 @@
 {#-
-  This file was automatically generated - do not edit
+  A copy of Material 9.7.5's `partials/path.html` with two changes, both marked
+  below. Re-diff it against upstream when bumping mkdocs-material.
+
+  1. The trail renders whenever the page has an ancestor. Upstream counts the
+     home page as a crumb and needs two, so a page one level under a section
+     — which is most pages here since the nav flattened — got no trail at all.
+     `nav.homepage` is unset in this site anyway: `index.md` sits inside the
+     Get Started section rather than at the top level of `nav:`, which is what
+     MkDocs requires before it will call a page the home page.
+
+  2. The current page is the last crumb, as in the design mock. Upstream stops
+     at the parent, which leaves the trail naming everything except where the
+     reader actually is. It is a `span`, not a link to itself.
 -#}
 {% import "partials/path-item.html" as item with context %}
 {% if page.meta and page.meta.hide %}
@@ -9,7 +21,8 @@
 {% if nav.homepage %}
   {% set depth = depth + 1 %}
 {% endif %}
-{% if depth > 1 %}
+{#- CHANGED: was `depth > 1`. -#}
+{% if depth > 0 %}
   <nav class="md-path" aria-label="{{ lang.t('nav') }}" {{ hidden }}>
     <ol class="md-path__list">
       {% if nav.homepage %}
@@ -18,6 +31,10 @@
       {% for nav_item in page.ancestors | reverse %}
         {{ item.render(nav_item) }}
       {% endfor %}
+      {#- ADDED: the current page. -#}
+      <li class="md-path__item md-path__item--current">
+        <span class="md-ellipsis">{{ page.title }}</span>
+      </li>
     </ol>
   </nav>
 {% endif %}
