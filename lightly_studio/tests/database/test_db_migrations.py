@@ -174,3 +174,92 @@ def test_postgres_embedding_model_dataset_id__backfilled(
         command.check(config)
     finally:
         engine.dispose()
+
+
+def test_postgres_collection_embedding_model__backfills_all_models(
+    postgres_url: str | None,
+) -> None:
+    """The rename migration seeds every embedding model, the oldest one as default."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    collection_id = "00000000-0000-0000-0000-000000000002"
+    older_model_id = "00000000-0000-0000-0000-000000000010"
+    newer_model_id = "00000000-0000-0000-0000-000000000011"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="c2d3e4f5a6b7",
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, dataset_id, created_at, updated_at
+                    ) VALUES (
+                        'collection', 'IMAGE', :collection_id, :dataset_id, NOW(), NOW()
+                    )
+                    """
+                ),
+                parameters={"collection_id": collection_id, "dataset_id": dataset_id},
+            )
+            # Two models for the same collection; the older one must become the default.
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO embedding_model (
+                        name, embedding_dimension, collection_id, dataset_id,
+                        embedding_model_id, created_at
+                    ) VALUES (
+                        'older', 128, :collection_id, :dataset_id,
+                        :older_model_id, '2020-01-01 00:00:00+00'
+                    ), (
+                        'newer', 128, :collection_id, :dataset_id,
+                        :newer_model_id, '2021-01-01 00:00:00+00'
+                    )
+                    """
+                ),
+                parameters={
+                    "collection_id": collection_id,
+                    "dataset_id": dataset_id,
+                    "older_model_id": older_model_id,
+                    "newer_model_id": newer_model_id,
+                },
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="d4e5f6a7b8c9",
+        )
+        with engine.connect() as connection:
+            rows = connection.execute(
+                statement=text(
+                    """
+                    SELECT embedding_model_id, is_default
+                    FROM collection_embedding_model
+                    WHERE collection_id = :collection_id
+                    ORDER BY embedding_model_id
+                    """
+                ),
+                parameters={"collection_id": collection_id},
+            ).all()
+
+        defaults = {str(model_id): is_default for model_id, is_default in rows}
+        assert defaults == {older_model_id: True, newer_model_id: False}
+    finally:
+        engine.dispose()
