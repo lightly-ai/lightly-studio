@@ -5,7 +5,20 @@ site_url: https://docs.lightly.ai/studio
 
 theme:
   name: material
-  language: en
+  # Not `en`. `overrides/partials/languages/custom.html` answers the handful of
+  # strings this theme words differently and lets Material fall back to `en` for
+  # everything else.
+  language: custom
+  # `overrides/` holds six templates. `main.html`, `partials/site_footer.html`
+  # and `partials/languages/custom.html` are additive — they append the site
+  # footer under Material's prev/next pager and reword a string or two.
+  # `partials/header.html`, `partials/nav.html` and `partials/toc.html` are FORKS
+  # of the same-named Material 9.7.5 partials, carrying the section tab strip and
+  # the sidebar scoping it does (see `extra.tabs` below), the release chip, and
+  # the page-action links under the contents list. Upstream regenerates those
+  # files between releases and shadowing them is silent, so re-diff them against
+  # `material/templates/partials/` whenever mkdocs-material is bumped.
+  custom_dir: overrides
   logo: _static/lightly_logo.svg
   favicon: _static/lightly_logo_fav.svg
   palette:
@@ -30,6 +43,11 @@ theme:
 repo_url: https://github.com/lightly-ai/lightly-studio
 repo_name: LightlyStudio
 docs_dir: docs
+
+# Sets `extra.package_version` from the installed package, so the footer does not
+# carry a second copy of the version. See `mkdocs_hooks.py`.
+hooks:
+  - mkdocs_hooks.py
 
 nav:
   - Getting Started:
@@ -193,6 +211,10 @@ plugins:
   - git-revision-date-localized:
       type: date
       fallback_to_build_date: true
+      # This plugin defaults its locale to `theme.language`, which is `custom`
+      # here — a Material convention, not a babel one, so it raises
+      # `UnknownLocaleError` on the first page. Say `en` outright.
+      locale: en
 
 extra:
   homepage: https://lightly.ai/lightly-studio
@@ -207,14 +229,17 @@ extra:
 markdown_extensions:
   - admonition
   - attr_list
-  - codehilite
   - def_list
   - footnotes
   - md_in_html
   - toc:
       permalink: true
   - pymdownx.details
-  - pymdownx.highlight
+  # `pygments_lang_class` puts the fence language on the wrapper as
+  # `language-python`, which is the only hook the header label has to read from.
+  # See `labelCodeBlocks` in _static/custom.js.
+  - pymdownx.highlight:
+      pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
