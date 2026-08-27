@@ -1,8 +1,5 @@
 name: Prepare Release
 
-# Creates a release branch, promotes the changelog, bumps the version, and
-# opens a review-ready release PR - the mechanical half of preparing a
-# LightlyStudio release. Publishes nothing.
 on:
   workflow_dispatch:
     inputs:
@@ -26,15 +23,11 @@ permissions:
   contents: write
   pull-requests: write
 
-# Only one release preparation at a time; never cancel one mid-flight since
-# it pushes a branch and opens a PR.
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
 env:
-  # prepare_release lives outside lightly_studio (CI-internal, not shipped);
-  # run as `python3 -m prepare_release` with this on PYTHONPATH.
   PYTHONPATH: ${{ github.workspace }}/.github/scripts
 
 jobs:
@@ -46,8 +39,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: main
-          # Full history + tags: the coverage checklist below diffs against
-          # the last tag.
           fetch-depth: 0
           fetch-tags: true
 
@@ -73,13 +64,10 @@ jobs:
       - name: Resolve inputs
         id: resolved
         working-directory: lightly_studio
-        # Passed via env, not interpolated into the script: inputs.version is
-        # free-form, and used raw it would let a crafted value inject shell code.
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_BUMP: ${{ inputs.bump }}
         run: |
-          # --dry-run --frozen: validate/normalize only, no write, no re-lock.
           if [ -n "$INPUT_VERSION" ]; then
             version="$(uv version "$INPUT_VERSION" --dry-run --frozen --short)"
           else
@@ -100,8 +88,6 @@ jobs:
 
       - name: Bump pyproject.toml version
         working-directory: lightly_studio
-        # --frozen: write the version only, no re-lock - the explicit uv sync
-        # below (and its narrow-diff check) is the one deliberate lock step.
         run: uv version "${{ steps.resolved.outputs.version }}" --frozen
 
       - name: Snapshot uv.lock before sync
