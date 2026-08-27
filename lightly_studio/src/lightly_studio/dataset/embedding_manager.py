@@ -183,8 +183,11 @@ class EmbeddingManager:
         self._models[model_id] = embedding_generator
 
         # Record the default in two places: the in-memory map caches the loaded generator
-        # for this process, and the default_embedding_space table persists the choice for
+        # for this process, and the collection_embedding_model table persists the choice for
         # query-layer callers (collection_embedding_model_resolver.get_by_collection_id).
+        # TODO(Michal, 08/2026): Update to use the updated collection_embedding_model_resolver
+        # interface once ready. Currently, registering multiple collection models might lead
+        # to an inconsistent state.
         if set_as_default or collection_id not in self._collection_id_to_default_model_id:
             self._collection_id_to_default_model_id[collection_id] = model_id
         if (

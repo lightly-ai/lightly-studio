@@ -111,7 +111,7 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
         "embedding_model": count(
             EmbeddingModelTable, col(EmbeddingModelTable.collection_id).in_(collection_ids)
         ),
-        "default_embedding_space": count(
+        "collection_embedding_model": count(
             CollectionEmbeddingModelTable,
             col(CollectionEmbeddingModelTable.collection_id).in_(collection_ids),
         ),
@@ -270,7 +270,7 @@ def test_deep_copy_then_delete_round_trip(db_session: Session) -> None:
         "tag",
         "sample_tag_link",
         "embedding_model",
-        "default_embedding_space",
+        "collection_embedding_model",
         "annotation_label",
         "object_track",
         "evaluation_run",

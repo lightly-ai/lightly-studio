@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.resolvers import collection_embedding_model_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -56,6 +57,59 @@ def test_set_default__replaces_existing(db_session: Session) -> None:
         )
         == model_2.embedding_model_id
     )
+
+
+def test_set_default__promotes_existing_link(db_session: Session) -> None:
+    # A collection that already links two models, as after the backfill migration.
+    collection = create_collection(session=db_session)
+    model_1 = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="model_1",
+        embedding_model_hash="hash_1",
+    )
+    model_2 = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="model_2",
+        embedding_model_hash="hash_2",
+    )
+    db_session.add(
+        CollectionEmbeddingModelTable(
+            collection_id=collection.collection_id,
+            embedding_model_id=model_1.embedding_model_id,
+            is_default=True,
+        )
+    )
+    db_session.add(
+        CollectionEmbeddingModelTable(
+            collection_id=collection.collection_id,
+            embedding_model_id=model_2.embedding_model_id,
+            is_default=False,
+        )
+    )
+    db_session.commit()
+
+    collection_embedding_model_resolver.set_default(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=model_2.embedding_model_id,
+    )
+
+    # The existing model_2 link is promoted; model_1 is demoted, so a single default holds.
+    assert (
+        collection_embedding_model_resolver.get_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        == model_2.embedding_model_id
+    )
+    defaults = db_session.exec(
+        select(CollectionEmbeddingModelTable).where(
+            CollectionEmbeddingModelTable.collection_id == collection.collection_id,
+            col(CollectionEmbeddingModelTable.is_default).is_(True),
+        )
+    ).all()
+    assert [row.embedding_model_id for row in defaults] == [model_2.embedding_model_id]
 
 
 def test_get_by_collection_id__none_when_unset(db_session: Session) -> None:
