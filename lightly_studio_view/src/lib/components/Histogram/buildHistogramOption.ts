@@ -221,10 +221,12 @@ function buildYAxis(
         show: showAxes,
         // Counts are whole numbers; avoid fractional tick labels.
         minInterval: valueMode === 'number' ? 1 : undefined,
-        max: valueMode === 'percentage' ? 100 : undefined,
+        // Percentage mode is *not* pinned to 100%: ECharts scales the axis to the
+        // tallest bin (rounded up to a nice tick), so a flat distribution whose
+        // biggest bin is 12% fills the plot instead of hugging the baseline.
         axisLabel:
             valueMode === 'percentage'
-                ? { ...CHART_AXIS_LABEL, formatter: (value: number) => `${value}%` }
+                ? { ...CHART_AXIS_LABEL, formatter: (value: number) => `${formatFloat(value)}%` }
                 : CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };
