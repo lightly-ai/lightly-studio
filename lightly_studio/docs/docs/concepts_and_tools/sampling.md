@@ -291,7 +291,7 @@ The three `target_distribution` options are:
 |---|---|
 | `"uniform"` | Equal share for every class present in the dataset |
 | `"input"` | Mirrors the class distribution of the candidate input set |
-| `{class: ratio, ...}` | Explicit target ratios; must sum to 1.0 |
+| `{class: ratio, ...}` | Explicit target ratios. Give a ratio to only some classes; the other classes then share the remainder to 1.0 |
 
 ### Metadata balancing
 
@@ -343,7 +343,20 @@ apply to the values of the metadata field:
 |---|---|
 | `"uniform"` | Equal share for every value present in the dataset |
 | `"input"` | Mirrors the value distribution of the candidate input set |
-| `{value: ratio, ...}` | Explicit target ratios; must sum to 1.0. The values without a ratio share the remainder |
+| `{value: ratio, ...}` | Explicit target ratios. Give a ratio to only some values; the other values then share the remainder to 1.0 |
+
+A boolean field is balanced over its two values. Name them with `True` and `False`, or with
+the lowercase strings `"true"` and `"false"`:
+
+```py
+# Select 20% blurry images and 80% sharp ones.
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_blur",
+    metadata_key="is_blurry",
+    target_distribution={True: 0.2, False: 0.8},
+)
+```
 
 Samples that have no value for the field stay available for selection, but the strategy does not
 move the selection towards or away from them. To balance more than one field, combine one strategy
