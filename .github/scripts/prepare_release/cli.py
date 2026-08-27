@@ -54,7 +54,6 @@ def main(argv: list[str] | None = None) -> int:
     pr_body_parser = subparsers.add_parser(RENDER_PR_BODY, help="assemble the release PR body")
     pr_body_parser.add_argument("--changelog", type=Path, required=True)
     pr_body_parser.add_argument("--version", required=True)
-    pr_body_parser.add_argument("--coverage-file", type=Path, required=True)
     pr_body_parser.add_argument("--output", type=Path, required=True)
 
     args = parser.parse_args(argv)
@@ -104,11 +103,7 @@ def _cmd_render_pr_body(args: argparse.Namespace) -> None:
     section_body = changelog.extract_released_section(
         changelog_text=args.changelog.read_text(), version=args.version
     )
-    coverage_checklist = args.coverage_file.read_text() if args.coverage_file.exists() else ""
-    body = pr_body.render_pr_body(
-        section_body=section_body,
-        coverage_checklist=coverage_checklist,
-    )
+    body = pr_body.render_pr_body(section_body=section_body)
     args.output.write_text(body)
 
 

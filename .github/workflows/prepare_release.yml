@@ -39,8 +39,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: main
-          fetch-depth: 0
-          fetch-tags: true
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
@@ -114,26 +112,11 @@ jobs:
             exit 1
           fi
 
-      - name: Build coverage checklist (advisory, git-derived, never published)
-        run: |
-          last_tag="$(git describe --tags --abbrev=0 origin/main 2>/dev/null || true)"
-          {
-            if [ -z "$last_tag" ]; then
-              echo "_No previous tag found; skipping coverage checklist._"
-            else
-              echo "Merged commits since \`$last_tag\` - check each has a matching CHANGELOG entry:"
-              echo
-              git log "$last_tag..origin/main" --no-merges --oneline | sed 's/^/- /'
-            fi
-          } > /tmp/coverage_checklist.md
-          cat /tmp/coverage_checklist.md >> "$GITHUB_STEP_SUMMARY"
-
       - name: Render PR body
         run: |
           python3 -m prepare_release render-pr-body \
             --changelog CHANGELOG.md \
             --version "${{ steps.resolved.outputs.version }}" \
-            --coverage-file /tmp/coverage_checklist.md \
             --output /tmp/pr_body.md
 
       - name: Commit changes
