@@ -155,4 +155,28 @@ result = dataset.evaluate(query=val_query).object_detection(
 Only samples that appear in both annotation sources **and** in the query are included. Samples
 missing from either source are silently skipped.
 
+### Reading evaluation results
+
+`evaluate()` also reads back the runs that were already stored. This lets a script assert model
+quality without the GUI.
+
+Use `list_runs()` to get the stored runs, newest first. Each run is an
+[`EvaluationRunView`](../api/evaluation.md#evaluationrunview) with its id, name, configuration,
+creation time, and source names. Use `confusion_matrix()` to get the confusion matrix of a run by
+its id.
+
+```python
+evaluator = dataset.evaluate()
+
+runs = evaluator.list_runs()
+for run in runs:
+    print(run.name, run.created_at, run.evaluation_run_configuration)
+
+matrix = evaluator.confusion_matrix(run_id=runs[0].id)
+print(matrix.row_labels, matrix.col_labels, matrix.counts)
+```
+
+`confusion_matrix()` supports object-detection and classification runs. It does not support
+segmentation runs.
+
 See [Evaluation API Reference](../api/evaluation.md) for the full API surface.
