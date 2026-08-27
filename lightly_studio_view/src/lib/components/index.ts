@@ -67,6 +67,7 @@ export { default as CollectionSearch } from '$lib/components/CollectionSearch/Co
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
 export { default as ImageOrderBy } from '$lib/components/OrderBy/ImageOrderBy.svelte';
+export { default as VideoOrderBy } from '$lib/components/OrderBy/VideoOrderBy.svelte';
 export { default as AnnotationOrderBy } from '$lib/components/OrderBy/AnnotationOrderBy.svelte';
 export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
 export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';

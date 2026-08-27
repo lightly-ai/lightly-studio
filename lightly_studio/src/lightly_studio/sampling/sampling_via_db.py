@@ -13,18 +13,16 @@ import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
 
+from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
-    embedding_model_resolver,
     metadata_resolver,
-    sample_embedding_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.sampling import sampling_helpers, sequence_sampling
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
@@ -428,41 +426,11 @@ def _add_strategy_to_mundig(
             stopping_condition_minimum_distance=strat.stopping_condition_minimum_distance,
         )
     elif isinstance(strat, EmbeddingSimilarityStrategy):
-        embeddings = sampling_helpers.get_embeddings_by_sample_ids(
+        _add_similarity_to_mundig(
             session=session,
-            collection_id=context.collection_id,
-            sample_ids=context.input_sample_ids,
-            embedding_model_name=strat.embedding_model_name,
-        )
-        embedding_model_id = embedding_model_resolver.get_by_name(
-            session=session,
-            collection_id=context.collection_id,
-            embedding_model_name=strat.embedding_model_name,
-        ).embedding_model_id
-        query_tag = tag_resolver.get_by_name(
-            session=session,
-            tag_name=strat.query_tag_name,
-            collection_id=context.collection_id,
-        )
-        if query_tag is None:
-            raise ValueError(f"Query tag with name {strat.query_tag_name} not found.")
-        query_embedding_tables = sample_embedding_resolver.get_all_by_collection_id(
-            session=session,
-            collection_id=context.collection_id,
-            embedding_model_id=embedding_model_id,
-            filters=SampleFilter(tag_ids=[query_tag.tag_id]),
-        )
-        query_embeddings = [embedding.embedding for embedding in query_embedding_tables]
-        if not query_embeddings:
-            raise ValueError(
-                "Query tag "
-                f"{strat.query_tag_name} does not have embeddings for embedding model "
-                f"{strat.embedding_model_name}."
-            )
-        mundig.add_similarity(
-            embeddings=embeddings,
-            query_embeddings=query_embeddings,
-            strength=strat.strength,
+            context=context,
+            strat=strat,
+            mundig=mundig,
         )
     elif isinstance(strat, MetadataWeightingStrategy):
         weights: list[float] = []
@@ -492,3 +460,58 @@ def _add_strategy_to_mundig(
         )
     else:
         raise ValueError(f"Sampling strategy of type {type(strat)} is unknown.")
+
+
+def _add_similarity_to_mundig(
+    session: Session,
+    context: _SamplingContext,
+    strat: EmbeddingSimilarityStrategy,
+    mundig: Mundig,
+) -> None:
+    """Resolve the embeddings of a similarity strategy and add it to Mundig."""
+    mundig.add_similarity(
+        embeddings=sampling_helpers.get_embeddings_by_sample_ids(
+            session=session,
+            collection_id=context.collection_id,
+            sample_ids=context.input_sample_ids,
+            embedding_model_name=strat.embedding_model_name,
+        ),
+        query_embeddings=_get_query_embeddings(
+            session=session,
+            collection_id=context.collection_id,
+            strat=strat,
+        ),
+        strength=strat.strength,
+    )
+
+
+def _get_query_embeddings(
+    session: Session,
+    collection_id: UUID,
+    strat: EmbeddingSimilarityStrategy,
+) -> list[Embedding]:
+    """Resolve the embeddings of the query sample tag of a similarity strategy.
+
+    Raises:
+        ValueError: If the query tag does not exist or has no embeddings for the model.
+    """
+    query_tag = tag_resolver.get_by_name(
+        session=session,
+        tag_name=strat.query_tag_name,
+        collection_id=collection_id,
+    )
+    if query_tag is None:
+        raise ValueError(f"Query tag with name {strat.query_tag_name} not found.")
+    query_embeddings = sampling_helpers.get_embeddings_by_tag_id(
+        session=session,
+        collection_id=collection_id,
+        tag_id=query_tag.tag_id,
+        embedding_model_name=strat.embedding_model_name,
+    )
+    if not query_embeddings:
+        raise ValueError(
+            "Query tag "
+            f"{strat.query_tag_name} does not have embeddings for embedding model "
+            f"{strat.embedding_model_name}."
+        )
+    return query_embeddings
