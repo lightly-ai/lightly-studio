@@ -17,9 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   grows that tag with the newly selected samples instead of requiring a fresh tag.
 - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
 - Compare the annotation class distribution of any sample tag against the current view in the Distribution panel.
+- Compare metadata distributions of any sample tag against the current view in the Distribution panel. Categorical metadata renders as grouped bars and numerical metadata as grouped histograms sharing the same bins.
 - Azure Blob Storage is supported in the LightlyStudio Enterprise version.
 - Make annotation classes selectable in distribution plot.
+- Switch categorical and numerical metadata distributions between sample counts and percentages.
 - Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
+- Python SDK: Balance a sampling over the values of a categorical metadata field with
+  `Sampling.metadata_balancing()`, using the same `uniform`, `input`, and explicit target
+  distributions as annotation class balancing.
+
 
 ### Changed
 

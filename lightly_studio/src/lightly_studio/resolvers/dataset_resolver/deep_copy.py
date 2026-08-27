@@ -43,8 +43,8 @@ from lightly_studio.models.annotation_collection_coverage import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricTable,
@@ -793,7 +793,7 @@ def _copy_default_embedding_spaces(session: Session) -> None:
     The inner joins on the collection and embedding-model maps drop any row whose
     collection or model is not part of the dataset.
     """
-    src = _table(DefaultEmbeddingSpaceTable).alias("src")
+    src = _table(CollectionEmbeddingModelTable).alias("src")
     map_collection = _map(_MAP_COLLECTION)
     map_model = _map(_MAP_EMBEDDING_MODEL)
     from_clause = src.join(map_collection, map_collection.c.old_id == src.c["collection_id"]).join(
@@ -805,7 +805,7 @@ def _copy_default_embedding_spaces(session: Session) -> None:
     }
     _copy_table(
         session=session,
-        target=DefaultEmbeddingSpaceTable,
+        target=CollectionEmbeddingModelTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

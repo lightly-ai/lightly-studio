@@ -23,8 +23,8 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate, Embeddin
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
-    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -183,18 +183,21 @@ class EmbeddingManager:
         self._models[model_id] = embedding_generator
 
         # Record the default in two places: the in-memory map caches the loaded generator
-        # for this process, and the default_embedding_space table persists the choice for
-        # query-layer callers (default_embedding_space_resolver.get_by_collection_id).
+        # for this process, and the collection_embedding_model table persists the choice for
+        # query-layer callers (collection_embedding_model_resolver.get_by_collection_id).
+        # TODO(Michal, 08/2026): Update to use the updated collection_embedding_model_resolver
+        # interface once ready. Currently, registering multiple collection models might lead
+        # to an inconsistent state.
         if set_as_default or collection_id not in self._collection_id_to_default_model_id:
             self._collection_id_to_default_model_id[collection_id] = model_id
         if (
             set_as_default
-            or default_embedding_space_resolver.get_by_collection_id(
+            or collection_embedding_model_resolver.get_by_collection_id(
                 session=session, collection_id=collection_id
             )
             is None
         ):
-            default_embedding_space_resolver.set_default(
+            collection_embedding_model_resolver.set_default(
                 session=session, collection_id=collection_id, embedding_model_id=model_id
             )
 

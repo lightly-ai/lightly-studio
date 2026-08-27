@@ -36,8 +36,8 @@ from lightly_studio.models.annotation_collection_coverage import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
@@ -328,8 +328,10 @@ def _delete_tags(session: Session, dataset_id: UUID) -> None:
 def _delete_default_embedding_spaces(session: Session, dataset_id: UUID) -> None:
     """Delete default embedding spaces for the dataset's collections."""
     session.exec(
-        delete(DefaultEmbeddingSpaceTable).where(
-            col(DefaultEmbeddingSpaceTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        delete(CollectionEmbeddingModelTable).where(
+            col(CollectionEmbeddingModelTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
