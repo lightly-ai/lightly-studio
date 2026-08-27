@@ -283,8 +283,10 @@ class Sampling:
             sampling_result_tag_name: Tag name for the sampling result.
             metadata_key: Metadata key to balance. Must be categorical (string or
                 boolean values).
-            target_distribution: Can be 'uniform', 'input',
-                or a dictionary mapping metadata values to target ratios.
+            target_distribution: Can be 'uniform', 'input', or a dictionary mapping
+                metadata values to target ratios. The values of a boolean key are named
+                with True and False or with the lowercase strings 'true' and 'false'.
+                Values without a ratio share the ratio remaining to 1.0.
             preselected_tag_name: Optional tag containing samples that should be treated
                 as already selected. These samples are excluded from the result tag.
                 Pass the same name as `sampling_result_tag_name` to instead grow that
