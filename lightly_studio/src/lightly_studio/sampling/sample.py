@@ -18,6 +18,7 @@ from lightly_studio.sampling.sampling_config import (
     MetadataWeightingStrategy,
     SamplingConfig,
     SamplingStrategy,
+    SubpartDiversityStrategy,
 )
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
 
@@ -295,6 +296,48 @@ class Sampling:
         strategy = MetadataBalancingStrategy(
             metadata_key=metadata_key,
             target_distribution=target_distribution,
+        )
+        self.multi_strategies(
+            n_samples_to_select=n_samples_to_select,
+            sampling_result_tag_name=sampling_result_tag_name,
+            sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
+        )
+
+    def subpart_diversity(
+        self,
+        n_samples_to_select: int,
+        sampling_result_tag_name: str,
+        embedding_model_name: str | None = None,
+        annotation_source_id: UUID | None = None,
+        preselected_tag_name: str | None = None,
+    ) -> None:
+        """Select a diverse subset based on the embeddings of annotated subparts (crops).
+
+        Each parent image contributes the embeddings of all its annotation crops.
+        Sampling maximizes diversity across those crop embeddings so that selected
+        images collectively cover a broad range of objects, not just a broad range
+        of scene-level appearance.
+
+        When `annotation_source_id` is omitted, crops from all annotation sources
+        are merged. Pass `annotation_source_id` to restrict to one specific annotation source.
+
+        Args:
+            n_samples_to_select: Number of samples to select.
+            sampling_result_tag_name: Tag name for the sampling result.
+            embedding_model_name: Name of the embedding model to use for crop samples.
+                If None, uses the only available model or raises if multiple exist.
+            annotation_source_id: Optional annotation source ID. When set, only
+                crops from that annotation source contribute embeddings. When omitted, crops
+                from all annotation sources are merged.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are excluded from the result tag.
+                Pass the same name as `sampling_result_tag_name` to instead grow that
+                tag with the newly selected samples.
+        """
+        strategy = SubpartDiversityStrategy(
+            embedding_model_name=embedding_model_name,
+            annotation_source_id=annotation_source_id,
         )
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
