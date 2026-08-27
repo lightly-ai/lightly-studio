@@ -190,7 +190,7 @@ class EmbeddingManager:
         # Determine if the model should be set as default.
         # TODO(Michal, 08/2026): Currently there are two places storing the defaults:
         # the `_collection_id_to_default_model_id` dict and the database. The source
-        # of truth should completely move to the database,
+        # of truth should completely move to the database.
         has_no_default_in_db = (
             collection_embedding_model_resolver.get_default_by_collection_id(
                 session=session, collection_id=collection_id
