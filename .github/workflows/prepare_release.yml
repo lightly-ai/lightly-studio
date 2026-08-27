@@ -77,12 +77,20 @@ jobs:
       - name: Resolve inputs
         id: resolved
         working-directory: lightly_studio
+        # Read the workflow_dispatch inputs via env instead of interpolating them
+        # into the script - INPUT_VERSION is a free-form string, and substituting
+        # it directly into `run:` would let it inject shell commands.
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BUMP: ${{ inputs.bump }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            version="${{ inputs.version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            # --dry-run --frozen: validate/normalize the explicit override only,
+            # no write, no re-lock. Also rejects a version that isn't valid semver.
+            version="$(uv version "$INPUT_VERSION" --dry-run --frozen --short)"
           else
             # --dry-run --frozen: compute the bumped version only, no write, no re-lock.
-            version="$(uv version --bump "${{ inputs.bump }}" --dry-run --frozen --short)"
+            version="$(uv version --bump "$INPUT_BUMP" --dry-run --frozen --short)"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "### Preparing release v$version" >> "$GITHUB_STEP_SUMMARY"
