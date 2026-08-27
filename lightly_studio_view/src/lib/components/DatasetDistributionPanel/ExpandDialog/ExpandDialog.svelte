@@ -79,6 +79,7 @@
             {categoryNoun}
             {categoryNounPlural}
             {sortLabels}
+            valueMode={config.valueMode}
             onConfigure={() => (configDialogOpen = true)}
             onValueModeChange={(valueMode) => onConfigChange({ ...config, valueMode })}
             onShowAll={() => onConfigChange({ ...config, mode: 'topN', n: data.length })}

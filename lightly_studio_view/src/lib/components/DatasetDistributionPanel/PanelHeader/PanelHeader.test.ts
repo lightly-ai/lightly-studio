@@ -44,6 +44,17 @@ describe('PanelHeader', () => {
         expect(screen.getByText(/491 samples/)).toBeInTheDocument();
     });
 
+    it('describes the full series when percentage mode is selected', () => {
+        render(PanelHeader, {
+            props: { ...defaultProps, valueMode: 'percentage', onValueModeChange: vi.fn() }
+        });
+
+        expect(screen.getByText(/100% of 491 annotations/)).toBeInTheDocument();
+        expect(screen.getByTestId('dataset-distribution-value-mode')).toHaveTextContent(
+            'Percentage'
+        );
+    });
+
     it('uses custom category wording and sort labels', () => {
         render(PanelHeader, {
             props: {
