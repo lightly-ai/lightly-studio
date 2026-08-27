@@ -1460,6 +1460,235 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   color: var(--ls-code-ink);
 }
 
+/* -- Callouts -------------------------------------------------------------
+
+   An icon in a fixed gutter, the title next to it on its own row, the body at
+   full width underneath. Every docs site that reads well down a long page
+   converges on some version of this — Material's own default, Docusaurus,
+   Starlight, GitHub alerts, Stripe — and they converge on it for one reason:
+   the body's left edge lands in the same place on every callout, whatever the
+   title says.
+
+   The previous version put the title in a `max-content` grid column and the
+   body in the second. That made the body start wherever the title happened to
+   end: eight callouts on `concepts_and_tools/sampling.md` started at eight
+   different x positions, 181px apart end to end. It also charged a
+   sentence-length title — `search_and_filter.md` has one — a quarter of the
+   box, forever, and pushed any fenced block inside a callout into the same
+   narrowed column.
+
+   `.admonition` and `details` share every rule below. `!!! tip` and `??? tip`
+   are the same object; only the chevron and the disclosure behaviour differ.
+   ------------------------------------------------------------------------- */
+
+.md-typeset :is(.admonition, details) {
+  /* Overridden per type further down. An unrecognised type keeps these. */
+  --ls-adm-color: var(--ls-muted);
+  --ls-adm-icon: var(--md-admonition-icon--note);
+  --ls-adm-line: color-mix(in srgb, var(--ls-adm-color) var(--ls-adm-edge), var(--ls-adm-base));
+
+  background-color: color-mix(in srgb, var(--ls-adm-color) var(--ls-adm-tint), var(--ls-adm-base));
+  border: 1px solid var(--ls-adm-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  display: flow-root;
+  font-size: 0.68rem;
+  margin: 1.1rem 0;
+  padding: 0.65rem 0.75rem;
+}
+
+/* Material gives each of its twelve types a stock border color and a tinted
+   focus ring, both at a higher specificity than the shorthand above
+   (`.md-typeset .admonition.note` is (0,3,0), `…:focus-within` is (0,4,0)).
+   Left alone they win, and every typed callout draws Material's blue, orange
+   or red instead of the theme's. Restating both against the same twelve, later
+   in the file, takes them back. */
+.md-typeset
+  :is(.admonition, details):is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote) {
+  border-color: var(--ls-adm-line);
+}
+
+.md-typeset
+  :is(.admonition, details):is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote):focus-within {
+  box-shadow: none;
+}
+
+/* Material drops the bottom padding on a closed `details`, because in its own
+   design the summary is a full-bleed bar that reaches the box edge. Here the
+   summary is ordinary padded content, so the padding has to come back. */
+.md-typeset details:not([open]) {
+  padding-bottom: 0.65rem;
+}
+
+/* The title row. Both selectors are needed: python-markdown emits a
+   `p.admonition-title` for `!!!` and a `summary` for `???`.
+
+   Wrapping the two halves in `:is()` puts this at (0,3,0), which is what
+   Material's own `[dir=ltr] .md-typeset .admonition-title` and its per-type
+   `.md-typeset .note > .admonition-title` sit at — ties, and this file loads
+   after the theme. */
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary) {
+  background-color: transparent;
+  border: 0;
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.5;
+  margin: 0 0 0.35rem;
+  padding: 0 0 0 1.3rem;
+  position: relative;
+}
+
+/* The icon is the gutter: 0.8rem at the box's inner left edge, so title text
+   starts 1.3rem in and body text starts at 0 — both fixed. It is also the only
+   thing carrying the type color, which leaves the title itself at full ink
+   contrast against the tint rather than at whatever the type hue manages. */
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary)::before {
+  background-color: var(--ls-adm-color);
+  content: "";
+  display: block;
+  height: 0.8rem;
+  left: 0;
+  mask-image: var(--ls-adm-icon);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  position: absolute;
+  top: 0.15rem;
+  width: 0.8rem;
+  -webkit-mask-image: var(--ls-adm-icon);
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
+/* Body blocks run the full inner width, so a fenced block or a table inside a
+   callout is as wide as the callout instead of indented under a label. */
+.md-typeset :is(.admonition, details) > :not(.admonition-title, summary) {
+  margin: 0 0 0.6rem;
+}
+
+/* Material's rule here is `html .md-typeset .admonition > :last-child`, so
+   matching its (0,3,1) needs the `html` back. */
+html .md-typeset :is(.admonition, details) > :last-child {
+  margin-bottom: 0;
+}
+
+/* A callout is already inset from the article. Leaving the reading measure set
+   at the top of this section in force would clip it a second time and leave a
+   band of dead surface down the right of every box. */
+.md-typeset :is(.admonition, details) :is(p, ul, ol, blockquote) {
+  max-width: none;
+}
+
+/* -- Disclosure ------------------------------------------------------------ */
+
+.md-typeset details > summary {
+  cursor: pointer;
+  padding-right: 1.5rem;
+}
+
+/* Material's chevron, moved onto the same baseline as the type icon opposite
+   it and dropped to the faint grey — it is a control, not part of the title. */
+.md-typeset details > summary::after {
+  color: var(--ls-faint);
+  height: 0.8rem;
+  inset-inline-end: 0;
+  top: 0.15rem;
+  width: 0.8rem;
+}
+
+/* -- Callout types ---------------------------------------------------------
+
+   Twelve authorable types, four visual registers. Every style guide that
+   covers notices lands on three to five — Google's, Microsoft's, Kubernetes',
+   GitLab's — and Google gives the reason that applies here: use too many and
+   "they begin to lose their visual distinctiveness". The finer distinction
+   lives in the icon, which is per type, so `tip` and `example` share a color
+   but never a glyph.
+
+   Qualifying each with `:is(.admonition, details)` puts these at (0,3,0), above
+   the block that sets the defaults, and keeps them from firing on some
+   unrelated element that happens to be called `.summary` or `.example`.
+   ------------------------------------------------------------------------- */
+
+/* Neutral: an aside. `note` is the most-used type in these docs and the one
+   carrying the least urgency, so it is the quiet one. */
+.md-typeset :is(.admonition, details):is(.note, .abstract, .summary, .tldr, .todo, .quote, .cite) {
+  --ls-adm-color: var(--ls-muted);
+}
+
+/* Accent: something the reader can act on. */
+.md-typeset
+  :is(.admonition, details):is(.info, .tip, .hint, .important, .example, .question, .help, .faq, .success, .check, .done) {
+  --ls-adm-color: var(--ls-accent);
+}
+
+/* The two registers that mean consequences take the louder tint and edge. A
+   page should not present "you can lose data" at the volume of "by the way". */
+.md-typeset :is(.admonition, details):is(.warning, .caution, .attention) {
+  --ls-adm-color: var(--ls-warn);
+  --ls-adm-edge: var(--ls-adm-edge-loud);
+  --ls-adm-tint: var(--ls-adm-tint-loud);
+}
+
+.md-typeset :is(.admonition, details):is(.danger, .error, .failure, .fail, .missing, .bug) {
+  --ls-adm-color: var(--ls-danger);
+  --ls-adm-edge: var(--ls-adm-edge-loud);
+  --ls-adm-tint: var(--ls-adm-tint-loud);
+}
+
+/* Glyphs. Material defines one data-URI SVG per canonical type on `:root` and
+   assigns them itself, but only for the canonical twelve — `hint`, `caution`,
+   `error` and the rest of pymdownx's aliases fall through to the note pencil.
+   Routing every type through `--ls-adm-icon` picks the aliases up and keeps the
+   whole mapping in one table. */
+.md-typeset :is(.admonition, details):is(.abstract, .summary, .tldr) {
+  --ls-adm-icon: var(--md-admonition-icon--abstract);
+}
+
+.md-typeset :is(.admonition, details):is(.quote, .cite) {
+  --ls-adm-icon: var(--md-admonition-icon--quote);
+}
+
+.md-typeset :is(.admonition, details).info {
+  --ls-adm-icon: var(--md-admonition-icon--info);
+}
+
+.md-typeset :is(.admonition, details):is(.tip, .hint, .important) {
+  --ls-adm-icon: var(--md-admonition-icon--tip);
+}
+
+.md-typeset :is(.admonition, details):is(.success, .check, .done) {
+  --ls-adm-icon: var(--md-admonition-icon--success);
+}
+
+.md-typeset :is(.admonition, details):is(.question, .help, .faq) {
+  --ls-adm-icon: var(--md-admonition-icon--question);
+}
+
+.md-typeset :is(.admonition, details).example {
+  --ls-adm-icon: var(--md-admonition-icon--example);
+}
+
+.md-typeset :is(.admonition, details):is(.warning, .caution, .attention) {
+  --ls-adm-icon: var(--md-admonition-icon--warning);
+}
+
+.md-typeset :is(.admonition, details):is(.failure, .fail, .missing) {
+  --ls-adm-icon: var(--md-admonition-icon--failure);
+}
+
+.md-typeset :is(.admonition, details):is(.danger, .error) {
+  --ls-adm-icon: var(--md-admonition-icon--danger);
+}
+
+.md-typeset :is(.admonition, details).bug {
+  --ls-adm-icon: var(--md-admonition-icon--bug);
+}
+
    8. Footer
 
    Two bands. Material's `.md-footer` carries the prev/next pager; `.ls-footer`
