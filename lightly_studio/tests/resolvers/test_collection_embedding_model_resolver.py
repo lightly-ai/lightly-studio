@@ -49,11 +49,9 @@ def test_get_or_create__idempotent_keeps_default(db_session: Session) -> None:
     )
 
     assert link.is_default is True
-    all_links = db_session.exec(
-        select(CollectionEmbeddingModelTable).where(
-            CollectionEmbeddingModelTable.collection_id == collection.collection_id
-        )
-    ).all()
+    all_links = collection_embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
     assert len(all_links) == 1
 
 
