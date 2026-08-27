@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { AUTHENTICATION_SESSION_STORAGE_KEY } from '$lib/constants';
-import { redirectTo } from '$lib/utils/navigation';
+import { redirectTo } from '$lib/utils';
 
 /**
  * Hook for handling user logout functionality.

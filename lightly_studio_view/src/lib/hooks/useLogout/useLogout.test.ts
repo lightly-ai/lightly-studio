@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import TestUseLogout from './useLogout.test.svelte';
 import { AUTHENTICATION_SESSION_STORAGE_KEY } from '$lib/constants';
-import * as navigation from '$lib/utils/navigation';
+import * as navigation from '$lib/utils';
 
 const LOGOUT_ENDPOINT = '/auth/api/v1/logout';
 
