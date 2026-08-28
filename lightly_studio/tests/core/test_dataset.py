@@ -367,6 +367,7 @@ class TestDataset:
             session=dataset.session,
             collection_id=dataset.collection_id,
             embedding_model_name="example_embedding_model",
+            set_as_default=True,
         )
         create_samples_with_embeddings(
             session=dataset.session,
@@ -394,6 +395,7 @@ class TestDataset:
             session=dataset.session,
             collection_id=dataset.collection_id,
             embedding_model_name="example_embedding_model",
+            set_as_default=True,
         )
         create_samples_with_embeddings(
             session=dataset.session,
