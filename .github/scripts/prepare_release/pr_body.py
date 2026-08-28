@@ -44,6 +44,6 @@ def render_pr_body(section_body: str, version: str) -> str:
         f"## Review checklist\n\n"
         f"{_GUARDS}\n\n"
         f"{_CHECKLIST}\n\n"
-        f"Merging publishes nothing - tag, GitHub release, PyPI and docs stay manual, see "
-        f"`RELEASE.md`.\n"
+        f"Merging publishes nothing - tagging, the GitHub release, PyPI and the docs are still "
+        f"manual.\n"
     )
