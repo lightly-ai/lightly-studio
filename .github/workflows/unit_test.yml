@@ -309,12 +309,20 @@ jobs:
     needs: detect
     if: needs.detect.outputs.release_tooling == 'true'
     runs-on: ubuntu-latest
+    # This job runs code the pull request itself supplies - pytest collects the
+    # PR's conftest.py, and `uv run --with` resolves tools from PyPI at job
+    # time. The repository default is a write-scoped token, so pin this job to
+    # read-only and keep the token out of .git/config.
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: .github/scripts
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
