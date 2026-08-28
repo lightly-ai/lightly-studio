@@ -7,8 +7,8 @@ backfills it from the ``group_component_name``/``group_component_index`` columns
 DuckDB builds its schema with ``create_all``, so this migration only matters for tracked
 Postgres databases.
 
-Revision ID: d4e5f6a7b8c9
-Revises: c2d3e4f5a6b7
+Revision ID: e5f6a7b8c9d0
+Revises: d4e5f6a7b8c9
 Create Date: 2026-08-27 09:50:09.000000
 
 """
@@ -20,8 +20,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "d4e5f6a7b8c9"
-down_revision: Union[str, Sequence[str], None] = "c2d3e4f5a6b7"
+revision: str = "e5f6a7b8c9d0"
+down_revision: Union[str, Sequence[str], None] = "d4e5f6a7b8c9"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
