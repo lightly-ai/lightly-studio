@@ -346,11 +346,18 @@ jobs:
           ref: 1f9b2156d23ecf5033b1cfe34be06af5d903d83c
           github-token: ${{ github.token }}
 
+      # `continue-on-error` reports the step's conclusion as success whatever
+      # happens, so the real result is in `outcome`. Echo it: a reviewer must be
+      # able to see that the gate blocked, not infer it from a skipped step.
       - name: Assert the known-red commit was blocked
-        if: steps.known-red.outcome != 'failure'
+        env:
+          OUTCOME: ${{ steps.known-red.outcome }}
         run: |
-          echo "::error::The release gate passed a commit whose required checks failed."
-          exit 1
+          echo "Release gate outcome on the known-red commit: ${OUTCOME}"
+          if [ "${OUTCOME}" != "failure" ]; then
+            echo "::error::The release gate passed a commit whose required checks failed."
+            exit 1
+          fi
 
       - name: Release gate must pass a known-green commit
         uses: ./.github/actions/check-release-ci
