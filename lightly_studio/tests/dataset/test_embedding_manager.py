@@ -109,7 +109,6 @@ def test_register_multiple_models(
             return EmbeddingSpaceDescription(
                 name="Fake",
                 embedding_model_hash="fake_hash",
-                parameter_count_in_mb=50,
                 embedding_dimension=5,
             )
 
@@ -148,8 +147,7 @@ def test_register_multiple_models(
     assert len(stored_models) == 2
     model_names = {model.name for model in stored_models}
     assert model_names == {"Random", "Fake"}
-    # Verify both models are associated with the same collection and dataset
-    assert all(model.collection_id == collection.collection_id for model in stored_models)
+    # Verify both models are associated with the same dataset
     assert all(model.dataset_id == collection.dataset_id for model in stored_models)
 
     # Both models are linked to the collection, not only the default one.
@@ -578,8 +576,8 @@ def test_load_or_get_default_model__shares_generator_across_collections(
 ) -> None:
     """An annotation child collection reuses the parent's loaded generator.
 
-    The generator weights are loaded once, but each collection still gets its
-    own embedding-model record and id.
+    The generator weights are loaded once, and both collections resolve to the same
+    embedding-model record because the model is deduplicated per dataset.
     """
     image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     annotation_collection = create_collection(
@@ -608,8 +606,8 @@ def test_load_or_get_default_model__shares_generator_across_collections(
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
     assert manager._models[image_model_id] is manager._models[annotation_model_id]
 
-    # Each collection still owns a distinct embedding-model record.
-    assert image_model_id != annotation_model_id
+    # Both collections share the dataset, so the model is deduplicated to one record.
+    assert image_model_id == annotation_model_id
 
 
 def test_load_or_get_default_model__cant_load(

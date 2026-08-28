@@ -303,7 +303,6 @@ def create_embedding_model(  # noqa: PLR0913
     collection_id: UUID,
     embedding_model_name: str = "example_embedding_model",
     embedding_model_hash: str = "example_hash",
-    parameter_count_in_mb: int = 100,
     embedding_dimension: int = 128,
     set_as_default: bool = False,
 ) -> EmbeddingModelTable:
@@ -318,18 +317,15 @@ def create_embedding_model(  # noqa: PLR0913
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
 
-    # TODO(Michal, 08/2026): Once collection_id is out of embedding_model, take dataset_id
-    # directly and make collection_id optional: link only when it is given, so unlinked
-    # models become expressible. The collection_embedding_model link is then the sole source
-    # of collection membership.
+    # TODO(Michal, 08/2026): Make collection_id optional here: link only when it is given, so
+    # unlinked models become expressible. The collection_embedding_model link is then the sole
+    # source of collection membership.
     model = embedding_model_resolver.create(
         session=session,
         embedding_model=EmbeddingModelCreate(
-            collection_id=collection_id,
             dataset_id=collection.dataset_id,
             name=embedding_model_name,
             embedding_model_hash=embedding_model_hash,
-            parameter_count_in_mb=parameter_count_in_mb,
             embedding_dimension=embedding_dimension,
         ),
     )
@@ -438,6 +434,7 @@ def fill_db_with_samples_and_embeddings(
             session=session,
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
+            embedding_model_hash=f"hash_{embedding_model_name}",
             # The first model is the collection default, matching production and the
             # queries that resolve the default embedding space (e.g. embeddings2d).
             set_as_default=index == 0,
@@ -483,6 +480,7 @@ def fill_db_with_video_samples_and_embeddings(
             session=session,
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
+            embedding_model_hash=f"hash_{embedding_model_name}",
             # The first model is the collection default, matching production and the
             # queries that resolve the default embedding space (e.g. embeddings2d).
             set_as_default=index == 0,
