@@ -13,6 +13,7 @@ from sqlalchemy import exists
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 
 
 def get_or_add_collection_model(
@@ -113,6 +114,61 @@ def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[UUID
             )
         ).all()
     )
+
+
+def get_by_name(
+    session: Session, collection_id: UUID, embedding_model_name: str | None
+) -> EmbeddingModelTable:
+    """Resolve one of a collection's embedding models by name.
+
+    Membership comes from the link table, not from ``EmbeddingModelTable.collection_id``,
+    which is being removed.
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection.
+        embedding_model_name: The name of the embedding model.
+            If None, expects the collection to have exactly one embedding model and
+            returns it. Otherwise raises a ValueError.
+            If set, expects the collection to have an embedding model with the given name.
+            Otherwise raises a ValueError.
+
+    Returns:
+        The embedding model with the given name.
+
+    Raises:
+        ValueError: If the name is None and the collection does not have exactly one
+            model, or if no linked model has the given name.
+    """
+    embedding_models = list(
+        session.exec(
+            select(EmbeddingModelTable)
+            .join(
+                CollectionEmbeddingModelTable,
+                onclause=col(CollectionEmbeddingModelTable.embedding_model_id)
+                == col(EmbeddingModelTable.embedding_model_id),
+            )
+            .where(CollectionEmbeddingModelTable.collection_id == collection_id)
+            .order_by(col(EmbeddingModelTable.created_at).asc())
+        ).all()
+    )
+
+    if embedding_model_name is None:
+        if len(embedding_models) != 1:
+            raise ValueError(
+                f"Expected exactly one embedding model, "
+                f"but found {len(embedding_models)} with names "
+                f"{[model.name for model in embedding_models]}."
+            )
+        return embedding_models[0]
+
+    embedding_model_with_name = next(
+        (model for model in embedding_models if model.name == embedding_model_name), None
+    )
+    if embedding_model_with_name is None:
+        raise ValueError(f"Embedding model with name `{embedding_model_name}` not found.")
+
+    return embedding_model_with_name
 
 
 def _get_default_by_collection_id(

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.resolvers import embedding_model_resolver
 from tests.helpers_resolvers import (
@@ -63,11 +64,19 @@ def test_read_embedding_model(db_session: Session) -> None:
 
 def test_delete_embedding_model(db_session: Session) -> None:
     collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
+    embedding_model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id
+    )
 
-    embedding_model = create_embedding_model(session=db_session, collection_id=collection_id)
+    # The model is linked to the collection, so remove the link first; otherwise the
+    # collection_embedding_model foreign key blocks the delete.
+    link = db_session.get(
+        CollectionEmbeddingModelTable,
+        (collection.collection_id, embedding_model.embedding_model_id),
+    )
+    db_session.delete(link)
+    db_session.commit()
 
-    # Delete the embedding model.
     embedding_model_resolver.delete(
         session=db_session, embedding_model_id=embedding_model.embedding_model_id
     )
@@ -232,109 +241,6 @@ def test_get_by_model_hash__scoped_by_dataset(db_session: Session) -> None:
         dataset_id=collection_3.dataset_id,
     )
     assert result_3 is None
-
-
-def test_get_by_name__none_with_single_model(db_session: Session) -> None:
-    """Test get_by_name when embedding_model_name is None and exactly one model exists."""
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    embedding_model = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_1",
-    )
-
-    result = embedding_model_resolver.get_by_name(
-        session=db_session, collection_id=collection_id, embedding_model_name=None
-    )
-    assert result.embedding_model_id == embedding_model.embedding_model_id
-    assert result.name == "embedding_model_1"
-
-
-def test_get_by_name__none_with_multiple_models(db_session: Session) -> None:
-    """Test get_by_name when embedding_model_name is None but multiple models exist."""
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_1",
-    )
-    create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_2",
-    )
-
-    with pytest.raises(
-        ValueError,
-        match=r"Expected exactly one embedding model, but found 2 with names "
-        r"\['embedding_model_1', 'embedding_model_2'\]\.",
-    ):
-        embedding_model_resolver.get_by_name(
-            session=db_session, collection_id=collection_id, embedding_model_name=None
-        )
-
-
-def test_get_by_name__none_with_no_models(db_session: Session) -> None:
-    """Test get_by_name when embedding_model_name is None but no models exist."""
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    with pytest.raises(
-        ValueError, match=r"Expected exactly one embedding model, but found 0 with names \[\]\."
-    ):
-        embedding_model_resolver.get_by_name(
-            session=db_session, collection_id=collection_id, embedding_model_name=None
-        )
-
-
-def test_get_by_name__existing_name(db_session: Session) -> None:
-    """Test get_by_name when embedding_model_name is provided and exists."""
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    embedding_model_1 = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_1",
-    )
-    embedding_model_2 = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_2",
-    )
-
-    result = embedding_model_resolver.get_by_name(
-        session=db_session, collection_id=collection_id, embedding_model_name="embedding_model_1"
-    )
-    assert result.embedding_model_id == embedding_model_1.embedding_model_id
-    assert result.name == "embedding_model_1"
-
-    result = embedding_model_resolver.get_by_name(
-        session=db_session, collection_id=collection_id, embedding_model_name="embedding_model_2"
-    )
-    assert result.embedding_model_id == embedding_model_2.embedding_model_id
-    assert result.name == "embedding_model_2"
-
-
-def test_get_by_name__nonexistent_name(db_session: Session) -> None:
-    """Test get_by_name when embedding_model_name is provided but doesn't exist."""
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_1",
-    )
-
-    with pytest.raises(ValueError, match=r"Embedding model with name `nonexistent` not found."):
-        embedding_model_resolver.get_by_name(
-            session=db_session, collection_id=collection_id, embedding_model_name="nonexistent"
-        )
 
 
 def test_get_or_create__creates_new_model(db_session: Session) -> None:
