@@ -13,6 +13,13 @@ vi.mock(
     }
 );
 
+vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte', () => ({
+    useRecomputeEvaluationRun: () => ({
+        mutation: { isPending: false },
+        recompute: vi.fn()
+    })
+}));
+
 const baseRun: EvaluationRunView = {
     id: 'run-1',
     name: 'Detection eval — v1',
@@ -28,6 +35,7 @@ const baseRun: EvaluationRunView = {
 };
 
 const defaultProps = {
+    datasetId: 'dataset-1',
     run: baseRun,
     expanded: false,
     onToggle: vi.fn()
@@ -103,5 +111,41 @@ describe('EvaluationRunItem', () => {
         expect(screen.getByTestId('evaluation-run-prediction-annotation-source')).toHaveTextContent(
             'predictions_v2'
         );
+    });
+
+    it('shows the stale icon when stale_since is set', () => {
+        const run: EvaluationRunView = {
+            ...baseRun,
+            stale_since: new Date('2026-02-01T00:00:00Z')
+        };
+        render(EvaluationRunItem, { props: { ...defaultProps, run } });
+
+        expect(screen.getByTestId('evaluation-run-stale-icon')).toBeInTheDocument();
+    });
+
+    it('shows the stale explanation and recompute button when stale and expanded', () => {
+        const run: EvaluationRunView = {
+            ...baseRun,
+            stale_since: new Date('2026-02-01T00:00:00Z')
+        };
+        render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
+
+        const staleSection = screen.getByTestId('evaluation-run-stale-section');
+        expect(staleSection).toHaveTextContent(
+            'Annotations in the source collections were modified after this evaluation was run. Recomputing will update results using the current input and annotations, which may differ from the original run. Recompute'
+        );
+        expect(screen.getByTestId('evaluation-run-recompute-button')).toBeInTheDocument();
+    });
+
+    it('does not show the recompute button when datasetId is not provided', () => {
+        const run: EvaluationRunView = {
+            ...baseRun,
+            stale_since: new Date('2026-02-01T00:00:00Z')
+        };
+        render(EvaluationRunItem, {
+            props: { ...defaultProps, datasetId: undefined, run, expanded: true }
+        });
+
+        expect(screen.queryByTestId('evaluation-run-stale-section')).not.toBeInTheDocument();
     });
 });
