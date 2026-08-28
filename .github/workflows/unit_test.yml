@@ -74,9 +74,9 @@ jobs:
           submodules: recursive
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           enable-cache: true
 
       - name: Set Up Python
@@ -110,9 +110,9 @@ jobs:
           python-version: "3.9"
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
 
@@ -162,9 +162,9 @@ jobs:
           submodules: recursive
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           enable-cache: true
 
       - name: Set Up Python
@@ -211,9 +211,9 @@ jobs:
           python-version: "3.9"
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
 
@@ -251,9 +251,9 @@ jobs:
           submodules: recursive
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           enable-cache: true
 
       - name: Set Up Python

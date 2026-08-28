@@ -124,7 +124,7 @@ def delete_dataset(
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
     # Must precede embedding_model and collections (FKs to both, deleted below and in step 6).
-    _delete_default_embedding_spaces(session=session, dataset_id=dataset_id)
+    _delete_collection_embedding_models(session=session, dataset_id=dataset_id)
     _delete_embedding_models(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
@@ -325,8 +325,8 @@ def _delete_tags(session: Session, dataset_id: UUID) -> None:
     )
 
 
-def _delete_default_embedding_spaces(session: Session, dataset_id: UUID) -> None:
-    """Delete default embedding spaces for the dataset's collections."""
+def _delete_collection_embedding_models(session: Session, dataset_id: UUID) -> None:
+    """Delete all embedding-model links for the dataset's collections."""
     session.exec(
         delete(CollectionEmbeddingModelTable).where(
             col(CollectionEmbeddingModelTable.collection_id).in_(

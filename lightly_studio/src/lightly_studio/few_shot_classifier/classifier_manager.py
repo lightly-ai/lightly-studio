@@ -124,7 +124,7 @@ class ClassifierManager:
         Returns:
             The created classifier name and ID.
         """
-        embedding_model_id = collection_embedding_model_resolver.get_by_collection_id(
+        embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
             session=session,
             collection_id=collection_id,
         )
@@ -626,7 +626,7 @@ def _get_embedding_model_by_hash(
         raise ValueError(f"Collection {collection_id} not found.")
 
     # TODO(Michal, 08/2026): Remove once embedding models are unique per dataset and hash.
-    default_embedding_model_id = collection_embedding_model_resolver.get_by_collection_id(
+    default_embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=session, collection_id=collection_id
     )
     if default_embedding_model_id is not None:

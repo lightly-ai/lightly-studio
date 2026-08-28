@@ -70,9 +70,9 @@ jobs:
 
       - name: Set Up uv
         if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
 

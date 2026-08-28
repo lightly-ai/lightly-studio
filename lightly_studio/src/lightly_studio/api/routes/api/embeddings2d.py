@@ -55,7 +55,7 @@ def get_2d_embeddings(
     _validate_filter_type(collection=collection, filters=body.filters)
 
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
-    embedding_model_id = collection_embedding_model_resolver.get_by_collection_id(
+    embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=session,
         collection_id=collection_id,
     )
