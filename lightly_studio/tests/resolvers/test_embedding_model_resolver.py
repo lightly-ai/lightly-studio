@@ -4,7 +4,10 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
-from lightly_studio.resolvers import embedding_model_resolver
+from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
+    embedding_model_resolver,
+)
 from tests.helpers_resolvers import (
     create_collection,
     create_embedding_model,
@@ -20,31 +23,6 @@ def test_create_embedding_model(db_session: Session) -> None:
         embedding_model_name="example_embedding_model",
     )
     assert embedding_model.name == "example_embedding_model"
-
-
-def test_read_embedding_models(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    embedding_model_1 = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_1",
-    )
-    embedding_model_2 = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_2",
-    )
-
-    # Get all embedding models of a collection.
-    embedding_models = embedding_model_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_id
-    )
-    assert len(embedding_models) == 2
-
-    assert embedding_models[0].embedding_model_id == embedding_model_1.embedding_model_id
-    assert embedding_models[1].embedding_model_id == embedding_model_2.embedding_model_id
 
 
 def test_read_embedding_model(db_session: Session) -> None:
@@ -265,7 +243,7 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
     )
 
     assert reused.embedding_model_id == existing.embedding_model_id
-    models = embedding_model_resolver.get_all_by_collection_id(
+    models = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     )
     assert len(models) == 1
@@ -334,12 +312,18 @@ def test_get_or_create__same_hash_different_collections(db_session: Session) -> 
     assert model_1.collection_id == collection_1.collection_id
     assert model_2.collection_id == collection_2.collection_id
 
-    # Each collection should have exactly one model
-    models_1 = embedding_model_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_1.collection_id
+    # Each dataset resolves the shared hash to its own model, so the two are not merged.
+    model_1_by_hash = embedding_model_resolver.get_by_model_hash(
+        session=db_session,
+        dataset_id=collection_1.dataset_id,
+        embedding_model_hash="same_hash",
     )
-    models_2 = embedding_model_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_2.collection_id
+    model_2_by_hash = embedding_model_resolver.get_by_model_hash(
+        session=db_session,
+        dataset_id=collection_2.dataset_id,
+        embedding_model_hash="same_hash",
     )
-    assert len(models_1) == 1
-    assert len(models_2) == 1
+    assert model_1_by_hash is not None
+    assert model_2_by_hash is not None
+    assert model_1_by_hash.embedding_model_id == model_1.embedding_model_id
+    assert model_2_by_hash.embedding_model_id == model_2.embedding_model_id
