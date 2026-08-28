@@ -147,28 +147,31 @@ def get_by_name(
         session: The database session.
         collection_id: The ID of the collection.
         embedding_model_name: The name of the embedding model.
-            If None, expects the collection to have exactly one embedding model and
-            returns it. Otherwise raises a ValueError.
+            If None, the collection's default embedding model is returned. Raises a
+            ValueError if the collection has no default.
             If set, expects the collection to have an embedding model with the given name.
             Otherwise raises a ValueError.
 
     Returns:
-        The embedding model with the given name.
+        The embedding model with the given name, or the default when no name is given.
 
     Raises:
-        ValueError: If the name is None and the collection does not have exactly one
-            model, or if no linked model has the given name.
+        ValueError: If the name is None and the collection has no default model, or if no
+            linked model has the given name.
     """
     embedding_models = get_all_models_by_collection_id(session=session, collection_id=collection_id)
 
     if embedding_model_name is None:
-        if len(embedding_models) != 1:
-            raise ValueError(
-                f"Expected exactly one embedding model, "
-                f"but found {len(embedding_models)} with names "
-                f"{[model.name for model in embedding_models]}."
-            )
-        return embedding_models[0]
+        default_model_id = get_default_by_collection_id(
+            session=session, collection_id=collection_id
+        )
+        default_model = next(
+            (model for model in embedding_models if model.embedding_model_id == default_model_id),
+            None,
+        )
+        if default_model is None:
+            raise ValueError(f"Collection {collection_id} has no default embedding model.")
+        return default_model
 
     embedding_model_with_name = next(
         (model for model in embedding_models if model.name == embedding_model_name), None

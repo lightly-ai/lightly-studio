@@ -205,13 +205,14 @@ def test_get_all_by_collection_id__returns_all_linked(db_session: Session) -> No
     assert set(linked) == {model_1.embedding_model_id, model_2.embedding_model_id}
 
 
-def test_get_by_name__none_with_single_model(db_session: Session) -> None:
-    """Resolve the only linked model when the name is None."""
+def test_get_by_name__none_returns_default(db_session: Session) -> None:
+    """Resolve the default model when the name is None."""
     collection = create_collection(session=db_session)
     embedding_model = create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="embedding_model_1",
+        set_as_default=True,
     )
 
     result = collection_embedding_model_resolver.get_by_name(
@@ -222,22 +223,41 @@ def test_get_by_name__none_with_single_model(db_session: Session) -> None:
     assert result.name == "embedding_model_1"
 
 
-def test_get_by_name__none_with_multiple_models(db_session: Session) -> None:
-    """Raise when the name is None but the collection has more than one linked model."""
+def test_get_by_name__none_returns_default_not_oldest(db_session: Session) -> None:
+    """Resolve the default model, not the oldest, when the collection has several."""
     collection = create_collection(session=db_session)
-    for name, model_hash in (("embedding_model_1", "hash_1"), ("embedding_model_2", "hash_2")):
-        create_embedding_model(
-            session=db_session,
-            collection_id=collection.collection_id,
-            embedding_model_name=name,
-            embedding_model_hash=model_hash,
-        )
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="oldest_model",
+        embedding_model_hash="hash_1",
+    )
+    default_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="default_model",
+        embedding_model_hash="hash_2",
+        set_as_default=True,
+    )
 
-    with pytest.raises(
-        ValueError,
-        match=r"Expected exactly one embedding model, but found 2 with names "
-        r"\['embedding_model_1', 'embedding_model_2'\]\.",
-    ):
+    result = collection_embedding_model_resolver.get_by_name(
+        session=db_session, collection_id=collection.collection_id, embedding_model_name=None
+    )
+
+    assert result.embedding_model_id == default_model.embedding_model_id
+    assert result.name == "default_model"
+
+
+def test_get_by_name__none_without_default(db_session: Session) -> None:
+    """Raise when the name is None but no linked model is the default."""
+    collection = create_collection(session=db_session)
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="embedding_model_1",
+    )
+
+    with pytest.raises(ValueError, match=r"has no default embedding model"):
         collection_embedding_model_resolver.get_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
@@ -247,9 +267,7 @@ def test_get_by_name__none_with_no_models(db_session: Session) -> None:
     """Raise when the name is None but the collection has no linked model."""
     collection = create_collection(session=db_session)
 
-    with pytest.raises(
-        ValueError, match=r"Expected exactly one embedding model, but found 0 with names \[\]\."
-    ):
+    with pytest.raises(ValueError, match=r"has no default embedding model"):
         collection_embedding_model_resolver.get_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
@@ -315,9 +333,7 @@ def test_get_by_name__scoped_to_the_collection(db_session: Session) -> None:
         embedding_model_name="other_model",
     )
 
-    with pytest.raises(
-        ValueError, match=r"Expected exactly one embedding model, but found 0 with names \[\]\."
-    ):
+    with pytest.raises(ValueError, match=r"has no default embedding model"):
         collection_embedding_model_resolver.get_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
