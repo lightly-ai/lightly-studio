@@ -19,8 +19,39 @@ env:
   E2E_BASE_URL: http://localhost:8001
 
 jobs:
+  detect:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      # Empty when the filter is skipped (non-PR/MG events), so `|| 'true'`
+      # runs everything. A real 'false' is non-empty and preserved.
+      e2e: ${{ steps.filter.outputs.e2e || 'true' }}
+    steps:
+      - name: Checkout Code # Needed for merge_group event
+        uses: actions/checkout@v6
+
+      - name: Filter changed paths
+        id: filter
+        # Other events have no base to diff; they fall back to running the tests.
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        with:
+          # `every` turns the `!` rules into exclusions: a changed file counts only
+          # if it matches every rule. So `e2e` is 'false' only when all changed
+          # files are excluded. Excluding the few paths the app cannot see, instead
+          # of listing the paths it can, keeps a new product directory from
+          # silently skipping the tests.
+          predicate-quantifier: 'every'
+          filters: |
+            e2e:
+              - '**'
+              # Release tooling, tested by its own checks in prepare_release.yml.
+              - '!.github/scripts/**'
+
   prepare-caches:
     name: Build Cache
+    needs: detect
+    if: needs.detect.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     # Recent runs: 3.5min median, 10min worst.
     timeout-minutes: 15
@@ -479,16 +510,44 @@ jobs:
         run: |
           kill ${{ env.SERVER_PID }} || true
 
+  # The single required status check: always runs, so gated jobs can be skipped
+  # without stranding the merge queue. Require this in the branch ruleset.
   success-check:
     name: End2End Success Check
     runs-on: ubuntu-latest
     needs:
+      - detect
       - prepare-caches
       - end-to-end
     if: always()
     steps:
-      - name: Check failure
-        if: needs.end-to-end.result != 'success'
+      - name: Verify required jobs
+        env:
+          DETECT: ${{ needs.detect.result }}
+          CACHES: ${{ needs.prepare-caches.result }}
+          END_TO_END: ${{ needs.end-to-end.result }}
         run: |
-          echo "❌ End-to-End tests did not complete successfully."
-          exit 1
+          echo "Detect changes: $DETECT"
+          echo "Build Cache: $CACHES"
+          echo "End2End Test: $END_TO_END"
+
+          # If detection failed, jobs were skipped for the wrong reason.
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::Change detection did not succeed (result=$DETECT); failing the gate."
+            exit 1
+          fi
+
+          # A gated job is fine only if it passed or was skipped. A failing
+          # Build Cache surfaces as 'failure' here, so it is not mistaken for a
+          # deliberate skip even though it also skips the tests downstream.
+          for result in "$CACHES" "$END_TO_END"; do
+            case "$result" in
+              success | skipped) ;;
+              *)
+                echo "❌ End-to-End tests did not complete successfully."
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "✅ End-to-End tests passed or were not needed for these changes."
