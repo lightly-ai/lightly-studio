@@ -7,8 +7,9 @@ import type {
     ImageFilter,
     SampleType,
     VideoFilter,
-    VideoFrameAdjacentFilter
-} from '$lib/api/lightly_studio_local/types.gen';
+    VideoFrameAdjacentFilter,
+    VideoSortFieldExpr
+} from '$lib/api/lightly_studio_local';
 import type { ImageSortExpr } from '../useImagesInfinite/types';
 
 export type AdjacentSamplesRequestBody =
@@ -24,6 +25,7 @@ export type AdjacentSamplesRequestBody =
           collection_id: string;
           filters?: ({ filter_type: 'video' } & VideoFilter) | null;
           text_embedding?: number[];
+          sort_by?: VideoSortFieldExpr[] | null;
       }
     | {
           sample_type: Extract<SampleType, 'video_frame'>;

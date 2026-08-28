@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Balance a sampling over the values of a categorical metadata field with
   `Sampling.metadata_balancing()`, using the same `uniform`, `input`, and explicit target
   distributions as annotation class balancing.
+- Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the
+  values of a categorical metadata field such as weather or city.
 
 
 ### Changed
