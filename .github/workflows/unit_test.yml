@@ -62,9 +62,10 @@ jobs:
             fast_track:
               - '.github/workflows/unit_test.yml'
               - 'fast_track/**'
-            # Release tooling: CI-internal, so it has its own toolchain.
+            # Release tooling and the CI gate that reads this workflow's checks.
             release_tooling:
               - '.github/workflows/unit_test.yml'
+              - '.github/actions/check-release-ci/**'
               - '.github/scripts/**'
 
   check-python:
@@ -312,9 +313,11 @@ jobs:
     # This job runs code the pull request itself supplies - pytest collects the
     # PR's conftest.py, and `uv run --with` resolves tools from PyPI at job
     # time. The repository default is a write-scoped token, so pin this job to
-    # read-only and keep the token out of .git/config.
+    # read-only and keep the token out of .git/config. `checks: read` is for the
+    # gate self-test below.
     permissions:
       contents: read
+      checks: read
     defaults:
       run:
         working-directory: .github/scripts
@@ -335,6 +338,35 @@ jobs:
 
       - name: Tests
         run: make test
+
+      # A gate that returns success unconditionally also passes a green commit,
+      # so the red case is the one that proves anything. Both shas are recorded
+      # in the action's README; replace them there and here together.
+      - name: Release gate must block a known-red commit
+        id: known-red
+        continue-on-error: true
+        uses: ./.github/actions/check-release-ci
+        with:
+          ref: 1f9b2156d23ecf5033b1cfe34be06af5d903d83c
+          github-token: ${{ github.token }}
+
+      # `continue-on-error` forces the step's conclusion to success, so the real
+      # result is in `outcome`.
+      - name: Assert the known-red commit was blocked
+        env:
+          OUTCOME: ${{ steps.known-red.outcome }}
+        run: |
+          echo "Release gate outcome on the known-red commit: ${OUTCOME}"
+          if [ "${OUTCOME}" != "failure" ]; then
+            echo "::error::The release gate passed a commit whose required checks failed."
+            exit 1
+          fi
+
+      - name: Release gate must pass a known-green commit
+        uses: ./.github/actions/check-release-ci
+        with:
+          ref: b2dc2470d5a0055e791944dbd14a4e965ff615bd
+          github-token: ${{ github.token }}
 
   # The single required status check: always runs, so gated jobs can be skipped
   # without stranding the merge queue. Require this in the branch ruleset.

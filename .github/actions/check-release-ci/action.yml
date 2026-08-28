@@ -1,0 +1,79 @@
+name: Check release CI
+description: >-
+  Fails unless every required CI check succeeded on the exact commit being
+  released, so a release is never cut from an untested or red commit.
+
+inputs:
+  ref:
+    description: Tag, branch or sha being released. Resolved to a commit sha.
+    required: true
+  skip-ci-check:
+    description: >-
+      Emergency override for the documented path where a fix is released from a
+      release branch rather than main. "true" skips the gate entirely and
+      records who overrode it in the log and the job summary.
+    required: false
+    default: "false"
+  github-token:
+    description: Token with read access to the repository's contents and checks.
+    required: true
+
+outputs:
+  sha:
+    description: The commit sha that `ref` resolved to.
+    value: ${{ steps.resolve.outputs.sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the release commit
+      id: resolve
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: lightly-ai/lightly-studio
+        REF: ${{ inputs.ref }}
+      run: |
+        set -euo pipefail
+        sha="$(gh api "repos/${REPO}/commits/${REF}" --jq .sha)"
+        echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+        echo "Release ref '${REF}' resolves to ${sha}."
+
+    - name: Record the override
+      if: inputs.skip-ci-check == 'true'
+      shell: bash
+      env:
+        SHA: ${{ steps.resolve.outputs.sha }}
+      run: |
+        set -euo pipefail
+        echo "::warning::Release CI gate skipped for ${SHA} by ${GITHUB_ACTOR} (skip-ci-check=true)."
+        {
+          echo "### Release CI gate for \`${SHA}\`"
+          echo
+          echo "⚠️ **Skipped** via \`skip-ci-check\`, requested by @${GITHUB_ACTOR}."
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Verify the required checks are green
+      if: inputs.skip-ci-check != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: lightly-ai/lightly-studio
+        SHA: ${{ steps.resolve.outputs.sha }}
+        # The gate lives with the rest of the release tooling so it is linted,
+        # type checked and unit tested, rather than being inlined here where
+        # nothing could test it.
+        PYTHONPATH: ${{ github.action_path }}/../../scripts
+      # `--slurp` keeps the paginated pages as a JSON array instead of
+      # concatenating them into invalid JSON.
+      run: |
+        set -euo pipefail
+        gh api "repos/${REPO}/rules/branches/main" > "${RUNNER_TEMP}/branch-rules.json"
+        gh api --paginate --slurp \
+          "repos/${REPO}/commits/${SHA}/check-runs?per_page=100" \
+          > "${RUNNER_TEMP}/check-runs.json"
+        python3 -m prepare_release check-ci \
+          --check-runs "${RUNNER_TEMP}/check-runs.json" \
+          --branch-rules "${RUNNER_TEMP}/branch-rules.json" \
+          --sha "${SHA}" \
+          --summary "${GITHUB_STEP_SUMMARY}"
