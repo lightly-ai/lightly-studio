@@ -154,7 +154,7 @@ class Dataset(Generic[T], ABC):
                 The name of the metadata to store the typicality values in. If not give, the default
                 name "typicality" is used.
         """
-        embedding_model_id = collection_embedding_model_resolver.get_by_name(
+        embedding_model_id = collection_embedding_model_resolver.get_model_by_name(
             session=self.session,
             collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,
@@ -187,7 +187,7 @@ class Dataset(Generic[T], ABC):
         Returns:
             The name of the metadata storing the similarity values.
         """
-        embedding_model_id = collection_embedding_model_resolver.get_by_name(
+        embedding_model_id = collection_embedding_model_resolver.get_model_by_name(
             session=self.session,
             collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,

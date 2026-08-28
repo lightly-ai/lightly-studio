@@ -215,7 +215,7 @@ def test_get_by_name__none_returns_default(db_session: Session) -> None:
         set_as_default=True,
     )
 
-    result = collection_embedding_model_resolver.get_by_name(
+    result = collection_embedding_model_resolver.get_model_by_name(
         session=db_session, collection_id=collection.collection_id, embedding_model_name=None
     )
 
@@ -240,7 +240,7 @@ def test_get_by_name__none_returns_default_not_oldest(db_session: Session) -> No
         set_as_default=True,
     )
 
-    result = collection_embedding_model_resolver.get_by_name(
+    result = collection_embedding_model_resolver.get_model_by_name(
         session=db_session, collection_id=collection.collection_id, embedding_model_name=None
     )
 
@@ -258,7 +258,7 @@ def test_get_by_name__none_without_default(db_session: Session) -> None:
     )
 
     with pytest.raises(ValueError, match=r"has no default embedding model"):
-        collection_embedding_model_resolver.get_by_name(
+        collection_embedding_model_resolver.get_model_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
 
@@ -268,7 +268,7 @@ def test_get_by_name__none_with_no_models(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 
     with pytest.raises(ValueError, match=r"has no default embedding model"):
-        collection_embedding_model_resolver.get_by_name(
+        collection_embedding_model_resolver.get_model_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
 
@@ -289,7 +289,7 @@ def test_get_by_name__existing_name(db_session: Session) -> None:
         embedding_model_hash="hash_2",
     )
 
-    result_1 = collection_embedding_model_resolver.get_by_name(
+    result_1 = collection_embedding_model_resolver.get_model_by_name(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="embedding_model_1",
@@ -297,7 +297,7 @@ def test_get_by_name__existing_name(db_session: Session) -> None:
     assert result_1.embedding_model_id == model_1.embedding_model_id
     assert result_1.name == "embedding_model_1"
 
-    result_2 = collection_embedding_model_resolver.get_by_name(
+    result_2 = collection_embedding_model_resolver.get_model_by_name(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="embedding_model_2",
@@ -316,7 +316,7 @@ def test_get_by_name__nonexistent_name(db_session: Session) -> None:
     )
 
     with pytest.raises(ValueError, match=r"Embedding model with name `nonexistent` not found."):
-        collection_embedding_model_resolver.get_by_name(
+        collection_embedding_model_resolver.get_model_by_name(
             session=db_session,
             collection_id=collection.collection_id,
             embedding_model_name="nonexistent",
@@ -334,12 +334,12 @@ def test_get_by_name__scoped_to_the_collection(db_session: Session) -> None:
     )
 
     with pytest.raises(ValueError, match=r"has no default embedding model"):
-        collection_embedding_model_resolver.get_by_name(
+        collection_embedding_model_resolver.get_model_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
 
     with pytest.raises(ValueError, match=r"Embedding model with name `other_model` not found."):
-        collection_embedding_model_resolver.get_by_name(
+        collection_embedding_model_resolver.get_model_by_name(
             session=db_session,
             collection_id=collection.collection_id,
             embedding_model_name="other_model",
