@@ -18,8 +18,10 @@ install-uv:
 ifeq ($(OS),Windows_NT)
 	powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/$(UV_VERSION)/install.ps1 | iex"
 else
-	@if ! command -v uv &> /dev/null; then \
+	@if [ "$$(uv --version 2>/dev/null | awk '{print $$2}')" != "$(UV_VERSION)" ]; then \
 		curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh | sh; \
+		[ "$$(uv --version 2>/dev/null | awk '{print $$2}')" = "$(UV_VERSION)" ] || \
+			echo "Installed uv $(UV_VERSION). Restart your shell, or fix your PATH if another uv shadows it."; \
 	fi
 endif
 
