@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import exists
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
@@ -90,6 +91,17 @@ def get_default_by_collection_id(session: Session, collection_id: UUID) -> UUID 
     """Return the collection's default embedding model id, or None if it has none."""
     default = _get_default_by_collection_id(session=session, collection_id=collection_id)
     return None if default is None else default.embedding_model_id
+
+
+def has_default_by_collection_id(session: Session, collection_id: UUID) -> bool:
+    """Return whether the collection has a default embedding model."""
+    stmt = select(
+        exists().where(
+            col(CollectionEmbeddingModelTable.collection_id) == collection_id,
+            col(CollectionEmbeddingModelTable.is_default).is_(True),
+        )
+    )
+    return session.exec(stmt).one()
 
 
 def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[UUID]:

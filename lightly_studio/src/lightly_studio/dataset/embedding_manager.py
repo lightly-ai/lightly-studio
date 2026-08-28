@@ -156,7 +156,7 @@ class EmbeddingManager:
             collection_id: The ID of the collection to associate with the model.
                 And to register as default, if requested.
             embedding_generator: The model implementation used for embeddings.
-            set_as_default: Whether to set this model as the default.
+            set_as_default: If True, make this model the collection's default.
 
         Returns:
             The created EmbeddingModel.
@@ -165,43 +165,44 @@ class EmbeddingManager:
         if collection is None:
             raise ValueError("Provided collection_id could not be found.")
 
-        embedding_space = embedding_generator.get_embedding_model_input()
-        embedding_model = EmbeddingModelCreate(
-            name=embedding_space.name,
-            parameter_count_in_mb=embedding_space.parameter_count_in_mb,
-            embedding_model_hash=embedding_space.embedding_model_hash,
-            embedding_dimension=embedding_space.embedding_dimension,
+        model_description = embedding_generator.get_embedding_model_input()
+        model_create = EmbeddingModelCreate(
+            name=model_description.name,
+            parameter_count_in_mb=model_description.parameter_count_in_mb,
+            embedding_model_hash=model_description.embedding_model_hash,
+            embedding_dimension=model_description.embedding_dimension,
             collection_id=collection_id,
             dataset_id=collection.dataset_id,
         )
         db_model = embedding_model_resolver.get_or_create(
             session=session,
-            embedding_model=embedding_model,
+            embedding_model=model_create,
         )
         model_id = db_model.embedding_model_id
 
         self._models[model_id] = embedding_generator
 
-        # Record the model in two places: the in-memory map caches the loaded generator for
-        # this process, and the collection_embedding_model table persists the link for
-        # query-layer callers (collection_embedding_model_resolver.get_default_by_collection_id).
-        if set_as_default or collection_id not in self._collection_id_to_default_model_id:
-            self._collection_id_to_default_model_id[collection_id] = model_id
-        collection_embedding_model_resolver.get_or_add_collection_model(
+        # Register the model with the collection.
+        collection_model_link = collection_embedding_model_resolver.get_or_add_collection_model(
             session=session, collection_id=collection_id, embedding_model_id=model_id
         )
-        # The first model linked to a collection becomes its default; an explicit request
-        # re-points it. "First model auto-defaults" is caller policy, kept out of the resolver.
-        if (
-            set_as_default
-            or collection_embedding_model_resolver.get_default_by_collection_id(
-                session=session, collection_id=collection_id
-            )
-            is None
-        ):
+        # TODO(Michal, 08/2026): The default is stored both in the database and in
+        # `_collection_id_to_default_model_id`. The database is the source of truth,
+        # while the dictionary only tracks models loaded at runtime. Split these
+        # responsibilities during the EmbeddingManager refactor.
+        if collection_model_link.is_default:
+            self._collection_id_to_default_model_id[collection_id] = model_id
+            return db_model
+
+        # Determine if the model should be set as default.
+        has_no_default_in_db = not collection_embedding_model_resolver.has_default_by_collection_id(
+            session=session, collection_id=collection_id
+        )
+        if set_as_default or has_no_default_in_db:
             collection_embedding_model_resolver.set_default(
                 session=session, collection_id=collection_id, embedding_model_id=model_id
             )
+            self._collection_id_to_default_model_id[collection_id] = model_id
 
         return db_model
 

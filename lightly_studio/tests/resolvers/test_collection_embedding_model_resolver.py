@@ -160,6 +160,25 @@ def test_get_default_by_collection_id__returns_id(db_session: Session) -> None:
     )
 
 
+def test_has_default_by_collection_id__false_when_unset(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+
+    assert not collection_embedding_model_resolver.has_default_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+
+def test_has_default_by_collection_id__true_when_set(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, set_as_default=True
+    )
+
+    assert collection_embedding_model_resolver.has_default_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+
 def test_get_all_by_collection_id__empty(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 
