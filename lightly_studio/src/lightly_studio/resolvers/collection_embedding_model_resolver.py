@@ -116,72 +116,36 @@ def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[UUID
     )
 
 
-def get_all_models_by_collection_id(
-    session: Session, collection_id: UUID
-) -> list[EmbeddingModelTable]:
-    """Return all embedding models linked to the collection, oldest first.
-
-    Membership comes from the link table, not from ``EmbeddingModelTable.collection_id``,
-    which is being removed.
-    """
-    return list(
-        session.exec(
-            select(EmbeddingModelTable)
-            .join(
-                CollectionEmbeddingModelTable,
-                onclause=col(CollectionEmbeddingModelTable.embedding_model_id)
-                == col(EmbeddingModelTable.embedding_model_id),
-            )
-            .where(CollectionEmbeddingModelTable.collection_id == collection_id)
-            .order_by(col(EmbeddingModelTable.created_at).asc())
-        ).all()
-    )
-
-
 def get_model_by_name(
     session: Session, collection_id: UUID, embedding_model_name: str | None
-) -> EmbeddingModelTable:
-    """Resolve one of a collection's embedding models by name.
+) -> UUID:
+    """Resolve the id of one of a collection's embedding models by name.
 
     Args:
         session: The database session.
         collection_id: The ID of the collection.
         embedding_model_name: The name of the embedding model.
-            If None, the collection's default embedding model is returned. Raises a
+            If None, the collection's default embedding model id is returned. Raises a
             ValueError if the collection has no default.
             If set, expects the collection to have an embedding model with the given name.
             Otherwise raises a ValueError.
 
     Returns:
-        The embedding model with the given name, or the default when no name is given.
+        The id of the embedding model with the given name, or of the default when no name
+        is given.
 
     Raises:
         ValueError: If the name is None and the collection has no default model, or if no
             linked model has the given name.
     """
     if embedding_model_name is None:
-        return _get_default_model(session=session, collection_id=collection_id)
+        default_id = get_default_by_collection_id(session=session, collection_id=collection_id)
+        if default_id is None:
+            raise ValueError(f"Collection {collection_id} has no default embedding model.")
+        return default_id
 
-    embedding_models = get_all_models_by_collection_id(session=session, collection_id=collection_id)
-    embedding_model_with_name = next(
-        (model for model in embedding_models if model.name == embedding_model_name), None
-    )
-    if embedding_model_with_name is None:
-        raise ValueError(f"Embedding model with name `{embedding_model_name}` not found.")
-
-    return embedding_model_with_name
-
-
-def _get_default_model(session: Session, collection_id: UUID) -> EmbeddingModelTable:
-    """Return the collection's default embedding model, raising if it has none.
-
-    The default is resolved by the ``is_default`` flag, never by insertion order.
-
-    Raises:
-        ValueError: If the collection has no default embedding model.
-    """
-    default_model = session.exec(
-        select(EmbeddingModelTable)
+    embedding_model_id = session.exec(
+        select(EmbeddingModelTable.embedding_model_id)
         .join(
             CollectionEmbeddingModelTable,
             onclause=col(CollectionEmbeddingModelTable.embedding_model_id)
@@ -189,12 +153,13 @@ def _get_default_model(session: Session, collection_id: UUID) -> EmbeddingModelT
         )
         .where(
             CollectionEmbeddingModelTable.collection_id == collection_id,
-            col(CollectionEmbeddingModelTable.is_default).is_(True),
+            EmbeddingModelTable.name == embedding_model_name,
         )
     ).one_or_none()
-    if default_model is None:
-        raise ValueError(f"Collection {collection_id} has no default embedding model.")
-    return default_model
+    if embedding_model_id is None:
+        raise ValueError(f"Embedding model with name `{embedding_model_name}` not found.")
+
+    return embedding_model_id
 
 
 def _get_default_by_collection_id(

@@ -30,7 +30,7 @@ def get_embeddings_by_sample_ids(
         session=session,
         collection_id=collection_id,
         embedding_model_name=embedding_model_name,
-    ).embedding_model_id
+    )
     embedding_tables = sample_embedding_resolver.get_by_sample_ids(
         session=session,
         sample_ids=list(sample_ids),
@@ -50,7 +50,7 @@ def get_embeddings_by_tag_id(
         session=session,
         collection_id=collection_id,
         embedding_model_name=embedding_model_name,
-    ).embedding_model_id
+    )
     embedding_tables = sample_embedding_resolver.get_all_by_collection_id(
         session=session,
         collection_id=collection_id,

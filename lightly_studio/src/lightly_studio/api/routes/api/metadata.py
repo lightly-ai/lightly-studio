@@ -171,7 +171,7 @@ def compute_typicality_metadata(
     Returns:
         None (204 No Content on success).
     """
-    embedding_model = collection_embedding_model_resolver.get_model_by_name(
+    embedding_model_id = collection_embedding_model_resolver.get_model_by_name(
         session=session,
         collection_id=collection.collection_id,
         embedding_model_name=request.embedding_model_name,
@@ -180,7 +180,7 @@ def compute_typicality_metadata(
     compute_typicality.compute_typicality_metadata(
         session=session,
         collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        embedding_model_id=embedding_model_id,
         metadata_name=request.metadata_name,
     )
 
@@ -227,7 +227,7 @@ def compute_similarity_metadata(
         HTTPException: 404 if invalid embedding model or query tag is given.
     """
     try:
-        embedding_model = collection_embedding_model_resolver.get_model_by_name(
+        embedding_model_id = collection_embedding_model_resolver.get_model_by_name(
             session=session,
             collection_id=collection.collection_id,
             embedding_model_name=request.embedding_model_name,
@@ -243,7 +243,7 @@ def compute_similarity_metadata(
             session=session,
             key_collection_id=collection.collection_id,
             query_tag_id=query_tag_id,
-            embedding_model_id=embedding_model.embedding_model_id,
+            embedding_model_id=embedding_model_id,
             metadata_name=request.metadata_name,
         )
     except TagNotFoundError as e:

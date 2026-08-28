@@ -158,7 +158,7 @@ class Dataset(Generic[T], ABC):
             session=self.session,
             collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,
-        ).embedding_model_id
+        )
         compute_typicality.compute_typicality_metadata(
             session=self.session,
             collection_id=self.collection_id,
@@ -191,7 +191,7 @@ class Dataset(Generic[T], ABC):
             session=self.session,
             collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,
-        ).embedding_model_id
+        )
         query_tag = tag_resolver.get_by_name(
             session=self.session, tag_name=query_tag_name, collection_id=self.collection_id
         )
