@@ -89,9 +89,9 @@ jobs:
 
       - name: Set Up Uv
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           enable-cache: true
 
       - name: Set Up Node.js
@@ -306,9 +306,9 @@ jobs:
 
       - name: Set Up Uv
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           enable-cache: true
 
       - name: Set Up Node.js
