@@ -45,8 +45,30 @@ jobs:
           filters: |
             e2e:
               - '**'
-              # Release tooling, tested by its own checks in prepare_release.yml.
+              # Release tooling and the other workflows: this workflow runs none
+              # of them, and prepare_release.yml checks its own tooling.
               - '!.github/scripts/**'
+              - '!.github/workflows/unit_test.yml'
+              - '!.github/workflows/prepare_release.yml'
+              - '!.github/workflows/fast_track_*.yml'
+              - '!.github/ISSUE_TEMPLATE/**'
+              - '!.github/CODEOWNERS'
+              # Backend unit tests: the app under test never imports them.
+              - '!lightly_studio/tests/**'
+              # Docs and dev scripts: the wheel is only src/lightly_studio plus
+              # alembic.ini, and nothing here is read at runtime.
+              - '!lightly_studio/docs/**'
+              - '!lightly_studio/scripts/**'
+              # Self-contained Node package with its own toolchain.
+              - '!fast_track/**'
+              # Agent instructions, git hooks and README assets.
+              - '!.agents/**'
+              - '!.claude/**'
+              - '!.githooks/**'
+              - '!assets/**'
+              # No markdown is imported or read at runtime, in either the backend
+              # or the view - checked before adding this rule.
+              - '!**/*.md'
 
   prepare-caches:
     name: Build Cache
