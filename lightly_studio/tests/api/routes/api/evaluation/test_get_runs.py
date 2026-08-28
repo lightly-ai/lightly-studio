@@ -21,6 +21,7 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
             created_at=datetime(2026, 5, 18, 10, 0, 0, tzinfo=timezone.utc),
             gt_annotation_source="gt_v1",
             pred_annotation_source="pred_v1",
+            stale_since=None,
         ),
         EvaluationRunView(
             id=run_2_id,
@@ -29,6 +30,7 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
             created_at=datetime(2026, 5, 17, 9, 30, 0, tzinfo=timezone.utc),
             gt_annotation_source="gt_v2",
             pred_annotation_source="pred_v2",
+            stale_since=None,
         ),
     ]
     list_views = mocker.patch(
