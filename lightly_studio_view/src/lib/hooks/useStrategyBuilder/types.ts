@@ -142,7 +142,7 @@ export const STRATEGY_DEFAULTS: { [K in StrategyType]: StrategyParamsByType[K] }
     metadata_balancing: {
         metadata_key: '',
         target_distribution_mode: 'uniform',
-        target_distribution: [],
+        target_distribution: []
     },
     subpart_diversity: {
         annotation_source_id: '',
