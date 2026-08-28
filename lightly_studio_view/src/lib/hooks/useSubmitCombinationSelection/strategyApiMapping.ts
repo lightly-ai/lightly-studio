@@ -1,5 +1,21 @@
 import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
-import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
+import type {
+    ClassBalancingTargetDistributionMode,
+    ClassBalancingTargetRow,
+    StrategyInstance
+} from '$lib/hooks/useStrategyBuilder';
+
+function toApiTargetDistribution(params: {
+    target_distribution_mode: ClassBalancingTargetDistributionMode;
+    target_distribution: ClassBalancingTargetRow[];
+}): Record<string, number> | 'uniform' | 'input' {
+    if (params.target_distribution_mode !== 'dictionary') {
+        return params.target_distribution_mode;
+    }
+    return Object.fromEntries(
+        params.target_distribution.map((row) => [row.class_name, row.weight])
+    );
+}
 
 export function getMetadataKey(instance: StrategyInstance): string {
     if (instance.type === 'typicality') return `typicality-${instance.id}`;
@@ -42,16 +58,18 @@ export function toApiStrategy(instance: StrategyInstance): SamplingRequest['stra
         };
     }
 
-    const targetDistribution =
-        instance.params.target_distribution_mode === 'dictionary'
-            ? Object.fromEntries(
-                  instance.params.target_distribution.map((row) => [row.class_name, row.weight])
-              )
-            : instance.params.target_distribution_mode;
+    if (instance.type === 'metadata_balancing') {
+        return {
+            strategy_name: 'metadata_balance',
+            metadata_key: instance.params.metadata_key,
+            target_distribution: toApiTargetDistribution(instance.params),
+            strength: instance.params.strength
+        };
+    }
 
     return {
         strategy_name: 'balance',
-        target_distribution: targetDistribution,
+        target_distribution: toApiTargetDistribution(instance.params),
         annotation_source_id: instance.params.annotation_source_id || null,
         strength: instance.params.strength
     };
