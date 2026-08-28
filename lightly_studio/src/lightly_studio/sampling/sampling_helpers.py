@@ -9,7 +9,7 @@ from sqlmodel import Session
 
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.resolvers import (
-    embedding_model_resolver,
+    collection_embedding_model_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -26,11 +26,11 @@ def get_embeddings_by_sample_ids(
 
     Output order matches ``sample_ids``.
     """
-    embedding_model_id = embedding_model_resolver.get_by_name(
+    embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
         session=session,
         collection_id=collection_id,
         embedding_model_name=embedding_model_name,
-    ).embedding_model_id
+    )
     embedding_tables = sample_embedding_resolver.get_by_sample_ids(
         session=session,
         sample_ids=list(sample_ids),
@@ -46,11 +46,11 @@ def get_embeddings_by_tag_id(
     embedding_model_name: str | None,
 ) -> list[Embedding]:
     """Resolve sample embeddings for the given model and sample tag."""
-    embedding_model_id = embedding_model_resolver.get_by_name(
+    embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
         session=session,
         collection_id=collection_id,
         embedding_model_name=embedding_model_name,
-    ).embedding_model_id
+    )
     embedding_tables = sample_embedding_resolver.get_all_by_collection_id(
         session=session,
         collection_id=collection_id,
