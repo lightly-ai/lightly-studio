@@ -1,15 +1,53 @@
-"""Render the release PR body: the draft release notes."""
+"""Render the release PR body: the draft release notes plus a reviewer checklist."""
 
 from __future__ import annotations
 
+# What the workflow already asserted before opening the PR, so the reviewer does
+# not re-check it by hand. Keep in sync with prepare_release.yml.
+_GUARDS = """\
+The workflow already checked that:
 
-def render_pr_body(section_body: str) -> str:
-    """Assembles the release PR body: the draft release notes.
+- exactly `CHANGELOG.md`, `lightly_studio/pyproject.toml` and `lightly_studio/uv.lock` changed,
+- the `uv.lock` diff is only this version bump,
+- `CHANGELOG.md` keeps an empty `[Unreleased]` skeleton and every earlier release is byte-identical,
+- Labelformat is pinned by version, not by git sha.
 
-    section_body is the CHANGELOG section already promoted for this version.
+What is left is editorial, and it is what this review is for."""
+
+_CHECKLIST = """\
+- [ ] The notes read as user-facing release notes: no ticket ids (`LIG 1234`), PR numbers or
+      internal jargon.
+- [ ] Nothing user-visible since the last release is missing.
+- [ ] Every entry is under the right heading, and near-duplicate entries are merged into one.
+- [ ] The version matches the impact of the entries ([semver](https://semver.org)): minor when
+      something notable is added or changed, patch otherwise.
+- [ ] CI is green on this branch."""
+
+_AFTER_MERGE = """\
+Merging publishes nothing. Tagging, the GitHub release, PyPI, the docs and the self-hosted
+image are still manual - follow `RELEASE.md` in `lightly-studio-private`."""
+
+
+def render_pr_body(section_body: str, version: str) -> str:
+    """Assembles the release PR body.
+
+    Args:
+        section_body: The CHANGELOG section already promoted for this version.
+        version: The version being released, e.g. "1.0.6".
+
+    Returns:
+        The Markdown body for the release PR.
     """
     return (
-        "## Draft release notes\n\n"
-        "> Mechanically promoted from CHANGELOG.md - review and edit before publishing.\n\n"
-        f"{section_body}\n"
+        f"Prepares the LightlyStudio {version} release: promotes the `[Unreleased]` changelog "
+        f"section, bumps the version and relocks.\n\n"
+        f"## Release notes for {version}\n\n"
+        f"Edit `CHANGELOG.md` on this branch rather than this description - the changelog is what "
+        f"gets published, this is a copy of it from when the PR was opened.\n\n"
+        f"{section_body}\n\n"
+        f"## Review checklist\n\n"
+        f"{_GUARDS}\n\n"
+        f"{_CHECKLIST}\n\n"
+        f"## After merging\n\n"
+        f"{_AFTER_MERGE}\n"
     )

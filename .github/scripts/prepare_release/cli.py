@@ -103,7 +103,7 @@ def _cmd_render_pr_body(args: argparse.Namespace) -> None:
     section_body = changelog.extract_released_section(
         changelog_text=args.changelog.read_text(), version=args.version
     )
-    body = pr_body.render_pr_body(section_body=section_body)
+    body = pr_body.render_pr_body(section_body=section_body, version=args.version)
     args.output.write_text(body)
 
 
