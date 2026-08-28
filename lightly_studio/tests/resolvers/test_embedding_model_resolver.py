@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.resolvers import embedding_model_resolver
 from tests.helpers_resolvers import (
@@ -60,32 +59,6 @@ def test_read_embedding_model(db_session: Session) -> None:
     assert embedding_model_from_resolver is not None
     assert embedding_model_from_resolver.embedding_model_id == embedding_model.embedding_model_id
     assert embedding_model_from_resolver.name == embedding_model.name
-
-
-def test_delete_embedding_model(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    embedding_model = create_embedding_model(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    # The model is linked to the collection, so remove the link first; otherwise the
-    # collection_embedding_model foreign key blocks the delete.
-    link = db_session.get(
-        CollectionEmbeddingModelTable,
-        (collection.collection_id, embedding_model.embedding_model_id),
-    )
-    db_session.delete(link)
-    db_session.commit()
-
-    embedding_model_resolver.delete(
-        session=db_session, embedding_model_id=embedding_model.embedding_model_id
-    )
-
-    # Assert the embedding model was deleted.
-    embedding_model_deleted = embedding_model_resolver.get_by_id(
-        session=db_session, embedding_model_id=embedding_model.embedding_model_id
-    )
-    assert embedding_model_deleted is None
 
 
 def test_get_by_model_hash_deprecated(db_session: Session) -> None:

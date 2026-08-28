@@ -107,14 +107,3 @@ def get_by_model_hash(
         )
     )
     return session.exec(query).first()
-
-
-def delete(session: Session, embedding_model_id: UUID) -> bool:
-    """Delete an embedding model."""
-    embedding_model = get_by_id(session=session, embedding_model_id=embedding_model_id)
-    if not embedding_model:
-        return False
-
-    session.delete(embedding_model)
-    session.commit()
-    return True
