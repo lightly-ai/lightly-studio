@@ -1,0 +1,57 @@
+name: Check Release CI
+
+# Job-level wrapper around `.github/actions/check-release-ci`, for manual
+# verification and for release workflows in this repository. Callers in other
+# repositories should use the composite action directly - a reusable workflow
+# runs in the caller's context, so its local `./.github/actions` path is not
+# guaranteed to resolve there.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag, branch or sha to check.
+        type: string
+        required: true
+      skip_ci_check:
+        description: >-
+          Emergency override. Skips the gate and records who overrode it.
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        description: Tag, branch or sha to check.
+        type: string
+        required: true
+      skip_ci_check:
+        description: Emergency override; skips the gate and records the override.
+        type: boolean
+        default: false
+    outputs:
+      sha:
+        description: The commit sha that `ref` resolved to.
+        value: ${{ jobs.check-release-ci.outputs.sha }}
+
+permissions:
+  contents: read
+  checks: read
+
+jobs:
+  check-release-ci:
+    name: Check Release CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.gate.outputs.sha }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Check the release commit's CI
+        id: gate
+        uses: ./.github/actions/check-release-ci
+        with:
+          ref: ${{ inputs.ref }}
+          skip-ci-check: ${{ inputs.skip_ci_check }}
+          github-token: ${{ github.token }}

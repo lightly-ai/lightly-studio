@@ -26,6 +26,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend || 'true' }}
       docs: ${{ steps.filter.outputs.docs || 'true' }}
       fast_track: ${{ steps.filter.outputs.fast_track || 'true' }}
+      release_tooling: ${{ steps.filter.outputs.release_tooling || 'true' }}
     steps:
       - name: Checkout Code # Needed for merge_group event
         uses: actions/checkout@v6
@@ -61,6 +62,11 @@ jobs:
             fast_track:
               - '.github/workflows/unit_test.yml'
               - 'fast_track/**'
+            # Release tooling and the CI gate that reads this workflow's checks.
+            release_tooling:
+              - '.github/workflows/unit_test.yml'
+              - '.github/actions/check-release-ci/**'
+              - '.github/scripts/**'
 
   check-python:
     name: Static Checks Python
@@ -299,6 +305,59 @@ jobs:
       - name: Tests
         run: npm run test
 
+  check-release-tooling:
+    name: Static Checks + Tests Release Tooling
+    needs: detect
+    if: needs.detect.outputs.release_tooling == 'true'
+    runs-on: ubuntu-latest
+    # The gate self-test below reads another commit's check runs.
+    permissions:
+      contents: read
+      checks: read
+    defaults:
+      run:
+        working-directory: .github/scripts
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+          enable-cache: true
+
+      - name: Static checks
+        run: make static-checks
+
+      - name: Tests
+        run: make test
+
+      # A gate that returns success unconditionally also passes a green commit,
+      # so the known-red commit is checked first. These two shas are the
+      # recorded acceptance cases from
+      # `.github/actions/check-release-ci/README.md`; if either stops resolving
+      # because its branch was pruned, replace it there and here together.
+      - name: Release gate must block a known-red commit
+        id: known-red
+        continue-on-error: true
+        uses: ./.github/actions/check-release-ci
+        with:
+          ref: 1f9b2156d23ecf5033b1cfe34be06af5d903d83c
+          github-token: ${{ github.token }}
+
+      - name: Assert the known-red commit was blocked
+        if: steps.known-red.outcome != 'failure'
+        run: |
+          echo "::error::The release gate passed a commit whose required checks failed."
+          exit 1
+
+      - name: Release gate must pass a known-green commit
+        uses: ./.github/actions/check-release-ci
+        with:
+          ref: b2dc2470d5a0055e791944dbd14a4e965ff615bd
+          github-token: ${{ github.token }}
+
   # The single required status check: always runs, so gated jobs can be skipped
   # without stranding the merge queue. Require this in the branch ruleset.
   unit-success:
@@ -312,6 +371,7 @@ jobs:
       - test-frontend
       - check-docs
       - check-fast-track
+      - check-release-tooling
     if: always()
     steps:
       - name: Verify required jobs
@@ -323,6 +383,7 @@ jobs:
           FRONTEND_TESTS: ${{ needs.test-frontend.result }}
           DOCS: ${{ needs.check-docs.result }}
           FAST_TRACK: ${{ needs.check-fast-track.result }}
+          RELEASE_TOOLING: ${{ needs.check-release-tooling.result }}
         run: |
           python3 - <<'PY'
           import os
@@ -341,6 +402,7 @@ jobs:
               "Frontend tests": os.environ["FRONTEND_TESTS"],
               "Build Docs": os.environ["DOCS"],
               "Static Checks + Tests Fast Track": os.environ["FAST_TRACK"],
+              "Static Checks + Tests Release Tooling": os.environ["RELEASE_TOOLING"],
           }
           allowed = {"success", "skipped"}
 

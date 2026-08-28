@@ -49,10 +49,8 @@ jobs:
       - name: Lint and test the prepare_release tooling
         working-directory: .github/scripts
         run: |
-          uv run --with ruff --no-project ruff format --check .
-          uv run --with ruff --no-project ruff check .
-          uv run --with mypy --no-project mypy prepare_release
-          uv run --with pytest --no-project pytest -q
+          make static-checks
+          make test
 
       - name: Guard against a git-pinned Labelformat
         run: |
