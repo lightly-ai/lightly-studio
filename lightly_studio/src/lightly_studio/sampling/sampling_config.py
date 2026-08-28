@@ -103,6 +103,7 @@ class MetadataBalancingStrategy(SamplingStrategy):
     metadata_key: str
     target_distribution: MetadataValueToTarget | Literal["uniform"] | Literal["input"]
 
+
 class SubpartDiversityStrategy(SamplingStrategy):
     """Sampling strategy based on diversity of annotation subparts (crops)."""
 
