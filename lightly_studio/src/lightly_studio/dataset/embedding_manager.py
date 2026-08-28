@@ -187,7 +187,7 @@ class EmbeddingManager:
         # query-layer callers (collection_embedding_model_resolver.get_default_by_collection_id).
         if set_as_default or collection_id not in self._collection_id_to_default_model_id:
             self._collection_id_to_default_model_id[collection_id] = model_id
-        collection_embedding_model_resolver.get_or_create(
+        collection_embedding_model_resolver.get_or_add_collection_model(
             session=session, collection_id=collection_id, embedding_model_id=model_id
         )
         # The first model linked to a collection becomes its default; an explicit request

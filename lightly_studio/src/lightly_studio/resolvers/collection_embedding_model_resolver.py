@@ -14,15 +14,12 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 
 
-def get_or_create(
+def get_or_add_collection_model(
     session: Session, collection_id: UUID, embedding_model_id: UUID
 ) -> CollectionEmbeddingModelTable:
     """Link an embedding model to a collection, returning the existing or new link row.
 
-    Idempotent: linking a model that is already linked returns its current row and never
-    touches ``is_default``. The composite primary key makes the link naturally unique, so
-    no separate "fail if exists" insert is needed. Whether a linked model is the
-    collection's default is a separate concern owned by ``set_default``.
+    If the link does not exist it is created as non-default.
 
     Args:
         session: The database session.

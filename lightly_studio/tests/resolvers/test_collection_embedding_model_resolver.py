@@ -15,7 +15,7 @@ def test_get_or_create__links_model(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     model = create_embedding_model(session=db_session, collection_id=collection.collection_id)
 
-    link = collection_embedding_model_resolver.get_or_create(
+    link = collection_embedding_model_resolver.get_or_add_collection_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=model.embedding_model_id,
@@ -30,7 +30,7 @@ def test_get_or_create__links_model(db_session: Session) -> None:
 def test_get_or_create__idempotent_keeps_default(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     model = create_embedding_model(session=db_session, collection_id=collection.collection_id)
-    collection_embedding_model_resolver.get_or_create(
+    collection_embedding_model_resolver.get_or_add_collection_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=model.embedding_model_id,
@@ -42,7 +42,7 @@ def test_get_or_create__idempotent_keeps_default(db_session: Session) -> None:
     )
 
     # Re-linking an already-default model returns the same row without clearing its flag.
-    link = collection_embedding_model_resolver.get_or_create(
+    link = collection_embedding_model_resolver.get_or_add_collection_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=model.embedding_model_id,
@@ -58,7 +58,7 @@ def test_get_or_create__idempotent_keeps_default(db_session: Session) -> None:
 def test_set_default__flags_linked_model(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     model = create_embedding_model(session=db_session, collection_id=collection.collection_id)
-    collection_embedding_model_resolver.get_or_create(
+    collection_embedding_model_resolver.get_or_add_collection_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=model.embedding_model_id,
@@ -89,7 +89,7 @@ def test_set_default__replaces_existing(db_session: Session) -> None:
         embedding_model_hash="hash_2",
     )
     for model in (model_1, model_2):
-        collection_embedding_model_resolver.get_or_create(
+        collection_embedding_model_resolver.get_or_add_collection_model(
             session=db_session,
             collection_id=collection.collection_id,
             embedding_model_id=model.embedding_model_id,
@@ -186,7 +186,7 @@ def test_get_all_by_collection_id__returns_all_linked(db_session: Session) -> No
         embedding_model_hash="hash_2",
     )
     for model in (model_1, model_2):
-        collection_embedding_model_resolver.get_or_create(
+        collection_embedding_model_resolver.get_or_add_collection_model(
             session=db_session,
             collection_id=collection.collection_id,
             embedding_model_id=model.embedding_model_id,

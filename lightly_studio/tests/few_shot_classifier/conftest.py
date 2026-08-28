@@ -66,7 +66,7 @@ def embedding_model(db_session: Session, collection: CollectionTable) -> Embeddi
     )
     created = embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
     # Link it and register it as the collection's default so it resolves as the model.
-    collection_embedding_model_resolver.get_or_create(
+    collection_embedding_model_resolver.get_or_add_collection_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=created.embedding_model_id,

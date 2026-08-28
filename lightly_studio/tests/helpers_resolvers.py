@@ -330,7 +330,7 @@ def create_embedding_model(  # noqa: PLR0913
         ),
     )
     if set_as_default:
-        collection_embedding_model_resolver.get_or_create(
+        collection_embedding_model_resolver.get_or_add_collection_model(
             session=session,
             collection_id=collection_id,
             embedding_model_id=model.embedding_model_id,
