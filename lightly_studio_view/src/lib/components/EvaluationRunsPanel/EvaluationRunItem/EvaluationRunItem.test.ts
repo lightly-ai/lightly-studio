@@ -22,6 +22,7 @@ const baseRun: EvaluationRunView = {
         classwise: true
     },
     created_at: new Date('2026-01-15T10:30:00Z'),
+    stale_since: null,
     gt_annotation_source: 'ground_truth_v1',
     pred_annotation_source: 'predictions_v2'
 };

@@ -48,6 +48,7 @@ class EvaluationRunTable(EvaluationRunBase, table=True):
     )
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    stale_since: datetime | None = None
 
 
 class EvaluationRunCreate(EvaluationRunBase):
@@ -61,5 +62,6 @@ class EvaluationRunView(BaseModel):
     name: str
     evaluation_run_configuration: dict[str, Any]
     created_at: datetime
+    stale_since: datetime | None
     gt_annotation_source: str | None
     pred_annotation_source: str | None
