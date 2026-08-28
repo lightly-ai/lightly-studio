@@ -309,10 +309,10 @@ def create_embedding_model(  # noqa: PLR0913
 ) -> EmbeddingModelTable:
     """Helper function to create a embedding model.
 
-    With ``set_as_default`` the model is recorded as the collection's default embedding
-    model, so ``collection_embedding_model_resolver.get_by_collection_id`` resolves to it. It
-    is off by default to avoid the ``collection_embedding_model`` foreign key blocking model
-    or collection deletes in tests that do not need a default.
+    With ``set_as_default`` the model is linked to the collection and recorded as its
+    default embedding model, so ``get_default_by_collection_id`` resolves to it. It is off
+    by default to avoid the ``collection_embedding_model`` foreign key blocking model or
+    collection deletes in tests that do not need a default.
     """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
@@ -330,6 +330,11 @@ def create_embedding_model(  # noqa: PLR0913
         ),
     )
     if set_as_default:
+        collection_embedding_model_resolver.get_or_add_collection_model(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=model.embedding_model_id,
+        )
         collection_embedding_model_resolver.set_default(
             session=session,
             collection_id=collection_id,

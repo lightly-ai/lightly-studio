@@ -57,7 +57,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -85,7 +85,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=None,
         )
         get_by_id = mocker.patch.object(embedding_model_resolver, "get_by_id")
@@ -110,7 +110,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -177,7 +177,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -232,7 +232,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -370,7 +370,7 @@ class TestClassifierManager:
         # Setup: Create a classifier first
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -433,7 +433,7 @@ class TestClassifierManager:
         # Setup: Create a classifier with initial samples
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -550,7 +550,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -633,7 +633,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -722,7 +722,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_by_collection_id",
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -988,11 +988,7 @@ def test_get_embedding_model_by_hash__prefers_default(db_session: Session) -> No
         collection_id=child.collection_id,
         embedding_model_name="model_in_child",
         embedding_model_hash="same_hash",
-    )
-    collection_embedding_model_resolver.set_default(
-        session=db_session,
-        collection_id=child.collection_id,
-        embedding_model_id=child_model.embedding_model_id,
+        set_as_default=True,
     )
 
     result = classifier_manager_module._get_embedding_model_by_hash(

@@ -182,17 +182,19 @@ class EmbeddingManager:
 
         self._models[model_id] = embedding_generator
 
-        # Record the default in two places: the in-memory map caches the loaded generator
-        # for this process, and the collection_embedding_model table persists the choice for
-        # query-layer callers (collection_embedding_model_resolver.get_by_collection_id).
-        # TODO(Michal, 08/2026): Update to use the updated collection_embedding_model_resolver
-        # interface once ready. Currently, registering multiple collection models might lead
-        # to an inconsistent state.
+        # Record the model in two places: the in-memory map caches the loaded generator for
+        # this process, and the collection_embedding_model table persists the link for
+        # query-layer callers (collection_embedding_model_resolver.get_default_by_collection_id).
         if set_as_default or collection_id not in self._collection_id_to_default_model_id:
             self._collection_id_to_default_model_id[collection_id] = model_id
+        collection_embedding_model_resolver.get_or_add_collection_model(
+            session=session, collection_id=collection_id, embedding_model_id=model_id
+        )
+        # The first model linked to a collection becomes its default; an explicit request
+        # re-points it. "First model auto-defaults" is caller policy, kept out of the resolver.
         if (
             set_as_default
-            or collection_embedding_model_resolver.get_by_collection_id(
+            or collection_embedding_model_resolver.get_default_by_collection_id(
                 session=session, collection_id=collection_id
             )
             is None

@@ -1,7 +1,8 @@
-"""Handler for database operations related to a collection's default embedding space.
+"""Handler for database operations on the collection-to-embedding-model link table.
 
-TODO(Michal, 08/2026): Rename the functions and change the interface so that it reflects
-the new "all collection models" semantics, not the old "only default model" semantics.
+Each row links one embedding model to one collection, with an ``is_default`` flag marking
+at most one of a collection's models as its default. Linking a model and choosing the
+default are separate operations: ``get_or_create`` links, ``set_default`` flips the flag.
 """
 
 from __future__ import annotations
@@ -13,73 +14,96 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 
 
+def get_or_add_collection_model(
+    session: Session, collection_id: UUID, embedding_model_id: UUID
+) -> CollectionEmbeddingModelTable:
+    """Link an embedding model to a collection, returning the existing or new link row.
+
+    If the link does not exist it is created as non-default.
+
+    Args:
+        session: The database session.
+        collection_id: The collection to link the model to.
+        embedding_model_id: The embedding model to link.
+
+    Returns:
+        The persisted link row.
+    """
+    link = session.get(CollectionEmbeddingModelTable, (collection_id, embedding_model_id))
+    if link is not None:
+        return link
+
+    link = CollectionEmbeddingModelTable(
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+    session.add(link)
+    session.commit()
+    session.refresh(link)
+    return link
+
+
 def set_default(
     session: Session, collection_id: UUID, embedding_model_id: UUID
 ) -> CollectionEmbeddingModelTable:
-    """Set the default embedding model of a collection.
+    """Make an already-linked embedding model the collection's default.
 
-    A collection may link several embedding models but has at most one default. The
-    current default (if any) is cleared and the target model is flagged instead. The
-    target keeps its existing link row when it already has one, so the composite primary
-    key is never mutated.
+    A collection has at most one default. The current default (if any) is cleared and the
+    target model is flagged instead. The target must already be linked via
+    ``get_or_create``; an unlinked model reaching here is a caller bug and raises.
 
     Args:
         session: The database session.
         collection_id: The collection whose default is set.
-        embedding_model_id: The embedding model to record as the default.
+        embedding_model_id: The already-linked embedding model to flag as the default.
 
     Returns:
         The persisted default embedding model row.
+
+    Raises:
+        ValueError: If the model is not linked to the collection.
     """
-    current_default = _get_by_collection_id(session=session, collection_id=collection_id)
-    if current_default is not None and current_default.embedding_model_id == embedding_model_id:
-        return current_default
+    target = session.get(CollectionEmbeddingModelTable, (collection_id, embedding_model_id))
+    if target is None:
+        raise ValueError(
+            f"Embedding model {embedding_model_id} is not linked to collection {collection_id}."
+        )
+    if target.is_default:
+        return target
 
     # Clear the old default first so the one-default-per-collection unique index (Postgres)
     # never sees two defaults at once.
+    current_default = _get_default_by_collection_id(session=session, collection_id=collection_id)
     if current_default is not None:
         current_default.is_default = False
         session.add(current_default)
         session.flush()
 
-    target = session.get(CollectionEmbeddingModelTable, (collection_id, embedding_model_id))
-    if target is None:
-        target = CollectionEmbeddingModelTable(
-            collection_id=collection_id,
-            embedding_model_id=embedding_model_id,
-            is_default=True,
-        )
-    else:
-        target.is_default = True
-
+    target.is_default = True
     session.add(target)
     session.commit()
     session.refresh(target)
     return target
 
 
-def get_by_collection_id(session: Session, collection_id: UUID) -> UUID | None:
+def get_default_by_collection_id(session: Session, collection_id: UUID) -> UUID | None:
     """Return the collection's default embedding model id, or None if it has none."""
-    default = _get_by_collection_id(session=session, collection_id=collection_id)
+    default = _get_default_by_collection_id(session=session, collection_id=collection_id)
     return None if default is None else default.embedding_model_id
 
 
-def delete_by_collection_id(session: Session, collection_id: UUID) -> bool:
-    """Delete the collection's default embedding space row.
-
-    Returns:
-        True if a row was deleted, False if the collection had no default.
-    """
-    default = _get_by_collection_id(session=session, collection_id=collection_id)
-    if default is None:
-        return False
-
-    session.delete(default)
-    session.commit()
-    return True
+def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[UUID]:
+    """Return the ids of all embedding models linked to the collection."""
+    return list(
+        session.exec(
+            select(CollectionEmbeddingModelTable.embedding_model_id).where(
+                CollectionEmbeddingModelTable.collection_id == collection_id
+            )
+        ).all()
+    )
 
 
-def _get_by_collection_id(
+def _get_default_by_collection_id(
     session: Session, collection_id: UUID
 ) -> CollectionEmbeddingModelTable | None:
     """Return the collection's default embedding model row, or None if it has none."""

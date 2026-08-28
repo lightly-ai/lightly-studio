@@ -28,7 +28,7 @@ def get_sample_ids_in_region(
     # so the region is tested against the exact projection the user lassoed over.
     # TODO(Kondrat, 07/2026): Select the embedding model via API parameter once supported,
     # matching embeddings2d.get_2d_embeddings.
-    embedding_model_id = collection_embedding_model_resolver.get_by_collection_id(
+    embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=session,
         collection_id=collection_id,
     )
