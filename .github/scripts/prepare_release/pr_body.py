@@ -23,10 +23,6 @@ _CHECKLIST = """\
       something notable is added or changed, patch otherwise.
 - [ ] CI is green on this branch."""
 
-_AFTER_MERGE = """\
-Merging publishes nothing. Tagging, the GitHub release, PyPI, the docs and the self-hosted
-image are still manual - follow `RELEASE.md` in `lightly-studio-private`."""
-
 
 def render_pr_body(section_body: str, version: str) -> str:
     """Assembles the release PR body.
@@ -48,6 +44,6 @@ def render_pr_body(section_body: str, version: str) -> str:
         f"## Review checklist\n\n"
         f"{_GUARDS}\n\n"
         f"{_CHECKLIST}\n\n"
-        f"## After merging\n\n"
-        f"{_AFTER_MERGE}\n"
+        f"Merging publishes nothing - tag, GitHub release, PyPI and docs stay manual, see "
+        f"`RELEASE.md`.\n"
     )

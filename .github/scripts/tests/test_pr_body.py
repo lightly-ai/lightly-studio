@@ -15,5 +15,5 @@ def test_render_pr_body__review_checklist():
 
 def test_render_pr_body__no_leftover_manual_steps():
     body = pr_body.render_pr_body(section_body="### Added\n\n- Added thing one.", version="1.0.6")
-    assert "## After merging" in body
+    assert "Merging publishes nothing" in body
     assert "RELEASE.md" in body
