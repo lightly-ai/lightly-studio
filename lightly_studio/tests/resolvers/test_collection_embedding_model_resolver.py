@@ -205,7 +205,7 @@ def test_get_all_by_collection_id__returns_all_linked(db_session: Session) -> No
     assert set(linked) == {model_1.embedding_model_id, model_2.embedding_model_id}
 
 
-def test_get_model_by_name__none_returns_default(db_session: Session) -> None:
+def test_get_model_id_by_name__none_returns_default(db_session: Session) -> None:
     """Resolve the default model id when the name is None."""
     collection = create_collection(session=db_session)
     embedding_model = create_embedding_model(
@@ -215,14 +215,14 @@ def test_get_model_by_name__none_returns_default(db_session: Session) -> None:
         set_as_default=True,
     )
 
-    result = collection_embedding_model_resolver.get_model_by_name(
+    result = collection_embedding_model_resolver.get_model_id_by_name(
         session=db_session, collection_id=collection.collection_id, embedding_model_name=None
     )
 
     assert result == embedding_model.embedding_model_id
 
 
-def test_get_model_by_name__none_returns_default_not_oldest(db_session: Session) -> None:
+def test_get_model_id_by_name__none_returns_default_not_oldest(db_session: Session) -> None:
     """Resolve the default model, not the oldest, when the collection has several."""
     collection = create_collection(session=db_session)
     create_embedding_model(
@@ -239,14 +239,14 @@ def test_get_model_by_name__none_returns_default_not_oldest(db_session: Session)
         set_as_default=True,
     )
 
-    result = collection_embedding_model_resolver.get_model_by_name(
+    result = collection_embedding_model_resolver.get_model_id_by_name(
         session=db_session, collection_id=collection.collection_id, embedding_model_name=None
     )
 
     assert result == default_model.embedding_model_id
 
 
-def test_get_model_by_name__none_without_default(db_session: Session) -> None:
+def test_get_model_id_by_name__none_without_default(db_session: Session) -> None:
     """Raise when the name is None but no linked model is the default."""
     collection = create_collection(session=db_session)
     create_embedding_model(
@@ -256,22 +256,22 @@ def test_get_model_by_name__none_without_default(db_session: Session) -> None:
     )
 
     with pytest.raises(ValueError, match=r"has no default embedding model"):
-        collection_embedding_model_resolver.get_model_by_name(
+        collection_embedding_model_resolver.get_model_id_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
 
 
-def test_get_model_by_name__none_with_no_models(db_session: Session) -> None:
+def test_get_model_id_by_name__none_with_no_models(db_session: Session) -> None:
     """Raise when the name is None but the collection has no linked model."""
     collection = create_collection(session=db_session)
 
     with pytest.raises(ValueError, match=r"has no default embedding model"):
-        collection_embedding_model_resolver.get_model_by_name(
+        collection_embedding_model_resolver.get_model_id_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
 
 
-def test_get_model_by_name__existing_name(db_session: Session) -> None:
+def test_get_model_id_by_name__existing_name(db_session: Session) -> None:
     """Resolve a linked model id by its name."""
     collection = create_collection(session=db_session)
     model_1 = create_embedding_model(
@@ -287,14 +287,14 @@ def test_get_model_by_name__existing_name(db_session: Session) -> None:
         embedding_model_hash="hash_2",
     )
 
-    result_1 = collection_embedding_model_resolver.get_model_by_name(
+    result_1 = collection_embedding_model_resolver.get_model_id_by_name(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="embedding_model_1",
     )
     assert result_1 == model_1.embedding_model_id
 
-    result_2 = collection_embedding_model_resolver.get_model_by_name(
+    result_2 = collection_embedding_model_resolver.get_model_id_by_name(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="embedding_model_2",
@@ -302,7 +302,7 @@ def test_get_model_by_name__existing_name(db_session: Session) -> None:
     assert result_2 == model_2.embedding_model_id
 
 
-def test_get_model_by_name__nonexistent_name(db_session: Session) -> None:
+def test_get_model_id_by_name__nonexistent_name(db_session: Session) -> None:
     """Raise when no linked model has the given name."""
     collection = create_collection(session=db_session)
     create_embedding_model(
@@ -312,14 +312,14 @@ def test_get_model_by_name__nonexistent_name(db_session: Session) -> None:
     )
 
     with pytest.raises(ValueError, match=r"Embedding model with name `nonexistent` not found."):
-        collection_embedding_model_resolver.get_model_by_name(
+        collection_embedding_model_resolver.get_model_id_by_name(
             session=db_session,
             collection_id=collection.collection_id,
             embedding_model_name="nonexistent",
         )
 
 
-def test_get_model_by_name__scoped_to_the_collection(db_session: Session) -> None:
+def test_get_model_id_by_name__scoped_to_the_collection(db_session: Session) -> None:
     """Membership comes from the link table, so another collection's model is not resolved."""
     collection = create_collection(session=db_session)
     other_collection = create_collection(session=db_session)
@@ -330,12 +330,12 @@ def test_get_model_by_name__scoped_to_the_collection(db_session: Session) -> Non
     )
 
     with pytest.raises(ValueError, match=r"has no default embedding model"):
-        collection_embedding_model_resolver.get_model_by_name(
+        collection_embedding_model_resolver.get_model_id_by_name(
             session=db_session, collection_id=collection.collection_id, embedding_model_name=None
         )
 
     with pytest.raises(ValueError, match=r"Embedding model with name `other_model` not found."):
-        collection_embedding_model_resolver.get_model_by_name(
+        collection_embedding_model_resolver.get_model_id_by_name(
             session=db_session,
             collection_id=collection.collection_id,
             embedding_model_name="other_model",

@@ -116,7 +116,7 @@ def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[UUID
     )
 
 
-def get_model_by_name(
+def get_model_id_by_name(
     session: Session, collection_id: UUID, embedding_model_name: str | None
 ) -> UUID:
     """Resolve the id of one of a collection's embedding models by name.

@@ -309,7 +309,7 @@ def create_embedding_model(  # noqa: PLR0913
 ) -> EmbeddingModelTable:
     """Helper function to create a embedding model.
 
-    The model is linked to the collection, so it resolves through ``get_model_by_name`` and
+    The model is linked to the collection, so it resolves through ``get_model_id_by_name`` and
     ``get_all_by_collection_id``, matching production where every registered model is linked.
     With ``set_as_default`` it is also recorded as the collection default, so
     ``get_default_by_collection_id`` resolves to it.

@@ -26,7 +26,7 @@ def get_embeddings_by_sample_ids(
 
     Output order matches ``sample_ids``.
     """
-    embedding_model_id = collection_embedding_model_resolver.get_model_by_name(
+    embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
         session=session,
         collection_id=collection_id,
         embedding_model_name=embedding_model_name,
@@ -46,7 +46,7 @@ def get_embeddings_by_tag_id(
     embedding_model_name: str | None,
 ) -> list[Embedding]:
     """Resolve sample embeddings for the given model and sample tag."""
-    embedding_model_id = collection_embedding_model_resolver.get_model_by_name(
+    embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
         session=session,
         collection_id=collection_id,
         embedding_model_name=embedding_model_name,
