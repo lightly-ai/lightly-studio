@@ -43,16 +43,6 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
     return db_model
 
 
-def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[EmbeddingModelTable]:
-    """Retrieve all embedding models."""
-    embedding_models = session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .order_by(col(EmbeddingModelTable.created_at).asc())
-    ).all()
-    return list(embedding_models)
-
-
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
     """Retrieve a single embedding model by ID."""
     return session.exec(
