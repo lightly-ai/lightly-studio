@@ -12,7 +12,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
 
 
 class AnnotationCreateParams(BaseModel):
@@ -68,5 +68,10 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
 
     if created_annotation is None:
         raise ValueError(f"Failed to create annotation: {annotation}")
+
+    evaluation_run_resolver.mark_stale_by_collection_id(
+        session=session,
+        collection_id=created_annotation.annotation_collection_id,
+    )
 
     return created_annotation

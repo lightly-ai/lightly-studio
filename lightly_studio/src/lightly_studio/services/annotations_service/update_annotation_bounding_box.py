@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.resolvers import (
     annotation_resolver,
+    evaluation_run_resolver,
 )
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 
@@ -29,8 +30,13 @@ def update_annotation_bounding_box(
         The updated annotation with the new bounding box assigned.
 
     """
-    return annotation_resolver.update_bounding_box(
+    result = annotation_resolver.update_bounding_box(
         session,
         annotation_id,
         bounding_box,
     )
+    evaluation_run_resolver.mark_stale_by_collection_id(
+        session=session,
+        collection_id=result.annotation_collection_id,
+    )
+    return result
