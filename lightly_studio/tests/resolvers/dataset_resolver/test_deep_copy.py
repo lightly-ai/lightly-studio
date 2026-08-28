@@ -389,6 +389,36 @@ def test_deep_copy__with_default_embedding_space(db_session: Session) -> None:
     assert copied_default_id == copied_model_id
 
 
+def test_deep_copy__with_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(
+        session=db_session, collection_name="original", sample_type=SampleType.GROUP
+    )
+    original_components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=original.collection_id,
+        components=[("front_camera", SampleType.IMAGE)],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copied group has its own component definition, not the original's.
+    copied_components = collection_resolver.get_group_components(
+        session=db_session, parent_collection_id=copied.collection_id
+    )
+    assert len(copied_components) == 1
+    copied_component = copied_components["front_camera"]
+    assert copied_component.collection_id != original_components["front_camera"].collection_id
+    assert copied_component.group_component_definition is not None
+    assert copied_component.group_component_definition.group_component_name == "front_camera"
+    assert copied_component.group_component_definition.group_component_index == 0
+
+
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
     """Verify deleting original collection after deep copy doesn't cause FK errors."""
     # Arrange
