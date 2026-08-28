@@ -64,6 +64,14 @@ these were checked in this order. Re-run them after changing the gate:
 | Green, with a cancelled push attempt | `2ae55628ff29e01065d748128d7a39aa4519f8bf` | passes, flagging the other attempt | passes, flagged |
 | Green | `b2dc2470d5a0055e791944dbd14a4e965ff615bd` | passes | passes |
 
-Still-running and misspelled-requirement commits are covered by
-`.github/scripts/tests/test_ci_gate.py`, which also pins `skipped` as blocking
-when a required check itself reports it.
+Checks still running was verified live rather than against a fixed sha, since
+any commit goes green afterwards: run against `0b6cfbc8` while its CI was in
+flight, the gate refused it with "is not reported yet; 12 check(s) on this
+commit are still running". An aggregate job gets no check run until the jobs it
+waits on finish, so this case arrives as an absent check rather than a running
+one - which is why it is worth stating separately from a commit that was never
+tested at all.
+
+The still-running and misspelled-requirement cases are also unit tested in
+`.github/scripts/tests/test_ci_gate.py`, which pins `skipped` as blocking when a
+required check itself reports it.

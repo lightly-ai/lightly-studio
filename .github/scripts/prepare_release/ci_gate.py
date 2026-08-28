@@ -136,8 +136,13 @@ def evaluate_check_runs(
     Returns:
         One verdict per required name, in the order given.
     """
+    in_flight = sum(1 for run in check_runs if run.status != _COMPLETED)
     return [
-        _verdict(name=name, runs=[run for run in check_runs if run.name == name])
+        _verdict(
+            name=name,
+            runs=[run for run in check_runs if run.name == name],
+            in_flight=in_flight,
+        )
         for name in required
     ]
 
@@ -157,12 +162,25 @@ def render_report(verdicts: Sequence[CheckVerdict], sha: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _verdict(name: str, runs: Sequence[CheckRun]) -> CheckVerdict:
-    """Judges one required check from every attempt reported under its name."""
+def _verdict(name: str, runs: Sequence[CheckRun], in_flight: int) -> CheckVerdict:
+    """Judges one required check from every attempt reported under its name.
+
+    Args:
+        name: The required check name.
+        runs: Every attempt reported under that name; may be empty.
+        in_flight: How many of the commit's check runs have not completed.
+            An aggregate job only gets a check run once the jobs it waits on
+            are done, so a commit whose CI is mid-flight has no run under this
+            name yet - which must not read as "CI never ran".
+
+    Returns:
+        The verdict for this check.
+    """
     if not runs:
-        return CheckVerdict(
-            name=name, passed=False, detail="was never reported on this commit", url=""
-        )
+        detail = "was never reported on this commit"
+        if in_flight:
+            detail = f"is not reported yet; {in_flight} check(s) on this commit are still running"
+        return CheckVerdict(name=name, passed=False, detail=detail, url="")
 
     successes = [run for run in runs if run.status == _COMPLETED and run.conclusion == _SUCCESS]
     if successes:

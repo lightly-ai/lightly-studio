@@ -263,3 +263,16 @@ class TestCheckCiCommand:
 def test_parse_check_runs__unreadable_payload_is_refused():
     with pytest.raises(PrepareReleaseError):
         ci_gate.parse_check_runs({"message": "No commit found for SHA"})
+
+
+# An aggregate job gets no check run until the jobs it waits on are done, so a
+# commit whose CI is mid-flight has no run under the required name yet.
+def test_evaluate_check_runs__missing_check_while_ci_is_running():
+    runs = ci_gate.parse_check_runs(
+        {"check_runs": [_api_run("Backend (3.9, DuckDB)", status="in_progress", conclusion=None)]}
+    )
+
+    verdicts = ci_gate.evaluate_check_runs(runs, required=["CI Success Check"])
+
+    assert not verdicts[0].passed
+    assert "1 check(s) on this commit are still running" in verdicts[0].detail
