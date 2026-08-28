@@ -58,8 +58,9 @@ hooks:
 
 # Six sections, named for what the reader is doing rather than for the kind of
 # artifact each page is: get set up, run the loop, learn the vocabulary, plug
-# something in, look something up. Two of the six are their own header tab (see
-# `extra.tabs`), so the sidebar shows four at a time.
+# something in, look something up. The theme-overrides PR promotes two of the six
+# to header tabs via `extra.tabs`; on this branch, with no tab strip, all six
+# render in the sidebar.
 #
 # Workflows is the product pipeline, in the order a user runs it: ingest, curate,
 # annotate, evaluate, export. One caption per stage, so the section reads top to
