@@ -36,6 +36,7 @@ from lightly_studio.api.routes.api import (
     group,
     image,
     image_embedding,
+    mcap_poc,
     metadata,
     operator,
     sample,
@@ -109,6 +110,7 @@ app.add_middleware(
         r"/images/sample/",
         r"/videos/media/",
         r"/frames/media/",
+        r"/api/mcap-poc/source/content",
     ],
 )
 
@@ -151,6 +153,7 @@ api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
 api_router.include_router(evaluation.evaluation_router)
 api_router.include_router(metadata.metadata_router)
+api_router.include_router(mcap_poc.mcap_poc_router)
 api_router.include_router(sampling.sampling_router)
 api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)

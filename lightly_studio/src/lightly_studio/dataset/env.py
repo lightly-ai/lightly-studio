@@ -24,6 +24,12 @@ LIGHTLY_STUDIO_API_URL: Optional[str] = env.str("LIGHTLY_STUDIO_API_URL", defaul
 LIGHTLY_STUDIO_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_TOKEN", default=None)
 LIGHTLY_STUDIO_API_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_API_KEY", default=None)
 
+# Fixed source used by the MCAP processing-boundary proof of concept. Keeping the
+# source server-configured avoids exposing an arbitrary file or URL reader endpoint.
+LIGHTLY_STUDIO_MCAP_POC_SOURCE: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_MCAP_POC_SOURCE", default=None
+)
+
 # Anonymous usage tracking. Covers the Python package and the GUI, which reads the flag back from
 # the API. See lightly_studio/analytics/tracking.py.
 LIGHTLY_STUDIO_ANALYTICS_ENABLED: bool = env.bool("LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
