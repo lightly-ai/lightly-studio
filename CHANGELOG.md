@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.0.6\] - 2026-08-28
+
+### Added
+
 - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
 - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
 - Python SDK: Order video queries by `VideoSampleField.created_at`.
@@ -28,7 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the
   values of a categorical metadata field such as weather or city.
 
-
 ### Changed
 
 - Speed up cloud storage (S3, GCS, Azure blob) indexing by enabling parallel requests.
@@ -43,10 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whole collection on every click, for annotations on images and on video frames. On PostgreSQL
   with 4M annotations a click went from 6.3s to 1.3s; the neighbour lookup itself went from ~6s
   to 3ms, and the remaining 1.2s is the exact position and total counts.
-
-### Deprecated
-
-### Removed
 
 ### Fixed
 
