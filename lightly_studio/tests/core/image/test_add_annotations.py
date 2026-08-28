@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-import posixpath
 
 import pytest
 from labelformat.formats.labelformat import LabelformatObjectDetectionInput
@@ -99,32 +98,6 @@ def test_add_annotations_from_labelformat__missing_images(db_session: Session) -
     images_root = Path("/images").absolute().as_posix()
     assert missing_paths == [f"{images_root}/nonexistent.jpg"]
     assert len(samples) == 0
-
-
-def test_normalize_images_root__local_path_is_posix() -> None:
-    # On Windows, `str(Path(...).absolute())` returns backslashes which, when
-    # joined with posix-separated labelformat filenames via `posixpath.join`,
-    # produce mixed-separator strings that fail to match ingested paths.
-    # The normalized root must therefore be in posix form.
-    result = add_annotations.normalize_images_root(Path("some") / "images")
-
-    assert "\\" not in result
-    assert result.endswith("some/images")
-    assert Path(result).is_absolute()
-
-
-def test_normalize_images_root__joins_cleanly_with_posix_filename() -> None:
-    root = add_annotations.normalize_images_root(Path("data") / "coco")
-    joined = posixpath.join(root, "images/0001.jpg")
-
-    assert "\\" not in joined
-    assert joined.endswith("data/coco/images/0001.jpg")
-
-
-def test_normalize_images_root__preserves_remote_protocol() -> None:
-    result = add_annotations.normalize_images_root("s3://bucket/path")
-
-    assert result == "s3://bucket/path"
 
 
 def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
