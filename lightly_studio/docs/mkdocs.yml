@@ -123,6 +123,7 @@ nav:
     - Annotate:
       - Annotations: concepts_and_tools/annotations.md
       - Captions: concepts_and_tools/captions.md
+      - Annotation Validation: concepts_and_tools/validation.md
     - Evaluate:
       - Model Evaluation: concepts_and_tools/evaluation.md
     - Export and Train:
@@ -144,6 +145,7 @@ nav:
       - Plugin: api/plugin.md
       - Annotation: api/annotation.md
       - Model Evaluation: api/evaluation.md
+      - Annotation Validation: api/validation.md
     - About Us: about_us/index.md
   - Tutorials:
     - All Tutorials: tutorials/index.md
@@ -206,6 +208,7 @@ plugins:
           - concepts_and_tools/sampling.md
           - concepts_and_tools/annotations.md
           - concepts_and_tools/captions.md
+          - concepts_and_tools/validation.md
           - concepts_and_tools/evaluation.md
           - concepts_and_tools/export.md
         Core Concepts:
@@ -224,6 +227,7 @@ plugins:
           - api/plugin.md
           - api/annotation.md
           - api/evaluation.md
+          - api/validation.md
           - about_us/index.md
         Tutorials:
           - tutorials/index.md

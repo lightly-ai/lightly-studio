@@ -35,12 +35,14 @@ from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluat
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.validation_report import ValidationReport
 from lightly_studio.resolvers import (
     collection_resolver,
     image_resolver,
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
+from lightly_studio.validation import run_validation
 
 logger = logging.getLogger(__name__)
 
@@ -731,6 +733,28 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         return ImageDatasetEvaluate(
             session=self.session,
             collection_id=self.collection_id,
+            sample_ids=[sample.sample_id for sample in query],
+        )
+
+    def validate(
+        self, annotation_source: str, query: DatasetQuery | None = None
+    ) -> ValidationReport:
+        """Check the dataset's object-detection annotations for integrity problems.
+
+        Args:
+            annotation_source: Name of the annotation source to check.
+            query: The dataset query to check. If None, the default query
+                ``self.query()`` is used.
+
+        Returns:
+            A report of the flagged annotations.
+        """
+        if query is None:
+            query = self.query()
+        return run_validation.validate_object_detection(
+            session=self.session,
+            collection_id=self.collection_id,
+            annotation_source=annotation_source,
             sample_ids=[sample.sample_id for sample in query],
         )
 

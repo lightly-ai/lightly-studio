@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distributions as annotation class balancing.
 - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the
   values of a categorical metadata field such as weather or city.
+- Python SDK: Check a dataset's object-detection annotations for integrity problems with `dataset.validate(annotation_source)`, which returns a report of degenerate (zero or negative size) and out-of-bounds boxes.
 
 
 ### Changed
