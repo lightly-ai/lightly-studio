@@ -57,7 +57,8 @@ const defaultMetadataBalancing: StrategyInstance = {
         target_distribution_mode: 'uniform',
         target_distribution: [],
         strength: 1
-    }
+    },
+    isExpanded: true
 };
 const defaultSubpartDiversity: StrategyInstance = {
     id: 'sd-1',

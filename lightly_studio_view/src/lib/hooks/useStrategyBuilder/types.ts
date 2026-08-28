@@ -40,7 +40,9 @@ export interface MetadataBalancingParams {
     metadata_key: string;
     target_distribution_mode: ClassBalancingTargetDistributionMode;
     target_distribution: ClassBalancingTargetRow[];
+    strength: number;
 }
+
 export interface SubpartDiversityParams {
     annotation_source_id: string;
     strength: number;
@@ -142,7 +144,8 @@ export const STRATEGY_DEFAULTS: { [K in StrategyType]: StrategyParamsByType[K] }
     metadata_balancing: {
         metadata_key: '',
         target_distribution_mode: 'uniform',
-        target_distribution: []
+        target_distribution: [],
+        strength: 1
     },
     subpart_diversity: {
         annotation_source_id: '',
