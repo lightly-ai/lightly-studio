@@ -108,6 +108,7 @@ def _deduplicate_embedding_models() -> None:
     first, then the duplicate models are deleted.
     """
     bind = op.get_bind()
+    # Map each duplicate model to its canonical (oldest) row within the same dataset and hash.
     bind.execute(
         sa.text(
             """
@@ -128,6 +129,7 @@ def _deduplicate_embedding_models() -> None:
             """
         )
     )
+    # Drop duplicate-model embeddings where the sample already has one on the canonical model.
     bind.execute(
         sa.text(
             """
@@ -142,6 +144,7 @@ def _deduplicate_embedding_models() -> None:
             """
         )
     )
+    # Repoint the remaining duplicate-model embeddings onto the canonical model.
     bind.execute(
         sa.text(
             """
@@ -152,6 +155,7 @@ def _deduplicate_embedding_models() -> None:
             """
         )
     )
+    # Drop duplicate-model links where the collection already links the canonical model.
     bind.execute(
         sa.text(
             """
@@ -166,6 +170,7 @@ def _deduplicate_embedding_models() -> None:
             """
         )
     )
+    # Repoint the remaining duplicate-model links onto the canonical model.
     bind.execute(
         sa.text(
             """
@@ -176,6 +181,7 @@ def _deduplicate_embedding_models() -> None:
             """
         )
     )
+    # Delete the now-unreferenced duplicate models.
     bind.execute(
         sa.text(
             """
@@ -185,4 +191,5 @@ def _deduplicate_embedding_models() -> None:
             """
         )
     )
+    # Drop the temporary mapping table now that the merge is complete.
     bind.execute(sa.text("DROP TABLE embedding_model_dedup"))
