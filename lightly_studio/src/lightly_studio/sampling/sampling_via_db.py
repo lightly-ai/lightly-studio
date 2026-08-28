@@ -19,8 +19,8 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
-    embedding_model_resolver,
     metadata_resolver,
     sample_embedding_resolver,
     tag_resolver,
@@ -454,11 +454,11 @@ def _get_subpart_embeddings(
     # rows, shifting all later embeddings onto the wrong IDs).
     crop_id_to_embedding: dict[UUID, Embedding] = {}
     for coll_id, crop_ids in collection_to_crop_ids.items():
-        embedding_model_id = embedding_model_resolver.get_by_name(
+        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
             session=session,
             collection_id=coll_id,
             embedding_model_name=strat.embedding_model_name,
-        ).embedding_model_id
+        )
         rows = sample_embedding_resolver.get_by_sample_ids(
             session=session,
             sample_ids=crop_ids,
