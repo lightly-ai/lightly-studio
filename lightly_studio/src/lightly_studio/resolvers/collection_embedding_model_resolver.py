@@ -116,13 +116,32 @@ def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[UUID
     )
 
 
+def get_all_models_by_collection_id(
+    session: Session, collection_id: UUID
+) -> list[EmbeddingModelTable]:
+    """Return all embedding models linked to the collection, oldest first.
+
+    Membership comes from the link table, not from ``EmbeddingModelTable.collection_id``,
+    which is being removed.
+    """
+    return list(
+        session.exec(
+            select(EmbeddingModelTable)
+            .join(
+                CollectionEmbeddingModelTable,
+                onclause=col(CollectionEmbeddingModelTable.embedding_model_id)
+                == col(EmbeddingModelTable.embedding_model_id),
+            )
+            .where(CollectionEmbeddingModelTable.collection_id == collection_id)
+            .order_by(col(EmbeddingModelTable.created_at).asc())
+        ).all()
+    )
+
+
 def get_by_name(
     session: Session, collection_id: UUID, embedding_model_name: str | None
 ) -> EmbeddingModelTable:
     """Resolve one of a collection's embedding models by name.
-
-    Membership comes from the link table, not from ``EmbeddingModelTable.collection_id``,
-    which is being removed.
 
     Args:
         session: The database session.
@@ -140,18 +159,7 @@ def get_by_name(
         ValueError: If the name is None and the collection does not have exactly one
             model, or if no linked model has the given name.
     """
-    embedding_models = list(
-        session.exec(
-            select(EmbeddingModelTable)
-            .join(
-                CollectionEmbeddingModelTable,
-                onclause=col(CollectionEmbeddingModelTable.embedding_model_id)
-                == col(EmbeddingModelTable.embedding_model_id),
-            )
-            .where(CollectionEmbeddingModelTable.collection_id == collection_id)
-            .order_by(col(EmbeddingModelTable.created_at).asc())
-        ).all()
-    )
+    embedding_models = get_all_models_by_collection_id(session=session, collection_id=collection_id)
 
     if embedding_model_name is None:
         if len(embedding_models) != 1:
