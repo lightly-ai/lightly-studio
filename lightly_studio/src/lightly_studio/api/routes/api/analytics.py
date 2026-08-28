@@ -6,6 +6,8 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from lightly_studio.analytics import install_id
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_ANALYTICS_ENABLED
+from lightly_studio.errors import NotFoundError
 
 __all__ = ["analytics_router"]
 
@@ -25,4 +27,7 @@ def get_install_id() -> InstallId:
     The web app calls PostHog's identify() with this id so that browser events
     and the Python SDK's events land under one distinct id per install.
     """
+    if not LIGHTLY_STUDIO_ANALYTICS_ENABLED:
+        # Opting out must leave no id on disk, so refuse before get_install_id() creates one.
+        raise NotFoundError("Usage tracking is disabled.")
     return InstallId(install_id=str(install_id.get_install_id()))
