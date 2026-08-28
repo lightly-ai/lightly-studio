@@ -12,6 +12,9 @@ is kept as canonical; ``sample_embedding`` and ``collection_embedding_model`` re
 repointed to it and the duplicate rows are deleted. Collapsing duplicates is lossy, so the
 downgrade cannot restore the removed rows.
 
+``embedding_model_hash`` also becomes ``NOT NULL``. Pre-existing NULL hashes are backfilled to
+"" before the collapse so they merge into a single row per dataset.
+
 DuckDB builds its schema with ``create_all`` and has no backfill step, so this migration only
 matters for tracked Postgres databases.
 
@@ -37,7 +40,22 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # Backfill NULL hashes to "" before deduplicating so former-NULL rows collapse together
+    # with the "=" join (NULL = NULL is unknown, so NULLs would otherwise survive) and the
+    # NOT NULL constraint below can be added.
+    op.execute(
+        sa.text(
+            "UPDATE embedding_model SET embedding_model_hash = '' "
+            "WHERE embedding_model_hash IS NULL"
+        )
+    )
     _deduplicate_embedding_models()
+    op.alter_column(
+        "embedding_model",
+        "embedding_model_hash",
+        existing_type=sa.VARCHAR(length=128),
+        nullable=False,
+    )
     op.create_unique_constraint(
         "unique_embedding_model_hash", "embedding_model", ["dataset_id", "embedding_model_hash"]
     )
@@ -98,6 +116,12 @@ def downgrade() -> None:
     )
     op.drop_constraint("unique_embedding_model_name", "embedding_model", type_="unique")
     op.drop_constraint("unique_embedding_model_hash", "embedding_model", type_="unique")
+    op.alter_column(
+        "embedding_model",
+        "embedding_model_hash",
+        existing_type=sa.VARCHAR(length=128),
+        nullable=True,
+    )
 
 
 def _deduplicate_embedding_models() -> None:

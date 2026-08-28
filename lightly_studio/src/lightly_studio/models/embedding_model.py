@@ -13,7 +13,7 @@ class EmbeddingSpaceDescription(SQLModel):
     """Description of an embedding space."""
 
     name: str
-    embedding_model_hash: str = Field(sa_column=Column(VARCHAR(128)))
+    embedding_model_hash: str = Field(sa_column=Column(VARCHAR(128), nullable=False))
     embedding_dimension: int
 
 
