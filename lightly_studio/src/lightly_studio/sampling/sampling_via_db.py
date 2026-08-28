@@ -20,7 +20,9 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
+    embedding_model_resolver,
     metadata_resolver,
+    sample_embedding_resolver,
     tag_resolver,
 )
 from lightly_studio.sampling import metadata_balancing, sampling_helpers, sequence_sampling
@@ -479,7 +481,7 @@ def _get_subpart_embeddings(
     return result
 
 
-def _add_strategy_to_mundig(  # noqa: C901
+def _add_strategy_to_mundig(
     session: Session,
     context: _SamplingContext,
     strat: object,
