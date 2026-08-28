@@ -320,7 +320,7 @@ def create_embedding_model(  # noqa: PLR0913
     # TODO(Michal, 08/2026): Make collection_id optional here: link only when it is given, so
     # unlinked models become expressible. The collection_embedding_model link is then the sole
     # source of collection membership.
-    model = embedding_model_resolver.create(
+    model = embedding_model_resolver.get_or_create(
         session=session,
         embedding_model=EmbeddingModelCreate(
             dataset_id=collection.dataset_id,
