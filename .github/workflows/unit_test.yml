@@ -26,6 +26,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend || 'true' }}
       docs: ${{ steps.filter.outputs.docs || 'true' }}
       fast_track: ${{ steps.filter.outputs.fast_track || 'true' }}
+      release_tooling: ${{ steps.filter.outputs.release_tooling || 'true' }}
     steps:
       - name: Checkout Code # Needed for merge_group event
         uses: actions/checkout@v6
@@ -61,6 +62,10 @@ jobs:
             fast_track:
               - '.github/workflows/unit_test.yml'
               - 'fast_track/**'
+            # Release tooling: CI-internal, so it has its own toolchain.
+            release_tooling:
+              - '.github/workflows/unit_test.yml'
+              - '.github/scripts/**'
 
   check-python:
     name: Static Checks Python
@@ -299,6 +304,30 @@ jobs:
       - name: Tests
         run: npm run test
 
+  check-release-tooling:
+    name: Static Checks + Tests Release Tooling
+    needs: detect
+    if: needs.detect.outputs.release_tooling == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .github/scripts
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+          enable-cache: true
+
+      - name: Static checks
+        run: make static-checks
+
+      - name: Tests
+        run: make test
+
   # The single required status check: always runs, so gated jobs can be skipped
   # without stranding the merge queue. Require this in the branch ruleset.
   unit-success:
@@ -312,6 +341,7 @@ jobs:
       - test-frontend
       - check-docs
       - check-fast-track
+      - check-release-tooling
     if: always()
     steps:
       - name: Verify required jobs
@@ -323,6 +353,7 @@ jobs:
           FRONTEND_TESTS: ${{ needs.test-frontend.result }}
           DOCS: ${{ needs.check-docs.result }}
           FAST_TRACK: ${{ needs.check-fast-track.result }}
+          RELEASE_TOOLING: ${{ needs.check-release-tooling.result }}
         run: |
           python3 - <<'PY'
           import os
@@ -341,6 +372,7 @@ jobs:
               "Frontend tests": os.environ["FRONTEND_TESTS"],
               "Build Docs": os.environ["DOCS"],
               "Static Checks + Tests Fast Track": os.environ["FAST_TRACK"],
+              "Static Checks + Tests Release Tooling": os.environ["RELEASE_TOOLING"],
           }
           allowed = {"success", "skipped"}
 
