@@ -14,24 +14,30 @@ vi.mock('$lib/version.json', () => ({
     version: '1.2.3'
 }));
 
+const INSTALL_ID = '0199f1a2-b775-76b8-9b09-c2fd260c67c1';
+
 const mockInit = vi.fn();
 const mockCapture = vi.fn();
 const mockRegister = vi.fn();
+const mockIdentify = vi.fn();
 
 vi.mock('posthog-js', () => ({
     default: {
         init: (...args: unknown[]) => mockInit(...args),
         capture: (...args: unknown[]) => mockCapture(...args),
-        register: (...args: unknown[]) => mockRegister(...args)
+        register: (...args: unknown[]) => mockRegister(...args),
+        identify: (...args: unknown[]) => mockIdentify(...args)
     }
 }));
 
 // Mocked at the module registry rather than spied on, so it survives the vi.resetModules() the
 // tests below need to get an uninitialized hook.
 const mockGetFeatures = vi.fn();
+const mockGetInstallId = vi.fn();
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
-    getFeatures: (...args: unknown[]) => mockGetFeatures(...args)
+    getFeatures: (...args: unknown[]) => mockGetFeatures(...args),
+    getInstallId: (...args: unknown[]) => mockGetInstallId(...args)
 }));
 
 describe('usePostHog', () => {
@@ -39,8 +45,11 @@ describe('usePostHog', () => {
         mockInit.mockClear();
         mockCapture.mockClear();
         mockRegister.mockClear();
+        mockIdentify.mockClear();
         mockGetFeatures.mockReset();
         mockGetFeatures.mockResolvedValue({ data: ['analytics'] });
+        mockGetInstallId.mockReset();
+        mockGetInstallId.mockResolvedValue({ data: { install_id: INSTALL_ID } });
     });
 
     it('should initialize PostHog with correct configuration', async () => {
@@ -55,6 +64,23 @@ describe('usePostHog', () => {
             capture_exceptions: true
         });
         expect(mockRegister).toHaveBeenCalledWith({ app_version: '1.2.3' });
+    });
+
+    it('should identify with the backend install id after initialization', async () => {
+        const { init } = await freshPostHog();
+        await init();
+
+        expect(mockIdentify).toHaveBeenCalledWith(INSTALL_ID);
+    });
+
+    it('should still initialize but not identify when the install id request fails', async () => {
+        mockGetInstallId.mockRejectedValue(new Error('API Error'));
+
+        const { init } = await freshPostHog();
+        await init();
+
+        expect(mockInit).toHaveBeenCalled();
+        expect(mockIdentify).not.toHaveBeenCalled();
     });
 
     it('should track events after initialization', async () => {
