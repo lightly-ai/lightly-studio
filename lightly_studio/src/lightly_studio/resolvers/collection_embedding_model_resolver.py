@@ -13,6 +13,7 @@ from sqlalchemy import exists
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 
 
 def get_or_add_collection_model(
@@ -113,6 +114,52 @@ def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[UUID
             )
         ).all()
     )
+
+
+def get_model_id_by_name(
+    session: Session, collection_id: UUID, embedding_model_name: str | None
+) -> UUID:
+    """Resolve the id of one of a collection's embedding models by name.
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection.
+        embedding_model_name: The name of the embedding model.
+            If None, the collection's default embedding model id is returned. Raises a
+            ValueError if the collection has no default.
+            If set, expects the collection to have an embedding model with the given name.
+            Otherwise raises a ValueError.
+
+    Returns:
+        The id of the embedding model with the given name, or of the default when no name
+        is given.
+
+    Raises:
+        ValueError: If the name is None and the collection has no default model, or if no
+            linked model has the given name.
+    """
+    if embedding_model_name is None:
+        default_id = get_default_by_collection_id(session=session, collection_id=collection_id)
+        if default_id is None:
+            raise ValueError(f"Collection {collection_id} has no default embedding model.")
+        return default_id
+
+    embedding_model_id = session.exec(
+        select(EmbeddingModelTable.embedding_model_id)
+        .join(
+            CollectionEmbeddingModelTable,
+            onclause=col(CollectionEmbeddingModelTable.embedding_model_id)
+            == col(EmbeddingModelTable.embedding_model_id),
+        )
+        .where(
+            CollectionEmbeddingModelTable.collection_id == collection_id,
+            EmbeddingModelTable.name == embedding_model_name,
+        )
+    ).one_or_none()
+    if embedding_model_id is None:
+        raise ValueError(f"Embedding model with name `{embedding_model_name}` not found.")
+
+    return embedding_model_id
 
 
 def _get_default_by_collection_id(

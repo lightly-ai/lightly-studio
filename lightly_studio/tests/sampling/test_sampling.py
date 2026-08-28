@@ -75,6 +75,7 @@ class TestSampling:
             session=dataset.session,
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
+            set_as_default=True,
         )
         for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
@@ -119,6 +120,7 @@ class TestSampling:
             session=dataset.session,
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
+            set_as_default=True,
         )
         for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
