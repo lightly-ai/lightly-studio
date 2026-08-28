@@ -132,7 +132,7 @@ describe('EvaluationRunItem', () => {
 
         const staleSection = screen.getByTestId('evaluation-run-stale-section');
         expect(staleSection).toHaveTextContent(
-            'Annotations in the source collections were modified after this evaluation was run. Recompute to update results.'
+            'Annotations in the source collections were modified after this evaluation was run. Recomputing will update results using the current input and annotations, which may differ from the original run. Recompute'
         );
         expect(screen.getByTestId('evaluation-run-recompute-button')).toBeInTheDocument();
     });
