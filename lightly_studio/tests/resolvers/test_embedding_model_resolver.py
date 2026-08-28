@@ -243,10 +243,10 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
     )
 
     assert reused.embedding_model_id == existing.embedding_model_id
-    models = collection_embedding_model_resolver.get_all_by_collection_id(
+    model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     )
-    assert len(models) == 1
+    assert len(model_ids) == 1
 
 
 def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
