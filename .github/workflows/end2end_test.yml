@@ -9,12 +9,6 @@ on:
   workflow_dispatch:
 
 
-# Nothing in this workflow writes. The repository default is a write token, so
-# narrow it: checkout needs `contents: read`, and `detect` also needs
-# `pull-requests: read` to list a pull request's changed files.
-permissions:
-  contents: read
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -28,10 +22,6 @@ jobs:
   detect:
     name: Detect changes
     runs-on: ubuntu-latest
-    # Job-level permissions replace the workflow-level block, so repeat `contents`.
-    permissions:
-      contents: read
-      pull-requests: read
     outputs:
       # Empty when the filter is skipped (non-PR/MG events), so `|| 'true'`
       # runs everything. A real 'false' is non-empty and preserved.
