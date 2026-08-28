@@ -56,11 +56,12 @@ docs_dir: docs
 hooks:
   - mkdocs_hooks.py
 
-# Six sections, named for what the reader is doing rather than for the kind of
-# artifact each page is: get set up, run the loop, learn the vocabulary, plug
-# something in, look something up. The theme-overrides PR promotes two of the six
-# to header tabs via `extra.tabs`; on this branch, with no tab strip, all six
-# render in the sidebar.
+# Seven sections. The five in the sidebar are named for what the reader is doing
+# rather than for the kind of artifact each page is: get set up, run the loop,
+# learn the vocabulary, plug something in, look something up. The theme-overrides
+# PR gives Tutorials and Enterprise each their own header tab via `extra.tabs` and
+# groups those five under a default Docs tab; on this branch, with no tab strip,
+# all seven render in the sidebar.
 #
 # Workflows is the product pipeline, in the order a user runs it: ingest, curate,
 # annotate, evaluate, export. One caption per stage, so the section reads top to
