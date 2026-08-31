@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from pathlib import Path
 
 import fsspec
 import numpy as np
@@ -23,7 +22,7 @@ from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
-from . import file_utils, image_crop_embedding, image_embedding
+from . import image_crop_embedding, image_embedding
 from .embedding_generator import (
     EmbeddingSpaceSpec,
     ImageCrop,
@@ -49,7 +48,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         checkpoint is downloaded and cached locally for future use.
         """
         LIGHTLY_STUDIO_MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        self._model, model_path = pe.CLIP.from_config(
+        self._model, _ = pe.CLIP.from_config(
             name=MODEL_NAME, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
         )
         self._preprocess = transforms.get_image_transform(self._model.image_size)
@@ -64,7 +63,6 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             else "cpu"
         )
         self._model = self._model.to(self._device)
-        self._model_hash = file_utils.get_file_xxhash(Path(model_path))
 
     def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
@@ -73,7 +71,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             A specification of the embedding space.
         """
         return EmbeddingSpaceSpec(
-            space_key=self._model_hash,
+            space_key=MODEL_NAME,
             dimension=self._model.output_dim,
         )
 

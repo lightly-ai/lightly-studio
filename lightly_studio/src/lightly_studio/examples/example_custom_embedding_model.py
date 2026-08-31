@@ -62,7 +62,6 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         )
         self._model = self._model.to(self._device)
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
-        self._model_hash = file_utils.get_file_xxhash(model_path)
 
     def get_embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
         """Describe the embedding space so it can be recorded in the database.
@@ -71,7 +70,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         Studio detect when the same embedding space has been used before.
         """
         return ls.EmbeddingSpaceSpec(
-            space_key=self._model_hash,
+            space_key="custom_embedding_model",
             dimension=EMBEDDING_DIMENSION,
         )
 

@@ -49,7 +49,6 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         )
         self._model = self._model.to(self._device)
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
-        self._model_hash = file_utils.get_file_xxhash(model_path)
 
     def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
@@ -58,7 +57,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             A specification of the embedding space.
         """
         return EmbeddingSpaceSpec(
-            space_key=self._model_hash,
+            space_key=MODEL_NAME,
             dimension=EMBEDDING_DIMENSION,
         )
 

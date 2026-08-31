@@ -8,6 +8,7 @@ from PIL import Image
 
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.mobileclip_embedding_generator import (
+    MODEL_NAME,
     MobileCLIPEmbeddingGenerator,
 )
 
@@ -20,7 +21,7 @@ class TestMobileCLIPEmbeddingGenerator:
         space_spec = mobileclip.get_embedding_space_spec()
 
         assert space_spec.dimension == 512
-        assert space_spec.space_key != ""
+        assert space_spec.space_key == MODEL_NAME
 
     def test_embed_text(self) -> None:
         text = "a cat"

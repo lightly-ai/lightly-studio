@@ -10,6 +10,7 @@ from PIL import Image
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.perception_encoder_embedding_generator import (
+    MODEL_NAME,
     PerceptionEncoderEmbeddingGenerator,
 )
 
@@ -22,7 +23,7 @@ class TestPerceptionEncoderEmbeddingGenerator:
         space_spec = perception_encoder.get_embedding_space_spec()
 
         assert space_spec.dimension == 512
-        assert space_spec.space_key != ""
+        assert space_spec.space_key == MODEL_NAME
 
     def test_embed_text(self) -> None:
         text = "a cat"

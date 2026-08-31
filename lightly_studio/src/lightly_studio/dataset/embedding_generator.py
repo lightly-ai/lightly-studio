@@ -27,9 +27,9 @@ class EmbeddingSpaceSpec:
     """Stable identifier for the embedding space.
 
     Two generators that share a ``space_key`` are treated as producing the same
-    embedding space, so their vectors are comparable. It is also shown as the
-    embedding model's name in the GUI. Change it whenever the produced vectors
-    change in a way that makes old and new embeddings incomparable.
+    embedding space, so their vectors are comparable. Change it whenever the produced
+    vectors become incomparable, e.g. for a model version change. Any string,
+    e.g. ``company/model-family@v4``.
     """
 
     dimension: int
