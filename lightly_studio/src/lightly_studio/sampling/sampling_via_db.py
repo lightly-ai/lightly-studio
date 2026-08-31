@@ -453,8 +453,7 @@ def _fetch_crop_embeddings(
                     f"Subpart embeddings have inconsistent dimensions across "
                     f"annotation collections: collection {expected_dim_coll_id} "
                     f"has dimension {expected_dim}, but collection {coll_id} has "
-                    f"dimension {dim} (embedding model: "
-                    f"'{embedding_model_name}')."
+                    f"dimension {dim}."
                 )
         for row in rows:
             crop_id_to_embedding[row.sample_id] = row.embedding

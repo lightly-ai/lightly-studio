@@ -1771,7 +1771,7 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
         ],
     )
 
-    # p0 gets an annotation in collection_a (2-D embeddings).
+    # p0 gets an annotation in collection_a with a 2-D default embedding model.
     annotations_a = create_annotations(
         session=db_session,
         collection_id=parent_collection.collection_id,
@@ -1787,9 +1787,10 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
     model_a = create_embedding_model(
         session=db_session,
         collection_id=coll_a_id,
-        embedding_model_name="crop_model",
+        embedding_model_name="model_2d",
         embedding_model_hash="hash_a",
         embedding_dimension=2,
+        set_as_default=True,
     )
     create_sample_embedding(
         session=db_session,
@@ -1798,7 +1799,7 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
         embedding=[1.0, 0.0],
     )
 
-    # p1 gets an annotation in collection_b (3-D embeddings).
+    # p1 gets an annotation in collection_b with a 3-D default embedding model.
     annotations_b = create_annotations(
         session=db_session,
         collection_id=parent_collection.collection_id,
@@ -1814,9 +1815,10 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
     model_b = create_embedding_model(
         session=db_session,
         collection_id=coll_b_id,
-        embedding_model_name="crop_model",
+        embedding_model_name="model_3d",
         embedding_model_hash="hash_b",
         embedding_dimension=3,
+        set_as_default=True,
     )
     create_sample_embedding(
         session=db_session,
@@ -1825,8 +1827,10 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
         embedding=[1.0, 0.0, 0.0],
     )
 
+    # embedding_model_name=None resolves each collection's default model,
+    # which have different dimensions.
     strat = SubpartDiversityStrategy(
-        embedding_model_name="crop_model",
+        embedding_model_name=None,
     )
     with pytest.raises(
         ValueError,
@@ -1836,7 +1840,7 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
             + re.escape(str(coll_a_id))
             + r" has dimension 2, but collection "
             + re.escape(str(coll_b_id))
-            + r" has dimension 3 \(embedding model: 'crop_model'\)\."
+            + r" has dimension 3\."
         ),
     ):
         _get_subpart_embeddings(
