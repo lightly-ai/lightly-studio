@@ -23,10 +23,27 @@ theme:
   custom_dir: overrides
   logo: _static/lightly_logo.svg
   favicon: _static/lightly_logo_fav.svg
+  font:
+    text: IBM Plex Sans
+    code: IBM Plex Mono
+  # `custom` opts out of Material's built-in color rules so the palette in
+  # _static/custom.css is the only thing setting colors. Without it Material
+  # falls back to `indigo` and its `[scheme][primary]` rules outrank ours.
   palette:
-    - scheme: default
-      primary: teal
-      accent: teal
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: octicons/moon-16
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: octicons/sun-16
+        name: Switch to light mode
   features:
     # Navigation lives entirely in the left sidebar: every section is a group
     # caption with its pages listed under it, no top-level tab row.
@@ -150,6 +167,9 @@ validation:
     not_found: warn
 
 extra_css:
+  # Display face for headings and the wordmark. Body and code faces come from
+  # `theme.font`, which Material loads from the same CDN.
+  - https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap
   - _static/custom.css
 
 extra_javascript:
