@@ -10,6 +10,12 @@ on:
 
 env:
   NODE_OPTIONS: --max-old-space-size=4096
+  # One shared uv cache on main instead of a ~3.4GB copy per pull request and
+  # merge-queue ref: every run restores main's, only main writes one. Per-ref
+  # copies blew the 10GB repository quota, and the eviction that followed turned
+  # off the e2e skip that depends on cached success markers.
+  UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -83,6 +89,7 @@ jobs:
         with:
           version: "0.12.6"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -120,6 +127,7 @@ jobs:
           version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -171,6 +179,7 @@ jobs:
         with:
           version: "0.12.6"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -221,6 +230,7 @@ jobs:
           version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -260,6 +270,7 @@ jobs:
         with:
           version: "0.12.6"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -329,6 +340,7 @@ jobs:
         with:
           version: "0.12.6"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Static checks
         run: make static-checks

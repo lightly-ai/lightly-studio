@@ -17,6 +17,11 @@ env:
   NODE_OPTIONS: --max-old-space-size=4096
   DATASET_PATH: $(pwd)/datasets
   E2E_BASE_URL: http://localhost:8001
+  # One shared uv cache on main instead of a ~3.4GB copy per pull request and
+  # merge-queue ref: every run restores main's, only main writes one. Per-ref
+  # copies blew the 10GB repository quota, and the eviction that followed turned
+  # off the e2e skip that depends on cached success markers.
+  UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 jobs:
   prepare-caches:
@@ -93,6 +98,7 @@ jobs:
         with:
           version: "0.12.6"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
         uses: actions/setup-node@v6
@@ -312,6 +318,7 @@ jobs:
         with:
           version: "0.12.6"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
         if: steps.cache-success.outputs.cache-hit != 'true'
