@@ -1,4 +1,6 @@
-site_name: LightlyStudio Docs
+# The header renders this as the wordmark, so it is the product name alone —
+# "Docs" is what the whole site is.
+site_name: LightlyStudio
 site_description: LightlyStudio Documentation
 site_url: https://docs.lightly.ai/studio
 
@@ -26,19 +28,24 @@ theme:
       primary: teal
       accent: teal
   features:
-    - navigation.tabs
+    # Navigation lives entirely in the left sidebar: every section is a group
+    # caption with its pages listed under it, no top-level tab row.
     - navigation.sections
+    - navigation.expand
+    # Deliberately not `navigation.indexes`. It folds a section's index page
+    # into the section's own caption, and MkDocs picks that page for any
+    # `index.md` under the section, wherever it sits in `nav:` — which took
+    # `about_us/index.md` out of the sidebar and left the Resources caption
+    # pointing at it. Captions are labels here, pages are items, and every
+    # index page below is titled so it can be one.
     - navigation.path
     - navigation.top
-    - content.action.edit
-    - toc.follow
     - navigation.instant
-    - navigation.expand
-    - search.highlight
-    - navigation.tabs.sticky
-    - navigation.indexes
-    - content.tabs.link
+    - content.action.edit
     - content.code.copy
+    - content.tabs.link
+    - toc.follow
+    - search.highlight
 
 repo_url: https://github.com/lightly-ai/lightly-studio
 repo_name: LightlyStudio
@@ -49,36 +56,62 @@ docs_dir: docs
 hooks:
   - mkdocs_hooks.py
 
+# Seven sections. The five in the sidebar are named for what the reader is doing
+# rather than for the kind of artifact each page is: get set up, run the loop,
+# learn the vocabulary, plug something in, look something up. The theme-overrides
+# PR gives Tutorials and Enterprise each their own header tab via `extra.tabs` and
+# groups those five under a default Docs tab; on this branch, with no tab strip,
+# all seven render in the sidebar.
+#
+# Workflows is the product pipeline, in the order a user runs it: ingest, curate,
+# annotate, evaluate, export. One caption per stage, so the section reads top to
+# bottom as the loop rather than as an alphabetical feature list. A page belongs
+# to the stage it serves, which is why the dataset pages sit under Data Ingest
+# rather than under Get Started.
+#
+# Core Concepts sits after Workflows, not inside Get Started. Tags and Metadata
+# are reached for mid-task — tracking curation progress, driving filters — not on
+# a first read, so a get-set-up caption did not describe them. The order is
+# FiftyOne's, whose nav this one otherwise follows: land, get running, see the
+# pipeline, then go deeper.
+#
+# Every other section keeps a single grouping level, and only where a run of
+# pages needs one — Data Ingest and the rest of the stages, and Python API. The
+# tree before last put a grouping level under every section ("Data Types",
+# "Setup Options", "Concepts", "Tools", "More"), which cost a whole visual
+# register to say things the section caption above it already said.
+#
+# No page moved on disk, so no URL changed and nothing needs a redirect.
 nav:
-  - Getting Started:
-    - index.md
-  - 🏢 Enterprise:
-    - Enterprise:
-      - enterprise/index.md
-      - Collaboration and Permissions: enterprise/collaboration.md
-      - Connect from Python: enterprise/connect.md
-      - Security and Architecture: enterprise/security.md
-      - On-Premise Deployment: enterprise/on-premise.md
-      - Local Storage: enterprise/local_storage.md
-    - Cloud Storage:
-      - enterprise/cloud_storage/index.md
-      - AWS S3: enterprise/cloud_storage/aws.md
-      - Google Cloud Storage: enterprise/cloud_storage/gcs.md
-      - Azure Blob Storage: enterprise/cloud_storage/azure.md
-  - Tutorials:
-    - tutorials/index.md
-    - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
-    - "Tutorial 2: Evaluate YOLO26 on Your Dataset with LightlyStudio": tutorials/yolo26-model-evaluation.md
-  - Dataset Setup:
-    - Data Types:
+  - Get Started:
+    - Welcome: index.md
+    - Run LightlyStudio from a Notebook: dataset_setup/notebooks.md
+    - Reuse Datasets: dataset_setup/reuse_datasets.md
+  - Workflows:
+    - Data Ingest:
       - Image Dataset: dataset_setup/image_dataset.md
       - Video Dataset: dataset_setup/video_dataset.md
-    - Setup Options:
-      - Run LightlyStudio from a Notebook: dataset_setup/notebooks.md
-      - Cloud Storage: dataset_setup/cloud_storage.md
-      - Reuse Datasets: dataset_setup/reuse_datasets.md
-  - Python API:
-    - API Reference:
+    - Curate:
+      - Search and Filter: concepts_and_tools/search_and_filter.md
+      - Lightly Query Language: concepts_and_tools/lightly_query_language.md
+      - Dataset Distributions: concepts_and_tools/dataset_distributions.md
+      - Sampling: concepts_and_tools/sampling.md
+    - Annotate:
+      - Annotations: concepts_and_tools/annotations.md
+      - Captions: concepts_and_tools/captions.md
+    - Evaluate:
+      - Model Evaluation: concepts_and_tools/evaluation.md
+    - Export and Train:
+      - Export: concepts_and_tools/export.md
+  - Core Concepts:
+    - Tags: concepts_and_tools/tags.md
+    - Metadata: concepts_and_tools/metadata.md
+    - Embeddings: concepts_and_tools/embeddings.md
+  - Ecosystem:
+    - Plugins: concepts_and_tools/plugins.md
+    - Cloud Storage: dataset_setup/cloud_storage.md
+  - Resources:
+    - Python API:
       - Dataset: api/dataset.md
       - Sample: api/sample.md
       - DatasetQuery: api/dataset_query.md
@@ -87,24 +120,23 @@ nav:
       - Plugin: api/plugin.md
       - Annotation: api/annotation.md
       - Model Evaluation: api/evaluation.md
-  - Concepts & Tools:
-    - Concepts:
-      - Annotations: concepts_and_tools/annotations.md
-      - Tags: concepts_and_tools/tags.md
-      - Captions: concepts_and_tools/captions.md
-      - Metadata: concepts_and_tools/metadata.md
-      - Embeddings: concepts_and_tools/embeddings.md
-    - Tools:
-      - Search and Filter: concepts_and_tools/search_and_filter.md
-      - Dataset Distributions: concepts_and_tools/dataset_distributions.md
-      - Export: concepts_and_tools/export.md
-      - Sampling: concepts_and_tools/sampling.md
-      - Plugins: concepts_and_tools/plugins.md
-      - Model Evaluation: concepts_and_tools/evaluation.md
-    - More:
-      - Lightly Query Language: concepts_and_tools/lightly_query_language.md
-  - About Us:
-    - about_us/index.md
+    - About Us: about_us/index.md
+  - Tutorials:
+    - All Tutorials: tutorials/index.md
+    - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
+    - "Tutorial 2: Evaluate YOLO26 on Your Dataset with LightlyStudio": tutorials/yolo26-model-evaluation.md
+  - Enterprise:
+    - Overview: enterprise/index.md
+    - Collaboration and Permissions: enterprise/collaboration.md
+    - Connect from Python: enterprise/connect.md
+    - Security and Architecture: enterprise/security.md
+    - On-Premise Deployment: enterprise/on-premise.md
+    - Local Storage: enterprise/local_storage.md
+    - Cloud Storage:
+      - Overview: enterprise/cloud_storage/index.md
+      - AWS S3: enterprise/cloud_storage/aws.md
+      - Google Cloud Storage: enterprise/cloud_storage/gcs.md
+      - Azure Blob Storage: enterprise/cloud_storage/azure.md
 
 # Promote link/nav checks from INFO to WARNING so that `mkdocs build --strict`
 # turns them into build errors (see the Makefile `docs` target).
@@ -134,8 +166,42 @@ plugins:
         intelligent data sampling, annotation management, embedding-based search, model evaluation,
         and cloud storage integration — accessible through a Python API or web interface.
       sections:
-        Getting Started:
+        Get Started:
           - index.md
+          - dataset_setup/notebooks.md
+          - dataset_setup/reuse_datasets.md
+        Workflows:
+          - dataset_setup/image_dataset.md
+          - dataset_setup/video_dataset.md
+          - concepts_and_tools/search_and_filter.md
+          - concepts_and_tools/lightly_query_language.md
+          - concepts_and_tools/dataset_distributions.md
+          - concepts_and_tools/sampling.md
+          - concepts_and_tools/annotations.md
+          - concepts_and_tools/captions.md
+          - concepts_and_tools/evaluation.md
+          - concepts_and_tools/export.md
+        Core Concepts:
+          - concepts_and_tools/tags.md
+          - concepts_and_tools/metadata.md
+          - concepts_and_tools/embeddings.md
+        Ecosystem:
+          - concepts_and_tools/plugins.md
+          - dataset_setup/cloud_storage.md
+        Resources:
+          - api/dataset.md
+          - api/sample.md
+          - api/dataset_query.md
+          - api/sampling.md
+          - api/embeddings.md
+          - api/plugin.md
+          - api/annotation.md
+          - api/evaluation.md
+          - about_us/index.md
+        Tutorials:
+          - tutorials/index.md
+          - tutorials/yolo-traffic-cctv-object-detection.md
+          - tutorials/yolo26-model-evaluation.md
         Enterprise:
           - enterprise/index.md
           - enterprise/collaboration.md
@@ -147,40 +213,6 @@ plugins:
           - enterprise/cloud_storage/aws.md
           - enterprise/cloud_storage/gcs.md
           - enterprise/cloud_storage/azure.md
-        Tutorials:
-          - tutorials/index.md
-          - tutorials/yolo-traffic-cctv-object-detection.md
-          - tutorials/yolo26-model-evaluation.md
-        Dataset Setup:
-          - dataset_setup/image_dataset.md
-          - dataset_setup/video_dataset.md
-          - dataset_setup/notebooks.md
-          - dataset_setup/cloud_storage.md
-          - dataset_setup/reuse_datasets.md
-        Python API:
-          - api/dataset.md
-          - api/sample.md
-          - api/dataset_query.md
-          - api/sampling.md
-          - api/embeddings.md
-          - api/plugin.md
-          - api/annotation.md
-          - api/evaluation.md
-        Concepts & Tools:
-          - concepts_and_tools/annotations.md
-          - concepts_and_tools/tags.md
-          - concepts_and_tools/captions.md
-          - concepts_and_tools/metadata.md
-          - concepts_and_tools/embeddings.md
-          - concepts_and_tools/search_and_filter.md
-          - concepts_and_tools/dataset_distributions.md
-          - concepts_and_tools/export.md
-          - concepts_and_tools/sampling.md
-          - concepts_and_tools/plugins.md
-          - concepts_and_tools/evaluation.md
-          - concepts_and_tools/lightly_query_language.md
-        About Us:
-          - about_us/index.md
   - mkdocstrings:
       handlers:
         python:

@@ -212,12 +212,6 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 
-/* Bold the active top-level menu item in the header navigation tabs */
-.md-tabs__item--active .md-tabs__link {
-  font-weight: 700;
-}
-
-
 /* ===== Multi-row tab overrides ===== */
 
 /* Enable wrapping; remove theme's inset box-shadow and scroll behavior */

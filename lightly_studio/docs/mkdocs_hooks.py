@@ -100,6 +100,8 @@ def on_nav(
     links, tab_sections = _resolve_tabs(specs=specs, sections=sections)
     config.extra["tab_links"] = links
     config.extra["tab_sections"] = tab_sections
+
+    _warn_on_llmstxt_drift(nav=nav, config=config)
     return nav
 
 
@@ -307,3 +309,40 @@ def _active_tab_name(page: Page, tab_sections: Mapping[str, frozenset[str]]) -> 
         return None
     root = ancestors[-1].title
     return next((name for name, titles in tab_sections.items() if root in titles), None)
+
+
+def _warn_on_llmstxt_drift(*, nav: Navigation, config: MkDocsConfig) -> None:
+    """Warns when `llmstxt.sections` and `nav:` list different pages.
+
+    The two are hand-maintained copies of the same page set. The llmstxt plugin
+    silently drops any page missing from its `sections`, and `mkdocs build
+    --strict` stays green, so the page vanishes from llms.txt with no signal.
+    This turns that drift into a warning — a build error under `--strict`.
+
+    Skipped when `sections` uses glob patterns, which a set comparison cannot
+    resolve against resolved page paths.
+
+    Args:
+        nav: The navigation tree MkDocs has just built.
+        config: The site configuration, read for the llmstxt plugin's sections.
+    """
+    plugin = config.plugins.get("llmstxt")
+    if plugin is None:
+        return
+    sections = plugin.config.get("sections") or {}
+    listed = {
+        item if isinstance(item, str) else next(iter(item))
+        for pages in sections.values()
+        for item in pages
+    }
+    if any("*" in path for path in listed):
+        return
+    in_nav = {page.file.src_uri for page in nav.pages}
+    only_nav = sorted(in_nav - listed)
+    only_llms = sorted(listed - in_nav)
+    if only_nav or only_llms:
+        log.warning(
+            "`llmstxt.sections` and `nav:` list different pages. Only in `nav:`: "
+            f"{only_nav}. Only in `llmstxt.sections`: {only_llms}. Update "
+            "`sections` in mkdocs.yml to match."
+        )
