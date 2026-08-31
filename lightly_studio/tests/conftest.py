@@ -75,9 +75,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 def _disable_analytics(mocker: MockerFixture) -> None:
     """Keep the suite off the network whatever the developer's environment configures.
 
-    Runs before any module level fixture, so a test that patches these itself still wins.
+    Runs before any module level fixture, so a test that patches these itself still wins. The key
+    is emptied too, defaulting to the production project.
     """
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
+    mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "")
     mocker.patch.object(tracking, "_tracker", None)
 
 

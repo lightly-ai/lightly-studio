@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from enum import Enum
 from importlib import metadata
 from pathlib import Path
@@ -26,6 +25,11 @@ INTERNAL_MARKER_PATH: Path = LIGHTLY_STUDIO_MODEL_CACHE_DIR / "internal"
 # Set by every CI provider we run on, GitHub Actions included. A build matrix otherwise looks like
 # one very active user.
 _CI_ENV_VAR = "CI"
+
+# Values of the CI variable that read as not CI. `CI=false` and `CI=0` mean the opposite of what a
+# non-empty check reads them as. Anything else counts as CI, because providers put their own name
+# in the variable, `CI=drone` among them.
+_FALSE_VALUES = frozenset({"", "0", "false", "no", "off", "f", "n"})
 
 
 class UserCohort(str, Enum):
@@ -58,16 +62,11 @@ def get_cohort(marker_path: Path = INTERNAL_MARKER_PATH) -> UserCohort:
     # the shell.
     if LIGHTLY_STUDIO_INTERNAL or marker_path.exists():
         return UserCohort.STAFF
-    if os.environ.get(_CI_ENV_VAR):
+    if _is_ci():
         return UserCohort.CI
     if _is_source_build():
         return UserCohort.SOURCE_BUILD
     return UserCohort.USER
-
-
-def is_test_run() -> bool:
-    """Whether the current process runs the test suite, whose events are dropped entirely."""
-    return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules
 
 
 def _is_source_build() -> bool:
@@ -91,3 +90,8 @@ def _is_source_build() -> bool:
     # A record that is not an object is malformed. `in` would raise on null or a number, and match
     # the wrong thing on a string or an array.
     return isinstance(record, dict) and "dir_info" in record
+
+
+def _is_ci() -> bool:
+    """Whether an automated build is running, per the variable every provider we run on sets."""
+    return os.environ.get(_CI_ENV_VAR, "").strip().lower() not in _FALSE_VALUES

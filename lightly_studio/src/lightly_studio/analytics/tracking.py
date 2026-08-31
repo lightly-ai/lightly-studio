@@ -12,7 +12,6 @@ import threading
 from collections.abc import Mapping
 from enum import Enum
 
-from lightly_studio.analytics import cohort
 from lightly_studio.analytics.posthog_tracker import PostHogTracker
 from lightly_studio.analytics.tracker import Tracker
 from lightly_studio.dataset.env import (
@@ -94,11 +93,6 @@ def _get_tracker() -> Tracker:
 def _create_tracker() -> Tracker:
     """Build the tracker matching the current configuration."""
     if not LIGHTLY_STUDIO_ANALYTICS_ENABLED or not LIGHTLY_STUDIO_POSTHOG_KEY:
-        return NoOpTracker()
-
-    # Tracking is on by default, so without this the test suite reports events of its own. They
-    # say nothing about how the app is used, and no cohort would keep them out of the metrics.
-    if cohort.is_test_run():
         return NoOpTracker()
 
     tracker = PostHogTracker(

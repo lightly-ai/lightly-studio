@@ -23,6 +23,9 @@ REQUEST_TIMEOUT_SECONDS = 3
 # the retry lines go to `backoff`'s own logger rather than PostHog's.
 _NOISY_LOGGERS = ("posthog", "backoff")
 
+# Reported when the distribution metadata is missing, so when running straight from a checkout.
+UNKNOWN_VERSION = "unknown"
+
 
 class PostHogTracker(Tracker):
     """Sends usage events to PostHog, keyed on the anonymous installation ID.
@@ -84,7 +87,7 @@ def _common_properties() -> dict[str, object]:
     """Build the properties attached to every event."""
     user_cohort = cohort.get_cohort().value
     return {
-        "lightly_studio_version": metadata.version("lightly-studio"),
+        "lightly_studio_version": _version(),
         "python_version": platform.python_version(),
         "os": platform.system(),
         "user_cohort": user_cohort,
@@ -92,3 +95,14 @@ def _common_properties() -> dict[str, object]:
         # can select on it without reading event properties.
         "$set": {"user_cohort": user_cohort},
     }
+
+
+def _version() -> str:
+    """Get the version of the installed package, `UNKNOWN_VERSION` when it is not installed.
+
+    Raising instead would cost the event, and an uninstalled checkout is the `SOURCE_BUILD` cohort.
+    """
+    try:
+        return metadata.version("lightly-studio")
+    except metadata.PackageNotFoundError:
+        return UNKNOWN_VERSION

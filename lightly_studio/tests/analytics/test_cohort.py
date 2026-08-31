@@ -21,7 +21,12 @@ from lightly_studio.analytics.cohort import UserCohort
         ((False, False, "true", False), UserCohort.CI),
         # An emptied variable is how CI providers unset it.
         ((False, False, "", True), UserCohort.SOURCE_BUILD),
+        # A tool or a developer using CI as a switch must not turn a real user into a CI run.
+        ((False, False, "false", True), UserCohort.SOURCE_BUILD),
+        ((False, False, "0", False), UserCohort.USER),
         ((False, False, "", False), UserCohort.USER),
+        # Providers that name themselves rather than spelling out a boolean.
+        ((False, False, "drone", False), UserCohort.CI),
     ],
 )
 def test_get_cohort(
@@ -40,10 +45,6 @@ def test_get_cohort(
     mocker.patch.object(cohort, "_is_source_build", return_value=is_source_build)
 
     assert cohort.get_cohort(marker_path=marker_path) == expected
-
-
-def test_is_test_run() -> None:
-    assert cohort.is_test_run()
 
 
 @pytest.mark.parametrize(
@@ -71,3 +72,34 @@ def test_is_source_build__without_the_package_installed(mocker: MockerFixture) -
     mocker.patch.object(metadata, "distribution", side_effect=metadata.PackageNotFoundError)
 
     assert cohort._is_source_build()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("1", True),
+        ("true", True),
+        ("TRUE", True),
+        (" yes ", True),
+        # Providers that name themselves rather than spelling out a boolean.
+        ("drone", True),
+        ("woodpecker", True),
+        # Values a tool or a developer sets to switch the variable off.
+        ("0", False),
+        ("false", False),
+        ("FALSE", False),
+        ("no", False),
+        ("off", False),
+        ("n", False),
+        ("", False),
+        ("   ", False),
+        (None, False),
+    ],
+)
+def test_is_ci(monkeypatch: pytest.MonkeyPatch, value: str | None, expected: bool) -> None:
+    if value is None:
+        monkeypatch.delenv(cohort._CI_ENV_VAR, raising=False)
+    else:
+        monkeypatch.setenv(cohort._CI_ENV_VAR, value)
+
+    assert cohort._is_ci() == expected

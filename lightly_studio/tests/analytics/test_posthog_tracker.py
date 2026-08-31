@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Generator
+from importlib import metadata
 from uuid import UUID
 
 import pytest
@@ -116,3 +117,10 @@ def test_common_properties(mocker: MockerFixture) -> None:
     assert all(properties.values())
     assert properties["user_cohort"] == "ci"
     assert properties["$set"] == {"user_cohort": "ci"}
+
+
+def test_version__without_the_package_installed(mocker: MockerFixture) -> None:
+    """Running straight from a checkout must still report, that being the source_build cohort."""
+    mocker.patch.object(metadata, "version", side_effect=metadata.PackageNotFoundError)
+
+    assert posthog_tracker._version() == posthog_tracker.UNKNOWN_VERSION

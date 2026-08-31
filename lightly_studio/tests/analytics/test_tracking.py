@@ -6,7 +6,7 @@ from collections.abc import Generator, Mapping
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio.analytics import cohort, tracking
+from lightly_studio.analytics import tracking
 
 
 class FakeTracker:
@@ -119,7 +119,6 @@ def test_shutdown__when_the_backend_raises(mocker: MockerFixture) -> None:
 
 
 def test_create_tracker(mocker: MockerFixture) -> None:
-    mocker.patch.object(cohort, "is_test_run", return_value=False)
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_test")
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_HOST", "https://posthog.test")
@@ -134,7 +133,6 @@ def test_create_tracker(mocker: MockerFixture) -> None:
 
 def test_create_tracker__flushes_at_exit(mocker: MockerFixture) -> None:
     """Without this hook a short-lived process drops the queued event."""
-    mocker.patch.object(cohort, "is_test_run", return_value=False)
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_test")
     mocker.patch.object(tracking, "PostHogTracker")
@@ -155,14 +153,5 @@ def test_create_tracker__when_analytics_are_disabled(mocker: MockerFixture) -> N
 def test_create_tracker__without_a_key(mocker: MockerFixture) -> None:
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "")
-
-    assert isinstance(tracking._create_tracker(), tracking.NoOpTracker)
-
-
-def test_create_tracker__during_a_test_run(mocker: MockerFixture) -> None:
-    """The suite must not report events of its own, tracking being on by default."""
-    mocker.patch.object(cohort, "is_test_run", return_value=True)
-    mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
-    mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_test")
 
     assert isinstance(tracking._create_tracker(), tracking.NoOpTracker)
