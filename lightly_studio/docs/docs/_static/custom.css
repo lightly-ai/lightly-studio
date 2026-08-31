@@ -32,6 +32,12 @@
   --ls-font-display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
   --ls-font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
+  /* The mono-caps label register: sidebar group captions and the contents
+     caption today; table and code headers and footer columns downstream. One
+     size and one tracking so the register stays in step. */
+  --ls-label-size: 0.525rem;
+  --ls-label-tracking: 0.08em;
+
   --ls-radius-sm: 5px;
   --ls-radius: 9px;
   --ls-radius-lg: 10px;
@@ -219,48 +225,724 @@ body[data-md-color-scheme="slate"] {
 }
 
 /* ==========================================================================
+   3. Base and layout
+   ========================================================================== */
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The mock is full-bleed: both sidebars are panels flush to the window edge,
+   with the article between them. So the shell is the window at every width. A
+   `max-width` here — Material ships 61rem — leaves the panels floating a
+   hundred-odd pixels in from the edge on a wide monitor, with a strip of page
+   showing outside each one. A panel that does not reach the edge stops reading
+   as chrome and starts reading as a card that failed to stretch. */
+.md-grid {
+  max-width: none;
+}
+
+/* The two bands under the article are the exception. They have no panels to
+   anchor and their contents are laid out `space-between`, so at 2560px the
+   footer's three link columns end up a screen apart. The band still runs edge
+   to edge; only what sits in it is bounded. */
+.md-footer__inner,
+.ls-footer__inner {
+  max-width: 84rem;
+}
+
+@media screen and (min-width: 76.25em) {
+  /* Material opens the row 1.5rem below the header. Both panels are pinned at
+     `top: var(--ls-header-height)`, so that margin shows as a 30px strip of
+     page above each of them — but only at the top of a page, because the first
+     scroll takes them up to the pin and closes it. A panel that meets the
+     header only once you scroll is worse than one that never does.
+
+     The article gets its air from the breadcrumb's own 1.2rem of padding, and
+     from `.md-content__inner` on the pages that have no breadcrumb. */
+  .md-main__inner {
+    margin-top: 0;
+  }
+
+  .md-sidebar--primary {
+    width: var(--ls-sidebar-width);
+  }
+
+  .md-sidebar--secondary {
+    width: var(--ls-toc-width);
+  }
+
+  .md-content {
+    min-width: 0;
+    padding-inline: 2rem;
+  }
+
+  /* The article is bounded and centred in whatever the panels leave it. Pinned
+     to the left instead — which is what the mock does, being a fixed-width
+     mock — it parts company with the contents list opposite it: at 1920 the
+     column is 1433px wide and the text would stop 250px short of the panel,
+     leaving a hole down the right of every page.
+
+     The long selector is Material's own, at (0,5,0), with `[dir]` standing in
+     for its `[dir=ltr]` so the rule is direction-neutral. A bare
+     `.md-content__inner` loses the margin to it by four classes. */
+  [dir] .md-sidebar--primary:not([hidden]) ~ .md-content > .md-content__inner,
+  [dir] .md-sidebar--secondary:not([hidden]) ~ .md-content > .md-content__inner {
+    margin-inline: auto;
+    max-width: 44rem;
+    padding-top: 0.9rem;
+  }
+}
+
+/* Material sizes a sticky sidebar from how much of `.md-main` is still on
+   screen, so every pixel of footer that scrolls up takes a pixel off it and the
+   nav ends up cut off mid-item. Pin them to the viewport instead: each stays a
+   fixed-height panel below the header, scrolls its own overflow, and once the
+   article column ends it scrolls away with the page like any other content.
+
+   `!important` because Material writes both values inline from its script.
+   Nothing else is needed to keep a sidebar out of the footer: sticky is bounded
+   by `.md-main__inner`, a flex row that is already at least as tall as its
+   tallest item.
+
+   Two breakpoints, because the TOC turns sticky at 60em while the nav is still
+   a full-height drawer up to 76.25em, and the drawer keeps Material's sizing. */
+@media screen and (min-width: 60em) {
+  .md-sidebar--secondary {
+    height: calc(100vh - var(--ls-header-height)) !important;
+    top: var(--ls-header-height) !important;
+  }
+
+  .md-sidebar--secondary .md-sidebar__scrollwrap {
+    height: 100% !important;
+  }
+}
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary {
+    height: calc(100vh - var(--ls-header-height)) !important;
+    top: var(--ls-header-height) !important;
+  }
+
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    height: 100% !important;
+  }
+}
+
+/* ==========================================================================
+   4. Header
+
+   One row: mark, wordmark, section tabs, scheme toggle, search, repo. The tabs
+   are inline in that row rather than in a second one under it.
+   ========================================================================== */
+
+/* Translucent and blurred over the content, as on the landing page. */
+.md-header {
+  backdrop-filter: blur(14px);
+  background-color: color-mix(in srgb, var(--ls-surface) 90%, transparent);
+  border-bottom: 1px solid var(--ls-line);
+  box-shadow: none;
+  color: var(--ls-ink);
+  height: var(--ls-header-height);
+}
+
+.md-header__inner {
+  height: var(--ls-header-height);
+  padding-inline: 1.3rem;
+}
+
+.md-header__button {
+  color: var(--ls-body);
+  opacity: 1;
+}
+
+.md-header__button:hover {
+  color: var(--ls-ink);
+  opacity: 1;
+}
+
+/* The mark's own padding is the whole gap to the wordmark — see the margin
+   reset further down. lightly.ai sets that gap at 8.4px against a 25.1px mark
+   (`Logo.svg`, measured on its paths), so 0.335 of the mark's width; this mark
+   renders at 20px, which puts it at 6.7px. 0.35rem is 7. */
+.md-header__button.md-logo {
+  margin: 0;
+  padding: 0.35rem;
+}
+
+.md-header__button.md-logo :is(img, svg) {
+  height: 1.1rem;
+  width: auto;
+}
+
+/* Wordmark. The logo is the mark alone, so the site name carries the name. */
+.md-header__title {
+  align-items: center;
+  display: flex;
+  font-family: var(--ls-font-display);
+  font-size: 0.83rem;
+  font-weight: 600;
+  height: var(--ls-header-height);
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  visibility: visible;
+}
+
+/* Material stacks the two topics absolutely to cross-fade them on scroll.
+   Only the brand is kept, so it goes back in flow and centres with the mark
+   instead of pinning to the top of a taller header. The `__ellipsis` wrapper
+   sits between the two, so it has to centre as well. */
+.md-header__title .md-header__ellipsis {
+  align-items: center;
+  display: flex;
+  height: 100%;
+}
+
+/* `--active` is Material's scroll state: it fades the site name out and slides
+   it 25px left to make room for the page title. That title is hidden below, so
+   the swap left the wordmark dissolving into an empty header. Pin it. */
+.md-header__title .md-header__topic,
+.md-header__title--active .md-header__topic {
+  color: var(--ls-ink);
+  opacity: 1;
+  pointer-events: auto;
+  position: relative;
+  transform: none;
+  transition: none;
+  z-index: 0;
+}
+
+.md-header__topic + .md-header__topic {
+  display: none;
+}
+
+/* Release chip, rendered next to the wordmark by `overrides/partials/header.html`
+   and set from the installed package by `mkdocs_hooks.py`. */
+/* The chip labels the wordmark, so it sits against it. Material grows
+   `.md-header__title` to fill the row, which pushed the chip 37px clear of the
+   wordmark and hard up against the first tab — reading as a prefix to "Docs"
+   rather than as the version of the thing to its left. The title is sized by
+   its content instead and the chip carries the slack: `auto` here is what keeps
+   search and the palette toggle pinned to the right edge.
+
+   Only the site name is ever in that title — the second `.md-header__topic`,
+   which is the page title Material cross-fades in on scroll, is hidden above —
+   so there is nothing long enough for a fixed-size title to clip. */
+[dir] .md-header__title {
+  flex-grow: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* The chip is only rendered when the package is installed, and the tab strip
+   that takes over from it is hidden below 76.25em — so on a narrow viewport of
+   a build without the package, nothing in the row carries the slack and search
+   slides in against the wordmark. Hand it back to the title there. */
+@media screen and (max-width: 76.234375em) {
+  .md-header__inner:not(:has(.ls-version)) .md-header__title {
+    margin-inline-end: auto;
+  }
+}
+
+.ls-version {
+  align-self: center;
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-faint);
+  flex: none;
+  font-family: var(--ls-font-mono);
+  font-size: 0.5rem;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-inline: 0.45rem auto;
+  padding: 0.05rem 0.25rem;
+}
+
+/* -- Search ---------------------------------------------------------------- */
+
+.md-search__form {
+  background-color: var(--ls-surface-mut);
+  border: 1px solid var(--ls-line);
+  border-radius: 7px;
+  box-shadow: none;
+  height: 1.6rem;
+  position: relative;
+}
+
+.md-search__form:hover {
+  background-color: var(--ls-surface-mut);
+  border-color: var(--ls-line-strong);
+}
+
+.md-search__input {
+  color: var(--ls-ink);
+  font-size: 0.65rem;
+}
+
+/* `--ls-muted`, not `--ls-faint`: the field is filled with the muted surface,
+   and the faint grey is only 4.3:1 against it. */
+.md-search__input::placeholder {
+  color: var(--ls-muted);
+}
+
+.md-search__icon {
+  color: var(--ls-faint);
+}
+
+.md-search__output {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+}
+
+.md-search-result__meta {
+  background-color: var(--ls-surface-sub);
+  color: var(--ls-muted);
+}
+
+/* Keyboard shortcut hint inside the search input */
+.search-shortcut-hint {
+  align-items: center;
+  display: flex;
+  opacity: 1;
+  pointer-events: none;
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: opacity 0.2s;
+}
+
+.search-shortcut-hint kbd {
+  align-items: center;
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius-sm);
+  box-shadow: none;
+  color: var(--ls-faint);
+  display: inline-flex;
+  font-family: var(--ls-font-mono);
+  font-size: 0.5rem;
+  font-weight: 500;
+  justify-content: center;
+  line-height: 1.4;
+  padding: 0.05rem 0.25rem;
+}
+
+/* Hide hint while search overlay is open */
+input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
+  display: none;
+}
+
+/* -- Repository link -------------------------------------------------------
+
+   The mark, the star count and the fork count. Material renders two more things
+   in the same block and both are already in this header: the repository name,
+   which is the wordmark at the other end of the row, and a version fact, which
+   is the release chip beside it.
+
+   `.md-source` carries its own `color: var(--md-primary-bg-color)`, mapped to
+   `--ls-ink` in section 1. Legible either way, but header chrome sits a step
+   below the ink.
+
+   Every rule is scoped to `.md-header__source`. The drawer renders the same
+   block through `partials/nav.html`, where the repository name is the only
+   thing naming the repository and has to stay.
+
+   Material builds this block as two stacked lines — an inline-block icon, an
+   inline-block name pulled back over it with `margin-left: -2rem`, and a
+   `width: 100%` flex list of facts that wraps under the name. Drop the name and
+   that collapses: the facts line has no height and the icon lands on top of the
+   first counter. So the row is rebuilt as flex here rather than patched.
+
+   `[dir]` stands in for Material's `[dir=ltr]` on the three rules that carry it,
+   which are (0,3,0) and (0,2,1) — a bare class chain loses to them. Matching the
+   specificity and loading later is what wins.
+   ------------------------------------------------------------------------- */
+
+.md-header__source {
+  margin-left: 0.4rem;
+  max-width: none;
+  width: auto;
+}
+
+.md-header__source .md-source {
+  align-items: center;
+  color: var(--ls-body);
+  display: flex;
+  font-size: 0.6rem;
+  gap: 0.35rem;
+}
+
+.md-header__source .md-source:hover {
+  color: var(--ls-ink);
+}
+
+.md-header__source .md-source__icon {
+  align-items: center;
+  display: flex;
+  height: auto;
+  width: auto;
+}
+
+[dir] .md-header__source .md-source__icon svg {
+  height: 0.9rem;
+  margin: 0;
+  width: 0.9rem;
+}
+
+/* `font-size: 0` is what drops the repository name; the facts list below sets
+   its own size, so the counters survive it. */
+[dir] .md-header__source .md-source__icon + .md-source__repository,
+[dir] .md-header__source .md-source__repository {
+  display: flex;
+  font-size: 0;
+  margin: 0;
+  max-width: none;
+  overflow: visible;
+  padding: 0;
+}
+
+.md-header__source .md-source__facts {
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  margin: 0;
+  opacity: 1;
+  width: auto;
+}
+
+/* Material hangs each count's icon off `vertical-align: text-top`, which lines
+   the 12px glyph up with the top of an 11px content box — so it rides high over
+   the digits. Centre the two on each other instead, and let the row's own gap
+   do the spacing the icon's margin was doing. */
+.md-header__source .md-source__fact {
+  align-items: center;
+  display: flex;
+  gap: 0.1rem;
+}
+
+[dir] .md-header__source .md-source__fact::before {
+  margin: 0;
+}
+
+/* The counts get their height from a keyframe that animates 0 → .65rem once, on
+   load, with no fill mode — paired with `overflow: hidden`. A drawer that opens
+   on demand can afford that; a header that is always on screen cannot, and it
+   leaves the row measuring zero. The counts are not an entrance here. */
+.md-header__source .md-source__facts,
+.md-header__source .md-source__fact {
+  animation: none;
+  overflow: visible;
+}
+
+.md-header__source .md-source__fact--version {
+  display: none;
+}
+
+/* ==========================================================================
+   5. Left sidebar
+
+   A panel, not a column of links in the page: tinted a shade off the article
+   and closed by a rule down its right edge, so the reader's eye has a boundary
+   to stop at rather than a run of text that happens to end.
+
+   Group captions are small mono caps — the same label register as the code
+   block header strip, the TOC title and the footer columns. Pages sit under
+   them in the body face. The current page is the one accented thing in the
+   panel: accent text on an accent tint.
+   ========================================================================== */
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary {
+    background-color: var(--ls-surface-sub);
+    border-right: 1px solid var(--ls-line);
+    padding-top: 0.5rem;
+  }
+}
+
+.md-sidebar--primary .md-nav {
+  font-size: 0.65rem;
+}
+
+/* The full nav overflows on most screens; the scrollbar should not compete
+   with it. */
+.md-sidebar__scrollwrap {
+  scrollbar-color: var(--ls-line) transparent;
+  scrollbar-width: thin;
+}
+
+/* The site name already sits in the header; the drawer still needs it. */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary .md-nav--primary > .md-nav__title {
+    display: none;
+  }
+}
+
+.md-sidebar--primary .md-nav__list {
+  padding-left: 0;
+}
+
+.md-sidebar--primary .md-nav__item {
+  padding: 0;
+}
+
+.md-sidebar--primary .md-nav__link {
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-body);
+  font-weight: 400;
+  gap: 0.3rem;
+  margin-top: 0;
+  padding: 0.25rem 0.4rem;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.md-sidebar--primary .md-nav__link:hover {
+  background-color: var(--ls-surface-mut);
+  color: var(--ls-ink);
+}
+
+.md-sidebar--primary .md-nav__link--active,
+.md-sidebar--primary .md-nav__link--active:hover {
+  background-color: var(--ls-accent-surface);
+  color: var(--ls-accent);
+  font-weight: 600;
+}
+
+/* Material's default active marker; the pill replaces it. */
+.md-sidebar--primary .md-nav__link--active::before {
+  display: none;
+}
+
+/* -- Group captions -------------------------------------------------------- */
+
+/* Level 1 ("Concepts & Tools", "Python API"): the primary grouping, set as
+   mono caps. Uppercasing in CSS rather than in `nav:` keeps the section title
+   itself readable everywhere else it is used — the breadcrumb, the drawer's
+   back button, the tab mapping in mkdocs.yml. */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item--section
+  > :is(.md-nav__link, .md-nav__container) {
+  background-color: transparent;
+  color: var(--ls-muted);
+  cursor: default;
+  font-family: var(--ls-font-mono);
+  font-size: var(--ls-label-size);
+  font-weight: 500;
+  letter-spacing: var(--ls-label-tracking);
+  margin: 0;
+  padding: 0 0.4rem 0.5rem;
+  text-transform: uppercase;
+}
+
+/* Level 2 ("Core Concepts", "Python API"): a run of pages inside a section that
+   is long enough to want a heading of its own. It reads as one of the items
+   around it, a half-step heavier, with its children indented under it and a
+   chevron to collapse them — not as a third label register. The section caption
+   above is what does the grouping; this only says where a run starts. */
+.md-sidebar--primary
+  .md-nav[data-md-level="1"]
+  > .md-nav__list
+  > .md-nav__item--nested
+  > :is(.md-nav__link, .md-nav__container) {
+  color: var(--ls-ink);
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+/* A section caption is a label, not a destination; nothing to hover. */
+.md-sidebar--primary .md-nav__item--section > .md-nav__link:hover,
+.md-sidebar--primary .md-nav__item--section > .md-nav__container:hover {
+  background-color: transparent;
+  color: inherit;
+}
+
+/* Under `navigation.indexes` a section that has an index page renders that
+   page's link *inside* the caption, so it inherits the caption's mono caps —
+   and, when it is the current page, takes the accent pill on top of them. A
+   filled pill of small caps reads as a banner, not as "you are here". The
+   accent on its own says the same thing and leaves the caption a caption.
+   (0,6,0), over the pill's (0,2,0). */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item--section
+  > .md-nav__container
+  > :is(.md-nav__link--active, .md-nav__link:hover) {
+  background-color: transparent;
+  color: var(--ls-accent);
+}
+
+/* Air between top-level groups. */
+.md-sidebar--primary
+  .md-nav[data-md-level="0"]
+  > .md-nav__list
+  > .md-nav__item
+  ~ .md-nav__item {
+  margin-top: 0.8rem;
+}
+
+/* Nested pages indent under their caption rather than sitting flush. */
+.md-sidebar--primary .md-nav[data-md-level="2"] .md-nav__link {
+  padding-left: 0.7rem;
+}
+
+@media screen and (max-width: 76.234375em) {
+  /* Material colors the drawer's current page with the link accent at (0,3,0),
+     which is the right color but on the wrong element — it paints every
+     ancestor section of the current page, not the page. Restate it so only the
+     accent pill below carries the mark. */
+  .md-sidebar--primary .md-nav--primary .md-nav__item--active > .md-nav__link {
+    color: var(--ls-body);
+  }
+
+  .md-sidebar--primary .md-nav--primary .md-nav__link--active {
+    color: var(--ls-accent);
+  }
+
+  /* In the drawer, a section's pages show inline instead of as a separate
+     slide-in panel, mirroring the desktop sidebar.
+
+     Both levels, not just the second. Material stacks every nested panel over
+     the whole drawer and slides in the one whose toggle is checked, and
+     `navigation.expand` checks all of them — so the section the reader is in
+     covers the root panel, and with it the tab strip, which is the one control
+     that gets them out of that section. */
+  .md-sidebar--primary .md-nav[data-md-level="1"],
+  .md-sidebar--primary .md-nav[data-md-level="2"]:not(.md-nav--secondary) {
+    height: auto;
+    opacity: 1;
+    position: static;
+    transform: none;
+    z-index: auto;
+  }
+
+  /* Material makes every list that follows a `.md-nav__title` its own scroller
+     with `scroll-snap-type: y mandatory`, on the assumption that only one panel
+     is ever on screen. Inlined, each of those nested lists captures the snap
+     points of the links inside it — a snap target belongs to its nearest
+     scroll container — leaving the drawer's own list snapping only to the
+     handful of section headings. Mandatory snap then refuses to rest anywhere
+     between them, so on a short viewport whole runs of links cannot be scrolled
+     to at all. The nested lists are not scrollers any more, so say so. */
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list,
+  .md-sidebar--primary .md-nav[data-md-level="2"] > .md-nav__list {
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  /* The inline panels no longer need their slide-in back-button title, nor the
+     drill-down chevron on the heading that used to open them. A level-1 heading
+     is a `.md-nav__container` when the section has an index page and a plain
+     `.md-nav__link` when it does not, so the chevron is matched as a descendant
+     of either. */
+  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__title,
+  .md-sidebar--primary .md-nav[data-md-level="2"] > .md-nav__title,
+  .md-sidebar--primary
+    .md-nav[data-md-level="0"]
+    > .md-nav__list
+    > .md-nav__item:has(> .md-nav[data-md-level="1"])
+    > :is(.md-nav__link, .md-nav__container)
+    .md-nav__icon,
+  .md-sidebar--primary
+    .md-nav[data-md-level="1"]
+    > .md-nav__list
+    > .md-nav__item:has(> .md-nav[data-md-level="2"])
+    > .md-nav__link
+    > .md-nav__icon {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   6. Right sidebar (table of contents)
+
+   The mirror of the left panel: same tint, same rule, same mono caps caption.
+   Each entry carries a 2px bar at its left edge — hairline until the entry is
+   the one on screen, accent when it is. A bar rather than a pill because the
+   entries are one long unbroken column here, and the run of bars is what makes
+   the nesting legible.
+   ========================================================================== */
+
+/* The panel needs the left sidebar opposite it to read as one of a pair, and
+   that only exists as a column above 76.25em. */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--secondary {
+    background-color: var(--ls-surface-sub);
+    border-left: 1px solid var(--ls-line);
+    padding-top: 0.9rem;
+  }
+}
+
+/* The caption, from where the list stops being a collapsible drawer with a back
+   button in its title and becomes a column beside the article.
+
+   The wording itself is Material's `toc` string, reworded in
+   `overrides/partials/languages/custom.html`. Setting it there rather than as
+   `::after` content keeps it the same string as the `aria-label` on the list,
+   which is drawn from the same key. */
+@media screen and (min-width: 60em) {
+  .md-nav--secondary .md-nav__title {
+    background: transparent;
+    box-shadow: none;
+    color: var(--ls-muted);
+    font-family: var(--ls-font-mono);
+    font-size: var(--ls-label-size);
+    font-weight: 500;
+    letter-spacing: var(--ls-label-tracking);
+    padding: 0 0 0.6rem 0.5rem;
+    text-transform: uppercase;
+  }
+}
+
+.md-nav--secondary .md-nav__list {
+  padding-left: 0;
+}
+
+.md-nav--secondary .md-nav__link {
+  border-inline-start: 2px solid var(--ls-line-hair);
+  border-radius: 0;
+  color: var(--ls-muted);
+  font-size: 0.625rem;
+  line-height: 1.45;
+  margin-top: 0;
+  padding: 0.2rem 0 0.2rem 0.5rem;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.md-nav--secondary .md-nav__link:hover {
+  background-color: transparent;
+  border-inline-start-color: var(--ls-line-strong);
+  color: var(--ls-ink);
+}
+
+.md-nav--secondary .md-nav__link--active,
+.md-nav--secondary .md-nav__link--active:hover {
+  border-inline-start-color: var(--ls-accent);
+  color: var(--ls-accent);
+}
+
+.md-nav--secondary .md-nav__link--active::before {
+  display: none;
+}
+
+/* Material indents nested entries with padding on the list, which would push
+   the bar in with the text and break the column the bars form. Indent the text
+   instead and leave every bar on the same line. */
+.md-nav--secondary .md-nav__item .md-nav__item .md-nav__link {
+  padding-left: 1rem;
+}
+
+.md-nav--secondary .md-nav__item .md-nav__item .md-nav__item .md-nav__link {
+  padding-left: 1.5rem;
+}
+
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is
    restyled. Last in the file so anything not yet themed keeps its old look.
    ========================================================================== */
-
-/* Keyboard shortcut hint inside the search input */
-.md-search__form {
-    position: relative;
-}
-
-.search-shortcut-hint {
-    position: absolute;
-    right: 0.6rem;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    pointer-events: none;
-    opacity: 0.55;
-    transition: opacity 0.2s;
-}
-
-.search-shortcut-hint kbd {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.1rem 0.35rem;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 0.25rem;
-    font-family: inherit;
-    font-size: 0.6rem;
-    line-height: 1.4;
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
-}
-
-/* Hide hint while search overlay is open */
-input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
-    display: none;
-}
 
 /* Card styling with rounded corners */
 .md-typeset .grid.cards > ol > li,
@@ -321,20 +1003,31 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     border-color: #091c1e !important; /* Match border color */
 }
 
-/* Custom logo styling - increased size */
-.md-header__button.md-logo {
-    margin: 0.2rem;
+/* Custom menu bar color */
+:root {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
+    --lightly-nav-active-color: #0a6f99;
 }
 
-.md-header__button.md-logo img,
-.md-header__button.md-logo svg {
-    height: 1.8rem; /* Reduced size */
-    width: auto;
+/* Override Material theme primary colors */
+[data-md-color-scheme="default"] {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
 }
 
-/* Hide site name next to logo (logo already contains the name) */
-.md-header__title {
-    visibility: hidden;
+[data-md-color-scheme="slate"] {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
 }
 
 /* Hide Material for MkDocs footer */
@@ -342,73 +1035,9 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     display: none !important;
 }
 
-/* Highlight the current page in the left and right navigation */
-.md-nav__link--active {
-  position: relative;
-}
-
-/* Set highlight color for the current page in the left navigation */
-.md-sidebar--primary .md-nav__link--active {
-  color: var(--lightly-nav-active-color);
-}
-
-.md-nav__link--active::before {
-  background-color: currentcolor;
-  border-radius: 999px;
-  bottom: 0.15em;
-  content: "";
-  left: -0.5rem;
-  position: absolute;
-  top: 0.15em;
-  width: 0.1rem;
-}
-
-/* Underline section headings in the left navigation */
-.md-sidebar--primary .md-nav__title {
-  color: var(--md-default-fg-color);
-}
-
-.md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested > .md-nav__link,
-.md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__link,
-.md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__container,
-.md-sidebar--primary .md-nav__item--section > .md-nav__container {
-  border-bottom: 0.05rem solid var(--md-default-fg-color--lightest);
-  color: var(--md-default-fg-color);
-  font-size: 0.75rem;
-  margin-top: 0;
-  padding-bottom: 0.2rem;
-}
-
-@media screen and (min-width: 76.25em) {
-  .md-sidebar--primary .md-nav[data-md-level="0"] > .md-nav__list > .md-nav__item--nested > .md-nav__link {
-    display: none;
-  }
-}
-
-@media screen and (max-width: 76.234375em) {
-  /* Once a top-level tab is opened, show its section level (and the pages
-     underneath) expanded inline, mirroring the desktop left menu. The tab
-     panels (level 1) still slide in on tap; only the level-2 section panels are
-     flattened from a separate drill-down into a static, always-visible block. */
-  .md-sidebar--primary .md-nav[data-md-level="2"]:not(.md-nav--secondary) {
-    height: auto;
-    opacity: 1;
-    position: static;
-    transform: none;
-    z-index: auto;
-  }
-
-  /* The inline section panels no longer need their slide-in back-button title
-     or the drill-down chevron on the section heading. */
-  .md-sidebar--primary .md-nav[data-md-level="2"] > .md-nav__title,
-  .md-sidebar--primary .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:has(> .md-nav[data-md-level="2"]) > .md-nav__link > .md-nav__icon {
-    display: none;
-  }
-}
-
-.md-sidebar--primary .md-nav__item--section:has(> .md-nav__container) ~ .md-nav__item--section:has(> .md-nav__container),
-.md-sidebar--primary .md-nav:not([data-md-level="0"]) > .md-nav__list > .md-nav__item--nested ~ .md-nav__item--nested {
-  margin-top: 1.3rem;
+/* Bold the active top-level menu item in the header navigation tabs */
+.md-tabs__item--active .md-tabs__link {
+  font-weight: 700;
 }
 
 

@@ -21,11 +21,18 @@ theme:
   # files between releases and shadowing them is silent, so re-diff them against
   # `material/templates/partials/` whenever mkdocs-material is bumped.
   custom_dir: overrides
-  logo: _static/lightly_logo.svg
+  # Mark only. The full logo carries a white wordmark, which is invisible on the
+  # light header; the wordmark is rendered as text instead (see custom.css).
+  logo: _static/lightly_mark.svg
   favicon: _static/lightly_logo_fav.svg
   font:
     text: IBM Plex Sans
     code: IBM Plex Mono
+  icon:
+    # The mark next to the star and fork counts in the header. Material defaults
+    # to `fontawesome/brands/git-alt`, a generic git mark; the repository is on
+    # GitHub and the rest of this theme's icons are Octicons.
+    repo: octicons/mark-github-16
   # `custom` opts out of Material's built-in color rules so the palette in
   # _static/custom.css is the only thing setting colors. Without it Material
   # falls back to `indigo` and its `[scheme][primary]` rules outrank ours.
