@@ -89,7 +89,7 @@ class RandomForest(FewShotClassifier):
         name: Name of the classifier.
         classes: Ordered list of class labels used for training and predictions.
         embedding_model_name: Name of the model used for creating the embeddings.
-        embedding_model_hash: Hash of the model used for creating the embeddings.
+        embedding_model_hash: Legacy. Filled with the model name.
     """
 
     def __init__(
