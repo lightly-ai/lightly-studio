@@ -83,7 +83,14 @@ class RandomForestExport:
 
 
 class RandomForest(FewShotClassifier):
-    """RandomForest classifier."""
+    """RandomForest classifier.
+
+    Attributes:
+        name: Name of the classifier.
+        classes: Ordered list of class labels used for training and predictions.
+        embedding_model_name: Name of the model used for creating the embeddings.
+        embedding_model_hash: Hash of the model used for creating the embeddings.
+    """
 
     def __init__(
         self,
