@@ -18,9 +18,9 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
 
 class TestPerceptionEncoderEmbeddingGenerator:
-    def test_get_embedding_space_spec(self) -> None:
+    def test_embedding_space_spec(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
-        space_spec = perception_encoder.get_embedding_space_spec()
+        space_spec = perception_encoder.embedding_space_spec()
 
         assert space_spec.dimension == 512
         assert space_spec.space_key == MODEL_NAME

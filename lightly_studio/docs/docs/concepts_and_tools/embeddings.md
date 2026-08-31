@@ -108,7 +108,7 @@ Implement these protocol methods based on your needs. The
 [API reference](../api/embeddings.md) gives the full method signatures:
 
 - **`EmbeddingGenerator`** (base):
-    - `get_embedding_space_spec` to describe the embedding space to the database.
+    - `embedding_space_spec` to describe the embedding space to the database.
     - `embed_text` to override the text search model.
 - **`ImageEmbeddingGenerator`**:
     - `embed_images` to override the image embedding model.
@@ -153,7 +153,7 @@ class CustomEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
     def __init__(self) -> None:
         self._filepath_to_embedding: dict[str, NDArray[np.float32]] = ...  # Implement the loading logic here.
 
-    def get_embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
 
     def embed_text(self, text: str) -> list[float]: ...
 
@@ -211,7 +211,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
     def __init__(self) -> None:
         ...  # Load your model and preprocessing here.
 
-    def get_embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
 
     def embed_text(self, text: str) -> list[float]: ...
 

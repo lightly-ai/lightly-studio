@@ -1,7 +1,7 @@
 """Example of how to load precomputed embeddings.
 
 Implement a class inheriting from ls.ImageEmbeddingGenerator. For image datasets,
-only `get_embedding_space_spec` and `embed_images` functions are necessary.
+only `embedding_space_spec` and `embed_images` functions are necessary.
 Register the generator with `ls.set_default_embedding_model`.
 
 For video datasets, implement ls.VideoEmbeddingGenerator as well to override the
@@ -54,7 +54,7 @@ class LoadExistingEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
         """
         self._embeddings_by_filepath = embeddings_by_filepath
 
-    def get_embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
         """Describe the embedding space so it can be recorded in the database."""
         return ls.EmbeddingSpaceSpec(
             space_key="precomputed",

@@ -103,7 +103,7 @@ def test_register_multiple_models(
 
     # Register a second model.
     class FakeEmbeddingGenerator(ImageEmbeddingGenerator):
-        def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        def embedding_space_spec(self) -> EmbeddingSpaceSpec:
             return EmbeddingSpaceSpec(
                 space_key="fake_hash",
                 dimension=5,
@@ -672,7 +672,7 @@ def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
     class ImageOnlyGenerator:
         # Implements the image protocol but not embed_videos, so only the image
         # slot is overridden.
-        def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        def embedding_space_spec(self) -> EmbeddingSpaceSpec:
             return EmbeddingSpaceSpec(
                 space_key="image_only_model",
                 dimension=3,
@@ -869,7 +869,7 @@ class TextOnlyEmbeddingGenerator:
     def __init__(self, dimension: int = 3) -> None:
         self._dimension = dimension
 
-    def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         return EmbeddingSpaceSpec(
             space_key="text_only_model",
             dimension=self._dimension,

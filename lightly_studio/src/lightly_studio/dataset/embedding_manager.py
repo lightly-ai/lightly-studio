@@ -165,7 +165,7 @@ class EmbeddingManager:
         if collection is None:
             raise ValueError("Provided collection_id could not be found.")
 
-        space_spec = embedding_generator.get_embedding_space_spec()
+        space_spec = embedding_generator.embedding_space_spec()
         model_create = EmbeddingModelCreate(
             name=space_spec.space_key,
             embedding_model_hash=space_spec.space_key,

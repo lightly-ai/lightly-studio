@@ -16,9 +16,9 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
 
 class TestMobileCLIPEmbeddingGenerator:
-    def test_get_embedding_space_spec(self) -> None:
+    def test_embedding_space_spec(self) -> None:
         mobileclip = MobileCLIPEmbeddingGenerator()
-        space_spec = mobileclip.get_embedding_space_spec()
+        space_spec = mobileclip.embedding_space_spec()
 
         assert space_spec.dimension == 512
         assert space_spec.space_key == MODEL_NAME

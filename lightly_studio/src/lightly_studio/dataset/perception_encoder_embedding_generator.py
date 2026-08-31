@@ -64,7 +64,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         )
         self._model = self._model.to(self._device)
 
-    def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
 
         Returns:

@@ -19,7 +19,7 @@ class EmbeddingSpaceSpec:
 
     <span class="doc-badge doc-badge--beta">Beta</span>
 
-    Returned by ``EmbeddingGenerator.get_embedding_space_spec`` and stored in the
+    Returned by ``EmbeddingGenerator.embedding_space_spec`` and stored in the
     database so the same embedding space can be recognized across LightlyStudio runs.
     """
 
@@ -73,14 +73,14 @@ class EmbeddingGenerator(Protocol):
     - During a GUI run to embed text or image search queries
 
     Generators are loaded at startup and need to identify themselves with
-    `get_embedding_space_spec` which returns metadata about the loaded model.
+    `embedding_space_spec` which returns metadata about the loaded model.
 
     To provide custom embeddings, implement one of the protocols below (``ImageEmbeddingGenerator``
     and/or ``VideoEmbeddingGenerator``) and register it with ``set_default_embedding_model``
     before you add a dataset or start the GUI.
     """
 
-    def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
 
         <span class="doc-badge doc-badge--beta">Beta</span>
@@ -215,7 +215,7 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """
         self._dimension = dimension
 
-    def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
 
         Returns:

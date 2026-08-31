@@ -50,7 +50,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         self._model = self._model.to(self._device)
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
 
-    def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
 
         Returns:

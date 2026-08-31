@@ -40,7 +40,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
     This implements the ls.ImageEmbeddingGenerator protocol. Here it wraps
     MobileCLIP to keep the example runnable, but the same structure works for any
-    model: implement get_embedding_space_spec, embed_text, embed_images,
+    model: implement embedding_space_spec, embed_text, embed_images,
     embed_image_crops and embed_pil_images. Implement ls.VideoEmbeddingGenerator as
     well to override the video model.
     """
@@ -63,7 +63,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         self._model = self._model.to(self._device)
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
 
-    def get_embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
         """Describe the embedding space so it can be recorded in the database.
 
         The `space_key` shows up as the model name in the GUI and lets Lightly
