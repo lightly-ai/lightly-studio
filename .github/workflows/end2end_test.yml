@@ -22,8 +22,10 @@ env:
   UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 jobs:
+  # Matrix jobs skip every step when `e2e-success-<name>-<file-hash>` is cached,
+  # so the hash has to cover every input the run depends on.
   prepare-caches:
-    name: Build Cache
+    name: Build Cache and Skip Steps
     runs-on: ubuntu-latest
     # Recent runs: 3.5min median, 10min worst.
     timeout-minutes: 15
@@ -40,15 +42,29 @@ jobs:
         run: >-
           echo "hash=${{ hashFiles(
             '.github/workflows/end2end_test.yml',
+            'Makefile',
             'lightly_studio/e2e-tests/**/*',
             'lightly_studio/src/**/*',
             'lightly_studio/pyproject.toml',
+            'lightly_studio/uv.lock',
+            'lightly_studio/Makefile',
+            'lightly_studio/alembic.ini',
             'lightly_studio_view/e2e/**/*',
             'lightly_studio_view/src/**/*',
             'lightly_studio_view/public/**/*',
+            'lightly_studio_view/static/**/*',
             'lightly_studio_view/package.json',
             'lightly_studio_view/package-lock.json',
-            'lightly_studio_view/vite.config.ts'
+            'lightly_studio_view/vite.config.ts',
+            'lightly_studio_view/svelte.config.js',
+            'lightly_studio_view/tailwind.config.ts',
+            'lightly_studio_view/postcss.config.js',
+            'lightly_studio_view/tsconfig.json',
+            'lightly_studio_view/playwright.config.ts',
+            'lightly_studio_view/langium-config.json',
+            'lightly_studio_view/openapi-ts.config.ts',
+            'lightly_studio_view/Makefile',
+            'lightly_studio_view/.nvmrc'
           ) }}" >> $GITHUB_OUTPUT
 
       - name: Cache build

@@ -253,9 +253,19 @@ def test_get_embedding_count(db_session: Session) -> None:
     create_images(db_session=db_session, collection_id=col2_id, images=[ImageStub("sample.png")])
 
     # Create an embedding models
-    embedding_model_1 = create_embedding_model(session=db_session, collection_id=col1_id)
+    embedding_model_1 = create_embedding_model(
+        session=db_session,
+        collection_id=col1_id,
+        embedding_model_name="model_1",
+        embedding_model_hash="hash_1",
+    )
     embedding_model_1_id = embedding_model_1.embedding_model_id
-    embedding_model_2 = create_embedding_model(session=db_session, collection_id=col1_id)
+    embedding_model_2 = create_embedding_model(
+        session=db_session,
+        collection_id=col1_id,
+        embedding_model_name="model_2",
+        embedding_model_hash="hash_2",
+    )
     embedding_model_2_id = embedding_model_2.embedding_model_id
 
     # Create embeddings for col1
