@@ -2,19 +2,18 @@
 
 The write path now keys embedding models by ``name`` (the generator's ``space_key``), and
 the ``unique_embedding_model_name`` constraint on ``(dataset_id, name)`` already enforces
-uniqueness. The previous migration (``f1a2b3c4d5e6``) set ``embedding_model_hash = name`` on
-every row, so the column is redundant. This migration drops the
-``unique_embedding_model_hash`` constraint and then the column.
+uniqueness. Nothing reads ``embedding_model_hash`` anymore, so the column is redundant. This
+migration drops the ``unique_embedding_model_hash`` constraint and then the column.
 
 The downgrade re-adds the column as nullable, backfills it from ``name``, sets it ``NOT NULL``,
-and re-adds the constraint. The original checkpoint file hashes were already overwritten by
-``f1a2b3c4d5e6`` and cannot be reconstructed, so the backfill uses ``name``.
+and re-adds the constraint. The original checkpoint file hashes cannot be reconstructed, so the
+backfill uses ``name``.
 
 DuckDB builds its schema with ``create_all`` and has no backfill step, so this migration only
 matters for tracked Postgres databases.
 
 Revision ID: a2b3c4d5e6f7
-Revises: f1a2b3c4d5e6
+Revises: d117a91bf587
 Create Date: 2026-08-31 10:00:00.000000
 
 """
@@ -28,7 +27,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "a2b3c4d5e6f7"
-down_revision: str | Sequence[str] | None = "f1a2b3c4d5e6"
+down_revision: str | Sequence[str] | None = "d117a91bf587"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
