@@ -8,12 +8,17 @@ from uuid import UUID, uuid4
 from sqlalchemy import UniqueConstraint
 from sqlmodel import VARCHAR, Column, Field, SQLModel
 
+# Maximum length of the `embedding_model_hash` column.
+EMBEDDING_MODEL_HASH_MAX_LENGTH = 128
+
 
 class EmbeddingModelBase(SQLModel):
     """Base class for the EmbeddingModel."""
 
     name: str
-    embedding_model_hash: str = Field(sa_column=Column(VARCHAR(128), nullable=False))
+    embedding_model_hash: str = Field(
+        sa_column=Column(VARCHAR(EMBEDDING_MODEL_HASH_MAX_LENGTH), nullable=False)
+    )
     embedding_dimension: int
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
 

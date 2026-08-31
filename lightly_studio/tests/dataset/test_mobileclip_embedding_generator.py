@@ -17,7 +17,7 @@ class TestMobileCLIPEmbeddingGenerator:
         mobileclip = MobileCLIPEmbeddingGenerator()
         space_spec = mobileclip.embedding_space_spec()
 
-        assert space_spec.space_key == "PE-Core-T16-384"
+        assert space_spec.space_key == "mobileclip_s0"
         assert space_spec.dimension == 512
 
     def test_embed_text(self) -> None:
