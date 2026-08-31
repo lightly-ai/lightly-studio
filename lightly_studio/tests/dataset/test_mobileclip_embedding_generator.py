@@ -7,10 +7,7 @@ import torch
 from PIL import Image
 
 from lightly_studio.dataset.embedding_generator import ImageCrop
-from lightly_studio.dataset.mobileclip_embedding_generator import (
-    MODEL_NAME,
-    MobileCLIPEmbeddingGenerator,
-)
+from lightly_studio.dataset.mobileclip_embedding_generator import MobileCLIPEmbeddingGenerator
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
@@ -20,8 +17,8 @@ class TestMobileCLIPEmbeddingGenerator:
         mobileclip = MobileCLIPEmbeddingGenerator()
         space_spec = mobileclip.embedding_space_spec()
 
+        assert space_spec.space_key == "PE-Core-T16-384"
         assert space_spec.dimension == 512
-        assert space_spec.space_key == MODEL_NAME
 
     def test_embed_text(self) -> None:
         text = "a cat"

@@ -28,8 +28,8 @@ class EmbeddingSpaceSpec:
 
     Two generators that share a ``space_key`` are treated as producing the same
     embedding space, so their vectors are comparable. Change it whenever the produced
-    vectors become incomparable, e.g. for a model version change. Any string,
-    e.g. ``company/model-family@v4``.
+    vectors become incomparable, e.g. for a model version change. Can be any string,
+    e.g. ``your-company/model-family@version``.
     """
 
     dimension: int

@@ -57,7 +57,7 @@ class LoadExistingEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
     def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
         """Describe the embedding space so it can be recorded in the database."""
         return ls.EmbeddingSpaceSpec(
-            space_key="precomputed",
+            space_key="your-company/model-family@version",
             dimension=EMBEDDING_DIMENSION,
         )
 

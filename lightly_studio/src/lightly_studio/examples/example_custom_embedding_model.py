@@ -66,11 +66,12 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
     def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
         """Describe the embedding space so it can be recorded in the database.
 
-        The `space_key` shows up as the model name in the GUI and lets Lightly
-        Studio detect when the same embedding space has been used before.
+        Returns metadata about the embedding space to be stored in the database.
+        The `space_key` field is used to match the same embedding space across
+        multiple LightlyStudio runs.
         """
         return ls.EmbeddingSpaceSpec(
-            space_key="custom_embedding_model",
+            space_key="your-company/model-family@version",
             dimension=EMBEDDING_DIMENSION,
         )
 

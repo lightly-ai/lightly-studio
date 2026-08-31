@@ -108,7 +108,7 @@ Implement these protocol methods based on your needs. The
 [API reference](../api/embeddings.md) gives the full method signatures:
 
 - **`EmbeddingGenerator`** (base):
-    - `embedding_space_spec` to describe the embedding space to the database.
+    - `embedding_space_spec` to describe the embedding space. Embeddings from the same space are comparable.
     - `embed_text` to override the text search model.
 - **`ImageEmbeddingGenerator`**:
     - `embed_images` to override the image embedding model.

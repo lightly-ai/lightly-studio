@@ -105,7 +105,7 @@ def test_register_multiple_models(
     class FakeEmbeddingGenerator(ImageEmbeddingGenerator):
         def embedding_space_spec(self) -> EmbeddingSpaceSpec:
             return EmbeddingSpaceSpec(
-                space_key="fake_hash",
+                space_key="fake_model",
                 dimension=5,
             )
 
@@ -143,7 +143,7 @@ def test_register_multiple_models(
     stored_models = db_session.exec(select(EmbeddingModelTable)).all()
     assert len(stored_models) == 2
     model_names = {model.name for model in stored_models}
-    assert model_names == {"random_model", "fake_hash"}
+    assert model_names == {"random_model", "fake_model"}
     # Verify both models are associated with the same dataset
     assert all(model.dataset_id == collection.dataset_id for model in stored_models)
 
