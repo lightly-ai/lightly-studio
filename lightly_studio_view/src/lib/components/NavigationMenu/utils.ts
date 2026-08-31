@@ -4,13 +4,17 @@ import { routeHelpers } from '$lib/routes';
 import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
 import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
+/**
+ * Builds the nav menu item for a collection, or null if the sample type has no
+ * dedicated view to navigate to (e.g. MCAP, which is locator-only for now).
+ */
 export function getMenuItem(
     datasetId: string,
     currentCollectionId: string | undefined,
     collectionId: string,
     sampleType: SampleType,
     groupComponentName?: string | null
-): NavigationMenuItem {
+): NavigationMenuItem | null {
     const collectionType = sampleType.toLowerCase();
     const isSelected = collectionId === currentCollectionId;
     const elementId = `${collectionType}-${collectionId}`;
@@ -64,6 +68,8 @@ export function getMenuItem(
                 isSelected,
                 icon: LayoutDashboard
             };
+        case SampleType.MCAP:
+            return null;
     }
 }
 
@@ -123,7 +129,7 @@ export function buildBreadcrumbLevels(
     const hasSeveralAnnotationCollections = rootCollection.children
         ? rootCollection.children.filter((c) => c.sample_type === SampleType.ANNOTATION).length > 1
         : false;
-    const toMenuItem = (c: CollectionView): NavigationMenuItem =>
+    const toMenuItem = (c: CollectionView): NavigationMenuItem | null =>
         getMenuItem(
             datasetId,
             currentCollectionId,
@@ -134,13 +140,23 @@ export function buildBreadcrumbLevels(
                 ? c.name
                 : c.group_component_definition?.group_component_name
         );
+    const isNavigationMenuItem = (item: NavigationMenuItem | null): item is NavigationMenuItem =>
+        item !== null;
 
-    return ancestorPath.map((node, index) => {
-        const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
+    return ancestorPath
+        .map((node, index) => {
+            const selected = toMenuItem(node);
+            if (!selected) return null;
 
-        return {
-            selected: toMenuItem(node),
-            siblings: siblings.map((sibling) => toMenuItem(sibling))
-        };
-    });
+            const siblings =
+                index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
+
+            return {
+                selected,
+                siblings: siblings
+                    .map((sibling) => toMenuItem(sibling))
+                    .filter(isNavigationMenuItem)
+            };
+        })
+        .filter((level): level is BreadcrumbLevel => level !== null);
 }
