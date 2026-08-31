@@ -67,10 +67,14 @@ const CODE_LABELS = {
     mysql: 'lightly query language',
 };
 
-// Fill the header bar that `.md-typeset .highlight::before` renders: the
+// Fill the header bar that `.md-typeset div.highlight::before` renders: the
 // `title=` on the fence if there is one, the language otherwise.
+//
+// Fenced blocks only. inlinehilite marks its inline `#!lang` snippets
+// `code.highlight` too, and an inline snippet takes no header strip; the
+// `doc-signature` blocks in the reference hide theirs, so labelling them is wasted.
 function labelCodeBlocks() {
-    document.querySelectorAll('.md-typeset .highlight').forEach(function (block) {
+    document.querySelectorAll('.md-typeset div.highlight:not(.doc-signature)').forEach(function (block) {
         const filename = block.querySelector('span.filename');
         if (filename) {
             block.setAttribute('data-code-label', filename.textContent.trim());

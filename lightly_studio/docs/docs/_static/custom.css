@@ -1396,7 +1396,9 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   display: none;
 }
 
-.md-typeset .highlight::before {
+/* Fenced blocks only. inlinehilite marks its inline `#!lang` snippets
+   `code.highlight` too, and an inline snippet takes no header strip. */
+.md-typeset div.highlight::before {
   background-color: var(--ls-code-head);
   border-bottom: 1px solid var(--ls-code-edge);
   color: var(--ls-code-head-ink);
