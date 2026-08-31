@@ -10,7 +10,7 @@ from sqlmodel import Session, col
 
 from lightly_studio.database import db_vector
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers import default_embedding_space_resolver
+from lightly_studio.resolvers import collection_embedding_model_resolver
 from lightly_studio.type_definitions import QueryType
 
 
@@ -27,7 +27,7 @@ def get_distance_expression(
     if not text_embedding:
         return None, None
 
-    embedding_model_id = default_embedding_space_resolver.get_by_collection_id(
+    embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=session, collection_id=collection_id
     )
 

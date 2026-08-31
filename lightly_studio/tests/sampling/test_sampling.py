@@ -16,6 +16,7 @@ from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
+    MetadataBalancingStrategy,
     MetadataWeightingStrategy,
     SamplingConfig,
 )
@@ -74,6 +75,7 @@ class TestSampling:
             session=dataset.session,
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
+            set_as_default=True,
         )
         for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
@@ -118,6 +120,7 @@ class TestSampling:
             session=dataset.session,
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
+            set_as_default=True,
         )
         for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
@@ -274,6 +277,40 @@ class TestSampling:
                 strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
             ),
             input_sample_ids=expected_sample_ids,
+        )
+
+    def test_metadata_balancing(self, db_session: Session, mocker: MockerFixture) -> None:
+        collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+            session=db_session,
+            metadata=["sunny", "sunny", "rainy"],
+            metadata_key="weather",
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        all_samples = image_resolver.get_all_by_collection_id(
+            session=db_session, pagination=None, collection_id=collection_id
+        ).samples
+        query = DatasetQuery(collection_table, db_session)
+        spy_sampling_via_db = mocker.spy(sampling_file, "sampling_via_database")
+
+        query.sampling().metadata_balancing(
+            n_samples_to_select=2,
+            sampling_result_tag_name="balanced_weather",
+            metadata_key="weather",
+            target_distribution="uniform",
+        )
+
+        spy_sampling_via_db.assert_called_once_with(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=collection_id,
+                n_samples_to_select=2,
+                sampling_result_tag_name="balanced_weather",
+                strategies=[
+                    MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform")
+                ],
+            ),
+            input_sample_ids=[sample.sample_id for sample in all_samples],
         )
 
     def test_metadata_weighting(self, db_session: Session, mocker: MockerFixture) -> None:

@@ -1,23 +1,49 @@
-"""Render the release PR body: draft notes + advisory coverage checklist."""
+"""Render the release PR body: the draft release notes plus a reviewer checklist."""
 
 from __future__ import annotations
 
+# What the workflow already asserted before opening the PR, so the reviewer does
+# not re-check it by hand. Keep in sync with prepare_release.yml.
+_GUARDS = """\
+The workflow already checked that:
 
-def render_pr_body(section_body: str, drafting_skipped_reason: str, coverage_checklist: str) -> str:
-    """Assembles the release PR body: draft notes + advisory coverage checklist.
+- exactly `CHANGELOG.md`, `lightly_studio/pyproject.toml` and `lightly_studio/uv.lock` changed,
+- the `uv.lock` diff is only this version bump,
+- `CHANGELOG.md` keeps an empty `[Unreleased]` skeleton and every earlier release is byte-identical,
+- Labelformat is pinned by version, not by git sha.
 
-    The coverage checklist is git-derived and untrusted display text - it
-    must never be mistaken for reviewed release notes, hence the explicit
-    label and the blank line separating it from the draft notes.
+What is left is editorial, and it is what this review is for."""
+
+_CHECKLIST = """\
+- [ ] The notes read as user-facing release notes: no ticket ids (`LIG 1234`), PR numbers or
+      internal jargon.
+- [ ] Nothing user-visible since the last release is missing.
+- [ ] Every entry is under the right heading, and near-duplicate entries are merged into one.
+- [ ] The version matches the impact of the entries ([semver](https://semver.org)): minor when
+      something notable is added or changed, patch otherwise.
+- [ ] CI is green on this branch."""
+
+
+def render_pr_body(section_body: str, version: str) -> str:
+    """Assembles the release PR body.
+
+    Args:
+        section_body: The CHANGELOG section already promoted for this version.
+        version: The version being released, e.g. "1.0.6".
+
+    Returns:
+        The Markdown body for the release PR.
     """
-    checklist = coverage_checklist.strip() or "_None found._"
     return (
-        "## Draft release notes\n\n"
-        f"> Automated drafting was skipped ({drafting_skipped_reason}). These are the "
-        "mechanically promoted CHANGELOG entries - review and edit before publishing.\n\n"
+        f"Prepares the LightlyStudio {version} release: promotes the `[Unreleased]` changelog "
+        f"section, bumps the version and relocks.\n\n"
+        f"## Release notes for {version}\n\n"
+        f"Edit `CHANGELOG.md` on this branch rather than this description - the changelog is what "
+        f"gets published, this is a copy of it from when the PR was opened.\n\n"
         f"{section_body}\n\n"
-        "## Coverage checklist (advisory only - never copy into the release notes)\n\n"
-        "Merged changes since the last tag with no obviously matching CHANGELOG entry, "
-        "for a human to judge:\n\n"
-        f"{checklist}\n"
+        f"## Review checklist\n\n"
+        f"{_GUARDS}\n\n"
+        f"{_CHECKLIST}\n\n"
+        f"Merging publishes nothing - tagging, the GitHub release, PyPI and the docs are still "
+        f"manual.\n"
     )

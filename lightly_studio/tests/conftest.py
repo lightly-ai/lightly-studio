@@ -236,7 +236,6 @@ def collections(db_session: Session) -> list[CollectionTable]:
 def embedding_model_input(collection: CollectionTable) -> EmbeddingModelCreate:
     """Create an EmbeddingModelCreate instance."""
     return EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         embedding_dimension=3,
         name="test_model",

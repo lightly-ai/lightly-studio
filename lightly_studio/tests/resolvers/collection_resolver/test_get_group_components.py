@@ -35,10 +35,12 @@ def test_get_group_components(db_session: Session) -> None:
 
     assert created_components == components
     assert len(components) == 2
-    assert components["image"].group_component_index == 0
-    assert components["image"].group_component_name == "image"
-    assert components["video"].group_component_index == 1
-    assert components["video"].group_component_name == "video"
+    assert components["image"].group_component_definition is not None
+    assert components["image"].group_component_definition.group_component_index == 0
+    assert components["image"].group_component_definition.group_component_name == "image"
+    assert components["video"].group_component_definition is not None
+    assert components["video"].group_component_definition.group_component_index == 1
+    assert components["video"].group_component_definition.group_component_name == "video"
 
 
 def test_get_group_components__non_existent_parent(db_session: Session) -> None:

@@ -37,8 +37,7 @@ def get_group_components_as_dict(
     )
     # Note: Group components are guaranteed to be unique by name
     collection_id_to_component_name = {
-        collection.collection_id: collection.group_component_name or ""
-        for collection in component_collections.values()
+        collection.collection_id: name for name, collection in component_collections.items()
     }
 
     # Get component samples

@@ -31,6 +31,7 @@ from lightly_studio.models.embedding_model import (
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
     collection_resolver,
     embedding_model_resolver,
     sample_embedding_resolver,
@@ -108,7 +109,6 @@ def test_register_multiple_models(
             return EmbeddingSpaceDescription(
                 name="Fake",
                 embedding_model_hash="fake_hash",
-                parameter_count_in_mb=50,
                 embedding_dimension=5,
             )
 
@@ -147,9 +147,55 @@ def test_register_multiple_models(
     assert len(stored_models) == 2
     model_names = {model.name for model in stored_models}
     assert model_names == {"Random", "Fake"}
-    # Verify both models are associated with the same collection and dataset
-    assert all(model.collection_id == collection.collection_id for model in stored_models)
+    # Verify both models are associated with the same dataset
     assert all(model.dataset_id == collection.dataset_id for model in stored_models)
+
+    # Both models are linked to the collection, not only the default one.
+    linked_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert set(linked_model_ids) == {model_id1, model_id2}
+
+    # The DB default is the model registered with set_as_default=True. The second model,
+    # registered with set_as_default=False, must not override the existing default.
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        == model_id1
+    )
+
+
+def test_register_embedding_model__seeds_default_cache_from_db(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """A fresh manager caches an existing DB default even when set_as_default is False.
+
+    The default lives in the database. A new manager starts with an empty cache, so
+    re-registering a model that is already the collection's default must seed the cache
+    from the database rather than leave it empty.
+    """
+    # A first manager registers the model and makes it the DB default.
+    first_manager = EmbeddingManager()
+    model_id = first_manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=collection.collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    # A fresh manager (empty cache) re-registers the same model without asking for default.
+    second_manager = EmbeddingManager()
+    second_manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=collection.collection_id,
+        set_as_default=False,
+    )
+
+    # The existing DB default is mirrored into the fresh manager's cache.
+    assert second_manager._collection_id_to_default_model_id[collection.collection_id] == model_id
 
 
 def test_embed_text_with_default_model(
@@ -530,8 +576,8 @@ def test_load_or_get_default_model__shares_generator_across_collections(
 ) -> None:
     """An annotation child collection reuses the parent's loaded generator.
 
-    The generator weights are loaded once, but each collection still gets its
-    own embedding-model record and id.
+    The generator weights are loaded once, and both collections resolve to the same
+    embedding-model record because the model is deduplicated per dataset.
     """
     image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     annotation_collection = create_collection(
@@ -560,8 +606,8 @@ def test_load_or_get_default_model__shares_generator_across_collections(
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
     assert manager._models[image_model_id] is manager._models[annotation_model_id]
 
-    # Each collection still owns a distinct embedding-model record.
-    assert image_model_id != annotation_model_id
+    # Both collections share the dataset, so the model is deduplicated to one record.
+    assert image_model_id == annotation_model_id
 
 
 def test_load_or_get_default_model__cant_load(
@@ -704,9 +750,15 @@ def test_default_model(
         collection_id=collection.collection_id,
         set_as_default=False,
     ).embedding_model_id
-    # The first model is always set as default.
+    # The first model is always set as default, both in memory and in the database.
     assert (
         embedding_manager._collection_id_to_default_model_id[collection.collection_id]
+        == first_model_id
+    )
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
         == first_model_id
     )
 

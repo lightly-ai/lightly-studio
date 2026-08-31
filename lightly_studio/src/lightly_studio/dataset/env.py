@@ -35,10 +35,9 @@ LIGHTLY_STUDIO_POSTHOG_KEY: str = env.str(
     "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_LB62TVP2O3S2goH4KASascsXRT14H7zfxHVfo7d2cLV"
 )
 # The EU instance, matching PUBLIC_POSTHOG_HOST in lightly_studio_view/.env. The two packages read
-# their configuration through different systems, so the value is written once on each side.
-LIGHTLY_STUDIO_POSTHOG_HOST: str = env.str(
-    "LIGHTLY_STUDIO_POSTHOG_HOST", "https://eu.i.posthog.com"
-)
+# their configuration through different systems, so the value is written once on each side. Not an
+# environment variable: the key above is the only part worth pointing elsewhere.
+LIGHTLY_STUDIO_POSTHOG_HOST: str = "https://eu.i.posthog.com"
 # Marks this machine as a Lightly dev or staff machine, so internal usage can be filtered out of
 # the product metrics. See lightly_studio/analytics/cohort.py for the alternative marker file,
 # which survives recreating the virtualenv.

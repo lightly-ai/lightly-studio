@@ -177,6 +177,26 @@ def test_video_sort_field_expr__rejects_evaluation_metric_source() -> None:
         )
 
 
+def test_image_and_video_sort_field_exprs_stay_structurally_identical() -> None:
+    # AdjacentSortExpr resolves a ``metadata`` source to ImageSortFieldExpr via left-to-right
+    # (LIG-10605). That is only safe while the two models share identical field definitions: a
+    # drift in ``field_name`` or ``direction`` (a new field, a changed type, an added
+    # constraint) would make the same payload validate differently depending on which model
+    # wins. ``source`` is narrowed per model on purpose, so exclude it. FieldInfo has no value
+    # equality, so compare its repr, which reflects the annotation, default, and metadata.
+    image_fields = {
+        name: repr(field)
+        for name, field in ImageSortFieldExpr.model_fields.items()
+        if name != "source"
+    }
+    video_fields = {
+        name: repr(field)
+        for name, field in VideoSortFieldExpr.model_fields.items()
+        if name != "source"
+    }
+    assert image_fields == video_fields
+
+
 def test_sort_field_expr_to_order_by__image_metadata_ascending() -> None:
     expr = ImageSortFieldExpr(
         source=SortFieldSource.metadata,

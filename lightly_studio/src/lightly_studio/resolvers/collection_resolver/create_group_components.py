@@ -9,6 +9,7 @@ from sqlmodel import Session
 from typing_extensions import TypeAlias
 
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
+from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.resolvers import collection_resolver
 
 # Define a type alias for group component definitions as (component_name, component_type)
@@ -65,10 +66,17 @@ def create_group_components(
             name=f"{parent.name}_comp_{idx}",
             parent_collection_id=parent.collection_id,
             sample_type=component_type,
-            group_component_name=component_name,
-            group_component_index=idx,
         )
         child_table = collection_resolver.create(session=session, collection=child_create)
+        session.add(
+            GroupComponentDefinitionTable(
+                collection_id=child_table.collection_id,
+                group_component_name=component_name,
+                group_component_index=idx,
+            )
+        )
         children[component_name] = child_table
+
+    session.commit()
 
     return children

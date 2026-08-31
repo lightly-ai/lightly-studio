@@ -158,11 +158,11 @@ describe('buildBreadcrumbLevels', () => {
     it('uses annotation name when root has multiple annotation collections', () => {
         const ann1 = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
             name: 'ground_truth',
-            group_component_name: 'gc-1'
+            group_component_definition: { group_component_name: 'gc-1', group_component_index: 0 }
         });
         const ann2 = makeCollection('ann-2', SampleType.ANNOTATION, undefined, {
             name: 'predictions',
-            group_component_name: 'gc-2'
+            group_component_definition: { group_component_name: 'gc-2', group_component_index: 1 }
         });
         const root = makeCollection('root', SampleType.IMAGE, [ann1, ann2]);
 
@@ -178,7 +178,7 @@ describe('buildBreadcrumbLevels', () => {
     it('uses group_component_name when root has a single annotation collection', () => {
         const ann = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
             name: 'ground_truth',
-            group_component_name: 'gc-1'
+            group_component_definition: { group_component_name: 'gc-1', group_component_index: 0 }
         });
         const root = makeCollection('root', SampleType.IMAGE, [ann]);
 
@@ -201,15 +201,18 @@ describe('buildBreadcrumbLevels', () => {
     it('keeps group_component_name for non-annotation siblings when multiple annotations exist', () => {
         const img = makeCollection('img-1', SampleType.IMAGE, undefined, {
             name: 'img-name',
-            group_component_name: 'Pictures'
+            group_component_definition: {
+                group_component_name: 'Pictures',
+                group_component_index: 0
+            }
         });
         const ann1 = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
             name: 'ground_truth',
-            group_component_name: 'gc-1'
+            group_component_definition: { group_component_name: 'gc-1', group_component_index: 1 }
         });
         const ann2 = makeCollection('ann-2', SampleType.ANNOTATION, undefined, {
             name: 'predictions',
-            group_component_name: 'gc-2'
+            group_component_definition: { group_component_name: 'gc-2', group_component_index: 2 }
         });
         const root = makeCollection('root', SampleType.GROUP, [img, ann1, ann2]);
 

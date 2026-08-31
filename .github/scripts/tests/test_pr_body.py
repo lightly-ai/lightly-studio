@@ -2,22 +2,17 @@ from prepare_release import pr_body
 
 
 def test_render_pr_body():
-    body = pr_body.render_pr_body(
-        section_body="### Added\n\n- Added thing one.",
-        drafting_skipped_reason="automated drafting is not wired in yet",
-        coverage_checklist="- abc123 Some PR title (#42)",
-    )
-    assert "Draft release notes" in body
-    assert "automated drafting is not wired in yet" in body
+    body = pr_body.render_pr_body(section_body="### Added\n\n- Added thing one.", version="1.0.6")
+    assert "Release notes for 1.0.6" in body
     assert "Added thing one" in body
-    assert "Coverage checklist" in body
-    assert "#42" in body
 
 
-def test_render_pr_body__empty_checklist_shows_placeholder():
-    body = pr_body.render_pr_body(
-        section_body="### Fixed\n\n- A fix.",
-        drafting_skipped_reason="reason",
-        coverage_checklist="",
-    )
-    assert "_None found._" in body
+def test_render_pr_body__review_checklist():
+    body = pr_body.render_pr_body(section_body="### Added\n\n- Added thing one.", version="1.0.6")
+    assert "## Review checklist" in body
+    assert body.count("- [ ] ") == 5
+
+
+def test_render_pr_body__says_merging_publishes_nothing():
+    body = pr_body.render_pr_body(section_body="### Added\n\n- Added thing one.", version="1.0.6")
+    assert "Merging publishes nothing" in body

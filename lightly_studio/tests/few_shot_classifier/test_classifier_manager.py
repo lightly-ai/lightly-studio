@@ -30,8 +30,8 @@ from lightly_studio.models.sample_embedding import (
 )
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
-    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -56,8 +56,8 @@ class TestClassifierManager:
         """Test creating a new classifier."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -84,8 +84,8 @@ class TestClassifierManager:
         """create_classifier raises when the collection has no default embedding model."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=None,
         )
         get_by_id = mocker.patch.object(embedding_model_resolver, "get_by_id")
@@ -109,8 +109,8 @@ class TestClassifierManager:
         """Test creating a new classifier."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -176,8 +176,8 @@ class TestClassifierManager:
         """Test creating a new classifier."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -231,8 +231,8 @@ class TestClassifierManager:
         """Test dropping a classifier in the finetuning step."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -369,8 +369,8 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         # Setup: Create a classifier first
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -432,8 +432,8 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         # Setup: Create a classifier with initial samples
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -549,8 +549,8 @@ class TestClassifierManager:
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -632,8 +632,8 @@ class TestClassifierManager:
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -721,8 +721,8 @@ class TestClassifierManager:
         """Test creating a new classifier."""
         classifier_manager = ClassifierManager()
         mocker.patch.object(
-            default_embedding_space_resolver,
-            "get_by_collection_id",
+            collection_embedding_model_resolver,
+            "get_default_by_collection_id",
             return_value=uuid4(),
         )
         mocker.patch.object(
@@ -966,37 +966,23 @@ class TestClassifierManager:
             )
 
 
-def test_get_embedding_model_by_hash__prefers_default(db_session: Session) -> None:
-    # A child collection shares its parent's dataset, so both can hold a row for the same
-    # hash while the write path deduplicates per collection. Sample embeddings are keyed to
-    # the collection's own row, so the lookup must return that row and not the oldest one in
-    # the dataset.
+def test_get_embedding_model_by_hash__resolves_within_dataset(db_session: Session) -> None:
+    # A child collection shares its parent's dataset, so a model registered under the parent
+    # resolves by hash when the lookup starts from the child collection.
     parent = create_collection(session=db_session, collection_name="parent")
     child = create_collection(
         session=db_session, collection_name="child", parent_collection_id=parent.collection_id
     )
     assert child.dataset_id == parent.dataset_id
-    # The parent's row is created first, so it is the oldest in the dataset.
-    create_embedding_model(
+    model = create_embedding_model(
         session=db_session,
         collection_id=parent.collection_id,
-        embedding_model_name="model_in_parent",
-        embedding_model_hash="same_hash",
-    )
-    child_model = create_embedding_model(
-        session=db_session,
-        collection_id=child.collection_id,
-        embedding_model_name="model_in_child",
-        embedding_model_hash="same_hash",
-    )
-    default_embedding_space_resolver.set_default(
-        session=db_session,
-        collection_id=child.collection_id,
-        embedding_model_id=child_model.embedding_model_id,
+        embedding_model_name="model",
+        embedding_model_hash="some_hash",
     )
 
     result = classifier_manager_module._get_embedding_model_by_hash(
-        session=db_session, embedding_model_hash="same_hash", collection_id=child.collection_id
+        session=db_session, embedding_model_hash="some_hash", collection_id=child.collection_id
     )
     assert result is not None
-    assert result.embedding_model_id == child_model.embedding_model_id
+    assert result.embedding_model_id == model.embedding_model_id

@@ -36,14 +36,17 @@ from lightly_studio.models.annotation_collection_coverage import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
+from lightly_studio.models.group_component_definition import (
+    GroupComponentDefinitionTable,
+)
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
@@ -121,11 +124,13 @@ def delete_dataset(
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
     # Must precede embedding_model and collections (FKs to both, deleted below and in step 6).
-    _delete_default_embedding_spaces(session=session, dataset_id=dataset_id)
+    _delete_collection_embedding_models(session=session, dataset_id=dataset_id)
     _delete_embedding_models(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
     _delete_export_jobs(session=session, dataset_id=dataset_id)
+    # Must precede collections (FK to collection, deleted in step 6).
+    _delete_group_component_definitions(session=session, dataset_id=dataset_id)
 
     # 6. Collections (single statement; self-FK satisfied at statement end).
     _delete_collections(session=session, dataset_id=dataset_id)
@@ -320,11 +325,25 @@ def _delete_tags(session: Session, dataset_id: UUID) -> None:
     )
 
 
-def _delete_default_embedding_spaces(session: Session, dataset_id: UUID) -> None:
-    """Delete default embedding spaces for the dataset's collections."""
+def _delete_collection_embedding_models(session: Session, dataset_id: UUID) -> None:
+    """Delete all embedding-model links for the dataset's collections."""
     session.exec(
-        delete(DefaultEmbeddingSpaceTable).where(
-            col(DefaultEmbeddingSpaceTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        delete(CollectionEmbeddingModelTable).where(
+            col(CollectionEmbeddingModelTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_group_component_definitions(session: Session, dataset_id: UUID) -> None:
+    """Delete group component definitions for the dataset's collections."""
+    session.exec(
+        delete(GroupComponentDefinitionTable).where(
+            col(GroupComponentDefinitionTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
