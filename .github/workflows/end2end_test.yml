@@ -19,10 +19,8 @@ env:
   E2E_BASE_URL: http://localhost:8001
 
 jobs:
-  # Drives the skipping: every matrix job below looks up
-  # `e2e-success-<name>-<file-hash>` and skips all of its steps on a hit. So the
-  # hash must cover every input the run depends on - miss one, and a commit that
-  # changes it reports green without running the tests.
+  # Matrix jobs skip every step when `e2e-success-<name>-<file-hash>` is cached,
+  # so the hash has to cover every input the run depends on.
   prepare-caches:
     name: Build Cache and Skip Steps
     runs-on: ubuntu-latest
