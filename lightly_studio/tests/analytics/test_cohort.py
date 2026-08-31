@@ -40,7 +40,8 @@ def test_get_cohort(
     marker_path = tmp_path / "internal"
     if marked:
         marker_path.touch()
-    monkeypatch.setenv(cohort._CI_ENV_VAR, ci)
+    monkeypatch.setenv("CI", ci)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     mocker.patch.object(cohort, "LIGHTLY_STUDIO_INTERNAL", internal_env)
     mocker.patch.object(cohort, "_is_source_build", return_value=is_source_build)
 
@@ -74,32 +75,40 @@ def test_is_source_build__without_the_package_installed(mocker: MockerFixture) -
     assert cohort._is_source_build()
 
 
+# Values are (CI, GITHUB_ACTIONS), None for a variable left unset.
 @pytest.mark.parametrize(
-    ("value", "expected"),
+    ("values", "expected"),
     [
-        ("1", True),
-        ("true", True),
-        ("TRUE", True),
-        (" yes ", True),
+        (("1", None), True),
+        (("true", None), True),
+        (("TRUE", None), True),
+        ((" yes ", None), True),
         # Providers that name themselves rather than spelling out a boolean.
-        ("drone", True),
-        ("woodpecker", True),
+        (("drone", None), True),
+        (("woodpecker", None), True),
+        # A workflow that switches CI off for a JS tool is still an automated build.
+        (("false", "true"), True),
+        ((None, "true"), True),
         # Values a tool or a developer sets to switch the variable off.
-        ("0", False),
-        ("false", False),
-        ("FALSE", False),
-        ("no", False),
-        ("off", False),
-        ("n", False),
-        ("", False),
-        ("   ", False),
-        (None, False),
+        (("0", None), False),
+        (("false", None), False),
+        (("FALSE", None), False),
+        (("no", None), False),
+        (("off", None), False),
+        (("n", None), False),
+        (("", None), False),
+        (("   ", None), False),
+        ((None, None), False),
+        (("false", "false"), False),
     ],
 )
-def test_is_ci(monkeypatch: pytest.MonkeyPatch, value: str | None, expected: bool) -> None:
-    if value is None:
-        monkeypatch.delenv(cohort._CI_ENV_VAR, raising=False)
-    else:
-        monkeypatch.setenv(cohort._CI_ENV_VAR, value)
+def test_is_ci(
+    monkeypatch: pytest.MonkeyPatch, values: tuple[str | None, str | None], expected: bool
+) -> None:
+    for name, value in zip(cohort._CI_ENV_VARS, values):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
 
     assert cohort._is_ci() == expected

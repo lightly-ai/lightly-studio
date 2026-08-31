@@ -22,11 +22,12 @@ from lightly_studio.dataset.env import (
 # container or a new laptop.
 INTERNAL_MARKER_PATH: Path = LIGHTLY_STUDIO_MODEL_CACHE_DIR / "internal"
 
-# Set by every CI provider we run on, GitHub Actions included. A build matrix otherwise looks like
-# one very active user.
-_CI_ENV_VAR = "CI"
+# Set by every CI provider we run on. A build matrix otherwise looks like one very active user.
+# GitHub Actions sets both, and is worth checking separately because a workflow that sets
+# `CI=false` for a JS tool is still not a person.
+_CI_ENV_VARS = ("CI", "GITHUB_ACTIONS")
 
-# Values of the CI variable that read as not CI. `CI=false` and `CI=0` mean the opposite of what a
+# Values of those variables that read as not CI. `CI=false` and `CI=0` mean the opposite of what a
 # non-empty check reads them as. Anything else counts as CI, because providers put their own name
 # in the variable, `CI=drone` among them.
 _FALSE_VALUES = frozenset({"", "0", "false", "no", "off", "f", "n"})
@@ -93,5 +94,7 @@ def _is_source_build() -> bool:
 
 
 def _is_ci() -> bool:
-    """Whether an automated build is running, per the variable every provider we run on sets."""
-    return os.environ.get(_CI_ENV_VAR, "").strip().lower() not in _FALSE_VALUES
+    """Whether an automated build is running, per the variables CI providers set."""
+    return any(
+        os.environ.get(name, "").strip().lower() not in _FALSE_VALUES for name in _CI_ENV_VARS
+    )
