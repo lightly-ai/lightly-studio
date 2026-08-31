@@ -11,6 +11,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
+from lightly_studio.database import db_manager
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingSpaceSpec,
@@ -25,7 +26,7 @@ from lightly_studio.dataset.embedding_manager import (
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
@@ -38,9 +39,71 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
     create_image,
 )
 from tests.resolvers.video.helpers import VideoStub, create_videos
+
+
+def test_set_default_embedding_space(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """A single call links an unlinked model to the collection and makes it default."""
+    session = db_manager.persistent_session()
+    collection = create_collection(session=session)
+    model = embedding_model_resolver.get_or_create(
+        session=session,
+        embedding_model=EmbeddingModelCreate(
+            dataset_id=collection.dataset_id,
+            name="unlinked_model",
+            embedding_dimension=4,
+        ),
+    )
+
+    embedding_manager.set_default_embedding_space(
+        collection_id=collection.collection_id,
+        embedding_model_id=model.embedding_model_id,
+    )
+
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=session, collection_id=collection.collection_id
+        )
+        == model.embedding_model_id
+    )
+
+
+def test_set_default_embedding_space__replaces_existing_default(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Setting a new default clears the old one, even if both models are already linked."""
+    session = db_manager.persistent_session()
+    collection = create_collection(session=session)
+    first_model = create_embedding_model(
+        session=session,
+        collection_id=collection.collection_id,
+        embedding_model_name="first_model",
+        set_as_default=True,
+    )
+    second_model = create_embedding_model(
+        session=session,
+        collection_id=collection.collection_id,
+        embedding_model_name="second_model",
+        set_as_default=False,
+    )
+
+    embedding_manager.set_default_embedding_space(
+        collection_id=collection.collection_id,
+        embedding_model_id=second_model.embedding_model_id,
+    )
+
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=session, collection_id=collection.collection_id
+        )
+        == second_model.embedding_model_id
+        != first_model.embedding_model_id
+    )
 
 
 def test_register_embedding_model(

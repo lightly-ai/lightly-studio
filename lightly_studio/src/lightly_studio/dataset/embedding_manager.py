@@ -12,6 +12,7 @@ from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.database import db_manager
 from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
@@ -87,6 +88,26 @@ def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None
     """
     EmbeddingManagerProvider.get_embedding_manager().set_default_embedding_model(
         embedding_generator=embedding_generator
+    )
+
+
+def set_default_embedding_space(collection_id: UUID, embedding_model_id: UUID) -> None:
+    """Explicitly set a collection's default embedding space.
+
+    Links the embedding model to the collection if it isn't already, then flags it as
+    the collection's default. Both steps commit internally, so call this after all
+    other pending writes on the session, typically as the last step of an import flow.
+
+    Args:
+        collection_id: The collection whose default embedding model is set.
+        embedding_model_id: The embedding model to make the default.
+    """
+    session = db_manager.persistent_session()
+    collection_embedding_model_resolver.get_or_add_collection_model(
+        session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+    )
+    collection_embedding_model_resolver.set_default(
+        session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
     )
 
 

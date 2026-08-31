@@ -27,7 +27,10 @@ from lightly_studio.dataset.embedding_generator import (
     ImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
 )
-from lightly_studio.dataset.embedding_manager import set_default_embedding_model
+from lightly_studio.dataset.embedding_manager import (
+    set_default_embedding_model,
+    set_default_embedding_space,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.enterprise import connect
 from lightly_studio.core.lightly_train_helpers.generate_train_script import lt_train_script
@@ -54,6 +57,7 @@ __all__ = [
     "connect",
     "lt_train_script",
     "set_default_embedding_model",
+    "set_default_embedding_space",
     "start_gui",
     "start_gui_background",
     "stop_gui_background",
