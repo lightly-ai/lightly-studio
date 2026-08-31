@@ -5,7 +5,7 @@ Adds the ``mcap`` locator table (1:1 with ``sample``) and the ``MCAP`` value on 
 time), not payload bytes.
 
 Revision ID: af51a31f2cd3
-Revises: e5f6a7b8c9d0
+Revises: d1e2f3a4b5c6
 Create Date: 2026-08-28 16:48:57.097750
 
 """
@@ -19,7 +19,7 @@ from alembic_postgresql_enum import TableReference
 
 # revision identifiers, used by Alembic.
 revision: str = "af51a31f2cd3"
-down_revision: Union[str, Sequence[str], None] = "e5f6a7b8c9d0"
+down_revision: Union[str, Sequence[str], None] = "d1e2f3a4b5c6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
