@@ -168,10 +168,8 @@ class EmbeddingManager:
         model_description = embedding_generator.get_embedding_model_input()
         model_create = EmbeddingModelCreate(
             name=model_description.name,
-            parameter_count_in_mb=model_description.parameter_count_in_mb,
             embedding_model_hash=model_description.embedding_model_hash,
             embedding_dimension=model_description.embedding_dimension,
-            collection_id=collection_id,
             dataset_id=collection.dataset_id,
         )
         db_model = embedding_model_resolver.get_or_create(

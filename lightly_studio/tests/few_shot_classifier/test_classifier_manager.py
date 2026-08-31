@@ -966,33 +966,23 @@ class TestClassifierManager:
             )
 
 
-def test_get_embedding_model_by_hash__prefers_default(db_session: Session) -> None:
-    # A child collection shares its parent's dataset, so both can hold a row for the same
-    # hash while the write path deduplicates per collection. Sample embeddings are keyed to
-    # the collection's own row, so the lookup must return that row and not the oldest one in
-    # the dataset.
+def test_get_embedding_model_by_hash__resolves_within_dataset(db_session: Session) -> None:
+    # A child collection shares its parent's dataset, so a model registered under the parent
+    # resolves by hash when the lookup starts from the child collection.
     parent = create_collection(session=db_session, collection_name="parent")
     child = create_collection(
         session=db_session, collection_name="child", parent_collection_id=parent.collection_id
     )
     assert child.dataset_id == parent.dataset_id
-    # The parent's row is created first, so it is the oldest in the dataset.
-    create_embedding_model(
+    model = create_embedding_model(
         session=db_session,
         collection_id=parent.collection_id,
-        embedding_model_name="model_in_parent",
-        embedding_model_hash="same_hash",
-    )
-    child_model = create_embedding_model(
-        session=db_session,
-        collection_id=child.collection_id,
-        embedding_model_name="model_in_child",
-        embedding_model_hash="same_hash",
-        set_as_default=True,
+        embedding_model_name="model",
+        embedding_model_hash="some_hash",
     )
 
     result = classifier_manager_module._get_embedding_model_by_hash(
-        session=db_session, embedding_model_hash="same_hash", collection_id=child.collection_id
+        session=db_session, embedding_model_hash="some_hash", collection_id=child.collection_id
     )
     assert result is not None
-    assert result.embedding_model_id == child_model.embedding_model_id
+    assert result.embedding_model_id == model.embedding_model_id

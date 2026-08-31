@@ -444,16 +444,12 @@ def _copy_annotation_labels(session: Session, new_dataset_id: UUID) -> None:
 
 
 def _copy_embedding_models(session: Session, new_dataset_id: UUID, now: datetime) -> None:
-    """Copy embedding models, remapping collection_id and dataset_id."""
+    """Copy embedding models, remapping the id and dataset_id."""
     src = _table(EmbeddingModelTable).alias("src")
     map_model = _map(_MAP_EMBEDDING_MODEL)
-    map_collection = _map(_MAP_COLLECTION)
-    from_clause = src.join(map_model, map_model.c.old_id == src.c["embedding_model_id"]).join(
-        map_collection, map_collection.c.old_id == src.c["collection_id"]
-    )
+    from_clause = src.join(map_model, map_model.c.old_id == src.c["embedding_model_id"])
     overrides = {
         "embedding_model_id": map_model.c.new_id,
-        "collection_id": map_collection.c.new_id,
         "dataset_id": literal(new_dataset_id),
         "created_at": literal(now),
     }
