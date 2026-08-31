@@ -6,11 +6,9 @@ locator fields; no payload bytes, file path, or topic are stored here.
 """
 
 from datetime import datetime, timezone
-from enum import Enum
 from typing import Optional
 from uuid import UUID
 
-from pydantic import model_validator
 from sqlalchemy import BigInteger
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
@@ -19,20 +17,8 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable, SampleView
 
 
-class McapDataType(str, Enum):
-    """Canonical discriminant for the MCAP payload behind a locator row."""
-
-    IMAGE = "image"
-    """foxglove CompressedVideo / camera."""
-    POINT_CLOUD = "point_cloud"
-    """PointCloud2 / lidar."""
-
-
 class McapBase(SQLModel):
     """Base class for the Mcap model."""
-
-    """The MCAP data type (camera vs. lidar) of the referenced channel."""
-    mcap_data_type: McapDataType
 
     """The MCAP channel id, unique within the source bag."""
     channel_id: int
@@ -43,29 +29,15 @@ class McapBase(SQLModel):
     """The sensor/header capture timestamp, in nanoseconds. Used for cross-channel sync."""
     capture_timestamp_ns: int = Field(sa_type=BigInteger)
 
-    """GOP seek time for keyframe-aligned decoding. Required when `mcap_data_type` is IMAGE."""
+    """GOP seek time for keyframe-aligned decoding. Required for camera channels."""
     keyframe_log_time_ns: Optional[int] = Field(default=None, sa_type=BigInteger)
 
-    """Optional point count. Only meaningful when `mcap_data_type` is POINT_CLOUD."""
+    """Optional point count. Only meaningful for lidar channels."""
     point_count: Optional[int] = Field(default=None)
 
 
 class McapCreate(McapBase):
     """Mcap class when inserting."""
-
-    @model_validator(mode="after")
-    def _validate_data_type_fields(self) -> "McapCreate":  # noqa: N804
-        if self.mcap_data_type == McapDataType.IMAGE:
-            if self.keyframe_log_time_ns is None:
-                raise ValueError("keyframe_log_time_ns is required when mcap_data_type is IMAGE")
-            if self.point_count is not None:
-                raise ValueError("point_count must be None when mcap_data_type is IMAGE")
-        elif self.mcap_data_type == McapDataType.POINT_CLOUD:
-            if self.keyframe_log_time_ns is not None:
-                raise ValueError(
-                    "keyframe_log_time_ns must be None when mcap_data_type is POINT_CLOUD"
-                )
-        return self
 
 
 class McapTable(McapBase, table=True):
@@ -85,7 +57,6 @@ class McapView(SQLModel):
 
     type: SampleType = SampleType.MCAP
     sample_id: UUID
-    mcap_data_type: McapDataType
     channel_id: int
     log_time_ns: int
     capture_timestamp_ns: int
@@ -103,7 +74,6 @@ class McapView(SQLModel):
         """
         return cls(
             sample_id=mcap.sample_id,
-            mcap_data_type=mcap.mcap_data_type,
             channel_id=mcap.channel_id,
             log_time_ns=mcap.log_time_ns,
             capture_timestamp_ns=mcap.capture_timestamp_ns,
