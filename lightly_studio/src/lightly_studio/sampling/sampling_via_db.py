@@ -401,6 +401,66 @@ def _get_annotations_for_class_balancing(
     return annotations
 
 
+def _fetch_crop_embeddings(
+    session: Session,
+    collection_to_crop_ids: Mapping[UUID, list[UUID]],
+    embedding_model_name: str,
+) -> dict[UUID, Embedding]:
+    """Fetch crop embeddings from every annotation collection and validate dimensions.
+
+    We call ``sample_embedding_resolver`` directly (rather than the
+    ``sampling_helpers`` wrapper) so each returned row carries its
+    ``sample_id``.  Building the dict from ``row.sample_id`` avoids the
+    positional misalignment that ``zip(crop_ids, embeddings)`` would introduce
+    when any crop lacks an embedding row (the resolver drops those rows,
+    shifting all later embeddings onto the wrong IDs).
+
+    Args:
+        session: The database session.
+        collection_to_crop_ids: Mapping from annotation collection ID to the
+            crop sample IDs that belong to it.
+        embedding_model_name: Name of the embedding model to look up in each
+            collection.
+
+    Returns:
+        A mapping from crop sample ID to its embedding vector.
+
+    Raises:
+        ValueError: If embeddings from different collections have different
+            dimensionalities.
+    """
+    crop_id_to_embedding: dict[UUID, Embedding] = {}
+    expected_dim: int | None = None
+    expected_dim_coll_id: UUID | None = None
+    for coll_id, crop_ids in collection_to_crop_ids.items():
+        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
+            session=session,
+            collection_id=coll_id,
+            embedding_model_name=embedding_model_name,
+        )
+        rows = sample_embedding_resolver.get_by_sample_ids(
+            session=session,
+            sample_ids=crop_ids,
+            embedding_model_id=embedding_model_id,
+        )
+        if rows:
+            dim = len(rows[0].embedding)
+            if expected_dim is None:
+                expected_dim = dim
+                expected_dim_coll_id = coll_id
+            elif dim != expected_dim:
+                raise ValueError(
+                    f"Subpart embeddings have inconsistent dimensions across "
+                    f"annotation collections: collection {expected_dim_coll_id} "
+                    f"has dimension {expected_dim}, but collection {coll_id} has "
+                    f"dimension {dim} (embedding model: "
+                    f"'{embedding_model_name}')."
+                )
+        for row in rows:
+            crop_id_to_embedding[row.sample_id] = row.embedding
+    return crop_id_to_embedding
+
+
 def _get_subpart_embeddings(
     session: Session,
     strat: SubpartDiversityStrategy,
@@ -445,26 +505,11 @@ def _get_subpart_embeddings(
         parent_to_crop_ids[annotation.parent_sample_id].append(annotation.sample_id)
         collection_to_crop_ids[annotation.annotation_collection_id].append(annotation.sample_id)
 
-    # Fetch embeddings. When annotation_source_id is set all crops belong to a
-    # single collection, so we can skip the per-collection iteration.
-    # We call sample_embedding_resolver directly (rather than the sampling_helpers
-    # wrapper) so each returned row carries its sample_id. Building the dict from
-    # row.sample_id avoids the positional misalignment that zip(crop_ids, embeddings)
-    # would introduce when any crop lacks an embedding row (the resolver drops those
-    # rows, shifting all later embeddings onto the wrong IDs).
-    crop_id_to_embedding: dict[UUID, Embedding] = {}
-    for coll_id, crop_ids in collection_to_crop_ids.items():
-        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
-            session=session,
-            collection_id=coll_id,
-            embedding_model_name=strat.embedding_model_name,
-        )
-        rows = sample_embedding_resolver.get_by_sample_ids(
-            session=session,
-            sample_ids=crop_ids,
-            embedding_model_id=embedding_model_id,
-        )
-        crop_id_to_embedding.update({row.sample_id: row.embedding for row in rows})
+    crop_id_to_embedding = _fetch_crop_embeddings(
+        session=session,
+        collection_to_crop_ids=collection_to_crop_ids,
+        embedding_model_name=strat.embedding_model_name,
+    )
 
     # Build the result aligned to input_sample_ids order. Samples that have
     # no annotations or no embeddings produce an empty inner list.

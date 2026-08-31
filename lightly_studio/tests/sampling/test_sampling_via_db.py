@@ -1752,6 +1752,100 @@ def test_get_subpart_embeddings__middle_crop_unembedded(
     np.testing.assert_array_equal(result[2][0], emb_c)
 
 
+def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
+    db_session: Session,
+) -> None:
+    """Raises ValueError when annotation collections have different embedding dimensions."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+        ],
+    )
+
+    # p0 gets an annotation in collection_a (2-D embeddings).
+    annotations_a = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+        collection_name="coll_a",
+    )
+    coll_a_id = annotations_a[0].annotation_collection_id
+    model_a = create_embedding_model(
+        session=db_session,
+        collection_id=coll_a_id,
+        embedding_model_name="crop_model",
+        embedding_model_hash="hash_a",
+        embedding_dimension=2,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations_a[0].sample_id,
+        embedding_model_id=model_a.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+
+    # p1 gets an annotation in collection_b (3-D embeddings).
+    annotations_b = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+        collection_name="coll_b",
+    )
+    coll_b_id = annotations_b[0].annotation_collection_id
+    model_b = create_embedding_model(
+        session=db_session,
+        collection_id=coll_b_id,
+        embedding_model_name="crop_model",
+        embedding_model_hash="hash_b",
+        embedding_dimension=3,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations_b[0].sample_id,
+        embedding_model_id=model_b.embedding_model_id,
+        embedding=[1.0, 0.0, 0.0],
+    )
+
+    strat = SubpartDiversityStrategy(
+        embedding_model_name="crop_model",
+    )
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Subpart embeddings have inconsistent dimensions across "
+            r"annotation collections: collection "
+            + re.escape(str(coll_a_id))
+            + r" has dimension 2, but collection "
+            + re.escape(str(coll_b_id))
+            + r" has dimension 3 \(embedding model: 'crop_model'\)\."
+        ),
+    ):
+        _get_subpart_embeddings(
+            session=db_session,
+            strat=strat,
+            input_sample_ids=[img.sample_id for img in parent_images],
+        )
+
+
 def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
     """Return all sample ids for the collection ordered as returned by resolver."""
     samples = image_resolver.get_all_by_collection_id(
