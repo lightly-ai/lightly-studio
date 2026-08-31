@@ -39,84 +39,6 @@ def test_read_embedding_model(db_session: Session) -> None:
     assert embedding_model_from_resolver.name == embedding_model.name
 
 
-def test_get_by_model_hash_deprecated(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    embedding_model_1 = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_1",
-        embedding_model_hash="hash_1",
-    )
-    create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_name="embedding_model_2",
-        embedding_model_hash="hash_2",
-    )
-
-    embedding_model = embedding_model_resolver.get_by_model_hash_deprecated(
-        session=db_session, embedding_model_hash="hash_1", collection_id=collection_id
-    )
-    assert embedding_model is not None
-    assert embedding_model.name == embedding_model_1.name
-
-    embedding_model = embedding_model_resolver.get_by_model_hash_deprecated(
-        session=db_session, embedding_model_hash="hash_3", collection_id=collection_id
-    )
-    assert embedding_model is None
-
-
-def test_get_by_model_hash_deprecated__with_collection_id(db_session: Session) -> None:
-    collection_1 = create_collection(session=db_session, collection_name="collection_1")
-    collection_2 = create_collection(session=db_session, collection_name="collection_2")
-
-    # Create models with same hash in different collections
-    model_1 = create_embedding_model(
-        session=db_session,
-        collection_id=collection_1.collection_id,
-        embedding_model_name="model_in_collection_1",
-        embedding_model_hash="same_hash",
-    )
-    model_2 = create_embedding_model(
-        session=db_session,
-        collection_id=collection_2.collection_id,
-        embedding_model_name="model_in_collection_2",
-        embedding_model_hash="same_hash",
-    )
-
-    # With collection_id, returns the correct model
-    result = embedding_model_resolver.get_by_model_hash_deprecated(
-        session=db_session,
-        embedding_model_hash="same_hash",
-        collection_id=collection_1.collection_id,
-    )
-    assert result is not None
-    assert result.embedding_model_id == model_1.embedding_model_id
-    assert result.embedding_model_hash == "same_hash"
-    assert result.collection_id == collection_1.collection_id
-
-    result = embedding_model_resolver.get_by_model_hash_deprecated(
-        session=db_session,
-        embedding_model_hash="same_hash",
-        collection_id=collection_2.collection_id,
-    )
-    assert result is not None
-    assert result.embedding_model_id == model_2.embedding_model_id
-    assert result.embedding_model_hash == "same_hash"
-    assert result.collection_id == collection_2.collection_id
-
-    # With non-matching collection_id, returns None
-    collection_3 = create_collection(session=db_session, collection_name="collection_3")
-    result_3 = embedding_model_resolver.get_by_model_hash_deprecated(
-        session=db_session,
-        embedding_model_hash="same_hash",
-        collection_id=collection_3.collection_id,
-    )
-    assert result_3 is None
-
-
 def test_get_by_model_hash(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
@@ -199,11 +121,9 @@ def test_get_or_create__creates_new_model(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 
     model_create = EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         name="Model Name",
         embedding_model_hash="model_hash",
-        parameter_count_in_mb=200,
         embedding_dimension=768,
     )
     created = embedding_model_resolver.get_or_create(
@@ -212,9 +132,8 @@ def test_get_or_create__creates_new_model(db_session: Session) -> None:
 
     assert created.embedding_model_hash == "model_hash"
     assert created.name == "Model Name"
-    assert created.parameter_count_in_mb == 200
     assert created.embedding_dimension == 768
-    assert created.collection_id == collection.collection_id
+    assert created.dataset_id == collection.dataset_id
 
 
 def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
@@ -225,16 +144,13 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
         collection_id=collection.collection_id,
         embedding_model_name="Model Name",
         embedding_model_hash="model_hash",
-        parameter_count_in_mb=10,
         embedding_dimension=32,
     )
 
     model_create = EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         name="Model Name",
         embedding_model_hash="model_hash",
-        parameter_count_in_mb=10,
         embedding_dimension=32,
     )
 
@@ -257,16 +173,13 @@ def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
         collection_id=collection.collection_id,
         embedding_model_name="Model Name",
         embedding_model_hash="model_hash",
-        parameter_count_in_mb=10,
         embedding_dimension=32,
     )
 
     conflicting_model_create = EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         name="Model Name",
         embedding_model_hash="model_hash",
-        parameter_count_in_mb=2000,
         embedding_dimension=64,
     )
 
@@ -279,16 +192,15 @@ def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
         )
 
 
-def test_get_or_create__same_hash_different_collections(db_session: Session) -> None:
+def test_get_or_create__same_hash_different_datasets(db_session: Session) -> None:
+    # Root collections each get their own dataset, so these models live in different datasets.
     collection_1 = create_collection(session=db_session, collection_name="collection_1")
     collection_2 = create_collection(session=db_session, collection_name="collection_2")
 
     model_create_1 = EmbeddingModelCreate(
-        collection_id=collection_1.collection_id,
         dataset_id=collection_1.dataset_id,
         name="Test Model",
         embedding_model_hash="same_hash",
-        parameter_count_in_mb=10,
         embedding_dimension=32,
     )
     model_1 = embedding_model_resolver.get_or_create(
@@ -296,11 +208,9 @@ def test_get_or_create__same_hash_different_collections(db_session: Session) -> 
     )
 
     model_create_2 = EmbeddingModelCreate(
-        collection_id=collection_2.collection_id,
         dataset_id=collection_2.dataset_id,
         name="Test Model",
         embedding_model_hash="same_hash",
-        parameter_count_in_mb=10,
         embedding_dimension=32,
     )
     model_2 = embedding_model_resolver.get_or_create(
@@ -309,8 +219,8 @@ def test_get_or_create__same_hash_different_collections(db_session: Session) -> 
 
     # Should be different models
     assert model_1.embedding_model_id != model_2.embedding_model_id
-    assert model_1.collection_id == collection_1.collection_id
-    assert model_2.collection_id == collection_2.collection_id
+    assert model_1.dataset_id == collection_1.dataset_id
+    assert model_2.dataset_id == collection_2.dataset_id
 
     # Each dataset resolves the shared hash to its own model, so the two are not merged.
     model_1_by_hash = embedding_model_resolver.get_by_model_hash(
