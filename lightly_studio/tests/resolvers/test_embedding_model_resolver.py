@@ -47,13 +47,11 @@ def test_get_by_name(db_session: Session) -> None:
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_1",
-        embedding_model_hash="hash_1",
     )
     create_embedding_model(
         session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding_model_2",
-        embedding_model_hash="hash_2",
     )
 
     embedding_model = embedding_model_resolver.get_by_name(
@@ -115,40 +113,36 @@ def test_get_by_name__scoped_by_dataset(db_session: Session) -> None:
 
 
 def test_get_or_create__creates_new_model(db_session: Session) -> None:
-    """get_or_create should insert a model when none exists for the hash."""
+    """get_or_create should insert a model when none exists for the name."""
     collection = create_collection(session=db_session)
 
     model_create = EmbeddingModelCreate(
         dataset_id=collection.dataset_id,
         name="Model Name",
-        embedding_model_hash="model_hash",
         embedding_dimension=768,
     )
     created = embedding_model_resolver.get_or_create(
         session=db_session, embedding_model=model_create
     )
 
-    assert created.embedding_model_hash == "model_hash"
     assert created.name == "Model Name"
     assert created.embedding_dimension == 768
     assert created.dataset_id == collection.dataset_id
 
 
 def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
-    """get_or_create should return the existing model for a matching hash."""
+    """get_or_create should return the existing model for a matching name."""
     collection = create_collection(session=db_session)
     existing = create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="Model Name",
-        embedding_model_hash="model_hash",
         embedding_dimension=32,
     )
 
     model_create = EmbeddingModelCreate(
         dataset_id=collection.dataset_id,
         name="Model Name",
-        embedding_model_hash="model_hash",
         embedding_dimension=32,
     )
 
@@ -170,14 +164,12 @@ def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="Model Name",
-        embedding_model_hash="model_hash",
         embedding_dimension=32,
     )
 
     conflicting_model_create = EmbeddingModelCreate(
         dataset_id=collection.dataset_id,
         name="Model Name",
-        embedding_model_hash="model_hash",
         embedding_dimension=64,
     )
 
@@ -198,7 +190,6 @@ def test_get_or_create__same_name_different_datasets(db_session: Session) -> Non
     model_create_1 = EmbeddingModelCreate(
         dataset_id=collection_1.dataset_id,
         name="Test Model",
-        embedding_model_hash="same_hash",
         embedding_dimension=32,
     )
     model_1 = embedding_model_resolver.get_or_create(
@@ -208,7 +199,6 @@ def test_get_or_create__same_name_different_datasets(db_session: Session) -> Non
     model_create_2 = EmbeddingModelCreate(
         dataset_id=collection_2.dataset_id,
         name="Test Model",
-        embedding_model_hash="same_hash",
         embedding_dimension=32,
     )
     model_2 = embedding_model_resolver.get_or_create(

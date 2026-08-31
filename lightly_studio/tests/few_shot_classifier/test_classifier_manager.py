@@ -116,9 +116,7 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_id",
-            return_value=EmbeddingModelTable(
-                name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
-            ),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             classifier_manager_module,
@@ -183,9 +181,7 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_id",
-            return_value=EmbeddingModelTable(
-                name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
-            ),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             classifier_manager_module,
@@ -728,9 +724,7 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_id",
-            return_value=EmbeddingModelTable(
-                name="test", embedding_dimension=3, embedding_model_hash="mock_hash"
-            ),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             classifier_manager_module,
