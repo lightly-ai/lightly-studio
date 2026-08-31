@@ -1069,21 +1069,38 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 /* -- Page actions ----------------------------------------------------------
 
-   Edit / report / ask, under the contents list. From
-   `overrides/partials/toc.html`; the edit link is the one Material would
-   otherwise draw as a bare pencil icon floating over the first paragraph.
+   Edit / report / ask, from `overrides/partials/page_actions.html`. The edit
+   link is the one Material would otherwise draw as a bare pencil icon floating
+   over the first paragraph.
+
+   Two copies, and exactly one is displayed at any width: a column under the
+   contents list where that list is a sidebar, a row under the article where it
+   has collapsed into a drawer. Page-level links do not belong inside a heading
+   list the reader has to open.
    ------------------------------------------------------------------------- */
 
 .ls-actions {
   border-top: 1px solid var(--ls-line-hair);
   display: flex;
+  flex-wrap: wrap;
+}
+
+.ls-actions--aside {
   flex-direction: column;
   gap: 0.4rem;
   margin: 1rem 0 0;
   padding: 0.8rem 0 0 0.5rem;
 }
 
-.ls-actions__link {
+.ls-actions--page {
+  gap: 0.4rem 1.2rem;
+  margin: 2.4rem 0 0;
+  padding: 0.8rem 0 0;
+}
+
+/* The article copy sits inside `.md-typeset`, whose `.md-typeset a` outranks a
+   bare `.ls-actions__link`. Scoping each link rule to the block wins it back. */
+.ls-actions .ls-actions__link {
   color: var(--ls-body);
   font-size: 0.625rem;
   line-height: 1.4;
@@ -1091,14 +1108,19 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   transition: color 0.12s;
 }
 
-.ls-actions__link:hover,
-.ls-actions__link:focus-visible {
+/* The article copy is read at body distance, not sidebar distance. */
+.ls-actions--page .ls-actions__link {
+  font-size: 0.7rem;
+}
+
+.ls-actions .ls-actions__link:hover,
+.ls-actions .ls-actions__link:focus-visible {
   color: var(--ls-accent);
 }
 
 /* An outline, not just the color shift above: a colour change on its own is not
    a focus indicator (same treatment as `.ls-tabs__link`). */
-.ls-actions__link:focus-visible {
+.ls-actions .ls-actions__link:focus-visible {
   border-radius: var(--ls-radius-sm);
   outline: 2px solid var(--ls-accent);
   outline-offset: 2px;
@@ -1109,11 +1131,14 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   display: none;
 }
 
-/* Below the TOC breakpoint the actions ride along inside the collapsed
-   contents drawer, which is the wrong place for them — they are page-level, not
-   part of the heading list. */
 @media screen and (max-width: 59.984375em) {
-  .ls-actions {
+  .ls-actions--aside {
+    display: none;
+  }
+}
+
+@media screen and (min-width: 60em) {
+  .ls-actions--page {
     display: none;
   }
 }

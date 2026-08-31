@@ -8,7 +8,7 @@
   as an editing control for the page rather than a link to its source.
   `custom.css` hides that copy.
 -#}
-{% import "partials/links.html" as links with context %}
+{% import "partials/page_actions.html" as page_actions with context %}
 {% set title = lang.t("toc") %}
 {% if config.mdx_configs.toc and config.mdx_configs.toc.title %}
   {% set title = config.mdx_configs.toc.title %}
@@ -30,21 +30,8 @@
       {% endfor %}
     </ul>
   {% endif %}
-  {#- ADDED: page actions. `actions` is a list of {label, href} declared under
-      `extra.page_actions` in mkdocs.yml; the edit link is prepended from
-      `page.edit_url`, which only exists once `repo_url` and `edit_uri` resolve
-      for this page. -#}
-  {% set actions = config.extra.page_actions or [] %}
-  {% if page.edit_url or actions %}
-    <div class="ls-actions">
-      {% if page.edit_url %}
-        <a class="ls-actions__link" href="{{ page.edit_url }}" rel="edit">
-          {{ lang.t("action.edit") }}
-        </a>
-      {% endif %}
-      {% for action in actions %}
-        {{ links.smart_link(action.href, action.label, "ls-actions__link") }}
-      {% endfor %}
-    </div>
-  {% endif %}
+  {#- ADDED: page actions, the copy that sits beside the article. The one under
+      it comes from `main.html`; `partials/page_actions.html` says why there are
+      two. -#}
+  {{ page_actions.page_actions("aside") }}
 </nav>
