@@ -15,7 +15,6 @@ from sqlmodel import Session
 from lightly_studio.few_shot_classifier import random_forest_classifier
 from lightly_studio.few_shot_classifier.classifier import (
     AnnotatedEmbedding,
-    ExportType,
 )
 from lightly_studio.few_shot_classifier.random_forest_classifier import (
     RandomForest,
@@ -239,7 +238,7 @@ class ClassifierManager:
             raise ValueError(
                 f"Classifier with ID {classifier_id} is not active and cannot be saved."
             )
-        classifier.few_shot_classifier.export(export_path=file_path, export_type="sklearn")
+        classifier.few_shot_classifier.export(export_path=file_path)
 
     def load_classifier_from_file(
         self, session: Session, file_path: Path, collection_id: UUID
@@ -553,15 +552,12 @@ class ClassifierManager:
             class_list=classifier.few_shot_classifier.classes,
         )
 
-    def save_classifier_to_buffer(
-        self, classifier_id: UUID, buffer: io.BytesIO, export_type: ExportType
-    ) -> None:
+    def save_classifier_to_buffer(self, classifier_id: UUID, buffer: io.BytesIO) -> None:
         """Save the classifier to a buffer.
 
         Args:
             classifier_id: The ID of the classifier to save.
             buffer: The buffer to save the classifier to.
-            export_type: The type of export to perform.
 
         Raises:
             ValueError: If the classifier with the given ID does not exist.
@@ -569,7 +565,7 @@ class ClassifierManager:
         classifier = self._classifiers.get(classifier_id)
         if classifier is None:
             raise ValueError(f"Classifier with ID {classifier_id} not found.")
-        classifier.few_shot_classifier.export(buffer=buffer, export_type=export_type)
+        classifier.few_shot_classifier.export(buffer=buffer)
 
     def load_classifier_from_buffer(
         self, session: Session, buffer: io.BytesIO, collection_id: UUID
