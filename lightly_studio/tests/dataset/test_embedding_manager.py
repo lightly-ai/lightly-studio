@@ -40,6 +40,7 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
     create_image,
 )
 from tests.resolvers.video.helpers import VideoStub, create_videos
@@ -912,6 +913,73 @@ def test_compute_image_embedding(
         select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
     ).all()
     assert len(stored_embeddings) == 0
+
+
+def test_attach_embeddings(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+) -> None:
+    """attach_embeddings stores vectors keyed to the right sample and model."""
+    model_a = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="model_a",
+        embedding_model_hash="hash_a",
+        embedding_dimension=4,
+    )
+    model_b = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="model_b",
+        embedding_model_hash="hash_b",
+        embedding_dimension=4,
+    )
+    sample_ids = [sample.sample_id for sample in samples[:3]]
+    vectors_a = np.array(
+        [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0], [9.0, 10.0, 11.0, 12.0]],
+        dtype=np.float32,
+    )
+    vectors_b = np.array(
+        [[-1.0, -2.0, -3.0, -4.0], [-5.0, -6.0, -7.0, -8.0], [-9.0, -10.0, -11.0, -12.0]],
+        dtype=np.float32,
+    )
+
+    embedding_manager.attach_embeddings(
+        session=db_session,
+        embedding_model_id=model_a.embedding_model_id,
+        sample_ids=sample_ids,
+        vectors=vectors_a,
+    )
+    embedding_manager.attach_embeddings(
+        session=db_session,
+        embedding_model_id=model_b.embedding_model_id,
+        sample_ids=sample_ids,
+        vectors=vectors_b,
+    )
+
+    stored_a = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session,
+        sample_ids=sample_ids,
+        embedding_model_id=model_a.embedding_model_id,
+    )
+    stored_b = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session,
+        sample_ids=sample_ids,
+        embedding_model_id=model_b.embedding_model_id,
+    )
+
+    # Each model's rows are keyed to the right sample, in the requested order.
+    assert [row.sample_id for row in stored_a] == sample_ids
+    assert [row.sample_id for row in stored_b] == sample_ids
+
+    # Each model's rows carry its own vectors, not the other model's.
+    np.testing.assert_array_equal(
+        np.array([row.embedding for row in stored_a], dtype=np.float32), vectors_a
+    )
+    np.testing.assert_array_equal(
+        np.array([row.embedding for row in stored_b], dtype=np.float32), vectors_b
+    )
 
 
 # Dimension of the model registered by _register_random_model, used to build

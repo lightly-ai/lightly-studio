@@ -541,6 +541,38 @@ class EmbeddingManager:
         return model
 
 
+def attach_embeddings(
+    session: Session,
+    embedding_model_id: UUID,
+    sample_ids: list[UUID],
+    vectors: NDArray[np.float32],
+) -> None:
+    """Store precomputed embedding vectors for existing samples.
+
+    Use this to attach vectors that were computed outside of LightlyStudio (for
+    example, by an external model or a previous run) directly to samples that
+    already exist in the database. Prefer the generator-based paths
+    (`embed_images`, `embed_videos`, `embed_and_store_pil_images`,
+    `embed_annotations`) when embeddings still need to be computed from an
+    `EmbeddingGenerator`.
+
+    Args:
+        session: Database session for resolver operations.
+        embedding_model_id: ID of a registered embedding model the vectors belong to.
+        sample_ids: Sample IDs the vectors are stored for.
+        vectors: Embedding vectors to store, in the same order as sample_ids.
+
+    Raises:
+        ValueError: If the vectors fail validation. See `_validate_and_coerce_embeddings`.
+    """
+    _store_embeddings(
+        session=session,
+        model_id=embedding_model_id,
+        sample_ids=sample_ids,
+        embeddings=vectors,
+    )
+
+
 def _store_embeddings(
     session: Session,
     model_id: UUID,
