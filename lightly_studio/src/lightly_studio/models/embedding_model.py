@@ -15,6 +15,7 @@ class EmbeddingModelBase(SQLModel):
     name: str
     embedding_dimension: int
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
+    remote_embedder_url: str | None = None
 
 
 class EmbeddingModelCreate(EmbeddingModelBase):

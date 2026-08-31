@@ -1,13 +1,14 @@
-"""drop embedding_model_hash column.
+"""drop embedding_model_hash column and add remote_embedder_url.
 
 The write path now keys embedding models by ``name`` (the generator's ``space_key``), and
 the ``unique_embedding_model_name`` constraint on ``(dataset_id, name)`` already enforces
 uniqueness. Nothing reads ``embedding_model_hash`` anymore, so the column is redundant. This
-migration drops the ``unique_embedding_model_hash`` constraint and then the column.
+migration drops the ``unique_embedding_model_hash`` constraint and then the column. It also adds
+the nullable ``remote_embedder_url`` column; being optional, it needs no backfill.
 
-The downgrade re-adds the column as nullable, backfills it from ``name``, sets it ``NOT NULL``,
-and re-adds the constraint. The original checkpoint file hashes cannot be reconstructed, so the
-backfill uses ``name``.
+The downgrade drops ``remote_embedder_url``, then re-adds ``embedding_model_hash`` as nullable,
+backfills it from ``name``, sets it ``NOT NULL``, and re-adds the constraint. The original
+checkpoint file hashes cannot be reconstructed, so the backfill uses ``name``.
 
 DuckDB builds its schema with ``create_all`` and has no backfill step, so this migration only
 matters for tracked Postgres databases.
@@ -36,14 +37,20 @@ def upgrade() -> None:
     """Upgrade schema."""
     op.drop_constraint("unique_embedding_model_hash", "embedding_model", type_="unique")
     op.drop_column("embedding_model", "embedding_model_hash")
+    op.add_column(
+        "embedding_model",
+        sa.Column("remote_embedder_url", sa.VARCHAR(), nullable=True),
+    )
 
 
 def downgrade() -> None:
     """Downgrade schema.
 
-    Re-adds the column and backfills it from ``name``. The original file hashes cannot be
-    reconstructed, so the backfilled value equals ``name``.
+    Drops ``remote_embedder_url``, then re-adds ``embedding_model_hash`` and backfills it from
+    ``name``. The original file hashes cannot be reconstructed, so the backfilled value equals
+    ``name``.
     """
+    op.drop_column("embedding_model", "remote_embedder_url")
     op.add_column(
         "embedding_model",
         sa.Column(
