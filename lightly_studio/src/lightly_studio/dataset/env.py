@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
-from environs import Env, EnvError
+from environs import Env
 
 env = Env()
 env.read_env()
@@ -41,12 +41,7 @@ LIGHTLY_STUDIO_POSTHOG_HOST: str = "https://eu.i.posthog.com"
 # Marks this machine as a Lightly dev or staff machine, so internal usage can be filtered out of
 # the product metrics. See lightly_studio/analytics/cohort.py for the alternative marker file,
 # which survives recreating the virtualenv.
-try:
-    LIGHTLY_STUDIO_INTERNAL: bool = env.bool("LIGHTLY_STUDIO_INTERNAL", False)
-except EnvError:
-    # The flag is hand-toggled in `.env`, where emptying the value is the obvious way to switch it
-    # off. A telemetry flag must not break every import over the spelling.
-    LIGHTLY_STUDIO_INTERNAL = False
+LIGHTLY_STUDIO_INTERNAL: bool = env.bool("LIGHTLY_STUDIO_INTERNAL", False)
 
 LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)
