@@ -58,6 +58,18 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    mcap_collections = (
+        op.get_bind()
+        .execute(sa.text("SELECT COUNT(*) FROM collection WHERE sample_type = 'MCAP'"))
+        .scalar()
+    )
+    if mcap_collections:
+        raise RuntimeError(
+            "Cannot remove MCAP from sampletype enum: "
+            f"{mcap_collections} collection(s) still have sample_type = 'MCAP'. "
+            "Remove or remap those collections before downgrading."
+        )
+
     op.sync_enum_values( # type: ignore[attr-defined]
         enum_schema="public",
         enum_name="sampletype",
