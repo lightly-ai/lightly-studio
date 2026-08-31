@@ -404,7 +404,7 @@ def _get_annotations_for_class_balancing(
 def _fetch_crop_embeddings(
     session: Session,
     collection_to_crop_ids: Mapping[UUID, list[UUID]],
-    embedding_model_name: str,
+    embedding_model_name: str | None,
 ) -> dict[UUID, Embedding]:
     """Fetch crop embeddings from every annotation collection and validate dimensions.
 
