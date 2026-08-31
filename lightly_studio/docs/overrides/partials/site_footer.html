@@ -4,6 +4,7 @@
   because Material's `.md-footer` already owns the page's `contentinfo` landmark
   and a second one would leave screen readers with two footers to choose from.
 -#}
+{% import "partials/links.html" as links with context %}
 {% set footer = config.extra.footer or {} %}
 <div class="ls-footer">
   <div class="ls-footer__inner md-grid">
@@ -24,15 +25,7 @@
           <h2 class="ls-footer__heading">{{ column.name }}</h2>
           <ul class="ls-footer__links">
             {% for link in column.links %}
-              <li>
-                {#- An `href` with a scheme is passed through; anything else is a
-                    site-relative path that `url` rewrites for the current page. -#}
-                {% if "://" in link.href %}
-                  <a class="ls-footer__link" href="{{ link.href }}">{{ link.label }}</a>
-                {% else %}
-                  <a class="ls-footer__link" href="{{ link.href | url }}">{{ link.label }}</a>
-                {% endif %}
-              </li>
+              <li>{{ links.smart_link(link.href, link.label, "ls-footer__link") }}</li>
             {% endfor %}
           </ul>
         </nav>

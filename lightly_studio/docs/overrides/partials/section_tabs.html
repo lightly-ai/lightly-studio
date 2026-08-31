@@ -7,12 +7,15 @@
   reader stuck in whichever section they arrived in. `custom.css` shows exactly
   one of the two at any width.
 
-  Links in a `nav`, not `role="tablist"`. Activating one loads a page rather
-  than swapping a panel in place, so the ARIA tabs pattern describes the wrong
-  widget: it would take two of the three links out of the tab order, bind the
-  arrow keys, and have a screen reader announce "selected" for something that is
-  about to navigate. Material's own tab row is the same markup for the same
-  reason.
+  Plain links in a `div`, not `role="tablist"`. Activating one loads a page
+  rather than swapping a panel in place, so the ARIA tabs pattern describes the
+  wrong widget: it would take two of the three links out of the tab order, bind
+  the arrow keys, and have a screen reader announce "selected" for something that
+  is about to navigate.
+
+  A `div` and not a `nav`: the strip already renders inside the header's `nav`
+  and, in the drawer variant, inside the sidebar's, so a `nav` here would only
+  nest a third landmark inside those two for a screen reader to step through.
 
   `extra.tab_links` and `ls_active_tab` are set by `mkdocs_hooks.py`. Neither
   exists on 404.html, which MkDocs builds without a page, so the strip draws
@@ -21,7 +24,7 @@
 
 {% macro strip(variant) %}
   {% set active = ls_active_tab if ls_active_tab is defined else none %}
-  <nav class="ls-tabs ls-tabs--{{ variant }}" aria-label="Sections">
+  <div class="ls-tabs ls-tabs--{{ variant }}">
     <ul class="ls-tabs__list">
       {% for tab in config.extra.tab_links or [] %}
         {% set is_active = tab.name == active %}
@@ -39,5 +42,5 @@
         </li>
       {% endfor %}
     </ul>
-  </nav>
+  </div>
 {% endmacro %}

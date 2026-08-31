@@ -1096,6 +1096,14 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   color: var(--ls-accent);
 }
 
+/* An outline, not just the color shift above: a colour change on its own is not
+   a focus indicator (same treatment as `.ls-tabs__link`). */
+.ls-actions__link:focus-visible {
+  border-radius: var(--ls-radius-sm);
+  outline: 2px solid var(--ls-accent);
+  outline-offset: 2px;
+}
+
 /* The pencil the actions list replaces. */
 .md-content__button.md-icon[rel="edit"] {
   display: none;
@@ -1268,6 +1276,14 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   color: var(--ls-accent);
 }
 
+/* An outline, not just the color shift above: a colour change on its own is not
+   a focus indicator (same treatment as `.ls-tabs__link`). */
+.ls-footer__link:focus-visible {
+  border-radius: var(--ls-radius-sm);
+  outline: 2px solid var(--ls-accent);
+  outline-offset: 2px;
+}
+
 .ls-footer__legal {
   align-items: center;
   border-top: 1px solid var(--ls-line-hair);
@@ -1283,8 +1299,6 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 .ls-footer__version {
   font-family: var(--ls-font-mono);
 }
-
-/* ==========================================================================
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is

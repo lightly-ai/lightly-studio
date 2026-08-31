@@ -8,6 +8,7 @@
   as an editing control for the page rather than a link to its source.
   `custom.css` hides that copy.
 -#}
+{% import "partials/links.html" as links with context %}
 {% set title = lang.t("toc") %}
 {% if config.mdx_configs.toc and config.mdx_configs.toc.title %}
   {% set title = config.mdx_configs.toc.title %}
@@ -42,11 +43,7 @@
         </a>
       {% endif %}
       {% for action in actions %}
-        {% if "://" in action.href %}
-          <a class="ls-actions__link" href="{{ action.href }}">{{ action.label }}</a>
-        {% else %}
-          <a class="ls-actions__link" href="{{ action.href | url }}">{{ action.label }}</a>
-        {% endif %}
+        {{ links.smart_link(action.href, action.label, "ls-actions__link") }}
       {% endfor %}
     </div>
   {% endif %}
