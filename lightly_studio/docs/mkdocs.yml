@@ -77,10 +77,11 @@ repo_url: https://github.com/lightly-ai/lightly-studio
 repo_name: LightlyStudio
 docs_dir: docs
 
-# The default branch is `main`. Without this, MkDocs derives `edit/master/docs/`
-# for a GitHub `repo_url`, and the "Edit this page" link (see `overrides/partials/toc.html`)
-# points at a `master` branch that does not exist and 404s.
-edit_uri: edit/main/docs/
+# The default branch is `main`, and the path is relative to the repository root,
+# not to this file. Without both, MkDocs derives `edit/master/docs/` for a GitHub
+# `repo_url`, and the "Edit this page" link (see `overrides/partials/toc.html`)
+# points at a branch and a path that do not exist, and 404s.
+edit_uri: edit/main/lightly_studio/docs/docs/
 
 # Read by the footer. Material's own `.md-footer-meta` bar stays hidden.
 copyright: "© 2026 Lightly · Apache 2.0"
