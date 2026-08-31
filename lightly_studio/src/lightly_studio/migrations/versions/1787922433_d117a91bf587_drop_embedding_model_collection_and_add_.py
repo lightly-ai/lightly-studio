@@ -19,7 +19,7 @@ DuckDB builds its schema with ``create_all`` and has no backfill step, so this m
 matters for tracked Postgres databases.
 
 Revision ID: d117a91bf587
-Revises: e5f6a7b8c9d0
+Revises: d1e2f3a4b5c6
 Create Date: 2026-08-28 15:07:13.439745
 
 """
@@ -33,7 +33,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "d117a91bf587"
-down_revision: str | Sequence[str] | None = "e5f6a7b8c9d0"
+down_revision: str | Sequence[str] | None = "d1e2f3a4b5c6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
