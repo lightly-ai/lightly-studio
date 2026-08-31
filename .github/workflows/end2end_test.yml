@@ -17,10 +17,8 @@ env:
   NODE_OPTIONS: --max-old-space-size=4096
   DATASET_PATH: $(pwd)/datasets
   E2E_BASE_URL: http://localhost:8001
-  # One shared uv cache on main instead of a ~3.4GB copy per pull request and
-  # merge-queue ref: every run restores main's, only main writes one. Per-ref
-  # copies blew the 10GB repository quota, and the eviction that followed turned
-  # off the e2e skip that depends on cached success markers.
+  # Every run restores the uv cache, only main writes one: per-ref copies are
+  # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
   UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 jobs:
