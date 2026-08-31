@@ -1,7 +1,7 @@
 """This module defines the Mcap model for the application.
 
-Stores seek keys into an ``.mcap`` file (channel id + log time, optionally a GOP
-keyframe time for video). Decoding and range requests happen later from these
+Stores seek keys into an ``.mcap`` file (channel id + log time, optionally a
+keyframe log time for video). Decoding and range requests happen later from these
 locator fields; no payload bytes, file path, or topic are stored here.
 """
 
@@ -29,7 +29,7 @@ class McapBase(SQLModel):
     """The sensor/header capture timestamp, in nanoseconds. Used for cross-channel sync."""
     capture_timestamp_ns: int = Field(sa_type=BigInteger)
 
-    """GOP seek time for keyframe-aligned decoding. Required for camera channels."""
+    """Log time of the keyframe to seek to before decoding. Required for camera channels."""
     keyframe_log_time_ns: Optional[int] = Field(default=None, sa_type=BigInteger)
 
     """Optional point count. Only meaningful for lidar channels."""
