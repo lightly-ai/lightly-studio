@@ -43,7 +43,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("sample_id"),
     )
     op.create_index(op.f("ix_mcap_created_at"), "mcap", ["created_at"], unique=False)
-    op.sync_enum_values( # type: ignore[attr-defined]
+    op.sync_enum_values(  # type: ignore[attr-defined]
         enum_schema="public",
         enum_name="sampletype",
         new_values=["VIDEO", "VIDEO_FRAME", "IMAGE", "ANNOTATION", "CAPTION", "GROUP", "MCAP"],
@@ -70,7 +70,7 @@ def downgrade() -> None:
             "Remove or remap those collections before downgrading."
         )
 
-    op.sync_enum_values( # type: ignore[attr-defined]
+    op.sync_enum_values(  # type: ignore[attr-defined]
         enum_schema="public",
         enum_name="sampletype",
         new_values=["VIDEO", "VIDEO_FRAME", "IMAGE", "ANNOTATION", "CAPTION", "GROUP"],
