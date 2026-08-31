@@ -113,6 +113,13 @@ exclude = [
 ]
 plugins = ["pydantic.mypy"]
 
+# Only `docs/mkdocs_hooks.py` imports this. CI installs the `docs` group
+# (`make install-optional-deps` is `uv sync --all-groups`), so this is for a
+# plain local `uv run mypy .`, which resolves the default groups only.
+[[tool.mypy.overrides]]
+module = "mkdocs.*"
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 module = "fsspec.*"
 ignore_missing_imports = true
