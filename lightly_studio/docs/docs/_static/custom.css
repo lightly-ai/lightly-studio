@@ -32,6 +32,12 @@
   --ls-font-display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
   --ls-font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
+  /* The mono-caps label register: sidebar group captions and the contents
+     caption today; table and code headers and footer columns downstream. One
+     size and one tracking so the register stays in step. */
+  --ls-label-size: 0.525rem;
+  --ls-label-tracking: 0.08em;
+
   --ls-radius-sm: 5px;
   --ls-radius: 9px;
   --ls-radius-lg: 10px;
@@ -441,7 +447,7 @@ body {
 .ls-version {
   align-self: center;
   border: 1px solid var(--ls-line);
-  border-radius: 4px;
+  border-radius: var(--ls-radius-sm);
   color: var(--ls-faint);
   flex: none;
   font-family: var(--ls-font-mono);
@@ -722,9 +728,9 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   color: var(--ls-muted);
   cursor: default;
   font-family: var(--ls-font-mono);
-  font-size: 0.525rem;
+  font-size: var(--ls-label-size);
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ls-label-tracking);
   margin: 0;
   padding: 0 0.4rem 0.5rem;
   text-transform: uppercase;
@@ -882,9 +888,9 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     box-shadow: none;
     color: var(--ls-muted);
     font-family: var(--ls-font-mono);
-    font-size: 0.525rem;
+    font-size: var(--ls-label-size);
     font-weight: 500;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--ls-label-tracking);
     padding: 0 0 0.6rem 0.5rem;
     text-transform: uppercase;
   }
