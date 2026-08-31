@@ -43,6 +43,7 @@ def list_views_by_dataset_id(
             created_at=run.created_at,
             gt_annotation_source=collection_name_by_id.get(run.gt_annotation_collection_id),
             pred_annotation_source=collection_name_by_id.get(run.pred_annotation_collection_id),
+            stale_since=run.stale_since,
         )
         for run in runs
     ]

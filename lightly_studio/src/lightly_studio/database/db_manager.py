@@ -121,13 +121,9 @@ class DatabaseEngine:
                 # A middlebox (e.g., firewalls, VPNs) can silently drop idle connections,
                 # and the next statement will fail with "server closed the connection unexpectedly".
                 # TCP keepalives keep the socket warm so the flow is never reaped.
-                # Pre_ping and recycle replace a pooled connection that died before it is
-                # handed out again.
 
                 # Test a pooled connection before handing it out, so a dead one is never reused.
                 engine_kwargs["pool_pre_ping"] = True
-                # Discard & reopen any connection older than 1800s.
-                engine_kwargs["pool_recycle"] = 1800
                 engine_kwargs["connect_args"] = {
                     "keepalives": 1,  # Setting this explicitly so the intent is visible.
                     "keepalives_idle": 30,  # Send a probe after 30s of idleness.
