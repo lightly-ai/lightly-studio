@@ -309,15 +309,19 @@ def create_embedding_model(  # noqa: PLR0913
 ) -> EmbeddingModelTable:
     """Helper function to create a embedding model.
 
-    With ``set_as_default`` the model is linked to the collection and recorded as its
-    default embedding model, so ``get_default_by_collection_id`` resolves to it. It is off
-    by default to avoid the ``collection_embedding_model`` foreign key blocking model or
-    collection deletes in tests that do not need a default.
+    The model is linked to the collection, so it resolves through ``get_model_id_by_name`` and
+    ``get_all_by_collection_id``, matching production where every registered model is linked.
+    With ``set_as_default`` it is also recorded as the collection default, so
+    ``get_default_by_collection_id`` resolves to it.
     """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
 
+    # TODO(Michal, 08/2026): Once collection_id is out of embedding_model, take dataset_id
+    # directly and make collection_id optional: link only when it is given, so unlinked
+    # models become expressible. The collection_embedding_model link is then the sole source
+    # of collection membership.
     model = embedding_model_resolver.create(
         session=session,
         embedding_model=EmbeddingModelCreate(
@@ -329,12 +333,12 @@ def create_embedding_model(  # noqa: PLR0913
             embedding_dimension=embedding_dimension,
         ),
     )
+    collection_embedding_model_resolver.get_or_add_collection_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=model.embedding_model_id,
+    )
     if set_as_default:
-        collection_embedding_model_resolver.get_or_add_collection_model(
-            session=session,
-            collection_id=collection_id,
-            embedding_model_id=model.embedding_model_id,
-        )
         collection_embedding_model_resolver.set_default(
             session=session,
             collection_id=collection_id,

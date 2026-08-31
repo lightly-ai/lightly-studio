@@ -135,6 +135,7 @@
                 {#each visibleRuns as run (run.id)}
                     <EvaluationRunItem
                         {run}
+                        {datasetId}
                         expanded={expandedRunId === run.id}
                         onToggle={() => toggleExpand(run.id)}
                     />
