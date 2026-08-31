@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import (
+    EmbeddingSpaceSpec,
     ImageCrop,
     ImageEmbeddingGenerator,
     RandomEmbeddingGenerator,
@@ -24,10 +25,7 @@ from lightly_studio.dataset.embedding_manager import (
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.models.embedding_model import (
-    EmbeddingModelTable,
-    EmbeddingSpaceDescription,
-)
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
@@ -72,7 +70,7 @@ def test_register_embedding_model(
         select(EmbeddingModelTable).where(EmbeddingModelTable.embedding_model_id == model_id)
     ).first()
     assert stored_model is not None
-    assert stored_model.name == "Random"
+    assert stored_model.name == "random_model"
     assert stored_model.embedding_dimension == 3
     assert stored_model.dataset_id == collection.dataset_id
 
@@ -105,11 +103,10 @@ def test_register_multiple_models(
 
     # Register a second model.
     class FakeEmbeddingGenerator(ImageEmbeddingGenerator):
-        def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
-            return EmbeddingSpaceDescription(
-                name="Fake",
-                embedding_model_hash="fake_hash",
-                embedding_dimension=5,
+        def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+            return EmbeddingSpaceSpec(
+                space_key="fake_hash",
+                dimension=5,
             )
 
         def embed_text(self, text: str) -> list[float]:
@@ -146,7 +143,7 @@ def test_register_multiple_models(
     stored_models = db_session.exec(select(EmbeddingModelTable)).all()
     assert len(stored_models) == 2
     model_names = {model.name for model in stored_models}
-    assert model_names == {"Random", "Fake"}
+    assert model_names == {"random_model", "fake_hash"}
     # Verify both models are associated with the same dataset
     assert all(model.dataset_id == collection.dataset_id for model in stored_models)
 
@@ -559,7 +556,7 @@ def test_load_or_get_default_model(
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
     model = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=model_id)
     assert model is not None
-    assert model.name == "Random"
+    assert model.name == "random_model"
 
     # Second registration should be a no-op and return the same ID.
     second_id = manager.load_or_get_default_model(
@@ -675,11 +672,10 @@ def test_set_default_embedding_model_falls_back_to_env_for_unregistered_slot(
     class ImageOnlyGenerator:
         # Implements the image protocol but not embed_videos, so only the image
         # slot is overridden.
-        def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
-            return EmbeddingSpaceDescription(
-                name="ImageOnly",
-                embedding_dimension=3,
-                embedding_model_hash="image_only_model",
+        def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+            return EmbeddingSpaceSpec(
+                space_key="image_only_model",
+                dimension=3,
             )
 
         def embed_text(self, text: str) -> list[float]:
@@ -873,11 +869,10 @@ class TextOnlyEmbeddingGenerator:
     def __init__(self, dimension: int = 3) -> None:
         self._dimension = dimension
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
-        return EmbeddingSpaceDescription(
-            name="TextOnly",
-            embedding_dimension=self._dimension,
-            embedding_model_hash="text_only_model",
+    def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(
+            space_key="text_only_model",
+            dimension=self._dimension,
         )
 
     def embed_text(self, text: str) -> list[float]:

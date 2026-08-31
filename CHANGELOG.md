@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
   to 0.03ms.
 - Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
+- Python SDK (beta): Custom embedding generators now implement `get_embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of `get_embedding_model_input`, which returned `EmbeddingSpaceDescription`.
 
 - Stepping to the previous or next annotation in the annotation details view no longer sorts the
   whole collection on every click, for annotations on images and on video frames. On PostgreSQL

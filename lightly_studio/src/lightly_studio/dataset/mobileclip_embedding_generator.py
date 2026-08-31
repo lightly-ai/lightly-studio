@@ -10,11 +10,10 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 from lightly_studio.vendor import mobileclip
 
 from . import file_utils, image_crop_embedding, image_embedding
-from .embedding_generator import ImageCrop, ImageEmbeddingGenerator
+from .embedding_generator import EmbeddingSpaceSpec, ImageCrop, ImageEmbeddingGenerator
 from .embedding_result import EmbeddingResult
 from .image_embedding import EmbeddingContext
 
@@ -52,16 +51,15 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
         self._model_hash = file_utils.get_file_xxhash(model_path)
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+    def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
 
         Returns:
-            A description of the embedding space.
+            A specification of the embedding space.
         """
-        return EmbeddingSpaceDescription(
-            name=MODEL_NAME,
-            embedding_model_hash=self._model_hash,
-            embedding_dimension=EMBEDDING_DIMENSION,
+        return EmbeddingSpaceSpec(
+            space_key=self._model_hash,
+            dimension=EMBEDDING_DIMENSION,
         )
 
     def embed_text(self, text: str) -> list[float]:

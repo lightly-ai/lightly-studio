@@ -20,12 +20,16 @@ from lightly_studio.core.file_outcome_report import (
     MissingInputFileError,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from . import file_utils, image_crop_embedding, image_embedding
-from .embedding_generator import ImageCrop, ImageEmbeddingGenerator, VideoEmbeddingGenerator
+from .embedding_generator import (
+    EmbeddingSpaceSpec,
+    ImageCrop,
+    ImageEmbeddingGenerator,
+    VideoEmbeddingGenerator,
+)
 from .embedding_result import EmbeddingResult
 from .image_embedding import EmbeddingContext
 
@@ -62,16 +66,15 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         self._model = self._model.to(self._device)
         self._model_hash = file_utils.get_file_xxhash(Path(model_path))
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+    def get_embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
 
         Returns:
-            A description of the embedding space.
+            A specification of the embedding space.
         """
-        return EmbeddingSpaceDescription(
-            name=MODEL_NAME,
-            embedding_model_hash=self._model_hash,
-            embedding_dimension=self._model.output_dim,
+        return EmbeddingSpaceSpec(
+            space_key=self._model_hash,
+            dimension=self._model.output_dim,
         )
 
     def embed_text(self, text: str) -> list[float]:
