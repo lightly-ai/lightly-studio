@@ -6,6 +6,7 @@ import {
     PUBLIC_POSTHOG_HOST
 } from '$env/static/public';
 import { version } from '$lib/version.json';
+import { getInstallId } from '$lib/api/lightly_studio_local/sdk.gen';
 // Imported by its own path: $lib/hooks re-exports usePostHog, so going through the barrel would
 // make the two modules import each other.
 import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
@@ -62,8 +63,19 @@ export const usePostHog = () => {
             capture_exceptions: true
         });
         posthog.register({ app_version: version });
-
+        // Set before the awaited identify() below so the guard above stays a synchronous critical
+        // section: a second concurrent caller must see this flip before we yield, or it inits twice.
         initialized = true;
+
+        // Identify with the backend install id so browser events and the Python SDK, which keys
+        // on the same id, report under one distinct id per install instead of two. On failure we
+        // leave posthog on its own anonymous id.
+        try {
+            const { data } = await getInstallId();
+            if (data) posthog.identify(data.install_id);
+        } catch (error) {
+            console.warn('Failed to identify PostHog user with install id', error);
+        }
     };
 
     /**
