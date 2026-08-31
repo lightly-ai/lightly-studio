@@ -75,6 +75,7 @@ jobs:
           version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
+          save-cache: false
 
       - name: Install backend dependencies
         if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'

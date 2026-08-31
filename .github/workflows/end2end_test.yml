@@ -17,6 +17,10 @@ env:
   NODE_OPTIONS: --max-old-space-size=4096
   DATASET_PATH: $(pwd)/datasets
   E2E_BASE_URL: http://localhost:8001
+  # Every run restores the uv cache, only main writes one: per-ref copies are
+  # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
+  # `python-version` is part of the uv cache key: 3.9 shares `unit_test.yml`'s entry.
+  UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 jobs:
   # Matrix jobs skip every step when `e2e-success-<name>-<file-hash>` is cached,
@@ -108,7 +112,9 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
         uses: actions/setup-node@v6
@@ -327,7 +333,9 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
         if: steps.cache-success.outputs.cache-hit != 'true'
