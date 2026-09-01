@@ -228,6 +228,29 @@ Read the map:
 !!! tip
     The embedding plot renders best in Firefox.
 
+### What a cluster contains
+
+Lasso a tight cluster to scope the grid to its images, and they turn out to be one coherent group. The embedding even splits a single class into finer sub-groups — here, anglers holding a tench versus the fish on its own:
+
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
+  <figure style="margin: 0;">
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-cassette.jpg" alt="A lassoed cluster of cassette players" style="width: 100%; border-radius: 6px;">
+    <figcaption>Cassette players.</figcaption>
+  </figure>
+  <figure style="margin: 0;">
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-parachute.jpg" alt="A lassoed cluster of parachutes" style="width: 100%; border-radius: 6px;">
+    <figcaption>Parachutes.</figcaption>
+  </figure>
+  <figure style="margin: 0;">
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-tench.jpg" alt="A lassoed cluster of anglers holding a tench" style="width: 100%; border-radius: 6px;">
+    <figcaption>Anglers holding a tench.</figcaption>
+  </figure>
+  <figure style="margin: 0;">
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-fish.jpg" alt="A lassoed cluster of tench on their own" style="width: 100%; border-radius: 6px;">
+    <figcaption>Tench on their own.</figcaption>
+  </figure>
+</div>
+
 ## Step 6: Select and curate a subset
 
 The map is not just for looking. Turn what you see into a curated subset. A diversity selection picks a spread of samples across the whole embedding space, so a smaller labeling or training set still covers the variety in your data.
