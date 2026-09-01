@@ -43,7 +43,14 @@ class ModelExportMetadata:
 
 
 class RandomForest(FewShotClassifier):
-    """RandomForest classifier."""
+    """RandomForest classifier.
+
+    Attributes:
+        name: Name of the classifier.
+        classes: Ordered list of class labels used for training and predictions.
+        embedding_model_name: Name of the model used for creating the embeddings.
+        embedding_model_hash: Legacy. Filled with the model name.
+    """
 
     def __init__(
         self,
@@ -77,7 +84,7 @@ class RandomForest(FewShotClassifier):
         self.name = name
         self.classes = classes
         self._class_to_index = {label: idx for idx, label in enumerate(classes)}
-        self._embedding_model_name = embedding_model_name
+        self.embedding_model_name = embedding_model_name
         self.embedding_model_hash = embedding_model_hash
 
     def train(self, annotated_embeddings: list[AnnotatedEmbedding]) -> None:
@@ -166,7 +173,7 @@ class RandomForest(FewShotClassifier):
             num_input_features=self._model.n_features_in_,
             num_estimators=len(self._model.estimators_),
             embedding_model_hash=self.embedding_model_hash,
-            embedding_model_name=self._embedding_model_name,
+            embedding_model_name=self.embedding_model_name,
             sklearn_version=sklearn.__version__,
         )
 

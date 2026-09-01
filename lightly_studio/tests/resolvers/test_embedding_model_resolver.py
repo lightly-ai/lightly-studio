@@ -39,7 +39,7 @@ def test_read_embedding_model(db_session: Session) -> None:
     assert embedding_model_from_resolver.name == embedding_model.name
 
 
-def test_get_by_model_hash(db_session: Session) -> None:
+def test_get_by_name(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
@@ -56,61 +56,59 @@ def test_get_by_model_hash(db_session: Session) -> None:
         embedding_model_hash="hash_2",
     )
 
-    embedding_model = embedding_model_resolver.get_by_model_hash(
-        session=db_session, embedding_model_hash="hash_1", dataset_id=collection.dataset_id
+    embedding_model = embedding_model_resolver.get_by_name(
+        session=db_session, name="embedding_model_1", dataset_id=collection.dataset_id
     )
     assert embedding_model is not None
     assert embedding_model.name == embedding_model_1.name
 
-    embedding_model = embedding_model_resolver.get_by_model_hash(
-        session=db_session, embedding_model_hash="hash_3", dataset_id=collection.dataset_id
+    embedding_model = embedding_model_resolver.get_by_name(
+        session=db_session, name="embedding_model_3", dataset_id=collection.dataset_id
     )
     assert embedding_model is None
 
 
-def test_get_by_model_hash__scoped_by_dataset(db_session: Session) -> None:
+def test_get_by_name__scoped_by_dataset(db_session: Session) -> None:
     # Root collections each get their own dataset, so these models live in different datasets.
     collection_1 = create_collection(session=db_session, collection_name="collection_1")
     collection_2 = create_collection(session=db_session, collection_name="collection_2")
 
-    # Create models with the same hash in different datasets.
+    # Create models with the same name in different datasets.
     model_1 = create_embedding_model(
         session=db_session,
         collection_id=collection_1.collection_id,
-        embedding_model_name="model_in_dataset_1",
-        embedding_model_hash="same_hash",
+        embedding_model_name="shared_model",
     )
     model_2 = create_embedding_model(
         session=db_session,
         collection_id=collection_2.collection_id,
-        embedding_model_name="model_in_dataset_2",
-        embedding_model_hash="same_hash",
+        embedding_model_name="shared_model",
     )
 
     # With dataset_id, returns the model owned by that dataset.
-    result = embedding_model_resolver.get_by_model_hash(
+    result = embedding_model_resolver.get_by_name(
         session=db_session,
-        embedding_model_hash="same_hash",
+        name="shared_model",
         dataset_id=collection_1.dataset_id,
     )
     assert result is not None
     assert result.embedding_model_id == model_1.embedding_model_id
-    assert result.embedding_model_hash == "same_hash"
+    assert result.name == "shared_model"
 
-    result = embedding_model_resolver.get_by_model_hash(
+    result = embedding_model_resolver.get_by_name(
         session=db_session,
-        embedding_model_hash="same_hash",
+        name="shared_model",
         dataset_id=collection_2.dataset_id,
     )
     assert result is not None
     assert result.embedding_model_id == model_2.embedding_model_id
-    assert result.embedding_model_hash == "same_hash"
+    assert result.name == "shared_model"
 
     # A dataset without a matching model returns None.
     collection_3 = create_collection(session=db_session, collection_name="collection_3")
-    result_3 = embedding_model_resolver.get_by_model_hash(
+    result_3 = embedding_model_resolver.get_by_name(
         session=db_session,
-        embedding_model_hash="same_hash",
+        name="shared_model",
         dataset_id=collection_3.dataset_id,
     )
     assert result_3 is None
@@ -166,7 +164,7 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
 
 
 def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
-    """Conflicting metadata for the same hash should raise an error."""
+    """Conflicting metadata for the same name should raise an error."""
     collection = create_collection(session=db_session)
     create_embedding_model(
         session=db_session,
@@ -185,14 +183,14 @@ def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
 
     with pytest.raises(
         ValueError,
-        match=r"An embedding model with the same hash but different parameters already exists.",
+        match=r"An embedding model with the same name but different parameters already exists.",
     ):
         embedding_model_resolver.get_or_create(
             session=db_session, embedding_model=conflicting_model_create
         )
 
 
-def test_get_or_create__same_hash_different_datasets(db_session: Session) -> None:
+def test_get_or_create__same_name_different_datasets(db_session: Session) -> None:
     # Root collections each get their own dataset, so these models live in different datasets.
     collection_1 = create_collection(session=db_session, collection_name="collection_1")
     collection_2 = create_collection(session=db_session, collection_name="collection_2")
@@ -222,18 +220,18 @@ def test_get_or_create__same_hash_different_datasets(db_session: Session) -> Non
     assert model_1.dataset_id == collection_1.dataset_id
     assert model_2.dataset_id == collection_2.dataset_id
 
-    # Each dataset resolves the shared hash to its own model, so the two are not merged.
-    model_1_by_hash = embedding_model_resolver.get_by_model_hash(
+    # Each dataset resolves the shared name to its own model, so the two are not merged.
+    model_1_by_name = embedding_model_resolver.get_by_name(
         session=db_session,
         dataset_id=collection_1.dataset_id,
-        embedding_model_hash="same_hash",
+        name="Test Model",
     )
-    model_2_by_hash = embedding_model_resolver.get_by_model_hash(
+    model_2_by_name = embedding_model_resolver.get_by_name(
         session=db_session,
         dataset_id=collection_2.dataset_id,
-        embedding_model_hash="same_hash",
+        name="Test Model",
     )
-    assert model_1_by_hash is not None
-    assert model_2_by_hash is not None
-    assert model_1_by_hash.embedding_model_id == model_1.embedding_model_id
-    assert model_2_by_hash.embedding_model_id == model_2.embedding_model_id
+    assert model_1_by_name is not None
+    assert model_2_by_name is not None
+    assert model_1_by_name.embedding_model_id == model_1.embedding_model_id
+    assert model_2_by_name.embedding_model_id == model_2.embedding_model_id

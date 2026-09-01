@@ -137,7 +137,7 @@ class ClassifierManager:
         classifier = RandomForest(
             name=name,
             classes=class_list,
-            embedding_model_hash=embedding_model.embedding_model_hash,
+            embedding_model_hash=embedding_model.name,
             embedding_model_name=embedding_model.name,
         )
 
@@ -166,15 +166,15 @@ class ClassifierManager:
         if classifier is None:
             raise ValueError(f"Classifier with ID {classifier_id} not found.")
 
-        embedding_model = _get_embedding_model_by_hash(
+        embedding_model = _get_embedding_model_by_name(
             session=session,
-            embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            embedding_model_name=classifier.few_shot_classifier.embedding_model_name,
             collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
-                "No embedding model found for hash '"
-                f"{classifier.few_shot_classifier.embedding_model_hash}'"
+                "No embedding model found for name '"
+                f"{classifier.few_shot_classifier.embedding_model_name}'"
             )
 
         # Get annotations.
@@ -256,15 +256,15 @@ class ClassifierManager:
         classifier = random_forest_classifier.load_random_forest_classifier(
             classifier_path=file_path, buffer=None
         )
-        embedding_model = _get_embedding_model_by_hash(
+        embedding_model = _get_embedding_model_by_name(
             session=session,
-            embedding_model_hash=classifier.embedding_model_hash,
+            embedding_model_name=classifier.embedding_model_name,
             collection_id=collection_id,
         )
         if embedding_model is None:
             raise ValueError(
-                "No matching embedding model found for the classifier's hash:"
-                f"'{classifier.embedding_model_hash}'."
+                "No matching embedding model found for the classifier's name: "
+                f"'{classifier.embedding_model_name}'."
             )
 
         classifier_id = uuid4()
@@ -391,15 +391,15 @@ class ClassifierManager:
         annotations = classifier.annotations
         used_samples = {sample_id for samples in annotations.values() for sample_id in samples}
 
-        embedding_model = _get_embedding_model_by_hash(
+        embedding_model = _get_embedding_model_by_name(
             session=session,
-            embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            embedding_model_name=classifier.few_shot_classifier.embedding_model_name,
             collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
-                "No embedding model found for hash '"
-                f"{classifier.few_shot_classifier.embedding_model_hash}'"
+                "No embedding model found for name '"
+                f"{classifier.few_shot_classifier.embedding_model_name}'"
             )
 
         # Create list of SampleEmbedding objects to track sample IDs
@@ -454,15 +454,15 @@ class ClassifierManager:
             raise ValueError(
                 f"Classifier with ID {classifier_id} is not active and cannot be used."
             )
-        embedding_model = _get_embedding_model_by_hash(
+        embedding_model = _get_embedding_model_by_name(
             session=session,
-            embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            embedding_model_name=classifier.few_shot_classifier.embedding_model_name,
             collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
-                "No embedding model found for hash '"
-                f"{classifier.few_shot_classifier.embedding_model_hash}'"
+                "No embedding model found for name '"
+                f"{classifier.few_shot_classifier.embedding_model_name}'"
             )
 
         # Create list of SampleEmbedding objects to track sample IDs
@@ -587,15 +587,15 @@ class ClassifierManager:
         classifier = random_forest_classifier.load_random_forest_classifier(
             buffer=buffer, classifier_path=None
         )
-        embedding_model = _get_embedding_model_by_hash(
+        embedding_model = _get_embedding_model_by_name(
             session=session,
-            embedding_model_hash=classifier.embedding_model_hash,
+            embedding_model_name=classifier.embedding_model_name,
             collection_id=collection_id,
         )
         if embedding_model is None:
             raise ValueError(
-                "No matching embedding model found for the classifier's hash: "
-                f"'{classifier.embedding_model_hash}'."
+                "No matching embedding model found for the classifier's name: "
+                f"'{classifier.embedding_model_name}'."
             )
 
         classifier_id = uuid4()
@@ -609,18 +609,18 @@ class ClassifierManager:
         return self._classifiers[classifier_id]
 
 
-def _get_embedding_model_by_hash(
-    session: Session, embedding_model_hash: str, collection_id: UUID
+def _get_embedding_model_by_name(
+    session: Session, embedding_model_name: str, collection_id: UUID
 ) -> EmbeddingModelTable | None:
-    """Resolve the embedding model with the given hash within the collection's dataset."""
+    """Resolve the embedding model with the given name within the collection's dataset."""
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection {collection_id} not found.")
 
-    return embedding_model_resolver.get_by_model_hash(
+    return embedding_model_resolver.get_by_name(
         session=session,
         dataset_id=collection.dataset_id,
-        embedding_model_hash=embedding_model_hash,
+        name=embedding_model_name,
     )
 
 
