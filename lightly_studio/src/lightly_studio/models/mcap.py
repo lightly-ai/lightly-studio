@@ -32,9 +32,6 @@ class McapBase(SQLModel):
     """Log time of the keyframe to seek to before decoding. Required for camera channels."""
     keyframe_log_time_ns: Optional[int] = Field(default=None, sa_type=BigInteger)
 
-    """Optional point count. Only meaningful for lidar channels."""
-    point_count: Optional[int] = Field(default=None)
-
 
 class McapCreate(McapBase):
     """Mcap class when inserting."""
@@ -61,7 +58,6 @@ class McapView(SQLModel):
     log_time_ns: int
     capture_timestamp_ns: int
     keyframe_log_time_ns: Optional[int] = None
-    point_count: Optional[int] = None
 
     sample: SampleView
 
@@ -78,6 +74,5 @@ class McapView(SQLModel):
             log_time_ns=mcap.log_time_ns,
             capture_timestamp_ns=mcap.capture_timestamp_ns,
             keyframe_log_time_ns=mcap.keyframe_log_time_ns,
-            point_count=mcap.point_count,
             sample=SampleView.model_validate(mcap.sample),
         )

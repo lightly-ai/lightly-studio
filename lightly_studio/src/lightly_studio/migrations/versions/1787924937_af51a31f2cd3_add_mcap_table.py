@@ -32,7 +32,6 @@ def upgrade() -> None:
         sa.Column("log_time_ns", sa.BigInteger(), nullable=False),
         sa.Column("capture_timestamp_ns", sa.BigInteger(), nullable=False),
         sa.Column("keyframe_log_time_ns", sa.BigInteger(), nullable=True),
-        sa.Column("point_count", sa.Integer(), nullable=True),
         sa.Column("sample_id", sa.Uuid(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
