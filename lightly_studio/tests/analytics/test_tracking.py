@@ -6,7 +6,8 @@ from collections.abc import Generator, Mapping
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio.analytics import tracking
+from lightly_studio.analytics import cohort, posthog_project, tracking
+from lightly_studio.analytics.cohort import UserCohort
 
 
 class FakeTracker:
@@ -120,7 +121,7 @@ def test_shutdown__when_the_backend_raises(mocker: MockerFixture) -> None:
 
 def test_create_tracker(mocker: MockerFixture) -> None:
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
-    mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_test")
+    mocker.patch.object(posthog_project, "get_project_key", return_value="phc_test")
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_HOST", "https://posthog.test")
     mocker.patch.object(atexit, "register")
     posthog_tracker = mocker.patch.object(tracking, "PostHogTracker")
@@ -134,7 +135,7 @@ def test_create_tracker(mocker: MockerFixture) -> None:
 def test_create_tracker__flushes_at_exit(mocker: MockerFixture) -> None:
     """Without this hook a short-lived process drops the queued event."""
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
-    mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_test")
+    mocker.patch.object(posthog_project, "get_project_key", return_value="phc_test")
     mocker.patch.object(tracking, "PostHogTracker")
     register = mocker.patch.object(atexit, "register")
 
@@ -145,13 +146,28 @@ def test_create_tracker__flushes_at_exit(mocker: MockerFixture) -> None:
 
 def test_create_tracker__when_analytics_are_disabled(mocker: MockerFixture) -> None:
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
-    mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_test")
+    mocker.patch.object(posthog_project, "get_project_key", return_value="phc_test")
 
     assert isinstance(tracking._create_tracker(), tracking.NoOpTracker)
 
 
 def test_create_tracker__without_a_key(mocker: MockerFixture) -> None:
+    """An empty LIGHTLY_STUDIO_POSTHOG_KEY switches tracking off by key alone."""
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
-    mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "")
+    mocker.patch.object(posthog_project, "get_project_key", return_value="")
 
     assert isinstance(tracking._create_tracker(), tracking.NoOpTracker)
+
+
+def test_create_tracker__reports_to_the_project_for_the_cohort(mocker: MockerFixture) -> None:
+    """A source build must not reach the production project."""
+    mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
+    mocker.patch.object(posthog_project, "LIGHTLY_STUDIO_POSTHOG_KEY", None)
+    mocker.patch.object(cohort, "get_cohort", return_value=UserCohort.SOURCE_BUILD)
+    mocker.patch.object(atexit, "register")
+    posthog_tracker = mocker.patch.object(tracking, "PostHogTracker")
+
+    tracking._create_tracker()
+
+    _, kwargs = posthog_tracker.call_args
+    assert kwargs["project_api_key"] == posthog_project.DEV_PROJECT_KEY

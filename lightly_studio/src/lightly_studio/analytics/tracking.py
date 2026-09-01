@@ -12,12 +12,12 @@ import threading
 from collections.abc import Mapping
 from enum import Enum
 
+from lightly_studio.analytics import cohort, posthog_project
 from lightly_studio.analytics.posthog_tracker import PostHogTracker
 from lightly_studio.analytics.tracker import Tracker
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_ANALYTICS_ENABLED,
     LIGHTLY_STUDIO_POSTHOG_HOST,
-    LIGHTLY_STUDIO_POSTHOG_KEY,
 )
 
 logger = logging.getLogger(__name__)
@@ -92,12 +92,15 @@ def _get_tracker() -> Tracker:
 
 def _create_tracker() -> Tracker:
     """Build the tracker matching the current configuration."""
-    if not LIGHTLY_STUDIO_ANALYTICS_ENABLED or not LIGHTLY_STUDIO_POSTHOG_KEY:
+    if not LIGHTLY_STUDIO_ANALYTICS_ENABLED:
         return NoOpTracker()
 
-    tracker = PostHogTracker(
-        project_api_key=LIGHTLY_STUDIO_POSTHOG_KEY, host=LIGHTLY_STUDIO_POSTHOG_HOST
-    )
+    # An empty key comes back here from the override, which disables tracking on its own.
+    project_api_key = posthog_project.get_project_key(cohort.get_cohort())
+    if not project_api_key:
+        return NoOpTracker()
+
+    tracker = PostHogTracker(project_api_key=project_api_key, host=LIGHTLY_STUDIO_POSTHOG_HOST)
     # PostHog delivers from a background thread and registers no exit hook of its own, so a
     # short-lived process would drop the event without this.
     atexit.register(shutdown)

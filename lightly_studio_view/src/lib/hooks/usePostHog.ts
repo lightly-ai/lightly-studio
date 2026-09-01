@@ -1,12 +1,7 @@
 import posthog from 'posthog-js';
 import { browser } from '$app/environment';
-import {
-    PUBLIC_POSTHOG_KEY,
-    PUBLIC_POSTHOG_DEV_KEY,
-    PUBLIC_POSTHOG_HOST
-} from '$env/static/public';
 import { version } from '$lib/version.json';
-import { getInstallId } from '$lib/api/lightly_studio_local/sdk.gen';
+import { getAnalyticsConfig } from '$lib/api/lightly_studio_local/sdk.gen';
 // Imported by its own path: $lib/hooks re-exports usePostHog, so going through the barrel would
 // make the two modules import each other.
 import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
@@ -47,35 +42,31 @@ export const usePostHog = () => {
         // Re-check: concurrent callers both get past the guard above before this resolves.
         if (initialized) return;
 
-        const apiKey = PUBLIC_POSTHOG_KEY || PUBLIC_POSTHOG_DEV_KEY;
-        const apiHost = PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
-
-        if (!apiKey) {
-            console.warn('PostHog API key not configured');
+        // Only the backend can tell a checkout from a released package, so it picks the
+        // project. Without a key there is nothing to fall back to.
+        let config;
+        try {
+            config = (await getAnalyticsConfig()).data;
+        } catch (error) {
+            console.warn('Failed to read the analytics configuration', error);
             return;
         }
+        if (!config) return;
+        // Re-check: the await above lets a second concurrent caller reach this point too.
+        if (initialized) return;
 
-        posthog.init(apiKey, {
-            api_host: apiHost,
+        posthog.init(config.posthog_key, {
+            api_host: config.posthog_host,
             person_profiles: 'identified_only',
             capture_pageview: true,
             capture_pageleave: true,
             capture_exceptions: true
         });
         posthog.register({ app_version: version });
-        // Set before the awaited identify() below so the guard above stays a synchronous critical
-        // section: a second concurrent caller must see this flip before we yield, or it inits twice.
         initialized = true;
 
-        // Identify with the backend install id so browser events and the Python SDK, which keys
-        // on the same id, report under one distinct id per install instead of two. On failure we
-        // leave posthog on its own anonymous id.
-        try {
-            const { data } = await getInstallId();
-            if (data) posthog.identify(data.install_id);
-        } catch (error) {
-            console.warn('Failed to identify PostHog user with install id', error);
-        }
+        // One distinct id per install, shared with the Python SDK, instead of two.
+        posthog.identify(config.install_id);
     };
 
     /**
