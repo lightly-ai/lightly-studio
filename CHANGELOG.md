@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hide every bounding box and its annotation counts when all annotation sources are unchecked, instead of showing them all.
 - Keep long-lived PostgreSQL connections alive.
 - Numerical metadata distributions in percentage mode now scale each compared tag independently, so bars match the tooltip.
+- Categorical metadata distributions now include aggregated "Other" and "Missing" bars, so percentages are shares of all samples instead of only the values shown.
 
 ### Security
 
