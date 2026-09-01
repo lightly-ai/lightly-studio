@@ -67,6 +67,9 @@
         if (!componentType) {
             throw new Error('Component type is missing for the selected component');
         }
+        if (componentType === SampleType.MCAP) {
+            return;
+        }
         selectedComponentId = compId;
         navigateToComponentDetails(compId, componentType);
     };
