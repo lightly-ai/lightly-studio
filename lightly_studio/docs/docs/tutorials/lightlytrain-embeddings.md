@@ -59,7 +59,7 @@ pip install lightly-train lightly-studio
 
 ## Step 1: Get a dataset
 
-Create the first script, `train_and_export.py`, and download the example dataset. To use your own data instead, point `IMAGE_PATH` at a folder of images. (`explore.py` will start with these same two lines.)
+Create the first script, `train_and_export.py`, and download the example dataset. To use your own data instead, point `IMAGE_PATH` at a folder of images — see [Load an Image Dataset](../dataset_setup/image_dataset.md). (`explore.py` will start with these same two lines.)
 
 ```python title="train_and_export.py"
 import lightly_studio as ls
@@ -71,7 +71,7 @@ IMAGE_PATH = f"{dataset_path}/coco_subset_128_images/images"
 
 ## Step 2: Train an embedding model
 
-Distillation adapts a strong pretrained backbone to your own images, using no labels. `dinov2/vits14` starts from pretrained weights, so a single pass already gives usable embeddings; train longer to adapt the model more closely to your data.
+[Distillation](https://docs.lightly.ai/train/stable/pretrain_distill/methods/distillation.html) adapts a strong pretrained backbone to your own images, using no labels. `dinov2/vits14` starts from pretrained weights, so a single pass already gives usable embeddings; train longer to adapt the model more closely to your data.
 
 ```python title="train_and_export.py"
 import lightly_train
@@ -85,11 +85,11 @@ lightly_train.pretrain(
 )
 ```
 
-Training writes a checkpoint to `out/pretrain/checkpoints/last.ckpt`. Any name from `lightly_train.list_models()` works for `model`.
+Training writes a checkpoint to `out/pretrain/checkpoints/last.ckpt`. Any name from `lightly_train.list_models()` works for `model` — see LightlyTrain's [supported models](https://docs.lightly.ai/train/stable/pretrain_distill/models/index.html). To train with more data, a different backbone, or another method (DINOv2, DINO, SimCLR), see LightlyTrain's [pretraining guide](https://docs.lightly.ai/train/stable/pretrain_distill/index.html) and [available methods](https://docs.lightly.ai/train/stable/pretrain_distill/methods/index.html).
 
 ## Step 3: Export the embedding model
 
-Export the trained model as a plain torch module. LightlyStudio loads this file and runs it directly.
+[Export](https://docs.lightly.ai/train/stable/pretrain_distill/export.html) the trained model as a plain torch module. LightlyStudio loads this file and runs it directly.
 
 ```python title="train_and_export.py"
 lightly_train.export(
@@ -205,7 +205,7 @@ dataset.add_images_from_path(path=IMAGE_PATH)
 !!! warning "Keep the same LightlyTrain version"
     `torch.load(..., weights_only=False)` unpickles LightlyTrain's model class, so the environment that runs LightlyStudio needs the same `lightly-train` version you exported with.
 
-Text search stays off, because the model has no text encoder. See [Embeddings](../concepts_and_tools/embeddings.md) for the full protocol.
+Text search stays off, because the model has no text encoder. See [Using your own embeddings](../concepts_and_tools/embeddings.md#using-your-own-embeddings) and the [Embeddings API](../api/embeddings.md) for the full `ImageEmbeddingGenerator` protocol.
 
 !!! note "Alternative: precompute the embeddings"
     Prefer to embed once, offline? Run `lightly_train.embed(...)` to write vectors to a file, then load them with the pattern in [`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py). That path embeds whole images only.
@@ -225,7 +225,7 @@ python train_and_export.py   # train and export the model (slow; run once)
 python explore.py            # embed your data and open LightlyStudio
 ```
 
-Click the `Embed` button in the top right to open the embedding plot. It shows every image as a point in a 2D projection (PaCMAP) of the embedding space.
+Click the `Embed` button in the top right to open the [embedding plot](../concepts_and_tools/embeddings.md#the-embedding-plot-gui). It shows every image as a point in a 2D projection (PaCMAP) of the embedding space.
 
 ![The embedding plot after loading LightlyTrain embeddings, colored by class](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg){ width="100%" }
 
@@ -272,7 +272,7 @@ dataset.query().sampling().diverse(
 )
 ```
 
-The result is saved as a tag. Open it in the grid to review the picks, or color the embedding plot by the tag to see the spread. You can do the same by hand: lasso a region in the plot to scope the grid to those samples, inspect them, and tag what you want to keep. Selecting points and inspecting samples works in both directions. For every strategy — diverse, deduplication, similarity, and typicality — see [Sampling](../concepts_and_tools/sampling.md).
+The result is saved as a [tag](../concepts_and_tools/tags.md). Open it in the grid to review the picks, or color the embedding plot by the tag to see the spread. You can do the same by hand: lasso a region in the plot to scope the grid to those samples, inspect them, and tag what you want to keep. Selecting points and inspecting samples works in both directions. For every strategy — diverse, deduplication, similarity, and typicality — see [Sampling](../concepts_and_tools/sampling.md).
 
 ## Conclusion
 
