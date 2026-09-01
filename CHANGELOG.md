@@ -48,6 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Removed the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
+  format and always writes the scikit-learn format, which is the only one LightlyStudio can load.
+
 ### Fixed
 
 - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.

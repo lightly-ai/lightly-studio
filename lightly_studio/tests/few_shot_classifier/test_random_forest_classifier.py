@@ -11,9 +11,7 @@ from sklearn.utils import validation  # type: ignore[import-untyped]
 from lightly_studio.few_shot_classifier.classifier import AnnotatedEmbedding
 from lightly_studio.few_shot_classifier.random_forest_classifier import (
     RandomForest,
-    load_lightly_random_forest,
     load_random_forest_classifier,
-    predict_with_lightly_random_forest,
 )
 
 
@@ -272,7 +270,7 @@ class TestRandomForestClassifier:
 
         classifier.train(annotated_embeddings)
         export_path = Path(tmp_path / "test_model_sklearn_instance.pkl")
-        classifier.export(export_path, export_type="sklearn")
+        classifier.export(export_path)
 
         loaded_classifier = load_random_forest_classifier(
             classifier_path=Path(tmp_path / "test_model_sklearn_instance.pkl"),
@@ -286,88 +284,6 @@ class TestRandomForestClassifier:
         predictions_exported_model = loaded_classifier.predict(test_embeddings)
         # Check that the predictions from the 2 classifiers are the same.
         assert predictions == predictions_exported_model
-
-    def test_export__lightly_format_root_is_leaf(self, tmp_path: Path) -> None:
-        """Test the export raw functionality.
-
-        The root becomes a leaf because the training set has only 2 samples.
-        RandomForest uses bootstrapping, so some trees may see only one class
-        and cannot split. In that case, the root node is a leaf that outputs
-        a fixed class probability.
-        """
-        classifier = RandomForest(
-            name="classifier_name",
-            classes=["0", "2", "1"],
-            embedding_model_hash="hash",
-            embedding_model_name="name",
-        )
-        # Step 1: Define embeddings for training
-        annotated_embeddings = [
-            AnnotatedEmbedding(
-                embedding=np.array([0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float32),
-                annotation="0",  # Class 0
-            ),
-            AnnotatedEmbedding(
-                embedding=np.array([1.0, 0.9, 0.8, 0.7, 0.6], dtype=np.float32),
-                annotation="1",  # Class 1
-            ),
-        ]
-
-        classifier.train(annotated_embeddings)
-        export_path = Path(tmp_path / "test_model_lightly.pkl")
-        classifier.export(export_path, export_type="lightly")
-
-        test_embeddings = [
-            np.array([0.15, 0.25, 0.35, 0.145, 0.155], dtype=np.float32),
-            np.array([0.9, 0.8, 0.7, 0.6, 0.6], dtype=np.float32),
-        ]
-        exported_classifier = load_lightly_random_forest(path=export_path, buffer=None)
-
-        predictions = classifier.predict(test_embeddings)
-        predictions_exported_model = predict_with_lightly_random_forest(
-            exported_classifier, test_embeddings
-        )
-        assert np.allclose(predictions, predictions_exported_model, atol=1e-8)
-
-    @pytest.mark.skip(reason="Skipped a long running test, lightly format should be removed.")
-    def test_export__lightly_format(self, tmp_path: Path) -> None:
-        """Test the export raw functionality."""
-        n_samples = 1000
-        n_features = 128
-        n_classes = 100
-
-        class_labels = [f"class_{i}" for i in range(n_classes)]
-        rng = np.random.default_rng(seed=42)
-
-        annotated_embeddings = [
-            AnnotatedEmbedding(
-                embedding=rng.random(n_features).tolist(),
-                annotation=str(rng.choice(class_labels)),
-            )
-            for _ in range(n_samples)
-        ]
-        # Add a class label to the beginning of the list to check that the
-        # predictions are in the correct order, using all the classes not olny
-        # the ones that are in the training data.
-        class_labels.insert(0, "class_A")
-        classifier = RandomForest(
-            name="classifier_name",
-            classes=class_labels,
-            embedding_model_hash="hash",
-            embedding_model_name="test_model",
-        )
-        classifier.train(annotated_embeddings)
-        export_path = Path(tmp_path / "test_model_lightly.pkl")
-        classifier.export(export_path, export_type="lightly")
-
-        test_embeddings = [rng.random(n_features).astype(np.float32) for _ in range(1000)]
-        exported_classifier = load_lightly_random_forest(path=export_path, buffer=None)
-
-        predictions = classifier.predict(test_embeddings)
-        predictions_exported_model = predict_with_lightly_random_forest(
-            exported_classifier, test_embeddings
-        )
-        assert np.allclose(predictions, predictions_exported_model, atol=1e-6)
 
     def test_export__to_buffer(self) -> None:
         """Test exporting the classifier to a buffer."""
@@ -396,27 +312,11 @@ class TestRandomForestClassifier:
             np.array([0.9, 0.8, 0.7, 0.6, 0.6], dtype=np.float32),
         ]
 
-        # Test sklearn export format.
-        buffer_sklearn = io.BytesIO()
-        classifier.export(export_path=None, buffer=buffer_sklearn, export_type="sklearn")
-        buffer_sklearn.seek(0)
-        loaded_classifier_sklearn = load_random_forest_classifier(
-            buffer=buffer_sklearn, classifier_path=None
-        )
-        predictions_sklearn = loaded_classifier_sklearn.predict(test_embeddings)
-
-        # Test lightly export format.
-        buffer_lightly = io.BytesIO()
-        classifier.export(export_path=None, buffer=buffer_lightly, export_type="lightly")
-        buffer_lightly.seek(0)
-        loaded_classifier_lightly = load_lightly_random_forest(buffer=buffer_lightly, path=None)
-        predictions_lightly = predict_with_lightly_random_forest(
-            loaded_classifier_lightly, test_embeddings
-        )
-
-        # Original predictions for comparison.
+        buffer = io.BytesIO()
+        classifier.export(export_path=None, buffer=buffer)
+        buffer.seek(0)
+        loaded_classifier = load_random_forest_classifier(buffer=buffer, classifier_path=None)
+        predictions_loaded = loaded_classifier.predict(test_embeddings)
         predictions_original = classifier.predict(test_embeddings)
 
-        # Verify predictions match for both export formats.
-        assert np.allclose(predictions_original, predictions_sklearn, atol=1e-6)
-        assert np.allclose(predictions_original, predictions_lightly, atol=1e-6)
+        assert np.allclose(predictions_original, predictions_loaded, atol=1e-6)
