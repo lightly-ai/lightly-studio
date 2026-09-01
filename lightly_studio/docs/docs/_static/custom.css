@@ -608,6 +608,14 @@ body {
   font-size: 0.65rem;
 }
 
+/* `search.suggest` renders the type-ahead completion into a sibling element that
+   Material sizes to match the input. The input above is shrunk to 0.65rem, so the
+   suggestion has to follow or the grey ghost word lands offset behind the typed
+   text and reads as duplicated. */
+.md-search__suggest {
+  font-size: 0.65rem;
+}
+
 /* `--ls-muted`, not `--ls-faint`: the field is filled with the muted surface,
    and the faint grey is only 4.3:1 against it. */
 .md-search__input::placeholder {
