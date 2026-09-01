@@ -10,6 +10,7 @@ from PIL import Image
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.dataset.embedding_generator import ImageCrop
 from lightly_studio.dataset.perception_encoder_embedding_generator import (
+    MODEL_NAME,
     PerceptionEncoderEmbeddingGenerator,
 )
 
@@ -17,13 +18,12 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
 
 class TestPerceptionEncoderEmbeddingGenerator:
-    def test_get_embedding_model_input(self) -> None:
+    def test_embedding_space_spec(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
-        embedding_model_input = perception_encoder.get_embedding_model_input()
+        space_spec = perception_encoder.embedding_space_spec()
 
-        assert embedding_model_input.name == "PE-Core-T16-384"
-        assert embedding_model_input.embedding_dimension == 512
-        assert embedding_model_input.embedding_model_hash != ""
+        assert space_spec.dimension == 512
+        assert space_spec.space_key == MODEL_NAME
 
     def test_embed_text(self) -> None:
         text = "a cat"

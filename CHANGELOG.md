@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
   to 0.03ms.
 - Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
+- Python SDK (beta): Simplified embedding generator interface. Implement `embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of the former `get_embedding_model_input`.
 
 - Stepping to the previous or next annotation in the annotation details view no longer sorts the
   whole collection on every click, for annotations on images and on video frames. On PostgreSQL
@@ -48,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Removed the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
+  format and always writes the scikit-learn format, which is the only one LightlyStudio can load.
+
 ### Fixed
 
 - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
@@ -55,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep long-lived PostgreSQL connections alive.
 - The "Load Classifier (.pkl)" button now opens the file picker. The button covered the invisible
   file input that was meant to receive the click, so nothing happened.
+- Numerical metadata distributions in percentage mode now scale each compared tag independently, so bars match the tooltip.
 
 ### Security
 

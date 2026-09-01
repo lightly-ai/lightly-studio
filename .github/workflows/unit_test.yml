@@ -10,6 +10,12 @@ on:
 
 env:
   NODE_OPTIONS: --max-old-space-size=4096
+  # Every run restores the uv cache, only main writes one: per-ref copies are
+  # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
+  # The Python version is part of the uv cache key, so each step passes the one its job runs:
+  # the 3.9 jobs share an entry instead of the release-tooling key, whose deps are ~30MB.
+  UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -82,7 +88,9 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -120,6 +128,7 @@ jobs:
           version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -170,7 +179,9 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
+          python-version: ${{ matrix.python }}
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -221,6 +232,7 @@ jobs:
           version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -259,7 +271,9 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -329,6 +343,7 @@ jobs:
         with:
           version: "0.12.6"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Static checks
         run: make static-checks

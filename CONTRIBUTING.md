@@ -141,6 +141,21 @@ Now edit the `.env` file:
 * Optionally change the `EXAMPLES_*` paths to point to data on your machine. You can leave the
 defaults to use the cloned dataset examples data.
 
+### Mark Your Machine as Internal
+
+Lightly staff should mark their machine once, so that internal usage is filtered out of the
+product metrics:
+
+```shell
+mkdir -p ~/.cache/lightly-studio && touch ~/.cache/lightly-studio/internal
+```
+
+The marker lives in the model cache directory, next to the installation ID, so it survives
+recreating the virtualenv. If you point `LIGHTLY_STUDIO_MODEL_CACHE_DIR` elsewhere, create the file
+there instead, otherwise nothing reads it.
+
+`LIGHTLY_STUDIO_INTERNAL=1`, in `.env` or the environment, does the same for a single run.
+
 ### Run Examples
 
 Choose a script in `lightly_studio/src/lightly_studio/examples` directory and run it like this:
