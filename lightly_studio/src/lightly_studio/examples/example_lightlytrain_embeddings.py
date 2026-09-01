@@ -72,7 +72,10 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
             else "cpu"
         )
         # Full-module pickle: the same lightly_train version must be installed to load it.
-        self._model = torch.load(model_file, weights_only=False).to(self._device).eval()
+        # map_location="cpu" first, so a model exported on a GPU still loads on a CPU/MPS host.
+        self._model = (
+            torch.load(model_file, map_location="cpu", weights_only=False).to(self._device).eval()
+        )
         self._preprocess = transforms.Compose(
             [
                 transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
@@ -143,7 +146,10 @@ data_dir = ls.utils.download_example_dataset(download_dir="dataset_examples")
 images_path = str(Path(data_dir) / "coco_subset_128_images" / "images")
 
 # 2. Train (or briefly adapt) an embedding model on the images.
-lightly_train.pretrain(out=PRETRAIN_DIR, data=images_path, model=MODEL, epochs=EPOCHS)
+# overwrite=True lets you re-run this script over an existing output directory.
+lightly_train.pretrain(
+    out=PRETRAIN_DIR, data=images_path, model=MODEL, epochs=EPOCHS, overwrite=True
+)
 
 # 3. Export the trained embedding model as a torch module Studio can run.
 lightly_train.export(
@@ -151,6 +157,7 @@ lightly_train.export(
     checkpoint=f"{PRETRAIN_DIR}/checkpoints/last.ckpt",
     part="embedding_model",
     format="torch_model",
+    overwrite=True,
 )
 
 # 4. Load the model into LightlyStudio. Register the generator BEFORE creating the

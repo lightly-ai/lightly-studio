@@ -68,6 +68,7 @@ lightly_train.pretrain(
     data=IMAGE_PATH,
     model="dinov2/vits14",
     epochs=1,  # A quick pass. Raise it (e.g. 10 or more) to adapt further to your data.
+    overwrite=True,  # Allow re-running over an existing output directory.
 )
 ```
 
@@ -83,6 +84,7 @@ lightly_train.export(
     checkpoint="out/pretrain/checkpoints/last.ckpt",
     part="embedding_model",
     format="torch_model",
+    overwrite=True,
 )
 ```
 
@@ -119,7 +121,10 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
     def __init__(self, model_file: str) -> None:
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self._model = torch.load(model_file, weights_only=False).to(self._device).eval()
+        # map_location="cpu" first, so a model exported on a GPU also loads on a CPU host.
+        self._model = torch.load(
+            model_file, map_location="cpu", weights_only=False
+        ).to(self._device).eval()
         self._preprocess = transforms.Compose(
             [
                 transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
@@ -230,6 +235,6 @@ ls.start_gui(open_browser=True)
 
 In this tutorial, you trained an embedding model on your own images with LightlyTrain, exported it, and ran it inside LightlyStudio to explore and curate your data.
 
-The connection between the two products is a single model file. Once LightlyStudio runs it, the embedding plot, search, and every sampling strategy work the same as with a built-in model — but now the space reflects a model that understands your data.
+The connection between the two products is a single model file. Once LightlyStudio runs it, the embedding plot and every sampling strategy work just as they do with a built-in model — but now the space reflects a model that understands your data. Text search is the one exception: this model is vision-only.
 
 To go further, train on your full dataset with more epochs, try a different backbone from `lightly_train.list_models()`, or read [Embeddings](../concepts_and_tools/embeddings.md) and [Sampling](../concepts_and_tools/sampling.md) to get more out of the map.
