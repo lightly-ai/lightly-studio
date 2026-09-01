@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   IoU explains itself.
 - Warn in the annotations grid when the evaluation run it is sorted by is out of date, and offer a
   recompute next to the sort control.
+- Warn in the annotation detail view when the prev/next order follows an out-of-date evaluation
+  run.
 
 
 ### Changed
