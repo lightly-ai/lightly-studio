@@ -14,7 +14,10 @@ from numpy.typing import NDArray
 from sqlmodel import Session, col, select
 
 from lightly_studio.database.db_vector import Embedding
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    CROPPABLE_ANNOTATION_TYPES,
+    AnnotationBaseTable,
+)
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -486,17 +489,14 @@ def _get_subpart_embeddings(
             session=session,
             parent_sample_ids=input_sample_ids,
             annotation_collection_id=strat.annotation_source_id,
-            annotation_types=[AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+            annotation_types=CROPPABLE_ANNOTATION_TYPES,
         )
     else:
         annotations = list(
             annotation_resolver.get_all_by_parent_sample_ids(
                 session=session,
                 parent_sample_ids=input_sample_ids,
-                annotation_types=[
-                    AnnotationType.OBJECT_DETECTION,
-                    AnnotationType.SEGMENTATION_MASK,
-                ],
+                annotation_types=CROPPABLE_ANNOTATION_TYPES,
             )
         )
     if not annotations:
