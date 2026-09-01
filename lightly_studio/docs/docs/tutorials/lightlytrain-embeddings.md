@@ -9,13 +9,26 @@ You will:
 - Explore the 2D embedding plot to find clusters, outliers, and near-duplicates.
 - Select a diverse subset for labeling or training.
 
-![The embedding plot in LightlyStudio, colored by cluster](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/embedding-plot.jpg){ width="100%" }
+![LightlyTrain embeddings in LightlyStudio, colored by class — the clusters separate cleanly](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg){ width="100%" }
 
 ## Why train your own embedding model
 
 Every embedding-based feature in LightlyStudio — the embedding plot, search, and sampling — is only as good as the model behind the vectors. A generic model like CLIP knows a little about everything. On specialized data, such as medical scans, satellite tiles, or factory-line images, it often smears distinct categories together, and the plot shows one undifferentiated blob.
 
 A model trained on your own images pulls those categories apart. Clusters, outliers, and near-duplicates become visible, and every downstream selection gets sharper. LightlyTrain trains that model from your unlabeled images; LightlyStudio turns its embeddings into a map you can explore and curate.
+
+The difference is easy to see. Below is the same dataset embedded two ways and colored by class — a generic model versus one adapted with LightlyTrain:
+
+<div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0;">
+  <figure style="flex: 1 1 320px; margin: 0;">
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/mobile-clip-embeddings.jpg" alt="MobileCLIP embeddings colored by class" style="width: 100%; border-radius: 6px;">
+    <figcaption><strong>A generic model (MobileCLIP).</strong> Classes overlap and bleed together.</figcaption>
+  </figure>
+  <figure style="flex: 1 1 320px; margin: 0;">
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg" alt="LightlyTrain embeddings colored by class" style="width: 100%; border-radius: 6px;">
+    <figcaption><strong>Your LightlyTrain model.</strong> The same classes separate into distinct clusters.</figcaption>
+  </figure>
+</div>
 
 ## How the workflow fits together
 
@@ -203,7 +216,7 @@ python train_and_explore.py
 
 Then open LightlyStudio and click the `Embed` button in the top right to open the embedding plot. It shows every image as a point in a 2D projection (PaCMAP) of the embedding space.
 
-![The embedding plot after loading LightlyTrain embeddings](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/embedding-plot-explore.jpg){ width="100%" }
+![The embedding plot after loading LightlyTrain embeddings, colored by class](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg){ width="100%" }
 
 Read the map:
 
