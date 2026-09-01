@@ -1468,6 +1468,7 @@ def test_sampling_via_database__subpart_diversity__annotation_source_id(
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
     assert len(samples_in_tag) == 2
+    assert {sample.file_path_abs for sample in samples_in_tag} == {"p0.jpg", "p1.jpg"}
 
 
 def test_sampling_via_database__subpart_diversity__no_annotation_source_id(
@@ -1560,6 +1561,7 @@ def test_sampling_via_database__subpart_diversity__no_annotation_source_id(
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
     assert len(samples_in_tag) == 2
+    assert {sample.file_path_abs for sample in samples_in_tag} == {"p0.jpg", "p1.jpg"}
 
 
 def test_sampling_via_database__subpart_diversity__multiple_annotation_collections(
@@ -1662,6 +1664,7 @@ def test_sampling_via_database__subpart_diversity__multiple_annotation_collectio
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
     assert len(samples_in_tag) == 2
+    assert {sample.file_path_abs for sample in samples_in_tag} == {"p0.jpg", "p1.jpg"}
 
 
 def test_get_subpart_embeddings__middle_crop_unembedded(
