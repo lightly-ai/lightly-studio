@@ -866,7 +866,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   cursor: default;
   font-family: var(--ls-font-mono);
   font-size: var(--ls-label-size);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: var(--ls-label-tracking);
   margin: 0;
   padding: 0 0.4rem 0.5rem;
@@ -874,18 +874,18 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 /* Level 2 ("Core Concepts", "Python API"): a run of pages inside a section that
-   is long enough to want a heading of its own. It reads as one of the items
-   around it, a half-step heavier, with its children indented under it and a
-   chevron to collapse them — not as a third label register. The section caption
+   is long enough to want a heading of its own. It reads as a plain item like the
+   ones around it — same size and color — with its children indented under it and a
+   chevron to collapse them, not as a third label register. The section caption
    above is what does the grouping; this only says where a run starts. */
 .md-sidebar--primary
   .md-nav[data-md-level="1"]
   > .md-nav__list
   > .md-nav__item--nested
   > :is(.md-nav__link, .md-nav__container) {
-  color: var(--ls-ink);
+  color: var(--ls-body);
   font-size: 0.65rem;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* A section caption is a label, not a destination; nothing to hover. */
