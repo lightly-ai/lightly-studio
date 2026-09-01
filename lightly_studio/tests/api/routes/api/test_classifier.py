@@ -10,9 +10,6 @@ from pytest_mock import MockerFixture
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
-from lightly_studio.few_shot_classifier.classifier import (
-    ExportType,
-)
 from lightly_studio.few_shot_classifier.classifier_manager import (
     ClassifierEntry,
     ClassifierManager,
@@ -175,23 +172,20 @@ def test_save_classifier_to_file(mocker: MockerFixture, test_client: TestClient)
     mock_classifier_manager.get_classifier_by_id.return_value = mock_classifier
 
     # Mock save_classifier_to_buffer to write some test data
-    def mock_save_to_buffer(
-        classifier_id: UUID, buffer: io.BytesIO, export_type: ExportType
-    ) -> None:
-        content = f"test binary data - {classifier_id}.{export_type}"
+    def mock_save_to_buffer(classifier_id: UUID, buffer: io.BytesIO) -> None:
+        content = f"test binary data - {classifier_id}"
         bcontent = content.encode("utf-8")
         buffer.write(bcontent)
 
     mock_classifier_manager.save_classifier_to_buffer.side_effect = mock_save_to_buffer
-    export_type = "lightly"
     # Make the request
-    response = test_client.post(f"/api/classifiers/{mock_id}/save_classifier_to_file/{export_type}")
+    response = test_client.post(f"/api/classifiers/{mock_id}/save_classifier_to_file")
 
     # Assert response
     assert response.status_code == HTTP_STATUS_OK
     assert response.headers["content-type"] == "application/octet-stream"
     assert response.headers["content-disposition"] == 'attachment; filename="classifier1.pkl"'
-    content = f"test binary data - {mock_id}.{export_type}"
+    content = f"test binary data - {mock_id}"
     bcontent = content.encode("utf-8")
     assert response.content == bcontent
 
