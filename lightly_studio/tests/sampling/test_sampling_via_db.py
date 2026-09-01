@@ -1791,7 +1791,6 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
         session=db_session,
         collection_id=coll_a_id,
         embedding_model_name="model_2d",
-        embedding_model_hash="hash_a",
         embedding_dimension=2,
         set_as_default=True,
     )
@@ -1819,7 +1818,6 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
         session=db_session,
         collection_id=coll_b_id,
         embedding_model_name="model_3d",
-        embedding_model_hash="hash_b",
         embedding_dimension=3,
         set_as_default=True,
     )
