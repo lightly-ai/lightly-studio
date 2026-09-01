@@ -39,7 +39,7 @@ LightlyTrain and LightlyStudio meet at one point: the embedding model.
 3. **Load** the module into LightlyStudio, which runs it to embed your data.
 4. **Explore and curate** the embeddings in the 2D plot.
 
-This tutorial builds **two small scripts**: `train_and_export.py` (train the model — run it once) and `explore.py` (load the model into LightlyStudio and explore — run it any time). Splitting them means you train once, then reopen and explore without retraining. A combined, runnable version of both is available as [`example_lightlytrain_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_lightlytrain_embeddings.py).
+This tutorial builds **two small scripts**: `train_and_export.py` (train the model — run it once) and `explore.py` (load the model into LightlyStudio and explore — run it any time). Splitting them means you train once, then reopen and explore without retraining. Runnable versions of both are on GitHub: [`example_lightlytrain_train_and_export.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_lightlytrain_train_and_export.py) and [`example_lightlytrain_explore.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_lightlytrain_explore.py).
 
 ## Prerequisites
 

@@ -1,26 +1,19 @@
-"""Train an embedding model with LightlyTrain and explore it in LightlyStudio.
+"""Load a LightlyTrain model into LightlyStudio and explore its embeddings.
 
-This script runs the full path end to end:
+Part 2 of a two-script example. Run ``example_lightlytrain_train_and_export.py``
+first to produce ``out/embedding_model.pt``. This script loads that model, embeds
+the dataset with it on the fly, selects a diverse subset, and opens the app.
 
-1. Train (or briefly adapt) an embedding model with ``lightly_train.pretrain``.
-2. Export it as a torch module with ``lightly_train.export``.
-3. Load the module into LightlyStudio through a small ``ImageEmbeddingGenerator``
-   that runs it on the fly, and open the app to explore and curate the embeddings.
-
-LightlyTrain is a separate install and needs Python 3.10 or newer:
+The environment that runs this needs the same ``lightly-train`` version used to
+export the model, because ``torch.load`` unpickles LightlyTrain's model class:
 
     pip install lightly-train lightly-studio
-
-Run the whole script with a single ``python example_lightlytrain_embeddings.py``.
-``EPOCHS = 1`` is a quick pass that already gives usable embeddings; raise it
-(for example to 10) to adapt the model more closely to your own images.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import lightly_train  # type: ignore[import-not-found]
 import numpy as np
 import torch
 from numpy.typing import NDArray
@@ -33,13 +26,7 @@ from lightly_studio.dataset import file_utils, image_crop_embedding, image_embed
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
 
-# Backbone to train/adapt. Any name from lightly_train.list_models() works.
-MODEL = "dinov2/vits14"
-# A quick pass that already gives usable embeddings. Raise it (e.g. 10) to adapt further.
-EPOCHS = 1
-PRETRAIN_DIR = "out/pretrain"
 MODEL_FILE = "out/embedding_model.pt"
-
 MAX_BATCH_SIZE = 128
 IMAGE_SIZE = 224
 # LightlyTrain's default normalization is ImageNet. If you trained with custom
@@ -141,37 +128,22 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         )
 
 
-# 1. Get a dataset. Swap in your own image folder here.
+# 1. Point at the same dataset used for training (download is skipped if present).
 data_dir = ls.utils.download_example_dataset(download_dir="dataset_examples")
 images_path = str(Path(data_dir) / "coco_subset_128_images" / "images")
 
-# 2. Train (or briefly adapt) an embedding model on the images.
-# overwrite=True lets you re-run this script over an existing output directory.
-lightly_train.pretrain(
-    out=PRETRAIN_DIR, data=images_path, model=MODEL, epochs=EPOCHS, overwrite=True
-)
-
-# 3. Export the trained embedding model as a torch module Studio can run.
-lightly_train.export(
-    out=MODEL_FILE,
-    checkpoint=f"{PRETRAIN_DIR}/checkpoints/last.ckpt",
-    part="embedding_model",
-    format="torch_model",
-    overwrite=True,
-)
-
-# 4. Load the model into LightlyStudio. Register the generator BEFORE creating the
+# 2. Load the model into LightlyStudio. Register the generator BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
 db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
 dataset.add_images_from_path(path=images_path)
 
-# 5. Curate in code: select a diverse subset. The result is stored as a tag you can
+# 3. Curate in code: select a diverse subset. The result is stored as a tag you can
 # open in the app. You can also do this interactively with the lasso in the GUI.
 dataset.query().sampling().diverse(
     n_samples_to_select=32, sampling_result_tag_name="diverse_subset"
 )
 
-# 6. Explore the embedding map. Open the printed URL and pick the Embed panel.
+# 4. Explore the embedding map. Open the printed URL and pick the Embed panel.
 ls.start_gui(open_browser=True)
