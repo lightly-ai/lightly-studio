@@ -156,6 +156,48 @@ there instead, otherwise nothing reads it.
 
 `LIGHTLY_STUDIO_INTERNAL=1`, in `.env` or the environment, does the same for a single run.
 
+### Test with a Private Mundig Development Wheel
+
+Lightly developers with access to the private Artifact Registry can test an unreleased
+`lightly-mundig` wheel without changing `pyproject.toml` or `uv.lock`.
+
+1. Install the authentication helper once and authenticate with Google Cloud:
+
+```bash
+uv tool install keyring --with keyrings.google-artifactregistry-auth
+gcloud auth application-default login
+```
+
+2. Configure the environment variables to use the private index:
+
+```bash
+export UV_INDEX="https://oauth2accesstoken@europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/"
+export UV_KEYRING_PROVIDER=subprocess
+export MUNDIG_DEV_VERSION="<dev-version>"
+```
+
+3. Run tests with the development wheel layered over the public version in the lockfile:
+
+```bash
+cd lightly_studio
+uv run --with "lightly-mundig==$MUNDIG_DEV_VERSION" pytest tests/path/to/test_file.py
+```
+
+For a longer development session, install the wheel directly into the project environment. Set
+`UV_NO_SYNC=1` to prevent subsequent `uv` commands (such as `make test` or `uv run`) from restoring
+the public version from the lockfile:
+
+```bash
+cd lightly_studio
+uv sync --all-groups --all-extras
+uv pip install --reinstall "lightly-mundig==$MUNDIG_DEV_VERSION"
+UV_NO_SYNC=1 make test
+```
+
+This workflow is local only. CI uses the public Mundig version pinned in `pyproject.toml`. Publish
+the required Mundig version to PyPI and update the pin in `pyproject.toml` before expecting CI to
+pass.
+
 ### Run Examples
 
 Choose a script in `lightly_studio/src/lightly_studio/examples` directory and run it like this:
