@@ -6,9 +6,10 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageView
+from lightly_studio.models.mcap import McapView
 from lightly_studio.models.video import VideoView
 from lightly_studio.resolvers import collection_resolver, group_resolver
-from tests.helpers_resolvers import ImageStub, create_collection, create_images
+from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_mcap
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
@@ -83,6 +84,57 @@ def test_get_group_component_details_by_group_id__multiple_components(db_session
     assert camera_result.details.height == camera.height
     assert camera_result.details.fps == camera.fps
     assert camera_result.details.duration_s == camera.duration_s
+
+
+def test_get_group_component_details_by_group_id__mcap_components(db_session: Session) -> None:
+    """Test that MCAP components are returned, not dropped."""
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[
+            ("front", SampleType.MCAP),
+            ("pcl_front", SampleType.MCAP),
+        ],
+    )
+
+    front = create_mcap(
+        db_session,
+        components["front"].collection_id,
+        channel_id=3,
+        keyframe_log_time_ns=90,
+    )
+    pcl_front = create_mcap(
+        db_session,
+        components["pcl_front"].collection_id,
+        channel_id=5,
+        keyframe_log_time_ns=None,
+    )
+
+    group_ids = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[{front.sample_id, pcl_front.sample_id}],
+    )
+
+    results = group_resolver.get_group_component_details_by_group_id(
+        session=db_session, group_id=group_ids[0]
+    )
+
+    assert len(results) == 2
+    assert {r.collection.group_component_name for r in results} == {"front", "pcl_front"}
+    for result in results:
+        assert isinstance(result.details, McapView)
+
+    front_result = next(r for r in results if r.collection.group_component_name == "front")
+    assert isinstance(front_result.details, McapView)
+    assert front_result.details.sample_id == front.sample_id
+    assert front_result.details.channel_id == 3
+    assert front_result.details.keyframe_log_time_ns == 90
+
+    pcl_result = next(r for r in results if r.collection.group_component_name == "pcl_front")
+    assert isinstance(pcl_result.details, McapView)
+    assert pcl_result.details.sample_id == pcl_front.sample_id
 
 
 def test_get_group_component_details_by_group_id__empty_group(db_session: Session) -> None:
