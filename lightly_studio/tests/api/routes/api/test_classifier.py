@@ -207,7 +207,6 @@ def test_load_classifier_from_file(mocker: MockerFixture, test_client: TestClien
         few_shot_classifier=RandomForest(
             name="mock_name",
             classes=["class1", "class2"],
-            embedding_model_hash="mock_hash",
             embedding_model_name="mock_model",
         ),
         classifier_id=mock_id,
@@ -273,7 +272,6 @@ def test_create_classifier(mocker: MockerFixture, test_client: TestClient) -> No
         few_shot_classifier=RandomForest(
             name=mock_name,
             classes=["class1", "class2"],
-            embedding_model_hash="mock_hash",
             embedding_model_name="mock_model",
         ),
         classifier_id=mock_id,
@@ -421,7 +419,6 @@ def test_load_classifier_from_buffer(mocker: MockerFixture, test_client: TestCli
         few_shot_classifier=RandomForest(
             name="mock_name",
             classes=["class1", "class2"],
-            embedding_model_hash="mock_hash",
             embedding_model_name="mock_model",
         ),
         classifier_id=mock_id,
