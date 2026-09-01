@@ -5,6 +5,7 @@ import {
     getEvaluationSampleMetricsInfoQueryKey
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { toast } from 'svelte-sonner';
+import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite/createAnnotationsInfiniteOptions';
 import { useRecomputeEvaluationRun } from './useRecomputeEvaluationRun.svelte';
 
 vi.mock('@tanstack/svelte-query', async (importOriginal) => {
@@ -49,6 +50,24 @@ describe('useRecomputeEvaluationRun', () => {
             queryKey: ['getEvaluationConfusionMatrix', 'dataset-1', 'run-1']
         });
         expect(toast.success).toHaveBeenCalledWith('Evaluation recomputed');
+    });
+
+    it('invalidates the annotation grid list query on success, so the sort order refreshes', () => {
+        vi.mocked(createMutation).mockReturnValue({
+            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
+                opts.onSuccess();
+            }
+        } as unknown as ReturnType<typeof createMutation>);
+
+        const { recompute } = useRecomputeEvaluationRun(() => ({
+            datasetId: 'dataset-1',
+            runId: 'run-1'
+        }));
+        recompute();
+
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: [ANNOTATIONS_INFINITE_QUERY_KEY_ROOT]
+        });
     });
 
     it('shows the server error message on failure', () => {

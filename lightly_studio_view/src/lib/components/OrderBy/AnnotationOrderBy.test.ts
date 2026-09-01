@@ -2,7 +2,10 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { readable } from 'svelte/store';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EvaluationRunAnnotationMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
+import type {
+    EvaluationRunAnnotationMetricsInfoView,
+    EvaluationRunView
+} from '$lib/api/lightly_studio_local/types.gen';
 import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
 import { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotationSortBy';
 import AnnotationOrderBy from './AnnotationOrderBy.svelte';
@@ -18,7 +21,10 @@ const mocks = vi.hoisted(() => ({
     trackEvent: vi.fn(),
     metricsProxy: { data: null as unknown[] | null, dataUpdatedAt: 0 },
     hasEmbeddingsProxy: { data: true as boolean | undefined },
-    textEmbeddingValue: undefined as TextEmbedding | undefined
+    textEmbeddingValue: undefined as TextEmbedding | undefined,
+    runsProxy: { data: [] as unknown[] },
+    recompute: vi.fn(),
+    recomputeMutation: { isPending: false }
 }));
 
 // Mocked at the source modules rather than at the `$lib/hooks` barrel, so both the component and
@@ -40,7 +46,37 @@ vi.mock(
     () => ({ useAnnotationEvaluationMetricsInfo: () => mocks.metricsProxy })
 );
 
+vi.mock('$lib/hooks/useEvaluationRuns/useEvaluationRuns', () => ({
+    useEvaluationRuns: () => mocks.runsProxy,
+    useInvalidateEvaluationRunsQueries: () => vi.fn()
+}));
+
+vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte', () => ({
+    useRecomputeEvaluationRun: (getParams: () => { runId: string }) => ({
+        mutation: mocks.recomputeMutation,
+        recompute: () => mocks.recompute(getParams())
+    })
+}));
+
 const COLLECTION_ID = 'source-1';
+const DATASET_ID = 'dataset-1';
+
+const STALE_RUN = {
+    id: 'run-1',
+    name: 'detection eval',
+    stale_since: new Date('2026-01-01')
+} as EvaluationRunView;
+
+const FRESH_RUN = { ...STALE_RUN, stale_since: null } as EvaluationRunView;
+
+const IOU_SORT = {
+    source: 'annotation_evaluation_metric',
+    evaluation_run_id: 'run-1',
+    metric_name: 'iou',
+    direction: 'asc'
+} as const;
+
+const defaultProps = { collectionId: COLLECTION_ID, datasetId: DATASET_ID };
 
 describe('AnnotationOrderBy', () => {
     beforeAll(() => {
@@ -56,12 +92,14 @@ describe('AnnotationOrderBy', () => {
         mocks.metricsProxy.dataUpdatedAt = 0;
         mocks.hasEmbeddingsProxy.data = true;
         mocks.textEmbeddingValue = undefined;
+        mocks.runsProxy.data = [STALE_RUN];
+        mocks.recomputeMutation.isPending = false;
         useAnnotationSortBy().setSortBy(COLLECTION_ID, null);
     });
 
     it('renders one entry per run and metric', async () => {
         const user = userEvent.setup();
-        render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
+        render(AnnotationOrderBy, { props: defaultProps });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
 
@@ -71,7 +109,7 @@ describe('AnnotationOrderBy', () => {
     it('renders when the source has no evaluation runs', async () => {
         const user = userEvent.setup();
         mocks.metricsProxy.data = [];
-        render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
+        render(AnnotationOrderBy, { props: defaultProps });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
 
@@ -80,7 +118,7 @@ describe('AnnotationOrderBy', () => {
 
     it('produces the annotation sort expression for the picked option', async () => {
         const user = userEvent.setup();
-        render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
+        render(AnnotationOrderBy, { props: defaultProps });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-run-1-iou'));
@@ -101,7 +139,7 @@ describe('AnnotationOrderBy', () => {
             metric_name: 'iou',
             direction: 'asc'
         });
-        render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
+        render(AnnotationOrderBy, { props: defaultProps });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-run-1-iou'));
@@ -111,7 +149,7 @@ describe('AnnotationOrderBy', () => {
 
     it('is disabled during similarity search', () => {
         mocks.textEmbeddingValue = { queryText: 'cat', embedding: [0.1] } as TextEmbedding;
-        render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
+        render(AnnotationOrderBy, { props: defaultProps });
 
         expect(screen.getByTestId('sort-by-trigger')).toBeDisabled();
         expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
@@ -120,14 +158,14 @@ describe('AnnotationOrderBy', () => {
     it('stays enabled when the source has no embeddings to search', () => {
         mocks.textEmbeddingValue = { queryText: 'cat', embedding: [0.1] } as TextEmbedding;
         mocks.hasEmbeddingsProxy.data = false;
-        render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
+        render(AnnotationOrderBy, { props: defaultProps });
 
         expect(screen.getByTestId('sort-by-trigger')).toBeEnabled();
     });
 
     it('fires grid_sorted analytics with the same shape as image sorting', async () => {
         const user = userEvent.setup();
-        render(AnnotationOrderBy, { props: { collectionId: COLLECTION_ID } });
+        render(AnnotationOrderBy, { props: defaultProps });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
         await user.click(screen.getByTestId('sort-field-run-1-iou'));
@@ -137,6 +175,44 @@ describe('AnnotationOrderBy', () => {
             sort_source: 'annotation_evaluation_metric',
             field_name: 'detection eval.iou',
             direction: 'asc'
+        });
+    });
+
+    it('warns and offers a recompute when the run the grid sorts by is stale', () => {
+        useAnnotationSortBy().setSortBy(COLLECTION_ID, IOU_SORT);
+        render(AnnotationOrderBy, { props: defaultProps });
+
+        expect(screen.getByTestId('annotation-sort-stale-icon')).toBeInTheDocument();
+        expect(screen.getByTestId('annotation-sort-recompute-button')).toBeInTheDocument();
+        expect(screen.getByLabelText(/this sort order is out of date/i)).toBeInTheDocument();
+    });
+
+    it('shows no warning when the run the grid sorts by is up to date', () => {
+        mocks.runsProxy.data = [FRESH_RUN];
+        useAnnotationSortBy().setSortBy(COLLECTION_ID, IOU_SORT);
+        render(AnnotationOrderBy, { props: defaultProps });
+
+        expect(screen.queryByTestId('annotation-sort-stale-icon')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('annotation-sort-recompute-button')).not.toBeInTheDocument();
+    });
+
+    it('shows no warning while no sort is active, even with a stale run', () => {
+        render(AnnotationOrderBy, { props: defaultProps });
+
+        expect(screen.queryByTestId('annotation-sort-stale-icon')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('annotation-sort-recompute-button')).not.toBeInTheDocument();
+    });
+
+    it('recomputes the run the grid sorts by when the button is pressed', async () => {
+        const user = userEvent.setup();
+        useAnnotationSortBy().setSortBy(COLLECTION_ID, IOU_SORT);
+        render(AnnotationOrderBy, { props: defaultProps });
+
+        await user.click(screen.getByTestId('annotation-sort-recompute-button'));
+
+        expect(mocks.recompute).toHaveBeenCalledWith({
+            datasetId: DATASET_ID,
+            runId: 'run-1'
         });
     });
 });
