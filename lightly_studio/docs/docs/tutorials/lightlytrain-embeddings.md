@@ -39,7 +39,7 @@ LightlyTrain and LightlyStudio meet at one point: the embedding model.
 3. **Load** the module into LightlyStudio, which runs it to embed your data.
 4. **Explore and curate** the embeddings in the 2D plot.
 
-This tutorial builds a single script, `train_and_explore.py`, one step at a time. The full script is also available as [`example_lightlytrain_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_lightlytrain_embeddings.py).
+This tutorial builds **two small scripts**: `train_and_export.py` (train the model — run it once) and `explore.py` (load the model into LightlyStudio and explore — run it any time). Splitting them means you train once, then reopen and explore without retraining. A combined, runnable version of both is available as [`example_lightlytrain_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_lightlytrain_embeddings.py).
 
 ## Prerequisites
 
@@ -59,9 +59,9 @@ pip install lightly-train lightly-studio
 
 ## Step 1: Get a dataset
 
-Create a script, `train_and_explore.py`, and download the example dataset. To use your own data instead, point `IMAGE_PATH` at a folder of images.
+Create the first script, `train_and_export.py`, and download the example dataset. To use your own data instead, point `IMAGE_PATH` at a folder of images. (`explore.py` will start with these same two lines.)
 
-```python title="train_and_explore.py"
+```python title="train_and_export.py"
 import lightly_studio as ls
 
 dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
@@ -73,7 +73,7 @@ IMAGE_PATH = f"{dataset_path}/coco_subset_128_images/images"
 
 Distillation adapts a strong pretrained backbone to your own images, using no labels. `dinov2/vits14` starts from pretrained weights, so a single pass already gives usable embeddings; train longer to adapt the model more closely to your data.
 
-```python title="train_and_explore.py"
+```python title="train_and_export.py"
 import lightly_train
 
 lightly_train.pretrain(
@@ -91,7 +91,7 @@ Training writes a checkpoint to `out/pretrain/checkpoints/last.ckpt`. Any name f
 
 Export the trained model as a plain torch module. LightlyStudio loads this file and runs it directly.
 
-```python title="train_and_explore.py"
+```python title="train_and_export.py"
 lightly_train.export(
     out="out/embedding_model.pt",
     checkpoint="out/pretrain/checkpoints/last.ckpt",
@@ -103,14 +103,14 @@ lightly_train.export(
 
 ## Step 4: Load the model into LightlyStudio
 
-LightlyStudio embeds each sample when you add it to a dataset. Register a generator that runs your exported model, and ingestion uses it — for whole images, object crops, and video frames alike.
+Now create the second script, `explore.py`. It re-locates the images, loads the model you exported, and registers a generator that runs it — so LightlyStudio embeds each sample (whole images, object crops, and video frames) as you add it to a dataset.
 
 !!! example "Beta API"
     The embeddings API is in beta. Its interface may change in future releases without a deprecation period.
 
 Register the generator **before** you create the dataset, so ingestion embeds with it.
 
-```python title="train_and_explore.py"
+```python title="explore.py"
 from pathlib import Path
 
 import numpy as np
@@ -119,9 +119,13 @@ from numpy.typing import NDArray
 from PIL import Image
 from torchvision import transforms
 
+import lightly_studio as ls
 from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
+
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+IMAGE_PATH = f"{dataset_path}/coco_subset_128_images/images"
 
 IMAGE_SIZE = 224
 # LightlyTrain normalizes with ImageNet statistics by default.
@@ -208,13 +212,20 @@ Text search stays off, because the model has no text encoder. See [Embeddings](.
 
 ## Step 5: Explore the embedding map
 
-Run the script. It trains the model, exports it, and loads it into a dataset that LightlyStudio embeds on the fly.
+Add one line to the end of `explore.py` to open the app:
 
-```bash
-python train_and_explore.py
+```python title="explore.py"
+ls.start_gui(open_browser=True)
 ```
 
-Then open LightlyStudio and click the `Embed` button in the top right to open the embedding plot. It shows every image as a point in a 2D projection (PaCMAP) of the embedding space.
+Now run both scripts — train once, then explore:
+
+```bash
+python train_and_export.py   # train and export the model (slow; run once)
+python explore.py            # embed your data and open LightlyStudio
+```
+
+Click the `Embed` button in the top right to open the embedding plot. It shows every image as a point in a 2D projection (PaCMAP) of the embedding space.
 
 ![The embedding plot after loading LightlyTrain embeddings, colored by class](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg){ width="100%" }
 
@@ -253,19 +264,15 @@ Lasso a tight cluster to scope the grid to its images, and they turn out to be o
 
 ## Step 6: Select and curate a subset
 
-The map is not just for looking. Turn what you see into a curated subset. A diversity selection picks a spread of samples across the whole embedding space, so a smaller labeling or training set still covers the variety in your data.
+The map is not just for looking. Turn what you see into a curated subset. A diversity selection picks a spread of samples across the whole embedding space, so a smaller labeling or training set still covers the variety in your data. Add it to `explore.py` **just before** the `ls.start_gui(...)` line:
 
-```python title="train_and_explore.py"
+```python title="explore.py"
 dataset.query().sampling().diverse(
     n_samples_to_select=32, sampling_result_tag_name="diverse_subset"
 )
 ```
 
 The result is saved as a tag. Open it in the grid to review the picks, or color the embedding plot by the tag to see the spread. You can do the same by hand: lasso a region in the plot to scope the grid to those samples, inspect them, and tag what you want to keep. Selecting points and inspecting samples works in both directions. For every strategy — diverse, deduplication, similarity, and typicality — see [Sampling](../concepts_and_tools/sampling.md).
-
-```python title="train_and_explore.py"
-ls.start_gui(open_browser=True)
-```
 
 ## Conclusion
 
