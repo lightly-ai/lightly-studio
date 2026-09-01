@@ -17,6 +17,10 @@ env:
   NODE_OPTIONS: --max-old-space-size=4096
   DATASET_PATH: $(pwd)/datasets
   E2E_BASE_URL: http://localhost:8001
+  # Every run restores the uv cache, only main writes one: per-ref copies are
+  # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
+  # `python-version` is part of the uv cache key: 3.9 shares `unit_test.yml`'s entry.
+  UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 jobs:
   # Matrix jobs skip every step when `e2e-success-<name>-<file-hash>` is cached,
@@ -66,7 +70,7 @@ jobs:
 
       - name: Cache build
         id: cache-build
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           lookup-only: true
           path: &cache-build-path |
@@ -76,7 +80,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: &cache-playwright-browsers-path ~/.cache/ms-playwright
           key: &cache-playwright-browsers-key >-
@@ -87,7 +91,7 @@ jobs:
 
       - name: Cache example dataset
         id: cache-example-dataset
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           # No need to download a cached version in cache preparation step
           lookup-only: true
@@ -108,7 +112,9 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
         uses: actions/setup-node@v6
@@ -279,7 +285,7 @@ jobs:
 
       - name: Check e2e success cache
         id: cache-success
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           lookup-only: true
           path: ${{ matrix.success_marker }}
@@ -290,7 +296,7 @@ jobs:
       - name: Cache build
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-build
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           fail-on-cache-miss: true
           path: *cache-build-path
@@ -299,7 +305,7 @@ jobs:
       - name: Cache Playwright browsers
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-playwright-browsers
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           fail-on-cache-miss: true
           path: *cache-playwright-browsers-path
@@ -308,7 +314,7 @@ jobs:
       - name: Cache example dataset
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-example-dataset
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           fail-on-cache-miss: true
           path: *cache-example-dataset-path
@@ -327,7 +333,9 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
         if: steps.cache-success.outputs.cache-hit != 'true'
@@ -449,7 +457,7 @@ jobs:
 
       - name: Save e2e success marker
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: ${{ matrix.success_marker }}
           key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
