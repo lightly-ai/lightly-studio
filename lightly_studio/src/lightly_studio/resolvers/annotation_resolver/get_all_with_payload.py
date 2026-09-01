@@ -8,11 +8,13 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import aliased, joinedload, load_only
-from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.api.routes.api.validators import Paginated
+
+# Aliased because `order_by` is also a local variable name in this module.
+from lightly_studio.core.dataset_query import order_by as order_by_module
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -109,17 +111,16 @@ def get_all_with_payload(
         )
 
     # Sort joins stay out of the count query below: they cannot change the count, so joining
-    # there would only run the join a second time per page.
-    rows_query = base_query
-    order_by_keys: list[ColumnElement[Any]] = []
+    # there would only run the join a second time per page. The type is loosened to Any
+    # because the sort value and the similarity distance are appended as extra columns,
+    # changing the row shape from a 2-tuple.
+    rows_query: Any = base_query
     if order_by is not None:
-        rows_query = order_by.apply_joins(rows_query)
-        order_by_keys = order_by.to_column_elements()
+        # Appends the sort value to the SELECT and orders by it, so the tiebreaker chain
+        # below is appended after the sort key.
+        rows_query = order_by.apply_with_order_value(rows_query)
 
-    # Type is loosened to Any because similarity search appends a distance column,
-    # changing the row shape from 2-tuple to 3-tuple.
     annotations_query: Any = rows_query.order_by(
-        *order_by_keys,
         *annotation_ordering.build_order_by(
             file_path_abs=annotation_ordering.file_path_abs_expression(sample_type=sample_type),
             created_at=col(AnnotationBaseTable.created_at),
@@ -156,19 +157,25 @@ def _build_annotation_views(
     sample_type: SampleType,
     has_distance: bool,
 ) -> list[AnnotationWithPayloadView]:
-    """Turn query rows into views, unpacking the distance column when present."""
+    """Turn query rows into views, unpacking the distance column when present.
+
+    The sort value is read by label, so it is ``None`` whenever no sort is active.
+    """
     annotation_views = []
     for row in rows:
         if has_distance:
             annotation, payload, distance = row
             similarity_score = distance_to_similarity(distance)
         else:
-            annotation, payload = row
+            annotation, payload = row[0], row[1]
             similarity_score = None
         annotation_views.append(
             AnnotationWithPayloadView(
                 parent_sample_type=sample_type,
-                annotation=AnnotationView.from_annotation_table(annotation=annotation),
+                annotation=AnnotationView.from_annotation_table(
+                    annotation=annotation,
+                    order_value=order_by_module.get_order_value(row=row),
+                ),
                 parent_sample_data=_serialize_annotation_payload(payload=payload),
                 similarity_score=similarity_score,
             )
