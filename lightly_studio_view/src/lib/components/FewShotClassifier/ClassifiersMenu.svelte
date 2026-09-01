@@ -51,6 +51,7 @@
 
     // Store-based state
     let shouldRestoreMenu = $state(false);
+    let classifierFileInput = $state<HTMLInputElement | null>(null);
 
     // Derived stores
     const isApplyButtonEnabled = derived(
@@ -204,18 +205,23 @@
 
                             <!-- Load Classifier -->
                             <div class="space-y-3">
-                                <div class="relative">
-                                    <input
-                                        title="Load Classifier"
-                                        type="file"
-                                        accept=".pkl"
-                                        class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                                        onchange={handleLoadClassifier}
-                                    />
-                                    <Button icon={Upload} buttonProps={{ class: 'w-full' }}>
-                                        Load Classifier (.pkl)
-                                    </Button>
-                                </div>
+                                <input
+                                    title="Load Classifier"
+                                    type="file"
+                                    accept=".pkl"
+                                    class="hidden"
+                                    bind:this={classifierFileInput}
+                                    onchange={handleLoadClassifier}
+                                />
+                                <Button
+                                    icon={Upload}
+                                    buttonProps={{
+                                        class: 'w-full',
+                                        onclick: () => classifierFileInput?.click()
+                                    }}
+                                >
+                                    Load Classifier (.pkl)
+                                </Button>
                             </div>
                         </div>
                     </TabsContent>
