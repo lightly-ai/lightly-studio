@@ -9,6 +9,7 @@
         VisualMapComponent
     } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
+    import { cn } from '$lib/utils';
     import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
     import { OTHER_LABEL } from './topNMatrix';
@@ -109,7 +110,7 @@
 {:else}
     <div
         bind:this={container}
-        class="w-full {fillHeight ? 'min-h-0 flex-1' : ''}"
+        class={cn('w-full', fillHeight && 'min-h-0 flex-1')}
         style={fillHeight ? undefined : `height: ${heightPx}px;`}
         data-testid="confusion-matrix"
     ></div>
