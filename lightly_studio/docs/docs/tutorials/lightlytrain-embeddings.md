@@ -19,12 +19,12 @@ A model trained on your own images pulls those categories apart. Clusters, outli
 
 The difference is easy to see. Below is the same dataset embedded two ways and colored by class — a generic model versus one adapted with LightlyTrain:
 
-<div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0;">
-  <figure style="flex: 1 1 320px; margin: 0;">
+<div style="display: flex; flex-direction: column; gap: 1.5rem; margin: 1rem 0;">
+  <figure style="margin: 0;">
     <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/mobile-clip-embeddings.jpg" alt="MobileCLIP embeddings colored by class" style="width: 100%; border-radius: 6px;">
     <figcaption><strong>A generic model (MobileCLIP).</strong> Classes overlap and bleed together.</figcaption>
   </figure>
-  <figure style="flex: 1 1 320px; margin: 0;">
+  <figure style="margin: 0;">
     <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg" alt="LightlyTrain embeddings colored by class" style="width: 100%; border-radius: 6px;">
     <figcaption><strong>Your LightlyTrain model.</strong> The same classes separate into distinct clusters.</figcaption>
   </figure>
