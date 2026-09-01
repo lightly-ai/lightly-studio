@@ -4,6 +4,7 @@ import {
     recomputeEvaluationRunMutation
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite/createAnnotationsInfiniteOptions';
 import { toast } from 'svelte-sonner';
 
 interface UseRecomputeEvaluationRunParams {
@@ -33,6 +34,11 @@ export const useRecomputeEvaluationRun = (getParams: () => UseRecomputeEvaluatio
                     });
                     client.invalidateQueries({
                         queryKey: ['getEvaluationConfusionMatrix', datasetId, runId]
+                    });
+                    // Recomputing changes the per-annotation metrics the grid sorts by, so every
+                    // cached annotation list is stale, whichever annotation source it belongs to.
+                    client.invalidateQueries({
+                        queryKey: [ANNOTATIONS_INFINITE_QUERY_KEY_ROOT]
                     });
                 },
                 onError: (error) => {

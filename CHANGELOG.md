@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   values of a categorical metadata field such as weather or city.
 - Show the active sort value on annotation grid tiles, so an evaluation-metric ranking such as
   IoU explains itself.
+- Warn in the annotations grid when the evaluation run it is sorted by is out of date, and offer a
+  recompute next to the sort control.
 
 
 ### Changed
