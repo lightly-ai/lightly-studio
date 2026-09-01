@@ -9,13 +9,23 @@ POSTGRES_SHM_SIZE ?= 2g
 POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 
+# Installs the uv version that `required-version` in pyproject.toml pins, so a local
+# `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
+UV_VERSION := 0.12.6
+
 .PHONY: install-uv
 install-uv:
 ifeq ($(OS),Windows_NT)
-	powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+	powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/$(UV_VERSION)/install.ps1 | iex"
 else
-	@if ! command -v uv &> /dev/null; then \
-		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+	@if [ "$$(uv --version 2>/dev/null | awk '{print $$2}')" != "$(UV_VERSION)" ]; then \
+		set -e; \
+		installer=$$(mktemp); \
+		trap 'rm -f "$$installer"' EXIT; \
+		curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh -o "$$installer"; \
+		sh "$$installer"; \
+		[ "$$(uv --version 2>/dev/null | awk '{print $$2}')" = "$(UV_VERSION)" ] || \
+			echo "Installed uv $(UV_VERSION). Restart your shell, or fix your PATH if another uv shadows it."; \
 	fi
 endif
 

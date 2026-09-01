@@ -22,7 +22,7 @@ def get_group_components(
         raise ValueError("Can only get group components for collections of type GROUP.")
 
     return {
-        child.group_component_name: child
+        child.group_component_definition.group_component_name: child
         for child in parent.children
-        if child.group_component_name is not None
+        if child.group_component_definition is not None
     }

@@ -303,31 +303,36 @@ def create_embedding_model(  # noqa: PLR0913
     collection_id: UUID,
     embedding_model_name: str = "example_embedding_model",
     embedding_model_hash: str = "example_hash",
-    parameter_count_in_mb: int = 100,
     embedding_dimension: int = 128,
     set_as_default: bool = False,
 ) -> EmbeddingModelTable:
     """Helper function to create a embedding model.
 
-    With ``set_as_default`` the model is recorded as the collection's default embedding
-    model, so ``collection_embedding_model_resolver.get_by_collection_id`` resolves to it. It
-    is off by default to avoid the ``collection_embedding_model`` foreign key blocking model
-    or collection deletes in tests that do not need a default.
+    The model is linked to the collection, so it resolves through ``get_model_id_by_name`` and
+    ``get_all_by_collection_id``, matching production where every registered model is linked.
+    With ``set_as_default`` it is also recorded as the collection default, so
+    ``get_default_by_collection_id`` resolves to it.
     """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
 
-    model = embedding_model_resolver.create(
+    # TODO(Michal, 08/2026): Make collection_id optional here: link only when it is given, so
+    # unlinked models become expressible. The collection_embedding_model link is then the sole
+    # source of collection membership.
+    model = embedding_model_resolver.get_or_create(
         session=session,
         embedding_model=EmbeddingModelCreate(
-            collection_id=collection_id,
             dataset_id=collection.dataset_id,
             name=embedding_model_name,
             embedding_model_hash=embedding_model_hash,
-            parameter_count_in_mb=parameter_count_in_mb,
             embedding_dimension=embedding_dimension,
         ),
+    )
+    collection_embedding_model_resolver.get_or_add_collection_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=model.embedding_model_id,
     )
     if set_as_default:
         collection_embedding_model_resolver.set_default(
@@ -429,6 +434,7 @@ def fill_db_with_samples_and_embeddings(
             session=session,
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
+            embedding_model_hash=f"hash_{embedding_model_name}",
             # The first model is the collection default, matching production and the
             # queries that resolve the default embedding space (e.g. embeddings2d).
             set_as_default=index == 0,
@@ -474,6 +480,7 @@ def fill_db_with_video_samples_and_embeddings(
             session=session,
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
+            embedding_model_hash=f"hash_{embedding_model_name}",
             # The first model is the collection default, matching production and the
             # queries that resolve the default embedding space (e.g. embeddings2d).
             set_as_default=index == 0,

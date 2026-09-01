@@ -185,7 +185,6 @@ def _setup(config: BenchmarkConfig) -> tuple[list[UUID], UUID]:
         embedding_model = embedding_model_resolver.create(
             session=session,
             embedding_model=EmbeddingModelCreate(
-                collection_id=collection.collection_id,
                 dataset_id=collection.dataset_id,
                 name=DEFAULT_EMBEDDING_MODEL_NAME,
                 embedding_dimension=config.embedding_dim,

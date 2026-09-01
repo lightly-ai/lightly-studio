@@ -318,12 +318,15 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     )
 
     # Assert - embedding model is copied with new ID
-    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
-    assert len(copied_embedding_models) == 1
-    copied_model = copied_embedding_models[0]
+    assert len(copied_model_ids) == 1
+    copied_model = embedding_model_resolver.get_by_id(
+        session=db_session, embedding_model_id=copied_model_ids[0]
+    )
+    assert copied_model is not None
     assert copied_model.embedding_model_id != embedding_model.embedding_model_id
     assert copied_model.dataset_id == copied.dataset_id
     assert copied_model.name == embedding_model.name
@@ -375,18 +378,48 @@ def test_deep_copy__with_default_embedding_space(db_session: Session) -> None:
     )
 
     # Assert - the copied collection's default resolves to the copied model, not the original.
-    copied_models = embedding_model_resolver.get_all_by_collection_id(
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
-    assert len(copied_models) == 1
-    copied_model_id = copied_models[0].embedding_model_id
+    assert len(copied_model_ids) == 1
+    copied_model_id = copied_model_ids[0]
     assert copied_model_id != embedding_model.embedding_model_id
 
-    copied_default_id = collection_embedding_model_resolver.get_by_collection_id(
+    copied_default_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=db_session, collection_id=copied.collection_id
     )
     assert copied_default_id == copied_model_id
+
+
+def test_deep_copy__with_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(
+        session=db_session, collection_name="original", sample_type=SampleType.GROUP
+    )
+    original_components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=original.collection_id,
+        components=[("front_camera", SampleType.IMAGE)],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copied group has its own component definition, not the original's.
+    copied_components = collection_resolver.get_group_components(
+        session=db_session, parent_collection_id=copied.collection_id
+    )
+    assert len(copied_components) == 1
+    copied_component = copied_components["front_camera"]
+    assert copied_component.collection_id != original_components["front_camera"].collection_id
+    assert copied_component.group_component_definition is not None
+    assert copied_component.group_component_definition.group_component_name == "front_camera"
+    assert copied_component.group_component_definition.group_component_index == 0
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
@@ -467,15 +500,15 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
     )
 
     # Assert - copied collection still has embeddings
-    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
-    assert len(copied_embedding_models) == 1
+    assert len(copied_model_ids) == 1
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
-        embedding_model_id=copied_embedding_models[0].embedding_model_id,
+        embedding_model_id=copied_model_ids[0],
     )
     assert len(copied_embeddings) == 1
 

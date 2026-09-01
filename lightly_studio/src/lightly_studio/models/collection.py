@@ -18,6 +18,7 @@ class SampleType(str, Enum):
     ANNOTATION = "annotation"
     CAPTION = "caption"
     GROUP = "group"
+    MCAP = "mcap"
 
 
 class CollectionBase(SQLModel):
@@ -30,10 +31,6 @@ class CollectionBase(SQLModel):
         index=True,
     )
     sample_type: SampleType
-
-    # Group-specific fields
-    group_component_name: Optional[str] = None
-    group_component_index: Optional[int] = None
 
 
 class CollectionTable(CollectionBase, table=True):
@@ -59,6 +56,7 @@ class CollectionTable(CollectionBase, table=True):
         back_populates="parent",
         sa_relationship_kwargs={"lazy": "select"},
     )
+    group_component_definition: Optional["GroupComponentDefinitionTable"] = Relationship()
     # TODO(lukas, 3/2026): add a relationship to DatasetTable
 
 
@@ -73,6 +71,7 @@ class CollectionView(CollectionBase):
     dataset_id: UUID
     created_at: datetime
     updated_at: datetime
+    group_component_definition: Optional["GroupComponentDefinitionView"] = None
     children: list["CollectionView"] = []
 
 
@@ -85,12 +84,13 @@ class ComponentCollectionView(CollectionBase):
     @classmethod
     def from_collection_table(cls, collection: "CollectionTable") -> "ComponentCollectionView":
         """Create a ComponentCollectionView from a CollectionTable."""
+        definition = collection.group_component_definition
         return cls(
             name=collection.name,
             parent_collection_id=collection.parent_collection_id,
             sample_type=collection.sample_type,
-            group_component_name=collection.group_component_name or "",
-            group_component_index=collection.group_component_index or 0,
+            group_component_name=definition.group_component_name if definition else "",
+            group_component_index=definition.group_component_index if definition else 0,
         )
 
 
@@ -120,3 +120,13 @@ class AnnotationCollectionView(SQLModel):
     # AnnotationType here, which would create a circular import with
     # annotation_base. Used by the GUI to filter sources by evaluation task.
     annotation_types: list[str] = Field(default_factory=list)
+
+
+# Import at the bottom to:
+# 1) avoid circular imports
+# 2) satisfy mypy
+# 3) include types in schema generation
+from lightly_studio.models.group_component_definition import (  # noqa: E402
+    GroupComponentDefinitionTable,
+    GroupComponentDefinitionView,
+)

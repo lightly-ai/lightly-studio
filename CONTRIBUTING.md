@@ -11,7 +11,7 @@ After you have your changes ready, and you create a new pull request, a maintain
 
 ## Requirements
 - Python **3.9–3.14** (3.9 recommended)
-- Uv version **0.8.17+**
+- Uv version **0.12.6** (pinned exactly, see `required-version` in `lightly_studio/pyproject.toml`)
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 
 ## Development Quickstart
@@ -140,6 +140,21 @@ Now edit the `.env` file:
 
 * Optionally change the `EXAMPLES_*` paths to point to data on your machine. You can leave the
 defaults to use the cloned dataset examples data.
+
+### Mark Your Machine as Internal
+
+Lightly staff should mark their machine once, so that internal usage is filtered out of the
+product metrics:
+
+```shell
+mkdir -p ~/.cache/lightly-studio && touch ~/.cache/lightly-studio/internal
+```
+
+The marker lives in the model cache directory, next to the installation ID, so it survives
+recreating the virtualenv. If you point `LIGHTLY_STUDIO_MODEL_CACHE_DIR` elsewhere, create the file
+there instead, otherwise nothing reads it.
+
+`LIGHTLY_STUDIO_INTERNAL=1`, in `.env` or the environment, does the same for a single run.
 
 ### Run Examples
 

@@ -17,10 +17,16 @@ env:
   NODE_OPTIONS: --max-old-space-size=4096
   DATASET_PATH: $(pwd)/datasets
   E2E_BASE_URL: http://localhost:8001
+  # Every run restores the uv cache, only main writes one: per-ref copies are
+  # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
+  # `python-version` is part of the uv cache key: 3.9 shares `unit_test.yml`'s entry.
+  UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 jobs:
+  # Matrix jobs skip every step when `e2e-success-<name>-<file-hash>` is cached,
+  # so the hash has to cover every input the run depends on.
   prepare-caches:
-    name: Build Cache
+    name: Build Cache and Skip Steps
     runs-on: ubuntu-latest
     # Recent runs: 3.5min median, 10min worst.
     timeout-minutes: 15
@@ -37,20 +43,34 @@ jobs:
         run: >-
           echo "hash=${{ hashFiles(
             '.github/workflows/end2end_test.yml',
+            'Makefile',
             'lightly_studio/e2e-tests/**/*',
             'lightly_studio/src/**/*',
             'lightly_studio/pyproject.toml',
+            'lightly_studio/uv.lock',
+            'lightly_studio/Makefile',
+            'lightly_studio/alembic.ini',
             'lightly_studio_view/e2e/**/*',
             'lightly_studio_view/src/**/*',
             'lightly_studio_view/public/**/*',
+            'lightly_studio_view/static/**/*',
             'lightly_studio_view/package.json',
             'lightly_studio_view/package-lock.json',
-            'lightly_studio_view/vite.config.ts'
+            'lightly_studio_view/vite.config.ts',
+            'lightly_studio_view/svelte.config.js',
+            'lightly_studio_view/tailwind.config.ts',
+            'lightly_studio_view/postcss.config.js',
+            'lightly_studio_view/tsconfig.json',
+            'lightly_studio_view/playwright.config.ts',
+            'lightly_studio_view/langium-config.json',
+            'lightly_studio_view/openapi-ts.config.ts',
+            'lightly_studio_view/Makefile',
+            'lightly_studio_view/.nvmrc'
           ) }}" >> $GITHUB_OUTPUT
 
       - name: Cache build
         id: cache-build
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           lookup-only: true
           path: &cache-build-path |
@@ -60,7 +80,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: &cache-playwright-browsers-path ~/.cache/ms-playwright
           key: &cache-playwright-browsers-key >-
@@ -71,7 +91,7 @@ jobs:
 
       - name: Cache example dataset
         id: cache-example-dataset
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           # No need to download a cached version in cache preparation step
           lookup-only: true
@@ -89,10 +109,12 @@ jobs:
 
       - name: Set Up Uv
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
         uses: actions/setup-node@v6
@@ -101,18 +123,20 @@ jobs:
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
+      # Run whenever either the build or the Playwright browser cache misses.
       - name: Install lightly_studio_view dependencies
-        if: steps.cache-build.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true' || steps.cache-playwright-browsers.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npm ci
 
       ### Build caches ###
 
-      # Only download browser binaries when cache misses; otherwise reuse cache
+      # Only download browser binaries when cache misses; otherwise reuse cache.
+      # Invoke the pinned Playwright directly to avoid drifting browser versions.
       - name: Install Playwright browsers
         if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
-        run: npx playwright install chromium
+        run: ./node_modules/.bin/playwright install chromium
 
       - name: Download example dataset
         if: steps.cache-example-dataset.outputs.cache-hit != 'true'
@@ -261,7 +285,7 @@ jobs:
 
       - name: Check e2e success cache
         id: cache-success
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           lookup-only: true
           path: ${{ matrix.success_marker }}
@@ -272,7 +296,7 @@ jobs:
       - name: Cache build
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-build
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           fail-on-cache-miss: true
           path: *cache-build-path
@@ -281,7 +305,7 @@ jobs:
       - name: Cache Playwright browsers
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-playwright-browsers
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           fail-on-cache-miss: true
           path: *cache-playwright-browsers-path
@@ -290,7 +314,7 @@ jobs:
       - name: Cache example dataset
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-example-dataset
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           fail-on-cache-miss: true
           path: *cache-example-dataset-path
@@ -306,10 +330,12 @@ jobs:
 
       - name: Set Up Uv
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
         if: steps.cache-success.outputs.cache-hit != 'true'
@@ -431,7 +457,7 @@ jobs:
 
       - name: Save e2e success marker
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: ${{ matrix.success_marker }}
           key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}

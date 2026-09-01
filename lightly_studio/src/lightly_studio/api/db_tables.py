@@ -25,8 +25,14 @@ from lightly_studio.models.collection_embedding_model import (
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.group_component_definition import (
+    GroupComponentDefinitionTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.image import (
     ImageTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.mcap import (
+    McapTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.metadata import (
     SampleMetadataTable,  # noqa: F401, required for SQLModel to work properly

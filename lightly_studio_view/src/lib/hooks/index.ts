@@ -74,3 +74,4 @@ export {
     type OperatorParameterType
 } from '$lib/hooks/useOperators';
 export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
+export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte';

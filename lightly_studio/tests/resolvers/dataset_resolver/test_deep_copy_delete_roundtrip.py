@@ -109,7 +109,7 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
         ),
         "tag": count(TagTable, col(TagTable.collection_id).in_(collection_ids)),
         "embedding_model": count(
-            EmbeddingModelTable, col(EmbeddingModelTable.collection_id).in_(collection_ids)
+            EmbeddingModelTable, col(EmbeddingModelTable.dataset_id) == dataset_id
         ),
         "collection_embedding_model": count(
             CollectionEmbeddingModelTable,

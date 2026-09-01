@@ -466,7 +466,6 @@ def test_database_engine__postgres_sets_keepalive_and_pool_options(
 
     kwargs = create_engine_mock.call_args.kwargs
     assert kwargs["pool_pre_ping"] is True
-    assert kwargs["pool_recycle"] == 1800
     assert kwargs["connect_args"] == {
         "keepalives": 1,
         "keepalives_idle": 30,
@@ -487,7 +486,6 @@ def test_database_engine__duckdb_omits_postgres_pool_options(
     kwargs = create_engine_mock.call_args.kwargs
     assert "connect_args" not in kwargs
     assert "pool_pre_ping" not in kwargs
-    assert "pool_recycle" not in kwargs
 
 
 @pytest.mark.postgres_only
@@ -498,7 +496,8 @@ def test_database_engine__postgres_pool_options_applied_on_real_engine(
     engine = DatabaseEngine(engine_url=postgres_url)
     try:
         assert engine._engine.pool._pre_ping is True
-        assert engine._engine.pool._recycle == 1800
+        # No pool recycle (-1): a forced reconnect would re-auth as an expired temp role.
+        assert engine._engine.pool._recycle == -1
     finally:
         engine.close()
 

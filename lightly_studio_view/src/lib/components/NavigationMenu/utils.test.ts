@@ -28,8 +28,14 @@ describe('getMenuItem', () => {
         [SampleType.GROUP, 'Groups', 'group-col-id']
     ] as const)('%s returns correct title, and id', (sampleType, expectedTitle, expectedId) => {
         const item = getMenuItem('dataset-id', undefined, 'col-id', sampleType);
+        if (!item) throw new Error('expected a menu item');
         expect(item.title).toBe(expectedTitle);
         expect(item.id).toBe(expectedId);
+    });
+
+    it('returns null for sample types without a dedicated view', () => {
+        const item = getMenuItem('dataset-id', undefined, 'col-id', SampleType.MCAP);
+        expect(item).toBeNull();
     });
 
     it('uses groupComponentName as title when provided', () => {
@@ -40,6 +46,7 @@ describe('getMenuItem', () => {
             SampleType.IMAGE,
             'Group Component Name'
         );
+        if (!item) throw new Error('expected a menu item');
         expect(item.title).toBe('Group Component Name');
     });
 
@@ -51,18 +58,21 @@ describe('getMenuItem', () => {
             SampleType.ANNOTATION,
             'ground_truth'
         );
+        if (!item) throw new Error('expected a menu item');
         expect(item.title).toBe('Annotations: ground_truth');
     });
 
     it('sets isSelected when collectionId matches currentCollectionId', () => {
         const selected = getMenuItem('dataset-id', 'col-id', 'col-id', SampleType.IMAGE);
         const notSelected = getMenuItem('dataset-id', 'other-col-id', 'col-id', SampleType.IMAGE);
+        if (!selected || !notSelected) throw new Error('expected a menu item');
         expect(selected.isSelected).toBe(true);
         expect(notSelected.isSelected).toBe(false);
     });
 
     it('generates correct href', () => {
         const item = getMenuItem('dataset-id', 'current-col-id', 'col-id', SampleType.IMAGE);
+        if (!item) throw new Error('expected a menu item');
         expect(item.href).toBe('/datasets/dataset-id/image/col-id/images');
     });
 });
@@ -112,6 +122,16 @@ describe('buildBreadcrumbLevels', () => {
         expect(levels[0].siblings[0].id).toBe('image-root');
     });
 
+    it('excludes MCAP siblings, which have no dedicated view', () => {
+        const child1 = makeCollection('child-1', SampleType.VIDEO);
+        const child2 = makeCollection('child-2', SampleType.MCAP);
+        const root = makeCollection('root', SampleType.IMAGE, [child1, child2]);
+
+        const levels = buildBreadcrumbLevels([root, child1], root, 'child-1', 'dataset-id');
+
+        expect(levels[1].siblings.map((s) => s.id)).toEqual(['video-child-1']);
+    });
+
     it('returns two levels for root > child path', () => {
         const child1 = makeCollection('child-1', SampleType.VIDEO);
         const child2 = makeCollection('child-2', SampleType.ANNOTATION);
@@ -158,11 +178,11 @@ describe('buildBreadcrumbLevels', () => {
     it('uses annotation name when root has multiple annotation collections', () => {
         const ann1 = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
             name: 'ground_truth',
-            group_component_name: 'gc-1'
+            group_component_definition: { group_component_name: 'gc-1', group_component_index: 0 }
         });
         const ann2 = makeCollection('ann-2', SampleType.ANNOTATION, undefined, {
             name: 'predictions',
-            group_component_name: 'gc-2'
+            group_component_definition: { group_component_name: 'gc-2', group_component_index: 1 }
         });
         const root = makeCollection('root', SampleType.IMAGE, [ann1, ann2]);
 
@@ -178,7 +198,7 @@ describe('buildBreadcrumbLevels', () => {
     it('uses group_component_name when root has a single annotation collection', () => {
         const ann = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
             name: 'ground_truth',
-            group_component_name: 'gc-1'
+            group_component_definition: { group_component_name: 'gc-1', group_component_index: 0 }
         });
         const root = makeCollection('root', SampleType.IMAGE, [ann]);
 
@@ -201,15 +221,18 @@ describe('buildBreadcrumbLevels', () => {
     it('keeps group_component_name for non-annotation siblings when multiple annotations exist', () => {
         const img = makeCollection('img-1', SampleType.IMAGE, undefined, {
             name: 'img-name',
-            group_component_name: 'Pictures'
+            group_component_definition: {
+                group_component_name: 'Pictures',
+                group_component_index: 0
+            }
         });
         const ann1 = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
             name: 'ground_truth',
-            group_component_name: 'gc-1'
+            group_component_definition: { group_component_name: 'gc-1', group_component_index: 1 }
         });
         const ann2 = makeCollection('ann-2', SampleType.ANNOTATION, undefined, {
             name: 'predictions',
-            group_component_name: 'gc-2'
+            group_component_definition: { group_component_name: 'gc-2', group_component_index: 2 }
         });
         const root = makeCollection('root', SampleType.GROUP, [img, ann1, ann2]);
 

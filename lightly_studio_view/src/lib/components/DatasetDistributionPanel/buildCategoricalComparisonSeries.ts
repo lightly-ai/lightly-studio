@@ -31,15 +31,24 @@ export const buildCategoricalComparisonSeries = (
         (bucket) => bucket.kind === 'value' && bucket.value === 'Other'
     );
 
-    return comparisons.map(({ id, label, categorical }) => ({
-        id,
-        label,
-        data: (categorical[metadataKey] ?? []).map((bucket) => ({
-            id: bucket.id,
-            label: comparisonLabel(bucket, hasLiteralMissing, hasLiteralOther),
-            count: bucket.count
-        }))
-    }));
+    return comparisons.map(({ id, label, categorical }) => {
+        const buckets = categorical[metadataKey] ?? [];
+        return {
+            id,
+            label,
+            data: buckets.map((bucket) => ({
+                id: bucket.id,
+                label: comparisonLabel(bucket, hasLiteralMissing, hasLiteralOther),
+                count: bucket.count
+            })),
+            // The percentage denominator, set here so a top-N view cannot shrink
+            // it. The backend returns only the most frequent values per key
+            // (`_TOP_VALUE_COUNT` in `categorical_value_counts.py`), so this is
+            // the total over the values it returned for the tag, not the tag's
+            // sample count.
+            totalCount: buckets.reduce((sum, bucket) => sum + bucket.count, 0)
+        };
+    });
 };
 
 /**

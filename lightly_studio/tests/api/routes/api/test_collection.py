@@ -16,6 +16,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.dataset.embedding_manager import EmbeddingManager
 from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_collection,
@@ -87,6 +88,28 @@ def test_delete_collection(test_client: TestClient, db_session: Session) -> None
 
     # Verify the collection is deleted
     response = client.get(f"/api/collections/{collection_id}")
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_delete_collection__with_group_component_definition(
+    test_client: TestClient, db_session: Session
+) -> None:
+    client = test_client
+    group = create_collection(
+        session=db_session, collection_name="group", sample_type=SampleType.GROUP
+    )
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group.collection_id,
+        components=[("front_camera", SampleType.IMAGE)],
+    )
+    component_collection_id = components["front_camera"].collection_id
+
+    response = client.delete(f"/api/collections/{component_collection_id}")
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"status": "deleted"}
+
+    response = client.get(f"/api/collections/{component_collection_id}")
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 

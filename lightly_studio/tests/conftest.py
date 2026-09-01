@@ -75,9 +75,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 def _disable_analytics(mocker: MockerFixture) -> None:
     """Keep the suite off the network whatever the developer's environment configures.
 
-    Runs before any module level fixture, so a test that patches these itself still wins.
+    Runs before any module level fixture, so a test that patches these itself still wins. The key
+    is emptied too, defaulting to the production project.
     """
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
+    mocker.patch.object(tracking, "LIGHTLY_STUDIO_POSTHOG_KEY", "")
     mocker.patch.object(tracking, "_tracker", None)
 
 
@@ -234,7 +236,6 @@ def collections(db_session: Session) -> list[CollectionTable]:
 def embedding_model_input(collection: CollectionTable) -> EmbeddingModelCreate:
     """Create an EmbeddingModelCreate instance."""
     return EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         embedding_dimension=3,
         name="test_model",

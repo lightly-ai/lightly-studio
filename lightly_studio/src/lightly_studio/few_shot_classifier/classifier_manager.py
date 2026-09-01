@@ -124,7 +124,7 @@ class ClassifierManager:
         Returns:
             The created classifier name and ID.
         """
-        embedding_model_id = collection_embedding_model_resolver.get_by_collection_id(
+        embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
             session=session,
             collection_id=collection_id,
         )
@@ -616,27 +616,10 @@ class ClassifierManager:
 def _get_embedding_model_by_hash(
     session: Session, embedding_model_hash: str, collection_id: UUID
 ) -> EmbeddingModelTable | None:
-    """Resolve the embedding model with the given hash within the collection's dataset.
-
-    The default is preferred while a dataset can contain one model row per collection.
-    The dataset-scoped fallback supports the final deduplicated state.
-    """
+    """Resolve the embedding model with the given hash within the collection's dataset."""
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection {collection_id} not found.")
-
-    # TODO(Michal, 08/2026): Remove once embedding models are unique per dataset and hash.
-    default_embedding_model_id = collection_embedding_model_resolver.get_by_collection_id(
-        session=session, collection_id=collection_id
-    )
-    if default_embedding_model_id is not None:
-        default_embedding_model = embedding_model_resolver.get_by_id(
-            session=session, embedding_model_id=default_embedding_model_id
-        )
-        if default_embedding_model is None:
-            raise ValueError("Default embedding space references a missing model.")
-        if default_embedding_model.embedding_model_hash == embedding_model_hash:
-            return default_embedding_model
 
     return embedding_model_resolver.get_by_model_hash(
         session=session,
