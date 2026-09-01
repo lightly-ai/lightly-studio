@@ -39,6 +39,7 @@
         {updateAnnotation}
         {refetch}
         collectionId={collection.collection_id!}
+        collectionDatasetId={collection.dataset_id}
         parentSample={{
             width: videoFrame.video.width,
             height: videoFrame.video.height,
