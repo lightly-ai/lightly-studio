@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     image_resolver,
@@ -1849,6 +1850,166 @@ def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
             strat=strat,
             input_sample_ids=[img.sample_id for img in parent_images],
         )
+
+
+def test_get_subpart_embeddings__excludes_classification_annotations(
+    db_session: Session,
+) -> None:
+    """Classification annotations are excluded — only OD and segmentation contribute."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+        ],
+    )
+    # p0 → object detection crop (should be included).
+    od_annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            ),
+        ],
+    )
+    # p1 → classification crop (should be excluded).
+    cls_annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+        ],
+    )
+    annotation_collection_id = od_annotations[0].annotation_collection_id
+
+    crop_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    emb_od = [1.0, 0.0]
+    emb_cls = [0.0, 1.0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=od_annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_od,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=cls_annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_cls,
+    )
+
+    strat = SubpartDiversityStrategy(embedding_model_name="crop_model")
+    result = _get_subpart_embeddings(
+        session=db_session,
+        strat=strat,
+        input_sample_ids=[img.sample_id for img in parent_images],
+    )
+
+    # p0 (OD): included — its crop embedding is returned.
+    assert len(result[0]) == 1
+    np.testing.assert_array_equal(result[0][0], emb_od)
+    # p1 (classification): excluded — even though its crop has an embedding.
+    assert result[1] == []
+
+
+def test_get_subpart_embeddings__excludes_classification__with_annotation_source(
+    db_session: Session,
+) -> None:
+    """Classification annotations are excluded even when annotation_source_id is set."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+        ],
+    )
+    # Both annotations go into the same named collection.
+    od_annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            ),
+        ],
+        collection_name="source",
+    )
+    cls_annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+        ],
+        collection_name="source",
+    )
+    annotation_collection_id = od_annotations[0].annotation_collection_id
+
+    crop_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    emb_od = [1.0, 0.0]
+    emb_cls = [0.0, 1.0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=od_annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_od,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=cls_annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_cls,
+    )
+
+    strat = SubpartDiversityStrategy(
+        annotation_source_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    result = _get_subpart_embeddings(
+        session=db_session,
+        strat=strat,
+        input_sample_ids=[img.sample_id for img in parent_images],
+    )
+
+    # p0 (OD): included — its crop embedding is returned.
+    assert len(result[0]) == 1
+    np.testing.assert_array_equal(result[0][0], emb_od)
+    # p1 (classification): excluded — even though its crop has an embedding.
+    assert result[1] == []
 
 
 def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
