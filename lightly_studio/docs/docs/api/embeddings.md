@@ -45,6 +45,12 @@ See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
 
 ## Supporting types
 
+### EmbeddingSpaceSpec
+
+::: lightly_studio.dataset.embedding_generator
+    options:
+        members: [EmbeddingSpaceSpec]
+
 ### EmbeddingResult
 
 ::: lightly_studio.dataset.embedding_result

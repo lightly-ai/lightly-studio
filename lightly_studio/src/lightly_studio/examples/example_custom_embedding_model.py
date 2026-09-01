@@ -25,7 +25,6 @@ from lightly_studio.dataset import file_utils, image_crop_embedding, image_embed
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.dataset.image_embedding import EmbeddingContext
-from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 from lightly_studio.vendor import mobileclip
 
 MODEL_NAME = "mobileclip_s0"
@@ -41,7 +40,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
     This implements the ls.ImageEmbeddingGenerator protocol. Here it wraps
     MobileCLIP to keep the example runnable, but the same structure works for any
-    model: implement get_embedding_model_input, embed_text, embed_images,
+    model: implement embedding_space_spec, embed_text, embed_images,
     embed_image_crops and embed_pil_images. Implement ls.VideoEmbeddingGenerator as
     well to override the video model.
     """
@@ -63,18 +62,17 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         )
         self._model = self._model.to(self._device)
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
-        self._model_hash = file_utils.get_file_xxhash(model_path)
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
-        """Describe the model so it can be recorded in the database.
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
+        """Describe the embedding space so it can be recorded in the database.
 
-        The name shows up in the GUI and the hash lets Lightly Studio detect when
-        the same model has been used before.
+        Returns metadata about the embedding space to be stored in the database.
+        The `space_key` field is used to match the same embedding space across
+        multiple LightlyStudio runs.
         """
-        return EmbeddingSpaceDescription(
-            name="Custom Embedding Model",
-            embedding_model_hash=self._model_hash,
-            embedding_dimension=EMBEDDING_DIMENSION,
+        return ls.EmbeddingSpaceSpec(
+            space_key="your-company/model-family@version",
+            dimension=EMBEDDING_DIMENSION,
         )
 
     def embed_text(self, text: str) -> list[float]:
