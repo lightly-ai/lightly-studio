@@ -184,14 +184,15 @@ uv run --with "lightly-mundig==$MUNDIG_DEV_VERSION" pytest tests/path/to/test_fi
 ```
 
 For a longer development session, install the wheel directly into the project environment. Set
-`UV_NO_SYNC=1` to prevent subsequent `uv` commands (such as `make test` or `uv run`) from restoring
-the public version from the lockfile:
+`UV_NO_SYNC=1` to prevent `uv run` commands, including those invoked by `make test`, from restoring
+the public version from the lockfile. This does not affect explicit `uv sync` commands:
 
 ```bash
 cd lightly_studio
-uv sync --all-groups --all-extras
+uv sync --locked --all-groups --all-extras
 uv pip install --reinstall "lightly-mundig==$MUNDIG_DEV_VERSION"
-UV_NO_SYNC=1 make test
+export UV_NO_SYNC=1
+make test
 ```
 
 This workflow is local only. CI uses the public Mundig version pinned in `pyproject.toml`. Publish
