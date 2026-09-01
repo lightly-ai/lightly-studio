@@ -4,9 +4,8 @@ In this tutorial, you learn how to train an embedding model with LightlyTrain, g
 
 You will:
 
-- Train (distill) an embedding model on your own images with LightlyTrain.
-- Generate embeddings for those images with the trained model.
-- Load the embeddings into LightlyStudio through a small generator.
+- Train (or adapt) an embedding model on your own images with LightlyTrain.
+- Export the model and run it inside LightlyStudio to embed your data.
 - Explore the 2D embedding plot to find clusters, outliers, and near-duplicates.
 - Select a diverse subset for labeling or training.
 
@@ -20,12 +19,12 @@ A model trained on your own images pulls those categories apart. Clusters, outli
 
 ## How the workflow fits together
 
-LightlyTrain and LightlyStudio meet at one point: the embeddings.
+LightlyTrain and LightlyStudio meet at one point: the embedding model.
 
 1. **Train** an embedding model on your images with LightlyTrain.
-2. **Generate** embeddings for the same images with the trained model.
-3. **Load** those embeddings into LightlyStudio.
-4. **Explore and curate** them in the embedding plot.
+2. **Export** it as a torch module.
+3. **Load** the module into LightlyStudio, which runs it to embed your data.
+4. **Explore and curate** the embeddings in the 2D plot.
 
 This tutorial builds a single script, `train_and_explore.py`, one step at a time. The full script is also available as [`example_lightlytrain_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_lightlytrain_embeddings.py).
 
@@ -34,7 +33,7 @@ This tutorial builds a single script, `train_and_explore.py`, one step at a time
 To follow this tutorial, make sure you have:
 
 - Python 3.10 or newer
-- A GPU (recommended for training; the low-epoch run also works on a CPU)
+- A GPU (recommended for training; the pretrained variant also runs on a CPU)
 - About 2 GB of free disk space
 
 ## Installation
@@ -59,7 +58,7 @@ IMAGE_PATH = f"{dataset_path}/coco_subset_128_images/images"
 
 ## Step 2: Train an embedding model
 
-Distillation teaches a compact model to reproduce the features of a strong pretrained backbone, using only your unlabeled images. Add the snippet below to train `dinov2/vits14` on the dataset.
+Distillation adapts a strong pretrained backbone to your own images, using no labels. `dinov2/vits14` starts from pretrained weights, so a single pass already gives usable embeddings; train longer to adapt the model more closely to your data.
 
 ```python title="train_and_explore.py"
 import lightly_train
@@ -68,38 +67,33 @@ lightly_train.pretrain(
     out="out/pretrain",
     data=IMAGE_PATH,
     model="dinov2/vits14",
-    epochs=10,
+    epochs=1,  # A quick pass. Raise it (e.g. 10 or more) to adapt further to your data.
 )
 ```
 
 Training writes a checkpoint to `out/pretrain/checkpoints/last.ckpt`. Any name from `lightly_train.list_models()` works for `model`.
 
-!!! tip "Use a pretrained backbone for a quick run"
-    `dinov2/vits14` starts from pretrained weights, so even a short run gives you a working embedding model. To skip the GPU, lower `epochs` (for example `epochs=1`) — enough to produce the checkpoint that Step 3 needs. Raise it later when you train on your real data.
+## Step 3: Export the embedding model
 
-## Step 3: Generate embeddings
-
-With the model trained, embed every image. `lightly_train.embed` runs the model over the folder and writes the vectors to a file.
+Export the trained model as a plain torch module. LightlyStudio loads this file and runs it directly.
 
 ```python title="train_and_explore.py"
-lightly_train.embed(
-    out="out/embeddings.pt",
-    data=IMAGE_PATH,
+lightly_train.export(
+    out="out/embedding_model.pt",
     checkpoint="out/pretrain/checkpoints/last.ckpt",
-    format="torch",
+    part="embedding_model",
+    format="torch_model",
 )
 ```
 
-The output is a dictionary, `{"filenames": [...], "embeddings": tensor}`, with one row per image. These are the vectors LightlyStudio will visualize.
+## Step 4: Load the model into LightlyStudio
 
-## Step 4: Load the embeddings into LightlyStudio
-
-LightlyStudio computes embeddings itself when you add data. To make it reuse the vectors from Step 3 instead, register a generator that looks each one up by file path.
+LightlyStudio embeds each sample when you add it to a dataset. Register a generator that runs your exported model, and ingestion uses it — for whole images, object crops, and video frames alike.
 
 !!! example "Beta API"
     The embeddings API is in beta. Its interface may change in future releases without a deprecation period.
 
-Add the generator and load the dataset. Register the generator **before** you create the dataset, so ingestion uses your vectors.
+Register the generator **before** you create the dataset, so ingestion embeds with it.
 
 ```python title="train_and_explore.py"
 from pathlib import Path
@@ -108,80 +102,95 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 from PIL import Image
+from torchvision import transforms
 
-from lightly_studio.dataset import file_utils
+from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
 from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
+from lightly_studio.dataset.image_embedding import EmbeddingContext
+
+IMAGE_SIZE = 224
+# LightlyTrain normalizes with ImageNet statistics by default.
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
-class LightlyTrainEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
-    """Serve embeddings precomputed by lightly_train.embed, keyed by file path."""
+class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
+    """Run a model exported from LightlyTrain to embed images on the fly."""
 
-    def __init__(self, embeddings_file: str, data_dir: str) -> None:
-        blob = torch.load(embeddings_file, weights_only=True)
-        vectors: NDArray[np.float32] = blob["embeddings"].to(torch.float32).numpy()
-        self._embedding_dimension = int(vectors.shape[1])
-        # embed() filenames are relative to data_dir; LightlyStudio stores absolute paths.
-        self._by_path = {
-            (Path(data_dir) / name).absolute().as_posix(): vectors[index]
-            for index, name in enumerate(blob["filenames"])
-        }
-        self._model_hash = file_utils.get_file_xxhash(Path(embeddings_file))
+    def __init__(self, model_file: str) -> None:
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._model = torch.load(model_file, weights_only=False).to(self._device).eval()
+        self._preprocess = transforms.Compose(
+            [
+                transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            ]
+        )
+        self._model_hash = file_utils.get_file_xxhash(Path(model_file))
+        # EmbeddingModel.forward returns (B, D, 1, 1); infer D from a dummy pass.
+        with torch.no_grad():
+            dummy = torch.zeros(1, 3, IMAGE_SIZE, IMAGE_SIZE, device=self._device)
+            self._dimension = int(self._model(dummy).flatten(1).shape[1])
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
-        return EmbeddingSpaceDescription(
-            name="LightlyTrain",
-            embedding_model_hash=self._model_hash,
-            embedding_dimension=self._embedding_dimension,
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
+        return ls.EmbeddingSpaceSpec(
+            space_key=f"lightlytrain/{self._model_hash}", dimension=self._dimension
         )
 
     def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
-        rows: list[NDArray[np.float32]] = []
-        kept_indices: list[int] = []
-        for index, filepath in enumerate(filepaths):
-            vector = self._by_path.get(filepath)
-            if vector is None:
-                continue
-            rows.append(vector)
-            kept_indices.append(index)
-        embeddings = (
-            np.stack(rows)
-            if rows
-            else np.empty((0, self._embedding_dimension), dtype=np.float32)
+        return image_embedding.embed_image_files_batched(
+            filepaths=filepaths, context=self._context(), show_progress=show_progress
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
-
-    def embed_text(self, text: str) -> list[float]:
-        raise NotImplementedError("Vision-only model; text search is unavailable.")
 
     def embed_image_crops(
         self, image_crops: list[ls.ImageCrop], show_progress: bool = True
     ) -> EmbeddingResult:
-        raise NotImplementedError("Precomputed whole-image vectors only.")
+        return image_crop_embedding.embed_image_crops_batched(
+            image_crops=image_crops, context=self._context(), show_progress=show_progress
+        )
 
     def embed_pil_images(
         self, images: list[Image.Image], show_progress: bool = True
     ) -> NDArray[np.float32]:
-        raise NotImplementedError("Precomputed vectors are keyed by file path.")
+        return image_embedding.embed_pil_images_batched(
+            images=images, context=self._context(), show_progress=show_progress
+        )
+
+    def embed_text(self, text: str) -> list[float]:
+        raise NotImplementedError("Vision-only model; text search is unavailable.")
+
+    def _context(self) -> EmbeddingContext:
+        return EmbeddingContext(
+            embedding_dimension=self._dimension,
+            max_batch_size=128,
+            device=self._device,
+            preprocess=self._preprocess,
+            encode_batch=lambda batch: self._model(batch).flatten(1).cpu().numpy(),
+        )
 
 
 ls.db_manager.connect(cleanup_existing=True)
-ls.set_default_embedding_model(
-    LightlyTrainEmbeddingsGenerator(embeddings_file="out/embeddings.pt", data_dir=IMAGE_PATH)
-)
+ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator("out/embedding_model.pt"))
 
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
 dataset.add_images_from_path(path=IMAGE_PATH)
 ```
 
-The generator serves whole-image vectors; the other methods raise, so text search and object-level embeddings stay off for this model. See [Embeddings](../concepts_and_tools/embeddings.md) for the full protocol.
+!!! note "Match your training normalization"
+    The transform above matches LightlyTrain's ImageNet default. If you trained with custom `normalize_args`, pass the same mean and std.
 
-!!! note "Advanced: embed live inside LightlyStudio"
-    Instead of precomputing, you can run the exported model inside LightlyStudio and embed images on the fly — this also covers object crops. See [`example_custom_embedding_model.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embedding_model.py) for the pattern.
+!!! warning "Keep the same LightlyTrain version"
+    `torch.load(..., weights_only=False)` unpickles LightlyTrain's model class, so the environment that runs LightlyStudio needs the same `lightly-train` version you exported with.
+
+Text search stays off, because the model has no text encoder. See [Embeddings](../concepts_and_tools/embeddings.md) for the full protocol.
+
+!!! note "Alternative: precompute the embeddings"
+    Prefer to embed once, offline? Run `lightly_train.embed(...)` to write vectors to a file, then load them with the pattern in [`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py). That path embeds whole images only.
 
 ## Step 5: Explore the embedding map
 
-Run the script. It trains the model, generates the embeddings, and loads them into a dataset.
+Run the script. It trains the model, exports it, and loads it into a dataset that LightlyStudio embeds on the fly.
 
 ```bash
 python train_and_explore.py
@@ -219,8 +228,8 @@ ls.start_gui(open_browser=True)
 
 ## Conclusion
 
-In this tutorial, you trained an embedding model on your own images with LightlyTrain, generated embeddings, and loaded them into LightlyStudio to explore and curate.
+In this tutorial, you trained an embedding model on your own images with LightlyTrain, exported it, and ran it inside LightlyStudio to explore and curate your data.
 
-The connection between the two products is a single file of vectors. Once they are in LightlyStudio, the embedding plot, search, and every sampling strategy work the same as with a built-in model — but now the space reflects a model that understands your data.
+The connection between the two products is a single model file. Once LightlyStudio runs it, the embedding plot, search, and every sampling strategy work the same as with a built-in model — but now the space reflects a model that understands your data.
 
 To go further, train on your full dataset with more epochs, try a different backbone from `lightly_train.list_models()`, or read [Embeddings](../concepts_and_tools/embeddings.md) and [Sampling](../concepts_and_tools/sampling.md) to get more out of the map.
