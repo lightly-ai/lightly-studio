@@ -58,7 +58,6 @@ def fine_tuning_embeddings() -> list[SampleEmbeddingTable]:
 def embedding_model(db_session: Session, collection: CollectionTable) -> EmbeddingModelTable:
     """Fixture to create an embedding model."""
     embedding_model = EmbeddingModelCreate(
-        embedding_model_hash="mock_hash",
         name="test_model",
         dataset_id=collection.dataset_id,
         embedding_dimension=3,
