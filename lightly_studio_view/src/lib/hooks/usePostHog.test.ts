@@ -116,6 +116,22 @@ describe('usePostHog', () => {
         expect(mockInit).not.toHaveBeenCalled();
     });
 
+    it('should request the config while the feature flags are still in flight', async () => {
+        // Serializing the two requests doubles the window in which events are dropped.
+        let resolveFeatures: (features: unknown) => void = () => {};
+        mockGetFeatures.mockReturnValue(new Promise((resolve) => (resolveFeatures = resolve)));
+
+        const { init } = await freshPostHog();
+        const initialized = init();
+        await Promise.resolve();
+
+        expect(mockGetAnalyticsConfig).toHaveBeenCalled();
+
+        resolveFeatures({ data: ['analytics'] });
+        await initialized;
+        expect(mockInit).toHaveBeenCalled();
+    });
+
     it('should not initialize when the features request fails', async () => {
         mockGetFeatures.mockRejectedValue(new Error('API Error'));
 

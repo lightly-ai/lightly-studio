@@ -9,7 +9,7 @@ from lightly_studio.analytics.cohort import UserCohort
 
 @pytest.fixture(autouse=True)
 def _no_key_override(mocker: MockerFixture) -> None:
-    """Undo the suite-wide empty override, which short-circuits every case below."""
+    """Ignore an override in the developer's environment, which wins over every case below."""
     mocker.patch.object(posthog_project, "LIGHTLY_STUDIO_POSTHOG_KEY", None)
 
 
@@ -37,10 +37,11 @@ def test_get_project_key__override_wins(mocker: MockerFixture) -> None:
     assert posthog_project.get_project_key(UserCohort.USER) == "phc_override"
 
 
-def test_get_project_key__empty_override_disables(mocker: MockerFixture) -> None:
+def test_get_project_key__empty_override_is_ignored(mocker: MockerFixture) -> None:
+    """An empty override reads as unset, rather than leaving the installation without a key."""
     mocker.patch.object(posthog_project, "LIGHTLY_STUDIO_POSTHOG_KEY", "")
 
-    assert posthog_project.get_project_key(UserCohort.USER) == ""
+    assert posthog_project.get_project_key(UserCohort.USER) == posthog_project.PROD_PROJECT_KEY
 
 
 def test_get_project_key__projects_differ() -> None:

@@ -95,11 +95,7 @@ def _create_tracker() -> Tracker:
     if not LIGHTLY_STUDIO_ANALYTICS_ENABLED:
         return NoOpTracker()
 
-    # An empty key comes back here from the override, which disables tracking on its own.
     project_api_key = posthog_project.get_project_key(cohort.get_cohort())
-    if not project_api_key:
-        return NoOpTracker()
-
     tracker = PostHogTracker(project_api_key=project_api_key, host=LIGHTLY_STUDIO_POSTHOG_HOST)
     # PostHog delivers from a background thread and registers no exit hook of its own, so a
     # short-lived process would drop the event without this.

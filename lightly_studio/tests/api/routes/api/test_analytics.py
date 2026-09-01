@@ -43,20 +43,6 @@ def test_get_analytics_config__a_source_build_reports_to_dev(
     assert response.json()["posthog_key"] == posthog_project.DEV_PROJECT_KEY
 
 
-def test_get_analytics_config__returns_not_found_without_a_key(
-    test_client: TestClient, mocker: MockerFixture
-) -> None:
-    """An empty LIGHTLY_STUDIO_POSTHOG_KEY has to stop the GUI as well."""
-    mocker.patch.object(analytics, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
-    mocker.patch.object(posthog_project, "LIGHTLY_STUDIO_POSTHOG_KEY", "")
-    get_install_id = mocker.patch.object(install_id, "get_install_id")
-
-    response = test_client.get("/api/analytics/config")
-
-    assert response.status_code == HTTP_STATUS_NOT_FOUND
-    get_install_id.assert_not_called()
-
-
 def test_get_analytics_config__returns_not_found_when_analytics_disabled(
     test_client: TestClient, mocker: MockerFixture
 ) -> None:

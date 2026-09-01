@@ -40,18 +40,14 @@ def get_analytics_config() -> AnalyticsConfig:
     distinct id per install, and initialises PostHog with the key, so both reach one project.
 
     Raises:
-        NotFoundError: If usage tracking is switched off, by the flag or by an empty key.
+        NotFoundError: If usage tracking is switched off.
     """
     # Opting out must leave no id on disk, so refuse before get_install_id() creates one.
     if not LIGHTLY_STUDIO_ANALYTICS_ENABLED:
         raise NotFoundError("Usage tracking is disabled.")
 
-    posthog_key = posthog_project.get_project_key(cohort.get_cohort())
-    if not posthog_key:
-        raise NotFoundError("Usage tracking is disabled.")
-
     return AnalyticsConfig(
         install_id=str(install_id.get_install_id()),
-        posthog_key=posthog_key,
+        posthog_key=posthog_project.get_project_key(cohort.get_cohort()),
         posthog_host=LIGHTLY_STUDIO_POSTHOG_HOST,
     )

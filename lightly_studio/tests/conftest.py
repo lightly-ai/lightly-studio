@@ -15,9 +15,10 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session, SQLModel
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
-from lightly_studio.analytics import posthog_project, tracking
+from lightly_studio.analytics import tracking
 from lightly_studio.api import features
 from lightly_studio.api.app import app
+from lightly_studio.api.routes.api import analytics
 from lightly_studio.database import db_manager
 from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
 from lightly_studio.dataset import embedding_manager
@@ -75,11 +76,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 def _disable_analytics(mocker: MockerFixture) -> None:
     """Keep the suite off the network whatever the developer's environment configures.
 
-    Runs before any module level fixture, so a test that patches these itself still wins. The key
-    is emptied too, since the flag alone leaves the project selection reachable.
+    Runs before any module level fixture, so a test that patches these itself still wins. The route
+    is switched off too, so that no test leaves an install id in the developer's cache directory.
     """
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
-    mocker.patch.object(posthog_project, "LIGHTLY_STUDIO_POSTHOG_KEY", "")
+    mocker.patch.object(analytics, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
     mocker.patch.object(tracking, "_tracker", None)
 
 

@@ -151,14 +151,6 @@ def test_create_tracker__when_analytics_are_disabled(mocker: MockerFixture) -> N
     assert isinstance(tracking._create_tracker(), tracking.NoOpTracker)
 
 
-def test_create_tracker__without_a_key(mocker: MockerFixture) -> None:
-    """An empty LIGHTLY_STUDIO_POSTHOG_KEY switches tracking off by key alone."""
-    mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
-    mocker.patch.object(posthog_project, "get_project_key", return_value="")
-
-    assert isinstance(tracking._create_tracker(), tracking.NoOpTracker)
-
-
 def test_create_tracker__reports_to_the_project_for_the_cohort(mocker: MockerFixture) -> None:
     """A source build must not reach the production project."""
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)

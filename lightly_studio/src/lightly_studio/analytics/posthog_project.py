@@ -23,9 +23,9 @@ def get_project_key(user_cohort: UserCohort) -> str:
         user_cohort: Cohort of this installation.
 
     Returns:
-        `LIGHTLY_STUDIO_POSTHOG_KEY` when set, empty if it switches tracking off. Otherwise the
-        production key for real users and the dev key for everyone else.
+        `LIGHTLY_STUDIO_POSTHOG_KEY` when it holds a key, otherwise the production key for real
+        users and the dev key for everyone else.
     """
-    if LIGHTLY_STUDIO_POSTHOG_KEY is not None:
+    if LIGHTLY_STUDIO_POSTHOG_KEY:
         return LIGHTLY_STUDIO_POSTHOG_KEY
     return PROD_PROJECT_KEY if user_cohort is UserCohort.USER else DEV_PROJECT_KEY

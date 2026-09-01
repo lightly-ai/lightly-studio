@@ -34,25 +34,25 @@ export const usePostHog = () => {
     const init = async () => {
         if (!browser || initialized) return;
 
+        // Started before the flags, which it does not depend on, since every event fired until
+        // both land is dropped. Requesting it with tracking switched off is safe: the endpoint
+        // refuses before it writes an install id.
+        const configResponse = getAnalyticsConfig().catch((error: unknown) => {
+            console.warn('Failed to read the analytics configuration', error);
+            return undefined;
+        });
+
         // A failed request leaves the flags empty, so a backend that cannot be reached is never
         // tracked against.
         const { featureFlags, ready } = useFeatureFlags();
         await ready;
         if (!get(featureFlags).includes(ANALYTICS_FEATURE)) return;
-        // Re-check: concurrent callers both get past the guard above before this resolves.
-        if (initialized) return;
 
         // Only the backend can tell a checkout from a released package, so it picks the
         // project. Without a key there is nothing to fall back to.
-        let config;
-        try {
-            config = (await getAnalyticsConfig()).data;
-        } catch (error) {
-            console.warn('Failed to read the analytics configuration', error);
-            return;
-        }
+        const config = (await configResponse)?.data;
         if (!config) return;
-        // Re-check: the await above lets a second concurrent caller reach this point too.
+        // Re-check: the awaits above let a second concurrent caller reach this point too.
         if (initialized) return;
 
         posthog.init(config.posthog_key, {
