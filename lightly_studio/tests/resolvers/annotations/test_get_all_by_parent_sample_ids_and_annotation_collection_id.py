@@ -173,7 +173,7 @@ def test_get_all_by_parent_sample_ids_and_annotation_collection_id__eager_loads_
     assert "sample" not in state.unloaded
 
 
-def test_get_all_by_parent_sample_ids_and_collection__annotation_types_none_returns_all(
+def test_get_all_by_parent_sample_ids_and_annotation_collection_id__annotation_types_none_returns_all(  # noqa: E501
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
@@ -295,7 +295,7 @@ def test_get_all_by_parent_sample_ids_and_annotation_collection_id__annotation_t
     }
 
 
-def test_get_all_by_parent_sample_ids_and_collection__annotation_types_empty_returns_empty(
+def test_get_all_by_parent_sample_ids_and_annotation_collection_id__annotation_types_empty_returns_empty(  # noqa: E501
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
