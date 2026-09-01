@@ -7,6 +7,8 @@ from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.group.group_sample import GroupSample
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.core.mcap.create_mcap_locator import CreateMcapLocator
+from lightly_studio.core.mcap.mcap_sample import McapSample
 from lightly_studio.core.video.create_video import CreateVideo
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database import db_manager
@@ -128,6 +130,45 @@ class TestGroupDataset:
         assert empty_sample["img"] is None
         assert empty_sample["vid"] is None
         assert empty_sample["extra"] is None
+
+    def test_add_group_sample__mcap(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        group_ds = GroupDataset.create(
+            components=[
+                ("front", SampleType.MCAP),
+                ("pcl_front", SampleType.MCAP),
+            ],
+            name="test_group_dataset",
+        )
+
+        group_sample = group_ds.add_group_sample(
+            components={
+                "front": CreateMcapLocator(
+                    channel_id=3,
+                    log_time_ns=100,
+                    keyframe_log_time_ns=90,
+                    capture_timestamp_ns=100,
+                ),
+                "pcl_front": CreateMcapLocator(
+                    channel_id=5,
+                    log_time_ns=100,
+                    capture_timestamp_ns=100,
+                ),
+            },
+        )
+
+        front_sample = group_sample["front"]
+        pcl_front_sample = group_sample["pcl_front"]
+
+        assert isinstance(front_sample, McapSample)
+        assert front_sample.channel_id == 3
+        assert front_sample.keyframe_log_time_ns == 90
+
+        assert isinstance(pcl_front_sample, McapSample)
+        assert pcl_front_sample.channel_id == 5
+        assert pcl_front_sample.keyframe_log_time_ns is None
 
     def test_iter_and_slice(
         self,
