@@ -211,7 +211,8 @@ describe('toApiStrategy', () => {
         expect(toApiStrategy(defaultMetadataBalancing)).toEqual({
             strategy_name: 'metadata_balance',
             metadata_key: 'weather',
-            target_distribution: 'uniform'
+            target_distribution: 'uniform',
+            strength: 1
         });
     });
 
