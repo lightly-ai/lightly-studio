@@ -19,7 +19,11 @@ from lightly_studio.dataset.embedding_generator import (
     VideoEmbeddingGenerator,
 )
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
+from lightly_studio.models.embedding_model import (
+    EMBEDDING_MODEL_HASH_MAX_LENGTH,
+    EmbeddingModelCreate,
+    EmbeddingModelTable,
+)
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -165,11 +169,11 @@ class EmbeddingManager:
         if collection is None:
             raise ValueError("Provided collection_id could not be found.")
 
-        model_description = embedding_generator.get_embedding_model_input()
+        space_spec = embedding_generator.embedding_space_spec()
         model_create = EmbeddingModelCreate(
-            name=model_description.name,
-            embedding_model_hash=model_description.embedding_model_hash,
-            embedding_dimension=model_description.embedding_dimension,
+            name=space_spec.space_key,
+            embedding_model_hash=_space_key_to_hash(space_spec.space_key),
+            embedding_dimension=space_spec.dimension,
             dataset_id=collection.dataset_id,
         )
         db_model = embedding_model_resolver.get_or_create(
@@ -691,3 +695,18 @@ def _load_video_embedding_generator() -> VideoEmbeddingGenerator | None:
     except ImportError:
         logger.warning("Embedding functionality is disabled.")
         return None
+
+
+def _space_key_to_hash(space_key: str) -> str:
+    """Fits a space key into the `embedding_model_hash` column.
+
+    A `space_key` may be any string, but the column is a bounded `VARCHAR`, so keys
+    longer than the limit are truncated.
+
+    Args:
+        space_key: The embedding space key to store.
+
+    Returns:
+        The space key truncated to the column limit.
+    """
+    return space_key[:EMBEDDING_MODEL_HASH_MAX_LENGTH]

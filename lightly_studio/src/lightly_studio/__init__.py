@@ -22,6 +22,7 @@ from lightly_studio.core.start_gui import (
 )
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
+    EmbeddingSpaceSpec,
     ImageCrop,
     ImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
@@ -40,6 +41,7 @@ __all__ = [
     "CreateImage",
     "CreateVideo",
     "EmbeddingGenerator",
+    "EmbeddingSpaceSpec",
     "GroupDataset",
     "ImageCrop",
     "ImageDataset",
