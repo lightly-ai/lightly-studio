@@ -458,6 +458,135 @@ body {
   padding: 0.05rem 0.25rem;
 }
 
+/* -- Section tabs ----------------------------------------------------------
+
+   Docs / Tutorials / Enterprise, inline in the header row. Each scopes the
+   sidebar to the `nav:` sections it claims; the markup comes from
+   `overrides/partials/section_tabs.html` and the mapping from `extra.tabs` in
+   mkdocs.yml. Still one row of chrome: this is not Material's `navigation.tabs`
+   strip, which is a second row under the header.
+
+   Two copies, and exactly one is displayed at any width. Below 76.25em the
+   sidebar these tabs scope is a slide-in drawer, so the strip has to be in the
+   drawer as well — a header-only strip would leave a phone reader stuck in
+   whichever section they arrived in. `display: none` rather than a transparent
+   or zero-size copy, so the hidden one is out of the accessibility tree and the
+   tab order too.
+
+   The active tab is marked twice over. The ink text carries it and the accent
+   rule underneath repeats it, because the header is translucent: with a
+   near-black code panel scrolled under it the accent falls below 3:1 against
+   what is effectively behind it. That is fine for a decoration and not enough
+   to be the only signal. Weight stays 500 on all three — bolding the active one
+   would change its width and shift the whole strip sideways on every
+   navigation.
+   ------------------------------------------------------------------------- */
+
+.ls-tabs__list {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ls-tabs__link {
+  /* Transparent until active, so both states are the same height and the row
+     does not jump as the reader moves between tabs. */
+  border-bottom: 2px solid transparent;
+  color: var(--ls-body);
+  font-size: 0.675rem;
+  font-weight: 500;
+  padding-bottom: 0.15rem;
+  text-decoration: none;
+  transition: border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.ls-tabs__link:hover {
+  color: var(--ls-ink);
+}
+
+.ls-tabs__link--active,
+.ls-tabs__link--active:hover {
+  border-bottom-color: var(--ls-accent);
+  color: var(--ls-ink);
+}
+
+/* The accent ring at a 0.2rem offset is Material's own focus treatment for
+   `.md-tabs__link` and `.md-header__button`, written with the real pseudo-class
+   rather than its polyfill class. An outline and not just a color change: a
+   color on its own is not a focus indicator. */
+.ls-tabs__link:focus-visible {
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-ink);
+  outline: 2px solid var(--ls-accent);
+  outline-offset: 0.2rem;
+}
+
+/* Three equal segments across the drawer, and a neutral pill for the active one
+   — the accent rule belongs to the header row, where the strip is the only
+   horizontal thing; in the drawer it would sit a few pixels from the sidebar's
+   own active pill and read as a second, competing marker. */
+.ls-tabs--drawer .ls-tabs__list {
+  gap: 0.25rem;
+  padding: 0.4rem 0.5rem 0.7rem;
+}
+
+.ls-tabs--drawer .ls-tabs__item {
+  flex: 1 1 0;
+}
+
+.ls-tabs--drawer .ls-tabs__link {
+  border-bottom: 0;
+  border-radius: var(--ls-radius-sm);
+  display: block;
+  font-size: 0.66rem;
+  padding: 0.3rem 0.35rem;
+  text-align: center;
+}
+
+.ls-tabs--drawer .ls-tabs__link--active,
+.ls-tabs--drawer .ls-tabs__link--active:hover {
+  background-color: var(--ls-surface-mut);
+  color: var(--ls-ink);
+}
+
+/* The drawer's scrollwrap clips at its edge, so the ring goes inside the pill
+   rather than around it. */
+.ls-tabs--drawer .ls-tabs__link:focus-visible {
+  outline-offset: -2px;
+}
+
+.ls-tabs--header {
+  display: none;
+}
+
+/* The drawer breakpoint. Above it the sidebar is a column and the strip belongs
+   in the header; below it the sidebar is the drawer and so is the strip. */
+@media screen and (min-width: 76.25em) {
+  .ls-tabs--header {
+    align-items: center;
+    display: flex;
+    /* The strip is what takes the slack once it exists, so the search field
+       stays pinned to the right edge. */
+    margin-inline-end: auto;
+    height: var(--ls-header-height);
+  }
+
+  .ls-tabs--drawer {
+    display: none;
+  }
+
+  /* The chip hands the slack over to the strip and settles for a plain gap —
+     wide enough that "v1.0.5" reads as belonging to the wordmark behind it
+     rather than to "Docs" in front of it. */
+  .ls-version {
+    margin-inline-end: 1.4rem;
+  }
+}
+
 /* -- Search ---------------------------------------------------------------- */
 
 .md-search__form {
@@ -938,6 +1067,263 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   padding-left: 1.5rem;
 }
 
+/* -- Page actions ----------------------------------------------------------
+
+   Edit / report / ask, from `overrides/partials/page_actions.html`. The edit
+   link is the one Material would otherwise draw as a bare pencil icon floating
+   over the first paragraph.
+
+   Two copies, and exactly one is displayed at any width: a column under the
+   contents list where that list is a sidebar, a row under the article where it
+   has collapsed into a drawer. Page-level links do not belong inside a heading
+   list the reader has to open.
+   ------------------------------------------------------------------------- */
+
+.ls-actions {
+  border-top: 1px solid var(--ls-line-hair);
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.ls-actions--aside {
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding: 0.8rem 0 0 0.5rem;
+}
+
+.ls-actions--page {
+  gap: 0.4rem 1.2rem;
+  margin: 2.4rem 0 0;
+  padding: 0.8rem 0 0;
+}
+
+/* The article copy sits inside `.md-typeset`, whose `.md-typeset a` outranks a
+   bare `.ls-actions__link`. Scoping each link rule to the block wins it back. */
+.ls-actions .ls-actions__link {
+  color: var(--ls-body);
+  font-size: 0.625rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+/* The article copy is read at body distance, not sidebar distance. */
+.ls-actions--page .ls-actions__link {
+  font-size: 0.7rem;
+}
+
+.ls-actions .ls-actions__link:hover,
+.ls-actions .ls-actions__link:focus-visible {
+  color: var(--ls-accent);
+}
+
+/* An outline, not just the color shift above: a colour change on its own is not
+   a focus indicator (same treatment as `.ls-tabs__link`). */
+.ls-actions .ls-actions__link:focus-visible {
+  border-radius: var(--ls-radius-sm);
+  outline: 2px solid var(--ls-accent);
+  outline-offset: 2px;
+}
+
+/* The pencil the actions list replaces. */
+.md-content__button.md-icon[rel="edit"] {
+  display: none;
+}
+
+@media screen and (max-width: 59.984375em) {
+  .ls-actions--aside {
+    display: none;
+  }
+}
+
+@media screen and (min-width: 60em) {
+  .ls-actions--page {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   8. Footer
+
+   Two bands. Material's `.md-footer` carries the prev/next pager; `.ls-footer`
+   below it carries the brand, the link columns and the legal line, and comes
+   from `overrides/partials/site_footer.html`.
+   ========================================================================== */
+
+.md-footer {
+  background-color: var(--ls-surface);
+  border-top: 1px solid var(--ls-line-hair);
+}
+
+.md-footer__inner {
+  gap: 0.6rem;
+  margin: 1.6rem auto;
+  opacity: 1;
+  padding: 0 1.3rem;
+}
+
+.md-footer__link {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  flex: none;
+  margin: 0;
+  opacity: 1;
+  padding: 0.7rem 0.9rem;
+  transition: border-color 0.15s;
+  width: calc(50% - 0.3rem);
+}
+
+.md-footer__link:hover {
+  border-color: var(--ls-ink);
+  opacity: 1;
+}
+
+.md-footer__direction {
+  color: var(--ls-muted);
+  font-size: 0.575rem;
+  opacity: 1;
+}
+
+.md-footer__title {
+  font-size: 0.725rem;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+.md-footer__title .md-ellipsis {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* The prev/next cards carry the direction already. */
+.md-footer__button {
+  display: none;
+}
+
+/* The copyright it would print is rendered by `.ls-footer__legal` instead, next
+   to the version, and the "Made with Material for MkDocs" line goes with it. */
+.md-footer-meta {
+  display: none !important;
+}
+
+/* -- Site footer ----------------------------------------------------------- */
+
+.ls-footer {
+  background-color: var(--ls-surface-mut);
+  border-top: 1px solid var(--ls-line);
+}
+
+.ls-footer__inner {
+  padding: 1.4rem 1.3rem 1.2rem;
+}
+
+/* The brand block and the columns share one row and wrap together, so a narrow
+   viewport stacks them in reading order rather than reflowing into a grid. */
+.ls-footer__top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.6rem 2rem;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+
+.ls-footer__brand {
+  max-width: 14rem;
+}
+
+.ls-footer__lockup {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+}
+
+/* Same size as the header mark, so the two lockups read as one wordmark. */
+.ls-footer__mark {
+  height: 1.1rem;
+  width: auto;
+}
+
+.ls-footer__wordmark {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ls-footer__tagline {
+  color: var(--ls-muted);
+  font-size: 0.62rem;
+  line-height: 1.55;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.ls-footer__column {
+  min-width: 6.5rem;
+}
+
+/* Same reason as the search placeholder: the footer band is the muted surface,
+   where the faint grey drops under 4.5:1. */
+.ls-footer__heading {
+  color: var(--ls-muted);
+  font-family: var(--ls-font-mono);
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.55rem;
+  text-transform: uppercase;
+}
+
+.ls-footer__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ls-footer__link {
+  color: var(--ls-body);
+  font-size: 0.62rem;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.ls-footer__link:hover,
+.ls-footer__link:focus-visible {
+  color: var(--ls-accent);
+}
+
+/* An outline, not just the color shift above: a colour change on its own is not
+   a focus indicator (same treatment as `.ls-tabs__link`). */
+.ls-footer__link:focus-visible {
+  border-radius: var(--ls-radius-sm);
+  outline: 2px solid var(--ls-accent);
+  outline-offset: 2px;
+}
+
+.ls-footer__legal {
+  align-items: center;
+  border-top: 1px solid var(--ls-line-hair);
+  color: var(--ls-faint);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.6rem;
+  gap: 0.4rem 1rem;
+  justify-content: space-between;
+  padding-top: 0.8rem;
+}
+
+.ls-footer__version {
+  font-family: var(--ls-font-mono);
+}
 
 /* ==========================================================================
    Legacy rules carried from the previous theme, removed as each region is
@@ -1002,44 +1388,6 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
     background-color: #091c1e !important; /* Use header dark color on hover */
     border-color: #091c1e !important; /* Match border color */
 }
-
-/* Custom menu bar color */
-:root {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-    --lightly-nav-active-color: #0a6f99;
-}
-
-/* Override Material theme primary colors */
-[data-md-color-scheme="default"] {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-}
-
-[data-md-color-scheme="slate"] {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-}
-
-/* Hide Material for MkDocs footer */
-.md-footer-meta {
-    display: none !important;
-}
-
-/* Bold the active top-level menu item in the header navigation tabs */
-.md-tabs__item--active .md-tabs__link {
-  font-weight: 700;
-}
-
 
 /* ===== Multi-row tab overrides ===== */
 
