@@ -64,9 +64,7 @@ class RandomForest(FewShotClassifier):
                 and predictions. The order of this list determines the order of
                 probability values in predictions.
             embedding_model_name: Name of the model used for creating the
-                embeddings.
-            Note: embedding_model_name is used for traceability in the exported
-            model metadata.
+                embeddings. Used for traceability in the exported model metadata.
 
         Raises:
             ValueError: If classes list is empty.
