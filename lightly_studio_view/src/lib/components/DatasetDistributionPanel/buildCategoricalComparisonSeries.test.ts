@@ -59,6 +59,39 @@ describe('buildCategoricalComparisonSeries', () => {
             { label: 'Priority', data: [{ label: 'Missing (no value)', count: 3 }] }
         ]);
     });
+
+    it("carries each tag's own bucket total as the percentage denominator", () => {
+        const series = buildCategoricalComparisonSeries(
+            [
+                {
+                    id: 'tag-a',
+                    label: 'Reviewed',
+                    categorical: {
+                        city: [
+                            {
+                                id: 'value-bern',
+                                kind: 'value',
+                                value: 'Bern',
+                                label: 'Bern',
+                                count: 2
+                            },
+                            {
+                                id: 'value-zurich',
+                                kind: 'value',
+                                value: 'Zurich',
+                                label: 'Zurich',
+                                count: 8
+                            }
+                        ]
+                    }
+                },
+                { id: 'tag-b', label: 'Priority', categorical: {} }
+            ],
+            'city'
+        );
+
+        expect(series.map(({ totalCount }) => totalCount)).toEqual([10, 0]);
+    });
 });
 
 describe('buildCategoricalComparisonBuckets', () => {
