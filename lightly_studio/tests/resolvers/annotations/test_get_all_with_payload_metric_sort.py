@@ -101,6 +101,50 @@ def test_get_all_with_payload__orders_by_annotation_evaluation_metric__descendin
     ]
 
 
+def test_get_all_with_payload__orders_by_annotation_evaluation_metric__sets_order_value(
+    db_session: Session,
+) -> None:
+    fixture = _create_annotation_evaluation_metric_fixture(session=db_session)
+
+    annotations_page = annotation_resolver.get_all_with_payload(
+        session=db_session,
+        collection_id=fixture.gt_collection_id,
+        filters=AnnotationsFilter(collection_ids=[fixture.gt_collection_id]),
+        ordering=annotation_resolver.AnnotationOrdering(
+            order_by=OrderByAnnotationEvaluationMetricField(
+                evaluation_run_id=fixture.run_id,
+                metric_name=METRIC_NAME,
+                side=EvaluationAnnotationSide.GROUND_TRUTH,
+                annotation_id_column=col(AnnotationBaseTable.sample_id),
+            )
+        ),
+    )
+
+    # The unmatched annotation has a metric row without a value and reports 0.0, while the
+    # annotation the run did not cover has no row at all and reports nothing.
+    assert {
+        a.annotation.sample_id: a.annotation.order_value for a in annotations_page.annotations
+    } == {
+        fixture.matched: MATCHED_VALUE,
+        fixture.unmatched: 0.0,
+        fixture.uncovered: None,
+    }
+
+
+def test_get_all_with_payload__order_value_is_none_without_ordering(
+    db_session: Session,
+) -> None:
+    fixture = _create_annotation_evaluation_metric_fixture(session=db_session)
+
+    annotations_page = annotation_resolver.get_all_with_payload(
+        session=db_session,
+        collection_id=fixture.gt_collection_id,
+        filters=AnnotationsFilter(collection_ids=[fixture.gt_collection_id]),
+    )
+
+    assert [a.annotation.order_value for a in annotations_page.annotations] == [None, None, None]
+
+
 def test_get_all_with_payload__text_embedding_takes_precedence_over_order_by(
     db_session: Session,
 ) -> None:
@@ -145,6 +189,8 @@ def test_get_all_with_payload__text_embedding_takes_precedence_over_order_by(
         fixture.matched,
         fixture.unmatched,
     ]
+    # The ignored sort contributes no value either.
+    assert all(a.annotation.order_value is None for a in annotations_page.annotations)
 
 
 def test_get_all_with_payload__orders_by_annotation_evaluation_metric__composes_with_label_filter(

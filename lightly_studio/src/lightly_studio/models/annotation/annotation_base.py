@@ -175,6 +175,7 @@ class AnnotationView(BaseModel):
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
     confidence: Optional[float] = None
+    order_value: Optional[float] = None
     created_at: datetime
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
@@ -186,14 +187,26 @@ class AnnotationView(BaseModel):
     tags: list[AnnotationViewTag] = []
 
     @classmethod
-    def from_annotation_table(cls, annotation: "AnnotationBaseTable") -> "AnnotationView":
-        """Convert an AnnotationBaseTable to an AnnotationView."""
+    def from_annotation_table(
+        cls,
+        annotation: "AnnotationBaseTable",
+        order_value: Optional[float] = None,
+    ) -> "AnnotationView":
+        """Convert an AnnotationBaseTable to an AnnotationView.
+
+        Args:
+            annotation: The annotation row to convert.
+            order_value: Primary sort value for the current grid sort, when provided by the
+                resolver. Mutually exclusive with the payload view's ``similarity_score``
+                for the grid overlay.
+        """
         return cls(
             parent_sample_id=annotation.parent_sample_id,
             sample_id=annotation.sample_id,
             annotation_collection_id=annotation.sample.collection_id,
             annotation_type=annotation.annotation_type,
             confidence=annotation.confidence,
+            order_value=order_value,
             created_at=annotation.created_at,
             object_track_id=annotation.object_track_id,
             object_track_number=annotation.object_track.object_track_number
