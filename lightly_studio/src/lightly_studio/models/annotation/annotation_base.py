@@ -46,6 +46,13 @@ class AnnotationType(str, Enum):
     OBJECT_DETECTION = "object_detection"
 
 
+# Annotation types that have a bounding box and can be cropped for embedding.
+CROPPABLE_ANNOTATION_TYPES = [
+    AnnotationType.OBJECT_DETECTION,
+    AnnotationType.SEGMENTATION_MASK,
+]
+
+
 class AnnotationBaseTable(SQLModel, table=True):
     """Base class for all annotation models."""
 
