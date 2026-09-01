@@ -134,6 +134,7 @@ images_path = str(Path(data_dir) / "coco_subset_128_images" / "images")
 
 # 2. Load the model into LightlyStudio. Register the generator BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
+# cleanup_existing=True resets the local database each run; remove it to keep prior runs.
 db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")

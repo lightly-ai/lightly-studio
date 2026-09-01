@@ -192,6 +192,7 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         )
 
 
+# Resets the local database so a re-run starts clean. Remove to keep prior tags and curation.
 ls.db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator("out/embedding_model.pt"))
 
