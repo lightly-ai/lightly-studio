@@ -118,6 +118,7 @@ Strategy = Annotated[
         EmbeddingDeduplicationStrategy,
         EmbeddingDiversityStrategy,
         EmbeddingSimilarityStrategy,
+        MetadataBalancingStrategy,
         MetadataWeightingStrategy,
         SubpartDiversityStrategy,
     ],
