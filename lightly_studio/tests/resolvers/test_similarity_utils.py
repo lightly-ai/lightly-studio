@@ -103,14 +103,12 @@ class TestGetDistanceExpression:
             session=db_session,
             collection_id=collection.collection_id,
             embedding_model_name="other_model",
-            embedding_model_hash="other_hash",
             embedding_dimension=3,
         )
         default_model = create_embedding_model(
             session=db_session,
             collection_id=collection.collection_id,
             embedding_model_name="default_model",
-            embedding_model_hash="default_hash",
             embedding_dimension=3,
             set_as_default=True,
         )
