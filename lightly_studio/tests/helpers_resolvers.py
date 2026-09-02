@@ -28,6 +28,7 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,
 )
 from lightly_studio.models.image import ImageCreate, ImageTable
+from lightly_studio.models.mcap import McapCreate, McapTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
@@ -41,6 +42,7 @@ from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
     image_resolver,
+    mcap_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -108,6 +110,32 @@ def create_image(
     image = image_resolver.get_by_id(session=session, sample_id=sample_ids[0])
     assert image is not None
     return image
+
+
+def create_mcap(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    channel_id: int = 0,
+    log_time_ns: int = 0,
+    capture_timestamp_ns: int = 0,
+    keyframe_log_time_ns: int | None = 0,
+) -> McapTable:
+    """Helper function to create an mcap sample."""
+    sample_ids = mcap_resolver.create_many(
+        session=session,
+        collection_id=collection_id,
+        samples=[
+            McapCreate(
+                channel_id=channel_id,
+                log_time_ns=log_time_ns,
+                capture_timestamp_ns=capture_timestamp_ns,
+                keyframe_log_time_ns=keyframe_log_time_ns,
+            )
+        ],
+    )
+    mcap = mcap_resolver.get_by_id(session=session, sample_id=sample_ids[0])
+    assert mcap is not None
+    return mcap
 
 
 @dataclass

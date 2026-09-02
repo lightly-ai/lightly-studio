@@ -75,7 +75,8 @@ theme:
     # Navigation lives entirely in the left sidebar: every section is a group
     # caption with its pages listed under it, no top-level tab row.
     - navigation.sections
-    - navigation.expand
+    # No `navigation.expand`: sub-groups start collapsed, so the sidebar opens
+    # showing section captions and their direct pages, not every nested page.
     # Deliberately not `navigation.indexes`. It folds a section's index page
     # into the section's own caption, and MkDocs picks that page for any
     # `index.md` under the section, wherever it sits in `nav:` — which took

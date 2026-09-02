@@ -355,4 +355,35 @@ describe('StrategyCard', () => {
             ).toBeInTheDocument();
         });
     });
+
+    describe('subpart_diversity', () => {
+        it('forwards croppableAnnotationSourceOptions to the subpart diversity form', async () => {
+            const instance: StrategyInstance = {
+                id: 'abc',
+                type: 'subpart_diversity',
+                params: { annotation_source_id: '', strength: 1 },
+                isExpanded: true
+            };
+
+            render(StrategyCard, {
+                props: {
+                    ...defaultProps,
+                    instance,
+                    croppableAnnotationSourceOptions: [
+                        { id: 'col-1', name: 'detections' },
+                        { id: 'col-2', name: 'masks' }
+                    ]
+                }
+            });
+
+            await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), {
+                key: 'Enter'
+            });
+
+            expect(
+                await screen.findByTestId('annotation-source-option-detections')
+            ).toBeInTheDocument();
+            expect(screen.getByTestId('annotation-source-option-masks')).toBeInTheDocument();
+        });
+    });
 });

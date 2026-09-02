@@ -7,11 +7,12 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.core.mcap.mcap_sample import McapSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.group import GroupTable
-from lightly_studio.resolvers import group_resolver, image_resolver, video_resolver
+from lightly_studio.resolvers import group_resolver, image_resolver, mcap_resolver, video_resolver
 
 
 class GroupSample(Sample):
@@ -67,6 +68,11 @@ def _create_specific_sample_class(
         if video_table is None:
             raise ValueError(f"Video sample with id '{sample_id}' does not exist.")
         return VideoSample(inner=video_table)
+    if sample_type == SampleType.MCAP:
+        mcap_table = mcap_resolver.get_by_id(session=session, sample_id=sample_id)
+        if mcap_table is None:
+            raise ValueError(f"Mcap sample with id '{sample_id}' does not exist.")
+        return McapSample(inner=mcap_table)
     if sample_type == SampleType.GROUP:
         group_table = group_resolver.get_by_id(session=session, sample_id=sample_id)
         if group_table is None:
