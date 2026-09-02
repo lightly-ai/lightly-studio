@@ -1,7 +1,7 @@
 """Anonymous usage tracking.
 
-Call sites use `track` and nothing else. Which backend receives the events is an implementation
-detail of this module, so replacing or dropping PostHog does not touch any caller.
+Call sites use `track` and `identify` — nothing else. Which backend receives the events is an
+implementation detail of this module, so replacing or dropping PostHog does not touch any caller.
 """
 
 from __future__ import annotations

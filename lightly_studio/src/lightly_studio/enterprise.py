@@ -107,7 +107,7 @@ def connect(
             event=tracking.ENTERPRISE_CONNECTED,
             properties={
                 "auth_method": "token" if token else "api_key",
-                "has_cloud_credentials": config.cloud_credentials is not None,
+                "has_cloud_credentials": bool(config.cloud_credentials),
             },
         )
 

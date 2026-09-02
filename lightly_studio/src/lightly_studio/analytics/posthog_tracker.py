@@ -28,10 +28,14 @@ UNKNOWN_VERSION = "unknown"
 
 
 class PostHogTracker(Tracker):
-    """Sends usage events to PostHog, keyed on the anonymous installation ID.
+    """Sends usage events to PostHog.
 
-    Events are queued and delivered by a background thread, so `track` does not block. Call
-    `shutdown` before the process ends, otherwise queued events are lost.
+    Events are initially keyed on the anonymous installation ID. After ``identify`` is called, the
+    tracker switches to the user's email as the distinct ID and all subsequent events are keyed on
+    that instead.
+
+    Events are queued and delivered by a background thread, so ``track`` does not block. Call
+    ``shutdown`` before the process ends, otherwise queued events are lost.
     """
 
     def __init__(self, project_api_key: str, host: str) -> None:
