@@ -129,12 +129,21 @@ from PIL import Image
 from torchvision import transforms
 
 import lightly_studio as ls
+from lightly_studio.core.annotation import CreateClassification
 from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
 
 # train_and_export.py already downloaded Imagenette to imagenette2-320/.
 IMAGE_PATH = "imagenette2-320/val"
+
+# Imagenette's folders are WordNet IDs; map them to readable class names.
+WNID_TO_NAME = {
+    "n01440764": "tench", "n02102040": "English springer", "n02979186": "cassette player",
+    "n03000684": "chain saw", "n03028079": "church", "n03394916": "French horn",
+    "n03417042": "garbage truck", "n03425413": "gas pump", "n03445777": "golf ball",
+    "n03888257": "parachute",
+}
 
 IMAGE_SIZE = 224
 # LightlyTrain normalizes with ImageNet statistics by default.
@@ -206,8 +215,14 @@ ls.db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator("out/embedding_model.pt"))
 
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-# tag_depth=1 tags each image with its class folder, so you can color the plot by class.
-dataset.add_images_from_path(path=IMAGE_PATH, tag_depth=1)
+dataset.add_images_from_path(path=IMAGE_PATH)
+
+# Label each image with its class, so you can color the plot by class in the GUI.
+for sample in dataset:
+    class_name = WNID_TO_NAME[Path(sample.file_path_abs).parent.name]
+    sample.add_annotation(
+        CreateClassification(class_name=class_name), annotation_source="class"
+    )
 ```
 
 !!! note "Match your training normalization"
@@ -236,7 +251,7 @@ python train_and_export.py   # train and export the model (slow; run once)
 python explore.py            # embed your data and open LightlyStudio
 ```
 
-Click the `Embed` button in the top right to open the [embedding plot](../concepts_and_tools/embeddings.md#the-embedding-plot-gui). It shows every image as a point in a 2D projection (PaCMAP) of the embedding space. To color points by their Imagenette class, open **Color by** at the bottom of the plot and pick **tags**.
+Click the `Embed` button in the top right to open the [embedding plot](../concepts_and_tools/embeddings.md#the-embedding-plot-gui). It shows every image as a point in a 2D projection (PaCMAP) of the embedding space. To color points by their class, open **Color by** at the bottom of the plot and pick **annotations**.
 
 ![The embedding plot after loading LightlyTrain embeddings, colored by class](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg){ width="100%" }
 

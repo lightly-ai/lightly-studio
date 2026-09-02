@@ -21,6 +21,7 @@ from PIL import Image
 from torchvision import transforms  # type: ignore[import-untyped]
 
 import lightly_studio as ls
+from lightly_studio.core.annotation import CreateClassification
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
 from lightly_studio.dataset.embedding_result import EmbeddingResult
@@ -33,6 +34,20 @@ IMAGE_SIZE = 224
 # normalize_args, pass the matching mean/std here.
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
+
+# Imagenette's folders are WordNet IDs; map them to readable class names.
+WNID_TO_NAME = {
+    "n01440764": "tench",
+    "n02102040": "English springer",
+    "n02979186": "cassette player",
+    "n03000684": "chain saw",
+    "n03028079": "church",
+    "n03394916": "French horn",
+    "n03417042": "garbage truck",
+    "n03425413": "gas pump",
+    "n03445777": "golf ball",
+    "n03888257": "parachute",
+}
 
 
 class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
@@ -137,8 +152,12 @@ images_path = "imagenette2-320/val"
 db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-# tag_depth=1 tags each image with its class folder, so you can color the plot by class.
-dataset.add_images_from_path(path=images_path, tag_depth=1)
+dataset.add_images_from_path(path=images_path)
+
+# Label each image with its class, so you can color the plot by class in the GUI.
+for sample in dataset:
+    class_name = WNID_TO_NAME[Path(sample.file_path_abs).parent.name]
+    sample.add_annotation(CreateClassification(class_name=class_name), annotation_source="class")
 
 # 3. Curate in code: select a diverse subset. The result is stored as a tag you can
 # open in the app. You can also do this interactively with the lasso in the GUI.
