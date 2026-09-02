@@ -44,9 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- Removed the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
+- Remove the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
   format and always writes the scikit-learn format, which is the only one LightlyStudio can load.
-- Dropped the legacy `embedding_model_hash` field from the classifier export format. Classifiers
+- Drop the legacy `embedding_model_hash` field from the classifier export format. Classifiers
   exported by older versions can no longer be loaded.
 
 ### Fixed
