@@ -107,9 +107,7 @@ def _get_field_value_counts(
     # sentinels to ``False`` on a boolean field.
     other_count = non_null_count - sum(int(count) for _, count in rows)
     if other_count > 0:
-        value_counts.append(
-            MetadataValueCountView(value=_OTHER_VALUE_SENTINEL, count=other_count)
-        )
+        value_counts.append(MetadataValueCountView(value=_OTHER_VALUE_SENTINEL, count=other_count))
     missing_count = total_count - non_null_count
     if missing_count > 0:
         value_counts.append(
