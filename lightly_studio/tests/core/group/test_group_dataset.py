@@ -137,21 +137,21 @@ class TestGroupDataset:
     ) -> None:
         group_ds = GroupDataset.create(
             components=[
-                ("front", SampleType.MCAP),
-                ("pcl_front", SampleType.MCAP),
+                ("camera", SampleType.MCAP),
+                ("lidar", SampleType.MCAP),
             ],
             name="test_group_dataset",
         )
 
         group_sample = group_ds.add_group_sample(
             components={
-                "front": CreateMcapLocator(
+                "camera": CreateMcapLocator(
                     channel_id=3,
                     log_time_ns=100,
                     keyframe_log_time_ns=90,
                     capture_timestamp_ns=100,
                 ),
-                "pcl_front": CreateMcapLocator(
+                "lidar": CreateMcapLocator(
                     channel_id=5,
                     log_time_ns=100,
                     capture_timestamp_ns=100,
@@ -159,16 +159,16 @@ class TestGroupDataset:
             },
         )
 
-        front_sample = group_sample["front"]
-        pcl_front_sample = group_sample["pcl_front"]
+        camera_sample = group_sample["camera"]
+        lidar_sample = group_sample["lidar"]
 
-        assert isinstance(front_sample, McapSample)
-        assert front_sample.channel_id == 3
-        assert front_sample.keyframe_log_time_ns == 90
+        assert isinstance(camera_sample, McapSample)
+        assert camera_sample.channel_id == 3
+        assert camera_sample.keyframe_log_time_ns == 90
 
-        assert isinstance(pcl_front_sample, McapSample)
-        assert pcl_front_sample.channel_id == 5
-        assert pcl_front_sample.keyframe_log_time_ns is None
+        assert isinstance(lidar_sample, McapSample)
+        assert lidar_sample.channel_id == 5
+        assert lidar_sample.keyframe_log_time_ns is None
 
     def test_iter_and_slice(
         self,
