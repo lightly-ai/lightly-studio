@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.dataset.embedding_generator import ImageCrop
+from lightly_studio.embed.types import ImageCrop
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
