@@ -51,6 +51,19 @@ class PostHogTracker(Tracker):
         self._distinct_id = str(install_id.get_install_id())
         self._common_properties = _common_properties()
 
+    def identify(self, email: str) -> None:
+        """Link the anonymous install ID to a known user and switch identity.
+
+        Calls ``alias`` so PostHog merges the pre-identification anonymous
+        events with the identified user, then switches ``distinct_id`` for all
+        subsequent ``track`` calls.
+
+        Args:
+            email: User email from the enterprise auth service.
+        """
+        self._client.alias(previous_id=self._distinct_id, distinct_id=email)
+        self._distinct_id = email
+
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         """Queue an event for delivery.
 
