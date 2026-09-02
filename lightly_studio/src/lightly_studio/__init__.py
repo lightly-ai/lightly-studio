@@ -36,9 +36,18 @@ from lightly_studio.core.lightly_train_helpers.generate_train_script import lt_t
 # TODO (Jonas 08/25): This will be removed as soon as the new interface is used in the examples
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 
+from lightly_studio.core.annotation import (
+    CreateClassification,
+    CreateObjectDetection,
+    CreateSegmentationMask,
+)
+
 __all__ = [
     "AnnotationType",
+    "CreateClassification",
     "CreateImage",
+    "CreateObjectDetection",
+    "CreateSegmentationMask",
     "CreateVideo",
     "EmbeddingGenerator",
     "EmbeddingSpaceSpec",
