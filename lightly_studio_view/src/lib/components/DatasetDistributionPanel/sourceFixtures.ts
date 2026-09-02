@@ -1,6 +1,7 @@
 import type { CategoryCount } from '$lib/components/BarChart';
 import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
 import type { CategoricalMetadataValue } from '$lib/services/types';
+import { MISSING_CATEGORICAL_VALUE, OTHER_CATEGORICAL_VALUE } from '$lib/services/types';
 import type { DistributionSource } from './types';
 import { longTail } from '$lib/components/BarChart/fixtures';
 import {
@@ -83,7 +84,10 @@ function categoricalBuckets(
 ): CategoricalMetadataBucket[] {
     return entries.map(([value, count], i) => {
         const id = String(i);
-        if (value === null) return { id, kind: 'missing', value: null, label: '(missing)', count };
+        if (value === null || value === MISSING_CATEGORICAL_VALUE)
+            return { id, kind: 'missing', value: null, label: '(missing)', count };
+        if (value === OTHER_CATEGORICAL_VALUE)
+            return { id, kind: 'other', label: 'Other (aggregated)', count };
         return { id, kind: 'value', value, label: String(value), count };
     });
 }
@@ -110,6 +114,18 @@ const locationTypeFilteredBuckets = categoricalBuckets([
     ['industrial', 540],
     ['highway', 420],
     [null, 115]
+]);
+
+/**
+ * A field cut off by the backend's top-N limit and missing from some samples, so
+ * the `__other__` and `__missing__` aggregates carry the rest of its total.
+ */
+export const truncatedCategoricalBuckets = categoricalBuckets([
+    ['city', 5840],
+    ['suburban', 3210],
+    ['rural', 2470],
+    [OTHER_CATEGORICAL_VALUE, 1830],
+    [MISSING_CATEGORICAL_VALUE, 650]
 ]);
 
 /**

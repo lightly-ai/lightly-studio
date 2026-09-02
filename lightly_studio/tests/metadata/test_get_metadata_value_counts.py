@@ -62,10 +62,12 @@ def test_get_metadata_value_counts__categorical_values_and_missing(
         ("", 1),
         ("Missing", 1),
         ("Other", 1),
+        ("__missing__", 2),
     ]
     assert [(entry.value, entry.count) for entry in counts["active"].value_counts] == [
         (True, 3),
         (False, 2),
+        ("__missing__", 2),
     ]
 
 
@@ -96,10 +98,66 @@ def test_get_metadata_value_counts__top_twenty_and_collection_isolation(
         session=db_session, collection_id=collection.collection_id
     )["category"]
 
-    assert len(counts.value_counts) == 20
+    assert len(counts.value_counts) == 21
     assert (counts.value_counts[0].value, counts.value_counts[0].count) == ("value-20", 2)
-    assert [entry.value for entry in counts.value_counts[1:]] == [
+    assert [entry.value for entry in counts.value_counts[1:20]] == [
         f"value-{index:02d}" for index in range(19)
+    ]
+    assert (counts.value_counts[20].value, counts.value_counts[20].count) == ("__other__", 1)
+
+
+def test_get_metadata_value_counts__aggregates_sum_to_the_samples_in_scope(
+    db_session: Session,
+) -> None:
+    """The top values plus both aggregates account for every sample in scope."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    for index in range(22):
+        _create_sample(
+            db_session=db_session,
+            collection_id=collection_id,
+            metadata={"category": f"value-{index:02d}"},
+        )
+    _create_explicit_null_sample(db_session=db_session, collection_id=collection_id)
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/no-metadata.png",
+    )
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session, collection_id=collection_id
+    )["category"]
+
+    by_value = {entry.value: entry.count for entry in counts.value_counts}
+    assert by_value["__other__"] == 2
+    assert by_value["__missing__"] == 2
+    assert sum(entry.count for entry in counts.value_counts) == 24
+
+
+def test_get_metadata_value_counts__no_aggregates_when_every_value_is_shown(
+    db_session: Session,
+) -> None:
+    """Zero-count aggregates are omitted rather than rendered as empty buckets."""
+    collection = create_collection(session=db_session)
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "Zurich"},
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "Bern"},
+    )
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session, collection_id=collection.collection_id
+    )["city"]
+
+    assert [(entry.value, entry.count) for entry in counts.value_counts] == [
+        ("Bern", 1),
+        ("Zurich", 1),
     ]
 
 

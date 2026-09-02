@@ -63,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The "Load Classifier (.pkl)" button now opens the file picker. The button covered the invisible
   file input that was meant to receive the click, so nothing happened.
 - Numerical metadata distributions in percentage mode now scale each compared tag independently, so bars match the tooltip.
+- Categorical metadata distributions now include aggregated "Other" and "Missing" bars, so percentages are shares of all samples instead of only the values shown.
 
 ### Security
 
