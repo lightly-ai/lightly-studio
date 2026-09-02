@@ -131,7 +131,7 @@ class VideoPathEmbedder(Embedder):
         """
 
 
-class FramePilEmbedder(Embedder):
+class FramePILEmbedder(Embedder):
     """Embeds video frames given as PIL images.
 
     <span class="doc-badge doc-badge--beta">Beta</span>

@@ -53,7 +53,7 @@ See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
 
 ### EmbeddingResult
 
-::: lightly_studio.dataset.embedding_result
+::: lightly_studio.embed.types
     options:
         members: [EmbeddingResult]
 
