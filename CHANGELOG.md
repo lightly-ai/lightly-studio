@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the
   values of a categorical metadata field such as weather or city.
 - Python SDK: Select images by the diversity of their annotation crop embeddings with `Sampling.subpart_diversity()`.
+- Python SDK: Import the annotation classes `CreateClassification`, `CreateObjectDetection`, and `CreateSegmentationMask` directly from the top-level `lightly_studio` package.
 
 ### Changed
 
