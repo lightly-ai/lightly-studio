@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distributions as annotation class balancing.
 - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the
   values of a categorical metadata field such as weather or city.
-
+- Python SDK: Select images by the diversity of their annotation crop embeddings with `Sampling.subpart_diversity()`.
 
 ### Changed
 
@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whole collection on every click, for annotations on images and on video frames. On PostgreSQL
   with 4M annotations a click went from 6.3s to 1.3s; the neighbour lookup itself went from ~6s
   to 3ms, and the remaining 1.2s is the exact position and total counts.
+- Bump lightly-mundig to 0.1.15; its sampling algorithms are up to 7x faster.
 
 ### Deprecated
 
@@ -51,6 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
   format and always writes the scikit-learn format, which is the only one LightlyStudio can load.
+- Dropped the legacy `embedding_model_hash` field from the classifier export format. Classifiers
+  exported by older versions can no longer be loaded.
 
 ### Fixed
 
@@ -60,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The "Load Classifier (.pkl)" button now opens the file picker. The button covered the invisible
   file input that was meant to receive the click, so nothing happened.
 - Numerical metadata distributions in percentage mode now scale each compared tag independently, so bars match the tooltip.
+- Categorical metadata distributions now include aggregated "Other" and "Missing" bars, so percentages are shares of all samples instead of only the values shown.
 
 ### Security
 

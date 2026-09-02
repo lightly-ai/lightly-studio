@@ -23,7 +23,7 @@ from .classifier import AnnotatedEmbedding, FewShotClassifier
 # The version of the file format used for exporting and importing classifiers.
 # This is used to ensure compatibility between different versions of the code.
 # If the format changes, this version should be incremented.
-FILE_FORMAT_VERSION = "1.0.0"
+FILE_FORMAT_VERSION = "1.1.0"
 
 
 @dataclass
@@ -37,7 +37,6 @@ class ModelExportMetadata:
     class_names: list[str]
     num_input_features: int
     num_estimators: int
-    embedding_model_hash: str
     embedding_model_name: str
     sklearn_version: str
 
@@ -49,7 +48,6 @@ class RandomForest(FewShotClassifier):
         name: Name of the classifier.
         classes: Ordered list of class labels used for training and predictions.
         embedding_model_name: Name of the model used for creating the embeddings.
-        embedding_model_hash: Legacy. Filled with the model name.
     """
 
     def __init__(
@@ -57,7 +55,6 @@ class RandomForest(FewShotClassifier):
         name: str,
         classes: list[str],
         embedding_model_name: str,
-        embedding_model_hash: str,
     ) -> None:
         """Initialize the RandomForestClassifier with predefined classes.
 
@@ -67,11 +64,7 @@ class RandomForest(FewShotClassifier):
                 and predictions. The order of this list determines the order of
                 probability values in predictions.
             embedding_model_name: Name of the model used for creating the
-                embeddings.
-            embedding_model_hash: Hash of the model used for creating the
-                embeddings.
-            Note: embedding_model_name and embedding_model_hash are used for
-            traceability in the exported model metadata.
+                embeddings. Used for traceability in the exported model metadata.
 
         Raises:
             ValueError: If classes list is empty.
@@ -85,7 +78,6 @@ class RandomForest(FewShotClassifier):
         self.classes = classes
         self._class_to_index = {label: idx for idx, label in enumerate(classes)}
         self.embedding_model_name = embedding_model_name
-        self.embedding_model_hash = embedding_model_hash
 
     def train(self, annotated_embeddings: list[AnnotatedEmbedding]) -> None:
         """Trains a classifier using the provided input.
@@ -172,7 +164,6 @@ class RandomForest(FewShotClassifier):
             class_names=self.classes,
             num_input_features=self._model.n_features_in_,
             num_estimators=len(self._model.estimators_),
-            embedding_model_hash=self.embedding_model_hash,
             embedding_model_name=self.embedding_model_name,
             sklearn_version=sklearn.__version__,
         )
@@ -250,7 +241,6 @@ def load_random_forest_classifier(
         name=metadata.name,
         classes=metadata.class_names,
         embedding_model_name=metadata.embedding_model_name,
-        embedding_model_hash=metadata.embedding_model_hash,
     )
     # Set the model.
     instance._model = model  # noqa: SLF001
