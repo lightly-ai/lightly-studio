@@ -12,12 +12,6 @@ from lightly_studio.models.sample import SampleCreate
 from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 
-class McapCreateHelper(McapCreate):
-    """Helper class to create McapTable with sample_id."""
-
-    sample_id: UUID
-
-
 def create_many(session: Session, collection_id: UUID, samples: list[McapCreate]) -> list[UUID]:
     """Create multiple mcap locator samples in a single database commit.
 
@@ -34,14 +28,12 @@ def create_many(session: Session, collection_id: UUID, samples: list[McapCreate]
     )
     # Bulk create McapTable entries using the generated sample_ids.
     db_mcaps = [
-        McapTable.model_validate(
-            McapCreateHelper(
-                channel_id=sample.channel_id,
-                log_time_ns=sample.log_time_ns,
-                capture_timestamp_ns=sample.capture_timestamp_ns,
-                keyframe_log_time_ns=sample.keyframe_log_time_ns,
-                sample_id=sample_id,
-            )
+        McapTable(
+            channel_id=sample.channel_id,
+            log_time_ns=sample.log_time_ns,
+            capture_timestamp_ns=sample.capture_timestamp_ns,
+            keyframe_log_time_ns=sample.keyframe_log_time_ns,
+            sample_id=sample_id,
         )
         for sample_id, sample in zip(sample_ids, samples)
     ]
