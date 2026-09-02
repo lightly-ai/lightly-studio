@@ -8,7 +8,7 @@ from tests.helpers_resolvers import create_collection
 
 
 def test_create_many_samples(db_session: Session) -> None:
-    """Test bulk creation of mcap locator samples, order preserved."""
+    """Test bulk creation of mcap samples, order preserved."""
     collection = create_collection(session=db_session, sample_type=SampleType.MCAP)
     collection_id = collection.collection_id
 
@@ -45,7 +45,7 @@ def test_create_many_samples(db_session: Session) -> None:
 
 
 def test_create_many__sample_type_mismatch(db_session: Session) -> None:
-    """Creating mcap locators in a non-MCAP collection is rejected."""
+    """Creating mcap samples in a non-MCAP collection is rejected."""
     collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     with pytest.raises(ValueError, match="is having sample type 'image', expected 'mcap'"):
         mcap_resolver.create_many(

@@ -7,7 +7,7 @@ from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.group.group_sample import GroupSample
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.core.mcap.create_mcap_locator import CreateMcapLocator
+from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.mcap_sample import McapSample
 from lightly_studio.core.video.create_video import CreateVideo
 from lightly_studio.core.video.video_sample import VideoSample
@@ -145,13 +145,13 @@ class TestGroupDataset:
 
         group_sample = group_ds.add_group_sample(
             components={
-                "camera": CreateMcapLocator(
+                "camera": CreateMcap(
                     channel_id=3,
                     log_time_ns=100,
                     keyframe_log_time_ns=90,
                     capture_timestamp_ns=100,
                 ),
-                "lidar": CreateMcapLocator(
+                "lidar": CreateMcap(
                     channel_id=5,
                     log_time_ns=100,
                     capture_timestamp_ns=100,

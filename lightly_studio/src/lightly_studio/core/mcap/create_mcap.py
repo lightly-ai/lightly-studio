@@ -1,4 +1,4 @@
-"""Class for creating an mcap locator sample."""
+"""Class for creating an mcap sample."""
 
 from __future__ import annotations
 
@@ -14,12 +14,12 @@ from lightly_studio.resolvers import mcap_resolver
 
 
 @dataclass
-class CreateMcapLocator(CreateSample):
-    """Class for creating an mcap locator sample.
+class CreateMcap(CreateSample):
+    """Class for creating an mcap sample.
 
     Stores a seek key into an ``.mcap`` file (channel id + log time, optionally a
     keyframe time for video), not pixels or point clouds. Decoding happens later from
-    these locator fields.
+    these fields.
     """
 
     channel_id: int
@@ -32,14 +32,14 @@ class CreateMcapLocator(CreateSample):
     """Log time of the keyframe to seek to before decoding. Required for camera channels."""
 
     def create_in_collection(self, session: Session, collection_id: UUID) -> UUID:
-        """Create an mcap locator sample in the specified collection.
+        """Create an mcap sample in the specified collection.
 
         Args:
             session: Database session for resolver operations.
             collection_id: The ID of an MCAP collection to create the sample in.
 
         Returns:
-            The UUID of the created mcap locator sample.
+            The UUID of the created mcap sample.
         """
         sample_ids = mcap_resolver.create_many(
             session=session,

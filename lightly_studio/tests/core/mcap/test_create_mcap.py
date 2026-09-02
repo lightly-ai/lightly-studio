@@ -1,15 +1,15 @@
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.create_mcap_locator import CreateMcapLocator
+from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import mcap_resolver
 from tests.helpers_resolvers import create_collection
 
 
-class TestCreateMcapLocator:
+class TestCreateMcap:
     def test_create_in_collection(self, db_session: Session) -> None:
         collection = create_collection(session=db_session, sample_type=SampleType.MCAP)
-        creator = CreateMcapLocator(
+        creator = CreateMcap(
             channel_id=3,
             log_time_ns=100,
             capture_timestamp_ns=100,
@@ -29,7 +29,7 @@ class TestCreateMcapLocator:
         assert mcap.sample.collection_id == collection.collection_id
 
     def test_sample_type(self) -> None:
-        creator = CreateMcapLocator(
+        creator = CreateMcap(
             channel_id=5,
             log_time_ns=100,
             capture_timestamp_ns=100,

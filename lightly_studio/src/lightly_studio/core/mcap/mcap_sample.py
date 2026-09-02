@@ -1,4 +1,4 @@
-"""Definition of McapSample class, representing a dataset mcap locator sample."""
+"""Definition of McapSample class, representing a dataset mcap sample."""
 
 from sqlmodel import col
 
@@ -8,7 +8,7 @@ from lightly_studio.models.mcap import McapTable
 
 
 class McapSample(Sample):
-    """Interface to a dataset mcap locator sample.
+    """Interface to a dataset mcap sample.
 
     Stores a seek key into an ``.mcap`` file, not pixels or point clouds.
     ```python

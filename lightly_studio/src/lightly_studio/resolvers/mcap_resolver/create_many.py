@@ -1,4 +1,4 @@
-"""Implementation of create functions for mcap locators."""
+"""Implementation of create functions for mcap samples."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 
 def create_many(session: Session, collection_id: UUID, samples: list[McapCreate]) -> list[UUID]:
-    """Create multiple mcap locator samples in a single database commit.
+    """Create multiple mcap samples in a single database commit.
 
     Returns the list of created sample IDs that matches the order of input samples.
     """
