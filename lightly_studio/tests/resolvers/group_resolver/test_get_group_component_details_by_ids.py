@@ -93,20 +93,20 @@ def test_get_group_component_details_by_group_id__mcap_components(db_session: Se
         session=db_session,
         parent_collection_id=group_col.collection_id,
         components=[
-            ("front", SampleType.MCAP),
-            ("pcl_front", SampleType.MCAP),
+            ("camera", SampleType.MCAP),
+            ("lidar", SampleType.MCAP),
         ],
     )
 
-    front = create_mcap(
+    camera = create_mcap(
         db_session,
-        components["front"].collection_id,
+        components["camera"].collection_id,
         channel_id=3,
         keyframe_log_time_ns=90,
     )
-    pcl_front = create_mcap(
+    lidar = create_mcap(
         db_session,
-        components["pcl_front"].collection_id,
+        components["lidar"].collection_id,
         channel_id=5,
         keyframe_log_time_ns=None,
     )
@@ -114,7 +114,7 @@ def test_get_group_component_details_by_group_id__mcap_components(db_session: Se
     group_ids = group_resolver.create_many(
         session=db_session,
         collection_id=group_col.collection_id,
-        groups=[{front.sample_id, pcl_front.sample_id}],
+        groups=[{camera.sample_id, lidar.sample_id}],
     )
 
     results = group_resolver.get_group_component_details_by_group_id(
@@ -122,19 +122,17 @@ def test_get_group_component_details_by_group_id__mcap_components(db_session: Se
     )
 
     assert len(results) == 2
-    assert {r.collection.group_component_name for r in results} == {"front", "pcl_front"}
-    for result in results:
-        assert isinstance(result.details, McapView)
+    assert {r.collection.group_component_name for r in results} == {"camera", "lidar"}
 
-    front_result = next(r for r in results if r.collection.group_component_name == "front")
-    assert isinstance(front_result.details, McapView)
-    assert front_result.details.sample_id == front.sample_id
-    assert front_result.details.channel_id == 3
-    assert front_result.details.keyframe_log_time_ns == 90
+    camera_result = next(r for r in results if r.collection.group_component_name == "camera")
+    assert isinstance(camera_result.details, McapView)
+    assert camera_result.details.sample_id == camera.sample_id
+    assert camera_result.details.channel_id == 3
+    assert camera_result.details.keyframe_log_time_ns == 90
 
-    pcl_result = next(r for r in results if r.collection.group_component_name == "pcl_front")
-    assert isinstance(pcl_result.details, McapView)
-    assert pcl_result.details.sample_id == pcl_front.sample_id
+    lidar_result = next(r for r in results if r.collection.group_component_name == "lidar")
+    assert isinstance(lidar_result.details, McapView)
+    assert lidar_result.details.sample_id == lidar.sample_id
 
 
 def test_get_group_component_details_by_group_id__empty_group(db_session: Session) -> None:

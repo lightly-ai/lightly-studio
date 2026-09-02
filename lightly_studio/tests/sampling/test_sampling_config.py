@@ -5,12 +5,22 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from lightly_studio.sampling.sampling_config import (
     EmbeddingDiversityStrategy,
     SamplingConfig,
+    Strategy,
 )
+
+
+class _StrategyWrapper(BaseModel):
+    strategy: Strategy
+
+
+def test_strategy__unknown_strategy_name_rejected() -> None:
+    with pytest.raises(ValidationError):
+        _StrategyWrapper.model_validate({"strategy": {"strategy_name": "unknown_subpart"}})
 
 
 class TestSamplingConfig:

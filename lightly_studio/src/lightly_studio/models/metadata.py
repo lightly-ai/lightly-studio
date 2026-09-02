@@ -222,9 +222,16 @@ class MetadataValueCountView(BaseModel):
 
 
 class MetadataValueCountsView(BaseModel):
-    """Top values and aggregate counts for a categorical metadata field."""
+    """Value counts for a categorical metadata field.
 
-    value_counts: list[MetadataValueCountView] = Field(description="Top concrete values")
+    The top concrete values come first, optionally followed by an ``__other__``
+    row for the less frequent concrete values and a ``__missing__`` row for the
+    samples with an absent or null value.
+    """
+
+    value_counts: list[MetadataValueCountView] = Field(
+        description="Top concrete values, then the __other__ and __missing__ aggregates"
+    )
 
 
 class MetadataInfoView(BaseModel):

@@ -113,10 +113,11 @@ def get_metadata_value_counts(
 ) -> dict[str, MetadataValueCountsView]:
     """Compute categorical metadata value counts under optional sample filters.
 
-    Returns the top 20 most frequent concrete values per key; less-frequent
-    concrete values are aggregated into ``other_count`` and samples with a
-    missing (null) value are counted in ``missing_count``.  Each key's own
-    metadata filter is excluded from its counts (faceted-search behavior).
+    Returns the top 20 most frequent concrete values per key, followed by an
+    ``__other__`` row aggregating the less frequent concrete values and a
+    ``__missing__`` row counting the samples with an absent or null value. Each
+    key's own metadata filter is excluded from its counts (faceted-search
+    behavior).
 
     Args:
         session: The database session.

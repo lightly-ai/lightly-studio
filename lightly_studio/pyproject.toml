@@ -48,7 +48,7 @@ dependencies = [
     # Mundig releases are published to PyPI: https://pypi.org/project/lightly-mundig/
     # To update, bump the pin below and relock:
     # uv lock --upgrade-package lightly-mundig==$version
-    "lightly-mundig==0.1.14",
+    "lightly-mundig==0.1.15",
     "pyarrow>=17.0.0",
     "av>=10.0.0",
     "requests>=2.32.3",
