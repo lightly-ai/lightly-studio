@@ -1,7 +1,7 @@
 """Example of how to load precomputed embeddings.
 
 Implement a class inheriting from ls.ImageEmbeddingGenerator. For image datasets,
-only `get_embedding_model_input` and `embed_images` functions are necessary.
+only `embedding_space_spec` and `embed_images` functions are necessary.
 Register the generator with `ls.set_default_embedding_model`.
 
 For video datasets, implement ls.VideoEmbeddingGenerator as well to override the
@@ -20,7 +20,6 @@ from PIL import Image
 import lightly_studio as ls
 from lightly_studio.database import db_manager
 from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 EMBEDDING_DIMENSION = 64
@@ -55,12 +54,11 @@ class LoadExistingEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
         """
         self._embeddings_by_filepath = embeddings_by_filepath
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
-        """Describe the model so it can be recorded in the database."""
-        return EmbeddingSpaceDescription(
-            name="Precomputed Embeddings",
-            embedding_model_hash="precomputed",
-            embedding_dimension=EMBEDDING_DIMENSION,
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
+        """Describe the embedding space so it can be recorded in the database."""
+        return ls.EmbeddingSpaceSpec(
+            space_key="your-company/model-family@version",
+            dimension=EMBEDDING_DIMENSION,
         )
 
     def embed_text(self, text: str) -> list[float]:

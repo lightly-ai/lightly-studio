@@ -3,6 +3,7 @@ import {
     buildCategoricalComparisonBuckets,
     buildCategoricalComparisonSeries
 } from './buildCategoricalComparisonSeries';
+import { truncatedCategoricalBuckets } from './sourceFixtures';
 
 describe('buildCategoricalComparisonSeries', () => {
     it('keeps value, missing, and other labels consistent across tag series', () => {
@@ -58,6 +59,56 @@ describe('buildCategoricalComparisonSeries', () => {
             },
             { label: 'Priority', data: [{ label: 'Missing (no value)', count: 3 }] }
         ]);
+    });
+
+    it('counts the other and missing aggregates towards the denominator', () => {
+        // The backend caps concrete values and reports the rest as aggregates, so
+        // a truncated field's shares stay relative to every sample of the tag.
+        const series = buildCategoricalComparisonSeries(
+            [
+                {
+                    id: 'tag-a',
+                    label: 'Reviewed',
+                    categorical: { city: truncatedCategoricalBuckets }
+                }
+            ],
+            'city'
+        );
+
+        expect(series[0].totalCount).toBe(14000);
+    });
+
+    it("carries each tag's own bucket total as the percentage denominator", () => {
+        const series = buildCategoricalComparisonSeries(
+            [
+                {
+                    id: 'tag-a',
+                    label: 'Reviewed',
+                    categorical: {
+                        city: [
+                            {
+                                id: 'value-bern',
+                                kind: 'value',
+                                value: 'Bern',
+                                label: 'Bern',
+                                count: 2
+                            },
+                            {
+                                id: 'value-zurich',
+                                kind: 'value',
+                                value: 'Zurich',
+                                label: 'Zurich',
+                                count: 8
+                            }
+                        ]
+                    }
+                },
+                { id: 'tag-b', label: 'Priority', categorical: {} }
+            ],
+            'city'
+        );
+
+        expect(series.map(({ totalCount }) => totalCount)).toEqual([10, 0]);
     });
 });
 

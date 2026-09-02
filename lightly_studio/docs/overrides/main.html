@@ -1,0 +1,21 @@
+{#-
+  Material's own footer is kept for the prev/next pager; the site footer is
+  appended under it. Overriding the block rather than replacing
+  `partials/footer.html` means the pager stays whatever upstream ships.
+
+  The page actions are appended to the article for the same reason: `content` is
+  the only hook Material gives inside `.md-content__inner`.
+-#}
+{% extends "base.html" %}
+
+{% import "partials/page_actions.html" as page_actions with context %}
+
+{% block content %}
+  {{ super() }}
+  {{ page_actions.page_actions("page") }}
+{% endblock %}
+
+{% block footer %}
+  {{ super() }}
+  {% include "partials/site_footer.html" %}
+{% endblock %}

@@ -14,29 +14,12 @@ from lightly_studio.resolvers import image_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import (
-    AnnotationClassBalancingStrategy,
-    EmbeddingDeduplicationStrategy,
-    EmbeddingDiversityStrategy,
-    EmbeddingSimilarityStrategy,
-    MetadataBalancingStrategy,
-    MetadataWeightingStrategy,
     SamplingConfig,
+    Strategy,
 )
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
 
 sampling_router = APIRouter()
-
-Strategy = Annotated[
-    Union[
-        AnnotationClassBalancingStrategy,
-        EmbeddingDeduplicationStrategy,
-        EmbeddingDiversityStrategy,
-        EmbeddingSimilarityStrategy,
-        MetadataBalancingStrategy,
-        MetadataWeightingStrategy,
-    ],
-    Field(discriminator="strategy_name"),
-]
 
 CollectionFilter = Annotated[
     Union[ImageFilter, VideoFilter],

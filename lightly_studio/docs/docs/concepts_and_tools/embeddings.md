@@ -108,7 +108,7 @@ Implement these protocol methods based on your needs. The
 [API reference](../api/embeddings.md) gives the full method signatures:
 
 - **`EmbeddingGenerator`** (base):
-    - `get_embedding_model_input` to describe the model to the database.
+    - `embedding_space_spec` to describe the embedding space. Embeddings from the same space are comparable.
     - `embed_text` to override the text search model.
 - **`ImageEmbeddingGenerator`**:
     - `embed_images` to override the image embedding model.
@@ -145,7 +145,6 @@ from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 
 EMBEDDING_DIMENSION = 512
 
@@ -154,7 +153,7 @@ class CustomEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
     def __init__(self) -> None:
         self._filepath_to_embedding: dict[str, NDArray[np.float32]] = ...  # Implement the loading logic here.
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription: ...
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
 
     def embed_text(self, text: str) -> list[float]: ...
 
@@ -204,7 +203,6 @@ from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
 
 EMBEDDING_DIMENSION = 512
 
@@ -213,7 +211,7 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
     def __init__(self) -> None:
         ...  # Load your model and preprocessing here.
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription: ...
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
 
     def embed_text(self, text: str) -> list[float]: ...
 
