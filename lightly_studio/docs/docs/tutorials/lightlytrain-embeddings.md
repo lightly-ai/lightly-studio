@@ -59,14 +59,23 @@ pip install lightly-train lightly-studio
 
 ## Step 1: Get a dataset
 
-Create the first script, `train_and_export.py`, and download the example dataset. To use your own data instead, point `IMAGE_PATH` at a folder of images — see [Load an Image Dataset](../dataset_setup/image_dataset.md). (`explore.py` will start with these same two lines.)
+Create the first script, `train_and_export.py`, and download [Imagenette](https://github.com/fastai/imagenette) — a 10-class subset of ImageNet. Its one-folder-per-class layout lets LightlyStudio color the embedding plot by class later. To use your own data instead, point `IMAGE_PATH` at a folder of images (one subfolder per class if you want class coloring) — see [Load an Image Dataset](../dataset_setup/image_dataset.md).
 
 ```python title="train_and_export.py"
-import lightly_studio as ls
+import tarfile
+import urllib.request
+from pathlib import Path
 
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+# Download Imagenette (a 10-class ImageNet subset), one folder per class.
+archive = Path("imagenette2-320.tgz")
+if not archive.exists():
+    urllib.request.urlretrieve(
+        "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz", archive
+    )
+    with tarfile.open(archive) as tar:
+        tar.extractall(".")
 
-IMAGE_PATH = f"{dataset_path}/coco_subset_128_images/images"
+IMAGE_PATH = "imagenette2-320/val"
 ```
 
 ## Step 2: Train an embedding model
@@ -124,8 +133,8 @@ from lightly_studio.dataset import file_utils, image_crop_embedding, image_embed
 from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
 
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-IMAGE_PATH = f"{dataset_path}/coco_subset_128_images/images"
+# train_and_export.py already downloaded Imagenette to imagenette2-320/.
+IMAGE_PATH = "imagenette2-320/val"
 
 IMAGE_SIZE = 224
 # LightlyTrain normalizes with ImageNet statistics by default.
@@ -197,7 +206,8 @@ ls.db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator("out/embedding_model.pt"))
 
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-dataset.add_images_from_path(path=IMAGE_PATH)
+# tag_depth=1 tags each image with its class folder, so you can color the plot by class.
+dataset.add_images_from_path(path=IMAGE_PATH, tag_depth=1)
 ```
 
 !!! note "Match your training normalization"
@@ -226,7 +236,7 @@ python train_and_export.py   # train and export the model (slow; run once)
 python explore.py            # embed your data and open LightlyStudio
 ```
 
-Click the `Embed` button in the top right to open the [embedding plot](../concepts_and_tools/embeddings.md#the-embedding-plot-gui). It shows every image as a point in a 2D projection (PaCMAP) of the embedding space.
+Click the `Embed` button in the top right to open the [embedding plot](../concepts_and_tools/embeddings.md#the-embedding-plot-gui). It shows every image as a point in a 2D projection (PaCMAP) of the embedding space. To color points by their Imagenette class, open **Color by** at the bottom of the plot and pick **tags**.
 
 ![The embedding plot after loading LightlyTrain embeddings, colored by class](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg){ width="100%" }
 
@@ -236,9 +246,6 @@ Read the map:
 - **Look for clusters** — tight groups are visually similar images; a well-trained model separates your categories into distinct blobs.
 - **Watch the edges** — points far from any cluster are outliers or mislabeled data worth a look.
 - **Spot near-duplicates** — points stacked on top of each other are almost identical images.
-
-!!! tip
-    The embedding plot renders best in Firefox.
 
 ### What a cluster contains
 

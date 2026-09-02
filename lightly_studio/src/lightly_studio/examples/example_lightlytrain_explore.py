@@ -128,9 +128,8 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         )
 
 
-# 1. Point at the same dataset used for training (download is skipped if present).
-data_dir = ls.utils.download_example_dataset(download_dir="dataset_examples")
-images_path = str(Path(data_dir) / "coco_subset_128_images" / "images")
+# 1. Point at the same dataset used for training (train_and_export.py downloaded it).
+images_path = "imagenette2-320/val"
 
 # 2. Load the model into LightlyStudio. Register the generator BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
@@ -138,7 +137,8 @@ images_path = str(Path(data_dir) / "coco_subset_128_images" / "images")
 db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-dataset.add_images_from_path(path=images_path)
+# tag_depth=1 tags each image with its class folder, so you can color the plot by class.
+dataset.add_images_from_path(path=images_path, tag_depth=1)
 
 # 3. Curate in code: select a diverse subset. The result is stored as a tag you can
 # open in the app. You can also do this interactively with the lasso in the GUI.

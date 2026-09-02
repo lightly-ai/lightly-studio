@@ -14,11 +14,11 @@ LightlyTrain is a separate install and needs Python 3.10 or newer:
 
 from __future__ import annotations
 
+import tarfile
+import urllib.request
 from pathlib import Path
 
 import lightly_train  # type: ignore[import-not-found]
-
-import lightly_studio as ls
 
 # Backbone to train/adapt. Any name from lightly_train.list_models() works.
 MODEL = "dinov2/vits14"
@@ -27,9 +27,15 @@ EPOCHS = 1
 PRETRAIN_DIR = "out/pretrain"
 MODEL_FILE = "out/embedding_model.pt"
 
-# 1. Get a dataset. Swap in your own image folder here.
-data_dir = ls.utils.download_example_dataset(download_dir="dataset_examples")
-images_path = str(Path(data_dir) / "coco_subset_128_images" / "images")
+# 1. Download Imagenette (a 10-class ImageNet subset), one folder per class.
+archive = Path("imagenette2-320.tgz")
+if not archive.exists():
+    urllib.request.urlretrieve(
+        "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz", archive
+    )
+    with tarfile.open(archive) as tar:
+        tar.extractall(".")
+images_path = "imagenette2-320/val"
 
 # 2. Train (or briefly adapt) an embedding model on the images.
 # overwrite=True lets you re-run this script over an existing output directory.
