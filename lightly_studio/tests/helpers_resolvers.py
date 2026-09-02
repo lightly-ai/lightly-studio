@@ -120,7 +120,7 @@ def create_mcap(  # noqa: PLR0913
     capture_timestamp_ns: int = 0,
     keyframe_log_time_ns: int | None = 0,
 ) -> McapTable:
-    """Helper function to create an mcap locator sample."""
+    """Helper function to create an mcap sample."""
     sample_ids = mcap_resolver.create_many(
         session=session,
         collection_id=collection_id,

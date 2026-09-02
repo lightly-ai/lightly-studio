@@ -1,4 +1,4 @@
-"""Implementation of get_many_by_id function for mcap locators."""
+"""Implementation of get_many_by_id function for mcap samples."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from lightly_studio.utils import batching
 
 
 def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[McapTable]:
-    """Retrieve multiple mcap locator samples by their IDs.
+    """Retrieve multiple mcap samples by their IDs.
 
     Output order matches the input order. Sample IDs with no matching MCAP
     record are silently omitted from the result.
