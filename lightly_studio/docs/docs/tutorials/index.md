@@ -20,3 +20,14 @@ unlabeled data to a trained and evaluated model.
 
     Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
 </div>
+
+## Embeddings
+
+<div class="grid cards wide" markdown>
+
+-   **[Explore LightlyTrain Embeddings in LightlyStudio](lightlytrain-embeddings.md)**
+
+    [![Explore LightlyTrain Embeddings in LightlyStudio](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg)](lightlytrain-embeddings.md)
+
+    Train an embedding model with LightlyTrain, then visualize and curate its embeddings — find clusters and outliers, and select a diverse subset.
+</div>
