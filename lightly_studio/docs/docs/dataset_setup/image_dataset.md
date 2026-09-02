@@ -12,7 +12,8 @@ in the GUI, and how to use the Python API to query and manipulate them.
 
 ### From a Folder
 
-Use `add_images_from_path` to load images from a folder:
+Use `add_images_from_path` to add raw images that have no annotations. The method
+loads images from a folder:
 
 ```python title="Load an Image Dataset from a Folder"
 import lightly_studio as ls
@@ -261,11 +262,16 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
 === "Custom Annotations"
 
+    You can load any format that LightlyStudio does not support directly. First add
+    the raw images. Then attach annotations in Python with the `Create*` classes.
+
+    The example below adds the three annotation types to one sample:
+
     ```python
     import numpy as np
 
     import lightly_studio as ls
-    from lightly_studio.core.annotation import (
+    from lightly_studio import (
         CreateClassification,
         CreateObjectDetection,
         CreateSegmentationMask,
@@ -307,15 +313,44 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
         ],
         annotation_source="ground_truth",
     )
-
-    ls.start_gui()
     ```
 
     Bounding boxes use pixel coordinates with `x` and `y` at the top-left corner.
-    Segmentation masks can be created from a binary mask with shape `(height, width)`. Class names
-    are added to the dataset automatically the first time they are used. The `annotation_source`
-    groups annotations, for example as `ground_truth` or model outputs. To annotate multiple
-    samples, iterate over a query and call `sample.add_annotations(...)` for each sample.
+    Create segmentation masks from a binary mask with shape `(height, width)`.
+    LightlyStudio adds new class names to the dataset automatically. The
+    `annotation_source` groups annotations, for example as `ground_truth` or model outputs.
+
+    To annotate a full dataset, parse your annotation file into Python. Match each
+    entry to a sample by its file name. The example below reads the annotations from a
+    dictionary. In practice, you read them from your own CSV, XML, or JSON file:
+
+    ```python
+    import lightly_studio as ls
+    from lightly_studio import CreateObjectDetection
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    images_path = f"{dataset_path}/coco_subset_128_images/images"
+
+    dataset = ls.ImageDataset.create()
+    dataset.add_images_from_path(path=images_path)
+
+    # Your custom format, parsed into Python and keyed by file name.
+    # Add one entry per image. Images with no entry are skipped below.
+    custom_annotations = {
+        "000000565296.jpg": [
+            CreateObjectDetection(class_name="vehicle", x=80, y=120, width=180, height=120),
+        ],
+    }
+
+    # Match each sample to its annotations by file name.
+    for sample in dataset:
+        annotations = custom_annotations.get(sample.file_name)
+        if annotations:
+            sample.add_annotations(annotations, annotation_source="ground_truth")
+
+    ls.start_gui()
+    ```
 
 === "Lightly Object Detections"
 
@@ -383,10 +418,6 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     </details>
 
 ---
-
-<!-- TODO(Michal, 03/2026): Link additional docs when ready.
-Moreover, you can write an adapter to load images with annotations from a custom format, see the
-[TODO](../todo) for details. -->
 
 ### From an Existing Dataset
 

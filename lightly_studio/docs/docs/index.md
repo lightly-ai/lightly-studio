@@ -107,7 +107,9 @@ them at your own image, video, or YOLO/COCO dataset by changing the input path.
     1. Run `python example_yolo.py` in your terminal.
     1. Click on the printed URL to open the app in your browser.
 
-=== "Image Folder"
+=== "Raw Images"
+
+    *Add images that have no annotations. LightlyStudio indexes and embeds them.*
 
     1. Create a file named `example_image.py` with the following contents:
 
@@ -131,7 +133,9 @@ them at your own image, video, or YOLO/COCO dataset by changing the input path.
     1. Run `python example_image.py` in your terminal.
     1. Click on the printed URL to open the app in your browser.
 
-=== "Video Folder"
+=== "Raw Videos"
+
+    *Add videos that have no annotations. LightlyStudio indexes and embeds them.*
 
     1. Create a file named `example_video.py` with the following contents:
 
