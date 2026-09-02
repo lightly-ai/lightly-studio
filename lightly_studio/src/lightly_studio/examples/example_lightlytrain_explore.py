@@ -144,7 +144,7 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
 
 # 1. Point at the same dataset used for training (train_and_export.py downloaded it).
-images_path = "imagenette2-320/val"
+IMAGE_PATH = "imagenette2-320/val"
 
 # 2. Load the model into LightlyStudio. Register the generator BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
@@ -152,7 +152,7 @@ images_path = "imagenette2-320/val"
 db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-dataset.add_images_from_path(path=images_path)
+dataset.add_images_from_path(path=IMAGE_PATH)
 
 # Label each image with its class, so you can color the plot by class in the GUI.
 for sample in dataset:

@@ -13,13 +13,13 @@ You will:
 
 ## Why train your own embedding model
 
-Every embedding-based feature in LightlyStudio — the embedding plot, search, and sampling — is only as good as the model behind the vectors. A generic model like CLIP knows a little about everything. On specialized data, such as medical scans, satellite tiles, or factory-line images, it often smears distinct categories together, and the plot shows one undifferentiated blob.
+Every embedding-based feature in LightlyStudio — the embedding plot, search, and sampling — is only as good as the model behind the vectors. A general-purpose model — LightlyStudio's default is MobileCLIP — knows a little about everything. On specialized data, such as medical scans, satellite tiles, or factory-line images, it often smears distinct categories together, and the plot shows one undifferentiated blob.
 
 A model trained on your own images pulls those categories apart. Clusters, outliers, and near-duplicates become visible, and every downstream selection gets sharper. LightlyTrain trains that model from your unlabeled images; LightlyStudio turns its embeddings into a map you can explore and curate.
 
 The difference is easy to see. Below is the same dataset embedded two ways and colored by class — a generic model versus one adapted with LightlyTrain:
 
-<div style="display: flex; flex-direction: column; gap: 1.5rem; margin: 1rem 0;">
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
   <figure style="margin: 0;">
     <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/mobile-clip-embeddings.jpg" alt="MobileCLIP embeddings colored by class" style="width: 100%; border-radius: 6px;">
     <figcaption><strong>A generic model (MobileCLIP).</strong> Classes overlap and bleed together.</figcaption>
@@ -46,7 +46,8 @@ This tutorial builds **two small scripts**: `train_and_export.py` (train the mod
 To follow this tutorial, make sure you have:
 
 - Python 3.10 or newer
-- A GPU (recommended for training; the pretrained variant also runs on a CPU)
+- A GPU for the training step. A CPU also works, since `dinov2/vits14` starts from pretrained weights — just slower.
+- The exploration step embeds your images on a CUDA GPU, Apple Silicon (MPS), or a CPU.
 - About 2 GB of free disk space
 
 ## Installation
@@ -59,7 +60,7 @@ pip install lightly-train lightly-studio
 
 ## Step 1: Get a dataset
 
-Create the first script, `train_and_export.py`, and download [Imagenette](https://github.com/fastai/imagenette) — a 10-class subset of ImageNet. Its one-folder-per-class layout lets LightlyStudio color the embedding plot by class later. To use your own data instead, point `IMAGE_PATH` at a folder of images (one subfolder per class if you want class coloring) — see [Load an Image Dataset](../dataset_setup/image_dataset.md).
+Create the first script, `train_and_export.py`, and download [Imagenette](https://github.com/fastai/imagenette) — a 10-class subset of ImageNet. The explore script reads its one-folder-per-class layout to label each image, so you can color the embedding plot by class later. To use your own data instead, point `IMAGE_PATH` at a folder of images (one subfolder per class if you want class coloring) — see [Load an Image Dataset](../dataset_setup/image_dataset.md).
 
 ```python title="train_and_export.py"
 import tarfile
@@ -112,7 +113,7 @@ lightly_train.export(
 
 ## Step 4: Load the model into LightlyStudio
 
-Now create the second script, `explore.py`. It re-locates the images, loads the model you exported, and registers a generator that runs it — so LightlyStudio embeds each sample (whole images, object crops, and video frames) as you add it to a dataset.
+Now create the second script, `explore.py`. It points back at the images, loads the model you exported, and registers a generator that runs it — so LightlyStudio embeds each sample (whole images, object crops, and video frames) as you add it to a dataset.
 
 !!! example "Beta API"
     The embeddings API is in beta. Its interface may change in future releases without a deprecation period.
@@ -155,8 +156,15 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
     """Run a model exported from LightlyTrain to embed images on the fly."""
 
     def __init__(self, model_file: str) -> None:
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # map_location="cpu" first, so a model exported on a GPU also loads on a CPU host.
+        # Auto select device: CUDA > MPS (Apple Silicon) > CPU.
+        self._device = torch.device(
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
+        )
+        # map_location="cpu" first, so a model exported on a GPU still loads on a CPU/MPS host.
         self._model = torch.load(
             model_file, map_location="cpu", weights_only=False
         ).to(self._device).eval()
@@ -262,26 +270,26 @@ Read the map:
 - **Watch the edges** — points far from any cluster are outliers or mislabeled data worth a look.
 - **Spot near-duplicates** — points stacked on top of each other are almost identical images.
 
-### What a cluster contains
+### What the clusters contain
 
-Lasso a tight cluster to scope the grid to its images, and they turn out to be one coherent group. The embedding even splits a single class into finer sub-groups — here, anglers holding a tench versus the fish on its own:
+Lasso any tight cluster to scope the grid to its images, and it turns out to be one coherent group. A well-trained model puts each class in its own well-separated blob — here are four of them:
 
 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
   <figure style="margin: 0;">
-    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-cassette.jpg" alt="A lassoed cluster of cassette players" style="width: 100%; border-radius: 6px;">
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-cassette-player.jpg" alt="A lassoed cluster of cassette players" style="width: 100%; border-radius: 6px;">
     <figcaption>Cassette players.</figcaption>
   </figure>
   <figure style="margin: 0;">
-    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-parachute.jpg" alt="A lassoed cluster of parachutes" style="width: 100%; border-radius: 6px;">
-    <figcaption>Parachutes.</figcaption>
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-english-springer.jpg" alt="A lassoed cluster of English springer dogs" style="width: 100%; border-radius: 6px;">
+    <figcaption>English springers.</figcaption>
   </figure>
   <figure style="margin: 0;">
-    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-tench.jpg" alt="A lassoed cluster of anglers holding a tench" style="width: 100%; border-radius: 6px;">
-    <figcaption>Anglers holding a tench.</figcaption>
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-church.jpg" alt="A lassoed cluster of churches" style="width: 100%; border-radius: 6px;">
+    <figcaption>Churches.</figcaption>
   </figure>
   <figure style="margin: 0;">
-    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-fish.jpg" alt="A lassoed cluster of tench on their own" style="width: 100%; border-radius: 6px;">
-    <figcaption>Tench on their own.</figcaption>
+    <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/cluster-garbage-truck.jpg" alt="A lassoed cluster of garbage trucks" style="width: 100%; border-radius: 6px;">
+    <figcaption>Garbage trucks.</figcaption>
   </figure>
 </div>
 

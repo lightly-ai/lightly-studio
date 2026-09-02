@@ -35,12 +35,12 @@ if not archive.exists():
     )
     with tarfile.open(archive) as tar:
         tar.extractall(".")
-images_path = "imagenette2-320/val"
+IMAGE_PATH = "imagenette2-320/val"
 
 # 2. Train (or briefly adapt) an embedding model on the images.
 # overwrite=True lets you re-run this script over an existing output directory.
 lightly_train.pretrain(
-    out=PRETRAIN_DIR, data=images_path, model=MODEL, epochs=EPOCHS, overwrite=True
+    out=PRETRAIN_DIR, data=IMAGE_PATH, model=MODEL, epochs=EPOCHS, overwrite=True
 )
 
 # 3. Export the trained embedding model as a torch module Studio can run.
