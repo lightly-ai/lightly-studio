@@ -14,6 +14,7 @@ from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.image.create_image import CreateImage
+from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.video.create_video import CreateVideo
 from lightly_studio.core.start_gui import (
     start_gui,
@@ -39,6 +40,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 __all__ = [
     "AnnotationType",
     "CreateImage",
+    "CreateMcap",
     "CreateVideo",
     "EmbeddingGenerator",
     "EmbeddingSpaceSpec",

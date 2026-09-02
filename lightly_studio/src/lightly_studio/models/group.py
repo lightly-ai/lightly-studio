@@ -150,7 +150,7 @@ class GroupComponentView(BaseModel):
             collection: ComponentCollectionView instance with collection data.
 
         Returns:
-            GroupComponentView with mcap locator data populated.
+            GroupComponentView with mcap sample data populated.
         """
         return cls(
             collection=collection,

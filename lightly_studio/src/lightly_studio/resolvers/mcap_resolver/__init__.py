@@ -1,4 +1,4 @@
-"""Resolvers for mcap locator database operations."""
+"""Resolvers for mcap sample database operations."""
 
 from lightly_studio.resolvers.mcap_resolver.create_many import create_many
 from lightly_studio.resolvers.mcap_resolver.get_by_id import get_by_id
