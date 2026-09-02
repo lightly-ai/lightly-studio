@@ -22,11 +22,10 @@ from lightly_studio.core.start_gui import (
 )
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
-    EmbeddingSpaceSpec,
-    ImageCrop,
     ImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
 )
+from lightly_studio.embed.types import EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.dataset.embedding_manager import set_default_embedding_model
 from lightly_studio.models.collection import SampleType
 from lightly_studio.enterprise import connect

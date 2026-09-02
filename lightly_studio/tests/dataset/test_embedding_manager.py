@@ -13,8 +13,6 @@ from sqlmodel import Session, select
 
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import (
-    EmbeddingSpaceSpec,
-    ImageCrop,
     ImageEmbeddingGenerator,
     RandomEmbeddingGenerator,
 )
@@ -22,7 +20,7 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
 )
-from lightly_studio.dataset.embedding_result import EmbeddingResult
+from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
