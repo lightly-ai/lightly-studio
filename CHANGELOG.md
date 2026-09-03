@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.
+
 ### Deprecated
 
 ### Removed
