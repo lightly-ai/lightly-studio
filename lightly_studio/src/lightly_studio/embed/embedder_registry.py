@@ -18,6 +18,7 @@ from lightly_studio.embed.embedder import (
     TextEmbedder,
     VideoPathEmbedder,
 )
+from lightly_studio.embed.types import EmbeddingSpaceSpec
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ class EmbedderRegistry:
     def __init__(self) -> None:
         """Create an empty registry."""
         self._by_space_and_capability: dict[tuple[str, Capability], Embedder] = {}
+        self._spec_by_space: dict[str, EmbeddingSpaceSpec] = {}
 
     def register(self, embedder: Embedder) -> None:
         """Register an embedder under every capability it implements.
@@ -53,9 +55,20 @@ class EmbedderRegistry:
             embedder: The embedder to register.
 
         Raises:
-            ValueError: If the embedder implements no capability.
+            ValueError: If the embedder's embedding space shares a ``space_key``
+                with an already registered space but does not match its spec, or
+                if the embedder implements no capability.
         """
-        space_key = embedder.embedding_space_spec().space_key
+        spec = embedder.embedding_space_spec()
+        space_key = spec.space_key
+        registered_spec = self._spec_by_space.get(space_key)
+        if registered_spec is not None and registered_spec != spec:
+            raise ValueError(
+                f"Embedding space {space_key!r} is already registered as {registered_spec}, "
+                f"cannot register the incompatible {spec}."
+            )
+        self._spec_by_space[space_key] = spec
+
         capabilities = _capabilities_of(embedder=embedder)
         if not capabilities:
             raise ValueError(f"Embedder {type(embedder).__name__!r} implements no capability.")

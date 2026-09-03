@@ -13,21 +13,22 @@ from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec
 
 
 class _FakeTextImageEmbedder(TextEmbedder, ImagePathEmbedder):
-    def __init__(self, space_key: str) -> None:
+    def __init__(self, space_key: str, dimension: int = 2) -> None:
         self._space_key = space_key
+        self._dimension = dimension
 
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        return EmbeddingSpaceSpec(space_key=self._space_key, dimension=2)
+        return EmbeddingSpaceSpec(space_key=self._space_key, dimension=self._dimension)
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         return EmbeddingResult(
-            embeddings=np.zeros((len(texts), 2), dtype=np.float32),
+            embeddings=np.zeros((len(texts), self._dimension), dtype=np.float32),
             kept_indices=list(range(len(texts))),
         )
 
     def embed_images(self, paths: list[str]) -> EmbeddingResult:
         return EmbeddingResult(
-            embeddings=np.zeros((len(paths), 2), dtype=np.float32),
+            embeddings=np.zeros((len(paths), self._dimension), dtype=np.float32),
             kept_indices=list(range(len(paths))),
         )
 
@@ -70,6 +71,13 @@ class TestEmbedderRegistry:
 
         assert registry.get_text_embedder(space_key="space-a") is second
         assert "Replacing embedder" in caplog.text
+
+    def test_register__conflicting_spec_raises(self) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeTextImageEmbedder(space_key="space-a", dimension=2))
+
+        with pytest.raises(ValueError, match="already registered"):
+            registry.register(embedder=_FakeTextImageEmbedder(space_key="space-a", dimension=3))
 
     def test_register__separate_spaces(self) -> None:
         registry = EmbedderRegistry()
