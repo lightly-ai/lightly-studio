@@ -3,6 +3,10 @@
 from lightly_studio.services.annotations_service.create_annotation import (
     create_annotation,
 )
+from lightly_studio.services.annotations_service.create_classification_annotations import (
+    create_classification_annotations,
+    create_classification_annotations_by_filter,
+)
 from lightly_studio.services.annotations_service.delete_annotation import (
     delete_annotation,
 )
@@ -30,6 +34,8 @@ from lightly_studio.services.annotations_service.update_temporal_span import (
 
 __all__ = [
     "create_annotation",
+    "create_classification_annotations",
+    "create_classification_annotations_by_filter",
     "delete_annotation",
     "get_annotation_by_id",
     "update_annotation",

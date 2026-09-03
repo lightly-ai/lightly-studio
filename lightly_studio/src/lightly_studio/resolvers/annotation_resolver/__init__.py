@@ -41,6 +41,9 @@ from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import 
 from lightly_studio.resolvers.annotation_resolver.get_label_ids_by_sample_ids import (
     get_label_ids_by_sample_ids,
 )
+from lightly_studio.resolvers.annotation_resolver.get_parent_sample_ids_with_label import (
+    get_parent_sample_ids_with_label,
+)
 from lightly_studio.resolvers.annotation_resolver.get_sample_ids import (
     build_sample_ids_query,
     get_sample_ids,
@@ -81,6 +84,7 @@ __all__ = [
     "get_by_id_with_payload",
     "get_by_ids",
     "get_label_ids_by_sample_ids",
+    "get_parent_sample_ids_with_label",
     "get_sample_ids",
     "get_unembedded_annotation_ids",
     "update_annotation_label",

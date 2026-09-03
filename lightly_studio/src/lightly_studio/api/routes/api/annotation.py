@@ -50,6 +50,7 @@ from lightly_studio.services.annotations_service.update_annotation import (
 annotations_router = APIRouter(prefix="/collections/{collection_id}", tags=["annotations"])
 annotations_router.include_router(annotations_module.create_annotation_router)
 annotations_router.include_router(annotations_module.annotation_metrics_info_router)
+annotations_router.include_router(annotations_module.create_classification_annotations_router)
 
 
 @annotations_router.get(

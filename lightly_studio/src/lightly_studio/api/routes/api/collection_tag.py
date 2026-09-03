@@ -26,10 +26,8 @@ from lightly_studio.models.tag import (
     TagTable,
     TagView,
 )
-from lightly_studio.resolvers import embedding_region_resolver, tag_resolver
-from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers import grid_filter_region, tag_resolver
 from lightly_studio.resolvers.grid_filter import GridFilter
-from lightly_studio.resolvers.image_filter import ImageFilter
 
 tag_router = APIRouter()
 
@@ -236,27 +234,10 @@ def add_samples_to_tag_by_filter(
             detail=f"Tag {tag_id} not found in collection {collection_id}.",
         )
 
-    # Resolve any embedding-plot region selection to concrete sample ids before building
-    # the query (the point-in-polygon test needs the session, which `apply` lacks).
     grid_filter = body.filter
-    if (
-        isinstance(grid_filter, ImageFilter)
-        and grid_filter.sample_filter is not None
-        and grid_filter.sample_filter.embedding_region is not None
-    ):
-        grid_filter.sample_filter.region_sample_ids = (
-            embedding_region_resolver.get_sample_ids_in_region(
-                session=session,
-                collection_id=collection_id,
-                region=grid_filter.sample_filter.embedding_region,
-            )
-        )
-    elif isinstance(grid_filter, AnnotationsFilter) and grid_filter.embedding_region is not None:
-        grid_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
-            session=session,
-            collection_id=collection_id,
-            region=grid_filter.embedding_region,
-        )
+    grid_filter_region.resolve_region_sample_ids(
+        session=session, collection_id=collection_id, grid_filter=grid_filter
+    )
     sample_ids_query = grid_filter.build_sample_ids_query(collection_id=collection_id)
     tag_resolver.add_samples_to_tag_from_query(
         session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
