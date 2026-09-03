@@ -65,3 +65,21 @@ export const useCollectionWithChildren = ({
         refetch
     };
 };
+
+/**
+ * Invalidates every cached collection hierarchy, regardless of dataset.
+ *
+ * The navigation menu renders the hierarchy of the dataset root, so a mutation that creates a
+ * child collection (e.g. the first annotation in a new annotation source) has to refresh it for
+ * the new entry to appear without a reload.
+ */
+export const useInvalidateCollectionHierarchyQueries = () => {
+    const client = useQueryClient();
+    return () => {
+        // Partial match on the _id field set by the @hey-api generated createQueryKey helper, so
+        // the hierarchy of the dataset root is refreshed without knowing its collection id here.
+        client.invalidateQueries({
+            queryKey: [{ _id: 'readCollectionHierarchy' }]
+        });
+    };
+};

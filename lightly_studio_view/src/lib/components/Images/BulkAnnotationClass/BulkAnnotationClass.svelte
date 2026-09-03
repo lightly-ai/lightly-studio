@@ -74,9 +74,11 @@
 {#if isVisible}
     <div class="min-w-[250px] max-w-[30%] flex-1">
         <Card className="h-full">
-            <CardContent className="h-full flex flex-col">
+            <!-- The padding lives inside the clipping box so focus rings on the full-width
+                 pickers are not cut off by `overflow-hidden`. -->
+            <CardContent className="h-full flex flex-col p-0">
                 <div
-                    class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
+                    class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden p-4 dark:[color-scheme:dark]"
                 >
                     <BulkAnnotationClassPanel
                         {selectedCount}

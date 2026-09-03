@@ -40,7 +40,7 @@ describe('useCreateAnnotation', () => {
         } as unknown as ReturnType<typeof useQueryClient>);
     });
 
-    it('invalidates annotation-bearing grids, counts, and sources after a successful create', async () => {
+    it('invalidates annotation-bearing grids, counts, sources and the navigation after a successful create', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: (data: unknown) => void }) => {
                 opts.onSuccess({
@@ -65,6 +65,9 @@ describe('useCreateAnnotation', () => {
         expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: 'col-1' } })
+        });
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: [{ _id: 'readCollectionHierarchy' }]
         });
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: [{ _id: 'getEvaluationRuns' }]

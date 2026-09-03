@@ -7,6 +7,7 @@ import {
     readAnnotationCollectionsQueryKey
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { useInvalidateCollectionHierarchyQueries } from '$lib/hooks/useCollection/useCollection';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
 import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
@@ -19,6 +20,7 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
     const { trackEvent } = usePostHog();
     const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
     const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
+    const invalidateCollectionHierarchyQueries = useInvalidateCollectionHierarchyQueries();
 
     const refetch = (collectionId: string) => {
         invalidateAnnotationGridQueries(collectionId);
@@ -30,6 +32,8 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
         client.invalidateQueries({
             queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: collectionId } })
         });
+        // A brand-new source is a new child collection, which the navigation menu lists.
+        invalidateCollectionHierarchyQueries();
         // Annotation mutations can mark evaluation runs as stale, so refresh the runs list.
         invalidateEvaluationRunsQueries();
     };

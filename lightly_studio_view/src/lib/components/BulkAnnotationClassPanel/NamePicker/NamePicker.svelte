@@ -85,7 +85,7 @@
             </Button>
         {/snippet}
     </Popover.Trigger>
-    <Popover.Content class="w-[240px] p-0" align="start">
+    <Popover.Content class="w-[var(--bits-popover-anchor-width)] p-0" align="start">
         <Command.Root bind:value={highlightedValue}>
             <Command.Input
                 placeholder={searchPlaceholder}

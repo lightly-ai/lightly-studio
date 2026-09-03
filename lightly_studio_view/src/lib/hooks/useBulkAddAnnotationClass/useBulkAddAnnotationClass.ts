@@ -9,6 +9,7 @@ import {
     createClassificationAnnotations,
     createClassificationAnnotationsByFilter
 } from '$lib/api/lightly_studio_local/sdk.gen';
+import { useInvalidateCollectionHierarchyQueries } from '$lib/hooks/useCollection/useCollection';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
@@ -33,6 +34,7 @@ export const useBulkAddAnnotationClass = ({
     const { trackEvent } = usePostHog();
     const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
     const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
+    const invalidateCollectionHierarchyQueries = useInvalidateCollectionHierarchyQueries();
 
     const refetch = (collectionId: string) => {
         // The grids embed the annotations of every sample, so the class pills need the payload
@@ -47,6 +49,8 @@ export const useBulkAddAnnotationClass = ({
         client.invalidateQueries({
             queryKey: readAnnotationLabelsQueryKey({ path: { collection_id: collectionId } })
         });
+        // A brand-new source is a new child collection, which the navigation menu lists.
+        invalidateCollectionHierarchyQueries();
         // Annotation mutations can mark evaluation runs as stale, so refresh the runs list.
         invalidateEvaluationRunsQueries();
     };

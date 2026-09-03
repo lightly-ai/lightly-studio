@@ -110,7 +110,7 @@ describe('useBulkAddAnnotationClass', () => {
         expect(createClassificationAnnotationsByFilter).not.toHaveBeenCalled();
     });
 
-    it('invalidates the annotation grids, counts, pickers and evaluation runs on success', async () => {
+    it('invalidates the annotation grids, counts, pickers, navigation and evaluation runs on success', async () => {
         await addAnnotationClass(new Set(['s-1']));
 
         expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
@@ -123,6 +123,7 @@ describe('useBulkAddAnnotationClass', () => {
             { id: 'countImageAnnotationsByCollection', collectionId: '__static_value__' },
             { id: 'readAnnotationCollections', collectionId: 'col-1' },
             { id: 'readAnnotationLabels', collectionId: 'col-1' },
+            { id: 'readCollectionHierarchy', collectionId: undefined },
             { id: 'getEvaluationRuns', collectionId: undefined }
         ]);
     });
