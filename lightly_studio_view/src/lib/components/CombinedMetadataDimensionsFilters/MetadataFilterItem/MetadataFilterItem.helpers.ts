@@ -10,7 +10,6 @@ type MetadataBound = MetadataBounds[string];
 // and commit.
 export const SLIDER_TICKS = 1000; // tick granularity: 0.1% of the range
 
-
 /** Map a real metadata value onto the slider's integer tick domain, clamped to [0, SLIDER_TICKS]. */
 export const toTick = (realValue: number, bound: MetadataBound): number => {
     if (bound.max === bound.min) {
