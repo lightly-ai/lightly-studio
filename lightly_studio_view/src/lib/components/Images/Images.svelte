@@ -1,7 +1,10 @@
 <script lang="ts">
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import {
+        useMetadataFilters,
+        createMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
@@ -145,8 +148,10 @@
             Array.from($tagsSelected).join(','),
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
-            JSON.stringify($metadataValues),
-            JSON.stringify($categoricalMetadataValues),
+            // Hash the effective metadata filters, not the raw slider values, so
+            // /metadata/info seeding full-range values does not change the scroll
+            // key and yank the grid to the top.
+            JSON.stringify(createMetadataFilters($metadataValues, $categoricalMetadataValues)),
             $textEmbedding?.queryText || '',
             confusionCell ? JSON.stringify(confusionCell) : '',
             JSON.stringify($imageSortBy)
