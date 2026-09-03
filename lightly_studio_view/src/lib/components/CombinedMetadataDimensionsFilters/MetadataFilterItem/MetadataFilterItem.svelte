@@ -2,7 +2,7 @@
     import { Slider } from '$lib/components/ui/slider/index.js';
     import type { MetadataBounds, MetadataValues } from '$lib/services/types';
     import { formatFloat, formatInteger } from '$lib/utils';
-    import { SLIDER_TICKS, fromTick, toTick } from './MetadataFilterItem.helpers';
+    import { fromTick, getSliderTickCount, toTick } from './MetadataFilterItem.helpers';
 
     type MetadataBound = MetadataBounds[string];
     type MetadataValue = MetadataValues[string];
@@ -17,13 +17,21 @@
     const { metadataKey, bound, value, onValueCommit }: MetadataFilterItemProps = $props();
 
     const isInteger = $derived(Number.isInteger(bound.min) && Number.isInteger(bound.max));
+    const ticks = $derived(getSliderTickCount(bound, isInteger));
 
-    const sliderValue = $derived([toTick(value.min, bound), toTick(value.max, bound)]);
+    const sliderValue = $derived([
+        toTick(value.min, bound, ticks),
+        toTick(value.max, bound, ticks)
+    ]);
 
     const handleValueCommit = (newTicks: number[]) => {
         onValueCommit(metadataKey, [
-            newTicks[0] !== sliderValue[0] ? fromTick(newTicks[0], bound, isInteger) : value.min,
-            newTicks[1] !== sliderValue[1] ? fromTick(newTicks[1], bound, isInteger) : value.max
+            newTicks[0] !== sliderValue[0]
+                ? fromTick(newTicks[0], bound, ticks, isInteger)
+                : value.min,
+            newTicks[1] !== sliderValue[1]
+                ? fromTick(newTicks[1], bound, ticks, isInteger)
+                : value.max
         ]);
     };
 
@@ -43,7 +51,7 @@
             type="multiple"
             class="filter-{metadataKey}"
             min={0}
-            max={SLIDER_TICKS}
+            max={ticks}
             step={1}
             value={sliderValue}
             onValueCommit={handleValueCommit}
