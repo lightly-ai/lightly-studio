@@ -44,8 +44,14 @@ class TestEmbedderRegistry:
 
         registry.register(embedder=embedder)
 
+        # Getters for implemented capabilities return the embedder.
         assert registry.get_text_embedder(space_key="space-a") is embedder
         assert registry.get_image_path_embedder(space_key="space-a") is embedder
+        # Getters for capabilities the embedder lacks return None.
+        assert registry.get_crop_path_embedder(space_key="space-a") is None
+        assert registry.get_video_path_embedder(space_key="space-a") is None
+        assert registry.get_frame_pil_embedder(space_key="space-a") is None
+        assert registry.get_image_bytes_embedder(space_key="space-a") is None
 
     def test_register__no_capability(self) -> None:
         registry = EmbedderRegistry()
@@ -80,9 +86,3 @@ class TestEmbedderRegistry:
         registry = EmbedderRegistry()
 
         assert registry.get_text_embedder(space_key="space-a") is None
-
-    def test_get_image_bytes_embedder__capability_not_implemented(self) -> None:
-        registry = EmbedderRegistry()
-        registry.register(embedder=_FakeTextImageEmbedder(space_key="space-a"))
-
-        assert registry.get_image_bytes_embedder(space_key="space-a") is None
