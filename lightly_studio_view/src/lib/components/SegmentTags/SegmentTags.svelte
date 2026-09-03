@@ -4,6 +4,8 @@
     import { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags, useGlobalStorage, useAddTagToSample } from '$lib/hooks';
     import { useRemoveTagFromSample } from '$lib/hooks';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { toast } from 'svelte-sonner';
     import AddTagPopover from './AddTagPopover.svelte';
 
@@ -20,6 +22,9 @@
     }
 
     let { tags, collectionId, sampleId, onRefetch = () => {} }: Props = $props();
+
+    const { user } = useAuth();
+    const canManageTags = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const { removeTagFromSample } = useRemoveTagFromSample({ getCollectionId: () => collectionId });
 
@@ -94,7 +99,7 @@
         {#each tags as tag, index (tag.tag_id ?? `${tag.name}-${index}`)}
             <div class="inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs">
                 <span data-testid="segment-tag-name">{tag.name}</span>
-                {#if tag.tag_id}
+                {#if canManageTags && tag.tag_id}
                     <Button
                         icon={X}
                         ariaLabel={`Remove tag ${tag.name}`}
@@ -114,5 +119,7 @@
         {/each}
     </div>
 
-    <AddTagPopover {options} {attachedTagNames} busy={$addTagBusy} onSelect={handleSelect} />
+    {#if canManageTags}
+        <AddTagPopover {options} {attachedTagNames} busy={$addTagBusy} onSelect={handleSelect} />
+    {/if}
 </Segment>
