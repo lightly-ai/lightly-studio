@@ -34,7 +34,7 @@ class Capability(str, Enum):
     VIDEO_PATH = "video_path"
     """Ingest: video by fsspec path or URL."""
 
-    FRAME_PIL = "frame_pil"
+    IMAGE_PIL = "image_pil"
     """Ingest: video frame as a PIL image."""
 
     TEXT = "text"
@@ -131,7 +131,7 @@ class VideoPathEmbedder(Embedder):
         """
 
 
-class FramePILEmbedder(Embedder):
+class ImagePILEmbedder(Embedder):
     """Embeds video frames given as PIL images.
 
     <span class="doc-badge doc-badge--beta">Beta</span>
