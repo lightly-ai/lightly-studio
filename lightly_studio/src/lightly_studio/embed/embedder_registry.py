@@ -12,9 +12,9 @@ from lightly_studio.embed.embedder import (
     Capability,
     CropPathEmbedder,
     Embedder,
-    FramePILEmbedder,
     ImageBytesEmbedder,
     ImagePathEmbedder,
+    ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
 )
@@ -26,7 +26,7 @@ _CAPABILITY_TO_TYPE = {
     Capability.IMAGE_PATH: ImagePathEmbedder,
     Capability.CROP_PATH: CropPathEmbedder,
     Capability.VIDEO_PATH: VideoPathEmbedder,
-    Capability.FRAME_PIL: FramePILEmbedder,
+    Capability.IMAGE_PIL: ImagePILEmbedder,
     Capability.TEXT: TextEmbedder,
     Capability.IMAGE_BYTES: ImageBytesEmbedder,
 }
@@ -99,10 +99,10 @@ class EmbedderRegistry:
         assert embedder is None or isinstance(embedder, VideoPathEmbedder)
         return embedder
 
-    def get_frame_pil_embedder(self, space_key: str) -> FramePILEmbedder | None:
-        """Get the embedder that embeds video frames for the space, if any."""
-        embedder = self._by_space_and_capability.get((space_key, Capability.FRAME_PIL))
-        assert embedder is None or isinstance(embedder, FramePILEmbedder)
+    def get_image_pil_embedder(self, space_key: str) -> ImagePILEmbedder | None:
+        """Get the embedder that embeds PIL images for the space, if any."""
+        embedder = self._by_space_and_capability.get((space_key, Capability.IMAGE_PIL))
+        assert embedder is None or isinstance(embedder, ImagePILEmbedder)
         return embedder
 
     def get_text_embedder(self, space_key: str) -> TextEmbedder | None:

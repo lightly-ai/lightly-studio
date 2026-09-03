@@ -51,7 +51,7 @@ class TestEmbedderRegistry:
         # Getters for capabilities the embedder lacks return None.
         assert registry.get_crop_path_embedder(space_key="space-a") is None
         assert registry.get_video_path_embedder(space_key="space-a") is None
-        assert registry.get_frame_pil_embedder(space_key="space-a") is None
+        assert registry.get_image_pil_embedder(space_key="space-a") is None
         assert registry.get_image_bytes_embedder(space_key="space-a") is None
 
     def test_register__no_capability(self) -> None:
