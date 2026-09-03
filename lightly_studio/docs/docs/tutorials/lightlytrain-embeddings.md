@@ -36,6 +36,8 @@ The distilled ViT-T closes 83% of the distance to its teacher. The teacher is 15
 
 The next two plots show the same 978 images from 20 species, colored by species. The model is the same size in both. Only the weights are different. Step 4 loads this same slice, so you can reproduce these plots. The distillation itself still runs on all 200 species.
 
+The purity in each caption is measured on these 978 images from 20 species. The table above measures all 200 species instead. Fewer species is an easier task, so the caption values are higher. Both use the same metric.
+
 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
   <figure style="margin: 0;">
     <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov3-tiny-before.png" alt="Embeddings from an off-the-shelf DINOv3 ViT-T, colored by species" style="width: 100%; border-radius: 6px;">
@@ -96,7 +98,8 @@ if not archive.exists():
         "https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz", archive
     )
     with tarfile.open(archive) as tar:
-        tar.extractall(".")
+        # filter="data" refuses members that would write outside the target directory.
+        tar.extractall(".", filter="data")
 
 IMAGE_PATH = "CUB_200_2011/images"
 ```
@@ -302,7 +305,7 @@ Read the map:
 
 - **Hover a point** to preview its image.
 - **Look for clusters.** Tight groups are visually similar images.
-- **Watch the edges.** Points far from any cluster are outliers or wrong labels.
+- **Watch the edges.** Points far from any cluster are outliers or wrong annotations.
 - **Spot near-duplicates.** Points on top of each other are almost identical images.
 
 !!! warning "Read the numbers, not only the plot"

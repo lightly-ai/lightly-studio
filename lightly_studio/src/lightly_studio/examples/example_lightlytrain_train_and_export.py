@@ -43,7 +43,10 @@ if not archive.exists():
         "https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz", archive
     )
     with tarfile.open(archive) as tar:
-        tar.extractall(".")
+        # filter="data" refuses members that would write outside the target directory.
+        # It is the default from Python 3.14 and is available in Python 3.12, and in
+        # recent 3.10 and 3.11 patch releases.
+        tar.extractall(".", filter="data")
 IMAGE_PATH = "CUB_200_2011/images"
 
 # 2. Distill the teacher into the student. This uses no labels.
