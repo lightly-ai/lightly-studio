@@ -126,6 +126,9 @@ Training writes a checkpoint to `out/pretrain/checkpoints/last.ckpt`.
 !!! note "Choose the teacher"
     A larger teacher is not always better. In this tutorial, ViT-L scores 0.062 above ViT-B, but it has 3.5 times more parameters. ViT-B trains faster and gives almost the same result.
 
+!!! note "The student is already a distilled model"
+    The `dinov3/vitt16` weights come from an earlier distillation run by Lightly. This tutorial distills that model again, onto one specific dataset. The 0.081 score in the table above is that general-purpose model on fine-grained birds. It is not the score of an untrained model. A model with random weights scores 0.005.
+
 Any name from `lightly_train.list_models()` works for `model` and for `teacher`. See the [supported models](https://docs.lightly.ai/train/stable/pretrain_distill/models/index.html) of LightlyTrain. For other methods, see the [pretraining guide](https://docs.lightly.ai/train/stable/pretrain_distill/index.html) and the [available methods](https://docs.lightly.ai/train/stable/pretrain_distill/methods/index.html).
 
 ## Step 3: Export the embedding model
@@ -262,7 +265,7 @@ for sample in dataset:
     The transform above matches the ImageNet default of LightlyTrain. If you trained with custom `normalize_args`, pass the same mean and standard deviation.
 
 !!! warning "Keep the same LightlyTrain version"
-    `torch.load(..., weights_only=False)` unpickles the model class of LightlyTrain. The environment that runs LightlyStudio needs the same `lightly-train` version that you exported with.
+    `torch.load(..., weights_only=False)` unpickles the model class of LightlyTrain. The environment that runs LightlyStudio needs the same `lightly-train` version that you exported with. This load also runs code from the file. Load only model files that you trust.
 
 Text search stays off, because the model has no text encoder. See [Using your own embeddings](../concepts_and_tools/embeddings.md#using-your-own-embeddings) and the [Embeddings API](../api/embeddings.md) for the full `ImageEmbeddingGenerator` protocol.
 
