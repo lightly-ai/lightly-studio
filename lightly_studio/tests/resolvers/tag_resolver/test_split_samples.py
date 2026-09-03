@@ -1,5 +1,6 @@
 from uuid import UUID
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers import tag_resolver
@@ -49,3 +50,32 @@ def test_split_samples__partitions_by_relative_size(db_session: Session) -> None
         )
     ]
     assert sorted(tagged_sample_ids) == sorted(sample_ids)
+
+
+@pytest.mark.parametrize(
+    ("splits", "scope_size", "message"),
+    [
+        (_splits(("train", 1)), 4, "At least two splits are required"),
+        (_splits(("train", 1), ("  ", 1)), 4, "must not be blank"),
+        (_splits(("train", 1), ("train", 1)), 4, "must be unique"),
+        (_splits(("train", 1), ("test", 0)), 4, "must be positive"),
+        (_splits(("train", 1), ("test", 1)), 0, "empty sample scope"),
+        (_splits(("train", 1), ("test", 1)), 1, "cannot exceed the number of matching samples"),
+    ],
+)
+def test_split_samples__rejects_invalid_input(
+    db_session: Session,
+    splits: list[tag_resolver.SplitDefinition],
+    scope_size: int,
+    message: str,
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    sample_ids = _create_sample_ids(session=db_session, collection_id=collection_id, count=4)
+
+    with pytest.raises(ValueError, match=message):
+        tag_resolver.split_samples(
+            session=db_session,
+            collection_id=collection_id,
+            sample_ids=sample_ids[:scope_size],
+            splits=splits,
+        )
