@@ -10,32 +10,22 @@ describe('MetadataFilterItem', () => {
     const solarAngle = { min: -75.89126551973673, max: 87.50941362154188 };
 
     it('mounts a full-precision float range without an effect-update loop', () => {
+        const onValueCommit = vi.fn();
+
         expect(() =>
             render(MetadataFilterItem, {
                 props: {
                     metadataKey: 'solar_angle',
                     bound: solarAngle,
                     value: { ...solarAngle },
-                    onValueCommit: vi.fn()
+                    onValueCommit
                 }
             })
         ).not.toThrow();
 
         expect(screen.getByText('solar angle')).toBeInTheDocument();
-    });
 
-    it('does not commit a filter just from mounting', () => {
-        const onValueCommit = vi.fn();
-
-        render(MetadataFilterItem, {
-            props: {
-                metadataKey: 'solar_angle',
-                bound: solarAngle,
-                value: { ...solarAngle },
-                onValueCommit
-            }
-        });
-
+        // Should not commit a filter just from mounting.
         expect(onValueCommit).not.toHaveBeenCalled();
     });
 });
