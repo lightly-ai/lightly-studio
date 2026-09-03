@@ -258,6 +258,7 @@ def test_delete_dataset__with_sequences(db_session: Session) -> None:
     )
     sequence = SequenceTable(sample_id=sample_ids[0])
     db_session.add(sequence)
+    db_session.flush()
     db_session.add(
         SampleSequenceLinkTable(sample_id=sample_ids[1], seq_id=sequence.seq_id, seq_number=0)
     )

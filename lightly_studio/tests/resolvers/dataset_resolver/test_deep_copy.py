@@ -432,6 +432,7 @@ def test_deep_copy__with_sequences(db_session: Session) -> None:
     )
     sequence = SequenceTable(sample_id=sample_ids[0])
     db_session.add(sequence)
+    db_session.flush()
     db_session.add(
         SampleSequenceLinkTable(
             sample_id=sample_ids[1],
