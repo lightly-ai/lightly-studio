@@ -16,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from lightly_studio.dataset.embedding_result import EmbeddingResult
 from numpy.typing import NDArray
 from PIL import Image
 from torchvision import transforms  # type: ignore[import-untyped]
@@ -24,7 +25,6 @@ import lightly_studio as ls
 from lightly_studio.core.annotation import CreateClassification
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
-from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
 
 MODEL_FILE = "out/embedding_model.pt"
