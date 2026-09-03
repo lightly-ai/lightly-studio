@@ -61,6 +61,9 @@ class EmbedderRegistry:
         """
         spec = embedder.embedding_space_spec()
         space_key = spec.space_key
+        capabilities = _capabilities_of(embedder=embedder)
+        if not capabilities:
+            raise ValueError(f"Embedder {type(embedder).__name__!r} implements no capability.")
         registered_spec = self._spec_by_space.get(space_key)
         if registered_spec is not None and registered_spec != spec:
             raise ValueError(
@@ -68,10 +71,6 @@ class EmbedderRegistry:
                 f"cannot register the incompatible {spec}."
             )
         self._spec_by_space[space_key] = spec
-
-        capabilities = _capabilities_of(embedder=embedder)
-        if not capabilities:
-            raise ValueError(f"Embedder {type(embedder).__name__!r} implements no capability.")
         for capability in capabilities:
             key = (space_key, capability)
             if key in self._by_space_and_capability:
