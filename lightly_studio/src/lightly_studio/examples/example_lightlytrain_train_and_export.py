@@ -44,8 +44,7 @@ if not archive.exists():
     )
     with tarfile.open(archive) as tar:
         # filter="data" refuses members that would write outside the target directory.
-        # It is the default from Python 3.14 and is available in Python 3.12, and in
-        # recent 3.10 and 3.11 patch releases.
+        # It needs Python 3.10.12+, 3.11.4+, or 3.12+, and is the default from 3.14.
         tar.extractall(".", filter="data")
 IMAGE_PATH = "CUB_200_2011/images"
 

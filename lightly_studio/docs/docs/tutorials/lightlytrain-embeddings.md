@@ -67,7 +67,7 @@ This tutorial builds two small scripts. `train_and_export.py` runs the distillat
 
 To follow this tutorial, make sure that you have:
 
-- Python 3.10 or newer
+- Python 3.10.12+, 3.11.4+, or 3.12+. Step 1 uses the `filter` argument of `tarfile`. Earlier patch releases do not have it.
 - A GPU for the distillation step. On 2 NVIDIA RTX 4090 GPUs, the run in this tutorial takes about 21 minutes.
 - A CUDA GPU, Apple Silicon (MPS), or a CPU for the exploration step
 - About 4 GB of free disk space
