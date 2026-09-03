@@ -21,10 +21,6 @@ from lightly_studio.embed.embedder import (
 
 logger = logging.getLogger(__name__)
 
-# Maps each capability to the embedder subclass that implements it. Left
-# unannotated on purpose: annotating the values as ``type[Embedder]`` trips
-# mypy's ``type-abstract`` check, which assumes such types get instantiated. We
-# only use these classes for ``isinstance``.
 _CAPABILITY_TO_TYPE = {
     Capability.IMAGE_PATH: ImagePathEmbedder,
     Capability.CROP_PATH: CropPathEmbedder,
@@ -38,9 +34,9 @@ _CAPABILITY_TO_TYPE = {
 class EmbedderRegistry:
     """Stores embedders keyed by embedding space and capability.
 
-    An embedder can provide several capabilities. It is registered under one key
-    per capability it implements. Each ``(space_key, capability)`` pair maps to a
-    single embedder; registering another embedder for the same pair replaces it.
+    An embedder can provide several capabilities. For a given space, the registry
+    stores at most one embedder per capability. Registering an embedder for the same
+    space and capability replaces the old one.
     """
 
     def __init__(self) -> None:
