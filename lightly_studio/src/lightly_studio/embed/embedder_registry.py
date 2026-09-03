@@ -1,0 +1,117 @@
+"""Registry that maps embedding spaces and capabilities to embedders.
+
+Holds at most one embedder per ``(space_key, capability)`` pair. Callers look up
+an embedder by the capability they need with the matching typed getter.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from lightly_studio.embed.embedder import (
+    Capability,
+    CropPathEmbedder,
+    Embedder,
+    FramePILEmbedder,
+    ImageBytesEmbedder,
+    ImagePathEmbedder,
+    TextEmbedder,
+    VideoPathEmbedder,
+)
+
+logger = logging.getLogger(__name__)
+
+# Maps each capability to the embedder subclass that implements it. Left
+# unannotated on purpose: annotating the values as ``type[Embedder]`` trips
+# mypy's ``type-abstract`` check, which assumes such types get instantiated. We
+# only use these classes for ``isinstance``.
+_CAPABILITY_TO_TYPE = {
+    Capability.IMAGE_PATH: ImagePathEmbedder,
+    Capability.CROP_PATH: CropPathEmbedder,
+    Capability.VIDEO_PATH: VideoPathEmbedder,
+    Capability.FRAME_PIL: FramePILEmbedder,
+    Capability.TEXT: TextEmbedder,
+    Capability.IMAGE_BYTES: ImageBytesEmbedder,
+}
+
+
+class EmbedderRegistry:
+    """Stores embedders keyed by embedding space and capability.
+
+    An embedder can provide several capabilities. It is registered under one key
+    per capability it implements. Each ``(space_key, capability)`` pair maps to a
+    single embedder; registering another embedder for the same pair replaces it.
+    """
+
+    def __init__(self) -> None:
+        """Create an empty registry."""
+        self._by_space_and_capability: dict[tuple[str, Capability], Embedder] = {}
+
+    def register(self, embedder: Embedder) -> None:
+        """Register an embedder under every capability it implements.
+
+        The capabilities are inferred from the embedder's type. The embedding
+        space is read from ``embedder.embedding_space_spec()``.
+
+        Args:
+            embedder: The embedder to register.
+
+        Raises:
+            ValueError: If the embedder implements no capability.
+        """
+        space_key = embedder.embedding_space_spec().space_key
+        capabilities = _capabilities_of(embedder)
+        if not capabilities:
+            raise ValueError(f"Embedder {type(embedder).__name__!r} implements no capability.")
+        for capability in capabilities:
+            key = (space_key, capability)
+            if key in self._by_space_and_capability:
+                logger.warning(
+                    "Replacing embedder for space %r and capability %s.",
+                    space_key,
+                    capability.value,
+                )
+            self._by_space_and_capability[key] = embedder
+
+    def get_image_path_embedder(self, space_key: str) -> ImagePathEmbedder | None:
+        """Get the embedder that embeds images by path for the space, if any."""
+        embedder = self._by_space_and_capability.get((space_key, Capability.IMAGE_PATH))
+        assert embedder is None or isinstance(embedder, ImagePathEmbedder)
+        return embedder
+
+    def get_crop_path_embedder(self, space_key: str) -> CropPathEmbedder | None:
+        """Get the embedder that embeds crops by path for the space, if any."""
+        embedder = self._by_space_and_capability.get((space_key, Capability.CROP_PATH))
+        assert embedder is None or isinstance(embedder, CropPathEmbedder)
+        return embedder
+
+    def get_video_path_embedder(self, space_key: str) -> VideoPathEmbedder | None:
+        """Get the embedder that embeds videos by path for the space, if any."""
+        embedder = self._by_space_and_capability.get((space_key, Capability.VIDEO_PATH))
+        assert embedder is None or isinstance(embedder, VideoPathEmbedder)
+        return embedder
+
+    def get_frame_pil_embedder(self, space_key: str) -> FramePILEmbedder | None:
+        """Get the embedder that embeds video frames for the space, if any."""
+        embedder = self._by_space_and_capability.get((space_key, Capability.FRAME_PIL))
+        assert embedder is None or isinstance(embedder, FramePILEmbedder)
+        return embedder
+
+    def get_text_embedder(self, space_key: str) -> TextEmbedder | None:
+        """Get the embedder that embeds text for the space, if any."""
+        embedder = self._by_space_and_capability.get((space_key, Capability.TEXT))
+        assert embedder is None or isinstance(embedder, TextEmbedder)
+        return embedder
+
+    def get_image_bytes_embedder(self, space_key: str) -> ImageBytesEmbedder | None:
+        """Get the embedder that embeds images by bytes for the space, if any."""
+        embedder = self._by_space_and_capability.get((space_key, Capability.IMAGE_BYTES))
+        assert embedder is None or isinstance(embedder, ImageBytesEmbedder)
+        return embedder
+
+
+def _capabilities_of(embedder: Embedder) -> list[Capability]:
+    """List the capabilities an embedder implements, inferred from its type."""
+    return [
+        capability for capability, cls in _CAPABILITY_TO_TYPE.items() if isinstance(embedder, cls)
+    ]
