@@ -27,7 +27,7 @@ unlabeled data to a trained and evaluated model.
 
 -   **[Explore LightlyTrain Embeddings in LightlyStudio](lightlytrain-embeddings.md)**
 
-    [![Explore LightlyTrain Embeddings in LightlyStudio](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov2-embeddings.jpg)](lightlytrain-embeddings.md)
+    [![Explore LightlyTrain Embeddings in LightlyStudio](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov3-tiny-after-distill.png)](lightlytrain-embeddings.md)
 
-    Train an embedding model with LightlyTrain, then visualize and curate its embeddings — find clusters and outliers, and select a diverse subset.
+    Distill a large embedding model into a small one with LightlyTrain, then visualize and curate its embeddings — find clusters and outliers, and select a diverse subset.
 </div>

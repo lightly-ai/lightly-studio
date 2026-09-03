@@ -1,8 +1,9 @@
 """Load a LightlyTrain model into LightlyStudio and explore its embeddings.
 
 Part 2 of a two-script example. Run ``example_lightlytrain_train_and_export.py``
-first to produce ``out/embedding_model.pt``. This script loads that model, embeds
-the dataset with it on the fly, selects a diverse subset, and opens the app.
+first to produce ``out/embedding_model.pt``, the distilled ``dinov3/vitt16``
+student. This script loads that model, embeds the dataset with it on the fly,
+selects a diverse subset, and opens the app.
 
 The environment that runs this needs the same ``lightly-train`` version used to
 export the model, because ``torch.load`` unpickles LightlyTrain's model class:
@@ -34,20 +35,6 @@ IMAGE_SIZE = 224
 # normalize_args, pass the matching mean/std here.
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
-
-# Imagenette's folders are WordNet IDs; map them to readable class names.
-WNID_TO_NAME = {
-    "n01440764": "tench",
-    "n02102040": "English springer",
-    "n02979186": "cassette player",
-    "n03000684": "chain saw",
-    "n03028079": "church",
-    "n03394916": "French horn",
-    "n03417042": "garbage truck",
-    "n03425413": "gas pump",
-    "n03445777": "golf ball",
-    "n03888257": "parachute",
-}
 
 
 class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
@@ -144,7 +131,7 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
 
 # 1. Point at the same dataset used for training (train_and_export.py downloaded it).
-IMAGE_PATH = "imagenette2-320/val"
+IMAGE_PATH = "CUB_200_2011/images"
 
 # 2. Load the model into LightlyStudio. Register the generator BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
@@ -154,10 +141,12 @@ ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_F
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
 dataset.add_images_from_path(path=IMAGE_PATH)
 
-# Label each image with its class, so you can color the plot by class in the GUI.
+# Label each image with its species, so you can color the plot by species in the GUI.
+# CUB folders look like "001.Black_footed_Albatross".
 for sample in dataset:
-    class_name = WNID_TO_NAME[Path(sample.file_path_abs).parent.name]
-    sample.add_annotation(CreateClassification(class_name=class_name), annotation_source="class")
+    folder = Path(sample.file_path_abs).parent.name
+    species = folder.split(".", 1)[-1].replace("_", " ")
+    sample.add_annotation(CreateClassification(class_name=species), annotation_source="class")
 
 # 3. Curate in code: select a diverse subset. The result is stored as a tag you can
 # open in the app. You can also do this interactively with the lasso in the GUI.
