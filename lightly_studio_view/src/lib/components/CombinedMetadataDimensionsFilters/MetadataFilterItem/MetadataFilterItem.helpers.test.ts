@@ -1,65 +1,79 @@
 import { describe, expect, it } from 'vitest';
-import {
-    clampMetadataValuesToMax,
-    getMetadataSliderMax,
-    getMetadataSliderStep,
-    getSliderDisplayMaxValue
-} from './MetadataFilterItem.helpers';
+import { SLIDER_TICKS, fromTick, toTick } from './MetadataFilterItem.helpers';
 
 describe('MetadataFilterItem.helpers', () => {
-    describe('getMetadataSliderStep', () => {
-        it('returns rounded integer step for integer metadata', () => {
-            const step = getMetadataSliderStep(0, 4500, true);
+    const solarAngle = { min: -75.89126551973673, max: 87.50941362154188 };
 
-            expect(step).toBe(5);
+    describe('toTick', () => {
+        it('maps the bounds to the tick endpoints', () => {
+            expect(toTick(solarAngle.min, solarAngle)).toBe(0);
+            expect(toTick(solarAngle.max, solarAngle)).toBe(SLIDER_TICKS);
         });
 
-        it('returns a minimum step of 1 when integer range is non-positive', () => {
-            const step = getMetadataSliderStep(12, 12, true);
+        it('maps the midpoint to the middle tick', () => {
+            const mid = (solarAngle.min + solarAngle.max) / 2;
 
-            expect(step).toBe(1);
+            expect(toTick(mid, solarAngle)).toBe(SLIDER_TICKS / 2);
         });
 
-        it('returns precise float step for float metadata', () => {
-            const step = getMetadataSliderStep(0, 1, false);
-
-            expect(step).toBe(0.001);
+        it('is monotonic across the range', () => {
+            expect(toTick(solarAngle.min, solarAngle)).toBeLessThanOrEqual(
+                toTick(solarAngle.max, solarAngle)
+            );
         });
 
-        it('returns fallback float step when float range is non-positive', () => {
-            const step = getMetadataSliderStep(3.5, 3.5, false);
-
-            expect(step).toBe(0.001);
-        });
-    });
-
-    describe('getMetadataSliderMax', () => {
-        it('keeps max when it is on the step grid', () => {
-            expect(getMetadataSliderMax(0, 10, 2)).toBe(10);
+        it('clamps values outside the bounds into the tick domain', () => {
+            expect(toTick(solarAngle.min - 100, solarAngle)).toBe(0);
+            expect(toTick(solarAngle.max + 100, solarAngle)).toBe(SLIDER_TICKS);
         });
 
-        it('extends max by one step when it is off-grid', () => {
-            expect(getMetadataSliderMax(0, 10, 3)).toBe(13);
+        it('returns 0 for a degenerate range instead of dividing by zero', () => {
+            expect(toTick(5, { min: 5, max: 5 })).toBe(0);
         });
     });
 
-    describe('getSliderDisplayMaxValue', () => {
-        it('uses virtual slider max when selected value reached bound max', () => {
-            expect(getSliderDisplayMaxValue(10, 10, 13)).toBe(13);
+    describe('fromTick', () => {
+        it('returns the exact bounds at the tick endpoints', () => {
+            expect(fromTick(0, solarAngle, false)).toBe(solarAngle.min);
+            expect(fromTick(SLIDER_TICKS, solarAngle, false)).toBe(solarAngle.max);
         });
 
-        it('keeps selected value when below bound max', () => {
-            expect(getSliderDisplayMaxValue(9, 10, 13)).toBe(9);
+        it('clamps ticks outside the domain to the bounds', () => {
+            expect(fromTick(-10, solarAngle, false)).toBe(solarAngle.min);
+            expect(fromTick(SLIDER_TICKS + 10, solarAngle, false)).toBe(solarAngle.max);
+        });
+
+        it('rounds to whole numbers for integer metadata fields', () => {
+            const bound = { min: 0, max: 1712 };
+            const value = fromTick(500, bound, true);
+
+            expect(Number.isInteger(value)).toBe(true);
+        });
+
+        it('keeps fractional precision for float metadata fields', () => {
+            const value = fromTick(500, solarAngle, false);
+
+            expect(Number.isInteger(value)).toBe(false);
         });
     });
 
-    describe('clampMetadataValuesToMax', () => {
-        it('clamps values above the bound max', () => {
-            expect(clampMetadataValuesToMax([12, 15], 10)).toEqual([10, 10]);
+    describe('round-trip', () => {
+        it('recovers interior values within one tick of granularity', () => {
+            const tickSize = (solarAngle.max - solarAngle.min) / SLIDER_TICKS;
+            const original = 12.3456;
+
+            const recovered = fromTick(toTick(original, solarAngle), solarAngle, false);
+
+            expect(Math.abs(recovered - original)).toBeLessThanOrEqual(tickSize);
         });
 
-        it('keeps values that are already below bound max', () => {
-            expect(clampMetadataValuesToMax([5, 9], 10)).toEqual([5, 9]);
+        it('recovers the bounds exactly', () => {
+            expect(fromTick(toTick(solarAngle.min, solarAngle), solarAngle, false)).toBe(
+                solarAngle.min
+            );
+            expect(fromTick(toTick(solarAngle.max, solarAngle), solarAngle, false)).toBe(
+                solarAngle.max
+            );
         });
     });
 });
