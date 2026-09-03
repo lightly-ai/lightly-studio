@@ -297,7 +297,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
     # Add one set of annotations to this sample.
     sample.add_annotations(
-        [
+        annotations=[
             CreateClassification(class_name="outdoor"),
             CreateObjectDetection(
                 class_name="vehicle",
@@ -321,10 +321,14 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     `annotation_source` groups annotations, for example as `ground_truth` or model outputs.
 
     To annotate a full dataset, parse your annotation file into Python. Match each
-    entry to a sample by its file name. The example below reads the annotations from a
-    dictionary. In practice, you read them from your own CSV, XML, or JSON file:
+    entry to a sample by its path relative to the folder you loaded. A relative path
+    stays unique even when subfolders repeat a file name. The example below reads the
+    annotations from a dictionary. In practice, you read them from your own CSV, XML,
+    or JSON file:
 
     ```python
+    from pathlib import Path
+
     import lightly_studio as ls
     from lightly_studio import CreateObjectDetection
 
@@ -335,7 +339,8 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=images_path)
 
-    # Your custom format, parsed into Python and keyed by file name.
+    # Your custom format, parsed into Python and keyed by path relative to images_path.
+    # A relative path is unique even when subfolders repeat a file name.
     # Add one entry per image. Images with no entry are skipped below.
     custom_annotations = {
         "000000565296.jpg": [
@@ -343,11 +348,13 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
         ],
     }
 
-    # Match each sample to its annotations by file name.
+    # Match each sample to its annotations by relative path.
+    images_root = Path(images_path).absolute()
     for sample in dataset:
-        annotations = custom_annotations.get(sample.file_name)
+        relative_path = Path(sample.file_path_abs).relative_to(images_root).as_posix()
+        annotations = custom_annotations.get(relative_path)
         if annotations:
-            sample.add_annotations(annotations, annotation_source="ground_truth")
+            sample.add_annotations(annotations=annotations, annotation_source="ground_truth")
 
     ls.start_gui()
     ```
