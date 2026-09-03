@@ -41,6 +41,7 @@ def test_get_parent_sample_ids_with_label(db_session: Session) -> None:
         parent_sample_ids=[labeled.sample_id, unlabeled.sample_id],
         annotation_label_id=label.annotation_label_id,
         annotation_collection_id=annotation.sample.collection_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
     )
 
     assert result == {labeled.sample_id}
@@ -69,6 +70,7 @@ def test_get_parent_sample_ids_with_label__filters_by_label(db_session: Session)
         parent_sample_ids=[image.sample_id],
         annotation_label_id=dog.annotation_label_id,
         annotation_collection_id=annotation.sample.collection_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
     )
 
     assert result == set()
@@ -111,9 +113,37 @@ def test_get_parent_sample_ids_with_label__filters_by_annotation_collection(
         parent_sample_ids=[in_ground_truth.sample_id, in_predictions.sample_id],
         annotation_label_id=label.annotation_label_id,
         annotation_collection_id=ground_truth_annotation.sample.collection_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
     )
 
     assert result == {in_ground_truth.sample_id}
+
+
+def test_get_parent_sample_ids_with_label__filters_by_annotation_type(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    detection = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+
+    result = annotation_resolver.get_parent_sample_ids_with_label(
+        session=db_session,
+        parent_sample_ids=[image.sample_id],
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_id=detection.sample.collection_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+
+    assert result == set()
 
 
 def test_get_parent_sample_ids_with_label__empty_parent_sample_ids(db_session: Session) -> None:
@@ -122,6 +152,7 @@ def test_get_parent_sample_ids_with_label__empty_parent_sample_ids(db_session: S
         parent_sample_ids=[],
         annotation_label_id=uuid.uuid4(),
         annotation_collection_id=uuid.uuid4(),
+        annotation_type=AnnotationType.CLASSIFICATION,
     )
 
     assert result == set()

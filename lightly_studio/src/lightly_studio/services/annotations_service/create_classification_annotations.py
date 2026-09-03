@@ -128,6 +128,11 @@ def _create_classifications(
         name=annotation_collection_name,
     )
 
+    # `annotation_resolver.create_many` commits, so every batch lands in its own
+    # transaction. That is deliberate: the dedupe above makes the whole operation
+    # idempotent, so a run that fails halfway is recovered by re-running it, which
+    # skips whatever already landed. Do not collapse this into one transaction
+    # expecting all-or-nothing semantics that nothing here relies on.
     created_annotation_ids: list[UUID] = []
     skipped_count = 0
     for start in range(0, len(parent_sample_ids), CREATE_BATCH_SIZE):
@@ -179,6 +184,7 @@ def _parent_sample_ids_without_label(
         parent_sample_ids=parent_sample_ids,
         annotation_label_id=annotation_label_id,
         annotation_collection_id=annotation_collection_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
     )
     return [
         parent_sample_id

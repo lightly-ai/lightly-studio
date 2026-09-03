@@ -8,7 +8,10 @@ from uuid import UUID
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_array
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+    AnnotationType,
+)
 from lightly_studio.models.sample import SampleTable
 
 
@@ -17,8 +20,13 @@ def get_parent_sample_ids_with_label(
     parent_sample_ids: Sequence[UUID],
     annotation_label_id: UUID,
     annotation_collection_id: UUID,
+    annotation_type: AnnotationType,
 ) -> set[UUID]:
-    """Return the parent samples that already have an annotation with the given label.
+    """Return the parent samples that already have such an annotation.
+
+    An annotation matches when it has the given label, type, and annotation collection.
+    Annotations of another type are not matches: a box and a whole-image classification
+    carrying the same annotation class are different annotations.
 
     The collection filter is applied on the annotation's own sample
     (``AnnotationBaseTable.sample_id -> SampleTable.collection_id``), not on the
@@ -29,6 +37,7 @@ def get_parent_sample_ids_with_label(
         parent_sample_ids: Parent sample IDs to check.
         annotation_label_id: ID of the annotation label to look for.
         annotation_collection_id: ID of the collection the annotation samples must belong to.
+        annotation_type: Type the annotation must have.
 
     Returns:
         The subset of ``parent_sample_ids`` that already have such an annotation.
@@ -44,6 +53,7 @@ def get_parent_sample_ids_with_label(
         )
         .where(col(SampleTable.collection_id) == annotation_collection_id)
         .where(col(AnnotationBaseTable.annotation_label_id) == annotation_label_id)
+        .where(col(AnnotationBaseTable.annotation_type) == annotation_type)
         .where(
             db_array.in_array(
                 column=col(AnnotationBaseTable.parent_sample_id),

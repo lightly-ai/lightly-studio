@@ -89,6 +89,43 @@ def test_create_classification_annotations__skips_already_annotated(
     assert response.json()["skipped_count"] == 1
 
 
+def test_create_classification_annotations__object_detection_of_same_class_not_skipped(
+    db_session: Session,
+    test_client: TestClient,
+    collection: CollectionTable,
+    images: list[ImageTable],
+) -> None:
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    detection = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=images[0].sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_collection_name="ground_truth",
+    )
+
+    response = test_client.post(
+        _bulk_route(collection),
+        json={
+            "sample_ids": [str(images[0].sample_id)],
+            "class_name": "car",
+            "annotation_collection_name": "ground_truth",
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    assert response.json()["created_count"] == 1
+    assert response.json()["skipped_count"] == 0
+    unchanged = annotation_resolver.get_by_id(session=db_session, annotation_id=detection.sample_id)
+    assert unchanged is not None
+    assert unchanged.annotation_type == AnnotationType.OBJECT_DETECTION
+    assert unchanged.annotation_label_id == label.annotation_label_id
+    assert unchanged.object_detection_details is not None
+
+
 def test_create_classification_annotations__adds_second_class_alongside_first(
     db_session: Session,
     test_client: TestClient,

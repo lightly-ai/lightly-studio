@@ -144,6 +144,44 @@ def test_create_classification_annotations__skips_samples_that_already_have_the_
     }
 
 
+def test_create_classification_annotations__object_detection_of_same_class_not_skipped(
+    db_session: Session, collection: CollectionTable, images: list[ImageTable]
+) -> None:
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    detection = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=images[0].sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_collection_name="ground_truth",
+    )
+
+    result = annotations_service.create_classification_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        class_name="car",
+        sample_ids=[images[0].sample_id],
+        annotation_collection_name="ground_truth",
+    )
+
+    assert result.created_count == 1
+    assert result.skipped_count == 0
+    unchanged = annotation_resolver.get_by_id(session=db_session, annotation_id=detection.sample_id)
+    assert unchanged is not None
+    assert unchanged.annotation_type == AnnotationType.OBJECT_DETECTION
+    assert unchanged.annotation_label_id == label.annotation_label_id
+    assert unchanged.object_detection_details is not None
+    assert _annotation_types_by_sample_id(session=db_session, images=images[:1]) == {
+        images[0].sample_id: {
+            AnnotationType.OBJECT_DETECTION,
+            AnnotationType.CLASSIFICATION,
+        }
+    }
+
+
 def test_create_classification_annotations__rerun_creates_nothing(
     db_session: Session, collection: CollectionTable, images: list[ImageTable]
 ) -> None:
@@ -377,6 +415,18 @@ def _class_names_by_sample_id(session: Session, images: list[ImageTable]) -> dic
             annotation.annotation_label.annotation_label_name
         )
     return class_names
+
+
+def _annotation_types_by_sample_id(
+    session: Session, images: list[ImageTable]
+) -> dict[UUID, set[AnnotationType]]:
+    annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=session, parent_sample_ids=[image.sample_id for image in images]
+    )
+    types: dict[UUID, set[AnnotationType]] = {image.sample_id: set() for image in images}
+    for annotation in annotations:
+        types[annotation.parent_sample_id].add(annotation.annotation_type)
+    return types
 
 
 def _annotation_collection_id(session: Session, annotation_id: UUID) -> UUID:
