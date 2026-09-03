@@ -12,8 +12,7 @@ in the GUI, and how to use the Python API to query and manipulate them.
 
 ### From a Folder
 
-Use `add_images_from_path` to add raw images that have no annotations. The method
-loads images from a folder:
+Use `add_images_from_path` to add raw images that have no annotations.
 
 ```python title="Load an Image Dataset from a Folder"
 import lightly_studio as ls
@@ -265,72 +264,13 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     You can load any format that LightlyStudio does not support directly. First add
     the raw images. Then attach annotations in Python with the `Create*` classes.
 
-    The example below adds the three annotation types to one sample:
+    Parse your annotation file into Python and match each entry to a sample by its
+    absolute path. The example below reads the annotations from a dictionary. In
+    practice, you read them from your own CSV, XML, or JSON file:
 
     ```python
-    import numpy as np
-
     import lightly_studio as ls
-    from lightly_studio import (
-        CreateClassification,
-        CreateObjectDetection,
-        CreateSegmentationMask,
-    )
-    from lightly_studio.core.dataset_query import ImageSampleField
-
-    # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-    images_path = f"{dataset_path}/coco_subset_128_images/images"
-
-    # Create an image dataset and add the images first.
-    dataset = ls.ImageDataset.create()
-    dataset.add_images_from_path(path=images_path)
-
-    # Use a query to fetch the sample you want to annotate.
-    sample = dataset.query().match(
-        ImageSampleField.file_name == "000000565296.jpg",
-    ).to_list()[0]
-
-    # A binary mask is indexed as [row, column], so its shape is (height, width).
-    binary_mask = np.zeros((sample.height, sample.width), dtype=np.uint8)
-    binary_mask[160:300, 300:480] = 1
-
-    # Add one set of annotations to this sample.
-    sample.add_annotations(
-        annotations=[
-            CreateClassification(class_name="outdoor"),
-            CreateObjectDetection(
-                class_name="vehicle",
-                x=80,
-                y=120,
-                width=180,
-                height=120,
-            ),
-            CreateSegmentationMask.from_binary_mask(
-                class_name="foreground",
-                binary_mask=binary_mask,
-            ),
-        ],
-        annotation_source="ground_truth",
-    )
-    ```
-
-    Bounding boxes use pixel coordinates with `x` and `y` at the top-left corner.
-    Create segmentation masks from a binary mask with shape `(height, width)`.
-    LightlyStudio adds new class names to the dataset automatically. The
-    `annotation_source` groups annotations, for example as `ground_truth` or model outputs.
-
-    To annotate a full dataset, parse your annotation file into Python. Match each
-    entry to a sample by its path relative to the folder you loaded. A relative path
-    stays unique even when subfolders repeat a file name. The example below reads the
-    annotations from a dictionary. In practice, you read them from your own CSV, XML,
-    or JSON file:
-
-    ```python
-    from pathlib import Path
-
-    import lightly_studio as ls
-    from lightly_studio import CreateObjectDetection
+    from lightly_studio.core.annotation import CreateObjectDetection
 
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
@@ -339,25 +279,26 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=images_path)
 
-    # Your custom format, parsed into Python and keyed by path relative to images_path.
-    # A relative path is unique even when subfolders repeat a file name.
+    # Your custom format, parsed into Python and keyed by absolute image path.
     # Add one entry per image. Images with no entry are skipped below.
     custom_annotations = {
-        "000000565296.jpg": [
+        f"{images_path}/000000565296.jpg": [
             CreateObjectDetection(class_name="vehicle", x=80, y=120, width=180, height=120),
         ],
     }
 
-    # Match each sample to its annotations by relative path.
-    images_root = Path(images_path).absolute()
+    # Match each sample to its annotations by absolute path.
     for sample in dataset:
-        relative_path = Path(sample.file_path_abs).relative_to(images_root).as_posix()
-        annotations = custom_annotations.get(relative_path)
+        annotations = custom_annotations.get(sample.file_path_abs)
         if annotations:
             sample.add_annotations(annotations=annotations, annotation_source="ground_truth")
 
     ls.start_gui()
     ```
+
+    Bounding boxes use pixel coordinates with `x` and `y` at the top-left corner.
+    LightlyStudio adds new class names to the dataset automatically. The
+    `annotation_source` groups annotations, for example as `ground_truth` or model outputs.
 
 === "Lightly Object Detections"
 

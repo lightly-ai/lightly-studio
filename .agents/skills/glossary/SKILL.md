@@ -24,8 +24,8 @@ Add new topics as their own `##` section below.
 
 ## Data ingest
 
-| Concept | Term | Python identifier | Avoid |
-|---|---|---|---|
-| Images added without any annotations | **raw images** | `add_images_from_path` | image folder, unlabeled images |
-| Videos added without any annotations | **raw videos** | `add_videos_from_path` | video folder |
+| Concept | Term | Avoid |
+|---|---|---|
+| Images added without any annotations | **raw images** | image folder, unlabeled images |
+| Videos added without any annotations | **raw videos** | video folder |
 
