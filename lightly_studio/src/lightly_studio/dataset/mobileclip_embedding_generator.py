@@ -10,11 +10,11 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
+from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.vendor import mobileclip
 
 from . import file_utils, image_crop_embedding, image_embedding
-from .embedding_generator import EmbeddingSpaceSpec, ImageCrop, ImageEmbeddingGenerator
-from .embedding_result import EmbeddingResult
+from .embedding_generator import ImageEmbeddingGenerator
 from .image_embedding import EmbeddingContext
 
 MODEL_NAME = "mobileclip_s0"

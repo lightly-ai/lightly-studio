@@ -19,17 +19,15 @@ from lightly_studio.core.file_outcome_report import (
     MissingInputFileError,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
+from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from . import image_crop_embedding, image_embedding
 from .embedding_generator import (
-    EmbeddingSpaceSpec,
-    ImageCrop,
     ImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
 )
-from .embedding_result import EmbeddingResult
 from .image_embedding import EmbeddingContext
 
 MODEL_NAME = "PE-Core-T16-384"

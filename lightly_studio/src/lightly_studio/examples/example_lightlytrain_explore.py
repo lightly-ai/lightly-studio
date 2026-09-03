@@ -24,8 +24,8 @@ import lightly_studio as ls
 from lightly_studio.core.annotation import CreateClassification
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
-from lightly_studio.dataset.embedding_result import EmbeddingResult
 from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.embed.types import EmbeddingResult
 
 MODEL_FILE = "out/embedding_model.pt"
 MAX_BATCH_SIZE = 128
