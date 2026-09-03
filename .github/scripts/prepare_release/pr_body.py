@@ -44,6 +44,7 @@ def render_pr_body(section_body: str, version: str) -> str:
         f"## Review checklist\n\n"
         f"{_GUARDS}\n\n"
         f"{_CHECKLIST}\n\n"
-        f"Merging publishes nothing - tagging, the GitHub release, PyPI and the docs are still "
-        f"manual.\n"
+        f"Merging tags this commit and opens a **draft** GitHub release. Nothing is public "
+        f"until the wheel is on PyPI and someone runs Undraft Release; PyPI and the docs are "
+        f"still manual.\n"
     )
