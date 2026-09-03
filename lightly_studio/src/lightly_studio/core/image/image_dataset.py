@@ -394,6 +394,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         annotation_source: str | None = None,
         embed_annotations: bool = True,
         limit: int | None = None,
+        tag_depth: int = 0,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
 
@@ -408,11 +409,18 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed_annotations: If True, generate embeddings for the annotation crops.
             limit: Maximum number of samples to load, in total across all processed
                 splits. By default, all samples are loaded.
+            tag_depth: Tags each sample by the directory levels of its image path below the
+                split's images directory. `tag_depth=0` (default) skips this; `tag_depth=N`
+                creates a tag for each of the first `N` directory levels. These tags are
+                added on top of the split tag.
 
         Raises:
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If tag_depth is negative, or if limit is not None and not greater
+                than 0.
         """
         fsspec_lister.validate_limit(limit)
+        if tag_depth < 0:
+            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         data_yaml = Path(data_yaml).absolute()
 
         if not data_yaml.is_file() or data_yaml.suffix != ".yaml":
@@ -454,6 +462,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 tag=split,
                 embed=False,
             )
+            # Tag samples by their directory levels below the split's images directory.
+            add_images.tag_samples_by_directory(
+                session=self.session,
+                collection_id=self.collection_id,
+                input_path=images_path,
+                sample_ids=created_sample_ids,
+                tag_depth=tag_depth,
+            )
 
             all_created_sample_ids.extend(created_sample_ids)
             if remaining is not None:
@@ -484,6 +500,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         annotation_source: str | None = None,
         embed_annotations: bool = True,
         limit: int | None = None,
+        tag_depth: int = 0,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
 
@@ -500,11 +517,18 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 a default source is used.
             embed_annotations: If True, generate embeddings for the annotation crops.
             limit: Maximum number of samples to load. By default, all samples are loaded.
+            tag_depth: Tags each sample by the directory levels of its image path below
+                `images_path`. `tag_depth=0` (default) skips this; `tag_depth=N` creates a
+                tag for each of the first `N` directory levels (see `add_images_from_path`).
+                These tags are added on top of the `split` tag.
 
         Raises:
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If tag_depth is negative, or if limit is not None and not greater
+                than 0.
         """
         fsspec_lister.validate_limit(limit)
+        if tag_depth < 0:
+            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
         if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
@@ -538,6 +562,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
+        )
+        # Tag samples by their directory levels below the images directory.
+        add_images.tag_samples_by_directory(
+            session=self.session,
+            collection_id=self.collection_id,
+            input_path=images_path,
+            sample_ids=created_sample_ids,
+            tag_depth=tag_depth,
         )
         _generate_embeddings_annotations(
             session=self.session,
