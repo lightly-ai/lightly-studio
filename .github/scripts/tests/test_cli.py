@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -44,6 +45,25 @@ name = "lightly-studio"
 version = "1.0.5"
 source = { editable = "." }
 """
+
+SAMPLE_BRANCH_RULES = [
+    {
+        "type": "required_status_checks",
+        "parameters": {
+            "required_status_checks": [
+                {"context": "CI Success Check"},
+                {"context": "End2End Success Check"},
+            ]
+        },
+    }
+]
+
+SAMPLE_CHECK_RUN = {
+    "name": "CI Success Check",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/lightly-ai/lightly-studio/runs/1",
+}
 
 
 def test_main__unknown_command_exits_nonzero():
@@ -157,3 +177,63 @@ def test_main__render_pr_body__writes_file(tmp_path: Path):
     )
     body = output.read_text()
     assert "Added thing one" in body
+
+
+def _check_ci_files(tmp_path: Path, *runs: dict[str, object]) -> tuple[Path, Path]:
+    check_runs = tmp_path / "check-runs.json"
+    check_runs.write_text(json.dumps({"check_runs": list(runs)}))
+    branch_rules = tmp_path / "branch-rules.json"
+    branch_rules.write_text(json.dumps(SAMPLE_BRANCH_RULES))
+    return check_runs, branch_rules
+
+
+def _check_ci_argv(check_runs: Path, branch_rules: Path) -> list[str]:
+    return [
+        "check-ci",
+        "--check-runs",
+        str(check_runs),
+        "--branch-rules",
+        str(branch_rules),
+        "--sha",
+        "0123abc",
+    ]
+
+
+def test_main__check_ci__green_commit_passes(tmp_path: Path):
+    check_runs, branch_rules = _check_ci_files(
+        tmp_path,
+        SAMPLE_CHECK_RUN | {"name": "CI Success Check"},
+        SAMPLE_CHECK_RUN | {"name": "End2End Success Check"},
+    )
+    summary = tmp_path / "summary.md"
+
+    exit_code = cli.main([*_check_ci_argv(check_runs, branch_rules), "--summary", str(summary)])
+
+    assert exit_code == 0
+    assert "0123abc" in summary.read_text()
+
+
+def test_main__check_ci__red_commit_fails(tmp_path: Path):
+    check_runs, branch_rules = _check_ci_files(
+        tmp_path,
+        SAMPLE_CHECK_RUN | {"name": "CI Success Check"},
+        SAMPLE_CHECK_RUN | {"name": "End2End Success Check", "conclusion": "failure"},
+    )
+
+    exit_code = cli.main(_check_ci_argv(check_runs, branch_rules))
+
+    assert exit_code == 1
+
+
+# A ruleset that requires nothing must not be read as "everything passes".
+def test_main__check_ci__ruleset_without_required_checks_fails(tmp_path: Path):
+    check_runs, branch_rules = _check_ci_files(
+        tmp_path,
+        SAMPLE_CHECK_RUN | {"name": "CI Success Check"},
+        SAMPLE_CHECK_RUN | {"name": "End2End Success Check"},
+    )
+    branch_rules.write_text(json.dumps([{"type": "pull_request", "parameters": {}}]))
+
+    exit_code = cli.main(_check_ci_argv(check_runs, branch_rules))
+
+    assert exit_code == 1
