@@ -1,0 +1,223 @@
+name: Publish Release
+
+on:
+  # Merging the "Bump version to X.Y.Z" pull request is the decision to
+  # release, so it is what starts this. The path filter is only a cheap
+  # pre-filter; what is released is worked out below.
+  push:
+    branches: [main]
+    paths: ["lightly_studio/pyproject.toml"]
+  # Retry hatch for a run that failed on something transient. It reaches the
+  # same commit as the push would, so it is safe to run at any time.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/.github/scripts
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # The tooling is taken from main, never from the released commit: running
+      # that commit's own release code would execute it with a write token.
+      - name: Checkout the release tooling
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Find the version and the commit that set it
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUSHED: ${{ github.sha }}
+        # A merge queue batch lands as a single push, so the commit that
+        # triggered this run is the tip of the batch and not necessarily the
+        # version bump - which is how a release ends up containing more than
+        # its changelog section describes. Walk back through the commits that
+        # touched pyproject.toml to the one that introduced this version, and
+        # release that. Between releases only a handful of commits touch the
+        # file, so one page is ample; not finding the bump is an error rather
+        # than a guess.
+        run: |
+          set -euo pipefail
+          version_at() {
+            gh api "repos/${GITHUB_REPOSITORY}/contents/lightly_studio/pyproject.toml?ref=$1" \
+              -H "Accept: application/vnd.github.raw" > "${RUNNER_TEMP}/pyproject-$1.toml"
+            python3 -m prepare_release read-version --pyproject "${RUNNER_TEMP}/pyproject-$1.toml"
+          }
+
+          # A dispatch can be started from any branch, so it is pinned to main
+          # rather than trusting the ref it was launched from.
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            tip="${PUSHED}"
+          else
+            tip="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+            echo "Dispatched run: releasing from main (${tip})."
+          fi
+
+          version="$(version_at "${tip}")"
+          bump=""
+          reached_previous_version=false
+          for commit in $(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits?path=lightly_studio/pyproject.toml&sha=${tip}&per_page=100" \
+            --jq '.[].sha'); do
+            if [ "$(version_at "${commit}")" = "${version}" ]; then
+              bump="${commit}"
+            else
+              reached_previous_version=true
+              break
+            fi
+          done
+
+          if [ -z "${bump}" ] || [ "${reached_previous_version}" = false ]; then
+            echo "::error::Could not identify the commit that set version ${version}."
+            exit 1
+          fi
+
+          {
+            echo "sha=${bump}"
+            echo "version=${version}"
+            echo "tag=v${version}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Version ${version} was set by ${bump}."
+
+      - name: Decide whether there is a release to cut
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+        # Whether this version is already released is the whole question, so it
+        # is asked directly. Absence is an answer and is matched on the status
+        # code, not on the message: a missing tag and a missing release do not
+        # report it the same way. Anything else is a failure to read and must
+        # not be mistaken for absence.
+        run: |
+          set -euo pipefail
+          absent_or_fail() {
+            if grep -q "(HTTP 404)" "$1"; then
+              return 0
+            fi
+            echo "::error::Could not read $2:"
+            cat "$1"
+            exit 1
+          }
+
+          # git/ref/tags answers a missing tag with 404, where commits/<tag>
+          # answers 422; an annotated tag points at a tag object, so it has to
+          # be dereferenced to reach the commit.
+          tag_commit=""
+          if ref="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" \
+                     --jq '"\(.object.type) \(.object.sha)"' 2>"${RUNNER_TEMP}/tag-err")"; then
+            if [ "${ref% *}" = "tag" ]; then
+              tag_commit="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${ref#* }" --jq .object.sha)"
+            else
+              tag_commit="${ref#* }"
+            fi
+          else
+            absent_or_fail "${RUNNER_TEMP}/tag-err" "tag ${TAG}"
+          fi
+
+          state=none
+          if draft="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq .draft \
+                       2>"${RUNNER_TEMP}/release-err")"; then
+            if [ "${draft}" = "true" ]; then state=draft; else state=published; fi
+          else
+            absent_or_fail "${RUNNER_TEMP}/release-err" "release ${TAG}"
+          fi
+
+          # A draft is left strictly alone. It is the one place a person edits
+          # the notes by hand, and a later pyproject.toml change must not
+          # rewrite that.
+          if [ "${state}" != "none" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::${TAG} already has a ${state} release; nothing to do."
+            exit 0
+          fi
+
+          if [ -n "${tag_commit}" ] && [ "${tag_commit}" != "${SHA}" ]; then
+            echo "::error::${TAG} already exists on ${tag_commit}, not on ${SHA}."
+            exit 1
+          fi
+
+          {
+            echo "release=true"
+            echo "tag_exists=$([ -n "${tag_commit}" ] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+
+      # TODO(Iunir, 09/2026): Enable once the check-release-ci action lands
+      # (#2125, #2126). Until then whoever merges the bump PR confirms CI.
+      # - name: Require green CI on the release commit
+      #   if: steps.decide.outputs.release == 'true'
+      #   uses: ./.github/actions/check-release-ci
+      #   with:
+      #     ref: ${{ steps.resolve.outputs.sha }}
+      #     github-token: ${{ github.token }}
+
+      # Before the tag, so a failure here leaves nothing to clean up.
+      - name: Assemble the release notes
+        if: steps.decide.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/contents/CHANGELOG.md?ref=${SHA}" \
+            -H "Accept: application/vnd.github.raw" > "${RUNNER_TEMP}/CHANGELOG.md"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="${TAG}" \
+            -f target_commitish="${SHA}" \
+            --jq .body > "${RUNNER_TEMP}/generated-notes.md"
+          python3 -m prepare_release render-release-notes \
+            --changelog "${RUNNER_TEMP}/CHANGELOG.md" \
+            --version "${VERSION}" \
+            --generated "${RUNNER_TEMP}/generated-notes.md" \
+            --output "${RUNNER_TEMP}/release-notes.md"
+          cat "${RUNNER_TEMP}/release-notes.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create the annotated tag
+        if: steps.decide.outputs.release == 'true' && steps.decide.outputs.tag_exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+        # Created through the API so the checkout keeps `persist-credentials: false`;
+        # `gh release create` would only make a lightweight tag.
+        run: |
+          set -euo pipefail
+          tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags" \
+            -f tag="${TAG}" \
+            -f message="LightlyStudio ${VERSION}" \
+            -f object="${SHA}" \
+            -f type=commit \
+            --jq .sha)"
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/tags/${TAG}" \
+            -f sha="${tag_sha}" >/dev/null
+          echo "Tagged ${SHA} as ${TAG}."
+
+      - name: Create the draft release
+        if: steps.decide.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create "${TAG}" --repo "${REPO}" \
+            --draft \
+            --title "${TAG}" \
+            --notes-file "${RUNNER_TEMP}/release-notes.md"
+          echo "::notice::Draft release ${TAG} ready. Publish to PyPI, then un-draft it."
