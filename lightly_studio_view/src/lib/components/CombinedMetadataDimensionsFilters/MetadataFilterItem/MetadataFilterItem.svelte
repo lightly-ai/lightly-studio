@@ -2,12 +2,7 @@
     import { Slider } from '$lib/components/ui/slider/index.js';
     import type { MetadataBounds, MetadataValues } from '$lib/services/types';
     import { formatFloat, formatInteger } from '$lib/utils';
-    import {
-        clampMetadataValuesToMax,
-        getMetadataSliderMax,
-        getMetadataSliderStep,
-        getSliderDisplayMaxValue
-    } from './MetadataFilterItem.helpers';
+    import { SLIDER_TICKS, fromTick, toTick } from './MetadataFilterItem.helpers';
 
     type MetadataBound = MetadataBounds[string];
     type MetadataValue = MetadataValues[string];
@@ -22,12 +17,14 @@
     const { metadataKey, bound, value, onValueCommit }: MetadataFilterItemProps = $props();
 
     const isInteger = $derived(Number.isInteger(bound.min) && Number.isInteger(bound.max));
-    const sliderStep = $derived(getMetadataSliderStep(bound.min, bound.max, isInteger));
-    const sliderMax = $derived(getMetadataSliderMax(bound.min, bound.max, sliderStep));
-    const sliderValueMax = $derived(getSliderDisplayMaxValue(value.max, bound.max, sliderMax));
 
-    const handleValueCommit = (newValues: number[]) => {
-        onValueCommit(metadataKey, clampMetadataValuesToMax(newValues, bound.max));
+    const sliderValue = $derived([toTick(value.min, bound), toTick(value.max, bound)]);
+
+    const handleValueCommit = (newTicks: number[]) => {
+        onValueCommit(metadataKey, [
+            newTicks[0] !== sliderValue[0] ? fromTick(newTicks[0], bound, isInteger) : value.min,
+            newTicks[1] !== sliderValue[1] ? fromTick(newTicks[1], bound, isInteger) : value.max
+        ]);
     };
 
     const formatValue = (sliderValue: number): string => {
@@ -45,10 +42,10 @@
         <Slider
             type="multiple"
             class="filter-{metadataKey}"
-            min={bound.min}
-            max={sliderMax}
-            step={sliderStep}
-            value={[value.min, sliderValueMax]}
+            min={0}
+            max={SLIDER_TICKS}
+            step={1}
+            value={sliderValue}
             onValueCommit={handleValueCommit}
         />
     </div>
