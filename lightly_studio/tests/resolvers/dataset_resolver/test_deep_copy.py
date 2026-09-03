@@ -471,7 +471,7 @@ def test_deep_copy__with_sequences(db_session: Session) -> None:
     ).all()
     assert [link.seq_number for link in copied_links] == [0, 1]
     assert [link.timestamp_ns for link in copied_links] == [1785699091646722462, None]
-    assert all(link.sample_id not in sample_ids[1:] for link in copied_links)
+    assert {link.sample_id for link in copied_links}.isdisjoint(sample_ids)
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
