@@ -130,6 +130,8 @@
     ) {
         handleSampleSelect({ sampleId, index, shiftKey: event.shiftKey });
     }
+    // TODO(Mihnea, 09/2026): hash the effective metadata filters, not raw $filterParams.
+    // Same fix as Images.svelte's filterHash.
     const filterHash = $derived(JSON.stringify($filterParams));
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
