@@ -18,6 +18,8 @@
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
@@ -48,6 +50,8 @@
     );
 
     const { trackEvent } = usePostHog();
+    const { user } = useAuth();
+    const canManageTags = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     let assignBusy = $state(false);
     let deletingTagId = $state<string | null>(null);
@@ -219,7 +223,7 @@
                             />
                         {/if}
                     </div>
-                    {#if editingTagId !== tag.tag_id}
+                    {#if canManageTags && editingTagId !== tag.tag_id}
                         <TagActionMenu
                             {tag}
                             open={openActionsTagId === tag.tag_id}
@@ -244,6 +248,13 @@
             {/each}
         </div>
 
-        <TagAssignInput options={$tags} {hasSelection} busy={assignBusy} onSelect={handleAssign} />
+        {#if canManageTags}
+            <TagAssignInput
+                options={$tags}
+                {hasSelection}
+                busy={assignBusy}
+                onSelect={handleAssign}
+            />
+        {/if}
     </div>
 </Segment>
