@@ -3,7 +3,7 @@
 import uuid
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -15,6 +15,8 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -419,6 +421,56 @@ def test_deep_copy__with_group_component_definitions(db_session: Session) -> Non
     assert copied_component.group_component_definition is not None
     assert copied_component.group_component_definition.group_component_name == "front_camera"
     assert copied_component.group_component_definition.group_component_index == 0
+
+
+def test_deep_copy__with_sequences(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id) for _ in range(3)],
+    )
+    sequence = SequenceTable(sample_id=sample_ids[0])
+    db_session.add(sequence)
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=sample_ids[1],
+            seq_id=sequence.seq_id,
+            seq_number=0,
+            timestamp_ns=1785699091646722462,
+        )
+    )
+    db_session.add(
+        SampleSequenceLinkTable(sample_id=sample_ids[2], seq_id=sequence.seq_id, seq_number=1)
+    )
+    db_session.commit()
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copy has its own sequence, keyed by a fresh seq_id.
+    copied_sequences = db_session.exec(
+        select(SequenceTable)
+        .join(SampleTable, col(SequenceTable.sample_id) == col(SampleTable.sample_id))
+        .where(col(SampleTable.collection_id) == copied.collection_id)
+    ).all()
+    assert len(copied_sequences) == 1
+    copied_seq_id = copied_sequences[0].seq_id
+    assert copied_seq_id != sequence.seq_id
+
+    # Assert - the copied links point at the copied samples, in the original order.
+    copied_links = db_session.exec(
+        select(SampleSequenceLinkTable)
+        .where(col(SampleSequenceLinkTable.seq_id) == copied_seq_id)
+        .order_by(col(SampleSequenceLinkTable.seq_number).asc())
+    ).all()
+    assert [link.seq_number for link in copied_links] == [0, 1]
+    assert [link.timestamp_ns for link in copied_links] == [1785699091646722462, None]
+    assert all(link.sample_id not in sample_ids[1:] for link in copied_links)
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:

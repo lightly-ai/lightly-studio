@@ -19,6 +19,7 @@ class SampleType(str, Enum):
     CAPTION = "caption"
     GROUP = "group"
     MCAP = "mcap"
+    SEQUENCE = "sequence"
 
 
 class CollectionBase(SQLModel):

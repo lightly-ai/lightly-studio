@@ -6,7 +6,7 @@ import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
 /**
  * Builds the nav menu item for a collection, or null if the sample type has no
- * dedicated view to navigate to (e.g. MCAP, which is locator-only for now).
+ * dedicated view to navigate to (e.g. MCAP and SEQUENCE, which have no view yet).
  */
 export function getMenuItem(
     datasetId: string,
@@ -69,6 +69,7 @@ export function getMenuItem(
                 icon: LayoutDashboard
             };
         case SampleType.MCAP:
+        case SampleType.SEQUENCE:
             return null;
     }
 }
