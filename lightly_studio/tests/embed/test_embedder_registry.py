@@ -42,27 +42,27 @@ class TestEmbedderRegistry:
         registry = EmbedderRegistry()
         embedder = _FakeTextImageEmbedder(space_key="space-a")
 
-        registry.register(embedder)
+        registry.register(embedder=embedder)
 
-        assert registry.get_text_embedder("space-a") is embedder
-        assert registry.get_image_path_embedder("space-a") is embedder
+        assert registry.get_text_embedder(space_key="space-a") is embedder
+        assert registry.get_image_path_embedder(space_key="space-a") is embedder
 
     def test_register__no_capability(self) -> None:
         registry = EmbedderRegistry()
 
         with pytest.raises(ValueError, match="no capability"):
-            registry.register(_FakeNoCapabilityEmbedder())
+            registry.register(embedder=_FakeNoCapabilityEmbedder())
 
     def test_register__replaces_existing(self, caplog: pytest.LogCaptureFixture) -> None:
         registry = EmbedderRegistry()
         first = _FakeTextImageEmbedder(space_key="space-a")
         second = _FakeTextImageEmbedder(space_key="space-a")
 
-        registry.register(first)
+        registry.register(embedder=first)
         with caplog.at_level(logging.WARNING):
-            registry.register(second)
+            registry.register(embedder=second)
 
-        assert registry.get_text_embedder("space-a") is second
+        assert registry.get_text_embedder(space_key="space-a") is second
         assert "Replacing embedder" in caplog.text
 
     def test_register__separate_spaces(self) -> None:
@@ -70,19 +70,19 @@ class TestEmbedderRegistry:
         embedder_a = _FakeTextImageEmbedder(space_key="space-a")
         embedder_b = _FakeTextImageEmbedder(space_key="space-b")
 
-        registry.register(embedder_a)
-        registry.register(embedder_b)
+        registry.register(embedder=embedder_a)
+        registry.register(embedder=embedder_b)
 
-        assert registry.get_text_embedder("space-a") is embedder_a
-        assert registry.get_text_embedder("space-b") is embedder_b
+        assert registry.get_text_embedder(space_key="space-a") is embedder_a
+        assert registry.get_text_embedder(space_key="space-b") is embedder_b
 
     def test_get_text_embedder__missing(self) -> None:
         registry = EmbedderRegistry()
 
-        assert registry.get_text_embedder("space-a") is None
+        assert registry.get_text_embedder(space_key="space-a") is None
 
     def test_get_image_bytes_embedder__capability_not_implemented(self) -> None:
         registry = EmbedderRegistry()
-        registry.register(_FakeTextImageEmbedder(space_key="space-a"))
+        registry.register(embedder=_FakeTextImageEmbedder(space_key="space-a"))
 
-        assert registry.get_image_bytes_embedder("space-a") is None
+        assert registry.get_image_bytes_embedder(space_key="space-a") is None
