@@ -34,7 +34,7 @@ The table gives the k-nearest-neighbor class purity for each model. Purity is th
 
 The distilled ViT-T closes 83% of the distance to its teacher. The teacher is 15 times larger. The distilled ViT-T also scores higher than an off-the-shelf ViT-S, which is 4 times larger.
 
-The next two plots show the same 978 images from 20 species, colored by species. The model is the same size in both. Only the weights are different.
+The next two plots show the same 978 images from 20 species, colored by species. The model is the same size in both. Only the weights are different. Step 4 loads this same slice, so you can reproduce these plots. The distillation itself still runs on all 200 species.
 
 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
   <figure style="margin: 0;">
@@ -171,6 +171,11 @@ from lightly_studio.embed.types import EmbeddingResult
 
 # train_and_export.py already downloaded CUB-200-2011 to CUB_200_2011/.
 IMAGE_PATH = "CUB_200_2011/images"
+# The plot gets one color per species, and 200 colors are hard to tell apart. These
+# two settings load a smaller slice so the plot stays readable. Set both to None to
+# load all 200 species and all 11,788 images.
+NUM_SPECIES: int | None = 20
+IMAGES_PER_SPECIES: int | None = 50
 
 IMAGE_SIZE = 224
 # LightlyTrain normalizes with ImageNet statistics by default.
@@ -249,7 +254,9 @@ ls.db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator("out/embedding_model.pt"))
 
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-dataset.add_images_from_path(path=IMAGE_PATH)
+species_dirs = sorted(p for p in Path(IMAGE_PATH).iterdir() if p.is_dir())
+for species_dir in species_dirs[:NUM_SPECIES]:
+    dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
 
 # Label each image with its species, so you can color the plot by species in the GUI.
 # CUB folders look like "001.Black_footed_Albatross".
@@ -289,6 +296,8 @@ python explore.py            # embed your data and open LightlyStudio
 
 Click the `Embed` button in the top right to open the [embedding plot](../concepts_and_tools/embeddings.md#the-embedding-plot-gui). The plot shows every image as a point in a 2D projection (PaCMAP) of the embedding space. To color the points by species, open **Color by** at the bottom of the plot and pick **annotations**.
 
+![The embedding plot after the distilled model embedded the 20-species slice, colored by species](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov3-tiny-after-distill.png){ width="100%" }
+
 Read the map:
 
 - **Hover a point** to preview its image.
@@ -297,7 +306,7 @@ Read the map:
 - **Spot near-duplicates.** Points on top of each other are almost identical images.
 
 !!! warning "Read the numbers, not only the plot"
-    A 2D projection keeps local neighborhoods, not distances. Two different embedding spaces can give similar plots. To compare two models, measure them. The purity numbers in this tutorial use the 10 nearest neighbors by cosine similarity, on 20 images per species.
+    A 2D projection keeps local neighborhoods, not distances. Two different embedding spaces can give similar plots. To compare two models, measure them. Every purity number here uses the 10 nearest neighbors by cosine similarity. The table uses 20 images from each of the 200 species. The two plot captions use the 978 images from 20 species, so their numbers are higher.
 
 ### What the clusters contain
 

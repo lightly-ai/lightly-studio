@@ -132,6 +132,11 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
 # 1. Point at the same dataset used for training (train_and_export.py downloaded it).
 IMAGE_PATH = "CUB_200_2011/images"
+# The plot gets one color per species, and 200 colors are hard to tell apart. These
+# two settings load a smaller slice so the plot stays readable. Set both to None to
+# load all 200 species and all 11,788 images.
+NUM_SPECIES: int | None = 20
+IMAGES_PER_SPECIES: int | None = 50
 
 # 2. Load the model into LightlyStudio. Register the generator BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
@@ -139,7 +144,9 @@ IMAGE_PATH = "CUB_200_2011/images"
 db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-dataset.add_images_from_path(path=IMAGE_PATH)
+species_dirs = sorted(p for p in Path(IMAGE_PATH).iterdir() if p.is_dir())
+for species_dir in species_dirs[:NUM_SPECIES]:
+    dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
 
 # Label each image with its species, so you can color the plot by species in the GUI.
 # CUB folders look like "001.Black_footed_Albatross".
