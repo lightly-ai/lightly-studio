@@ -1,7 +1,6 @@
 import type {
     AnnotationsFilter,
     EvaluationMetricSortExpr,
-    MetadataFilter,
     QueryExpr,
     ReadImagesRequest,
     SampleFilter,
@@ -38,7 +37,7 @@ export type SamplesQueryKey = readonly [
     ImagesInfiniteParams['mode'],
     NormalModeFilters | ClassifierSamples | undefined,
     {
-        metadata_filters?: MetadataFilter[];
+        metadata_filters?: SampleFilter['metadata_filters'];
         text_embedding?: ReadImagesRequest['text_embedding'];
         query_expr?: QueryExpr;
     },
