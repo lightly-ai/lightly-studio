@@ -50,6 +50,7 @@ export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSe
 export { usePostHog } from '$lib/hooks/usePostHog';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+export { useBulkAddAnnotationClass } from '$lib/hooks/useBulkAddAnnotationClass/useBulkAddAnnotationClass';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';

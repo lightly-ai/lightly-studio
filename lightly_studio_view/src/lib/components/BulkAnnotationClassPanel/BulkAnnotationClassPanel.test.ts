@@ -31,6 +31,9 @@ describe('BulkAnnotationClassPanel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         Element.prototype.scrollIntoView = vi.fn();
+        // A confirm dialog left open by an earlier test keeps `pointer-events: none` on the body,
+        // which makes every later pointer interaction unperformable.
+        document.body.style.pointerEvents = '';
     });
 
     it('renders nothing without a selection', () => {
