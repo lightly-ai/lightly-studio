@@ -56,7 +56,7 @@ class EmbedderRegistry:
             ValueError: If the embedder implements no capability.
         """
         space_key = embedder.embedding_space_spec().space_key
-        capabilities = _capabilities_of(embedder)
+        capabilities = _capabilities_of(embedder=embedder)
         if not capabilities:
             raise ValueError(f"Embedder {type(embedder).__name__!r} implements no capability.")
         for capability in capabilities:
