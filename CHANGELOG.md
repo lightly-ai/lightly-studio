@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the
   values of a categorical metadata field such as weather or city.
 - Python SDK: Select images by the diversity of their annotation crop embeddings with `Sampling.subpart_diversity()`.
-- Add one annotation class to every selected image at once from the image grid, while editing annotations. The panel shows the annotation classes the selection already has in the target annotation source, and skips the images that already have the picked class.
+- Add one annotation class to every selected image at once from the image grid, while editing annotations.
 
 ### Changed
 

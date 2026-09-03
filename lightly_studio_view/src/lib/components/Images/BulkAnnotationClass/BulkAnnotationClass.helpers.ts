@@ -1,13 +1,5 @@
-import type { ImageFilter } from '$lib/api/lightly_studio_local';
-import { buildImageFilter } from '$lib/utils/buildImageFilter';
-
 /** The backend default source new annotations land in when no name is sent. */
 export const DEFAULT_ANNOTATION_SOURCE_NAME = 'annotation';
-
-interface SelectionClassCount {
-    className: string;
-    sampleCount: number;
-}
 
 /**
  * Pick the annotation source the new annotations are written to.
@@ -30,41 +22,6 @@ export function resolveAnnotationSource({
     );
 }
 
-/**
- * Filter restricting the annotation counts to the selected samples and the target source.
- *
- * The annotation type is not part of the filter; the counts endpoint takes it separately.
- */
-export function buildSelectionCountsFilter({
-    sampleIds,
-    annotationSourceId
-}: {
-    sampleIds: string[];
-    annotationSourceId: string;
-}): ImageFilter | undefined {
-    return buildImageFilter({
-        dimensionsValues: null,
-        annotationFilter: { collection_ids: [annotationSourceId] },
-        metadataFilters: undefined,
-        sampleIds
-    });
-}
-
-/**
- * Map the annotation counts response to the panel's per-class sample counts.
- *
- * `current_count` respects the request filter, so it is the count within the selection;
- * `total_count` deliberately ignores the filter and must not be used here.
- */
-export function toSelectionClassCounts(
-    rows: Array<{ [key: string]: string | number }> | undefined
-): SelectionClassCount[] {
-    return (rows ?? []).map((row) => ({
-        className: String(row.label_name ?? ''),
-        sampleCount: Number(row.current_count ?? 0)
-    }));
-}
-
 /** Map annotation labels to the picker's options; the name is what gets sent. */
 export function toAnnotationClassOptions(
     labels: Array<{ annotation_label_id?: string; annotation_label_name: string }> | undefined
@@ -85,10 +42,10 @@ export function formatApplyResult({
 }): string {
     const totalCount = createdCount + skippedCount;
     if (createdCount === 0) {
-        return `No images changed; all ${totalCount} already had this annotation class.`;
+        return `No images changed; all ${totalCount} already had this class.`;
     }
     if (skippedCount === 0) {
-        return `Added the annotation class to ${createdCount} ${createdCount === 1 ? 'image' : 'images'}.`;
+        return `Added the class to ${createdCount} ${createdCount === 1 ? 'image' : 'images'}.`;
     }
-    return `Added to ${createdCount} of ${totalCount} images; ${skippedCount} already had this annotation class.`;
+    return `Added to ${createdCount} of ${totalCount} images; ${skippedCount} already had this class.`;
 }

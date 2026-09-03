@@ -1,19 +1,15 @@
 <script lang="ts">
+    import { Info as InfoIcon } from '@lucide/svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { Button } from '$lib/components';
+    import * as Alert from '$lib/components/ui/alert/index.js';
     import NamePicker from './NamePicker/NamePicker.svelte';
-    import ExistingClassCounts from './ExistingClassCounts/ExistingClassCounts.svelte';
     import ConfirmApplyDialog from './ConfirmApplyDialog/ConfirmApplyDialog.svelte';
-    import { summarizeApply, withSelectedOption } from './BulkAnnotationClassPanel.helpers';
+    import { withSelectedOption } from './BulkAnnotationClassPanel.helpers';
 
     interface AnnotationClassOption {
         id: string;
         name: string;
-    }
-
-    interface SelectionClassCount {
-        className: string;
-        sampleCount: number;
     }
 
     interface Props {
@@ -25,9 +21,6 @@
         annotationSources: string[];
         /** Annotation source the new annotations are written to. */
         selectedSource: string;
-        /** Annotation classes the selected images already have in `selectedSource`. */
-        selectionClassCounts: SelectionClassCount[];
-        isLoadingCounts: boolean;
         isApplying: boolean;
         onSourceChange: (source: string) => void;
         onApply: (args: { className: string; source: string }) => void;
@@ -38,8 +31,6 @@
         annotationClasses,
         annotationSources,
         selectedSource,
-        selectionClassCounts,
-        isLoadingCounts,
         isApplying,
         onSourceChange,
         onApply
@@ -55,30 +46,21 @@
             className
         )
     );
-    const summary = $derived(summarizeApply({ className, selectedCount, selectionClassCounts }));
     const canApply = $derived(className.length > 0 && selectedSource.length > 0 && !isApplying);
-    // The target source stays on the action itself: there is no undo for this anywhere.
-    const applyLabel = $derived(
-        selectedSource ? `Add annotation class to ${selectedSource}` : 'Add annotation class'
-    );
+    const title = $derived(`${selectedCount} ${selectedCount === 1 ? 'image' : 'images'} selected`);
 </script>
 
 {#if selectedCount > 0}
-    <Segment title={`Selected images: ${selectedCount}`}>
+    <Segment {title}>
         <div class="flex flex-col gap-3" data-testid="bulk-annotation-class-panel">
-            <p class="text-sm text-muted-foreground">
-                Add one annotation class to every selected image. Existing annotations are kept —
-                change or remove them in the annotation view.
-            </p>
-
             <div class="space-y-1">
-                <p class="text-xs font-medium">Annotation source</p>
+                <p class="text-xs font-medium">Source</p>
                 <NamePicker
                     value={selectedSource}
                     options={sourceOptions}
-                    placeholder="Select an annotation source"
-                    searchPlaceholder="Search or create a source…"
-                    ariaLabel="Annotation source"
+                    placeholder="Select a source"
+                    searchPlaceholder="Search or create…"
+                    ariaLabel="Source"
                     onPick={onSourceChange}
                     disabled={isApplying}
                     testId="bulk-source-picker"
@@ -86,24 +68,18 @@
             </div>
 
             <div class="space-y-1">
-                <p class="text-xs font-medium">Annotation class</p>
+                <p class="text-xs font-medium">Class</p>
                 <NamePicker
                     value={className}
                     options={classOptions}
-                    placeholder="Select an annotation class"
-                    searchPlaceholder="Search or create a class…"
-                    ariaLabel="Annotation class"
+                    placeholder="Select a class"
+                    searchPlaceholder="Search or create…"
+                    ariaLabel="Class"
                     onPick={(name) => (className = name)}
                     disabled={isApplying}
                     testId="bulk-class-picker"
                 />
             </div>
-
-            <ExistingClassCounts
-                source={selectedSource}
-                counts={selectionClassCounts}
-                isLoading={isLoadingCounts}
-            />
 
             <Button
                 variant="default"
@@ -116,8 +92,16 @@
                     'data-testid': 'bulk-annotation-class-apply'
                 }}
             >
-                <span class="min-w-0 truncate">{applyLabel}</span>
+                <span class="min-w-0 truncate">Add class</span>
             </Button>
+
+            <Alert.Root
+                class="flex items-start gap-2 border-border bg-muted/50 p-2 text-xs text-muted-foreground"
+                data-testid="bulk-annotation-class-hint"
+            >
+                <InfoIcon class="mt-0.5 size-3.5 shrink-0" />
+                <span>Change or remove annotations in the annotation view.</span>
+            </Alert.Root>
         </div>
     </Segment>
 
@@ -125,8 +109,7 @@
         open={isConfirming}
         {className}
         source={selectedSource}
-        affectedCount={summary.affectedCount}
-        skippedCount={summary.skippedCount}
+        imageCount={selectedCount}
         {isApplying}
         onOpenChange={(open) => (isConfirming = open)}
         onConfirm={() => {

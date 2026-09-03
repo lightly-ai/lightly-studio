@@ -17,8 +17,6 @@
             annotationClasses,
             annotationSources: ['ground_truth', 'predictions'],
             selectedSource: 'ground_truth',
-            selectionClassCounts: [],
-            isLoadingCounts: false,
             isApplying: false,
             onSourceChange: () => {},
             onApply: () => {}
@@ -35,26 +33,8 @@
 
 <Story name="No selection" args={{ selectedCount: 0 }} template={sidePanel} />
 
-<Story name="Selection without existing classes" template={sidePanel} />
+<Story name="Selection" template={sidePanel} />
 
-<Story
-    name="Selection where some images already have the class"
-    args={{
-        selectionClassCounts: [
-            { className: 'dog', sampleCount: 4 },
-            { className: 'cat', sampleCount: 2 }
-        ]
-    }}
-    template={sidePanel}
-/>
+<Story name="Single image" args={{ selectedCount: 1 }} template={sidePanel} />
 
-<Story name="Loading existing classes" args={{ isLoadingCounts: true }} template={sidePanel} />
-
-<Story
-    name="Applying"
-    args={{
-        isApplying: true,
-        selectionClassCounts: [{ className: 'dog', sampleCount: 4 }]
-    }}
-    template={sidePanel}
-/>
+<Story name="Applying" args={{ isApplying: true }} template={sidePanel} />

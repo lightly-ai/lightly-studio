@@ -5,14 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import BulkAnnotationClass from './BulkAnnotationClass.svelte';
 
-type CountsParams = {
-    collectionId: string;
-    annotationType?: string;
-    countMode?: string;
-    filter?: { sample_filter?: Record<string, unknown> };
-    enabled?: boolean;
-};
-
 const isEditingMode = writable(false);
 const selectedSampleIds = writable(new Set<string>());
 const lastAnnotationSource = writable<Record<string, string>>({});
@@ -38,19 +30,6 @@ vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     })
 }));
 
-let countsParams: CountsParams[] = [];
-let countsResult: { data?: Array<Record<string, string | number>>; isFetching: boolean } = {
-    data: undefined,
-    isFetching: false
-};
-vi.mock('$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts', () => ({
-    useImageAnnotationCountsQueryKey: [{ _id: 'countImageAnnotationsByCollection' }],
-    useImageAnnotationCounts: (getParams: () => CountsParams) => {
-        countsParams.push(getParams());
-        return countsResult;
-    }
-}));
-
 const addAnnotationClass = vi.fn();
 vi.mock('$lib/hooks/useBulkAddAnnotationClass/useBulkAddAnnotationClass', () => ({
     useBulkAddAnnotationClass: () => ({ addAnnotationClass })
@@ -74,8 +53,6 @@ describe('BulkAnnotationClass', () => {
         // A confirm dialog left open by an earlier test keeps `pointer-events: none` on the body,
         // which makes every later pointer interaction unperformable.
         document.body.style.pointerEvents = '';
-        countsParams = [];
-        countsResult = { data: undefined, isFetching: false };
         annotationCollections.data = [{ collection_id: 'src-1', name: 'annotation' }];
         isEditingMode.set(true);
         selectedSampleIds.set(new Set(['s-1', 's-2']));
@@ -104,52 +81,8 @@ describe('BulkAnnotationClass', () => {
     it('shows the selection size and the resolved default annotation source', () => {
         render(BulkAnnotationClass, { props: { collectionId: 'col-1' } });
 
-        expect(screen.getByText('Selected images: 2')).toBeInTheDocument();
-        expect(screen.getByTestId('bulk-annotation-class-apply')).toHaveTextContent(
-            'Add annotation class to annotation'
-        );
-    });
-
-    it('counts distinct samples per classification class within the selection and source', () => {
-        render(BulkAnnotationClass, { props: { collectionId: 'col-1' } });
-
-        expect(countsParams[0]).toMatchObject({
-            collectionId: 'col-1',
-            annotationType: 'classification',
-            countMode: 'samples',
-            enabled: true,
-            filter: {
-                sample_filter: {
-                    sample_ids: ['s-1', 's-2'],
-                    annotations_filter: { collection_ids: ['src-1'] }
-                }
-            }
-        });
-    });
-
-    it('renders the per-class counts from current_count', () => {
-        countsResult = {
-            data: [{ label_name: 'dog', current_count: 3, total_count: 900 }],
-            isFetching: false
-        };
-        render(BulkAnnotationClass, { props: { collectionId: 'col-1' } });
-
-        const counts = screen.getByTestId('existing-class-counts');
-        expect(counts).toHaveTextContent('dog');
-        expect(counts).toHaveTextContent('3');
-        expect(counts).not.toHaveTextContent('900');
-    });
-
-    it('skips the counts query for an annotation source that does not exist yet', () => {
-        lastAnnotationSource.set({ 'col-1': 'brand-new-source' });
-        countsResult = {
-            data: [{ label_name: 'dog', current_count: 3, total_count: 900 }],
-            isFetching: false
-        };
-        render(BulkAnnotationClass, { props: { collectionId: 'col-1' } });
-
-        expect(countsParams[0]).toMatchObject({ enabled: false, filter: undefined });
-        expect(screen.getByTestId('existing-class-counts-empty')).toBeInTheDocument();
+        expect(screen.getByText('2 images selected')).toBeInTheDocument();
+        expect(screen.getByTestId('bulk-source-picker-trigger')).toHaveTextContent('annotation');
     });
 
     it('remembers a picked annotation source', async () => {
@@ -173,7 +106,7 @@ describe('BulkAnnotationClass', () => {
             selectedSampleIds: new Set(['s-1', 's-2'])
         });
         expect(toast.success).toHaveBeenCalledWith(
-            'Added to 28 of 40 images; 12 already had this annotation class.'
+            'Added to 28 of 40 images; 12 already had this class.'
         );
     });
 
@@ -183,8 +116,6 @@ describe('BulkAnnotationClass', () => {
 
         await applyClass('dog');
 
-        expect(toast.error).toHaveBeenCalledWith(
-            'Failed to add the annotation class. Please try again.'
-        );
+        expect(toast.error).toHaveBeenCalledWith('Failed to add the class. Please try again.');
     });
 });

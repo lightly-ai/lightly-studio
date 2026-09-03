@@ -15,8 +15,6 @@ const defaultProps = {
     ],
     annotationSources: ['ground_truth', 'predictions'],
     selectedSource: 'ground_truth',
-    selectionClassCounts: [{ className: 'dog', sampleCount: 3 }],
-    isLoadingCounts: false,
     isApplying: false,
     onSourceChange,
     onApply
@@ -42,20 +40,14 @@ describe('BulkAnnotationClassPanel', () => {
         expect(screen.queryByTestId('bulk-annotation-class-panel')).not.toBeInTheDocument();
     });
 
-    it('shows the selection size, the target source on the action, and the existing classes', () => {
+    it('shows the selection size and the apply action', () => {
         render(BulkAnnotationClassPanel, { props: defaultProps });
 
-        expect(screen.getByText('Selected images: 10')).toBeInTheDocument();
-        expect(screen.getByTestId('bulk-annotation-class-apply')).toHaveTextContent(
-            'Add annotation class to ground_truth'
+        expect(screen.getByText('10 images selected')).toBeInTheDocument();
+        expect(screen.getByTestId('bulk-annotation-class-apply')).toHaveTextContent('Add class');
+        expect(screen.getByTestId('bulk-annotation-class-hint')).toHaveTextContent(
+            'Change or remove annotations in the annotation view.'
         );
-        expect(screen.getByTestId('existing-class-counts')).toHaveTextContent('dog');
-    });
-
-    it('shows a loading state for the existing classes', () => {
-        render(BulkAnnotationClassPanel, { props: { ...defaultProps, isLoadingCounts: true } });
-
-        expect(screen.getByTestId('existing-class-counts-loading')).toBeInTheDocument();
     });
 
     it('reports a picked annotation source', async () => {
@@ -68,7 +60,7 @@ describe('BulkAnnotationClassPanel', () => {
         expect(onSourceChange).toHaveBeenCalledWith('predictions');
     });
 
-    it('asks for confirmation before applying and derives the skip count from the counts', async () => {
+    it('asks for confirmation before applying', async () => {
         const user = userEvent.setup();
         render(BulkAnnotationClassPanel, { props: defaultProps });
 
@@ -77,11 +69,8 @@ describe('BulkAnnotationClassPanel', () => {
 
         expect(onApply).not.toHaveBeenCalled();
         const dialog = await screen.findByRole('dialog');
-        expect(dialog).toHaveTextContent('7 images');
-        expect(dialog).toHaveTextContent('ground_truth');
-        expect(screen.getByTestId('confirm-apply-skipped')).toHaveTextContent(
-            '3 images already have this annotation class and are skipped.'
-        );
+        expect(dialog).toHaveTextContent('Add dog to 10 images in ground_truth.');
+        expect(dialog).toHaveTextContent('This cannot be undone.');
     });
 
     it('applies the picked annotation class and source on confirmation', async () => {

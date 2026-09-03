@@ -1,7 +1,6 @@
 <script lang="ts">
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
-    import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_local';
     import { Card, CardContent } from '$lib/components';
     import BulkAnnotationClassPanel from '$lib/components/BulkAnnotationClassPanel/BulkAnnotationClassPanel.svelte';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
@@ -9,15 +8,9 @@
     import { useBulkAddAnnotationClass } from '$lib/hooks/useBulkAddAnnotationClass/useBulkAddAnnotationClass';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import {
-        useImageAnnotationCounts,
-        useImageAnnotationCountsQueryKey
-    } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
-    import {
-        buildSelectionCountsFilter,
         formatApplyResult,
         resolveAnnotationSource,
-        toAnnotationClassOptions,
-        toSelectionClassCounts
+        toAnnotationClassOptions
     } from './BulkAnnotationClass.helpers';
 
     interface Props {
@@ -45,43 +38,6 @@
         resolveAnnotationSource({ lastSource: $lastAnnotationSource[collectionId], sourceNames })
     );
 
-    // The counts endpoint scopes by source ID, while the picker works in names. A name the user
-    // just typed has no source yet, and therefore no existing annotations to count.
-    const selectedSourceId = $derived(
-        annotationCollections.data?.find((source) => source.name === selectedSource)?.collection_id
-    );
-
-    const countsSampleIds = $derived(isVisible ? [...$selectedSampleIds] : []);
-    const countsFilter = $derived(
-        selectedSourceId
-            ? buildSelectionCountsFilter({
-                  sampleIds: countsSampleIds,
-                  annotationSourceId: selectedSourceId
-              })
-            : undefined
-    );
-
-    const counts = useImageAnnotationCounts(() => ({
-        collectionId,
-        annotationType: AnnotationType.CLASSIFICATION,
-        // Distinct samples, not object counts: the panel reports how many images are skipped.
-        countMode: AnnotationCountMode.SAMPLES,
-        filter: countsFilter,
-        // A suffix-extension of the shared key keeps mutation invalidations reaching this query
-        // while isolating its cache entry; the selection and source are part of the key because
-        // the base key does not cover the filter.
-        queryKey: [
-            ...useImageAnnotationCountsQueryKey,
-            'bulkAnnotationClassSelection',
-            { selectedSourceId, countsSampleIds }
-        ],
-        enabled: isVisible && selectedSourceId !== undefined
-    }));
-
-    const selectionClassCounts = $derived(
-        selectedSourceId ? toSelectionClassCounts(counts.data) : []
-    );
-
     const { addAnnotationClass } = useBulkAddAnnotationClass({
         getCollectionId: () => collectionId
     });
@@ -104,7 +60,7 @@
                 })
             );
         } catch {
-            toast.error('Failed to add the annotation class. Please try again.');
+            toast.error('Failed to add the class. Please try again.');
         } finally {
             isApplying = false;
         }
@@ -127,8 +83,6 @@
                         annotationClasses={toAnnotationClassOptions(annotationLabels.data)}
                         annotationSources={sourceNames}
                         {selectedSource}
-                        {selectionClassCounts}
-                        isLoadingCounts={counts.isFetching}
                         {isApplying}
                         onSourceChange={(source) =>
                             updateLastAnnotationSource(collectionId, source)}
