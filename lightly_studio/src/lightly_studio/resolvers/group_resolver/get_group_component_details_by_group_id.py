@@ -72,7 +72,7 @@ def get_group_component_details_by_group_id(
                 video=video, collection=collection_view
             )
 
-    # Process mcap locators
+    # Process mcap samples
     for mcap in mcaps:
         collection_view = collection_id_to_view.get(mcap.sample.collection_id)
         if collection_view:

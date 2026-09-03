@@ -181,6 +181,7 @@ nav:
     - All Tutorials: tutorials/index.md
     - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
     - "Tutorial 2: Evaluate YOLO26 on Your Dataset with LightlyStudio": tutorials/yolo26-model-evaluation.md
+    - "Tutorial 3: Explore LightlyTrain Embeddings in LightlyStudio": tutorials/lightlytrain-embeddings.md
   - Enterprise:
     - Overview: enterprise/index.md
     - Collaboration and Permissions: enterprise/collaboration.md
@@ -261,6 +262,7 @@ plugins:
           - tutorials/index.md
           - tutorials/yolo-traffic-cctv-object-detection.md
           - tutorials/yolo26-model-evaluation.md
+          - tutorials/lightlytrain-embeddings.md
         Enterprise:
           - enterprise/index.md
           - enterprise/collaboration.md

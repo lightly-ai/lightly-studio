@@ -32,28 +32,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- BREAKING: Change embedding model schema in the database. DuckDB users need to re-index their data. PostgreSQL users (Enterprise) are unaffected, the migration is automatic.
 - Speed up cloud storage (S3, GCS, Azure blob) indexing by enabling parallel requests.
 - Speed up cloud image indexing by reading image dimensions in small chunks instead of downloading most of each image.
 - Speed up object embeddings by loading input images in parallel.
-- Stepping to the previous or next image now drives an index range scan instead of scanning the
-  sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
-  to 0.03ms.
+- Significantly speed up the previous and next navigation in the GUI for large datasets.
 - Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
 - Python SDK (beta): Simplified embedding generator interface. Implement `embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of the former `get_embedding_model_input`.
-
-- Stepping to the previous or next annotation in the annotation details view no longer sorts the
-  whole collection on every click, for annotations on images and on video frames. On PostgreSQL
-  with 4M annotations a click went from 6.3s to 1.3s; the neighbour lookup itself went from ~6s
-  to 3ms, and the remaining 1.2s is the exact position and total counts.
 - Bump lightly-mundig to 0.1.15; its sampling algorithms are up to 7x faster.
 
 ### Deprecated
 
 ### Removed
 
-- Removed the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
+- Remove the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
   format and always writes the scikit-learn format, which is the only one LightlyStudio can load.
-- Dropped the legacy `embedding_model_hash` field from the classifier export format. Classifiers
+- Drop the legacy `embedding_model_hash` field from the classifier export format. Classifiers
   exported by older versions can no longer be loaded.
 
 ### Fixed
@@ -123,6 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add metadata filter chips to the left sidebar
 - Display classification annotations in the annotations grid.
 - Show a preview image when hovering over the 2d embedding plot.
+- Python SDK: `ImageDataset.add_samples_from_coco` and `add_samples_from_yolo` now accept `tag_depth` to tag imported samples by their folder structure, in addition to the split tag.
 
 ### Changed
 
