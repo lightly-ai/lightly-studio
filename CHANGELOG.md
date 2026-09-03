@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK (beta): Simplified embedding generator interface. Implement `embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of the former `get_embedding_model_input`.
 - Bump lightly-mundig to 0.1.15; its sampling algorithms are up to 7x faster.
 - Python SDK: Split a dataset into new sample tags with `DatasetQuery.split()`
+- Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.
 
 ### Deprecated
 
