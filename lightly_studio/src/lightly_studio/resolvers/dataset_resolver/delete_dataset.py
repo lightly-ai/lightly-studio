@@ -52,6 +52,7 @@ from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -106,6 +107,8 @@ def delete_dataset(
     _delete_sample_tag_links(session=session, dataset_id=dataset_id)
     # Must precede groups (SampleGroupLinkTable.parent_sample_id -> GroupTable).
     _delete_sample_group_links(session=session, dataset_id=dataset_id)
+    # Must precede sequences (SampleSequenceLinkTable.sequence_id -> SequenceTable).
+    _delete_sample_sequence_links(session=session, dataset_id=dataset_id)
 
     # 3. Sample attachments.
     _delete_sample_embeddings(session=session, dataset_id=dataset_id)
@@ -117,6 +120,7 @@ def delete_dataset(
 
     # 4. Sample type tables.
     _delete_groups(session=session, dataset_id=dataset_id)
+    _delete_sequences(session=session, dataset_id=dataset_id)
     _delete_videos(session=session, dataset_id=dataset_id)
     _delete_images(session=session, dataset_id=dataset_id)
     _delete_mcaps(session=session, dataset_id=dataset_id)
@@ -172,6 +176,16 @@ def _delete_sample_group_links(session: Session, dataset_id: UUID) -> None:
     session.exec(
         delete(SampleGroupLinkTable).where(
             col(SampleGroupLinkTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_sample_sequence_links(session: Session, dataset_id: UUID) -> None:
+    """Delete sample-sequence links for the dataset's samples."""
+    session.exec(
+        delete(SampleSequenceLinkTable).where(
+            col(SampleSequenceLinkTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
@@ -281,6 +295,16 @@ def _delete_groups(session: Session, dataset_id: UUID) -> None:
     """Delete group records for the dataset's samples."""
     session.exec(
         delete(GroupTable).where(col(GroupTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_sequences(session: Session, dataset_id: UUID) -> None:
+    """Delete sequence records for the dataset's samples."""
+    session.exec(
+        delete(SequenceTable).where(
+            col(SequenceTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 

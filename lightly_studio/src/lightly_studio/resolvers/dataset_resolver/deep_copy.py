@@ -60,6 +60,7 @@ from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -131,6 +132,7 @@ def deep_copy(
     _copy_videos(session=session)
     _copy_video_frames(session=session)
     _copy_groups(session=session)
+    _copy_sequences(session=session)
     _copy_captions(session=session, now=now)
     _copy_annotations(session=session, now=now)
     _copy_annotation_details(session=session, detail_table=ObjectDetectionAnnotationTable)
@@ -144,6 +146,7 @@ def deep_copy(
 
     _copy_sample_tag_links(session=session)
     _copy_sample_group_links(session=session)
+    _copy_sample_sequence_links(session=session)
     _copy_annotation_collection_coverage(session=session)
     _copy_default_embedding_spaces(session=session)
     _copy_group_component_definitions(session=session)
@@ -580,6 +583,21 @@ def _copy_groups(session: Session) -> None:
     )
 
 
+def _copy_sequences(session: Session) -> None:
+    """Copy sequences, remapping sample_id."""
+    src = _table(SequenceTable).alias("src")
+    map_sample = _map(_MAP_SAMPLE)
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"])
+    overrides = {"sample_id": map_sample.c.new_id}
+    _copy_table(
+        session=session,
+        target=SequenceTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
 def _copy_captions(session: Session, now: datetime) -> None:
     """Copy captions, remapping sample_id and parent_sample_id."""
     src = _table(CaptionTable).alias("src")
@@ -777,6 +795,31 @@ def _copy_sample_group_links(session: Session) -> None:
     _copy_table(
         session=session,
         target=SampleGroupLinkTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_sample_sequence_links(session: Session) -> None:
+    """Copy sample-sequence links, remapping sample_id and sequence_id.
+
+    ``seq_number`` and ``timestamp_ns`` are copied verbatim, so the copied sequence keeps
+    the order and the timestamps of the original.
+    """
+    src = _table(SampleSequenceLinkTable).alias("src")
+    map_sample = _map(_MAP_SAMPLE)
+    map_sequence = _map(_MAP_SAMPLE, alias="map_sequence")
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"]).join(
+        map_sequence, map_sequence.c.old_id == src.c["sequence_id"]
+    )
+    overrides = {
+        "sample_id": map_sample.c.new_id,
+        "sequence_id": map_sequence.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=SampleSequenceLinkTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

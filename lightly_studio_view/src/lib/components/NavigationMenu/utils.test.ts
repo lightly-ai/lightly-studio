@@ -33,10 +33,13 @@ describe('getMenuItem', () => {
         expect(item.id).toBe(expectedId);
     });
 
-    it('returns null for sample types without a dedicated view', () => {
-        const item = getMenuItem('dataset-id', undefined, 'col-id', SampleType.MCAP);
-        expect(item).toBeNull();
-    });
+    it.each([SampleType.MCAP, SampleType.SEQUENCE] as const)(
+        '%s returns null, having no dedicated view',
+        (sampleType) => {
+            const item = getMenuItem('dataset-id', undefined, 'col-id', sampleType);
+            expect(item).toBeNull();
+        }
+    );
 
     it('uses groupComponentName as title when provided', () => {
         const item = getMenuItem(
