@@ -1,7 +1,8 @@
 """Embedder that produces random vectors.
 
-Implements every capability so it can stand in for a real model in tests, demos
-and local development. The vectors carry no meaning, so search results are random.
+Implements every locally implemented capability so it can stand in for a real model
+in tests, demos and local development. The vectors carry no meaning, so search
+results are random.
 """
 
 from __future__ import annotations
@@ -10,8 +11,8 @@ import numpy as np
 from PIL.Image import Image
 
 from lightly_studio.embed.embedder import (
-    CropPathEmbedder,
     ImageBytesEmbedder,
+    ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
@@ -22,7 +23,7 @@ from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, Imag
 
 class RandomEmbedder(
     ImagePathEmbedder,
-    CropPathEmbedder,
+    ImageCropPathEmbedder,
     VideoPathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
@@ -30,8 +31,8 @@ class RandomEmbedder(
 ):
     """Embedder that returns a random vector for every input.
 
-    Supports every capability. The vectors are meaningless, so it is meant for
-    tests, demos and local development, not for real search.
+    Supports every locally implemented capability. The vectors are meaningless, so it
+    is meant for tests, demos and local development, not for real search.
     """
 
     __slots__ = ("_dimension",)
@@ -52,7 +53,7 @@ class RandomEmbedder(
         """Return a random vector for each image path."""
         return self._random_result(count=len(paths))
 
-    def embed_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
         """Return a random vector for each crop."""
         return self._random_result(count=len(crops))
 
