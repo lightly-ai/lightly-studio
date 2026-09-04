@@ -7,8 +7,8 @@ import torch
 from PIL import Image
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
-from lightly_studio.dataset import image_embedding
-from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.embed import image_embedding
+from lightly_studio.embed.image_embedding import EmbeddingContext
 
 
 def test_embed_image_files_batched__empty_input_returns_empty_array() -> None:

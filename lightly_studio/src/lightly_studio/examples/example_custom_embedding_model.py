@@ -21,9 +21,10 @@ from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
-from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
+from lightly_studio.dataset import file_utils
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.embed import image_crop_embedding, image_embedding
+from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio.embed.types import EmbeddingResult
 from lightly_studio.vendor import mobileclip
 
