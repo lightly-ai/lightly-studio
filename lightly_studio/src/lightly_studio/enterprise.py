@@ -14,6 +14,7 @@ import logging
 import requests
 from pydantic import BaseModel, ValidationError
 
+from lightly_studio.analytics import tracking
 from lightly_studio.cloud_credentials import apply_cloud_credentials
 from lightly_studio.database import db_manager
 from lightly_studio.dataset.env import (
@@ -33,6 +34,7 @@ class _EnterpriseConnectResponse(BaseModel):
     """
 
     engine_url: str
+    email: str | None = None
     cloud_credentials: dict[str, str] | None = None
 
 
@@ -98,6 +100,16 @@ def connect(
     except (ConnectionError, PermissionError, RuntimeError):
         logger.exception("Failed to connect to LightlyStudio enterprise instance.")
         raise
+
+    if config.email:
+        tracking.identify(email=config.email)
+        tracking.track(
+            event=tracking.ENTERPRISE_CONNECTED,
+            properties={
+                "auth_method": "token" if token else "api_key",
+                "has_cloud_credentials": bool(config.cloud_credentials),
+            },
+        )
 
     if config.cloud_credentials:
         apply_cloud_credentials(credentials=config.cloud_credentials)

@@ -28,10 +28,14 @@ UNKNOWN_VERSION = "unknown"
 
 
 class PostHogTracker(Tracker):
-    """Sends usage events to PostHog, keyed on the anonymous installation ID.
+    """Sends usage events to PostHog.
 
-    Events are queued and delivered by a background thread, so `track` does not block. Call
-    `shutdown` before the process ends, otherwise queued events are lost.
+    Events are initially keyed on the anonymous installation ID. After ``identify`` is called, the
+    tracker switches to the user's email as the distinct ID and all subsequent events are keyed on
+    that instead.
+
+    Events are queued and delivered by a background thread, so ``track`` does not block. Call
+    ``shutdown`` before the process ends, otherwise queued events are lost.
     """
 
     def __init__(self, project_api_key: str, host: str) -> None:
@@ -50,6 +54,19 @@ class PostHogTracker(Tracker):
         _silence_delivery_logging()
         self._distinct_id = str(install_id.get_install_id())
         self._common_properties = _common_properties()
+
+    def identify(self, email: str) -> None:
+        """Link the anonymous install ID to a known user and switch identity.
+
+        Calls ``alias`` so PostHog merges the pre-identification anonymous
+        events with the identified user, then switches ``distinct_id`` for all
+        subsequent ``track`` calls.
+
+        Args:
+            email: User email from the enterprise auth service.
+        """
+        self._client.alias(previous_id=self._distinct_id, distinct_id=email)
+        self._distinct_id = email
 
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         """Queue an event for delivery.

@@ -15,7 +15,11 @@ class FakeTracker:
 
     def __init__(self) -> None:
         self.events: list[tuple[str, Mapping[str, object]]] = []
+        self.identified_emails: list[str] = []
         self.shutdown_calls = 0
+
+    def identify(self, email: str) -> None:
+        self.identified_emails.append(email)
 
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         self.events.append((event, properties))
@@ -26,6 +30,9 @@ class FakeTracker:
 
 class BrokenTracker:
     """Stands in for a backend that is down or misconfigured."""
+
+    def identify(self, email: str) -> None:
+        raise RuntimeError(f"unreachable, could not identify '{email}'")
 
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         raise RuntimeError(f"unreachable, dropped '{event}' with {properties}")
@@ -40,6 +47,22 @@ def reset_tracker() -> Generator[None, None, None]:
     tracking._tracker = None
     yield
     tracking._tracker = None
+
+
+def test_identify(mocker: MockerFixture) -> None:
+    fake = FakeTracker()
+    mocker.patch.object(tracking, "_create_tracker", return_value=fake)
+
+    tracking.identify(email="user@example.com")
+
+    assert fake.identified_emails == ["user@example.com"]
+
+
+def test_identify__when_the_backend_raises(mocker: MockerFixture) -> None:
+    """A broken analytics backend must never surface to the caller."""
+    mocker.patch.object(tracking, "_create_tracker", return_value=BrokenTracker())
+
+    tracking.identify(email="user@example.com")
 
 
 def test_track(mocker: MockerFixture) -> None:

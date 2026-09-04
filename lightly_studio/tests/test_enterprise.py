@@ -13,6 +13,7 @@ from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture, MockType
 
 from lightly_studio import enterprise
+from lightly_studio.analytics import tracking
 from lightly_studio.database import db_manager
 
 
@@ -366,3 +367,72 @@ def test_connect__aws_missing_skips_env(
 
     assert "AWS_ACCESS_KEY_ID" not in os.environ
     assert "AWS_SECRET_ACCESS_KEY" not in os.environ
+
+
+def test_connect__identifies_and_tracks_with_token(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "email": "user@example.com",
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+    mock_identify = mocker.patch.object(tracking, "identify")
+    mock_track = mocker.patch.object(tracking, "track")
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    mock_identify.assert_called_once_with(email="user@example.com")
+    mock_track.assert_called_once_with(
+        event=tracking.ENTERPRISE_CONNECTED,
+        properties={"auth_method": "token", "has_cloud_credentials": False},
+    )
+
+
+def test_connect__identifies_and_tracks_with_api_key(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "email": "user@example.com",
+        "cloud_credentials": {"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "secret"},
+    }
+    mocker.patch.object(requests, "post", return_value=mock_response)
+    mock_identify = mocker.patch.object(tracking, "identify")
+    mock_track = mocker.patch.object(tracking, "track")
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", api_key="ls_testkey")
+
+    mock_identify.assert_called_once_with(email="user@example.com")
+    mock_track.assert_called_once_with(
+        event=tracking.ENTERPRISE_CONNECTED,
+        properties={"auth_method": "api_key", "has_cloud_credentials": True},
+    )
+
+
+def test_connect__skips_tracking_without_email(
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+    mock_identify = mocker.patch.object(tracking, "identify")
+    mock_track = mocker.patch.object(tracking, "track")
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    mock_identify.assert_not_called()
+    mock_track.assert_not_called()

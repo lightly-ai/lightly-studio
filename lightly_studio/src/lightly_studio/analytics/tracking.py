@@ -1,7 +1,7 @@
 """Anonymous usage tracking.
 
-Call sites use `track` and nothing else. Which backend receives the events is an implementation
-detail of this module, so replacing or dropping PostHog does not touch any caller.
+Call sites use `track` and `identify` — nothing else. Which backend receives the events is an
+implementation detail of this module, so replacing or dropping PostHog does not touch any caller.
 """
 
 from __future__ import annotations
@@ -23,10 +23,14 @@ from lightly_studio.dataset.env import (
 logger = logging.getLogger(__name__)
 
 APP_LAUNCHED = "app_launched"
+ENTERPRISE_CONNECTED = "enterprise_connected"
 
 
 class NoOpTracker(Tracker):
     """Tracker that drops everything, used when tracking is off."""
+
+    def identify(self, email: str) -> None:
+        """Discard the identification."""
 
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         """Discard the event."""
@@ -40,6 +44,20 @@ class LaunchSource(str, Enum):
 
     QUICKSTART = "quickstart"
     GUI = "gui"
+
+
+def identify(email: str) -> None:
+    """Link the current anonymous installation to a known user.
+
+    Never raises. Tracking is best effort and must not be able to break the caller.
+
+    Args:
+        email: User email from the enterprise auth service.
+    """
+    try:
+        _get_tracker().identify(email=email)
+    except Exception:
+        logger.debug("Could not identify the user.", exc_info=True)
 
 
 def track(event: str, properties: Mapping[str, object]) -> None:
