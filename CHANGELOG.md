@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the
   values of a categorical metadata field such as weather or city.
 - Python SDK: Select images by the diversity of their annotation crop embeddings with `Sampling.subpart_diversity()`.
+- Add bulk deletion for selected annotations in the GUI.
 
 ### Changed
 
