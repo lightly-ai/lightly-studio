@@ -89,27 +89,27 @@ class TestPerceptionEncoderEmbedder:
         # to the full image, so the embeddings must match.
         assert np.allclose(crop_result.embeddings[0], image_result.embeddings[0], atol=1e-4)
 
-    def test_embed_frames__empty_input(self) -> None:
+    def test_embed_images_pil__empty_input(self) -> None:
         perception_encoder = PerceptionEncoderEmbedder()
-        result = perception_encoder.embed_frames(frames=[])
+        result = perception_encoder.embed_images_pil(images=[])
 
         assert result.embeddings.shape == (0, 512)
         assert result.kept_indices == []
 
-    def test_embed_frames__matches_embed_images(self) -> None:
+    def test_embed_images_pil__matches_embed_images(self) -> None:
         perception_encoder = PerceptionEncoderEmbedder()
         cat_image_path = FIXTURES_DIR / "cat.jpg"
         with Image.open(cat_image_path) as image:
             cat_pil_image = image.convert("RGB")
 
-        frame_result = perception_encoder.embed_frames(frames=[cat_pil_image])
+        pil_image_result = perception_encoder.embed_images_pil(images=[cat_pil_image])
         image_result = perception_encoder.embed_images(paths=[str(cat_image_path)])
 
-        assert frame_result.embeddings.shape == (1, 512)
-        assert frame_result.kept_indices == [0]
+        assert pil_image_result.embeddings.shape == (1, 512)
+        assert pil_image_result.kept_indices == [0]
         # An in-memory PIL image is preprocessed and encoded identically to the same
         # image loaded from disk, so the embeddings must match.
-        assert np.allclose(frame_result.embeddings[0], image_result.embeddings[0], atol=1e-4)
+        assert np.allclose(pil_image_result.embeddings[0], image_result.embeddings[0], atol=1e-4)
 
     def test_embed_videos(self) -> None:
         perception_encoder = PerceptionEncoderEmbedder()
