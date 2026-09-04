@@ -8,7 +8,6 @@ import fsspec
 import numpy as np
 import torch
 from av import FFmpegError, container
-from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
 
@@ -18,11 +17,14 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcomeReport,
     MissingInputFileError,
 )
-from lightly_studio.dataset.embedding_generator import (
-    ImageEmbeddingGenerator,
-    VideoEmbeddingGenerator,
-)
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
+from lightly_studio.embed.embedder import (
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    ImagePILEmbedder,
+    TextEmbedder,
+    VideoPathEmbedder,
+)
 from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
@@ -36,7 +38,13 @@ MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8
 
 
-class PerceptionEncoderEmbedder(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
+class PerceptionEncoderEmbedder(
+    ImagePathEmbedder,
+    ImageCropPathEmbedder,
+    ImagePILEmbedder,
+    TextEmbedder,
+    VideoPathEmbedder,
+):
     """Perception Encoder Core embedding model."""
 
     def __init__(self) -> None:
@@ -73,76 +81,71 @@ class PerceptionEncoderEmbedder(ImageEmbeddingGenerator, VideoEmbeddingGenerator
             dimension=self._model.output_dim,
         )
 
-    def embed_text(self, text: str) -> list[float]:
-        """Embed a text with Perception Encoder.
+    def embed_text(self, texts: list[str]) -> EmbeddingResult:
+        """Embed a batch of texts with Perception Encoder.
 
         Args:
-            text: The text to embed.
+            texts: The strings to embed.
 
         Returns:
-            A list of floats representing the generated embedding.
+            The embeddings and the indices of the inputs they cover.
         """
-        tokenized = self._tokenizer([text]).to(self._device)
-        with torch.no_grad():
-            embedding = self._model.encode_text(tokenized, normalize=True)[0]
-            # Convert embedding to list of floats.
-            embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
-        return embedding_list
+        if not texts:
+            empty = np.empty((0, self._model.output_dim), dtype=np.float32)
+            return EmbeddingResult(embeddings=empty, kept_indices=[])
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
+        tokenized = self._tokenizer(texts).to(self._device)
+        with torch.no_grad():
+            embeddings = self._model.encode_text(tokenized, normalize=True).cpu().numpy()
+        return EmbeddingResult(
+            embeddings=embeddings.astype(np.float32), kept_indices=list(range(len(texts)))
+        )
+
+    def embed_images(self, paths: list[str]) -> EmbeddingResult:
         """Embed images with Perception Encoder.
 
         Args:
-            filepaths: A list of file paths to the images to embed.
-            show_progress: Whether to show a progress bar during embedding.
+            paths: fsspec paths or URLs of the images to embed.
 
         Returns:
-            An ``EmbeddingResult`` with embeddings for the readable files, in the same
-            order as the corresponding input file paths.
+            The embeddings and the indices of the inputs they cover.
         """
         return image_embedding.embed_image_files_batched(
-            filepaths=filepaths,
+            filepaths=paths,
             context=self._embedding_context(),
-            show_progress=show_progress,
+            show_progress=True,
         )
 
-    def embed_image_crops(
-        self, image_crops: list[ImageCrop], show_progress: bool = True
-    ) -> EmbeddingResult:
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
         """Embed image crops with Perception Encoder.
 
         Args:
-            image_crops: A list of image crop definitions to embed.
-            show_progress: Whether to show a progress bar during embedding.
+            crops: The crops to embed.
 
         Returns:
-            An ``EmbeddingResult`` with embeddings for the crops of readable files,
-            in the same order as the corresponding input crops.
+            The embeddings and the indices of the inputs they cover.
         """
         return image_crop_embedding.embed_image_crops_batched(
-            image_crops=image_crops,
+            image_crops=crops,
             context=self._embedding_context(),
-            show_progress=show_progress,
+            show_progress=True,
         )
 
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]:
-        """Embed in-memory PIL images with Perception Encoder.
+    def embed_frames(self, frames: list[Image.Image]) -> EmbeddingResult:
+        """Embed video frames with Perception Encoder.
 
         Args:
-            images: PIL images to embed.
-            show_progress: Whether to show a progress bar during embedding.
+            frames: The frames to embed, as PIL images.
 
         Returns:
-            A numpy array representing the generated embeddings in the same order
-            as the input images.
+            The embeddings and the indices of the inputs they cover.
         """
-        return image_embedding.embed_pil_images_batched(
-            images=images,
+        embeddings = image_embedding.embed_pil_images_batched(
+            images=frames,
             context=self._embedding_context(),
-            show_progress=show_progress,
+            show_progress=True,
         )
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(frames))))
 
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched image embedding."""
@@ -156,11 +159,11 @@ class PerceptionEncoderEmbedder(ImageEmbeddingGenerator, VideoEmbeddingGenerator
             ),
         )
 
-    def embed_videos(self, filepaths: list[str]) -> EmbeddingResult:
+    def embed_videos(self, paths: list[str]) -> EmbeddingResult:
         """Embed videos with Perception Encoder, skipping missing or broken files.
 
         Args:
-            filepaths: A list of file paths to the videos to embed.
+            paths: fsspec paths or URLs of the videos to embed.
 
         Returns:
             An ``EmbeddingResult`` whose embeddings cover only the readable videos, with
@@ -169,7 +172,7 @@ class PerceptionEncoderEmbedder(ImageEmbeddingGenerator, VideoEmbeddingGenerator
         Raises:
             AllInputFilesFailedError: If every attempted file was missing or broken.
         """
-        total_videos = len(filepaths)
+        total_videos = len(paths)
         if not total_videos:
             empty = np.empty((0, self._model.output_dim), dtype=np.float32)
             return EmbeddingResult(embeddings=empty, kept_indices=[])
@@ -179,7 +182,7 @@ class PerceptionEncoderEmbedder(ImageEmbeddingGenerator, VideoEmbeddingGenerator
         report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
 
         def preprocessed_videos_iter() -> Iterator[torch.Tensor]:
-            for index, filepath in enumerate(filepaths):
+            for index, filepath in enumerate(paths):
                 frames: torch.Tensor | None = None
                 with report.track(path=filepath):
                     frames = _load_video_frames(filepath, self._preprocess)
