@@ -66,21 +66,21 @@ class TestPerceptionEncoderEmbedder:
         assert np.isclose(cat_embedding_normed[2], 0.0307, atol=1e-4)
         assert np.isclose(cat_embedding_normed[3], -0.0493, atol=1e-4)
 
-    def test_embed_crops__empty_input(self) -> None:
+    def test_embed_image_crops__empty_input(self) -> None:
         perception_encoder = PerceptionEncoderEmbedder()
-        result = perception_encoder.embed_crops(crops=[])
+        result = perception_encoder.embed_image_crops(crops=[])
 
         assert result.embeddings.shape == (0, 512)
         assert result.kept_indices == []
 
-    def test_embed_crops__full_image_crop_matches_embed_images(self) -> None:
+    def test_embed_image_crops__full_image_crop_matches_embed_images(self) -> None:
         perception_encoder = PerceptionEncoderEmbedder()
         cat_image_path = FIXTURES_DIR / "cat.jpg"
         with Image.open(cat_image_path) as image:
             width, height = image.size
 
         full_crop = ImageCrop(filepath=str(cat_image_path), x=0, y=0, width=width, height=height)
-        crop_result = perception_encoder.embed_crops(crops=[full_crop])
+        crop_result = perception_encoder.embed_image_crops(crops=[full_crop])
         image_result = perception_encoder.embed_images(paths=[str(cat_image_path)])
 
         assert crop_result.embeddings.shape == (1, 512)

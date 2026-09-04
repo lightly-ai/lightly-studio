@@ -19,7 +19,7 @@ from lightly_studio.core.file_outcome_report import (
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.embed.embedder import (
-    CropPathEmbedder,
+    ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
@@ -40,7 +40,7 @@ VIDEO_FRAMES_PER_SAMPLE: int = 8
 
 class PerceptionEncoderEmbedder(
     ImagePathEmbedder,
-    CropPathEmbedder,
+    ImageCropPathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
@@ -116,7 +116,7 @@ class PerceptionEncoderEmbedder(
             show_progress=True,
         )
 
-    def embed_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
         """Embed image crops with Perception Encoder.
 
         Args:
