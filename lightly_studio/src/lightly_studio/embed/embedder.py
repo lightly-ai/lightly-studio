@@ -26,25 +26,25 @@ class Capability(str, Enum):
     """
 
     IMAGE_PATH = "image_path"
-    """Image by fsspec path."""
+    """Ingest: image by fsspec path."""
 
     IMAGE_CROP_PATH = "image_crop_path"
-    """Crop given by an image fsspec path and a pixel box."""
+    """Ingest: crop specified by an image fsspec path and a pixel box."""
 
     VIDEO_PATH = "video_path"
-    """Video by fsspec path."""
+    """Ingest: video by fsspec path."""
 
     IMAGE_PIL = "image_pil"
-    """Video frame as a PIL image."""
+    """Ingest: video frame as a PIL image."""
 
     TEXT = "text"
-    """Text query."""
+    """Interactive: text query."""
 
     IMAGE_BYTES = "image_bytes"
-    """Image as raw file bytes."""
+    """Interactive and ingest: image as raw file bytes."""
 
     VIDEO_BYTES = "video_bytes"
-    """Video as raw file bytes. No local implementation yet."""
+    """Ingest: video as raw file bytes. No local implementation yet."""
 
 
 class Embedder(ABC):
