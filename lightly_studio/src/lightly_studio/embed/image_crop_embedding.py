@@ -17,7 +17,7 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcome,
     FileOutcomeReport,
 )
-from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio.embed.types import EmbeddingResult, ImageCrop
 from lightly_studio.utils import executor, parallelize
 

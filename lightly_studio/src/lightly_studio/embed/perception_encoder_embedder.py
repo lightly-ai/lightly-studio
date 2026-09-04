@@ -18,17 +18,17 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcomeReport,
     MissingInputFileError,
 )
+from lightly_studio.dataset.embedding_generator import (
+    ImageEmbeddingGenerator,
+    VideoEmbeddingGenerator,
+)
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.embed import image_crop_embedding, image_embedding
-from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
-from .embedding_generator import (
-    ImageEmbeddingGenerator,
-    VideoEmbeddingGenerator,
-)
+from . import image_crop_embedding, image_embedding
+from .image_embedding import EmbeddingContext
 
 MODEL_NAME = "PE-Core-T16-384"
 DEFAULT_VIDEO_CHANNEL = 0
@@ -36,7 +36,7 @@ MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8
 
 
-class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
+class PerceptionEncoderEmbedder(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
     """Perception Encoder Core embedding model."""
 
     def __init__(self) -> None:
