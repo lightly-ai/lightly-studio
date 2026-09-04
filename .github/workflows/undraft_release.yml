@@ -1,0 +1,53 @@
+name: Undraft Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the draft release to publish, e.g. v1.2.3.
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  undraft-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require the version on PyPI
+        env:
+          TAG: ${{ inputs.tag }}
+        # The release is drafted so that a failed PyPI publish stays
+        # recoverable; publishing it before the wheel is installable is the
+        # state that drafting exists to avoid.
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          status="$(curl -sS -o "${RUNNER_TEMP}/pypi.json" -w '%{http_code}' \
+            "https://pypi.org/pypi/lightly-studio/${version}/json")"
+          if [ "${status}" != "200" ]; then
+            echo "::error::lightly-studio ${version} is not on PyPI (HTTP ${status}). Publish the wheel first."
+            exit 1
+          fi
+          # A version record outlives its files: a half-finished upload or a yank still answers 200.
+          if ! python3 -c 'import json, sys; sys.exit(0 if any(f["packagetype"] == "bdist_wheel" and not f["yanked"] for f in json.load(open(sys.argv[1]))["urls"]) else 1)' \
+            "${RUNNER_TEMP}/pypi.json"; then
+            echo "::error::lightly-studio ${version} has no installable wheel on PyPI."
+            exit 1
+          fi
+
+      - name: Publish the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "$(gh release view "${TAG}" --repo "${REPO}" --json isDraft --jq .isDraft)" != "true" ]; then
+            echo "::error::${TAG} is not a draft release."
+            exit 1
+          fi
+          gh release edit "${TAG}" --repo "${REPO}" --draft=false
+          echo "::notice::Published ${TAG}."
