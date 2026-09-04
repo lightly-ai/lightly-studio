@@ -1,12 +1,15 @@
-"""Labelformat git-pin guard.
+"""Version guards and the release version reader.
 
-Reading, bumping, and writing the `[project]` version is left to
+Bumping and writing the `[project]` version is left to
 `uv version --bump` (see the Prepare Release workflow) rather than
 reimplemented here - it already parses/writes real TOML and handles more
 than plain X.Y.Z (alpha/beta/rc/post/dev), which regex-based text editing
-kept getting subtly wrong in review. This module keeps only the guard that
-`uv` has no way to know about: whether Labelformat itself needs a release
-first.
+kept getting subtly wrong in review. This module keeps the guard that `uv`
+has no way to know about - whether Labelformat itself needs a release first -
+and a plain reader for the Publish Release workflow, which must learn the
+version to tag without resolving the project environment first. That reader
+matches a line rather than parsing TOML: `tomllib` is 3.11+, and this CLI has
+to stay importable on whatever `python3` a runner or a laptop provides.
 """
 
 from __future__ import annotations
@@ -14,6 +17,27 @@ from __future__ import annotations
 import re
 
 from prepare_release.errors import PrepareReleaseError
+
+_PROJECT_HEADER_RE = re.compile(r"^\[project\][ \t]*$", re.MULTILINE)
+_ANY_HEADER_RE = re.compile(r"^\[", re.MULTILINE)
+_VERSION_RE = re.compile(r"^version[ \t]*=[ \t]*[\"'](?P<version>[^\"']+)[\"']", re.MULTILINE)
+
+
+def read_project_version(pyproject_text: str) -> str:
+    """Reads the version out of the `[project]` table of a pyproject.toml.
+
+    The tag comes from the package rather than from workflow input, so the two
+    can never disagree. Only the `[project]` table is searched, so a `version`
+    in a later table cannot be picked up by mistake.
+
+    Raises:
+        PrepareReleaseError: There is no `[project]` table, or it declares no
+            plain `version = "..."`.
+    """
+    match = _VERSION_RE.search(_project_table(pyproject_text))
+    if match is None:
+        raise PrepareReleaseError('no plain `version = "..."` found in the [project] table')
+    return match["version"]
 
 
 def check_labelformat_pin(pyproject_text: str) -> None:
@@ -52,3 +76,13 @@ def _strip_comment(line: str) -> str:
         elif char == "#":
             return line[:i]
     return line
+
+
+def _project_table(pyproject_text: str) -> str:
+    """Returns the body of the `[project]` table, up to the next table header."""
+    header = _PROJECT_HEADER_RE.search(pyproject_text)
+    if header is None:
+        raise PrepareReleaseError("no [project] table found in pyproject.toml")
+    next_header = _ANY_HEADER_RE.search(pyproject_text, header.end())
+    end = next_header.start() if next_header else len(pyproject_text)
+    return pyproject_text[header.end() : end]

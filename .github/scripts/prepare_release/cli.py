@@ -1,11 +1,11 @@
-"""Command-line entry point for the prepare-release tooling.
+"""Command-line entry point for the release tooling.
 
-Backs the "Prepare Release" GitHub Actions workflow
-(`.github/workflows/prepare_release.yml`). Each subcommand does one small,
-independently testable piece of preparing a release: promoting the
-changelog and guarding against a handful of ways that can quietly go
-wrong. Reading/bumping/writing the `[project]` version itself is left to
-`uv version --bump` directly in the workflow (see version.py's docstring).
+Backs the "Prepare Release" and "Publish Release" GitHub Actions workflows.
+Each subcommand does one small, independently testable piece of preparing or
+publishing a release: promoting the changelog, assembling the release notes,
+and guarding against a handful of ways those can quietly go wrong. Bumping
+and writing the `[project]` version is left to `uv version --bump` directly
+in the workflow (see version.py's docstring); `read-version` only reads it.
 
 Usage:
     python -m prepare_release promote-changelog --changelog CHANGELOG.md \
@@ -18,13 +18,15 @@ import argparse
 import sys
 from pathlib import Path
 
-from prepare_release import changelog, lock, pr_body, version
+from prepare_release import changelog, lock, pr_body, release_notes, version
 from prepare_release.errors import PrepareReleaseError
 
 CHECK_LABELFORMAT_PIN = "check-labelformat-pin"
 PROMOTE_CHANGELOG = "promote-changelog"
 ASSERT_LOCK_DIFF = "assert-lock-diff"
 RENDER_PR_BODY = "render-pr-body"
+READ_VERSION = "read-version"
+RENDER_RELEASE_NOTES = "render-release-notes"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -56,6 +58,24 @@ def main(argv: list[str] | None = None) -> int:
     pr_body_parser.add_argument("--version", required=True)
     pr_body_parser.add_argument("--output", type=Path, required=True)
 
+    read_version = subparsers.add_parser(
+        READ_VERSION, help="print the [project] version of a pyproject.toml"
+    )
+    read_version.add_argument("--pyproject", type=Path, required=True)
+
+    release_notes_parser = subparsers.add_parser(
+        RENDER_RELEASE_NOTES, help="assemble the GitHub release body"
+    )
+    release_notes_parser.add_argument("--changelog", type=Path, required=True)
+    release_notes_parser.add_argument("--version", required=True)
+    release_notes_parser.add_argument(
+        "--generated",
+        type=Path,
+        required=True,
+        help="body from the `releases/generate-notes` API",
+    )
+    release_notes_parser.add_argument("--output", type=Path, required=True)
+
     args = parser.parse_args(argv)
 
     try:
@@ -71,6 +91,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         PROMOTE_CHANGELOG: _cmd_promote_changelog,
         ASSERT_LOCK_DIFF: _cmd_assert_lock_diff,
         RENDER_PR_BODY: _cmd_render_pr_body,
+        READ_VERSION: _cmd_read_version,
+        RENDER_RELEASE_NOTES: _cmd_render_release_notes,
     }
     handlers[args.command](args)
     return 0
@@ -104,6 +126,20 @@ def _cmd_render_pr_body(args: argparse.Namespace) -> None:
         changelog_text=args.changelog.read_text(), version=args.version
     )
     body = pr_body.render_pr_body(section_body=section_body, version=args.version)
+    args.output.write_text(body)
+
+
+def _cmd_read_version(args: argparse.Namespace) -> None:
+    print(version.read_project_version(args.pyproject.read_text()))
+
+
+def _cmd_render_release_notes(args: argparse.Namespace) -> None:
+    section = changelog.extract_released_section(
+        changelog_text=args.changelog.read_text(), version=args.version
+    )
+    body = release_notes.render_release_notes(
+        changelog_section=section, generated_notes=args.generated.read_text()
+    )
     args.output.write_text(body)
 
 
