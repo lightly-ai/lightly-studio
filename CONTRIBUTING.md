@@ -42,12 +42,12 @@ make static-checks
 make test
 
 # Frontend
-cd lightly_studio_view
+cd ../lightly_studio_view
 make static-checks
 make test
 
 # Embedding server package
-cd lightly_embed
+cd ../lightly_embed
 make static-checks
 make test
 ```

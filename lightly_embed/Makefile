@@ -43,8 +43,9 @@ format:
 # The dependency tree of the published wheel is the whole point of this package: it has to
 # install next to a customer's own CUDA and torch pins. In a monorepo that invariant is easy to
 # break by accident, so it is asserted rather than reviewed. Matched as substrings, so that
-# variants such as duckdb-engine, torchvision or opencv-python-headless are caught too.
-FORBIDDEN_WHEEL_DEPENDENCIES := lightly-studio torch duckdb opencv
+# variants such as duckdb-engine, torchvision or opencv-python-headless are caught too. `cuda`
+# and `nvidia` cover the CUDA wheels, which can arrive without torch pulling them in.
+FORBIDDEN_WHEEL_DEPENDENCIES := lightly-studio torch duckdb opencv cuda nvidia
 # Defaults to the floor of `requires-python`, where a marker-gated dependency is most likely to
 # slip in. The unit test workflow resolves the tree once per Python it supports.
 WHEEL_PYTHON_VERSION ?= 3.9

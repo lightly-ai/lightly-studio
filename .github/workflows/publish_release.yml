@@ -229,10 +229,17 @@ jobs:
   # LIG-10690, so that the first automated publish in this repo is a flag flip rather than new
   # machinery written under time pressure. Until then the wheel is only built and attached to
   # the run, which is also what proves the release job works.
+  #
+  # TODO(Iunir, 09/2026): LIG-10690 has to move this validation ahead of the tag and the draft
+  # release before it enables the upload. As it stands a failure here leaves a tagged release
+  # whose wheel was never published, which is tolerable only while nothing is uploaded.
   build-lightly-embed:
     name: Build the lightly-embed wheel
     needs: publish-release
-    if: needs.publish-release.outputs.release == 'true'
+    # Deliberately not gated on `release`: an already tagged and drafted release still has to be
+    # able to rebuild and revalidate its wheel, so that a failure here is retried by dispatching
+    # the workflow again rather than by deleting the draft. Nothing in this job writes anything.
+    if: needs.publish-release.result == 'success' && needs.publish-release.outputs.sha != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

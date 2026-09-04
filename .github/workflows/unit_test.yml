@@ -371,12 +371,19 @@ jobs:
         # The floor and the ceiling of `requires-python`; nothing in the package is version
         # specific.
         python: ["3.9", "3.14"]
+    # This job runs Makefile targets the pull request itself supplies. The repository default is
+    # a write-scoped token, so it is pinned to read-only and kept out of .git/config, the same
+    # way check-release-tooling is.
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: lightly_embed
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
