@@ -55,6 +55,28 @@ dataset.match(VideoSampleField.width > 1920).add_tag("high-res")
 
 See [Search and Filter](search_and_filter.md#query-in-python) for the full query API.
 
+### Splitting a dataset
+
+`DatasetQuery.split` creates new tags and assigns every matching image or video sample to exactly
+one of them. Tag sizes are relative weights, so this creates a 70/20/10 train, validation, and
+test split. The optional seed makes the assignment reproducible while the queried samples remain
+unchanged.
+
+```python
+counts = dataset.query().split({"train": 7, "validation": 2, "test": 1}, seed=42)
+# {"train": 700, "validation": 200, "test": 100} for a 1,000-sample dataset
+```
+
+Split a workload instead by choosing one tag for each reviewer:
+
+```python
+from lightly_studio.core.dataset_query import ImageSampleField
+
+dataset.match(ImageSampleField.width > 1920).split({"reviewer-a": 1, "reviewer-b": 1})
+```
+
+Output tag names must be new. Video-frame datasets are not yet supported.
+
 ### Tagging when loading data
 
 When working with images, the `ImageDataset` class provides convenience features to automatically
