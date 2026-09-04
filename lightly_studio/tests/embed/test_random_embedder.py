@@ -23,11 +23,11 @@ class TestRandomEmbedder:
         assert result.embeddings.dtype == np.float32
         assert result.kept_indices == [0, 1]
 
-    def test_embed_crops(self) -> None:
+    def test_embed_image_crops(self) -> None:
         embedder = RandomEmbedder(dimension=4)
         crop = ImageCrop(filepath="a.jpg", x=0, y=0, width=1, height=1)
 
-        result = embedder.embed_crops(crops=[crop])
+        result = embedder.embed_image_crops(crops=[crop])
 
         assert result.embeddings.shape == (1, 4)
         assert result.kept_indices == [0]
