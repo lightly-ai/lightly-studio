@@ -1,9 +1,9 @@
 """Capability-split embedder interfaces.
 
 Defines the ``Embedder`` base class and one abstract subclass per input a model
-can embed: images and image crops by path, videos, video frames, text, and
-images by bytes. A concrete model implements only the capabilities it supports,
-and callers pick an embedder by the capability they need.
+can embed: images and crops by path, videos, video frames, text, and images by
+bytes. A concrete model implements only the capabilities it supports, and
+callers pick an embedder by the capability they need.
 """
 
 from __future__ import annotations
@@ -21,9 +21,8 @@ class Capability(str, Enum):
 
     <span class="doc-badge doc-badge--beta">Beta</span>
 
-    Some capabilities are used at ingest time (IMAGE_PATH, IMAGE_CROP_PATH,
-    VIDEO_PATH, IMAGE_PIL, VIDEO_BYTES) and some interactively while the GUI
-    runs (TEXT, IMAGE_BYTES).
+    Some capabilities are used at ingest, when data is loaded into the database.
+    Others are needed interactively while the GUI runs.
     """
 
     IMAGE_PATH = "image_path"
