@@ -48,7 +48,6 @@ class Capability(str, Enum):
     """Video as raw file bytes. No local implementation yet."""
 
 
-
 class Embedder(ABC):
     """Base class for every embedder.
 
