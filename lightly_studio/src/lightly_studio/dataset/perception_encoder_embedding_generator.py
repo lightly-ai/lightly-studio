@@ -22,7 +22,7 @@ from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
-from lightly_studio.utils import batching
+from lightly_studio.utils import batching, executor, parallelize
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from .embedding_generator import (
@@ -177,12 +177,28 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
         kept_indices: list[int] = []
         report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
+        preprocess = self._preprocess
+
+        def decode_one(filepath: str) -> tuple[torch.Tensor | None, FileOutcome]:
+            # Runs on a worker thread: decode only, no shared state.
+            try:
+                return _load_video_frames(filepath, preprocess), FileOutcome.ADDED
+            except MissingInputFileError:
+                return None, FileOutcome.MISSING
+            except BrokenInputFileError:
+                return None, FileOutcome.BROKEN
 
         def preprocessed_videos_iter() -> Iterator[torch.Tensor]:
-            for index, filepath in enumerate(filepaths):
-                frames: torch.Tensor | None = None
-                with report.track(path=filepath):
-                    frames = _load_video_frames(filepath, self._preprocess)
+            # Decode in parallel, in input order. The report is not thread-safe, so record it here.
+            decoded = parallelize.thread_imap_lazy(
+                function=decode_one,
+                iterable=filepaths,
+                max_workers=executor.get_media_worker_count(),
+                # Read at most two batches ahead so the next batch is ready during inference.
+                buffer_size=2 * MAX_BATCH_SIZE,
+            )
+            for index, (frames, outcome) in enumerate(decoded):
+                report.record(path=filepaths[index], outcome=outcome)
                 if frames is not None:
                     kept_indices.append(index)
                     yield frames
