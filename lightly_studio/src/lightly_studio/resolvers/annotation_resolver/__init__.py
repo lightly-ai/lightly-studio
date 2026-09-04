@@ -1,5 +1,10 @@
 """Resolvers for database operations."""
 
+from lightly_studio.resolvers.annotation_resolver.bulk_create_classifications import (
+    BulkCreateClassificationsResult,
+    bulk_create_classifications,
+    bulk_create_classifications_from_query,
+)
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
     delete_annotation,
@@ -64,7 +69,10 @@ from lightly_studio.resolvers.annotation_resolver.update_temporal_span import (
 __all__ = [
     "AnnotationCrop",
     "AnnotationOrdering",
+    "BulkCreateClassificationsResult",
     "build_sample_ids_query",
+    "bulk_create_classifications",
+    "bulk_create_classifications_from_query",
     "create_many",
     "delete_annotation",
     "delete_annotations",
