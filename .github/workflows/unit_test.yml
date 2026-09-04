@@ -35,7 +35,7 @@ jobs:
       release_tooling: ${{ steps.filter.outputs.release_tooling || 'true' }}
     steps:
       - name: Checkout Code # Needed for merge_group event
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Filter changed paths
         id: filter
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -171,7 +171,7 @@ jobs:
             make_target: test-postgres
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -217,7 +217,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -263,7 +263,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -299,7 +299,7 @@ jobs:
         working-directory: fast_track
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
       - name: Set Up Node
@@ -334,7 +334,7 @@ jobs:
         working-directory: .github/scripts
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
