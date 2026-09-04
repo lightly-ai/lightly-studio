@@ -262,15 +262,22 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 === "Custom Annotations"
 
     You can load any format that LightlyStudio does not support directly. First add
-    the raw images. Then attach annotations in Python with the `Create*` classes.
+    the raw images. Then attach annotations in Python with the `Create*` classes for
+    classification, object detection, and segmentation.
 
     Parse your annotation file into Python and match each entry to a sample by its
     absolute path. The example below reads the annotations from a dictionary. In
     practice, you read them from your own CSV, XML, or JSON file:
 
     ```python
+    import numpy as np
+
     import lightly_studio as ls
-    from lightly_studio.core.annotation import CreateObjectDetection
+    from lightly_studio.core.annotation import (
+        CreateClassification,
+        CreateObjectDetection,
+        CreateSegmentationMask,
+    )
 
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
@@ -279,11 +286,22 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=images_path)
 
+    # A binary mask is indexed as [row, column], so its shape is (height, width).
+    binary_mask = np.zeros((480, 640), dtype=np.uint8)
+    binary_mask[160:300, 300:480] = 1
+
     # Your custom format, parsed into Python and keyed by absolute image path.
     # Add one entry per image. Images with no entry are skipped below.
     custom_annotations = {
         f"{images_path}/000000565296.jpg": [
+            CreateClassification(class_name="outdoor"),
             CreateObjectDetection(class_name="vehicle", x=80, y=120, width=180, height=120),
+        ],
+        f"{images_path}/000000001732.jpg": [
+            CreateSegmentationMask.from_binary_mask(
+                class_name="foreground",
+                binary_mask=binary_mask,
+            ),
         ],
     }
 
@@ -297,8 +315,10 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     ```
 
     Bounding boxes use pixel coordinates with `x` and `y` at the top-left corner.
-    LightlyStudio adds new class names to the dataset automatically. The
-    `annotation_source` groups annotations, for example as `ground_truth` or model outputs.
+    Segmentation masks are created from a binary mask with shape `(height, width)`
+    that matches the image. LightlyStudio adds new class names to the dataset
+    automatically. The `annotation_source` groups annotations, for example as
+    `ground_truth` or model outputs.
 
 === "Lightly Object Detections"
 
