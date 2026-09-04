@@ -10,8 +10,8 @@ import numpy as np
 from PIL.Image import Image
 
 from lightly_studio.embed.embedder import (
-    CropPathEmbedder,
     ImageBytesEmbedder,
+    ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
@@ -22,7 +22,7 @@ from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, Imag
 
 class RandomEmbedder(
     ImagePathEmbedder,
-    CropPathEmbedder,
+    ImageCropPathEmbedder,
     VideoPathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,

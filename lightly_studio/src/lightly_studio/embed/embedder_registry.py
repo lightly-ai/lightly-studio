@@ -11,9 +11,9 @@ import logging
 
 from lightly_studio.embed.embedder import (
     Capability,
-    CropPathEmbedder,
     Embedder,
     ImageBytesEmbedder,
+    ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 _CAPABILITY_TO_TYPE = {
     Capability.IMAGE_PATH: ImagePathEmbedder,
-    Capability.CROP_PATH: CropPathEmbedder,
+    Capability.IMAGE_CROP_PATH: ImageCropPathEmbedder,
     Capability.VIDEO_PATH: VideoPathEmbedder,
     Capability.IMAGE_PIL: ImagePILEmbedder,
     Capability.TEXT: TextEmbedder,
@@ -79,10 +79,10 @@ class EmbedderRegistry:
         embedder = self._space_key_to_embedder.get(space_key)
         return embedder if isinstance(embedder, ImagePathEmbedder) else None
 
-    def get_crop_path_embedder(self, space_key: str) -> CropPathEmbedder | None:
+    def get_image_crop_path_embedder(self, space_key: str) -> ImageCropPathEmbedder | None:
         """Get the space's embedder if it embeds crops by path, else None."""
         embedder = self._space_key_to_embedder.get(space_key)
-        return embedder if isinstance(embedder, CropPathEmbedder) else None
+        return embedder if isinstance(embedder, ImageCropPathEmbedder) else None
 
     def get_video_path_embedder(self, space_key: str) -> VideoPathEmbedder | None:
         """Get the space's embedder if it embeds videos by path, else None."""

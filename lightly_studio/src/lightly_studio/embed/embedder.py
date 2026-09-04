@@ -28,7 +28,7 @@ class Capability(str, Enum):
     IMAGE_PATH = "image_path"
     """Ingest: image by fsspec path or URL."""
 
-    CROP_PATH = "crop_path"
+    IMAGE_CROP_PATH = "image_crop_path"
     """Ingest: crop specified by an image fsspec or URL and a pixel box."""
 
     VIDEO_PATH = "video_path"
@@ -87,7 +87,7 @@ class ImagePathEmbedder(Embedder):
         """
 
 
-class CropPathEmbedder(Embedder):
+class ImageCropPathEmbedder(Embedder):
     """Embeds crops of stored images, each an image path plus a pixel box.
 
     <span class="doc-badge doc-badge--beta">Beta</span>
