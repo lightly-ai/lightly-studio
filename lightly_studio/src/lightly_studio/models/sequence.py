@@ -2,7 +2,7 @@
 
 A sequence is a sample that puts other samples in order: every linked sample gets a
 ``seq_number`` inside the sequence and, optionally, the sensor timestamp it was captured
-at. ``seq_number`` is to a sequence what ``frame_number`` is to a video.
+at.
 
 The sequence has its own ``seq_id`` identity, separate from the ``sample_id`` of the
 sample representing it, so tables that describe a sequence can reference it directly.
@@ -30,9 +30,7 @@ class SampleSequenceLinkTable(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("seq_id", "seq_number", name="unique_seq_number_per_sequence"),
     )
-    # Primary key, so a sample sits in at most one slot of at most one sequence.
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     seq_id: UUID = Field(foreign_key="sequence.seq_id", index=True)
     seq_number: int
-    # BigInteger: epoch nanoseconds overflow a 32-bit INTEGER on PostgreSQL.
     timestamp_ns: Optional[int] = Field(default=None, sa_type=BigInteger)

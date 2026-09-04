@@ -182,8 +182,6 @@ def _build_id_maps(session: Session, old_dataset_id: UUID) -> None:
         id_column="sample_id",
         where_sql=in_collection_map,
     )
-    # Sequences are keyed by their own seq_id, which the link table references, so they
-    # need a map of their own on top of the sample map.
     _create_id_map(
         session=session,
         source_table="sequence",
