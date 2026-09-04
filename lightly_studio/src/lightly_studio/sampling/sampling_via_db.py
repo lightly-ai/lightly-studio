@@ -567,9 +567,13 @@ def _add_strategy_to_mundig(
         )
     elif isinstance(strat, MetadataWeightingStrategy):
         metadata_key = strat.metadata_key
-        # One query for all values, then an in-memory lookup per sample, not one query each.
+        # Read the selected samples' values in one batched query, then look each up in
+        # memory, instead of one query per sample.
         values_by_sample_id, _ = metadata_resolver.get_metadata_values_for_key(
-            session=session, collection_id=context.collection_id, key=metadata_key
+            session=session,
+            collection_id=context.collection_id,
+            key=metadata_key,
+            sample_ids=context.input_sample_ids,
         )
         weights: list[float] = []
         for sample_id in context.input_sample_ids:
