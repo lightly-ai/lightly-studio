@@ -28,6 +28,7 @@ jobs:
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
       release: ${{ steps.decide.outputs.release }}
+      state: ${{ steps.decide.outputs.state }}
     steps:
       # The tooling is taken from main, never from the released commit: running
       # that commit's own release code would execute it with a write token.
@@ -142,7 +143,10 @@ jobs:
           # the notes by hand, and a later pyproject.toml change must not
           # rewrite that.
           if [ "${state}" != "none" ]; then
-            echo "release=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "release=false"
+              echo "state=${state}"
+            } >> "$GITHUB_OUTPUT"
             echo "::notice::${TAG} already has a ${state} release; nothing to do."
             exit 0
           fi
@@ -154,6 +158,7 @@ jobs:
 
           {
             echo "release=true"
+            echo "state=${state}"
             echo "tag_exists=$([ -n "${tag_commit}" ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
 
@@ -236,10 +241,14 @@ jobs:
   build-lightly-embed:
     name: Build the lightly-embed wheel
     needs: publish-release
-    # Deliberately not gated on `release`: an already tagged and drafted release still has to be
-    # able to rebuild and revalidate its wheel, so that a failure here is retried by dispatching
-    # the workflow again rather than by deleting the draft. Nothing in this job writes anything.
-    if: needs.publish-release.result == 'success' && needs.publish-release.outputs.sha != ''
+    # Gated on the release state rather than on `release`, which is false for a draft as well as
+    # for an already published version. A draft has to stay buildable, so that a failure here is
+    # retried by dispatching the workflow again rather than by deleting the draft; a published
+    # version must not be, or every later push would retry a version that is already on PyPI.
+    if: >-
+      needs.publish-release.result == 'success'
+      && needs.publish-release.outputs.sha != ''
+      && needs.publish-release.outputs.state != 'published'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
