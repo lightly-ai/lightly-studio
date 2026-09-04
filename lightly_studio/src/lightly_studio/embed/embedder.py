@@ -24,6 +24,12 @@ class Capability(str, Enum):
     Members are named ``SUBJECT[_TRANSPORT]``, with the transport omitted when a
     subject has a single form. ``PATH`` and ``PIL`` are local-only; ``URL`` and
     ``BYTES`` are the transports an embedding backend can accept.
+
+    Capabilities are used both at ingest, when data is loaded into the database,
+    and interactively while the GUI runs. Which of the two a capability serves is
+    a property of the call site rather than of the capability itself:
+    ``IMAGE_BYTES`` backs interactive search today and bulk ingest over the wire
+    later.
     """
 
     IMAGE_PATH = "image_path"
