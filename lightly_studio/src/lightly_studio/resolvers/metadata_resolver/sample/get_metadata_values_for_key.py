@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -11,12 +12,14 @@ from sqlmodel import Session, col, select
 from lightly_studio.database import db_json
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.utils import batching
 
 
 def get_metadata_values_for_key(
     session: Session,
     collection_id: UUID,
     key: str,
+    sample_ids: Sequence[UUID] | None = None,
 ) -> tuple[dict[UUID, Any], str | None]:
     """Get metadata values and schema type for one key in a collection.
 
@@ -24,6 +27,9 @@ def get_metadata_values_for_key(
         session: The database session.
         collection_id: The collection's UUID.
         key: The metadata key to retrieve.
+        sample_ids: If given, read only these samples instead of the whole
+            collection. The read is batched so a long list stays within the
+            database parameter limit.
 
     Returns:
         A tuple containing:
@@ -38,7 +44,7 @@ def get_metadata_values_for_key(
     )
     value_expr = db_json.json_extract_key_as_text(column=SampleMetadataTable.data, key=key)
 
-    rows = session.exec(
+    base_query = (
         select(SampleMetadataTable.sample_id, value_expr, schema_type_expr)
         .select_from(SampleTable)
         .join(
@@ -49,7 +55,16 @@ def get_metadata_values_for_key(
             SampleTable.collection_id == collection_id,
             schema_type_expr.isnot(None),
         )
-    ).all()
+    )
+
+    if sample_ids is None:
+        rows = session.exec(base_query).all()
+    else:
+        rows = []
+        for batch in batching.batched(items=sample_ids):
+            rows.extend(
+                session.exec(base_query.where(col(SampleMetadataTable.sample_id).in_(batch))).all()
+            )
     if not rows:
         return {}, None
 
