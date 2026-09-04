@@ -107,7 +107,7 @@ def delete_dataset(
     _delete_sample_tag_links(session=session, dataset_id=dataset_id)
     # Must precede groups (SampleGroupLinkTable.parent_sample_id -> GroupTable).
     _delete_sample_group_links(session=session, dataset_id=dataset_id)
-    # Must precede sequences (SampleSequenceLinkTable.seq_id -> SequenceTable).
+    # Must precede sequences (SampleSequenceLinkTable.sequence_id -> SequenceTable).
     _delete_sample_sequence_links(session=session, dataset_id=dataset_id)
 
     # 3. Sample attachments.

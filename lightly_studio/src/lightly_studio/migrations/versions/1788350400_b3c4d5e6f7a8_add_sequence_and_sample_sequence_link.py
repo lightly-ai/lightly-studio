@@ -1,6 +1,6 @@
 """add sequence and sample_sequence_link tables.
 
-Adds the ``sequence`` table (1:1 with ``sample``, but with its own ``seq_id`` identity),
+Adds the ``sequence`` table (1:1 with ``sample``, keyed by ``sample_id`` like ``group``),
 the ``sample_sequence_link`` table that orders samples inside a sequence, and the
 ``SEQUENCE`` value on the ``SampleType`` enum.
 
@@ -38,19 +38,17 @@ def upgrade() -> None:
     """Upgrade schema."""
     op.create_table(
         "sequence",
-        sa.Column("seq_id", sa.Uuid(), nullable=False),
         sa.Column("sample_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
             ["sample_id"],
             ["sample.sample_id"],
         ),
-        sa.PrimaryKeyConstraint("seq_id"),
+        sa.PrimaryKeyConstraint("sample_id"),
     )
-    op.create_index(op.f("ix_sequence_sample_id"), "sequence", ["sample_id"], unique=True)
     op.create_table(
         "sample_sequence_link",
         sa.Column("sample_id", sa.Uuid(), nullable=False),
-        sa.Column("seq_id", sa.Uuid(), nullable=False),
+        sa.Column("sequence_id", sa.Uuid(), nullable=False),
         sa.Column("seq_number", sa.Integer(), nullable=False),
         sa.Column("timestamp_ns", sa.BigInteger(), nullable=True),
         sa.ForeignKeyConstraint(
@@ -58,14 +56,17 @@ def upgrade() -> None:
             ["sample.sample_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["seq_id"],
-            ["sequence.seq_id"],
+            ["sequence_id"],
+            ["sequence.sample_id"],
         ),
         sa.PrimaryKeyConstraint("sample_id"),
-        sa.UniqueConstraint("seq_id", "seq_number", name="unique_seq_number_per_sequence"),
+        sa.UniqueConstraint("sequence_id", "seq_number", name="unique_seq_number_per_sequence"),
     )
     op.create_index(
-        op.f("ix_sample_sequence_link_seq_id"), "sample_sequence_link", ["seq_id"], unique=False
+        op.f("ix_sample_sequence_link_sequence_id"),
+        "sample_sequence_link",
+        ["sequence_id"],
+        unique=False,
     )
     op.sync_enum_values(  # type: ignore[attr-defined]
         enum_schema="public",
@@ -106,7 +107,8 @@ def downgrade() -> None:
         affected_columns=_SAMPLE_TYPE_COLUMNS,
         enum_values_to_rename=[],
     )
-    op.drop_index(op.f("ix_sample_sequence_link_seq_id"), table_name="sample_sequence_link")
+    op.drop_index(
+        op.f("ix_sample_sequence_link_sequence_id"), table_name="sample_sequence_link"
+    )
     op.drop_table("sample_sequence_link")
-    op.drop_index(op.f("ix_sequence_sample_id"), table_name="sequence")
     op.drop_table("sequence")

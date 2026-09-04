@@ -436,13 +436,15 @@ def test_deep_copy__with_sequences(db_session: Session) -> None:
     db_session.add(
         SampleSequenceLinkTable(
             sample_id=sample_ids[1],
-            seq_id=sequence.seq_id,
+            sequence_id=sequence.sample_id,
             seq_number=0,
             timestamp_ns=1785699091646722462,
         )
     )
     db_session.add(
-        SampleSequenceLinkTable(sample_id=sample_ids[2], seq_id=sequence.seq_id, seq_number=1)
+        SampleSequenceLinkTable(
+            sample_id=sample_ids[2], sequence_id=sequence.sample_id, seq_number=1
+        )
     )
     db_session.commit()
 
@@ -453,20 +455,20 @@ def test_deep_copy__with_sequences(db_session: Session) -> None:
         copy_name="copied",
     )
 
-    # Assert - the copy has its own sequence, keyed by a fresh seq_id.
+    # Assert - the copy has its own sequence, keyed by a fresh sample_id.
     copied_sequences = db_session.exec(
         select(SequenceTable)
         .join(SampleTable, col(SequenceTable.sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == copied.collection_id)
     ).all()
     assert len(copied_sequences) == 1
-    copied_seq_id = copied_sequences[0].seq_id
-    assert copied_seq_id != sequence.seq_id
+    copied_sequence_id = copied_sequences[0].sample_id
+    assert copied_sequence_id != sequence.sample_id
 
     # Assert - the copied links point at the copied samples, in the original order.
     copied_links = db_session.exec(
         select(SampleSequenceLinkTable)
-        .where(col(SampleSequenceLinkTable.seq_id) == copied_seq_id)
+        .where(col(SampleSequenceLinkTable.sequence_id) == copied_sequence_id)
         .order_by(col(SampleSequenceLinkTable.seq_number).asc())
     ).all()
     assert [link.seq_number for link in copied_links] == [0, 1]

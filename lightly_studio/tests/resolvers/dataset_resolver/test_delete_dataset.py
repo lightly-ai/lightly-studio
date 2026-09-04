@@ -260,10 +260,12 @@ def test_delete_dataset__with_sequences(db_session: Session) -> None:
     db_session.add(sequence)
     db_session.flush()
     db_session.add(
-        SampleSequenceLinkTable(sample_id=sample_ids[1], seq_id=sequence.seq_id, seq_number=0)
+        SampleSequenceLinkTable(
+            sample_id=sample_ids[1], sequence_id=sequence.sample_id, seq_number=0
+        )
     )
     db_session.commit()
-    seq_id = sequence.seq_id
+    sequence_id = sequence.sample_id
     collection_id = collection.collection_id
 
     # Act
@@ -274,10 +276,12 @@ def test_delete_dataset__with_sequences(db_session: Session) -> None:
 
     # Assert - collection, sequence, and its links are all deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
-    assert db_session.get(SequenceTable, seq_id) is None
+    assert db_session.get(SequenceTable, sequence_id) is None
     assert (
         db_session.exec(
-            select(SampleSequenceLinkTable).where(col(SampleSequenceLinkTable.seq_id) == seq_id)
+            select(SampleSequenceLinkTable).where(
+                col(SampleSequenceLinkTable.sequence_id) == sequence_id
+            )
         ).all()
         == []
     )

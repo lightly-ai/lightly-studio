@@ -2,14 +2,11 @@
 
 A sequence is a sample that puts other samples in order: every linked sample gets a
 ``seq_number`` inside the sequence and, optionally, the sensor timestamp it was captured
-at.
-
-The sequence has its own ``seq_id`` identity, separate from the ``sample_id`` of the
-sample representing it, so tables that describe a sequence can reference it directly.
+at. Identity is the sequence sample's ``sample_id``, the same pattern as Group.
 """
 
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import BigInteger, UniqueConstraint
 from sqlmodel import Field, SQLModel
@@ -19,8 +16,7 @@ class SequenceTable(SQLModel, table=True):
     """This class defines the Sequence model."""
 
     __tablename__ = "sequence"
-    seq_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    sample_id: UUID = Field(foreign_key="sample.sample_id", unique=True, index=True)
+    sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
 
 
 class SampleSequenceLinkTable(SQLModel, table=True):
@@ -28,9 +24,11 @@ class SampleSequenceLinkTable(SQLModel, table=True):
 
     __tablename__ = "sample_sequence_link"
     __table_args__ = (
-        UniqueConstraint("seq_id", "seq_number", name="unique_seq_number_per_sequence"),
+        UniqueConstraint("sequence_id", "seq_number", name="unique_seq_number_per_sequence"),
     )
+    # Primary key, so a sample sits in at most one slot of at most one sequence.
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
-    seq_id: UUID = Field(foreign_key="sequence.seq_id", index=True)
+    sequence_id: UUID = Field(foreign_key="sequence.sample_id", index=True)
     seq_number: int
+    # BigInteger: epoch nanoseconds overflow a 32-bit INTEGER on PostgreSQL.
     timestamp_ns: Optional[int] = Field(default=None, sa_type=BigInteger)
