@@ -11,7 +11,7 @@ After you have your changes ready, and you create a new pull request, a maintain
 
 ## Requirements
 - Python **3.9–3.14** (3.9 recommended)
-- Uv version **0.12.6** (pinned exactly, see `required-version` in `lightly_studio/pyproject.toml`)
+- Uv version **0.12.6** (pinned exactly, see `required-version` in the root `pyproject.toml`)
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 
 ## Development Quickstart
@@ -45,7 +45,27 @@ make test
 cd lightly_studio_view
 make static-checks
 make test
+
+# Embedding server package
+cd lightly_embed
+make static-checks
+make test
 ```
+
+### The uv Workspace
+
+The Python packages are members of one [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/):
+
+- `lightly_studio` - the application, published as `lightly-studio`.
+- `lightly_embed` - the server a customer runs in front of their own embedding model, published
+  as `lightly-embed`. Its dependencies stay limited to an HTTP server so that it installs next to
+  their CUDA and torch pins; `make -C lightly_embed check-wheel-dependencies` asserts that.
+
+They share one `uv.lock` and one `.venv`, both at the repository root, so that the two packages
+cannot resolve the same dependency to different versions. `uv run` in a member directory installs
+that member's dependencies into the shared environment without removing the other's, so switching
+between members costs nothing. An explicit `uv sync` does prune, so the next `uv run` in the other
+member reinstalls what it needs.
 
 When you update the code, follow our coding guidelines in [.agents/skills](./.agents/skills).
 They are [Agent Skills](https://agentskills.io). Skills do not load automatically. Load the
@@ -231,9 +251,9 @@ npm run dev
 
 ### Exploring the Makefile
 
-There are three Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
-targets, one in `lightly_studio_view` for the frontend, and one in the repository root that
-delegates to both. Some commonly used commands:
+There are four Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
+targets, one in `lightly_studio_view` for the frontend, one in `lightly_embed` for the embedding
+server package, and one in the repository root that delegates to all three. Some commonly used commands:
 
 Run tests:
 

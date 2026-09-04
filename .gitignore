@@ -1,3 +1,13 @@
+# The uv workspace shares one virtual environment, at the repository root.
+.venv
+dist
+build
+*.egg-info
+__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
 # OS
 .DS_Store
 Thumbs.db

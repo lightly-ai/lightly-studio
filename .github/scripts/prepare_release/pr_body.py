@@ -7,7 +7,7 @@ from __future__ import annotations
 _GUARDS = """\
 The workflow already checked that:
 
-- exactly `CHANGELOG.md`, `lightly_studio/pyproject.toml` and `lightly_studio/uv.lock` changed,
+- exactly `CHANGELOG.md`, `lightly_studio/pyproject.toml` and `uv.lock` changed,
 - the `uv.lock` diff is only this version bump,
 - `CHANGELOG.md` keeps an empty `[Unreleased]` skeleton and every earlier release is byte-identical,
 - Labelformat is pinned by version, not by git sha.

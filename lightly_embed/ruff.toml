@@ -1,0 +1,8 @@
+# One style for both members. When they ever need to diverge, copy what differs rather than
+# letting the two files drift apart silently.
+extend = "../lightly_studio/ruff.toml"
+
+# Relative patterns resolve against the directory of the file that declares them, so the
+# extended `tests/**/*.py` entry only covers lightly_studio's tests and has to be repeated.
+[lint.per-file-ignores]
+"tests/**/*.py" = ["D100", "D101", "D102", "D103", "D107", "PLR2004", "SLF001"]

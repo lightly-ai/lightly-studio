@@ -1,0 +1,17 @@
+# The workspace root is virtual: it ships no code and is never published. It exists so that
+# every member resolves against one `uv.lock`. That is what will let `lightly-studio` depend on
+# `lightly-embed` for the shared wire models (LIG-10641) without the two ever drifting apart.
+[tool.uv.workspace]
+members = ["lightly_studio", "lightly_embed"]
+
+[tool.uv]
+# Pinned exactly, and kept in sync with the version every workflow installs. uv
+# rewrites parts of uv.lock (wheel lists, dependency markers) as its lockfile
+# serialisation evolves, so two uv versions relocking the same requirements
+# produce different files. An exact pin keeps CI and local relocks byte-identical.
+required-version = "==0.12.6"
+# moto[server] pulls in antlr4-python3-runtime unconstrained (latest 4.13.x), but it
+# only loads it lazily for StepFunctions mocking, which we never use (moto is only
+# used for S3 mocking in tests). The lightly_train plugin's omegaconf/hydra require
+# antlr 4.9.* and crash on import with 4.13.x, so we pin it back to 4.9.3.
+constraint-dependencies = ["antlr4-python3-runtime==4.9.3"]

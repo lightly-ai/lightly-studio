@@ -33,6 +33,7 @@ jobs:
       docs: ${{ steps.filter.outputs.docs || 'true' }}
       fast_track: ${{ steps.filter.outputs.fast_track || 'true' }}
       release_tooling: ${{ steps.filter.outputs.release_tooling || 'true' }}
+      lightly_embed: ${{ steps.filter.outputs.lightly_embed || 'true' }}
     steps:
       - name: Checkout Code # Needed for merge_group event
         uses: actions/checkout@v7
@@ -53,7 +54,8 @@ jobs:
               - 'lightly_studio/e2e-tests/**'
               - 'lightly_studio/dataset_examples/**'
               - 'lightly_studio/pyproject.toml'
-              - 'lightly_studio/uv.lock'
+              - 'pyproject.toml'
+              - 'uv.lock'
               - 'lightly_studio/ruff.toml'
               - 'lightly_studio/pytest.ini'
               - 'lightly_studio/Makefile'
@@ -72,6 +74,13 @@ jobs:
             release_tooling:
               - '.github/workflows/unit_test.yml'
               - '.github/scripts/**'
+            # The second workspace member. Shares the lockfile, not the dependencies.
+            lightly_embed:
+              - '.github/workflows/unit_test.yml'
+              - 'lightly_embed/**'
+              - 'lightly_studio/ruff.toml'
+              - 'pyproject.toml'
+              - 'uv.lock'
 
   check-python:
     name: Static Checks Python
@@ -351,6 +360,56 @@ jobs:
       - name: Tests
         run: make test
 
+  check-lightly-embed:
+    name: Static Checks + Tests LightlyEmbed (${{ matrix.python }})
+    needs: detect
+    if: needs.detect.outputs.lightly_embed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor and the ceiling of `requires-python`; nothing in the package is version
+        # specific.
+        python: ["3.9", "3.14"]
+    defaults:
+      run:
+        working-directory: lightly_embed
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
+
+      - name: Set Up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      # No install step: the package has no extras and no non-default groups, so `uv run`
+      # installs everything these targets need.
+      - name: Static checks
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: make static-checks
+
+      - name: Tests
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: make test
+
+      # The invariant the whole package exists for. Asserted on the built wheel, because that
+      # is what a customer installs onto an inference box next to their own torch pins.
+      - name: Assert the wheel pulls in nothing heavy
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: make check-wheel-dependencies WHEEL_PYTHON_VERSION=${{ matrix.python }}
+
   # The single required status check: always runs, so gated jobs can be skipped
   # without stranding the merge queue. Require this in the branch ruleset.
   unit-success:
@@ -365,6 +424,7 @@ jobs:
       - check-docs
       - check-fast-track
       - check-release-tooling
+      - check-lightly-embed
     if: always()
     steps:
       - name: Verify required jobs
@@ -377,6 +437,7 @@ jobs:
           DOCS: ${{ needs.check-docs.result }}
           FAST_TRACK: ${{ needs.check-fast-track.result }}
           RELEASE_TOOLING: ${{ needs.check-release-tooling.result }}
+          LIGHTLY_EMBED: ${{ needs.check-lightly-embed.result }}
         run: |
           python3 - <<'PY'
           import os
@@ -396,6 +457,7 @@ jobs:
               "Build Docs": os.environ["DOCS"],
               "Static Checks + Tests Fast Track": os.environ["FAST_TRACK"],
               "Static Checks + Tests Release Tooling": os.environ["RELEASE_TOOLING"],
+              "Static Checks + Tests LightlyEmbed": os.environ["LIGHTLY_EMBED"],
           }
           allowed = {"success", "skipped"}
 
