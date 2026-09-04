@@ -107,8 +107,6 @@ def downgrade() -> None:
         affected_columns=_SAMPLE_TYPE_COLUMNS,
         enum_values_to_rename=[],
     )
-    op.drop_index(
-        op.f("ix_sample_sequence_link_sequence_id"), table_name="sample_sequence_link"
-    )
+    op.drop_index(op.f("ix_sample_sequence_link_sequence_id"), table_name="sample_sequence_link")
     op.drop_table("sample_sequence_link")
     op.drop_table("sequence")
