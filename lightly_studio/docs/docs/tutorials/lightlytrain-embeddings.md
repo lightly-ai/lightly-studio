@@ -9,7 +9,7 @@ You will:
 - Explore the 2D embedding plot to find clusters, outliers, and near-duplicates.
 - Select a diverse subset for labeling or training.
 
-![Embeddings from a distilled DINOv3 ViT-T, colored by species. The clusters separate cleanly](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov3-tiny-after-distill.png){ width="100%" }
+![Embeddings from a distilled DINOv3 ViT-T, one color per class. The clusters separate cleanly](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov3-tiny-after-distill.png){ width="100%" }
 
 ## Why distill a model on your own images
 
@@ -51,7 +51,7 @@ The purity in each caption is measured on these 978 images from 20 species. The 
 </div>
 
 !!! note "Pick a dataset where a larger model helps"
-    Distillation moves the knowledge of the teacher into the student. If a large model scores about the same as a small one on your data, there is nothing to move. On CUB-200, ViT-L scores 0.195 above ViT-S, so there is a large margin to recover. On a 10-class satellite dataset, the same margin was only 0.022, and distillation gives almost nothing.
+    Distillation moves the knowledge of the teacher into the student. If a large model scores about the same as a small one on your data, there is nothing to move. On CUB-200, ViT-L scores 0.195 above ViT-S, so there is a large margin to recover. On coarse-grained data, where a small model already comes close to a large one, distillation gives almost nothing.
 
 ## How the workflow fits together
 
@@ -68,7 +68,7 @@ This tutorial builds two small scripts. `train_and_export.py` runs the distillat
 
 To follow this tutorial, make sure that you have:
 
-- Python 3.10.12+, 3.11.4+, or 3.12+. Step 1 uses the `filter` argument of `tarfile`. Earlier patch releases do not have it.
+- Python 3.10 or newer. Step 1 passes `filter` to `tarfile.extractall`, which on 3.10 and 3.11 needs a patch release from June 2023 or later.
 - A GPU for the distillation step. On 2 NVIDIA RTX 4090 GPUs, the run in this tutorial takes about 21 minutes.
 - A CUDA GPU, Apple Silicon (MPS), or a CPU for the exploration step
 - About 4 GB of free disk space
@@ -87,7 +87,7 @@ Create the first script, `train_and_export.py`. This script downloads CUB-200-20
 
 To use your own data, point `IMAGE_PATH` at a folder that holds one subfolder for each class, with the images directly inside. That is the layout `explore.py` reads in Step 4, and the only one it accepts. `IMAGE_PATH` is defined in both scripts, so change it in both. See [Load an Image Dataset](../dataset_setup/image_dataset.md).
 
-Everything the script does goes inside `if __name__ == "__main__":`. LightlyTrain starts dataloader workers that re-import this file on macOS and Windows, and without the guard the run crashes. Steps 2 and 3 add more code inside the same block.
+Each step below writes one function. Step 5 calls them.
 
 ```python title="train_and_export.py"
 import tarfile
@@ -107,10 +107,10 @@ DATA_DIR = Path("data")
 EXTRACT_DONE = DATA_DIR / ".extracted"
 IMAGE_PATH = DATA_DIR / "CUB_200_2011" / "images"
 
-if __name__ == "__main__":
-    # Download CUB-200-2011 (11,788 images of 200 bird species), one folder per
-    # species. The helper downloads to a temp file and moves it into place only on
-    # success, so an interrupted download is never mistaken for a complete one.
+
+def download_dataset() -> None:
+    # The helper downloads to a temp file and moves it into place only on success,
+    # so an interrupted download is never mistaken for a complete one.
     file_utils.download_file_if_does_not_exist(url=CUB_URL, local_filename=ARCHIVE)
     if not EXTRACT_DONE.exists():
         with tarfile.open(ARCHIVE) as tar:
@@ -125,9 +125,8 @@ if __name__ == "__main__":
 
 Here the student is `dinov3/vitt16` and the teacher is `dinov3/vitb16`. Both start from pretrained weights. Both are covered by the [DINOv3 license](https://docs.lightly.ai/train/stable/pretrain_distill/models/dinov3.html), which the model you export inherits. For Apache 2.0 weights, use a DINOv2 model instead.
 
-Append this inside the `if __name__ == "__main__":` block from Step 1. It is indented to match:
-
 ```python title="train_and_export.py"
+def distill() -> None:
     lightly_train.pretrain(
         out="out/pretrain",
         data=IMAGE_PATH,
@@ -143,9 +142,6 @@ Append this inside the `if __name__ == "__main__":` block from Step 1. It is ind
 
 Training writes a checkpoint to `out/pretrain/checkpoints/last.ckpt`.
 
-!!! note "Choose the teacher"
-    A larger teacher is not always better. ViT-L has 3.5 times more parameters than ViT-B, so every distillation step costs more, and the teacher is frozen either way. This tutorial did not measure a ViT-T distilled from ViT-L, so the table above cannot tell you what that extra cost buys.
-
 !!! note "The student is already a distilled model"
     Lightly trained the `dinov3/vitt16` weights, not Meta. They come from an earlier distillation run, with DINOv3 ViT-L/16 as the teacher and ImageNet-1K as the data. This tutorial distills that model again, onto one specific dataset. So the 0.081 score in the table above is a general-purpose model on fine-grained birds, not an untrained one. The floor is 0.005.
 
@@ -153,9 +149,10 @@ Any name from `lightly_train.list_models()` works for `model` and for `teacher`.
 
 ## Step 3: Export the embedding model
 
-[Export](https://docs.lightly.ai/train/stable/pretrain_distill/export.html) the student as a plain torch module. LightlyStudio loads this file and runs it directly. This block goes inside the same `if __name__ == "__main__":` block, after the `pretrain` call:
+[Export](https://docs.lightly.ai/train/stable/pretrain_distill/export.html) the student as a plain torch module. LightlyStudio loads this file and runs it directly.
 
 ```python title="train_and_export.py"
+def export_student() -> None:
     lightly_train.export(
         out="out/embedding_model.pt",
         checkpoint="out/pretrain/checkpoints/last.ckpt",
@@ -163,6 +160,15 @@ Any name from `lightly_train.list_models()` works for `model` and for `teacher`.
         format="torch_model",
         overwrite=True,
     )
+```
+
+Finish the script by calling the three functions. The `__main__` guard is required: LightlyTrain starts dataloader workers that re-import this file on macOS and Windows, and without it the run crashes during startup.
+
+```python title="train_and_export.py"
+if __name__ == "__main__":
+    download_dataset()
+    distill()
+    export_student()
 ```
 
 ## Step 4: Load the model into LightlyStudio
@@ -336,9 +342,7 @@ python train_and_export.py   # distill and export the model (slow; run once)
 python explore.py            # embed your data and open LightlyStudio
 ```
 
-Click the `Embed` button in the top right to open the [embedding plot](../concepts_and_tools/embeddings.md#the-embedding-plot-gui). The plot shows every image as a point in a 2D projection (PaCMAP) of the embedding space. To color the points by species, open **Color by** at the bottom of the plot and pick **annotations**.
-
-![The embedding plot after the distilled model embedded the 20-species slice, colored by species](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov3-tiny-after-distill.png){ width="100%" }
+Click the `Embed` button in the top right to open the [embedding plot](../concepts_and_tools/embeddings.md#the-embedding-plot-gui). The plot shows every image as a point in a 2D projection (PaCMAP) of the embedding space. To color the points by species, open **Color by** at the bottom of the plot and pick **annotations**. You get the plot at the top of this page.
 
 Read the map:
 

@@ -47,13 +47,13 @@ DATA_DIR = Path("data")
 EXTRACT_DONE = DATA_DIR / ".extracted"
 IMAGE_PATH = DATA_DIR / "CUB_200_2011" / "images"
 
-# LightlyTrain spawns dataloader workers, which re-import this module on macOS and
-# Windows. Without the guard, the module body runs again in every worker and the
-# process dies during bootstrapping.
-if __name__ == "__main__":
-    # 1. Download CUB-200-2011 (11,788 images of 200 bird species), one folder per
-    # species. The helper downloads to a temp file and moves it into place only on
-    # success, so an interrupted download is never mistaken for a complete one.
+
+def download_dataset() -> None:
+    """Download CUB-200-2011 (11,788 images of 200 bird species), one folder per species.
+
+    The helper downloads to a temp file and moves it into place only on success, so an
+    interrupted download is never mistaken for a complete one.
+    """
     file_utils.download_file_if_does_not_exist(url=CUB_URL, local_filename=ARCHIVE)
     if not EXTRACT_DONE.exists():
         with tarfile.open(ARCHIVE) as tar:
@@ -62,9 +62,13 @@ if __name__ == "__main__":
             tar.extractall(DATA_DIR, filter="data")
         EXTRACT_DONE.touch()
 
-    # 2. Distill the teacher into the student. This uses no labels.
-    # resume_interrupted=True picks a crashed run back up where it stopped instead of
-    # repeating all 100 epochs. On a first run there is no checkpoint and it does nothing.
+
+def distill() -> None:
+    """Distill the teacher into the student. This uses no labels.
+
+    resume_interrupted=True picks a crashed run back up where it stopped instead of
+    repeating all 100 epochs. On a first run there is no checkpoint and it does nothing.
+    """
     lightly_train.pretrain(
         out=PRETRAIN_DIR,
         data=IMAGE_PATH,
@@ -75,7 +79,9 @@ if __name__ == "__main__":
         resume_interrupted=True,
     )
 
-    # 3. Export the student as a torch module that LightlyStudio can run.
+
+def export_student() -> None:
+    """Export the student as a torch module that LightlyStudio can run."""
     lightly_train.export(
         out=MODEL_FILE,
         checkpoint=f"{PRETRAIN_DIR}/checkpoints/last.ckpt",
@@ -83,3 +89,12 @@ if __name__ == "__main__":
         format="torch_model",
         overwrite=True,
     )
+
+
+# LightlyTrain spawns dataloader workers, which re-import this module on macOS and
+# Windows. Without the guard, the calls below run again in every worker and the
+# process dies during bootstrapping.
+if __name__ == "__main__":
+    download_dataset()
+    distill()
+    export_student()
