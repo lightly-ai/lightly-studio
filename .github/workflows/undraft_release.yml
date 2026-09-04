@@ -25,10 +25,16 @@ jobs:
         run: |
           set -euo pipefail
           version="${TAG#v}"
-          status="$(curl -sS -o /dev/null -w '%{http_code}' \
+          status="$(curl -sS -o "${RUNNER_TEMP}/pypi.json" -w '%{http_code}' \
             "https://pypi.org/pypi/lightly-studio/${version}/json")"
           if [ "${status}" != "200" ]; then
             echo "::error::lightly-studio ${version} is not on PyPI (HTTP ${status}). Publish the wheel first."
+            exit 1
+          fi
+          # A version record outlives its files: a half-finished upload or a yank still answers 200.
+          if ! python3 -c 'import json, sys; sys.exit(0 if any(f["packagetype"] == "bdist_wheel" and not f["yanked"] for f in json.load(open(sys.argv[1]))["urls"]) else 1)' \
+            "${RUNNER_TEMP}/pypi.json"; then
+            echo "::error::lightly-studio ${version} has no installable wheel on PyPI."
             exit 1
           fi
 
