@@ -90,6 +90,10 @@ class PerceptionEncoderEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
+        if not texts:
+            empty = np.empty((0, self._model.output_dim), dtype=np.float32)
+            return EmbeddingResult(embeddings=empty, kept_indices=[])
+
         tokenized = self._tokenizer(texts).to(self._device)
         with torch.no_grad():
             embeddings = self._model.encode_text(tokenized, normalize=True).cpu().numpy()
