@@ -26,13 +26,13 @@ class Capability(str, Enum):
     """
 
     IMAGE_PATH = "image_path"
-    """Ingest: image by fsspec path or URL."""
+    """Ingest: image by fsspec path."""
 
-    CROP_PATH = "crop_path"
-    """Ingest: crop specified by an image fsspec or URL and a pixel box."""
+    IMAGE_CROP_PATH = "image_crop_path"
+    """Ingest: crop specified by an image fsspec path and a pixel box."""
 
     VIDEO_PATH = "video_path"
-    """Ingest: video by fsspec path or URL."""
+    """Ingest: video by fsspec path."""
 
     IMAGE_PIL = "image_pil"
     """Ingest: video frame as a PIL image."""
@@ -41,7 +41,10 @@ class Capability(str, Enum):
     """Interactive: text query."""
 
     IMAGE_BYTES = "image_bytes"
-    """Interactive: image as raw file bytes."""
+    """Interactive and ingest: image as raw file bytes."""
+
+    VIDEO_BYTES = "video_bytes"
+    """Ingest: video as raw file bytes. No local implementation yet."""
 
 
 class Embedder(ABC):
@@ -66,11 +69,9 @@ class Embedder(ABC):
 
 
 class ImagePathEmbedder(Embedder):
-    """Embeds images read from an fsspec path or URL (local, ``s3://``, ...).
+    """Embeds images read from an fsspec path (local, ``s3://``, ...).
 
     <span class="doc-badge doc-badge--beta">Beta</span>
-
-    Used at ingest.
     """
 
     __slots__ = ()
@@ -80,25 +81,23 @@ class ImagePathEmbedder(Embedder):
         """Embed a batch of images given by path.
 
         Args:
-            paths: fsspec paths or URLs of the images to embed.
+            paths: fsspec paths of the images to embed.
 
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
 
 
-class CropPathEmbedder(Embedder):
+class ImageCropPathEmbedder(Embedder):
     """Embeds crops of stored images, each an image path plus a pixel box.
 
     <span class="doc-badge doc-badge--beta">Beta</span>
-
-    Used at ingest.
     """
 
     __slots__ = ()
 
     @abstractmethod
-    def embed_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
         """Embed a batch of image crops given by path and pixel box.
 
         Args:
@@ -110,11 +109,9 @@ class CropPathEmbedder(Embedder):
 
 
 class VideoPathEmbedder(Embedder):
-    """Embeds videos read from an fsspec path or URL.
+    """Embeds videos read from an fsspec path.
 
     <span class="doc-badge doc-badge--beta">Beta</span>
-
-    Used at ingest.
     """
 
     __slots__ = ()
@@ -124,7 +121,7 @@ class VideoPathEmbedder(Embedder):
         """Embed a batch of videos given by path.
 
         Args:
-            paths: fsspec paths or URLs of the videos to embed.
+            paths: fsspec paths of the videos to embed.
 
         Returns:
             The embeddings and the indices of the inputs they cover.
@@ -135,8 +132,6 @@ class ImagePILEmbedder(Embedder):
     """Embeds video frames given as PIL images.
 
     <span class="doc-badge doc-badge--beta">Beta</span>
-
-    Used at ingest.
     """
 
     __slots__ = ()
@@ -157,8 +152,6 @@ class TextEmbedder(Embedder):
     """Embeds text queries.
 
     <span class="doc-badge doc-badge--beta">Beta</span>
-
-    Used for interactive requests.
     """
 
     __slots__ = ()
@@ -180,8 +173,8 @@ class ImageBytesEmbedder(Embedder):
 
     <span class="doc-badge doc-badge--beta">Beta</span>
 
-    Used for interactive requests, where the upload has no path to read. JPEG,
-    PNG and WebP only.
+    For callers that have no path to read, such as an upload. JPEG, PNG and
+    WebP only.
     """
 
     __slots__ = ()
