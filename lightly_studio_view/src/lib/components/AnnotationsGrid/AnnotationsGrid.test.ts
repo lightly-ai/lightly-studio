@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
     sortedAnnotationsData: [] as AnnotationWithPayloadView[],
     updateAnnotations: vi.fn(),
     updateAnnotationsRaw: vi.fn(),
+    deleteAnnotations: vi.fn(),
     refresh: vi.fn(),
     isPendingStore: null as unknown as Writable<boolean>,
     pickedAnnotationIds: null as unknown as Writable<Record<string, Set<string>>>,
@@ -156,6 +157,12 @@ vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', 
     }))
 }));
 
+vi.mock('$lib/hooks/useBulkDeleteAnnotations/useBulkDeleteAnnotations', () => ({
+    useBulkDeleteAnnotations: vi.fn(() => ({
+        deleteAnnotations: mocks.deleteAnnotations
+    }))
+}));
+
 vi.mock('$lib/hooks/useScrollRestoration/useScrollRestoration', () => ({
     useScrollRestoration: vi.fn(() => ({
         initialize: vi.fn(),
@@ -245,6 +252,7 @@ describe('AnnotationsGrid', () => {
         vi.clearAllMocks();
         mocks.annotationsData = [];
         mocks.sortedAnnotationsData = [];
+        mocks.deleteAnnotations.mockResolvedValue({ deletedCount: 0, staleSelection: false });
         mocks.getCollectionVersion.mockResolvedValue('v1');
         mocks.pickedAnnotationIds.set({});
         mocks.isEditingModeStore.set(false);
@@ -340,5 +348,22 @@ describe('AnnotationsGrid', () => {
                 groupId: 'annotation-label-change'
             })
         );
+    });
+
+    it('deletes selected annotations and refreshes the grid', async () => {
+        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
+        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1']) });
+        mocks.isEditingModeStore.set(true);
+
+        renderGrid();
+
+        await fireEvent.click(screen.getByTestId('mock-delete-annotations'));
+
+        expect(mocks.deleteAnnotations).toHaveBeenCalledWith({
+            collectionId: 'col-1',
+            annotationIds: ['cls-1']
+        });
+        expect(mocks.clearSelectedSampleAnnotationCrops).toHaveBeenCalledWith('col-1');
+        expect(mocks.refresh).toHaveBeenCalledOnce();
     });
 });

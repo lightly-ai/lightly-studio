@@ -15,6 +15,7 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import { useBulkDeleteAnnotations } from '$lib/hooks/useBulkDeleteAnnotations/useBulkDeleteAnnotations';
     import type { AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -147,6 +148,9 @@
         toggleSampleAnnotationCropSelection,
         clearSelectedSampleAnnotationCrops
     } = useGlobalStorage();
+    const selectedAnnotationIds = $derived(
+        $pickedAnnotationIds[collection_id] ?? new Set<string>()
+    );
 
     const annotations: AnnotationWithPayloadView[] = $derived(
         infiniteAnnotations.data?.pages.flatMap((page) => page.data) ?? []
@@ -186,7 +190,7 @@
     const selectedAnnotations = $derived(
         annotations
             .map((annotation) => annotation.annotation)
-            .filter((annotation) => $pickedAnnotationIds[collection_id]?.has(annotation.sample_id))
+            .filter((annotation) => selectedAnnotationIds.has(annotation.sample_id))
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
@@ -199,13 +203,33 @@
         });
 
         await updateAnnotations(
-            selectedAnnotations.map((annotation) => ({
-                annotation_id: annotation.sample_id,
+            [...selectedAnnotationIds].map((annotationId) => ({
+                annotation_id: annotationId,
                 label_name: item.value,
                 collection_id: collection_id
             }))
         );
         clearSelectedSampleAnnotationCrops(collection_id);
+    };
+
+    const { deleteAnnotations } = useBulkDeleteAnnotations();
+    let isDeletingSelectedAnnotations = $state(false);
+
+    const handleDeleteSelectedAnnotations = async () => {
+        if (selectedAnnotationIds.size === 0 || isDeletingSelectedAnnotations) return;
+        isDeletingSelectedAnnotations = true;
+        try {
+            const result = await deleteAnnotations({
+                collectionId: collection_id,
+                annotationIds: [...selectedAnnotationIds]
+            });
+            if (!result.staleSelection) {
+                clearSelectedSampleAnnotationCrops(collection_id);
+                refresh();
+            }
+        } finally {
+            isDeletingSelectedAnnotations = false;
+        }
     };
 
     const scrollResetKey = $derived(infiniteLoaderIdentifier);
@@ -285,10 +309,11 @@
     {#if $isEditingMode && !hideSelectedAnnotationsPanel}
         <div class="min-w-[250px] max-w-[30%] flex-1">
             <SelectedAnnotations
-                {selectedAnnotations}
-                disabled={selectedAnnotations.length === 0}
-                isLoading={$isPending}
+                selectedCount={selectedAnnotationIds.size}
+                disabled={selectedAnnotationIds.size === 0}
+                isLoading={$isPending || isDeletingSelectedAnnotations}
                 onSelect={handleSelectLabel}
+                onDelete={handleDeleteSelectedAnnotations}
                 collectionId={collection_id}
             />
         </div>

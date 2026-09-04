@@ -2,20 +2,22 @@
     import { Card, CardContent } from '$lib/components';
     import { Segment } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
+    import BulkDeleteAnnotationsButton from './BulkDeleteAnnotationsButton.svelte';
 
     type Props = {
-        selectedAnnotations: Array<AnnotationView>;
+        selectedCount: number;
         onSelect: (item: { value: string; label: string }) => void;
         disabled?: boolean;
         isLoading?: boolean;
         collectionId: string;
+        onDelete: () => Promise<void> | void;
     };
 
-    const { selectedAnnotations, onSelect, disabled, isLoading, collectionId }: Props = $props();
+    const { selectedCount, onSelect, disabled, isLoading, collectionId, onDelete }: Props =
+        $props();
 
     const result = useAnnotationLabels(() => ({ collectionId }));
 
@@ -27,7 +29,7 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
         >
-            <Segment title={`Selected annotations: ${selectedAnnotations.length}`}>
+            <Segment title={`Selected annotations: ${selectedCount}`}>
                 <div class="flex flex-col space-y-4">
                     <div class="text-md mb-2">
                         You can edit annotation classes for multiple annotations at once.
@@ -45,6 +47,12 @@
                             <LabelNotFound label={inputValue} />
                         {/snippet}
                     </SelectList>
+                    <BulkDeleteAnnotationsButton
+                        {selectedCount}
+                        {disabled}
+                        {isLoading}
+                        {onDelete}
+                    />
                 </div>
             </Segment>
         </div>
