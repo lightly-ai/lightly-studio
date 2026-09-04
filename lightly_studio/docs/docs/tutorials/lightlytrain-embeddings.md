@@ -34,7 +34,7 @@ The table gives the k-nearest-neighbor class purity for each model. Purity is th
 
 The distilled ViT-T closes 83% of the distance to its teacher. The teacher is 15 times larger. The distilled ViT-T also scores higher than an off-the-shelf ViT-S, which is 4 times larger.
 
-The next two plots show the same 978 images from 20 species, colored by species. The model is the same size in both. Only the weights are different. Step 4 loads this same slice, so you can reproduce these plots. The distillation itself still runs on all 200 species.
+The next two plots show the same 978 images from 20 species, colored by species. The model is the same size in both. Only the weights are different. Step 4 loads this same slice, so you can reproduce the plot after distillation. The distillation itself still runs on all 200 species.
 
 The purity in each caption is measured on these 978 images from 20 species. The table above measures all 200 species instead. Fewer species is an easier task, so the caption values are higher. Both use the same metric.
 
@@ -91,17 +91,20 @@ import tarfile
 import urllib.request
 from pathlib import Path
 
+IMAGE_PATH = "CUB_200_2011/images"
+
 # Download CUB-200-2011 (11,788 images of 200 bird species), one folder per species.
 archive = Path("CUB_200_2011.tgz")
 if not archive.exists():
     urllib.request.urlretrieve(
         "https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz", archive
     )
+# Extract whenever the images are missing, so an interrupted run recovers without
+# a second download.
+if not Path(IMAGE_PATH).is_dir():
     with tarfile.open(archive) as tar:
         # filter="data" refuses members that would write outside the target directory.
         tar.extractall(".", filter="data")
-
-IMAGE_PATH = "CUB_200_2011/images"
 ```
 
 ## Step 2: Distill the model
@@ -259,17 +262,23 @@ ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator("out/embedding_mod
 
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
 species_dirs = sorted(p for p in Path(IMAGE_PATH).iterdir() if p.is_dir())
-for species_dir in species_dirs[:NUM_SPECIES]:
-    dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
+if species_dirs:
+    # One call per species, so each species contributes at most IMAGES_PER_SPECIES images.
+    for species_dir in species_dirs[:NUM_SPECIES]:
+        dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
+else:
+    # A flat folder with no per-class subfolders: one call loads it.
+    dataset.add_images_from_path(path=IMAGE_PATH)
 
 # Label each image with its species, so you can color the plot by species in the GUI.
-# CUB folders look like "001.Black_footed_Albatross".
-for sample in dataset:
-    folder = Path(sample.file_path_abs).parent.name
-    species = folder.split(".", 1)[-1].replace("_", " ")
-    sample.add_annotation(
-        CreateClassification(class_name=species), annotation_source="class"
-    )
+# CUB folders look like "001.Black_footed_Albatross". A flat folder has no species to read.
+if species_dirs:
+    for sample in dataset:
+        folder = Path(sample.file_path_abs).parent.name
+        species = folder.split(".", 1)[-1].replace("_", " ")
+        sample.add_annotation(
+            CreateClassification(class_name=species), annotation_source="class"
+        )
 ```
 
 !!! note "Match your training normalization"
@@ -357,6 +366,6 @@ In this tutorial, you distilled a large model into a small one with LightlyTrain
 
 The connection between the two products is a single model file. The distilled ViT-T went from 0.081 to 0.606 purity, at the inference cost of a 5.5M-parameter model.
 
-Text search is the one exception: this model is vision-only.
+After LightlyStudio loads the model file, the embedding plot and every sampling strategy work as they do with a built-in model. Text search is the one exception, because this model is vision-only.
 
 To go further, distill on your full dataset, try a different teacher from `lightly_train.list_models()`, or read [Embeddings](../concepts_and_tools/embeddings.md) and [Sampling](../concepts_and_tools/sampling.md).

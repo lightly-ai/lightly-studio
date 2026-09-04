@@ -146,15 +146,21 @@ db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
 species_dirs = sorted(p for p in Path(IMAGE_PATH).iterdir() if p.is_dir())
-for species_dir in species_dirs[:NUM_SPECIES]:
-    dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
+if species_dirs:
+    # One call per species, so each species contributes at most IMAGES_PER_SPECIES images.
+    for species_dir in species_dirs[:NUM_SPECIES]:
+        dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
+else:
+    # A flat folder with no per-class subfolders: one call loads it.
+    dataset.add_images_from_path(path=IMAGE_PATH)
 
 # Label each image with its species, so you can color the plot by species in the GUI.
-# CUB folders look like "001.Black_footed_Albatross".
-for sample in dataset:
-    folder = Path(sample.file_path_abs).parent.name
-    species = folder.split(".", 1)[-1].replace("_", " ")
-    sample.add_annotation(CreateClassification(class_name=species), annotation_source="class")
+# CUB folders look like "001.Black_footed_Albatross". A flat folder has no species to read.
+if species_dirs:
+    for sample in dataset:
+        folder = Path(sample.file_path_abs).parent.name
+        species = folder.split(".", 1)[-1].replace("_", " ")
+        sample.add_annotation(CreateClassification(class_name=species), annotation_source="class")
 
 # 3. Curate in code: select a diverse subset. The result is stored as a tag you can
 # open in the app. You can also do this interactively with the lasso in the GUI.

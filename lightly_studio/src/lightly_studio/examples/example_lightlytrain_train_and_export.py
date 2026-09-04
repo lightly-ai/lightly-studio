@@ -35,6 +35,7 @@ TEACHER = "dinov3/vitb16"
 EPOCHS = 100
 PRETRAIN_DIR = "out/pretrain"
 MODEL_FILE = "out/embedding_model.pt"
+IMAGE_PATH = "CUB_200_2011/images"
 
 # 1. Download CUB-200-2011 (11,788 images of 200 bird species), one folder per species.
 archive = Path("CUB_200_2011.tgz")
@@ -42,11 +43,13 @@ if not archive.exists():
     urllib.request.urlretrieve(
         "https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz", archive
     )
+# Extract whenever the images are missing, so an interrupted run recovers without
+# a second download.
+if not Path(IMAGE_PATH).is_dir():
     with tarfile.open(archive) as tar:
         # filter="data" refuses members that would write outside the target directory.
         # It needs Python 3.10.12+, 3.11.4+, or 3.12+, and is the default from 3.14.
         tar.extractall(".", filter="data")
-IMAGE_PATH = "CUB_200_2011/images"
 
 # 2. Distill the teacher into the student. This uses no labels.
 # overwrite=True lets you re-run this script over an existing output directory.
