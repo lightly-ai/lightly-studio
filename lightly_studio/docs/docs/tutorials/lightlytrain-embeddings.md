@@ -21,11 +21,12 @@ Distillation gives you both. LightlyTrain copies the behavior of the large model
 
 This tutorial uses [CUB-200-2011](https://www.vision.caltech.edu/datasets/cub_200_2011/), a dataset of 11,788 photos of 200 bird species. Species recognition is fine-grained, so model capacity matters here.
 
-The table gives the k-nearest-neighbor class purity for each model. Purity is the fraction of the 10 nearest neighbors of an image that have the same species. A random model scores 0.005 on 200 classes.
+The table gives the k-nearest-neighbor class purity for each model. Purity is the fraction of the 10 nearest neighbors of an image that have the same species. The first row is the floor: pick neighbors at random and 1 in 200 lands on the same species.
 
 | Model | Parameters | Purity |
 | --- | --- | --- |
-| DINOv3 ViT-T (off the shelf) | 5.5M | 0.081 |
+| Random neighbors (the floor, no model) | — | 0.005 |
+| DINOv3 ViT-T, off the shelf ([distilled by Lightly](https://docs.lightly.ai/train/stable/pretrain_distill/models/dinov3.html#pretrain-and-fine-tune-a-dinov3-model)) | 5.5M | 0.081 |
 | MobileCLIP (LightlyStudio default) | 11M | 0.357 |
 | DINOv3 ViT-S | 21.6M | 0.582 |
 | **DINOv3 ViT-T, distilled in this tutorial** | **5.5M** | **0.606** |
@@ -34,7 +35,7 @@ The table gives the k-nearest-neighbor class purity for each model. Purity is th
 
 The distilled ViT-T closes 83% of the distance to its teacher. The teacher is 15 times larger. The distilled ViT-T also scores higher than an off-the-shelf ViT-S, which is 4 times larger.
 
-The next two plots show the same 978 images from 20 species, colored by species. The model is the same size in both. Only the weights are different. Step 4 loads this same slice, so you can reproduce the plot after distillation. The distillation itself still runs on all 200 species.
+The next two plots show the same 978 images from 20 species, colored by species. The model is the same size in both. Only the weights are different. Step 4 loads this same slice, so the right-hand plot is the one you get at the end of this tutorial. The distillation itself still runs on all 200 species.
 
 The purity in each caption is measured on these 978 images from 20 species. The table above measures all 200 species instead. Fewer species is an easier task, so the caption values are higher. Both use the same metric.
 
@@ -84,71 +85,84 @@ pip install lightly-train lightly-studio
 
 Create the first script, `train_and_export.py`. This script downloads CUB-200-2011. The dataset has one folder for each species, and the explore script reads those folder names to label each image.
 
-To use your own data, point `IMAGE_PATH` at a folder of images. Use one subfolder for each class if you want class coloring. See [Load an Image Dataset](../dataset_setup/image_dataset.md).
+To use your own data, point `IMAGE_PATH` at a folder that holds one subfolder for each class, with the images directly inside. That is the layout `explore.py` reads in Step 4, and the only one it accepts. `IMAGE_PATH` is defined in both scripts, so change it in both. See [Load an Image Dataset](../dataset_setup/image_dataset.md).
+
+Everything the script does goes inside `if __name__ == "__main__":`. LightlyTrain starts dataloader workers that re-import this file on macOS and Windows, and without the guard the run crashes. Steps 2 and 3 add more code inside the same block.
 
 ```python title="train_and_export.py"
 import tarfile
-import urllib.request
 from pathlib import Path
 
-IMAGE_PATH = "CUB_200_2011/images"
+import lightly_train
 
-# Download CUB-200-2011 (11,788 images of 200 bird species), one folder per species.
-archive = Path("CUB_200_2011.tgz")
-if not archive.exists():
-    urllib.request.urlretrieve(
-        "https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz", archive
-    )
-# Extract whenever the images are missing, so an interrupted run recovers without
-# a second download.
-if not Path(IMAGE_PATH).is_dir():
-    with tarfile.open(archive) as tar:
-        # filter="data" refuses members that would write outside the target directory.
-        tar.extractall(".", filter="data")
+from lightly_studio.dataset import file_utils
+
+CUB_URL = "https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz"
+ARCHIVE = Path("CUB_200_2011.tgz")
+# The archive also holds a top-level attributes.txt, so extract into a directory of
+# our own instead of the working directory.
+DATA_DIR = Path("data")
+# Touched only after extractall returns. CUB_200_2011/images appears three members
+# into the archive, so its presence says nothing about whether extraction finished.
+EXTRACT_DONE = DATA_DIR / ".extracted"
+IMAGE_PATH = DATA_DIR / "CUB_200_2011" / "images"
+
+if __name__ == "__main__":
+    # Download CUB-200-2011 (11,788 images of 200 bird species), one folder per
+    # species. The helper downloads to a temp file and moves it into place only on
+    # success, so an interrupted download is never mistaken for a complete one.
+    file_utils.download_file_if_does_not_exist(url=CUB_URL, local_filename=ARCHIVE)
+    if not EXTRACT_DONE.exists():
+        with tarfile.open(ARCHIVE) as tar:
+            # filter="data" refuses members that would write outside DATA_DIR.
+            tar.extractall(DATA_DIR, filter="data")
+        EXTRACT_DONE.touch()
 ```
 
 ## Step 2: Distill the model
 
 [Distillation](https://docs.lightly.ai/train/stable/pretrain_distill/methods/distillation.html) copies the behavior of a large teacher into a small student. It uses no labels.
 
-Here the student is `dinov3/vitt16` and the teacher is `dinov3/vitb16`. Both start from pretrained weights.
+Here the student is `dinov3/vitt16` and the teacher is `dinov3/vitb16`. Both start from pretrained weights. Both are covered by the [DINOv3 license](https://docs.lightly.ai/train/stable/pretrain_distill/models/dinov3.html), which the model you export inherits. For Apache 2.0 weights, use a DINOv2 model instead.
+
+Append this inside the `if __name__ == "__main__":` block from Step 1. It is indented to match:
 
 ```python title="train_and_export.py"
-import lightly_train
-
-lightly_train.pretrain(
-    out="out/pretrain",
-    data=IMAGE_PATH,
-    model="dinov3/vitt16",  # The student. This is the model you run later.
-    method="distillation",
-    method_args={"teacher": "dinov3/vitb16"},  # The teacher. Larger and stronger.
-    epochs=100,
-    overwrite=True,  # Allow re-running over an existing output directory.
-)
+    lightly_train.pretrain(
+        out="out/pretrain",
+        data=IMAGE_PATH,
+        model="dinov3/vitt16",  # The student. This is the model you run later.
+        method="distillation",
+        method_args={"teacher": "dinov3/vitb16"},  # The teacher. Larger and stronger.
+        epochs=100,
+        # Pick a crashed run back up instead of repeating all 100 epochs. On a first
+        # run there is no checkpoint and this does nothing.
+        resume_interrupted=True,
+    )
 ```
 
 Training writes a checkpoint to `out/pretrain/checkpoints/last.ckpt`.
 
 !!! note "Choose the teacher"
-    A larger teacher is not always better. In this tutorial, ViT-L scores 0.062 above ViT-B, but it has 3.5 times more parameters. ViT-B trains faster and gives almost the same result.
+    A larger teacher is not always better. ViT-L has 3.5 times more parameters than ViT-B, so every distillation step costs more, and the teacher is frozen either way. This tutorial did not measure a ViT-T distilled from ViT-L, so the table above cannot tell you what that extra cost buys.
 
 !!! note "The student is already a distilled model"
-    The `dinov3/vitt16` weights come from an earlier distillation run by Lightly. This tutorial distills that model again, onto one specific dataset. The 0.081 score in the table above is that general-purpose model on fine-grained birds. It is not the score of an untrained model. A model with random weights scores 0.005.
+    Lightly trained the `dinov3/vitt16` weights, not Meta. They come from an earlier distillation run, with DINOv3 ViT-L/16 as the teacher and ImageNet-1K as the data. This tutorial distills that model again, onto one specific dataset. So the 0.081 score in the table above is a general-purpose model on fine-grained birds, not an untrained one. The floor is 0.005.
 
 Any name from `lightly_train.list_models()` works for `model` and for `teacher`. See the [supported models](https://docs.lightly.ai/train/stable/pretrain_distill/models/index.html) of LightlyTrain. For other methods, see the [pretraining guide](https://docs.lightly.ai/train/stable/pretrain_distill/index.html) and the [available methods](https://docs.lightly.ai/train/stable/pretrain_distill/methods/index.html).
 
 ## Step 3: Export the embedding model
 
-[Export](https://docs.lightly.ai/train/stable/pretrain_distill/export.html) the student as a plain torch module. LightlyStudio loads this file and runs it directly.
+[Export](https://docs.lightly.ai/train/stable/pretrain_distill/export.html) the student as a plain torch module. LightlyStudio loads this file and runs it directly. This block goes inside the same `if __name__ == "__main__":` block, after the `pretrain` call:
 
 ```python title="train_and_export.py"
-lightly_train.export(
-    out="out/embedding_model.pt",
-    checkpoint="out/pretrain/checkpoints/last.ckpt",
-    part="embedding_model",
-    format="torch_model",
-    overwrite=True,
-)
+    lightly_train.export(
+        out="out/embedding_model.pt",
+        checkpoint="out/pretrain/checkpoints/last.ckpt",
+        part="embedding_model",
+        format="torch_model",
+        overwrite=True,
+    )
 ```
 
 ## Step 4: Load the model into LightlyStudio
@@ -176,8 +190,8 @@ from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio.embed.types import EmbeddingResult
 
-# train_and_export.py already downloaded CUB-200-2011 to CUB_200_2011/.
-IMAGE_PATH = "CUB_200_2011/images"
+# train_and_export.py already downloaded CUB-200-2011 to data/CUB_200_2011/.
+IMAGE_PATH = Path("data/CUB_200_2011/images")
 # The plot gets one color per species, and 200 colors are hard to tell apart. These
 # two settings load a smaller slice so the plot stays readable. Set both to None to
 # load all 200 species and all 11,788 images.
@@ -256,29 +270,44 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         )
 
 
+# Check the inputs before connecting, because cleanup_existing=True below deletes the
+# local database. Both paths are relative, so the usual mistake is the working directory.
+for required_path in (IMAGE_PATH, Path("out/embedding_model.pt")):
+    if not required_path.exists():
+        raise SystemExit(
+            f"{required_path} not found (cwd={Path.cwd()}). "
+            "Run train_and_export.py first."
+        )
+
 # Resets the local database so a re-run starts clean. Remove to keep prior tags and curation.
 ls.db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator("out/embedding_model.pt"))
 
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-species_dirs = sorted(p for p in Path(IMAGE_PATH).iterdir() if p.is_dir())
-if species_dirs:
-    # One call per species, so each species contributes at most IMAGES_PER_SPECIES images.
-    for species_dir in species_dirs[:NUM_SPECIES]:
-        dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
-else:
-    # A flat folder with no per-class subfolders: one call loads it.
-    dataset.add_images_from_path(path=IMAGE_PATH)
+
+# This script expects one subfolder per class with the images directly inside, the
+# layout CUB-200-2011 ships. Anything else is rejected rather than loaded wrong.
+species_dirs = sorted(p for p in IMAGE_PATH.iterdir() if p.is_dir() and p.name[0] != ".")
+if not species_dirs:
+    raise SystemExit(
+        f"{IMAGE_PATH} has no class subfolders. For a flat folder of images, replace "
+        "this block with a single dataset.add_images_from_path(path=IMAGE_PATH) call "
+        "and drop the labelling loop below."
+    )
+
+# One call per species, so each species contributes at most IMAGES_PER_SPECIES images.
+# A single call would cap the total across all species instead.
+for species_dir in species_dirs[:NUM_SPECIES]:
+    dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
 
 # Label each image with its species, so you can color the plot by species in the GUI.
-# CUB folders look like "001.Black_footed_Albatross". A flat folder has no species to read.
-if species_dirs:
-    for sample in dataset:
-        folder = Path(sample.file_path_abs).parent.name
-        species = folder.split(".", 1)[-1].replace("_", " ")
-        sample.add_annotation(
-            CreateClassification(class_name=species), annotation_source="class"
-        )
+# CUB folders look like "001.Black_footed_Albatross".
+for sample in dataset:
+    folder = Path(sample.file_path_abs).parent.name
+    species = folder.split(".", 1)[-1].replace("_", " ")
+    sample.add_annotation(
+        CreateClassification(class_name=species), annotation_source="species"
+    )
 ```
 
 !!! note "Match your training normalization"
@@ -319,11 +348,11 @@ Read the map:
 - **Spot near-duplicates.** Points on top of each other are almost identical images.
 
 !!! warning "Read the numbers, not only the plot"
-    A 2D projection keeps local neighborhoods, not distances. Two different embedding spaces can give similar plots. To compare two models, measure them. Every purity number here uses the 10 nearest neighbors by cosine similarity. The table uses 20 images from each of the 200 species. The two plot captions use the 978 images from 20 species, so their numbers are higher.
+    A 2D projection keeps local neighborhoods, not distances. Two different embedding spaces can give similar plots, so a plot on its own does not tell you which model is better. Every purity number on this page uses the 10 nearest neighbors by cosine similarity. The table uses 20 images from each of the 200 species. The two plot captions use the 978 images from 20 species, so their numbers are higher.
 
 ### What the clusters contain
 
-Lasso a tight cluster to scope the grid to its images. Each cluster holds one species. Here are four of them:
+Lasso a tight cluster to scope the grid to its images, and it turns out to be one coherent group. The tightest clusters are close to a single species, with a few strays. Here are four of them:
 
 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
   <figure style="margin: 0;">
