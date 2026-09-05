@@ -95,7 +95,6 @@ class VideoLoadContext:
     collection_id: UUID
     video_frames_collection_id: UUID
     video_channel: int
-    num_decode_threads: int | None
     target_fps: float | None
     embed_frames: bool
     embedding_model_id: UUID | None
@@ -106,7 +105,6 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     collection_id: UUID,
     video_paths: Iterable[str],
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
-    num_decode_threads: int | None = None,
     show_progress: bool = True,
     target_fps: float | None = None,
     embed_frames: bool = False,
@@ -119,8 +117,6 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         sample_type == SampleType.VIDEO.
         video_paths: An iterable of file paths to the videos to load.
         video_channel: The video channel from which frames are loaded.
-        num_decode_threads: Optional override for the number of FFmpeg decode threads.
-            If omitted, the available CPU cores - 1 (max 16) are used.
         show_progress: Whether to display a progress bar and final summary of loading results.
         target_fps: Optional target frame rate for subsampling. When set below the source
             frame rate, only selected frames are kept. frame_number values remain
@@ -172,7 +168,6 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         collection_id=collection_id,
         video_frames_collection_id=video_frames_collection_id,
         video_channel=video_channel,
-        num_decode_threads=num_decode_threads,
         target_fps=target_fps,
         embed_frames=effective_embed_frames,
         embedding_model_id=embedding_model_id,
@@ -284,7 +279,6 @@ def _load_single_video(
                     context=extraction_context,
                     video_container=video_container,
                     video_channel=context.video_channel,
-                    num_decode_threads=context.num_decode_threads,
                     target_fps=context.target_fps,
                 )
             except (OSError, FFmpegError) as e:
@@ -472,7 +466,6 @@ def _create_video_frame_samples(
     context: FrameExtractionContext,
     video_container: InputContainer,
     video_channel: int,
-    num_decode_threads: int | None = None,
     target_fps: float | None = None,
 ) -> list[UUID]:
     """Create video frame samples for a video by parsing all frames.
@@ -484,7 +477,6 @@ def _create_video_frame_samples(
         context: Frame extraction context (session, dataset and parent video).
         video_container: The PyAV container with the opened video.
         video_channel: The video channel from which frames are loaded.
-        num_decode_threads: Optional override for FFmpeg decode thread count.
         target_fps: Optional target frame rate for subsampling. If set and lower than the
             source frame rate, only a subset of frames is persisted; kept frames retain
             their original frame_number. If omitted, all frames are persisted.
@@ -496,7 +488,7 @@ def _create_video_frame_samples(
     samples_to_create: list[VideoFrameCreate] = []
     pil_frames: list[Image.Image] = []
     video_stream = video_container.streams.video[video_channel]
-    _configure_stream_threading(video_stream=video_stream, num_decode_threads=num_decode_threads)
+    _configure_stream_threading(video_stream=video_stream)
 
     # Get time base for converting PTS to seconds
     time_base = video_stream.time_base if video_stream.time_base else None
@@ -576,7 +568,9 @@ def _flush_frame_batch(
     return created_sample_ids
 
 
-def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: int | None) -> None:
+def _configure_stream_threading(
+    video_stream: VideoStream, num_decode_threads: int | None = None
+) -> None:
     """Configure codec-level threading for faster decode when available."""
     codec_context = getattr(video_stream, "codec_context", None)
     if codec_context is None:

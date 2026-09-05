@@ -231,7 +231,6 @@ def _fail_after_frame_creation(
         context: FrameExtractionContext,
         video_container: InputContainer,
         video_channel: int,
-        num_decode_threads: int | None = None,
         target_fps: float | None = None,
     ) -> list[UUID]:
         video = video_resolver.get_by_id(session=context.session, sample_id=context.video_sample_id)
@@ -255,7 +254,6 @@ def _fail_after_frame_creation(
             context=context,
             video_container=video_container,
             video_channel=video_channel,
-            num_decode_threads=num_decode_threads,
             target_fps=target_fps,
         )
 

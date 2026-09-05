@@ -21,8 +21,6 @@ class CreateVideo(CreateSample):
     """The file path of the video to be created."""
     video_channel: int = DEFAULT_VIDEO_CHANNEL
     """The video channel to be used for loading the video."""
-    num_decode_threads: int | None = None
-    """The number of threads to use for decoding the video."""
 
     def create_in_collection(self, session: Session, collection_id: UUID) -> UUID:
         """Create a video sample in the specified collection.
@@ -42,7 +40,6 @@ class CreateVideo(CreateSample):
             collection_id=collection_id,
             video_paths=[self.path],
             video_channel=self.video_channel,
-            num_decode_threads=self.num_decode_threads,
             show_progress=False,
         )
         if len(video_path_to_id) != 1:

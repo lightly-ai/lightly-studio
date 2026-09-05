@@ -120,7 +120,6 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
-        num_decode_threads: int | None = None,
         embed: bool = True,
         embed_frames: bool = True,
         target_fps: float | None = None,
@@ -133,8 +132,6 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             allowed_extensions: An iterable container of allowed video file
                 extensions in lowercase, including the leading dot. If None,
                 uses default VIDEO_EXTENSIONS.
-            num_decode_threads: Optional override for the number of FFmpeg decode threads.
-                If omitted, the available CPU cores - 1 (max 16) are used.
             embed: If True, generate embeddings for the newly added videos.
             embed_frames: If True, generate image embeddings for the extracted video frames
                 during decoding.
@@ -157,7 +154,6 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             session=self.session,
             collection_id=self.collection_id,
             video_paths=video_paths,
-            num_decode_threads=num_decode_threads,
             target_fps=target_fps,
             embed_frames=embed_frames,
         )
