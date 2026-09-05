@@ -566,10 +566,18 @@ def _add_strategy_to_mundig(
             mundig=mundig,
         )
     elif isinstance(strat, MetadataWeightingStrategy):
-        weights: list[float] = []
         metadata_key = strat.metadata_key
+        # Read the selected samples' values in one batched query, then look each up in
+        # memory, instead of one query per sample.
+        values_by_sample_id, _ = metadata_resolver.get_metadata_values_for_key(
+            session=session,
+            collection_id=context.collection_id,
+            key=metadata_key,
+            sample_ids=context.input_sample_ids,
+        )
+        weights: list[float] = []
         for sample_id in context.input_sample_ids:
-            weight = metadata_resolver.get_value_for_sample(session, sample_id, key=metadata_key)
+            weight = values_by_sample_id.get(sample_id)
             if not isinstance(weight, (float, int)):
                 raise ValueError(
                     f"Metadata {metadata_key} is not a number, only numbers can be used as weights"
