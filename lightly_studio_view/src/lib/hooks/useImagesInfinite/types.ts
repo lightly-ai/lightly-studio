@@ -37,8 +37,7 @@ export type SamplesQueryKey = readonly [
     ImagesInfiniteParams['mode'],
     NormalModeFilters | ClassifierSamples | undefined,
     {
-        metadata_values?: MetadataValues;
-        categorical_metadata_values?: CategoricalMetadataValues;
+        metadata_filters?: SampleFilter['metadata_filters'];
         text_embedding?: ReadImagesRequest['text_embedding'];
         query_expr?: QueryExpr;
     },

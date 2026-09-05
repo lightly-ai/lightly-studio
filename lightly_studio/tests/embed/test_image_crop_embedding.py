@@ -14,9 +14,9 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
-from lightly_studio.dataset import image_crop_embedding
-from lightly_studio.dataset.embedding_generator import ImageCrop
-from lightly_studio.dataset.image_embedding import EmbeddingContext
+from lightly_studio.embed import image_crop_embedding
+from lightly_studio.embed.image_embedding import EmbeddingContext
+from lightly_studio.embed.types import ImageCrop
 from lightly_studio.utils import executor
 
 

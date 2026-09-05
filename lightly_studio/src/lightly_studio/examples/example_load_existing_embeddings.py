@@ -19,7 +19,7 @@ from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
-from lightly_studio.dataset.embedding_result import EmbeddingResult
+from lightly_studio.embed.types import EmbeddingResult
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 EMBEDDING_DIMENSION = 64
