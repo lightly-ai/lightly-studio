@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from functools import cached_property
 from typing import Any
 from uuid import UUID
 
@@ -107,11 +108,17 @@ class ImageDatasetEvaluate:
         """
         self.session = session
         self.collection_id = collection_id
+        self._sample_ids_source: Iterable[UUID] = sample_ids
+
+    @cached_property
+    def sample_ids(self) -> set[UUID]:
+        """The IDs of the samples selected for evaluation, materialized once on first read."""
         # Materialize once: callers may pass a single-use generator, and the
         # facade can be reused across task methods (object_detection(),
         # classification(), ...). Without this, the second call would see an
-        # exhausted iterator and silently evaluate zero samples.
-        self.sample_ids: set[UUID] = set(sample_ids)
+        # exhausted iterator and silently evaluate zero samples. Deferred to the first
+        # read so readback methods (list_runs(), confusion_matrix()) do not scan.
+        return set(self._sample_ids_source)
 
     def object_detection(
         self,
@@ -287,7 +294,8 @@ class ImageDatasetEvaluate:
             config_json=config_json,
         )
 
-        selected_sample_ids = self.sample_ids
+        # Copy: the intersection below is in place, and must not mutate the cached set.
+        selected_sample_ids = set(self.sample_ids)
         gt_covered_sample_ids = set(
             annotation_collection_coverage_resolver.list_by_collection_id(
                 session=self.session,

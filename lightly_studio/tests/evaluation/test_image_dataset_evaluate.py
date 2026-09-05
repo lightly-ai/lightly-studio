@@ -698,6 +698,72 @@ def test_confusion_matrix__run_from_another_dataset_raises(
         dataset.evaluate().confusion_matrix(run_id=run.id)
 
 
+def test_readback_does_not_materialize_sample_ids(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Reading back runs leaves the sample IDs unmaterialized; a write materializes them."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name=source_name,
+        )
+    evaluator = dataset.evaluate()
+
+    evaluator.list_runs()
+    # The cached property is absent until read, so readback did not scan the dataset.
+    assert "sample_ids" not in vars(evaluator)
+
+    evaluator.object_detection(
+        name="run-1", gt_annotation_source="gt", pred_annotation_source="pred"
+    )
+    assert "sample_ids" in vars(evaluator)
+
+
+def test_write_method_does_not_shrink_cached_sample_ids(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """A write method restricts to covered samples without mutating the cached set."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    covered_image = create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/covered.png",
+    )
+    uncovered_image = create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/uncovered.png",
+    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=covered_image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name=source_name,
+        )
+    evaluator = dataset.evaluate()
+
+    evaluator.object_detection(
+        name="run-1", gt_annotation_source="gt", pred_annotation_source="pred"
+    )
+
+    assert evaluator.sample_ids == {covered_image.sample_id, uncovered_image.sample_id}
+
+
 def _create_gt_and_pred_collections(session: Session, collection_id: UUID) -> None:
     """Create child 'gt' and 'pred' annotation collections under the parent collection.
 
