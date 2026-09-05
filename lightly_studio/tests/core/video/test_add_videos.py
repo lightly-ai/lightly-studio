@@ -266,6 +266,79 @@ def _fail_after_frame_creation(
     )
 
 
+@pytest.mark.parametrize("reported_size", [None, 128 * 2**20, 128 * 2**20 + 1])
+def test_load_into_collection_from_paths__reads_remote_videos(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture, reported_size: int | None
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    local_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=5, fps=5)
+    remote_path = _write_to_memory_filesystem(local_path=local_path, name="video.mp4")
+
+    fs, _ = fsspec.core.url_to_fs(url=remote_path)
+    mocker.patch.object(type(fs), "info", return_value={"size": reported_size})
+    download = mocker.spy(type(fs), "cat_file")
+
+    video_path_to_id, frame_sample_ids = add_videos.load_into_collection_from_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video_paths=[remote_path, remote_path],
+        show_progress=False,
+    )
+
+    assert set(video_path_to_id) == {remote_path}
+    video = video_resolver.get_by_id(session=db_session, sample_id=video_path_to_id[remote_path])
+    assert video is not None
+    assert video.file_path_abs == remote_path
+    assert video.fps == 5
+    assert sorted(frame.frame_number for frame in video.frames) == list(range(5))
+    assert download.call_count == (reported_size == 128 * 2**20)
+    assert len(frame_sample_ids) == 5
+
+
+def test__fetch_video__leaves_local_files_unread(tmp_path: Path, mocker: MockerFixture) -> None:
+    """A local file is decoded straight from disk, so reading it up front is skipped."""
+    local_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=2, fps=1)
+
+    fs, _ = fsspec.core.url_to_fs(url=str(local_path))
+    download = mocker.spy(type(fs), "cat_file")
+
+    fetched = add_videos._fetch_video(video_path=str(local_path))
+
+    assert fetched.error is None
+    assert fetched.content is None
+    download.assert_not_called()
+
+
+def test_load_into_collection_from_paths__continues_after_download_failure(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    local_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=2, fps=1)
+    remote_path = _write_to_memory_filesystem(local_path=local_path, name="broken.mp4")
+    fs, _ = fsspec.core.url_to_fs(url=remote_path)
+    mocker.patch.object(type(fs), "cat_file", side_effect=OSError("Download failed"))
+
+    with caplog.at_level("INFO"):
+        videos, frames = add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video_paths=[remote_path, str(local_path)],
+            show_progress=False,
+        )
+
+    assert set(videos) == {str(local_path)}
+    assert len(frames) == 2
+    assert "broken=1" in caplog.text
+
+
+def _write_to_memory_filesystem(local_path: Path, name: str) -> str:
+    """Copy a file onto fsspec's in-memory filesystem and return its remote-style path."""
+    memory_path = f"memory://videos/{name}"
+    filesystem, filesystem_path = fsspec.core.url_to_fs(url=memory_path)
+    filesystem.pipe_file(filesystem_path, local_path.read_bytes())
+    return memory_path
+
+
 def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
     """Test _create_video_frame_samples function directly."""
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)

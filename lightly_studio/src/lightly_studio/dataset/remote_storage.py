@@ -11,9 +11,14 @@ from lightly_studio.dataset import env
 _LOCAL_PROTOCOLS = frozenset(("file", "local"))
 
 
+def is_remote(path: str) -> bool:
+    """Return whether the path lives on remote storage rather than a local filesystem."""
+    return fsspec.utils.get_protocol(path) not in _LOCAL_PROTOCOLS
+
+
 def image_probe_workers(paths: Iterable[str]) -> int:
     """Return the configured worker count when any path is remote, otherwise one."""
-    if any(fsspec.utils.get_protocol(path) not in _LOCAL_PROTOCOLS for path in paths):
+    if any(is_remote(path) for path in paths):
         return env.LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS
     return 1
 

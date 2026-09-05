@@ -6,10 +6,11 @@ import itertools
 import logging
 import math
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
-from typing import cast
+from typing import BinaryIO, cast
 from uuid import UUID
 
 import av
@@ -36,11 +37,13 @@ from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers, path_utils
 from lightly_studio.core.file_outcome_report import (
-    AlreadyPresentInputFileError,
     BrokenInputFileError,
+    FileOutcome,
     FileOutcomeReport,
+    InputFileError,
     MissingInputFileError,
 )
+from lightly_studio.dataset import remote_storage
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
@@ -56,12 +59,17 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.utils import parallelize
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_VIDEO_CHANNEL = 0
 # Number of samples to process in a single batch
 SAMPLE_BATCH_SIZE = 128
+
+# Bound read-ahead; the current video and I/O buffers use additional memory.
+_MAX_FETCH_WORKERS = 3
+_MAX_BUFFERED_VIDEO_BYTES = 128 * 2**20
 
 # Video file extensions
 # These are commonly supported by PyAV/FFmpeg.
@@ -99,6 +107,15 @@ class VideoLoadContext:
     target_fps: float | None
     embed_frames: bool
     embedding_model_id: UUID | None
+
+
+@dataclass
+class _FetchedVideo:
+    """Fetched bytes, an input error, or no content when buffering was skipped."""
+
+    path: str
+    content: bytes | None = None
+    error: InputFileError | None = None
 
 
 def load_into_collection_from_paths(  # noqa: PLR0913
@@ -178,24 +195,29 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         embedding_model_id=embedding_model_id,
     )
 
-    # TODO(Malte, 07/2026): Parallelize video indexing across videos with
-    # parallelize.thread_imap_lazy (one task per whole video, never split a video;
-    # workers and prefetch stay bounded) to overlap remote reads. Decode single-threaded
-    # per video and keep DB writes and embedding on a single thread, as neither the
-    # session nor the model is thread-safe.
-    for video_path in tqdm(
-        video_paths_list,
+    paths_to_load: list[str] = []
+    for video_path in video_paths_list:
+        if video_path in seen_or_existing_paths:
+            report.record(path=video_path, outcome=FileOutcome.ALREADY_PRESENT)
+            continue
+        seen_or_existing_paths.add(video_path)
+        paths_to_load.append(video_path)
+
+    fetched_videos = tqdm(
+        _fetch_videos(video_paths=paths_to_load),
         desc="Loading frames from videos",
         unit=" video",
+        total=len(paths_to_load),
         disable=not show_progress,
-    ):
-        with report.track(path=video_path):
-            video_sample_id, frame_sample_ids = _load_single_video(
-                context=load_context,
-                video_path=video_path,
-                seen_or_existing_paths=seen_or_existing_paths,
+    )
+    for fetched in fetched_videos:
+        with report.track(path=fetched.path):
+            if fetched.error is not None:
+                raise fetched.error
+            video_sample_id, frame_sample_ids = _load_video_from(
+                context=load_context, fetched=fetched
             )
-            created_video_path_to_id[video_path] = video_sample_id
+            created_video_path_to_id[fetched.path] = video_sample_id
             created_video_frame_sample_ids.extend(frame_sample_ids)
 
     report.log_summary()
@@ -204,34 +226,60 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     return created_video_path_to_id, created_video_frame_sample_ids
 
 
+def _fetch_videos(video_paths: list[str]) -> Iterator[_FetchedVideo]:
+    """Prefetch bytes; decoding, database writes, and embedding stay on the caller."""
+    yield from parallelize.thread_imap_lazy(
+        function=_fetch_video, iterable=video_paths, max_workers=_MAX_FETCH_WORKERS
+    )
+
+
+def _fetch_video(video_path: str) -> _FetchedVideo:
+    """Buffer small remote videos; return input errors so ingestion can continue."""
+    try:
+        fs, fs_path = fsspec.core.url_to_fs(url=video_path)
+        video_size = fs.info(fs_path).get("size")
+        if (
+            not remote_storage.is_remote(video_path)
+            or video_size is None
+            or video_size > _MAX_BUFFERED_VIDEO_BYTES
+        ):
+            return _FetchedVideo(path=video_path)
+        return _FetchedVideo(path=video_path, content=fs.cat_file(fs_path))
+    except FileNotFoundError:
+        return _FetchedVideo(path=video_path, error=MissingInputFileError())
+    except OSError:
+        return _FetchedVideo(path=video_path, error=BrokenInputFileError())
+
+
+def _load_video_from(context: VideoLoadContext, fetched: _FetchedVideo) -> tuple[UUID, list[UUID]]:
+    """Decode buffered bytes or open the original file."""
+    if fetched.content is not None:
+        return _load_single_video(
+            context=context, video_path=fetched.path, video_file=BytesIO(fetched.content)
+        )
+    # ``_load_single_video`` takes ownership of the file object and closes it.
+    fs, fs_path = fsspec.core.url_to_fs(url=fetched.path)
+    return _load_single_video(
+        context=context, video_path=fetched.path, video_file=fs.open(path=fs_path, mode="rb")
+    )
+
+
 def _load_single_video(
     context: VideoLoadContext,
     video_path: str,
-    seen_or_existing_paths: set[str],
+    video_file: BinaryIO,
 ) -> tuple[UUID, list[UUID]]:
     """Load one video and its frames, returning the created video and frame sample IDs.
 
-    Raises a ``FileOutcomeReport`` error (already-present, missing, or broken) when the
-    video cannot be loaded, so the caller's ``report.track`` block can record the outcome.
+    Raises a ``FileOutcomeReport`` error (broken) when the video cannot be loaded, so the
+    caller's ``report.track`` block can record the outcome.
     """
-    # Skip paths already in the database or already seen in this call.
-    if video_path in seen_or_existing_paths:
-        raise AlreadyPresentInputFileError()
-    seen_or_existing_paths.add(video_path)
-
-    # Detect a missing path proactively: FileNotFoundError is unreliable across
-    # fsspec backends and is a subclass of OSError, which we treat as broken.
-    fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-    if not fs.exists(fs_path):
-        raise MissingInputFileError()
-
-    video_file = fs.open(path=fs_path, mode="rb")
     try:
         # Open the container first: if this fails there is nothing to close, so the
         # failed open is translated into a broken-file signal at this I/O boundary.
         try:
             # Open video container for reading (returns InputContainer)
-            video_container = container.open(file=video_file)
+            video_container = container.open(file=video_file, mode="r")
         except (OSError, FFmpegError) as e:
             raise BrokenInputFileError() from e
 
@@ -242,7 +290,8 @@ def _load_single_video(
                 video_stream = video_container.streams.video[context.video_channel]
 
                 # Get video metadata
-                framerate = float(video_stream.average_rate) or 0.0
+                # average_rate is None for streams with no declared rate.
+                framerate = float(video_stream.average_rate) if video_stream.average_rate else 0.0
                 video_width = video_stream.width or 0
                 video_height = video_stream.height or 0
                 if video_stream.duration and video_stream.time_base:
