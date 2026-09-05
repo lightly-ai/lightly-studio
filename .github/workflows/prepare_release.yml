@@ -87,7 +87,8 @@ jobs:
         run: uv version "${{ steps.resolved.outputs.version }}" --frozen
 
       - name: Snapshot uv.lock before sync
-        run: cp lightly_studio/uv.lock /tmp/uv.lock.before
+        # The lockfile covers the whole uv workspace, so it lives at the repository root.
+        run: cp uv.lock /tmp/uv.lock.before
 
       - name: uv sync
         working-directory: lightly_studio
@@ -97,13 +98,13 @@ jobs:
         run: |
           python3 -m prepare_release assert-lock-diff \
             --before /tmp/uv.lock.before \
-            --after lightly_studio/uv.lock \
+            --after uv.lock \
             --package lightly-studio
 
       - name: Confirm exactly the expected files changed
         run: |
           changed="$(git status --porcelain | awk '{print $2}' | sort)"
-          expected="$(printf '%s\n' CHANGELOG.md lightly_studio/pyproject.toml lightly_studio/uv.lock | sort)"
+          expected="$(printf '%s\n' CHANGELOG.md lightly_studio/pyproject.toml uv.lock | sort)"
           if [ "$changed" != "$expected" ]; then
             echo "::error::Unexpected file set changed. Got:"
             echo "$changed"
@@ -121,7 +122,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md lightly_studio/pyproject.toml lightly_studio/uv.lock
+          git add CHANGELOG.md lightly_studio/pyproject.toml uv.lock
           git commit -m "Bump version to ${{ steps.resolved.outputs.version }}"
           git push origin "release-v${{ steps.resolved.outputs.version }}"
 

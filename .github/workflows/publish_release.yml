@@ -25,6 +25,10 @@ jobs:
   publish-release:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      release: ${{ steps.decide.outputs.release }}
+      state: ${{ steps.decide.outputs.state }}
     steps:
       # The tooling is taken from main, never from the released commit: running
       # that commit's own release code would execute it with a write token.
@@ -139,7 +143,10 @@ jobs:
           # the notes by hand, and a later pyproject.toml change must not
           # rewrite that.
           if [ "${state}" != "none" ]; then
-            echo "release=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "release=false"
+              echo "state=${state}"
+            } >> "$GITHUB_OUTPUT"
             echo "::notice::${TAG} already has a ${state} release; nothing to do."
             exit 0
           fi
@@ -151,6 +158,7 @@ jobs:
 
           {
             echo "release=true"
+            echo "state=${state}"
             echo "tag_exists=$([ -n "${tag_commit}" ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
 
@@ -221,3 +229,65 @@ jobs:
             --title "${TAG}" \
             --notes-file "${RUNNER_TEMP}/release-notes.md"
           echo "::notice::Draft release ${TAG} ready. Publish to PyPI, then un-draft it."
+
+  # lightly-embed rides the same release as lightly-studio. Uploading is deliberately off until
+  # LIG-10690, so that the first automated publish in this repo is a flag flip rather than new
+  # machinery written under time pressure. Until then the wheel is only built and attached to
+  # the run, which is also what proves the release job works.
+  #
+  # TODO(Iunir, 09/2026): LIG-10690 has to move this validation ahead of the tag and the draft
+  # release before it enables the upload. As it stands a failure here leaves a tagged release
+  # whose wheel was never published, which is tolerable only while nothing is uploaded.
+  build-lightly-embed:
+    name: Build the lightly-embed wheel
+    needs: publish-release
+    # Gated on the release state rather than on `release`, which is false for a draft as well as
+    # for an already published version. A draft has to stay buildable, so that a failure here is
+    # retried by dispatching the workflow again rather than by deleting the draft; a published
+    # version must not be, or every later push would retry a version that is already on PyPI.
+    if: >-
+      needs.publish-release.result == 'success'
+      && needs.publish-release.outputs.sha != ''
+      && needs.publish-release.outputs.state != 'published'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      PUBLISH_TO_PYPI: "false"
+    steps:
+      # The released commit, not main: the wheel has to be built from what was tagged.
+      - name: Checkout the released commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.publish-release.outputs.sha }}
+          persist-credentials: false
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+          python-version: "3.9"
+          enable-cache: true
+
+      # Builds the wheel and asserts its dependency tree pulls in nothing heavy. This is the
+      # last gate before the wheel could reach a customer's inference box.
+      - name: Build the wheel
+        working-directory: lightly_embed
+        run: make check-wheel-dependencies
+
+      - name: Attach the wheel to the run
+        uses: actions/upload-artifact@v4
+        with:
+          name: lightly-embed-wheel
+          path: lightly_embed/dist/*
+          if-no-files-found: error
+
+      # TODO(Iunir, 09/2026): LIG-10690 sets PUBLISH_TO_PYPI to true and adds the PyPI
+      # credentials this needs.
+      - name: Publish the wheel to PyPI
+        if: env.PUBLISH_TO_PYPI == 'true'
+        working-directory: lightly_embed
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: uv publish dist/*
