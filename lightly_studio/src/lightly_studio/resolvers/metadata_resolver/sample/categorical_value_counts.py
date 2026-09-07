@@ -83,14 +83,19 @@ def get_metadata_value_counts(
         active_keys = _active_metadata_filter_keys(field_filters)
         groups[active_keys].append(key)
 
-    total_count = _get_total_count(session=session, collection_id=collection_id, filters=filters)
-
     result: dict[str, MetadataValueCountsView] = {}
     for _active_keys, group_fields in groups.items():
         # Reconstruct the shared filter for this group from the first field
         # (all fields in the group have the same effective filter).
         group_filters = metadata_helpers.without_metadata_key_filter(
             filters=filters, metadata_key=group_fields[0]
+        )
+        # Total count must use the same effective filter as the value query so that
+        # __missing__ = total - non_null stays non-negative. Using the original
+        # filter here would exclude samples the value query includes (e.g. city=A
+        # would hide city=B samples from the total but not from the city value query).
+        group_total = _get_total_count(
+            session=session, collection_id=collection_id, filters=group_filters
         )
         raw_counts = _query_value_counts(
             session=session,
@@ -103,7 +108,7 @@ def get_metadata_value_counts(
             result[key] = _build_value_counts_view(
                 key_counts=key_counts,
                 metadata_type=schema[key],
-                total_count=total_count,
+                total_count=group_total,
             )
 
     return result
