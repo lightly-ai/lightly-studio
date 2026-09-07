@@ -7,7 +7,7 @@ from uuid import UUID
 
 import sqlalchemy
 import sqlmodel
-from sqlalchemy import func, true
+from sqlalchemy import func
 from sqlmodel import Session
 
 from lightly_studio.database import db_json
@@ -146,7 +146,7 @@ def _query_value_counts(
             sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
             isouter=True,
         )
-        .join(kv, true())
+        .join(kv, sqlalchemy.true())
         .where(SampleTable.collection_id == collection_id)
         .where(kv_key.in_(keys))
         .group_by(kv_key, kv_value)
