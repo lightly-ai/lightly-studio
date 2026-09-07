@@ -91,8 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
 - Hide every bounding box and its annotation counts when all annotation sources are unchecked, instead of showing them all.
 - Keep long-lived PostgreSQL connections alive.
-- The "Load Classifier (.pkl)" button now opens the file picker. The button covered the invisible
-  file input that was meant to receive the click, so nothing happened.
+- Fixxing a bug where the "Load Classifier (.pkl)" button failed to open the file picker.
 
 ### Security
 
