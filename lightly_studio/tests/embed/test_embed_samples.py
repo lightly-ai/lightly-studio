@@ -128,7 +128,6 @@ def test_embed_text_for_collection__no_default_model(
 @pytest.mark.usefixtures("patched_manager")
 def test_collection_has_default_embedder__loads_and_reports_true(
     db_session: Session,
-    collection: CollectionTable,
     mocker: MockerFixture,
 ) -> None:
     """The helper ensures the default is loaded, then reports it is available.
@@ -136,6 +135,7 @@ def test_collection_has_default_embedder__loads_and_reports_true(
     The check is ensure-and-check: no default exists up front, and the first call
     registers one as a side effect before returning True.
     """
+    collection = create_collection(session=db_session)
     mocker.patch.object(
         embedding_manager,
         "_load_embedding_generator_from_env",
@@ -166,11 +166,11 @@ def test_collection_has_default_embedder__loads_and_reports_true(
 @pytest.mark.usefixtures("patched_manager")
 def test_collection_has_default_embedder__false_when_none_loadable(
     db_session: Session,
-    collection: CollectionTable,
     mocker: MockerFixture,
 ) -> None:
     """The helper reports False when no default model can be loaded."""
-    _disable_env_loader(mocker)
+    collection = create_collection(session=db_session)
+    _disable_env_loader(mocker=mocker)
 
     has_default = embed_samples.collection_has_default_embedder(
         session=db_session, collection_id=collection.collection_id
@@ -276,15 +276,15 @@ def test_embed_video_samples__no_default_model_skips(
         collection_id=video_collection.collection_id,
         videos=[VideoStub(path="/videos/video_0.mp4")],
     )
-    _disable_env_loader(mocker)
+    _disable_env_loader(mocker=mocker)
 
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_video_samples(
             session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
         )
 
     assert "No embedding model loaded" in caplog.text
-    assert _stored_embeddings(db_session) == []
+    assert _stored_embeddings(session=db_session) == []
 
 
 def test_embed_annotation_collection(
@@ -429,9 +429,9 @@ def test_embed_frame_samples__no_default_model_skips(
         video=VideoStub(duration_s=1.0, fps=3.0),
     )
     pil_frames = [Image.new("RGB", (2, 2)) for _ in frames.frame_sample_ids]
-    _disable_env_loader(mocker)
+    _disable_env_loader(mocker=mocker)
 
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_frame_samples(
             session=db_session,
             collection_id=frames.video_frames_collection_id,
@@ -440,7 +440,7 @@ def test_embed_frame_samples__no_default_model_skips(
         )
 
     assert "No embedding model loaded" in caplog.text
-    assert _stored_embeddings(db_session) == []
+    assert _stored_embeddings(session=db_session) == []
 
 
 def _register_default_random_model(
