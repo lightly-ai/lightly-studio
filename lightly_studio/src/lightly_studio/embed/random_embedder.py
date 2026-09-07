@@ -61,9 +61,9 @@ class RandomEmbedder(
         """Return a random vector for each video path."""
         return self._random_result(count=len(paths))
 
-    def embed_frames(self, frames: list[Image]) -> EmbeddingResult:
-        """Return a random vector for each frame."""
-        return self._random_result(count=len(frames))
+    def embed_images_pil(self, images: list[Image]) -> EmbeddingResult:
+        """Return a random vector for each PIL image."""
+        return self._random_result(count=len(images))
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         """Return a random vector for each text string."""
