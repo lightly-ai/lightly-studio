@@ -86,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
     - Hide every bounding box and its annotation counts when all annotation sources are unchecked, instead of showing them all.
     - Keep long-lived PostgreSQL connections alive.
-    - Fixxing a bug where the "Load Classifier (.pkl)" button failed to open the file picker.
+    - Fix a bug where the "Load Classifier (.pkl)" button failed to open the file picker.
 
 - Security
     - Scope export downloads to the collection they were prepared for, so an export key from one collection can no longer be used to download an export prepared for a different collection.
