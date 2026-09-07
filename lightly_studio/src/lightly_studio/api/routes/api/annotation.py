@@ -12,7 +12,7 @@ from sqlmodel import col
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
@@ -243,6 +243,12 @@ class AnnotationUpdateInput(BaseModel):
     end_time_s: float | None = None
 
 
+class BulkDeleteAnnotationsInput(BaseModel):
+    """API input for bulk annotation deletion."""
+
+    annotation_ids: list[UUID]
+
+
 @annotations_router.put(
     "/annotations",
 )
@@ -310,6 +316,30 @@ def delete_annotation(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail="Annotation not found",
         ) from e
+
+
+@annotations_router.delete("/annotations")
+def bulk_delete_annotations(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID,
+        Path(title="collection Id", description="The ID of the annotation collection"),
+    ],
+    body: Annotated[BulkDeleteAnnotationsInput, Body()],
+) -> dict[str, int]:
+    """Delete annotations in the annotation collection."""
+    try:
+        deleted_count = annotation_resolver.bulk_delete_annotations(
+            session=session,
+            collection_id=collection_id,
+            annotation_ids=body.annotation_ids,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=HTTP_STATUS_BAD_REQUEST,
+            detail="Some annotations are not in the requested collection.",
+        ) from e
+    return {"deleted_count": deleted_count}
 
 
 @annotations_router.get("/annotations/payload/{sample_id}")

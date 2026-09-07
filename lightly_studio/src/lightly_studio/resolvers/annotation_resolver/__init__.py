@@ -1,5 +1,8 @@
 """Resolvers for database operations."""
 
+from lightly_studio.resolvers.annotation_resolver.bulk_delete_annotations import (
+    bulk_delete_annotations,
+)
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
     delete_annotation,
@@ -65,6 +68,7 @@ __all__ = [
     "AnnotationCrop",
     "AnnotationOrdering",
     "build_sample_ids_query",
+    "bulk_delete_annotations",
     "create_many",
     "delete_annotation",
     "delete_annotations",
