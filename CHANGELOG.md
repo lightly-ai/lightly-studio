@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make annotation classes selectable in distribution plot.
 - Switch categorical and numerical metadata distributions between sample counts and percentages.
 - Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
+- Recompute stale evaluation runs from the GUI or API after annotation changes.
+- Python SDK: Create and read MCAP locator samples.
+- Add an order-by control to the videos grid.
 - Python SDK: Balance a sampling over the values of a categorical metadata field with
   `Sampling.metadata_balancing()`, using the same `uniform`, `input`, and explicit target
   distributions as annotation class balancing.
@@ -51,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Speed up object embeddings by loading input images in parallel.
 - Significantly speed up the previous and next navigation in the GUI for large datasets.
 - Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
+- Python SDK: COCO and YOLO imports now accept `tag_depth > 1` to tag samples by several leading directory levels.
 - Python SDK (beta): Simplified embedding generator interface. Implement `embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of the former `get_embedding_model_input`.
 - Bump lightly-mundig to 0.1.15; its sampling algorithms are up to 7x faster.
 - Python SDK: Split a dataset into new sample tags with `DatasetQuery.split()`
@@ -71,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   file input that was meant to receive the click, so nothing happened.
 - Numerical metadata distributions in percentage mode now scale each compared tag independently, so bars match the tooltip.
 - Categorical metadata distributions now include aggregated "Other" and "Missing" bars, so percentages are shares of all samples instead of only the values shown.
+- Viewer users can no longer create or delete tags; existing tags remain visible.
 
 ### Security
 
