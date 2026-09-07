@@ -37,19 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the values of a categorical metadata field such as weather or city.
 - Python SDK: Select images by the diversity of their annotation crop embeddings with `Sampling.subpart_diversity()`.
 
-#### Sort annotations and samples
+- Sort annotations and samples
+    - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+    - Python SDK: Order video queries by `VideoSampleField.created_at`.
+    - Add an order-by control to the videos grid.
 
-- Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
-- Python SDK: Order video queries by `VideoSampleField.created_at`.
-- Add an order-by control to the videos grid.
-
-#### Other
-
-- Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
-- Azure Blob Storage is supported in the LightlyStudio Enterprise version.
-- Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
-- Recompute stale evaluation runs from the GUI or API after annotation changes.
-- Python SDK: Create and read MCAP locator samples.
+- Other
+    - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+    - Azure Blob Storage is supported in the LightlyStudio Enterprise version.
+    - Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
+    - Recompute stale evaluation runs from the GUI or API after annotation changes.
+    - Python SDK: Create and read MCAP locator samples.
 
 ### Changed
 
