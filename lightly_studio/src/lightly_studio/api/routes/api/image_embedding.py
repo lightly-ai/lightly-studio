@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 image_embedding_router = APIRouter()
 
 
+# TODO(Michal, 09/2026): Switch to embedding with image file bytes instead of an uploaded file.
 @image_embedding_router.post(
     "/image_embedding/from_file/for_collection/{collection_id}", response_model=list[float]
 )
