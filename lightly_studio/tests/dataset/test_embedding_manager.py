@@ -803,6 +803,40 @@ def test_embed_videos(
         assert embedding.sample_id in video_ids
 
 
+def test_embed_videos__raises_when_a_video_is_missing(
+    db_session: Session,
+) -> None:
+    """Raises a ValueError when a sample_id has no video, instead of embedding a subset."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = video_collection.collection_id
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[VideoStub(path="/videos/video_0.mp4", duration_s=1.0, fps=24.0)],
+    )
+    manager = EmbeddingManager()
+    model_id = manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    missing_id = UUID(int=1234567)
+    with pytest.raises(ValueError, match="Could not fetch all video paths"):
+        manager.embed_videos(
+            session=db_session,
+            collection_id=collection_id,
+            sample_ids=[*video_ids, missing_id],
+        )
+
+    # A missing video must fail before any embedding is stored, so nothing is persisted.
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert not stored_embeddings
+
+
 def test_embed_videos_skips_broken_videos(
     db_session: Session,
 ) -> None:
