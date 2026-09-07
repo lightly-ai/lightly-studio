@@ -36,10 +36,12 @@ install-optional-deps:
 	@echo "Installing with optional dependencies..."
 	uv sync --all-groups --all-extras
 
+# `--out-dir dist` on every `uv build` below: in a uv workspace `uv build` defaults to the
+# workspace root, so without it the wheel would land in ../dist instead of lightly_studio/dist.
 .PHONY: build
 build: clean build-lightly_studio_view
 	@echo "Building a distribution package..."
-	uv build
+	uv build --out-dir dist
 
 .PHONY: build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
@@ -58,7 +60,7 @@ endif
 .PHONY: build-dirty
 build-dirty: build-dirty-lightly_studio_view
 	@echo "Building a distribution package..."
-	uv build
+	uv build --out-dir dist
 
 .PHONY: build-dirty-lightly_studio_view
 build-dirty-lightly_studio_view: export-schema export-version

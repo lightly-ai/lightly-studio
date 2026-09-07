@@ -11,7 +11,7 @@ After you have your changes ready, and you create a new pull request, a maintain
 
 ## Requirements
 - Python **3.9–3.14** (3.9 recommended)
-- Uv version **0.12.6** (pinned exactly, see `required-version` in `lightly_studio/pyproject.toml`)
+- Uv version **0.12.6** (pinned exactly, see `required-version` in the root `pyproject.toml`)
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 
 ## Development Quickstart
@@ -42,10 +42,18 @@ make static-checks
 make test
 
 # Frontend
-cd lightly_studio_view
+cd ../lightly_studio_view
 make static-checks
 make test
 ```
+
+### The uv Workspace
+
+`lightly_studio` is a member of a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
+whose root is the repository root. The `uv.lock` and the `.venv` both live there, so that every
+package added to the workspace later resolves its dependencies against the same lockfile.
+
+`uv` finds them by walking up from wherever it runs, so the commands above are unchanged by this.
 
 When you update the code, follow our coding guidelines in [.agents/skills](./.agents/skills).
 They are [Agent Skills](https://agentskills.io). Skills do not load automatically. Load the
