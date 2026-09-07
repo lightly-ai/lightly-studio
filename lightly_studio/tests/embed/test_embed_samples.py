@@ -59,7 +59,7 @@ def test_embed_image_for_collection(
 
     assert len(embedding) == 5
     # Nothing is stored for an interactive query embedding.
-    assert _stored_embeddings(db_session) == []
+    assert _stored_embeddings(session=db_session) == []
 
 
 @pytest.mark.usefixtures("patched_manager")
@@ -148,13 +148,13 @@ def test_embed_image_samples__no_default_model_skips(
     _disable_env_loader(mocker=mocker)
     sample_ids = [sample.sample_id for sample in samples]
 
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_image_samples(
             session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
         )
 
     assert "No embedding model loaded" in caplog.text
-    assert _stored_embeddings(db_session) == []
+    assert _stored_embeddings(session=db_session) == []
 
 
 def test_embed_annotation_collection(
@@ -205,13 +205,13 @@ def test_embed_annotation_collection__no_default_model_skips(
     )
     _disable_env_loader(mocker=mocker)
 
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_annotation_collection(
             session=db_session, annotation_collection_id=annotation_collection_id
         )
 
     assert "No embedding model loaded" in caplog.text
-    assert _stored_embeddings(db_session) == []
+    assert _stored_embeddings(session=db_session) == []
 
 
 def _register_default_random_model(
