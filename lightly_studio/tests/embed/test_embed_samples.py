@@ -16,18 +16,19 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManagerProvider,
 )
 from lightly_studio.embed import embed_samples
-from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.models.image import ImageTable
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
     collection_resolver,
     sample_embedding_resolver,
 )
 from tests.helpers_resolvers import (
+    ImageStub,
     create_annotation,
     create_annotation_label,
     create_collection,
     create_image,
+    create_images,
 )
 
 
@@ -107,11 +108,15 @@ def test_embed_text_for_collection__no_default_model(
 
 def test_embed_image_samples(
     db_session: Session,
-    collection: CollectionTable,
-    samples: list[ImageTable],
     patched_manager: EmbeddingManager,
 ) -> None:
     """Image samples are embedded and stored under the collection's default model."""
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
+    )
     model_id = _register_default_random_model(
         manager=patched_manager, session=db_session, collection_id=collection.collection_id
     )
@@ -130,13 +135,17 @@ def test_embed_image_samples(
 @pytest.mark.usefixtures("patched_manager")
 def test_embed_image_samples__no_default_model_skips(
     db_session: Session,
-    collection: CollectionTable,
-    samples: list[ImageTable],
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """With no default model, embedding is skipped, a warning logged, nothing stored."""
-    _disable_env_loader(mocker)
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
+    )
+    _disable_env_loader(mocker=mocker)
     sample_ids = [sample.sample_id for sample in samples]
 
     with caplog.at_level(logging.WARNING):
@@ -150,10 +159,10 @@ def test_embed_image_samples__no_default_model_skips(
 
 def test_embed_annotation_collection(
     db_session: Session,
-    collection: CollectionTable,
     patched_manager: EmbeddingManager,
 ) -> None:
     """Annotation crops are embedded and stored under the collection's default model."""
+    collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
     create_annotation(
@@ -184,17 +193,17 @@ def test_embed_annotation_collection(
 @pytest.mark.usefixtures("patched_manager")
 def test_embed_annotation_collection__no_default_model_skips(
     db_session: Session,
-    collection: CollectionTable,
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """With no default model, annotation embedding is skipped and nothing stored."""
+    collection = create_collection(session=db_session)
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=db_session,
         collection_id=collection.collection_id,
         sample_type=SampleType.ANNOTATION,
     )
-    _disable_env_loader(mocker)
+    _disable_env_loader(mocker=mocker)
 
     with caplog.at_level(logging.WARNING):
         embed_samples.embed_annotation_collection(
