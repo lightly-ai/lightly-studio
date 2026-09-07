@@ -40,11 +40,11 @@ class TestRandomEmbedder:
         assert result.embeddings.shape == (3, 4)
         assert result.kept_indices == [0, 1, 2]
 
-    def test_embed_frames(self) -> None:
+    def test_embed_images_pil(self) -> None:
         embedder = RandomEmbedder(dimension=4)
-        frames = [Image.new("RGB", (2, 2))]
+        images = [Image.new("RGB", (2, 2))]
 
-        result = embedder.embed_frames(frames=frames)
+        result = embedder.embed_images_pil(images=images)
 
         assert result.embeddings.shape == (1, 4)
         assert result.kept_indices == [0]

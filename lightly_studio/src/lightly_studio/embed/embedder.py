@@ -1,7 +1,7 @@
 """Capability-split embedder interfaces.
 
 Defines the ``Embedder`` base class and one abstract subclass per input a model
-can embed: images and crops by path, videos, video frames, text, and images by
+can embed: images and crops by path, videos, PIL images, text, and images by
 bytes. A concrete model implements only the capabilities it supports, and
 callers pick an embedder by the capability they need.
 """
@@ -35,7 +35,7 @@ class Capability(str, Enum):
     """Ingest: video by fsspec path."""
 
     IMAGE_PIL = "image_pil"
-    """Ingest: video frame as a PIL image."""
+    """Ingest: image represented as a PIL image."""
 
     TEXT = "text"
     """Interactive: text query."""
@@ -129,7 +129,7 @@ class VideoPathEmbedder(Embedder):
 
 
 class ImagePILEmbedder(Embedder):
-    """Embeds video frames given as PIL images.
+    """Embeds images represented as PIL images.
 
     <span class="doc-badge doc-badge--beta">Beta</span>
     """
@@ -137,11 +137,11 @@ class ImagePILEmbedder(Embedder):
     __slots__ = ()
 
     @abstractmethod
-    def embed_frames(self, frames: list[Image]) -> EmbeddingResult:
-        """Embed a batch of video frames.
+    def embed_images_pil(self, images: list[Image]) -> EmbeddingResult:
+        """Embed a batch of PIL images.
 
         Args:
-            frames: The frames to embed, as PIL images.
+            images: The PIL images to embed.
 
         Returns:
             The embeddings and the indices of the inputs they cover.

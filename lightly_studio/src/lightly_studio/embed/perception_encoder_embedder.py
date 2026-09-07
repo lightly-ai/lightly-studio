@@ -131,21 +131,21 @@ class PerceptionEncoderEmbedder(
             show_progress=True,
         )
 
-    def embed_frames(self, frames: list[Image.Image]) -> EmbeddingResult:
-        """Embed video frames with Perception Encoder.
+    def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
+        """Embed PIL images with Perception Encoder.
 
         Args:
-            frames: The frames to embed, as PIL images.
+            images: The PIL images to embed.
 
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
         embeddings = image_embedding.embed_pil_images_batched(
-            images=frames,
+            images=images,
             context=self._embedding_context(),
             show_progress=True,
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(frames))))
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
 
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched image embedding."""
