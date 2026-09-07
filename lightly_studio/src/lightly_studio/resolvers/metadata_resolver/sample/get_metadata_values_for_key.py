@@ -27,9 +27,7 @@ def get_metadata_values_for_key(
         session: The database session.
         collection_id: The collection's UUID.
         key: The metadata key to retrieve.
-        sample_ids: If given, read only these samples instead of the whole
-            collection. The read is batched so a long list stays within the
-            database parameter limit.
+        sample_ids: If given, read only these samples instead of the whole collection.
 
     Returns:
         A tuple containing:
