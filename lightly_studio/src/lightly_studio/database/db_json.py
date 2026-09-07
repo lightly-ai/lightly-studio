@@ -131,8 +131,11 @@ def json_object_unnest_lateral(
             f" FROM unnest(json_keys(COALESCE({column_sql}, '{{}}'))) t(key))"
         )
     else:
-        # PostgreSQL: json_each_text returns (key text, value text) for the json type.
-        sql = f"json_each_text(COALESCE({column_sql}, '{{}}'))"
+        # PostgreSQL: json_each_text is a set-returning function.  Wrap it in a SELECT
+        # so that SQLAlchemy's lateral(text(...)) produces LATERAL (SELECT key, value
+        # FROM json_each_text(...)) rather than the bare LATERAL (json_each_text(...))
+        # that PostgreSQL rejects.
+        sql = f"(SELECT key, value FROM json_each_text(COALESCE({column_sql}, '{{}}')))"
     return sqlalchemy.lateral(
         sqlalchemy.text(sql).columns(sqlalchemy.column("key"), sqlalchemy.column("value")),
         name=name,
