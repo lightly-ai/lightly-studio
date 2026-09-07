@@ -62,7 +62,12 @@ function validateFrameInput(input: PointCloudFrameInput): void {
     input.cameras.forEach((camera) => validateCamera(camera, input.coordinateFrame.id));
 }
 
-function cloneFrameMetadata(input: PointCloudFrameInput): object {
+type FrameMetadata = Pick<
+    PointCloudFrame,
+    'id' | 'source' | 'sourcePointCount' | 'timestamp' | 'coordinateFrame' | 'cameras'
+>;
+
+function cloneFrameMetadata(input: PointCloudFrameInput): FrameMetadata {
     return freezeMetadata(
         structuredClone({
             id: input.id,
