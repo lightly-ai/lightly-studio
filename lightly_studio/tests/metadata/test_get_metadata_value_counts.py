@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+from contextlib import contextmanager
 from typing import Any
 from uuid import UUID, uuid4
 
+import sqlalchemy
 from sqlmodel import Session
 
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -13,6 +16,24 @@ from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataF
 from lightly_studio.resolvers.metadata_resolver.sample import categorical_value_counts
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection, create_image
+
+
+@contextmanager
+def _count_queries(session: Session) -> Generator[list[str], None, None]:
+    """Context manager that records all SQL statements executed on the session."""
+    executed: list[str] = []
+
+    def _before_execute(
+        _conn: Any, _cursor: Any, statement: str, _parameters: Any, _context: Any, _executemany: Any
+    ) -> None:
+        executed.append(statement)
+
+    bind = session.get_bind()
+    sqlalchemy.event.listen(bind, "before_cursor_execute", _before_execute)
+    try:
+        yield executed
+    finally:
+        sqlalchemy.event.remove(bind, "before_cursor_execute", _before_execute)
 
 
 def test_get_metadata_value_counts__categorical_values_and_missing(
@@ -276,6 +297,81 @@ def test_get_metadata_value_counts__literal_top_level_keys(db_session: Session) 
 
     assert counts["site.name"].value_counts[0].value == "Zurich"
     assert counts["owner's site"].value_counts[0].value == "primary"
+
+
+def test_get_metadata_value_counts__query_count_does_not_grow_with_field_count(
+    db_session: Session,
+) -> None:
+    """DB round-trips must stay constant as the number of categorical fields grows.
+
+    Without active metadata filters all fields are batched into a single unnest
+    query plus one total-count query, so the number of statements must not grow
+    linearly with the number of fields.
+    """
+    collection_few = create_collection(session=db_session)
+    collection_many = create_collection(session=db_session)
+    few_fields = {f"field_{i}": f"value_{i}" for i in range(3)}
+    many_fields = {f"field_{i}": f"value_{i}" for i in range(20)}
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection_few.collection_id,
+        metadata=few_fields,
+    )
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection_many.collection_id,
+        metadata=many_fields,
+    )
+
+    with _count_queries(db_session) as few_queries:
+        categorical_value_counts.get_metadata_value_counts(
+            session=db_session,
+            collection_id=collection_few.collection_id,
+            fields=list(few_fields),
+        )
+    with _count_queries(db_session) as many_queries:
+        categorical_value_counts.get_metadata_value_counts(
+            session=db_session,
+            collection_id=collection_many.collection_id,
+            fields=list(many_fields),
+        )
+
+    assert len(few_queries) == len(many_queries), (
+        f"Query count grew from {len(few_queries)} (3 fields) to "
+        f"{len(many_queries)} (20 fields) — O(N) queries detected"
+    )
+
+
+def test_get_metadata_value_counts__query_count_with_active_filter(
+    db_session: Session,
+) -> None:
+    """With one active metadata filter the query count is bounded by the filter count.
+
+    The filtered field gets its own query (its filter must be excluded); all other
+    fields are still batched together. So the total must be much less than N*2.
+    """
+    collection = create_collection(session=db_session)
+    fields = {f"field_{i}": f"value_{i}" for i in range(10)}
+    _create_sample(db_session=db_session, collection_id=collection.collection_id, metadata=fields)
+
+    filters = ImageFilter(
+        sample_filter=SampleFilter(
+            metadata_filters=[MetadataFilter(key="field_0", op="==", value="value_0")]
+        )
+    )
+    with _count_queries(db_session) as queries:
+        categorical_value_counts.get_metadata_value_counts(
+            session=db_session,
+            collection_id=collection.collection_id,
+            filters=filters,
+            fields=list(fields),
+        )
+
+    # Expected: schema lookup + total count + 1 batch for unfiltered fields
+    # + 1 query for the filtered field = well under 2*N=20.
+    assert len(queries) < len(fields) * 2, (
+        f"Query count {len(queries)} is too high for {len(fields)} fields with 1 active filter"
+    )
 
 
 def _create_sample(

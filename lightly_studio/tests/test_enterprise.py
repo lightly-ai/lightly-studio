@@ -8,8 +8,8 @@ import os
 import fsspec
 import pytest
 import requests
-from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
-from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
+from adlfs import AzureBlobFileSystem  # type: ignore[import-not-found]
+from gcsfs import GCSFileSystem  # type: ignore[import-not-found]
 from pytest_mock import MockerFixture, MockType
 
 from lightly_studio import enterprise

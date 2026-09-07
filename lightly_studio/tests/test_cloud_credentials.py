@@ -8,8 +8,8 @@ from collections.abc import Generator
 
 import fsspec
 import pytest
-from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
-from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
+from adlfs import AzureBlobFileSystem  # type: ignore[import-not-found]
+from gcsfs import GCSFileSystem  # type: ignore[import-not-found]
 from pytest_mock import MockerFixture
 
 from lightly_studio import cloud_credentials

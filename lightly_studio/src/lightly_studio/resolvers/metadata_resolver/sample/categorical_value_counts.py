@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from uuid import UUID
 
+import sqlalchemy
 import sqlmodel
-from sqlalchemy import func
-from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy import func, true
 from sqlmodel import Session
 
 from lightly_studio.database import db_json
@@ -38,12 +39,16 @@ def get_metadata_value_counts(
 ) -> dict[str, MetadataValueCountsView]:
     """Count categorical metadata values for a collection.
 
-    Each field's own metadata filter is excluded while all other filters apply.
-    Results contain the 20 most frequent concrete values, followed by an
-    ``__other__`` row aggregating the less frequent concrete values and a
-    ``__missing__`` row counting the samples with an absent or null value. Both
-    aggregate rows are omitted when their count is zero, so the counts always sum
-    to the number of samples in scope.
+    Each field's own metadata filter is excluded while all other filters apply
+    (faceted-search behavior).  Results contain the 20 most frequent concrete
+    values, followed by an ``__other__`` row aggregating the less frequent
+    concrete values and a ``__missing__`` row counting the samples with an absent
+    or null value.  Both aggregate rows are omitted when their count is zero, so
+    the counts always sum to the number of samples in scope.
+
+    Fields that share the same effective filter set are aggregated in a single
+    database query, so the number of round-trips is bounded by the number of
+    distinct active metadata filters rather than the total number of fields.
 
     Args:
         session: The database session.
@@ -58,57 +63,156 @@ def get_metadata_value_counts(
         A mapping from categorical metadata keys to their value counts.
     """
     schema = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
-    result: dict[str, MetadataValueCountsView] = {}
-    for key, metadata_type in schema.items():
-        if metadata_type not in CATEGORICAL_TYPE_NAMES:
-            continue
-        if fields is not None and key not in fields:
-            continue
+    categorical_fields = [
+        key
+        for key, metadata_type in schema.items()
+        if metadata_type in CATEGORICAL_TYPE_NAMES and (fields is None or key in fields)
+    ]
+
+    # Group fields by their effective filter set. Fields whose own key is not
+    # present in any active metadata filter all share the baseline filter and are
+    # queried together. Fields whose key IS actively filtered each need the
+    # baseline minus that one filter, so they form their own singleton group.
+    groups: dict[frozenset[str], list[str]] = defaultdict(list)
+    for key in categorical_fields:
         field_filters = metadata_helpers.without_metadata_key_filter(
             filters=filters, metadata_key=key
         )
-        result[key] = _get_field_value_counts(
+        # Use the remaining metadata filter keys as the group identity. Two fields
+        # share a group iff their effective filter sets are identical.
+        active_keys = _active_metadata_filter_keys(field_filters)
+        groups[active_keys].append(key)
+
+    total_count = _get_total_count(session=session, collection_id=collection_id, filters=filters)
+
+    result: dict[str, MetadataValueCountsView] = {}
+    for _active_keys, group_fields in groups.items():
+        # Reconstruct the shared filter for this group from the first field
+        # (all fields in the group have the same effective filter).
+        group_filters = metadata_helpers.without_metadata_key_filter(
+            filters=filters, metadata_key=group_fields[0]
+        )
+        raw_counts = _query_value_counts(
             session=session,
             collection_id=collection_id,
-            metadata_key=key,
-            metadata_type=metadata_type,
-            filters=field_filters,
+            keys=group_fields,
+            filters=group_filters,
         )
+        for key in group_fields:
+            key_counts = raw_counts.get(key, {})
+            result[key] = _build_value_counts_view(
+                key_counts=key_counts,
+                metadata_type=schema[key],
+                total_count=total_count,
+            )
+
     return result
 
 
-def _get_field_value_counts(
+def _query_value_counts(
     session: Session,
     collection_id: UUID,
-    metadata_key: str,
-    metadata_type: str,
+    keys: list[str],
     filters: ImageFilter | None,
-) -> MetadataValueCountsView:
-    value_expr = db_json.json_extract_key_as_text(column=SampleMetadataTable.data, key=metadata_key)
-    rows = _get_top_value_counts(
-        session=session,
-        collection_id=collection_id,
-        value_expr=value_expr,
-        filters=filters,
+) -> dict[str, dict[str | None, int]]:
+    """Aggregate value counts for all ``keys`` in a single query.
+
+    Returns a nested mapping of ``{key: {value_or_None: count}}``.  SQL NULL
+    values (absent or JSON-null fields) map to ``None`` in the inner dict.
+    """
+    # Compile the metadata column reference for the dialect so that
+    # json_object_unnest_lateral can embed it in the correct raw SQL fragment.
+    bind = session.get_bind()
+    data_col = sqlalchemy.inspect(SampleMetadataTable).mapper.column_attrs["data"].columns[0]
+    data_col_sql = str(data_col.compile(dialect=bind.dialect))
+    # Lateral unnest expands each sample's JSON object into (key, value) rows.
+    # Both dialects expose a "key" text column and a "value" text column (SQL NULL
+    # for JSON null); see json_object_unnest_lateral in db_json for per-dialect SQL.
+    kv = db_json.json_object_unnest_lateral(column_sql=data_col_sql, dialect_name=bind.dialect.name)
+    kv_key = kv.c.key
+    kv_value = kv.c.value
+
+    count_expr = func.count().label("cnt")
+    query = (
+        sqlmodel.select(kv_key.label("key"), kv_value.label("val"), count_expr)
+        .select_from(SampleTable)
+        .join(
+            SampleMetadataTable,
+            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
+            isouter=True,
+        )
+        .join(kv, true())
+        .where(SampleTable.collection_id == collection_id)
+        .where(kv_key.in_(keys))
+        .group_by(kv_key, kv_value)
     )
+    query = metadata_helpers.apply_image_filters(
+        query=query, collection_id=collection_id, filters=filters
+    )
+
+    result: dict[str, dict[str | None, int]] = defaultdict(dict)
+    for key, val, count in session.execute(query).all():
+        result[str(key)][val] = int(count)
+    return result
+
+
+def _get_total_count(
+    session: Session,
+    collection_id: UUID,
+    filters: ImageFilter | None,
+) -> int:
+    """Return the total number of samples in scope under ``filters``."""
+    query = (
+        sqlmodel.select(func.count())
+        .select_from(SampleTable)
+        .where(SampleTable.collection_id == collection_id)
+    )
+    query = metadata_helpers.apply_image_filters(
+        query=query, collection_id=collection_id, filters=filters
+    )
+    return int(session.execute(query).scalar_one())
+
+
+def _build_value_counts_view(
+    key_counts: dict[str | None, int],
+    metadata_type: str,
+    total_count: int,
+) -> MetadataValueCountsView:
+    """Build the value-counts view for one field from raw aggregation results.
+
+    Takes the top-20 concrete values, then appends ``__other__`` and
+    ``__missing__`` aggregates when their counts are non-zero.
+
+    Args:
+        key_counts: Mapping from raw string value (or None for SQL NULL) to count.
+        metadata_type: The schema type name of this field (e.g. ``"string"``).
+        total_count: Total samples in scope, used to compute the missing count.
+
+    Returns:
+        The assembled view for this field.
+    """
+    # Separate NULL (missing) from concrete values.
+    missing_count = key_counts.get(None, 0)
+    concrete: list[tuple[str, int]] = [
+        (val, cnt) for val, cnt in key_counts.items() if val is not None
+    ]
+    concrete.sort(key=lambda pair: (-pair[1], pair[0]))
+
+    top = concrete[:_TOP_VALUE_COUNT]
+    other_count = sum(cnt for _, cnt in concrete[_TOP_VALUE_COUNT:])
+
+    # Samples with no metadata row at all are not in key_counts; add them to missing.
+    non_null_count = sum(cnt for _, cnt in concrete)
+    missing_count = total_count - non_null_count
+
     value_counts = [
         MetadataValueCountView(
-            value=_parse_value(value=value, metadata_type=metadata_type), count=int(count)
+            value=_parse_value(value=val, metadata_type=metadata_type), count=cnt
         )
-        for value, count in rows
+        for val, cnt in top
     ]
-    total_count, non_null_count = _get_scope_counts(
-        session=session,
-        collection_id=collection_id,
-        value_expr=value_expr,
-        filters=filters,
-    )
-    # Built here rather than through ``_parse_value``, which would coerce the
-    # sentinels to ``False`` on a boolean field.
-    other_count = non_null_count - sum(int(count) for _, count in rows)
     if other_count > 0:
         value_counts.append(MetadataValueCountView(value=_OTHER_VALUE_SENTINEL, count=other_count))
-    missing_count = total_count - non_null_count
     if missing_count > 0:
         value_counts.append(
             MetadataValueCountView(value=_MISSING_VALUE_SENTINEL, count=missing_count)
@@ -116,68 +220,15 @@ def _get_field_value_counts(
     return MetadataValueCountsView(value_counts=value_counts)
 
 
-def _get_top_value_counts(
-    session: Session,
-    collection_id: UUID,
-    value_expr: ColumnElement[str],
-    filters: ImageFilter | None,
-) -> list[tuple[str, int]]:
-    count_expr = func.count().label("value_count")
-    query = (
-        sqlmodel.select(value_expr, count_expr)
-        .select_from(SampleTable)
-        .join(
-            SampleMetadataTable,
-            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
-            isouter=True,
-        )
-        .where(SampleTable.collection_id == collection_id)
-        .where(value_expr.isnot(None))
-        .group_by(value_expr)
-        .order_by(count_expr.desc(), value_expr.asc())
-        .limit(_TOP_VALUE_COUNT)
-    )
-    query = metadata_helpers.apply_image_filters(
-        query=query, collection_id=collection_id, filters=filters
-    )
-    return [(str(value), int(count)) for value, count in session.execute(query).all()]
-
-
-def _get_scope_counts(
-    session: Session,
-    collection_id: UUID,
-    value_expr: ColumnElement[str],
-    filters: ImageFilter | None,
-) -> tuple[int, int]:
-    """Count the samples in scope and those holding a concrete value.
-
-    Args:
-        session: The database session.
-        collection_id: The collection whose samples are counted.
-        value_expr: Expression extracting the metadata value of the counted field.
-        filters: Optional image filters restricting the counted samples. Must be
-            the same filters the value counts were taken under, so the totals
-            describe the same scope.
-
-    Returns:
-        The number of samples in scope and, of those, the number whose value is
-        neither absent nor null.
-    """
-    query = (
-        sqlmodel.select(func.count(), func.count(value_expr))
-        .select_from(SampleTable)
-        .join(
-            SampleMetadataTable,
-            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
-            isouter=True,
-        )
-        .where(SampleTable.collection_id == collection_id)
-    )
-    query = metadata_helpers.apply_image_filters(
-        query=query, collection_id=collection_id, filters=filters
-    )
-    total_count, non_null_count = session.execute(query).one()
-    return int(total_count), int(non_null_count)
+def _active_metadata_filter_keys(filters: ImageFilter | None) -> frozenset[str]:
+    """Return the set of metadata filter keys active in ``filters``."""
+    if (
+        filters is None
+        or filters.sample_filter is None
+        or not filters.sample_filter.metadata_filters
+    ):
+        return frozenset()
+    return frozenset(f.key for f in filters.sample_filter.metadata_filters)
 
 
 def _parse_value(value: str, metadata_type: str) -> str | bool:

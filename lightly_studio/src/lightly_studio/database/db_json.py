@@ -17,8 +17,9 @@ import re
 from typing import Any, cast
 
 import sqlalchemy
-from sqlalchemy import ColumnElement, Text
+from sqlalchemy import ColumnElement, Text, lateral, text
 from sqlalchemy.engine.interfaces import Dialect
+from sqlalchemy.sql.selectable import LateralFromClause
 from sqlalchemy.types import TypeDecorator
 
 _DUCKDB_DIALECT = "duckdb"
@@ -96,6 +97,44 @@ def json_extract_key_as_float(column: Any, key: str) -> ColumnElement[float]:
         The extracted value as a float.
     """
     return cast(ColumnElement[float], column[_bind_key(key)].as_float())
+
+
+def json_object_unnest_lateral(
+    column_sql: str, dialect_name: str, name: str = "kv"
+) -> LateralFromClause:
+    """Return a LATERAL subquery that unnests a JSON object column into (key, value) rows.
+
+    Both ``key`` and ``value`` are text columns.  JSON ``null`` values become SQL NULL
+    in ``value`` on both databases.  The lateral can be joined with ``join(kv, true())``.
+
+    ``column_sql`` must be the already-compiled SQL string for the JSON column, e.g.
+    ``"metadata.data"``.  Obtain it by calling
+    ``column_expr.compile(dialect=session.get_bind().dialect)`` before calling this
+    function.
+
+    Args:
+        column_sql: Compiled SQL reference to the JSON object column.
+        dialect_name: SQLAlchemy dialect name, e.g. ``"duckdb"`` or ``"postgresql"``.
+        name: Alias name for the lateral; defaults to ``"kv"``.
+
+    Returns:
+        A :class:`LateralFromClause` with columns ``key`` and ``value``.
+    """
+    if dialect_name == _DUCKDB_DIALECT:
+        # DuckDB: unnest(json_keys(col)) gives one key per row; re-extract the value
+        # using json_extract_string with a JSON Pointer so keys with / or ~ are safe.
+        sql = (
+            f"(SELECT key,"
+            f" json_extract_string(COALESCE({column_sql}, '{{}}'), '/' || key) AS value"
+            f" FROM unnest(json_keys(COALESCE({column_sql}, '{{}}'))) t(key))"
+        )
+    else:
+        # PostgreSQL: jsonb_each_text returns (key text, value text).
+        sql = f"jsonb_each_text(COALESCE({column_sql}, '{{}}'))"
+    return lateral(
+        text(sql).columns(sqlalchemy.column("key"), sqlalchemy.column("value")),
+        name=name,
+    )
 
 
 class _JsonKeyType(TypeDecorator[str]):
