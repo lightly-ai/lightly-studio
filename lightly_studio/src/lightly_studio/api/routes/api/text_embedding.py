@@ -50,13 +50,16 @@ def embed_text(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
             detail=f"{exc}",
         ) from None
-    except Exception as exc:
+    except Exception:
+        # The exception comes from a caller-supplied generator, so its text is not ours
+        # to forward to the client. It goes to the log instead.
         logger.exception("Error embedding text")
         raise HTTPException(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
             detail=(
-                "Could not embed the text query. The embedding model of this collection "
-                f"has no text encoder available for live queries: {exc}"
+                "Could not embed the text query. This collection's embedding model may "
+                "have no text encoder for live queries, for example when the collection "
+                "was imported with precomputed embeddings. See the server log for details."
             ),
         ) from None
 

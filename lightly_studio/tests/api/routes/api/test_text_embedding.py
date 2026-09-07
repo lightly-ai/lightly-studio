@@ -1,6 +1,8 @@
+import logging
 from collections.abc import Mapping
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -98,15 +100,14 @@ def test_embed_text__no_text_encoder(
     )
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
-    detail = response.json()["detail"]
-    assert "no text encoder available for live queries" in detail
-    assert "Generator has no text encoder" in detail
+    assert "no text encoder for live queries" in response.json()["detail"]
 
 
-def test_embed_text__unrelated_error_is_not_masked(
+def test_embed_text__unrelated_error_is_logged(
     db_session: Session,
     mocker: MockerFixture,
     test_client: TestClient,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
@@ -121,10 +122,13 @@ def test_embed_text__unrelated_error_is_not_masked(
         side_effect=RuntimeError("CUDA out of memory"),
     )
 
-    response = test_client.get(
-        f"/api/text_embedding/for_collection/{collection_id!s}",
-        params={"query_text": "sample"},
-    )
+    with caplog.at_level(logging.ERROR):
+        response = test_client.get(
+            f"/api/text_embedding/for_collection/{collection_id!s}",
+            params={"query_text": "sample"},
+        )
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
-    assert "CUDA out of memory" in response.json()["detail"]
+    # The detail stays generic, but the real cause must reach the log.
+    assert "CUDA out of memory" not in response.json()["detail"]
+    assert "CUDA out of memory" in caplog.text
