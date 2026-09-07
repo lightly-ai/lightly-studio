@@ -1,8 +1,16 @@
-# The lockfile is shared with the other workspace members and lives at the repository root, so
-# every uv command here resolves it from there. See ../CONTRIBUTING.md.
+.PHONY: clean
+clean:
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "if (Test-Path dist) { Remove-Item -Path dist -Recurse -Force }"
+	@powershell -Command "if (Test-Path build) { Remove-Item -Path build -Recurse -Force }"
+else
+	rm -rf dist build
+endif
 
+# Cleans first, so that the wheel glob in check-wheel-dependencies below can only ever match
+# the artifact this build produced.
 .PHONY: build
-build:
+build: clean
 	@echo "Building a distribution package..."
 	uv build --package lightly-embed --out-dir dist
 
