@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import sqlalchemy
 from sqlalchemy import Integer, cast, func
 from sqlmodel import Session, col, select
 
@@ -72,8 +73,9 @@ def get_metadata_histograms(
     collection_id: UUID,
     filters: ImageFilter | None = None,
     bin_count: int = _HISTOGRAM_BIN_COUNT,
+    fields: list[str] | None = None,
 ) -> dict[str, HistogramView]:
-    """Compute value-distribution histograms for all numeric metadata keys.
+    """Compute value-distribution histograms for the numeric metadata keys.
 
     Bin edges always span the full (unfiltered) value range of each key, so
     the chart's x-axis stays stable while the counts change with the active
@@ -81,24 +83,38 @@ def get_metadata_histograms(
     (faceted-search behavior): the full shape of the field being adjusted
     stays visible while every other filter applies.
 
+    Min/max values for all fields are fetched in a single query before the
+    per-field bucketing queries run, so the number of DB round-trips is
+    ``len(numeric_fields) + 1`` rather than ``2 * len(numeric_fields)``.
+
     Args:
         session: The database session.
         collection_id: The collection's UUID.
         filters: Optional sample filters restricting which values are counted.
         bin_count: Number of equal-width bins per histogram.
+        fields: Numeric fields to histogram. Pass only the fields that will be
+            rendered to avoid running DB queries for unused fields. All numeric
+            fields are histogrammed when absent.
 
     Returns:
         Mapping of metadata key to its histogram.
     """
     merged = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
+    numeric_fields = [
+        key
+        for key, metadata_type in merged.items()
+        if metadata_type in NUMERIC_TYPE_NAMES and (fields is None or key in fields)
+    ]
+    if not numeric_fields:
+        return {}
+
+    all_stats = _get_all_fields_min_max(
+        session=session, collection_id=collection_id, keys=numeric_fields
+    )
 
     histograms: dict[str, HistogramView] = {}
-    for key, metadata_type in merged.items():
-        if metadata_type not in NUMERIC_TYPE_NAMES:
-            continue
-        stats = _get_metadata_min_max_count(
-            session=session, collection_id=collection_id, metadata_key=key
-        )
+    for key in numeric_fields:
+        stats = all_stats.get(key)
         if stats is None:
             continue
         histograms[key] = _compute_histogram(
@@ -110,6 +126,67 @@ def get_metadata_histograms(
             bin_count=bin_count,
         )
     return histograms
+
+
+def _get_all_fields_min_max(
+    session: Session,
+    collection_id: UUID,
+    keys: list[str],
+) -> dict[str, tuple[float, float, int]]:
+    """Fetch min, max, and count for all numeric ``keys`` in a single query.
+
+    Uses a lateral unnest to expand the JSON object once per sample and
+    aggregate all requested keys in one pass over the table.
+
+    Args:
+        session: The database session.
+        collection_id: The collection whose metadata is aggregated.
+        keys: The numeric metadata keys to aggregate.
+
+    Returns:
+        Mapping from key to ``(min, max, count)``; keys with no non-null
+        values are absent from the result.
+    """
+    bind = session.get_bind()
+    data_col = sqlalchemy.inspect(SampleMetadataTable).mapper.column_attrs["data"].columns[0]
+    data_col_sql = str(data_col.compile(dialect=bind.dialect))
+
+    kv = db_json.json_object_unnest_lateral(
+        column_sql=data_col_sql, dialect_name=bind.dialect.name, name="kv_mm"
+    )
+    kv_key = kv.c.key
+    kv_value = kv.c.value
+
+    # Cast the text value to float for aggregation. Non-numeric values in
+    # nominally-numeric fields are excluded by the IS NOT NULL guard on kv_value
+    # (json_extract_string returns NULL for JSON null, and the cast would fail
+    # for non-numeric strings, but the schema ensures these keys hold numbers).
+    float_value = cast(kv_value, sqlalchemy.Float)
+
+    query = (
+        select(
+            kv_key.label("key"),
+            func.min(float_value).label("min_val"),
+            func.max(float_value).label("max_val"),
+            func.count(float_value).label("cnt"),
+        )
+        .select_from(SampleTable)
+        .join(
+            SampleMetadataTable,
+            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+        )
+        .join(kv, sqlalchemy.true())
+        .where(SampleTable.collection_id == collection_id)
+        .where(kv_key.in_(keys))
+        .where(kv_value.isnot(None))
+        .group_by(kv_key)
+    )
+
+    result: dict[str, tuple[float, float, int]] = {}
+    for key, min_val, max_val, cnt in session.execute(query).all():
+        if min_val is not None and max_val is not None and cnt > 0:
+            result[str(key)] = (float(min_val), float(max_val), int(cnt))
+    return result
 
 
 def _get_metadata_min_max_count(

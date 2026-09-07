@@ -78,6 +78,12 @@
         selectedComparisonTagIds?: string[];
         /** Updates the independent comparison selection without changing the grid filter. */
         onComparisonTagIdsChange?: (ids: string[]) => void;
+        /**
+         * Called whenever the active group changes (i.e. the user picks a
+         * different metadata key from the group selector). The host can use
+         * this to scope requests to only the visible field.
+         */
+        onGroupChange?: (sourceId: string, groupId: string | undefined) => void;
     }
 
     const {
@@ -97,7 +103,8 @@
         onCategoricalRetry,
         comparisonTagItems = [],
         selectedComparisonTagIds = [],
-        onComparisonTagIdsChange
+        onComparisonTagIdsChange,
+        onGroupChange
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -130,6 +137,10 @@
             activeSource.groups?.find(groupHasContent) ??
             activeSource.groups?.[0]
     );
+
+    $effect(() => {
+        onGroupChange?.(activeSource.id, activeGroup?.id);
+    });
     const activeSingleSeriesData = $derived<CategoryCount[]>(
         activeGroup?.data ?? activeSource.data ?? []
     );

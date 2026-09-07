@@ -725,6 +725,16 @@
     // User-configurable bin count for the metadata histograms.
     let histogramBinCount = $state(20);
 
+    // The active metadata field the user is currently viewing in the distribution
+    // panel. Undefined means "all fields" (first load or non-metadata source).
+    // Used to scope histogram requests to only the visible field so the server
+    // skips computing every field on every tag click.
+    let activeMetadataGroupId = $state<string | undefined>(undefined);
+    // When the active metadata field is known, scope requests to that field only.
+    const visibleHistogramFields = $derived(
+        activeMetadataGroupId !== undefined ? [activeMetadataGroupId] : undefined
+    );
+
     const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
         collectionId: collectionId,
         filter: distributionBaseFilter,
@@ -764,7 +774,8 @@
         sampleTags: selectedDistributionSampleTags,
         filter: distributionBaseFilter,
         binCount: histogramBinCount,
-        enabled: distributionPanelVisible && distributionSampleTagIds.length > 0
+        enabled: distributionPanelVisible && distributionSampleTagIds.length > 0,
+        fields: visibleHistogramFields
     }));
     const metadataTagDistributions = $derived(metadataTagDistributionsQuery.data ?? []);
 
@@ -1051,6 +1062,10 @@
                                             selectedComparisonTagIds={distributionSampleTagIds}
                                             onComparisonTagIdsChange={(ids) =>
                                                 (distributionSampleTagIds = ids)}
+                                            onGroupChange={(sourceId, groupId) => {
+                                                activeMetadataGroupId =
+                                                    sourceId === 'metadata' ? groupId : undefined;
+                                            }}
                                         />
                                     {/key}
                                 {/await}

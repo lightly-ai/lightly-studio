@@ -21,6 +21,8 @@ interface MetadataComparisonParams {
     sampleTags: SampleTagItem[];
     filter?: ImageFilter;
     binCount?: number;
+    /** Restrict histograms to these numeric fields; all fields computed when absent. */
+    fields?: string[];
     enabled?: boolean;
 }
 
@@ -73,6 +75,7 @@ const buildSampleTagQueries = ({
     sampleTags,
     filter,
     binCount,
+    fields,
     enabled = true
 }: MetadataComparisonParams) =>
     sampleTags.flatMap(({ id }) => {
@@ -81,7 +84,11 @@ const buildSampleTagQueries = ({
             {
                 ...getMetadataHistogramsOptions({
                     path: { collection_id: collectionId },
-                    body: { ...body, ...(binCount ? { bin_count: binCount } : {}) }
+                    body: {
+                        ...body,
+                        ...(binCount ? { bin_count: binCount } : {}),
+                        ...(fields ? { fields } : {})
+                    }
                 }),
                 enabled: enabled && sampleTags.length > 0,
                 placeholderData: (previous: Record<string, HistogramView> | undefined) => previous

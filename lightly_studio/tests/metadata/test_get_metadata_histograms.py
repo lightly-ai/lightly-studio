@@ -1,9 +1,14 @@
 """Test the filtered metadata histograms resolver."""
 
+from __future__ import annotations
+
+from collections.abc import Generator
+from contextlib import contextmanager
 from typing import Any
 from uuid import UUID
 
 import pytest
+import sqlalchemy
 from sqlmodel import Session
 
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -12,6 +17,29 @@ from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataF
 from lightly_studio.resolvers.metadata_resolver.sample import get_metadata_info
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection, create_image
+
+
+@contextmanager
+def _count_queries(session: Session) -> Generator[list[str], None, None]:
+    """Context manager that records all SQL statements executed on the session."""
+    executed: list[str] = []
+
+    def _before_execute(
+        _conn: Any,
+        _cursor: Any,
+        statement: str,
+        _parameters: Any,
+        _context: Any,
+        _executemany: Any,
+    ) -> None:
+        executed.append(statement)
+
+    bind = session.get_bind()
+    sqlalchemy.event.listen(bind, "before_cursor_execute", _before_execute)
+    try:
+        yield executed
+    finally:
+        sqlalchemy.event.remove(bind, "before_cursor_execute", _before_execute)
 
 
 def _create_samples_with_scores(db_session: Session, collection_id: UUID) -> None:
@@ -269,3 +297,76 @@ def test_get_metadata_histograms__degenerate_bin_skips_explicit_json_null(
     assert constant.bin_edges == pytest.approx([5.0, 5.0])
     # score <= 3 keeps 4 samples carrying the constant, plus the null row on top.
     assert constant.counts == [4]
+
+
+def test_get_metadata_histograms__fields_limits_computed_keys(
+    db_session: Session,
+) -> None:
+    """Only fields listed in the fields argument are returned."""
+    collection = create_collection(session=db_session)
+    _create_samples_with_scores(db_session, collection.collection_id)
+
+    histograms = get_metadata_info.get_metadata_histograms(
+        session=db_session,
+        collection_id=collection.collection_id,
+        fields=["score"],
+    )
+
+    assert set(histograms) == {"score"}
+    assert len(histograms["score"].counts) > 0
+
+
+def test_get_metadata_histograms__query_count_does_not_grow_with_field_count(
+    db_session: Session,
+) -> None:
+    """Min/max are batched in one query regardless of how many numeric fields exist.
+
+    Without the optimisation ``_get_all_fields_min_max`` the number of DB
+    round-trips would be ``2 * N`` (one min/max + one bucketing query per field).
+    With it the round-trips are ``N + 1`` (one combined min/max + N bucketings).
+    We verify that the constant overhead (the ``+1``) stays flat: adding more
+    fields must not increase the query count proportionally more than the number
+    of extra bucketing queries.
+    """
+    collection_few = create_collection(session=db_session)
+    collection_many = create_collection(session=db_session)
+
+    few_fields = {f"field_{i}": float(i) for i in range(3)}
+    many_fields = {f"field_{i}": float(i) for i in range(20)}
+
+    def _add_sample(collection_id: UUID, metadata: dict[str, float]) -> None:
+        sample = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/{collection_id}-{next(_counter)}.png",
+        ).sample
+        for key, value in metadata.items():
+            sample[key] = value
+
+    _counter = iter(range(10_000))
+    _add_sample(collection_few.collection_id, few_fields)
+    _add_sample(collection_many.collection_id, many_fields)
+
+    with _count_queries(db_session) as few_queries:
+        get_metadata_info.get_metadata_histograms(
+            session=db_session,
+            collection_id=collection_few.collection_id,
+            fields=list(few_fields),
+        )
+    with _count_queries(db_session) as many_queries:
+        get_metadata_info.get_metadata_histograms(
+            session=db_session,
+            collection_id=collection_many.collection_id,
+            fields=list(many_fields),
+        )
+
+    # few_queries = schema + 1 min/max + 3 bucketing = ~5
+    # many_queries = schema + 1 min/max + 20 bucketing = ~22
+    # The difference must be proportional only to the extra bucketing queries,
+    # not doubled (which would indicate the old 2*N pattern).
+    extra_fields = len(many_fields) - len(few_fields)
+    extra_queries = len(many_queries) - len(few_queries)
+    assert extra_queries <= extra_fields + 1, (
+        f"Query overhead grew by {extra_queries} for {extra_fields} extra fields "
+        f"— more than one extra query per field suggests unbatched min/max calls"
+    )

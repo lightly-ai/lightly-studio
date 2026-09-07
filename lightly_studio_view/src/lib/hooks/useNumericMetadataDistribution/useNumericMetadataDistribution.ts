@@ -25,19 +25,23 @@ export interface NumericMetadataHistogramOptions {
     collectionId: string;
     filter?: ImageFilter;
     binCount?: number;
+    /** Restrict histograms to these numeric fields; all fields computed when absent. */
+    fields?: string[];
 }
 
 export const getNumericMetadataHistogramRequestOptions = ({
     collectionId,
     filter,
-    binCount
+    binCount,
+    fields
 }: NumericMetadataHistogramOptions) => ({
     path: { collection_id: collectionId },
-    ...(filter || binCount
+    ...(filter || binCount || fields
         ? {
               body: {
                   ...(filter ? { filters: filter } : {}),
-                  ...(binCount ? { bin_count: binCount } : {})
+                  ...(binCount ? { bin_count: binCount } : {}),
+                  ...(fields ? { fields } : {})
               }
           }
         : {})
@@ -67,17 +71,20 @@ export const useNumericMetadataDistribution = (
         filter?: ImageFilter;
         /** Number of equal-width bins per histogram (server default: 20). */
         binCount?: number;
+        /** Restrict to these numeric fields; all fields computed when absent. */
+        fields?: string[];
         enabled?: boolean;
     }
 ) =>
     createQuery(() => {
-        const { collectionId, filter, binCount, enabled = true } = getOptions();
+        const { collectionId, filter, binCount, fields, enabled = true } = getOptions();
         // Computed inside the reactive function so a change to collectionId,
-        // filter, or binCount updates the query key and triggers a refetch.
+        // filter, binCount, or fields updates the query key and triggers a refetch.
         const requestOptions = getNumericMetadataHistogramRequestOptions({
             collectionId,
             filter,
-            binCount
+            binCount,
+            fields
         });
         return {
             ...getMetadataHistogramsOptions(requestOptions),

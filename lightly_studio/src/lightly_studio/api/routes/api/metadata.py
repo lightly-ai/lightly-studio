@@ -61,6 +61,9 @@ class MetadataHistogramsRequest(BaseModel):
     bin_count: int = Field(
         _DEFAULT_BIN_COUNT, ge=1, le=200, description="Number of equal-width bins per histogram"
     )
+    fields: list[str] | None = Field(
+        None, description="Numeric fields to histogram; all numeric fields are computed when absent"
+    )
 
 
 @metadata_router.post("/metadata/histograms", response_model=dict[str, HistogramView])
@@ -89,6 +92,7 @@ def get_metadata_histograms(
         collection_id=collection_id,
         filters=request.filters if request else None,
         bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
+        fields=request.fields if request else None,
     )
 
 
