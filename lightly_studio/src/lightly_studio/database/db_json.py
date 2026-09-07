@@ -17,7 +17,7 @@ import re
 from typing import Any, cast
 
 import sqlalchemy
-from sqlalchemy import ColumnElement, Text, lateral, text
+from sqlalchemy import ColumnElement, Text
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.sql.selectable import LateralFromClause
 from sqlalchemy.types import TypeDecorator
@@ -133,8 +133,8 @@ def json_object_unnest_lateral(
     else:
         # PostgreSQL: json_each_text returns (key text, value text) for the json type.
         sql = f"json_each_text(COALESCE({column_sql}, '{{}}'))"
-    return lateral(
-        text(sql).columns(sqlalchemy.column("key"), sqlalchemy.column("value")),
+    return sqlalchemy.lateral(
+        sqlalchemy.text(sql).columns(sqlalchemy.column("key"), sqlalchemy.column("value")),
         name=name,
     )
 
