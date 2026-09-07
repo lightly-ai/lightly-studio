@@ -8,12 +8,13 @@ import os
 import fsspec
 import pytest
 import requests
-from adlfs import AzureBlobFileSystem  # type: ignore[import-not-found]
-from gcsfs import GCSFileSystem  # type: ignore[import-not-found]
 from pytest_mock import MockerFixture, MockType
 
 from lightly_studio import enterprise
 from lightly_studio.database import db_manager
+
+AzureBlobFileSystem = pytest.importorskip("adlfs", reason="adlfs not installed").AzureBlobFileSystem
+GCSFileSystem = pytest.importorskip("gcsfs", reason="gcsfs not installed").GCSFileSystem
 
 
 @pytest.fixture(autouse=True)

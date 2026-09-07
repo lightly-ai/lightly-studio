@@ -8,12 +8,13 @@ from collections.abc import Generator
 
 import fsspec
 import pytest
-from adlfs import AzureBlobFileSystem  # type: ignore[import-not-found]
-from gcsfs import GCSFileSystem  # type: ignore[import-not-found]
 from pytest_mock import MockerFixture
 
 from lightly_studio import cloud_credentials
 from lightly_studio.cloud_credentials import apply_cloud_credentials
+
+AzureBlobFileSystem = pytest.importorskip("adlfs", reason="adlfs not installed").AzureBlobFileSystem
+GCSFileSystem = pytest.importorskip("gcsfs", reason="gcsfs not installed").GCSFileSystem
 
 
 @pytest.fixture(autouse=True)

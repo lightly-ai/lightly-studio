@@ -2,11 +2,13 @@ import json
 import os
 
 import fsspec
-from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
+import pytest
 from fastapi.testclient import TestClient
-from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture
-from s3fs import S3FileSystem  # type: ignore[import-untyped]
+
+AzureBlobFileSystem = pytest.importorskip("adlfs", reason="adlfs not installed").AzureBlobFileSystem
+GCSFileSystem = pytest.importorskip("gcsfs", reason="gcsfs not installed").GCSFileSystem
+S3FileSystem = pytest.importorskip("s3fs", reason="s3fs not installed").S3FileSystem
 
 
 def test_refresh_cloud_credentials__sets_env_vars(

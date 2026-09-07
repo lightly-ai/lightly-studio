@@ -7,11 +7,12 @@ from typing import Any
 import boto3
 import fsspec
 import pytest
-import s3fs  # type: ignore[import-untyped]
 from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
 from lightly_studio.dataset import fsspec_lister
+
+s3fs = pytest.importorskip("s3fs", reason="s3fs not installed")
 
 
 @pytest.fixture(scope="session")
