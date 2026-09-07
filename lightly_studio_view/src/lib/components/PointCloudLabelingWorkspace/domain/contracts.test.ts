@@ -75,4 +75,17 @@ describe('point-cloud domain contracts', () => {
             ).toThrow();
         }
     });
+
+    it('rejects sparse vectors and quaternions at the geometry boundary', () => {
+        const annotation = createAnnotationFixture();
+        const mutableCenter = Array<number>(3);
+        mutableCenter[0] = 10;
+        mutableCenter[2] = 1;
+        const sparseCenter = mutableCenter as unknown as typeof annotation.center;
+        const mutableRotation = Array<number>(4);
+        mutableRotation[3] = 1;
+        const sparseRotation = mutableRotation as unknown as typeof annotation.rotation;
+        expect(() => createCuboidAnnotation({ ...annotation, center: sparseCenter })).toThrow();
+        expect(() => createCuboidAnnotation({ ...annotation, rotation: sparseRotation })).toThrow();
+    });
 });

@@ -20,22 +20,24 @@ export function assertCompatibleCoordinates(actual: CoordinateFrame, expected: C
 
 /** Validates and freezes a vector so shared geometry cannot be mutated. */
 export function freezeVector(value: Vector3): Vector3 {
-    if (value.length !== 3 || !value.every(Number.isFinite)) {
+    const values = Array.from(value);
+    if (values.length !== 3 || !values.every(Number.isFinite)) {
         throw new Error('A vector must contain three finite coordinates.');
     }
-    return Object.freeze([...value]) as Vector3;
+    return Object.freeze(values) as Vector3;
 }
 
 /** Validates and freezes a unit quaternion in xyzw order. */
 export function freezeRotation(value: Quaternion): Quaternion {
+    const values = Array.from(value);
     if (
-        value.length !== 4 ||
-        !value.every(Number.isFinite) ||
-        Math.abs(Math.hypot(...value) - 1) > 1e-6
+        values.length !== 4 ||
+        !values.every(Number.isFinite) ||
+        Math.abs(Math.hypot(...values) - 1) > 1e-6
     ) {
         throw new Error('Rotation must be a unit quaternion in xyzw order.');
     }
-    return Object.freeze([...value]) as Quaternion;
+    return Object.freeze(values) as Quaternion;
 }
 
 /** Validates and returns an immutable annotation suitable for persistence or rendering. */
