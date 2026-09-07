@@ -4,8 +4,27 @@ import type {
     AnnotationClass,
     AnnotationTrack,
     CameraFrame,
+    PointCloudFrame,
     WorkspaceInteraction
 } from './contracts';
+
+type FrameFixtureInput = Parameters<typeof createPointCloudFrame>[0];
+
+/** Named fixture set used by provider, renderer, and workspace contract tests. */
+export interface PointCloudFrameFixtures {
+    readonly empty: PointCloudFrame;
+    readonly normal: PointCloudFrame;
+    readonly large: PointCloudFrame;
+    readonly partial: PointCloudFrame;
+    readonly malformed: readonly FrameFixtureInput[];
+}
+
+/** Named fixture state shared by workspace and persistence tests. */
+export interface WorkspaceFixture {
+    readonly annotationClass: AnnotationClass;
+    readonly track: AnnotationTrack;
+    readonly interaction: WorkspaceInteraction;
+}
 
 /** Creates a calibrated camera fixture with deterministic source metadata. */
 export function createCameraFixture(): CameraFrame {
@@ -61,7 +80,7 @@ export function createFrameInput(pointCount = 4): Parameters<typeof createPointC
 }
 
 /** Creates empty, normal, large, partial, and malformed frame fixtures. */
-export function createFrameFixtures() {
+export function createFrameFixtures(): PointCloudFrameFixtures {
     const normal = createFrameInput();
     return {
         empty: createPointCloudFrame(createFrameInput(0)),
@@ -109,11 +128,7 @@ export function createAnnotationFixture() {
 }
 
 /** Creates matching class, track, selection, and dirty-state fixtures. */
-export function createWorkspaceFixture(): {
-    annotationClass: AnnotationClass;
-    track: AnnotationTrack;
-    interaction: WorkspaceInteraction;
-} {
+export function createWorkspaceFixture(): WorkspaceFixture {
     return {
         annotationClass: { id: 'vehicle', name: 'Vehicle', color: '#3366ff' },
         track: {
