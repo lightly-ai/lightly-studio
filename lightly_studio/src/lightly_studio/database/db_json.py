@@ -122,10 +122,12 @@ def json_object_unnest_lateral(
     """
     if dialect_name == _DUCKDB_DIALECT:
         # DuckDB: unnest(json_keys(col)) gives one key per row; re-extract the value
-        # using json_extract_string with a JSON Pointer so keys with / or ~ are safe.
+        # using a JSON Pointer.  JSON Pointer requires ~ → ~0 and / → ~1 inside each
+        # segment, so we escape the key in SQL before prefixing the leading '/'.
         sql = (
             f"(SELECT key,"
-            f" json_extract_string(COALESCE({column_sql}, '{{}}'), '/' || key) AS value"
+            f" json_extract_string(COALESCE({column_sql}, '{{}}'),"
+            f"   '/' || replace(replace(key, '~', '~0'), '/', '~1')) AS value"
             f" FROM unnest(json_keys(COALESCE({column_sql}, '{{}}'))) t(key))"
         )
     else:
