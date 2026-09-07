@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Generator
-from contextlib import contextmanager
 from typing import Any
 from uuid import UUID
 
@@ -19,7 +19,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection, create_image
 
 
-@contextmanager
+@contextlib.contextmanager
 def _count_queries(session: Session) -> Generator[list[str], None, None]:
     """Context manager that records all SQL statements executed on the session."""
     executed: list[str] = []
