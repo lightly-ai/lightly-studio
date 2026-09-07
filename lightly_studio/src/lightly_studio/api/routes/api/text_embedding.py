@@ -29,7 +29,7 @@ def embed_text(
     """Retrieve embeddings for the input text."""
     if embedding_model_id is not None:
         raise NotImplementedError(
-            "Per-request embedding model override is not supported; the collection's "
+            "Per-request embedding model override is not supported yet. Collection's "
             "default embedding model is always used."
         )
     try:
