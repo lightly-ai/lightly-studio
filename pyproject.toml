@@ -1,8 +1,8 @@
 # The workspace root is virtual: it ships no code and is never published. It exists so that
-# every member resolves against one `uv.lock`, which is what will let a second package share
-# `lightly-studio`'s dependency versions instead of drifting from them.
+# every member resolves against one `uv.lock`. That is what will let `lightly-studio` depend on
+# `lightly-embed` for the shared wire models (LIG-10641) without the two ever drifting apart.
 [tool.uv.workspace]
-members = ["lightly_studio"]
+members = ["lightly_studio", "lightly_embed"]
 
 [tool.uv]
 # Pinned exactly, and kept in sync with the version every workflow installs. uv

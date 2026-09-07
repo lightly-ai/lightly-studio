@@ -8,7 +8,7 @@ tool cannot load skills, read that `SKILL.md` first.
 
 Load the skill that matches the path you edit:
 
-- `lightly_studio/**/*.py` → [python-guide](./.agents/skills/python-guide/SKILL.md): Python style.
+- `lightly_studio/**/*.py`, `lightly_embed/**/*.py` → [python-guide](./.agents/skills/python-guide/SKILL.md): Python style.
 - `lightly_studio/src/lightly_studio/**` → also [backend-guide](./.agents/skills/backend-guide/SKILL.md): FastAPI and SQLModel.
 - `lightly_studio_view/**` (`.ts`, `.svelte`) → [frontend-guide](./.agents/skills/frontend-guide/SKILL.md): TypeScript and SvelteKit.
 

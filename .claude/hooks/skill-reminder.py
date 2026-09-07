@@ -18,6 +18,7 @@ from pathlib import Path
 SKILLS_BY_PATH = [
     ("lightly_studio/src/lightly_studio/", (".py",), ["python-guide", "backend-guide"]),
     ("lightly_studio/", (".py",), ["python-guide"]),
+    ("lightly_embed/", (".py",), ["python-guide"]),
     ("lightly_studio_view/", (".ts", ".svelte"), ["frontend-guide"]),
 ]
 

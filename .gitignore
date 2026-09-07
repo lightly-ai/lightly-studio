@@ -1,6 +1,7 @@
 # The uv workspace shares one virtual environment, at the repository root.
 .venv
 dist
+build
 __pycache__
 .mypy_cache
 .pytest_cache

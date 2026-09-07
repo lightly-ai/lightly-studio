@@ -1,0 +1,59 @@
+[project]
+name = "lightly-embed"
+version = "0.1.0"
+description = "Serve your own embedding model to LightlyStudio over HTTP."
+readme = "README.md"
+# Matches lightly-studio, so a customer stuck on an old inference image can still install it.
+requires-python = ">=3.9,<3.15"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+]
+
+# An HTTP server and nothing else. This package installs next to a customer's own CUDA and
+# torch pins, so anything heavier would fight them. `tests/test_packaging.py` asserts the set.
+dependencies = [
+    "fastapi>=0.115.5",
+    "pydantic>=2.0",
+    "uvicorn>=0.32.1",
+]
+
+[dependency-groups]
+# Version floors match lightly-studio, so both members review the same way.
+dev = [
+    "mypy>=1.19.1",
+    "pytest>=8.3.3",
+    "ruff>=0.7.4",
+]
+
+[tool.mypy]
+strict = true
+disallow_untyped_defs = true
+ignore_missing_imports = false
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_typed = true
+warn_untyped_fields = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest.ini_options]
+python_files = "tests/*.py tests/**/*.py"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/lightly_embed"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lightly_embed"]
