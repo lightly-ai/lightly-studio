@@ -10,12 +10,24 @@ from sqlmodel import Field, SQLModel
 
 
 class EmbeddingModelBase(SQLModel):
-    """Base class for the EmbeddingModel."""
+    """Base class for the EmbeddingModel.
+
+    Attributes:
+        name: The name identifying the embedding model within its dataset.
+        embedding_dimension: The dimension of the embeddings the model produces.
+        dataset_id: The dataset owning the embedding model.
+        remote_embedder_url: The base URL of the remote embedding backend, if the model is
+            served remotely.
+        api_key: The bearer token sent to `remote_embedder_url`. It is a secret: it must never
+            reach a response model, so a route returning an embedding model needs a view model
+            that omits it. `repr=False` keeps it out of log lines that dump the row.
+    """
 
     name: str
     embedding_dimension: int
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
     remote_embedder_url: str | None = None
+    api_key: str | None = Field(default=None, repr=False)
 
 
 class EmbeddingModelCreate(EmbeddingModelBase):
