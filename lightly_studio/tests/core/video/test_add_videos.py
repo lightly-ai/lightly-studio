@@ -463,7 +463,6 @@ def test__create_video_frame_samples__embed_frames(
             collection_id=video_frames_collection_id,
             video_sample_id=video_sample_id,
             embed_frames=True,
-            embedding_model_id=model_id,
         ),
         video_container=video_container,
         video_channel=0,
