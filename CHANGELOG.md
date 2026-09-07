@@ -23,14 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-#### Other
-
-- Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
-- Azure Blob Storage is supported in the LightlyStudio Enterprise version.
-- Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
-- Recompute stale evaluation runs from the GUI or API after annotation changes.
-- Python SDK: Create and read MCAP locator samples.
-
 #### Distribution plot
 
 - Compare the annotation class distribution of any sample tag against the current view in the Distribution panel.
@@ -51,6 +43,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
 - Python SDK: Order video queries by `VideoSampleField.created_at`.
 - Add an order-by control to the videos grid.
+
+#### Other
+
+- Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+- Azure Blob Storage is supported in the LightlyStudio Enterprise version.
+- Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
+- Recompute stale evaluation runs from the GUI or API after annotation changes.
+- Python SDK: Create and read MCAP locator samples.
 
 ### Changed
 
