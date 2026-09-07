@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Speed up cloud storage (S3, GCS, Azure blob) indexing by enabling parallel requests.
     - Speed up cloud image indexing by reading image dimensions in small chunks instead of downloading most of each image.
     - Speed up object embeddings by loading input images in parallel.
-    - Significantly speed up the previous and next navigation in the GUI for large datasets.
+    - Speed up the previous and next navigation in the GUI for large datasets.
     - Bump lightly-mundig to 0.1.15; its sampling algorithms are up to 7x faster.
 
 - Python SDK
