@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.1.0\] - 2026-09-07
+
+### Added
+
 - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
 - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
 - Python SDK: Order video queries by `VideoSampleField.created_at`.
@@ -40,8 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK (beta): Simplified embedding generator interface. Implement `embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of the former `get_embedding_model_input`.
 - Bump lightly-mundig to 0.1.15; its sampling algorithms are up to 7x faster.
 - Python SDK: Split a dataset into new sample tags with `DatasetQuery.split()`
-
-### Deprecated
 
 ### Removed
 
