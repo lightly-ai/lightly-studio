@@ -41,13 +41,14 @@ function freezeMetadata<T extends object>(value: T): T {
     return Object.freeze(value);
 }
 
-/** Copies, validates, bounds, and freezes provider output for shared domain consumption. */
-export function createPointCloudFrame(input: PointCloudFrameInput): PointCloudFrame {
+function validateFrameInput(input: PointCloudFrameInput): void {
     assertCompatibleCoordinates(
         input.coordinateFrame,
         canonicalCoordinateFrame(input.coordinateFrame.id)
     );
-    if (input.positions.length % 3 !== 0) throw new Error('Positions must contain xyz triples.');
+    if (input.positions.length % 3 !== 0) {
+        throw new Error('Positions must contain xyz triples.');
+    }
     validateTimestamp(input.timestamp);
     validateFrameSource(input.source);
     if (
@@ -59,17 +60,26 @@ export function createPointCloudFrame(input: PointCloudFrameInput): PointCloudFr
         );
     }
     input.cameras.forEach((camera) => validateCamera(camera, input.coordinateFrame.id));
+}
+
+function cloneFrameMetadata(input: PointCloudFrameInput): object {
+    return freezeMetadata(
+        structuredClone({
+            id: input.id,
+            source: input.source,
+            sourcePointCount: input.sourcePointCount,
+            timestamp: input.timestamp,
+            coordinateFrame: input.coordinateFrame,
+            cameras: input.cameras
+        })
+    );
+}
+
+/** Copies, validates, bounds, and freezes provider output for shared domain consumption. */
+export function createPointCloudFrame(input: PointCloudFrameInput): PointCloudFrame {
+    validateFrameInput(input);
     return Object.freeze({
-        ...freezeMetadata(
-            structuredClone({
-                id: input.id,
-                source: input.source,
-                sourcePointCount: input.sourcePointCount,
-                timestamp: input.timestamp,
-                coordinateFrame: input.coordinateFrame,
-                cameras: input.cameras
-            })
-        ),
+        ...cloneFrameMetadata(input),
         positions: pack(input.positions, input.positions.length),
         intensity: input.intensity && pack(input.intensity, input.positions.length / 3, true),
         color: input.color && pack(input.color, input.positions.length, true),
