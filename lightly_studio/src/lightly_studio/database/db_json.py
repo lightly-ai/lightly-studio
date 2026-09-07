@@ -129,8 +129,8 @@ def json_object_unnest_lateral(
             f" FROM unnest(json_keys(COALESCE({column_sql}, '{{}}'))) t(key))"
         )
     else:
-        # PostgreSQL: jsonb_each_text returns (key text, value text).
-        sql = f"jsonb_each_text(COALESCE({column_sql}, '{{}}'))"
+        # PostgreSQL: json_each_text returns (key text, value text) for the json type.
+        sql = f"json_each_text(COALESCE({column_sql}, '{{}}'))"
     return lateral(
         text(sql).columns(sqlalchemy.column("key"), sqlalchemy.column("value")),
         name=name,
