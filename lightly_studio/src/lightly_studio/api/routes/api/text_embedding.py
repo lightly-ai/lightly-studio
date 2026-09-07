@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -15,6 +16,8 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManagerProvider,
     TextEmbedQuery,
 )
+
+logger = logging.getLogger(__name__)
 
 text_embedding_router = APIRouter()
 # Define a type alias for the EmbeddingManager dependency
@@ -46,6 +49,15 @@ def embed_text(
         raise HTTPException(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
             detail=f"{exc}",
+        ) from None
+    except Exception as exc:
+        logger.exception("Error embedding text")
+        raise HTTPException(
+            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Could not embed the text query. The embedding model of this collection "
+                f"has no text encoder available for live queries: {exc}"
+            ),
         ) from None
 
     return text_embeddings

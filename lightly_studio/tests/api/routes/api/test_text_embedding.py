@@ -6,6 +6,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_OK,
 )
 from lightly_studio.dataset.embedding_manager import (
@@ -71,3 +72,59 @@ def test_embed_text_embedding_invalid_model_id(
     )
     assert response.status_code == 500
     assert response.json() == {"detail": f"No embedding model found with ID {test_uuid}"}
+
+
+def test_embed_text__no_text_encoder(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+
+    mocker.patch.object(
+        EmbeddingManagerProvider,
+        "get_embedding_manager",
+        return_value=EmbeddingManager(),
+    )
+    mocker.patch.object(
+        EmbeddingManager,
+        "embed_text",
+        side_effect=NotImplementedError("Generator has no text encoder"),
+    )
+
+    response = test_client.get(
+        f"/api/text_embedding/for_collection/{collection_id!s}",
+        params={"query_text": "sample"},
+    )
+
+    assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
+    detail = response.json()["detail"]
+    assert "no text encoder available for live queries" in detail
+    assert "Generator has no text encoder" in detail
+
+
+def test_embed_text__unrelated_error_is_not_masked(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+
+    mocker.patch.object(
+        EmbeddingManagerProvider,
+        "get_embedding_manager",
+        return_value=EmbeddingManager(),
+    )
+    mocker.patch.object(
+        EmbeddingManager,
+        "embed_text",
+        side_effect=RuntimeError("CUDA out of memory"),
+    )
+
+    response = test_client.get(
+        f"/api/text_embedding/for_collection/{collection_id!s}",
+        params={"query_text": "sample"},
+    )
+
+    assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
+    assert "CUDA out of memory" in response.json()["detail"]
