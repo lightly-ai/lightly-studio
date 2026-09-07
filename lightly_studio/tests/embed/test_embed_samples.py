@@ -49,6 +49,16 @@ def patched_manager(mocker: MockerFixture) -> EmbeddingManager:
     return manager
 
 
+class _FirstPixelEmbeddingGenerator(RandomEmbeddingGenerator):
+    """Embeds each PIL image as its top-left pixel's RGB, so frame order is verifiable."""
+
+    def embed_pil_images(
+        self, images: list[Image.Image], show_progress: bool = True
+    ) -> NDArray[np.float32]:
+        _ = show_progress
+        return np.array([image.getpixel((0, 0)) for image in images], dtype=np.float32)
+
+
 def test_embed_image_for_collection(
     db_session: Session,
     patched_manager: EmbeddingManager,
@@ -431,16 +441,6 @@ def test_embed_frame_samples__no_default_model_skips(
 
     assert "No embedding model loaded" in caplog.text
     assert _stored_embeddings(db_session) == []
-
-
-class _FirstPixelEmbeddingGenerator(RandomEmbeddingGenerator):
-    """Embeds each PIL image as its top-left pixel's RGB, so frame order is verifiable."""
-
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]:
-        _ = show_progress
-        return np.array([image.getpixel((0, 0)) for image in images], dtype=np.float32)
 
 
 def _register_default_random_model(

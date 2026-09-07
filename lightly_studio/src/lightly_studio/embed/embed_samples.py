@@ -184,4 +184,5 @@ def embed_frame_samples(
         embedding_model_id=model_id,
         sample_ids=sample_ids,
         images=pil_frames,
+        show_progress=False,
     )
