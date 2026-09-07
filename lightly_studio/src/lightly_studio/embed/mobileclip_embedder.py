@@ -42,9 +42,9 @@ class MobileCLIPEmbedder(
 ):
     """MobileCLIP embedding model.
 
-    Embeds images by path, image crops, video frames and text into one shared
-    embedding space. MobileCLIP cannot embed a whole video, so there is no video
-    capability; a video is covered frame by frame through ``embed_frames``.
+    Embeds images by path, image crops, PIL images and text into one shared embedding
+    space. MobileCLIP cannot embed a whole video, so there is no video capability; a
+    video is covered frame by frame through ``embed_images_pil``.
     """
 
     __slots__ = ("_device", "_model", "_preprocess", "_tokenizer")
@@ -112,21 +112,23 @@ class MobileCLIPEmbedder(
             show_progress=True,
         )
 
-    def embed_frames(self, frames: list[Image.Image]) -> EmbeddingResult:
-        """Embed video frames with MobileCLIP.
+    def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
+        """Embed PIL images with MobileCLIP.
 
         Args:
-            frames: The frames to embed, as PIL images.
+            images: The PIL images to embed.
 
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
+        # TODO(Iunir, 09/2026): Let embed_pil_images_batched return an EmbeddingResult so
+        # the kept indices come from it instead of being assumed complete here.
         embeddings = image_embedding.embed_pil_images_batched(
-            images=frames,
+            images=images,
             context=self._embedding_context(),
             show_progress=True,
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(frames))))
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         """Embed texts with MobileCLIP.
