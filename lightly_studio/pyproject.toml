@@ -72,6 +72,9 @@ cloud-storage = [
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
 ]
+hugging-face = [
+    "datasets>=3.0.0,<5.0",
+]
 
 [dependency-groups]
 dev = [

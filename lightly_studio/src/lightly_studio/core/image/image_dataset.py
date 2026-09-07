@@ -26,7 +26,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.image import add_annotations, add_images
+from lightly_studio.core.image import add_annotations, add_images, hugging_face
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister, remote_storage
@@ -58,6 +58,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
     Samples can be added to the dataset using various methods:
     ```python
     dataset.add_images_from_path(...)
+    dataset.add_images_from_hugging_face(...)
     dataset.add_samples_from_yolo(...)
     dataset.add_samples_from_coco(...)
     dataset.add_samples_from_coco_caption(...)
@@ -190,6 +191,49 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 tag_depth=tag_depth,
             )
 
+        if embed:
+            _generate_embeddings_image(
+                session=self.session,
+                collection_id=self.collection_id,
+                sample_ids=created_sample_ids,
+            )
+
+    def add_images_from_hugging_face(
+        self,
+        hugging_face_dataset: Iterable[Mapping[str, object]],
+        images_path: PathLike,
+        image_column: str = "image",
+        embed: bool = True,
+        limit: int | None = None,
+    ) -> None:
+        """Add images from a Hugging Face dataset.
+
+        Images in a Hugging Face dataset are decoded in memory. This method saves them to
+        ``images_path`` so LightlyStudio can serve them after indexing.
+
+        Args:
+            hugging_face_dataset: Hugging Face dataset containing decoded Pillow images.
+            images_path: Local directory in which to save the images.
+            image_column: Name of the column containing the images.
+            embed: If True, generate embeddings for the newly added images.
+            limit: Maximum number of samples to load. By default, all samples are loaded.
+
+        Raises:
+            ValueError: If limit is invalid, the image column is missing, or an image value is
+                not a Pillow image.
+        """
+        fsspec_lister.validate_limit(limit)
+        image_paths = hugging_face.materialize_images(
+            hugging_face_dataset=hugging_face_dataset,
+            images_path=images_path,
+            image_column=image_column,
+            limit=limit,
+        )
+        created_sample_ids = add_images.load_into_dataset_from_paths(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            image_paths=image_paths,
+        )
         if embed:
             _generate_embeddings_image(
                 session=self.session,
