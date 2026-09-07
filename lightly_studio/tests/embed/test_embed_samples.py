@@ -8,45 +8,52 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
-from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
 from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
 )
 from lightly_studio.embed import embed_samples
-from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from tests.helpers_resolvers import create_collection
 
-# Dimension of the RandomEmbeddingGenerator registered as the default in these tests.
-_MODEL_DIMENSION = 3
+
+@pytest.fixture
+def patched_manager(mocker: MockerFixture) -> EmbeddingManager:
+    """Route embed_samples to a fresh manager so tests never touch the shared singleton."""
+    manager = EmbeddingManager()
+    mocker.patch.object(EmbeddingManagerProvider, "get_embedding_manager", return_value=manager)
+    return manager
 
 
 def test_embed_image_for_collection(
     db_session: Session,
-    collection: CollectionTable,
-    mocker: MockerFixture,
+    patched_manager: EmbeddingManager,
 ) -> None:
     """A single image is embedded with the collection's default model, unstored."""
-    manager = _fresh_manager(mocker)
-    _register_default(manager=manager, session=db_session, collection_id=collection.collection_id)
+    collection = create_collection(session=db_session)
+    _register_default_random_model(
+        manager=patched_manager,
+        session=db_session,
+        collection_id=collection.collection_id,
+        dimension=5,
+    )
 
     embedding = embed_samples.embed_image_for_collection(
         collection_id=collection.collection_id, filepath="/path/to/image.jpg"
     )
 
-    assert len(embedding) == _MODEL_DIMENSION
+    assert len(embedding) == 5
     # Nothing is stored for an interactive query embedding.
     assert _stored_embeddings(db_session) == []
 
 
+@pytest.mark.usefixtures("patched_manager")
 def test_embed_image_for_collection__no_default_model(
-    collection: CollectionTable,
-    mocker: MockerFixture,
+    db_session: Session,
 ) -> None:
     """Without a default model the interactive image path raises a clear error."""
-    _fresh_manager(mocker)
-
+    collection = create_collection(session=db_session)
     with pytest.raises(ValueError, match="No embedding_model_id provided and no default embedding"):
         embed_samples.embed_image_for_collection(
             collection_id=collection.collection_id, filepath="/path/to/image.jpg"
@@ -55,55 +62,46 @@ def test_embed_image_for_collection__no_default_model(
 
 def test_embed_text_for_collection(
     db_session: Session,
-    collection: CollectionTable,
-    mocker: MockerFixture,
+    patched_manager: EmbeddingManager,
 ) -> None:
     """A text query is embedded with the collection's default model."""
-    manager = _fresh_manager(mocker)
-    _register_default(manager=manager, session=db_session, collection_id=collection.collection_id)
+    collection = create_collection(session=db_session)
+    _register_default_random_model(
+        manager=patched_manager,
+        session=db_session,
+        collection_id=collection.collection_id,
+        dimension=3,
+    )
 
     embedding = embed_samples.embed_text_for_collection(
         collection_id=collection.collection_id, text="a red car"
     )
 
-    assert len(embedding) == _MODEL_DIMENSION
+    assert len(embedding) == 3
 
 
+@pytest.mark.usefixtures("patched_manager")
 def test_embed_text_for_collection__no_default_model(
-    collection: CollectionTable,
-    mocker: MockerFixture,
+    db_session: Session,
 ) -> None:
     """Without a default model the interactive text path raises a clear error."""
-    _fresh_manager(mocker)
-
+    collection = create_collection(session=db_session)
     with pytest.raises(ValueError, match="No embedding_model_id provided and no default embedding"):
         embed_samples.embed_text_for_collection(
             collection_id=collection.collection_id, text="a red car"
         )
 
 
-def _fresh_manager(mocker: MockerFixture) -> EmbeddingManager:
-    """Route embed_samples to a fresh manager so tests never touch the shared singleton."""
-    manager = EmbeddingManager()
-    mocker.patch.object(EmbeddingManagerProvider, "get_embedding_manager", return_value=manager)
-    return manager
-
-
-def _disable_env_loader(mocker: MockerFixture) -> None:
-    """Make loading a default generator from the environment return nothing."""
-    mocker.patch.object(embedding_manager, "_load_embedding_generator_from_env", return_value=None)
-
-
-def _register_default(
+def _register_default_random_model(
     manager: EmbeddingManager,
     session: Session,
     collection_id: UUID,
-    generator: RandomEmbeddingGenerator | None = None,
+    dimension: int = 3,
 ) -> UUID:
-    """Register an embedding generator as the collection's default and return its model ID."""
+    """Register a random embedding generator as the collection's default and return its model ID."""
     return manager.register_embedding_model(
         session=session,
-        embedding_generator=generator or RandomEmbeddingGenerator(dimension=_MODEL_DIMENSION),
+        embedding_generator=RandomEmbeddingGenerator(dimension=dimension),
         collection_id=collection_id,
         set_as_default=True,
     ).embedding_model_id
