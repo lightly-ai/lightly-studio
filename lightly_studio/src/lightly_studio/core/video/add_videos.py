@@ -44,7 +44,7 @@ from lightly_studio.core.file_outcome_report import (
     MissingInputFileError,
 )
 from lightly_studio.dataset import remote_storage
-from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.embed import embed_samples
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
@@ -92,7 +92,6 @@ class FrameExtractionContext:
     collection_id: UUID
     video_sample_id: UUID
     embed_frames: bool = False
-    embedding_model_id: UUID | None = None
 
 
 @dataclass
@@ -106,7 +105,6 @@ class VideoLoadContext:
     num_decode_threads: int | None
     target_fps: float | None
     embed_frames: bool
-    embedding_model_id: UUID | None
 
 
 @dataclass
@@ -173,16 +171,11 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
-    embedding_model_id: UUID | None = None
-    if embed_frames:
-        embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-        embedding_model_id = embedding_manager.load_or_get_default_model(
-            session=session,
-            collection_id=video_frames_collection_id,
-        )
-        if embedding_model_id is None:
-            logger.warning("No embedding model loaded. Skipping frame embedding generation.")
-    effective_embed_frames = embed_frames and embedding_model_id is not None
+    effective_embed_frames = embed_frames and embed_samples.collection_has_default_embedder(
+        session=session, collection_id=video_frames_collection_id
+    )
+    if embed_frames and not effective_embed_frames:
+        logger.warning("No embedding model loaded. Skipping frame embedding generation.")
 
     load_context = VideoLoadContext(
         session=session,
@@ -192,7 +185,6 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         num_decode_threads=num_decode_threads,
         target_fps=target_fps,
         embed_frames=effective_embed_frames,
-        embedding_model_id=embedding_model_id,
     )
 
     paths_to_load: list[str] = []
@@ -326,7 +318,6 @@ def _load_single_video(
                 collection_id=context.video_frames_collection_id,
                 video_sample_id=video_sample_ids[0],
                 embed_frames=context.embed_frames,
-                embedding_model_id=context.embedding_model_id,
             )
             try:
                 frame_sample_ids = _create_video_frame_samples(
@@ -612,14 +603,12 @@ def _flush_frame_batch(
         collection_id=context.collection_id,
     )
 
-    if context.embed_frames and context.embedding_model_id is not None and pil_frames:
-        embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-        embedding_manager.embed_and_store_pil_images(
+    if context.embed_frames and pil_frames:
+        embed_samples.embed_frame_samples(
             session=context.session,
-            embedding_model_id=context.embedding_model_id,
+            collection_id=context.collection_id,
             sample_ids=created_sample_ids,
-            images=pil_frames,
-            show_progress=False,
+            pil_frames=pil_frames,
         )
 
     return created_sample_ids
