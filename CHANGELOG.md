@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Distribution plot
     - Compare the annotation class distribution by sample tag.
-    - Compare metadata distributions by sample tag against.
+    - Compare metadata distributions by sample tag.
     - Make annotation classes selectable in distribution plot.
     - Switch categorical and numerical metadata distributions between sample counts and percentages.
 
