@@ -63,7 +63,9 @@ whose root is the repository root:
   their CUDA and torch pins; `make -C lightly_studio_embed check-wheel-dependencies` asserts that.
 
 They share one `uv.lock` and one `.venv`, both at the repository root, so that the two packages
-cannot resolve the same dependency to different versions. `uv run` in a member directory installs
+cannot resolve the same dependency to different versions, and one set of check commands from
+`make/python.mk`. Running `make static-checks` or `make test` at the root covers every Python
+member. `uv run` in a member directory installs
 that member's dependencies into the shared environment without removing the other's, so switching
 between members costs nothing. An explicit `uv sync` does prune, so the next `uv run` in the other
 member reinstalls what it needs.
@@ -252,9 +254,13 @@ npm run dev
 
 ### Exploring the Makefile
 
-There are four Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
-targets, one in `lightly_studio_view` for the frontend, one in `lightly_studio_embed` for the embedding
-server package, and one in the repository root that delegates to all three. Some commonly used commands:
+There are five Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
+targets, one in `lightly_studio_view` for the frontend, one in `lightly_studio_embed` for the
+embedding server package, one in the repository root that delegates to all three, and
+`make/python.mk`, which holds the targets every Python member shares - `static-checks`, `lint`,
+`type-check`, `format-check`, `format`, `lint-fix` and `check-uv-lock`. The members include that
+file instead of copying those commands, so they cannot drift and a new Python package gets them
+by including it too. Some commonly used commands:
 
 Run tests:
 

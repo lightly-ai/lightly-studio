@@ -28,6 +28,10 @@ static-checks:
 type-check:
 	for member in $(PYTHON_MEMBERS); do $(MAKE) -C $$member type-check || exit 1; done
 
+.PHONY: lint-fix
+lint-fix:
+	for member in $(PYTHON_MEMBERS); do $(MAKE) -C $$member lint-fix || exit 1; done
+
 .PHONY: build
 build:
 	$(MAKE) -C lightly_studio build

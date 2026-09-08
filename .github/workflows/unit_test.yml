@@ -59,6 +59,7 @@ jobs:
               - 'lightly_studio/ruff.toml'
               - 'lightly_studio/src/**'
               - 'lightly_studio/tests/**'
+              - 'make/**'
               - 'pyproject.toml'
               - 'uv.lock'
             frontend:
@@ -81,6 +82,7 @@ jobs:
               - 'Makefile'
               - 'lightly_studio/ruff.toml'
               - 'lightly_studio_embed/**'
+              - 'make/**'
               - 'pyproject.toml'
               - 'uv.lock'
 

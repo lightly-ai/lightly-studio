@@ -1,3 +1,5 @@
+include ../make/python.mk
+
 .PHONY: clean
 clean:
 ifeq ($(OS),Windows_NT)
@@ -17,35 +19,6 @@ build: clean
 test:
 	@echo "Running tests..."
 	uv run pytest
-
-.PHONY: check-uv-lock
-check-uv-lock:
-	@echo "Ensuring uv.lock is up to date..."
-	uv lock --check
-
-.PHONY: lint
-lint:
-	@echo "Linting project with ruff..."
-	uv run ruff check
-
-.PHONY: type-check
-type-check:
-	@echo "Checking types with mypy..."
-	uv run mypy .
-
-.PHONY: format-check
-format-check:
-	@echo "Checking format with ruff..."
-	uv run ruff format --check
-
-.PHONY: static-checks
-static-checks: check-uv-lock lint type-check format-check
-
-.PHONY: format
-format:
-	@echo "Formatting project with ruff..."
-	uv run ruff format
-	uv run ruff check --fix
 
 # The dependency tree of the published wheel is the whole point of this package: it has to
 # install next to a customer's own CUDA and torch pins. The check lives in Python rather than in
