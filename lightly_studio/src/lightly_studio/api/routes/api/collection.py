@@ -15,7 +15,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.dataset import embedding_utils
+from lightly_studio.embed import embedding_utils
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionOverviewView,
