@@ -1,6 +1,6 @@
 """Assemble the GitHub release body: the changelog section, then GitHub's own notes.
 
-Backs the "Publish Release" workflow. The `CHANGELOG.md` section leads because
+Backs the "Draft Release" workflow. The `CHANGELOG.md` section leads because
 it is the text the team edited and reviewed on the release PR; GitHub's
 auto-generated notes follow as the full commit-level record.
 
