@@ -41,14 +41,6 @@ from tests.resolvers.video.helpers import (
 )
 
 
-@pytest.fixture
-def patched_manager(mocker: MockerFixture) -> EmbeddingManager:
-    """Route embed_samples to a fresh manager so tests never touch the shared singleton."""
-    manager = EmbeddingManager()
-    mocker.patch.object(EmbeddingManagerProvider, "get_embedding_manager", return_value=manager)
-    return manager
-
-
 class _FirstPixelEmbeddingGenerator(RandomEmbeddingGenerator):
     """Embeds each PIL image as its top-left pixel's RGB, so frame order is verifiable."""
 
@@ -57,6 +49,14 @@ class _FirstPixelEmbeddingGenerator(RandomEmbeddingGenerator):
     ) -> NDArray[np.float32]:
         _ = show_progress
         return np.array([image.getpixel((0, 0)) for image in images], dtype=np.float32)
+
+
+@pytest.fixture
+def patched_manager(mocker: MockerFixture) -> EmbeddingManager:
+    """Route embed_samples to a fresh manager so tests never touch the shared singleton."""
+    manager = EmbeddingManager()
+    mocker.patch.object(EmbeddingManagerProvider, "get_embedding_manager", return_value=manager)
+    return manager
 
 
 def test_embed_image_for_collection(
@@ -176,57 +176,6 @@ def test_embed_image_samples__no_default_model_skips(
     assert _stored_embeddings(session=db_session) == []
 
 
-def test_embed_video_samples(
-    db_session: Session,
-    patched_manager: EmbeddingManager,
-) -> None:
-    """Video samples are embedded and stored under the collection's default model."""
-    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    video_ids = create_videos(
-        session=db_session,
-        collection_id=video_collection.collection_id,
-        videos=[VideoStub(path=f"/videos/video_{index}.mp4") for index in range(3)],
-    )
-    model_id = _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=video_collection.collection_id
-    )
-
-    embed_samples.embed_video_samples(
-        session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
-    )
-
-    count = sample_embedding_resolver.get_embedding_count(
-        session=db_session,
-        collection_id=video_collection.collection_id,
-        embedding_model_id=model_id,
-    )
-    assert count == len(video_ids)
-
-
-@pytest.mark.usefixtures("patched_manager")
-def test_embed_video_samples__no_default_model_skips(
-    db_session: Session,
-    mocker: MockerFixture,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """With no default model, video embedding is skipped and nothing stored."""
-    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    video_ids = create_videos(
-        session=db_session,
-        collection_id=video_collection.collection_id,
-        videos=[VideoStub(path="/videos/video_0.mp4")],
-    )
-    _disable_env_loader(mocker=mocker)
-
-    with caplog.at_level(level=logging.WARNING):
-        embed_samples.embed_video_samples(
-            session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
-        )
-
-    assert "No embedding model loaded" in caplog.text
-    assert _stored_embeddings(session=db_session) == []
-
-
 def test_embed_annotation_collection(
     db_session: Session,
     patched_manager: EmbeddingManager,
@@ -278,6 +227,57 @@ def test_embed_annotation_collection__no_default_model_skips(
     with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_annotation_collection(
             session=db_session, annotation_collection_id=annotation_collection_id
+        )
+
+    assert "No embedding model loaded" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_video_samples(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
+) -> None:
+    """Video samples are embedded and stored under the collection's default model."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        videos=[VideoStub(path=f"/videos/video_{index}.mp4") for index in range(3)],
+    )
+    model_id = _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=video_collection.collection_id
+    )
+
+    embed_samples.embed_video_samples(
+        session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
+    )
+
+    count = sample_embedding_resolver.get_embedding_count(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        embedding_model_id=model_id,
+    )
+    assert count == len(video_ids)
+
+
+@pytest.mark.usefixtures("patched_manager")
+def test_embed_video_samples__no_default_model_skips(
+    db_session: Session,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """With no default model, video embedding is skipped and nothing stored."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        videos=[VideoStub(path="/videos/video_0.mp4")],
+    )
+    _disable_env_loader(mocker=mocker)
+
+    with caplog.at_level(level=logging.WARNING):
+        embed_samples.embed_video_samples(
+            session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
         )
 
     assert "No embedding model loaded" in caplog.text

@@ -84,30 +84,6 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
     )
 
 
-def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
-    """Embed video samples with the collection's default model and store the result.
-
-    Does nothing (and logs a warning) if the collection has no usable default model.
-
-    Args:
-        session: Database session for resolver operations.
-        collection_id: The collection whose default embedding model is used.
-        sample_ids: Video sample IDs to embed.
-    """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
-        return
-
-    manager.embed_videos(
-        session=session,
-        collection_id=collection_id,
-        sample_ids=sample_ids,
-        embedding_model_id=model_id,
-    )
-
-
 def embed_annotation_collection(session: Session, annotation_collection_id: UUID) -> None:
     """Embed the crops of an annotation collection and store the result.
 
@@ -129,6 +105,30 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
     manager.embed_annotations(
         session=session,
         annotation_collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+
+
+def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
+    """Embed video samples with the collection's default model and store the result.
+
+    Does nothing (and logs a warning) if the collection has no usable default model.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The collection whose default embedding model is used.
+        sample_ids: Video sample IDs to embed.
+    """
+    manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
+    if model_id is None:
+        logger.warning("No embedding model loaded. Skipping embedding generation.")
+        return
+
+    manager.embed_videos(
+        session=session,
+        collection_id=collection_id,
+        sample_ids=sample_ids,
         embedding_model_id=model_id,
     )
 
