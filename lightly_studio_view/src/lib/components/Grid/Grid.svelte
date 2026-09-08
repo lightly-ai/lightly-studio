@@ -117,12 +117,12 @@
     });
 
     $effect(() => {
-        if (
-            !grid ||
-            cellSize <= 0 ||
-            initialScrollPosition === undefined ||
-            initialScrollPosition === null
-        ) {
+        if (cellSize <= 0 || clientHeight <= 0) {
+            previousInitialScrollPosition = undefined;
+            return;
+        }
+
+        if (!grid || initialScrollPosition === undefined || initialScrollPosition === null) {
             return;
         }
 
