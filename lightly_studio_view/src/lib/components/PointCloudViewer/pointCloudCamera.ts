@@ -11,10 +11,14 @@ export function fitCameraToBounds(
 
     const placement = computeCameraPlacement(bounds);
     camera.position.set(...placement.position);
-    if (!controls) return;
+    if (!controls) {
+        camera.lookAt(...placement.target);
+        return;
+    }
 
+    const wasDamping = controls.enableDamping;
     controls.enableDamping = false;
     controls.target.set(...placement.target);
     controls.update();
-    controls.enableDamping = true;
+    controls.enableDamping = wasDamping;
 }
