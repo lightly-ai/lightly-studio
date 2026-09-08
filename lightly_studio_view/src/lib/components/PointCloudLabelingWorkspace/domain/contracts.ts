@@ -1,4 +1,4 @@
-/** A canonical position or translation: x forward, y left, z up, in metres. */
+/** A canonical position or translation: x forward, y left, z up, in meters. */
 export type Vector3 = readonly [number, number, number];
 /** An active local-to-parent rotation in unit quaternion order x, y, z, w. */
 export type Quaternion = readonly [number, number, number, number];
@@ -10,7 +10,7 @@ export interface CoordinateFrame {
     /** The only convention accepted by the canonical domain model. */
     readonly convention: 'right-handed-x-forward-y-left-z-up';
     /** The canonical distance unit. */
-    readonly unit: 'metre';
+    readonly unit: 'meter';
 }
 
 /** Rectified pinhole intrinsics measured in image pixels. */
@@ -88,10 +88,10 @@ export interface CameraCalibration {
     readonly id: string;
     /** Coordinate frame receiving transformed camera points. */
     readonly pointCloudCoordinateFrameId: string;
-    /** Camera optical axes: x right, y down, z forward, in metres. */
+    /** Camera optical axes: x right, y down, z forward, in meters. */
     readonly cameraCoordinateFrameId: string;
     /** Camera-to-point-cloud transform: p_cloud = R(q) * p_camera + translation. */
-    /** Camera-to-point-cloud translation in metres. */
+    /** Camera-to-point-cloud translation in meters. */
     readonly translation: Vector3;
     /** Camera-to-point-cloud active rotation. */
     readonly rotation: Quaternion;
@@ -137,7 +137,7 @@ export interface CuboidAnnotation {
     readonly keyframeId: string | null;
     /** Cuboid centre in the canonical coordinate frame. */
     readonly center: Vector3;
-    /** Positive full extents along the cuboid's local x, y, z axes, in metres. */
+    /** Positive full extents along the cuboid's local x, y, z axes, in meters. */
     readonly size: Vector3;
     /** Cuboid orientation as a unit xyzw quaternion. */
     readonly rotation: Quaternion;
