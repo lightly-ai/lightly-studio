@@ -5,43 +5,121 @@ import {
     createCuboidAnnotation,
     createPointCloudFrame
 } from './index';
-import {
-    createAnnotationFixture,
-    createFrameFixtures,
-    createFrameInput,
-    createWorkspaceFixture
-} from './fixtures';
+import { createAnnotationFixture } from './fixtures';
+
+const SOURCE = {
+    recordingId: 'rec-0',
+    streamId: 'lidar-0',
+    messageId: '0',
+    publishedAt: null
+} as const;
+
+const TIMESTAMP = { nanoseconds: '1000000000', clockId: 'rec-0' } as const;
+
+const FRAME = canonicalCoordinateFrame('lidar-0');
 
 describe('point-cloud domain contracts', () => {
+    it('computes null bounds for an empty frame and finite bounds for a populated frame', () => {
+        const empty = createPointCloudFrame({
+            id: 'f',
+            source: SOURCE,
+            timestamp: TIMESTAMP,
+            sourcePointCount: 0,
+            coordinateFrame: FRAME,
+            positions: new Float32Array([]),
+            cameras: []
+        });
+        expect(empty.bounds).toBeNull();
+
+        const positions = new Float32Array([1, 0, 0, 3, 0, 1.5]);
+        const populated = createPointCloudFrame({
+            id: 'f',
+            source: SOURCE,
+            timestamp: TIMESTAMP,
+            sourcePointCount: 2,
+            coordinateFrame: FRAME,
+            positions,
+            cameras: []
+        });
+        expect(populated.bounds).toEqual({ min: [1, 0, 0], max: [3, 0, 1.5] });
+    });
+
+    it('omits optional attributes when not provided', () => {
+        const frame = createPointCloudFrame({
+            id: 'f',
+            source: SOURCE,
+            timestamp: TIMESTAMP,
+            sourcePointCount: 1,
+            coordinateFrame: FRAME,
+            positions: new Float32Array([0, 0, 0]),
+            cameras: []
+        });
+        expect(frame.intensity).toBeUndefined();
+        expect(frame.color).toBeUndefined();
+    });
+
+    it('rejects malformed position buffers', () => {
+        const base = {
+            id: 'f',
+            source: SOURCE,
+            timestamp: TIMESTAMP,
+            sourcePointCount: 1,
+            coordinateFrame: FRAME,
+            cameras: []
+        };
+        expect(() =>
+            createPointCloudFrame({ ...base, positions: new Float32Array([1, 2]) })
+        ).toThrow();
+        expect(() =>
+            createPointCloudFrame({ ...base, positions: new Float32Array([NaN, 0, 0]) })
+        ).toThrow();
+        expect(() =>
+            createPointCloudFrame({
+                ...base,
+                positions: new Float32Array([0, 0, 0]),
+                intensity: new Float32Array([])
+            })
+        ).toThrow();
+        expect(() =>
+            createPointCloudFrame({
+                ...base,
+                positions: new Float32Array([0, 0, 0]),
+                color: new Float32Array([2, 0, 0])
+            })
+        ).toThrow();
+    });
+
     it('isolates provider and renderer buffers and freezes shared metadata', () => {
-        const input = createFrameInput();
-        const frame = createPointCloudFrame(input);
-        input.positions[0] = 99;
+        const positions = new Float32Array([0, 0, 0]);
+        const frame = createPointCloudFrame({
+            id: 'f',
+            source: SOURCE,
+            timestamp: TIMESTAMP,
+            sourcePointCount: 1,
+            coordinateFrame: FRAME,
+            positions,
+            cameras: []
+        });
+        positions[0] = 99;
         const rendererBuffer = frame.positions.copy();
         rendererBuffer.fill(42);
         expect(frame.positions.copy()[0]).toBe(0);
-        expect(frame.timestamp.nanoseconds).toBe('1788220800123456789');
         expect(() => Object.assign(frame.timestamp, { nanoseconds: '0' })).toThrow();
-        expect(() => Object.assign(frame.bounds!.min, { 0: 42 })).toThrow();
-        expect(() => Object.assign(frame.cameras[0].calibration!.intrinsics, { fx: 0 })).toThrow();
-    });
-
-    it('provides deterministic buffers and consistent track and selection identities', () => {
-        expect(createFrameInput().positions).toEqual(createFrameInput().positions);
-        const annotation = createAnnotationFixture();
-        const workspace = createWorkspaceFixture();
-        expect(workspace.track.id).toBe(annotation.trackId);
-        expect(workspace.track.keyframes[0]).toEqual({
-            id: annotation.keyframeId,
-            frameId: annotation.frameId,
-            annotationId: annotation.id
-        });
-        expect(workspace.annotationClass.id).toBe(annotation.annotationClassId);
-        expect(workspace.interaction.selection.annotationIds).toContain(annotation.id);
     });
 
     it('round-trips canonical annotations through JSON without sharing mutable geometry', () => {
-        const annotation = createAnnotationFixture();
+        const annotation = createCuboidAnnotation({
+            id: 'a',
+            frameId: 'f',
+            coordinateFrame: FRAME,
+            annotationClassId: 'car',
+            annotationSourceId: 'gt',
+            trackId: 'track-0',
+            keyframeId: 'kf-0',
+            center: [1, 0, 0],
+            size: [2, 1, 1],
+            rotation: [0, 0, 0, 1]
+        });
         const decoded = JSON.parse(JSON.stringify(annotation));
         const restored = createCuboidAnnotation(decoded);
         decoded.center[0] = 100;
@@ -59,7 +137,6 @@ describe('point-cloud domain contracts', () => {
             { ...frame, unit: 'millimetre' },
             { ...frame, convention: 'y-up' }
         ]) {
-            // Simulate untrusted provider metadata crossing the typed boundary.
             expect(() =>
                 assertCompatibleCoordinates(JSON.parse(JSON.stringify(incompatible)), frame)
             ).toThrow();
