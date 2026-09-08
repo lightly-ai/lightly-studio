@@ -35,12 +35,17 @@
         };
     });
     // Position effect: copy batch into shared buffers, update draw range and bounds.
+    // cameraRef and controlsRef are read in the tracked section so the effect
+    // retries the fit once both refs are bound; hasFitted is only set to true
+    // after the fit is actually performed.
     $effect(() => {
         const currentBatch = batch;
+        const camera = cameraRef;
+        const controls = controlsRef;
         untrack(() => {
             const bounds = pointCloudBuffer.updatePositions(currentBatch);
-            if (!hasFitted && bounds) {
-                fitCameraToBounds(cameraRef, controlsRef, bounds);
+            if (!hasFitted && bounds && camera && controls) {
+                fitCameraToBounds(camera, controls, bounds);
                 hasFitted = true;
             }
             invalidate();
