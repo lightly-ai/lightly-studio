@@ -7,7 +7,7 @@ are exported intentionally: this issue defines the shared boundary for future ad
 
 ## Coordinates and time
 
-Point positions, bounds and cuboid centres use metres in a right-handed frame with
+Point positions, bounds and cuboid centres use meters in a right-handed frame with
 x forward, y left and z up. A frame ID identifies both the axes and origin; two
 different IDs cannot be mixed even if their conventions match. Providers must convert
 source units and axes before constructing a frame. `assertCompatibleCoordinates`

@@ -1,8 +1,8 @@
 import type { CoordinateFrame, CuboidAnnotation, Quaternion, Vector3 } from './contracts';
 
-/** Creates the canonical metre/right-handed frame descriptor for an identifier. */
+/** Creates the canonical meter/right-handed frame descriptor for an identifier. */
 export const canonicalCoordinateFrame = (id: string): CoordinateFrame =>
-    Object.freeze({ id, convention: 'right-handed-x-forward-y-left-z-up', unit: 'metre' });
+    Object.freeze({ id, convention: 'right-handed-x-forward-y-left-z-up', unit: 'meter' });
 
 /**
  * Ensures two geometries can be combined without an implicit conversion.
