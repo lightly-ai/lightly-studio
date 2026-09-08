@@ -242,7 +242,7 @@ def test_embed_video_samples(
     video_ids = create_videos(
         session=db_session,
         collection_id=video_collection.collection_id,
-        videos=[VideoStub(path=f"/videos/video_{index}.mp4") for index in range(3)],
+        videos=[VideoStub(path="/videos/video_0.mp4"), VideoStub(path="/videos/video_1.mp4")],
     )
     model_id = _register_default_random_model(
         manager=patched_manager, session=db_session, collection_id=video_collection.collection_id
