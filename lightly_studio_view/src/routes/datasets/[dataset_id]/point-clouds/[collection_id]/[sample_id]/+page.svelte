@@ -26,10 +26,7 @@
     const sourcePath = $derived.by<WorkspaceCrumb[]>(() => {
         const collectionName = page.data.collection?.name;
         return [
-            {
-                label: 'Home',
-                href: routeHelpers.toCollectionHome(datasetId, collectionType ?? 'mcap', datasetId)
-            },
+            { label: 'Home', href: routeHelpers.toHome() },
             ...(collectionName
                 ? [
                       {

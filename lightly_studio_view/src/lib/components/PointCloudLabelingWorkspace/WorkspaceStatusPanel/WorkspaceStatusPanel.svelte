@@ -8,7 +8,18 @@
     let { status, onExit, onRetry }: Props = $props();
 </script>
 
-<div data-testid="workspace-status-panel" data-status={status}>
+<div
+    role={status === 'error' ? 'alert' : 'status'}
+    data-testid="workspace-status-panel"
+    data-status={status}
+>
+    {#if status === 'loading'}
+        <p>Loading…</p>
+    {:else if status === 'unsupported'}
+        <p>This view is not supported.</p>
+    {:else if status === 'error'}
+        <p>Something went wrong.</p>
+    {/if}
     {#if status === 'error' && onRetry}
         <button onclick={onRetry}>Retry</button>
     {/if}
