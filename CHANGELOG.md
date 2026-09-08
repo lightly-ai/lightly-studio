@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Reduce grid-view overscan prefetching for videos and frames from 20 additional rows to 2, lowering initial frontend load by avoiding unnecessary backend-rendered videos.
+- Change the video decoding backend for the GUI from OpenCV to PyAV, resulting in up to 6× faster decoding performance for parallel streams when loading the grid view and scrolling.
 
 ### Deprecated
 
