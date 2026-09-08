@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-# Version floors match lightly-studio, so both members review the same way.
+# The same floors as the repository's other Python packages, so the tooling behaves alike.
 dev = [
     "mypy>=1.19.1",
     "pytest>=8.3.3",

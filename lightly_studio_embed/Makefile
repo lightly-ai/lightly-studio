@@ -12,8 +12,9 @@ build: clean
 	@echo "Building a distribution package..."
 	uv build --package lightly-studio-embed --out-dir dist
 
-# Exit code 5 is "no tests collected", which is the honest state until serve() adds code and
-# tests of its own. Any real failure still fails the target.
+# Exit code 5 is "no tests collected". The package has no code to test yet, and any real
+# failure still fails the target.
+# TODO(Iunir, 09/2026): Drop the exit code 5 tolerance once the package has tests.
 .PHONY: test
 test:
 	@echo "Running tests..."

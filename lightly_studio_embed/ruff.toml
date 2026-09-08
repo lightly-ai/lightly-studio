@@ -1,8 +1,9 @@
-# One style for both members. When they ever need to diverge, copy what differs rather than
-# letting the two files drift apart silently.
+# Every Python package in the repository lints by one set of rules, which live in the
+# configuration this extends.
 extend = "../lightly_studio/ruff.toml"
 
-# Relative patterns resolve against the directory of the file that declares them, so the
-# extended `tests/**/*.py` entry only covers lightly_studio's tests and has to be repeated.
+# Ruff resolves a relative pattern against the directory of the file that declares it, so the
+# extended configuration's test ignores cover only its own tests. Each package lists the ignores
+# its own tests need.
 [lint.per-file-ignores]
 "tests/**/*.py" = ["D100", "D101", "D102", "D103", "D107", "PLR2004", "SLF001"]

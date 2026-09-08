@@ -76,7 +76,7 @@ jobs:
             release_tooling:
               - '.github/scripts/**'
               - '.github/workflows/unit_test.yml'
-            # The second workspace member. Shares the lockfile, not the dependencies.
+            # The embedding server package. Shares the lockfile, not the dependencies.
             lightly_studio_embed:
               - '.github/workflows/unit_test.yml'
               - 'Makefile'
