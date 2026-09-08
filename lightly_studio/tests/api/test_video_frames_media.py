@@ -2,20 +2,29 @@
 
 from __future__ import annotations
 
+import io
+import wave
+from collections.abc import Iterator
+from fractions import Fraction
 from pathlib import Path
+from typing import cast
 
+import av
 import cv2
+import fsspec
 import numpy as np
+import pytest
+from av.video.stream import VideoStream
 from fastapi.testclient import TestClient
+from PIL import Image
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 import lightly_studio.api.routes.video_frames_media as video_frames_media_module
 import lightly_studio.utils.executor as executor_module
-from lightly_studio.api.routes.video_frames_media import (
-    _CAP_CACHE_SIZE,
-    _get_cached_capture,
-)
+from lightly_studio.api.routes.video_frames_media import FrameTransformOptions
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.settings import GridViewThumbnailQualityType
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_video_with_frames
 
@@ -143,105 +152,178 @@ def test_stream_frame_high_requires_bounds(
     assert response.status_code == 400
 
 
-def test_get_cached_capture_creates_new(
-    tmp_path: Path,
+@pytest.fixture(autouse=True)
+def clear_container_cache() -> Iterator[None]:
+    yield
+    cache = getattr(video_frames_media_module._thread_local, "container_cache", {})
+    for _, resources in cache.values():
+        resources.close()
+    cache.clear()
+
+
+@pytest.fixture
+def variable_rate_video(tmp_path: Path) -> Path:
+    path = tmp_path / "variable.mkv"
+    with av.open(str(path), mode="w") as container:
+        stream = cast(VideoStream, container.add_stream("ffv1", rate=25))
+        stream.width, stream.height = 32, 16
+        stream.pix_fmt = "bgr0"
+        stream.time_base = Fraction(1, 1000)
+        stream.codec_context.time_base = Fraction(1, 1000)
+        for index, pts in enumerate([100, 140, 220, 260, 400]):
+            pixels = np.full((16, 32, 3), index * 40, dtype=np.uint8)
+            pixels[:8, :16] = (255, 0, 0)
+            frame = av.VideoFrame.from_ndarray(pixels, format="rgb24")
+            frame.pts, frame.time_base = pts, Fraction(1, 1000)
+            for packet in stream.encode(frame):
+                container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+    return path
+
+
+@pytest.mark.parametrize("pts", [220, -1, 221])
+@pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+def test_process_video_frame_exact_frame(
+    variable_rate_video: Path,
+    pts: int,
+    rotation: int,
 ) -> None:
-    """Test _get_cached_capture creates new VideoCapture when not cached."""
-    video_path = create_video_file(
-        output_path=tmp_path / "test_video.mp4",
-        width=320,
-        height=240,
-        num_frames=5,
-        fps=1,
+    # Includes missing/unmatched PTS and a nonzero start time at variable frame rate.
+    buffer, media_type = video_frames_media_module._process_video_frame(
+        video_path=str(variable_rate_video),
+        frame_number=2,
+        frame_timestamp_pts=pts,
+        rotation_deg=rotation,
+        transform=FrameTransformOptions(GridViewThumbnailQualityType.RAW, None, None),
+    )
+    expected = np.full((16, 32, 3), 80, dtype=np.uint8)
+    expected[:8, :16] = (255, 0, 0)
+    assert media_type == "image/png"
+    np.testing.assert_array_equal(
+        np.asarray(Image.open(io.BytesIO(buffer))), np.rot90(expected, k=rotation // 90)
     )
 
-    cap = _get_cached_capture(str(video_path))
 
-    assert cap is not None
-    assert isinstance(cap, cv2.VideoCapture)
-    assert cap.isOpened()
-
-
-def test_get_cached_capture_reuses_cached(
-    tmp_path: Path,
-) -> None:
-    """Test _get_cached_capture reuses cached VideoCapture for same video."""
-    video_path = create_video_file(
-        output_path=tmp_path / "test_video.mp4",
-        width=320,
-        height=240,
-        num_frames=5,
-        fps=1,
-    )
-
-    # Get capture first time
-    cap1 = _get_cached_capture(str(video_path))
-    cap1_id = id(cap1)
-
-    # Get capture second time - should be same object
-    cap2 = _get_cached_capture(str(video_path))
-    cap2_id = id(cap2)
-
-    assert cap1_id == cap2_id, "VideoCapture should be reused from cache"
-
-
-def test_get_cached_capture_lru_eviction(
-    tmp_path: Path,
-) -> None:
-    """Test _get_cached_capture evicts least recently used entries when cache is full."""
-    # Create multiple video files
-    video_paths = []
-    for i in range(_CAP_CACHE_SIZE + 2):  # Create more than cache size
-        video_path = create_video_file(
-            output_path=tmp_path / f"test_video_{i}.mp4",
-            width=320,
-            height=240,
-            num_frames=5,
-            fps=1,
+def test_decode_video_frame_seeks_backwards(variable_rate_video: Path) -> None:
+    for index, pts in [(4, 400), (0, 100), (3, 260), (3, 260)]:
+        frame = video_frames_media_module._decode_video_frame(
+            video_path=str(variable_rate_video),
+            frame_number=index,
+            frame_timestamp_pts=pts,
         )
-        video_paths.append(str(video_path))
-
-    # Fill cache to capacity
-    for path in video_paths[:_CAP_CACHE_SIZE]:
-        _get_cached_capture(path)
-
-    # Access cache to verify size
-    cache = video_frames_media_module._thread_local.cap_cache
-    assert len(cache) == _CAP_CACHE_SIZE
-
-    # Add one more - should evict the oldest
-    _get_cached_capture(video_paths[_CAP_CACHE_SIZE])
-
-    # Cache should still be at max size
-    assert len(cache) == _CAP_CACHE_SIZE
-
-    # The first video should be evicted (oldest)
-    assert video_paths[0] not in cache
+        assert frame.pts == pts
+        assert frame.to_ndarray(format="rgb24")[-1, -1, 0] == index * 40
 
 
-def test_get_cached_capture_handles_stale_entry(
-    tmp_path: Path,
-) -> None:
-    """Test _get_cached_capture handles stale (closed) VideoCapture entries."""
-    video_path = create_video_file(
-        output_path=tmp_path / "test_video.mp4",
-        width=320,
-        height=240,
-        num_frames=5,
-        fps=1,
+def test_decode_video_frame_failed_seek(variable_rate_video: Path, mocker: MockerFixture) -> None:
+    container = video_frames_media_module._get_cached_container(str(variable_rate_video))
+    unseekable = mocker.Mock(streams=container.streams)
+    unseekable.seek.side_effect = av.error.InvalidDataError(1, "Cannot seek")
+    mocker.patch.object(
+        video_frames_media_module, "_get_cached_container", side_effect=[unseekable, container]
     )
+    frame = video_frames_media_module._decode_video_frame(
+        video_path=str(variable_rate_video),
+        frame_number=2,
+        frame_timestamp_pts=220,
+    )
+    assert frame.pts == 220
 
-    # Get and cache a capture
-    cap1 = _get_cached_capture(str(video_path))
-    assert cap1.isOpened()
 
-    # Manually close it to simulate stale entry
-    cap1.release()
+@pytest.mark.parametrize(
+    ("bounds", "expected"), [((None, 4), (8, 4)), ((8, None), (8, 4)), ((64, 64), (32, 16))]
+)
+def test_resize_frame(bounds: tuple[int | None, int | None], expected: tuple[int, int]) -> None:
+    result = video_frames_media_module._resize_frame(
+        image=Image.new("RGB", (32, 16)),
+        max_width=bounds[0],
+        max_height=bounds[1],
+    )
+    assert result.size == expected
 
-    # Get capture again - should create new one since old is closed
-    cap2 = _get_cached_capture(str(video_path))
-    assert cap2.isOpened()
-    assert id(cap1) != id(cap2), "Should create new VideoCapture for stale entry"
+
+def test_decode_video_frame_invalid_index(variable_rate_video: Path) -> None:
+    with pytest.raises(ValueError, match="No frame at index 20"):
+        video_frames_media_module._decode_video_frame(
+            video_path=str(variable_rate_video),
+            frame_number=20,
+            frame_timestamp_pts=-1,
+        )
+
+
+def test_get_cached_container_reuses_cached(variable_rate_video: Path) -> None:
+    first = video_frames_media_module._get_cached_container(str(variable_rate_video))
+    assert video_frames_media_module._get_cached_container(str(variable_rate_video)) is first
+
+
+@pytest.mark.parametrize("reset", [False, True])
+def test_get_cached_container_closes_files(
+    variable_rate_video: Path,
+    mocker: MockerFixture,
+    reset: bool,
+) -> None:
+    fs = fsspec.filesystem("memory")
+    mocker.patch.object(fsspec.core, "url_to_fs", return_value=(fs, "video"))
+    files = [io.BytesIO(variable_rate_video.read_bytes()) for _ in range(5)]
+    mocker.patch.object(fs, "open", side_effect=files)
+    first = video_frames_media_module._get_cached_container("first")
+    close = mocker.spy(video_frames_media_module._thread_local.container_cache["first"][1], "close")
+    if reset:
+        video_frames_media_module._get_cached_container(video_path="first", reset=True)
+    else:
+        for index in range(4):
+            video_frames_media_module._get_cached_container(str(index))
+    close.assert_called_once()
+    assert files[0].closed
+    with pytest.raises((AssertionError, ValueError), match=r"not open|closed"):
+        next(first.decode(video=0))
+
+
+@pytest.mark.parametrize("audio_only", [False, True])
+def test_get_cached_container_failed_open_closes_file(
+    mocker: MockerFixture,
+    audio_only: bool,
+) -> None:
+    fs = fsspec.filesystem("memory")
+    file = io.BytesIO(b"not a video")
+    if audio_only:
+        file = io.BytesIO()
+        with wave.open(file, mode="wb") as audio:
+            audio.setparams((1, 2, 8000, 0, "NONE", "not compressed"))
+            audio.writeframes(b"\x00\x00" * 800)
+        file.seek(0)
+    mocker.patch.object(fsspec.core, "url_to_fs", return_value=(fs, "broken"))
+    mocker.patch.object(fs, "open", return_value=file)
+    with pytest.raises((av.FFmpegError, ValueError)):
+        video_frames_media_module._get_cached_container("broken")
+    assert file.closed
+    assert "broken" not in video_frames_media_module._thread_local.container_cache
+
+
+@pytest.mark.parametrize("protocol", ["gs", "gcs", "s3", "file"])
+def test_get_cached_container_remote_cache(
+    variable_rate_video: Path,
+    mocker: MockerFixture,
+    protocol: str,
+) -> None:
+    fs = fsspec.filesystem("memory")
+    mocker.patch.object(fsspec.core, "url_to_fs", return_value=(fs, "video"))
+    open_file = mocker.patch.object(
+        fs, "open", return_value=io.BytesIO(variable_rate_video.read_bytes())
+    )
+    container = video_frames_media_module._get_cached_container(f"{protocol}://video")
+    assert next(container.decode(video=0)).pts == 100
+    if protocol == "file":
+        open_file.assert_called_once_with(path="video", mode="rb")
+    else:
+        open_file.assert_called_once_with(
+            path="video",
+            mode="rb",
+            block_size=256 * 2**10,
+            cache_type="blockcache",
+            cache_options={"maxblocks": 4},
+        )
 
 
 def test_get_media_executor_creates_singleton() -> None:
