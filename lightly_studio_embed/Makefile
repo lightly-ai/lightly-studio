@@ -12,7 +12,7 @@ endif
 .PHONY: build
 build: clean
 	@echo "Building a distribution package..."
-	uv build --package lightly-embed --out-dir dist
+	uv build --package lightly-studio-embed --out-dir dist
 
 .PHONY: test
 test:
@@ -54,6 +54,9 @@ format:
 # variants such as duckdb-engine, torchvision or opencv-python-headless are caught too. `cuda`
 # and `nvidia` cover the CUDA wheels, which can arrive without torch pulling them in.
 FORBIDDEN_WHEEL_DEPENDENCIES := lightly-studio torch duckdb opencv cuda nvidia
+# The package's own name contains `lightly-studio`, so it has to be excluded from the matching
+# below or it would report itself.
+PACKAGE_NAME := lightly-studio-embed
 # Defaults to the floor of `requires-python`, where a marker-gated dependency is most likely to
 # slip in. The unit test workflow resolves the tree once per Python it supports.
 WHEEL_PYTHON_VERSION ?= 3.9
@@ -62,14 +65,15 @@ WHEEL_PYTHON_VERSION ?= 3.9
 check-wheel-dependencies: build
 	@echo "Resolving the dependency tree of the built wheel..."
 	@mkdir -p build
-	@ls dist/lightly_embed-*.whl > build/wheel-requirements.in
+	@ls dist/lightly_studio_embed-*.whl > build/wheel-requirements.in
 	@uv pip compile build/wheel-requirements.in --python-version $(WHEEL_PYTHON_VERSION) \
 		--no-header --no-annotate --quiet --output-file build/wheel-requirements.txt
-	@awk -F'[=@ ]' '!/^#/ && NF && $$1 !~ /\// { print tolower($$1) }' \
+	@awk -F'[=@ ]' -v self="$(PACKAGE_NAME)" \
+		'!/^#/ && NF && $$1 !~ /\// && tolower($$1) != self { print tolower($$1) }' \
 		build/wheel-requirements.txt > build/wheel-dependencies.txt
 	@for name in $(FORBIDDEN_WHEEL_DEPENDENCIES); do \
 		if grep -q "$$name" build/wheel-dependencies.txt; then \
-			echo "Error: the lightly-embed wheel resolves '$$name'. Resolved tree:"; \
+			echo "Error: the lightly-studio-embed wheel resolves '$$name'. Resolved tree:"; \
 			cat build/wheel-dependencies.txt; \
 			exit 1; \
 		fi; \

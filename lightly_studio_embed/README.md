@@ -1,4 +1,4 @@
-# LightlyEmbed
+# LightlyStudio Embed
 
 Serve your own embedding model to [LightlyStudio](https://github.com/lightly-ai/lightly-studio)
 over HTTP, so that your model's weights never leave your machine.
@@ -10,5 +10,5 @@ There is no public API yet, and nothing is published to PyPI: this only reserves
 it is released, installing it will be:
 
 ```bash
-pip install lightly-embed
+pip install lightly-studio-embed
 ```
