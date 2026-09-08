@@ -12,7 +12,14 @@ export interface PointBatch {
     count: number;
 }
 
-export function createPointCloudBuffer() {
+export interface PointCloudBuffer {
+    geometry: BufferGeometry;
+    updatePositions: (batch: PointBatch) => Box3 | undefined;
+    updateColors: (count: number, colorMode: ColorMode, intensityRange?: [number, number]) => void;
+    dispose: () => void;
+}
+
+export function createPointCloudBuffer(): PointCloudBuffer {
     let capacity = 0;
     let positions = new Float32Array(0);
     let intensities = new Float32Array(0);
