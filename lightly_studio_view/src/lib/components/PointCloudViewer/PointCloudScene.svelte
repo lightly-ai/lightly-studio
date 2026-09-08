@@ -12,7 +12,7 @@
     interface Props {
         /** Current point cloud batch with positions, intensities, and count. */
         batch: PointBatch;
-        /** How points are colored: by height, intensity, or plain white. */
+        /** How points are colored: by height, intensity, or neutral gray. */
         colorMode?: ColorMode;
         /** Screen-space point size in pixels. */
         pointSize?: number;
