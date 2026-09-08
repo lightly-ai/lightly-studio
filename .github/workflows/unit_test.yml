@@ -131,6 +131,13 @@ jobs:
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: lightly_studio_view/.nvmrc
+          cache: npm
+          cache-dependency-path: lightly_studio_view/package-lock.json
+
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
         run: make install-optional-deps
@@ -189,6 +196,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: lightly_studio_view/.nvmrc
+          cache: npm
+          cache-dependency-path: lightly_studio_view/package-lock.json
+
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
         env:
@@ -234,6 +248,13 @@ jobs:
           python-version: "3.9"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
+
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: lightly_studio_view/.nvmrc
+          cache: npm
+          cache-dependency-path: lightly_studio_view/package-lock.json
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
