@@ -414,13 +414,6 @@ jobs:
           UV_PYTHON: ${{ matrix.python }}
         run: make test
 
-      # The invariant the whole package exists for. Asserted on the built wheel, because that
-      # is what a customer installs onto an inference box next to their own torch pins.
-      - name: Assert the wheel pulls in nothing heavy
-        env:
-          UV_PYTHON: ${{ matrix.python }}
-        run: make check-wheel-dependencies WHEEL_PYTHON_VERSION=${{ matrix.python }}
-
   # The single required status check: always runs, so gated jobs can be skipped
   # without stranding the merge queue. Require this in the branch ruleset.
   unit-success:

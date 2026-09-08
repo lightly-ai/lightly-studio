@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 # An HTTP server and nothing else. This package installs next to a customer's own CUDA and
-# torch pins, so anything heavier would fight them. `tests/test_packaging.py` asserts the set.
+# torch pins, so anything heavier would fight them.
 dependencies = [
     "fastapi>=0.115.5",
     "pydantic>=2.0",

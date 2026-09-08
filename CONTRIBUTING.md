@@ -58,9 +58,9 @@ The Python packages are members of one [uv workspace](https://docs.astral.sh/uv/
 whose root is the repository root:
 
 - `lightly_studio` - the application, published as `lightly-studio`.
-- `lightly_studio_embed` - the server a customer runs in front of their own embedding model, published
-  as `lightly-studio-embed`. Its dependencies stay limited to an HTTP server so that it installs next to
-  their CUDA and torch pins; `make -C lightly_studio_embed check-wheel-dependencies` asserts that.
+- `lightly_studio_embed` - the server a customer runs in front of their own embedding model,
+  published as `lightly-studio-embed`. Its dependencies stay limited to an HTTP server, so that it
+  installs next to a customer's own CUDA and torch pins.
 
 They share one `uv.lock` and one `.venv`, both at the repository root, so that the two packages
 cannot resolve the same dependency to different versions, and one set of check commands from
