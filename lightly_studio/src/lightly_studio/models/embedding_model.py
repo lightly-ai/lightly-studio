@@ -16,6 +16,8 @@ class EmbeddingModelBase(SQLModel):
     embedding_dimension: int
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
     remote_embedder_url: str | None = None
+    # Secret: `repr=False` keeps it out of logged rows, and it must never reach a response model.
+    api_key: str | None = Field(default=None, repr=False)
 
 
 class EmbeddingModelCreate(EmbeddingModelBase):

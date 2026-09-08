@@ -21,18 +21,7 @@ def test_render_release_notes():
         changelog_section="### Added\n\n- A thing.", generated_notes="## What's Changed\n* A by @d"
     )
 
-    assert body == (
-        "### Added\n\n- A thing.\n\n<!-- STOP DISCORD MESSAGE -->\n\n## What's Changed\n* A by @d\n"
-    )
-
-
-# Discord caps the message body, so the marker must precede the generated notes.
-def test_render_release_notes__marker_precedes_the_generated_notes():
-    body = release_notes.render_release_notes(
-        changelog_section="### Added\n\n- A thing.", generated_notes="## What's Changed\n* A by @d"
-    )
-
-    assert body.index(release_notes.DISCORD_STOP_MARKER) < body.index("What's Changed")
+    assert body == ("## Changelog\n\n### Added\n\n- A thing.\n\n## What's Changed\n* A by @d\n")
 
 
 def test_sanitize_generated_notes():

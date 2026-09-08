@@ -1,4 +1,4 @@
-name: Publish Release
+name: Draft Release
 
 on:
   # Merging the "Bump version to X.Y.Z" pull request is the decision to
@@ -22,7 +22,7 @@ env:
   PYTHONPATH: ${{ github.workspace }}/.github/scripts
 
 jobs:
-  publish-release:
+  draft-release:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -220,4 +220,4 @@ jobs:
             --draft \
             --title "${TAG}" \
             --notes-file "${RUNNER_TEMP}/release-notes.md"
-          echo "::notice::Draft release ${TAG} ready. Publish to PyPI, then un-draft it."
+          echo "::notice::Draft release ${TAG} ready. Run Finish Release once the wheel is on PyPI."

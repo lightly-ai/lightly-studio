@@ -6,7 +6,7 @@ reimplemented here - it already parses/writes real TOML and handles more
 than plain X.Y.Z (alpha/beta/rc/post/dev), which regex-based text editing
 kept getting subtly wrong in review. This module keeps the guard that `uv`
 has no way to know about - whether Labelformat itself needs a release first -
-and a plain reader for the Publish Release workflow, which must learn the
+and a plain reader for the Draft Release workflow, which must learn the
 version to tag without resolving the project environment first. That reader
 matches a line rather than parsing TOML: `tomllib` is 3.11+, and this CLI has
 to stay importable on whatever `python3` a runner or a laptop provides.

@@ -5,30 +5,20 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, HTTPException, Path, Query
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
 )
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManager,
-    EmbeddingManagerProvider,
-    TextEmbedQuery,
-)
+from lightly_studio.embed import embed_samples
 
 text_embedding_router = APIRouter()
-# Define a type alias for the EmbeddingManager dependency
-EmbeddingManagerDep = Annotated[
-    EmbeddingManager,
-    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),  # noqa: PLW0108
-]
 
 
 @text_embedding_router.get(
     "/text_embedding/for_collection/{collection_id}", response_model=list[float]
 )
 def embed_text(
-    embedding_manager: EmbeddingManagerDep,
     collection_id: Annotated[UUID, Path(title="The ID of the collection for which to embed.")],
     query_text: str = Query(..., description="The text to embed."),
     embedding_model_id: Annotated[
@@ -37,10 +27,14 @@ def embed_text(
     ] = None,
 ) -> list[float]:
     """Retrieve embeddings for the input text."""
+    if embedding_model_id is not None:
+        raise NotImplementedError(
+            "Per-request embedding model override is not supported yet. Collection's "
+            "default embedding model is always used."
+        )
     try:
-        text_embeddings = embedding_manager.embed_text(
-            collection_id=collection_id,
-            text_query=TextEmbedQuery(text=query_text, embedding_model_id=embedding_model_id),
+        text_embeddings = embed_samples.embed_text_for_collection(
+            collection_id=collection_id, text=query_text
         )
     except ValueError as exc:
         raise HTTPException(
