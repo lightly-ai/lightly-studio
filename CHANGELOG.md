@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Reduce grid-view overscan prefetching for videos and frames from 20 additional rows to 2, lowering initial frontend load by avoiding unnecessary backend-rendered videos.
+
 ### Deprecated
 
 ### Removed
