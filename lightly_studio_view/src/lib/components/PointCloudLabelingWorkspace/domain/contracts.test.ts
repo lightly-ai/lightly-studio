@@ -139,7 +139,7 @@ describe('point-cloud domain contracts', () => {
         expect(() => assertCompatibleCoordinates(frame, frame)).not.toThrow();
         for (const incompatible of [
             { ...frame, id: 'world' },
-            { ...frame, unit: 'millimetre' },
+            { ...frame, unit: 'millimeter' },
             { ...frame, convention: 'y-up' }
         ]) {
             expect(() =>
