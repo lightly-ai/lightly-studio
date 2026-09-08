@@ -20,7 +20,7 @@ from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
-from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.embed import embed_samples
 from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -280,19 +280,8 @@ def _generate_embeddings_video(
     if not sample_ids:
         return
 
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
-        session=session, collection_id=collection_id
-    )
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
-        return
-
-    embedding_manager.embed_videos(
-        session=session,
-        collection_id=collection_id,
-        sample_ids=sample_ids,
-        embedding_model_id=model_id,
+    embed_samples.embed_video_samples(
+        session=session, collection_id=collection_id, sample_ids=sample_ids
     )
 
 
