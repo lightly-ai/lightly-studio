@@ -254,13 +254,12 @@ npm run dev
 
 ### Exploring the Makefile
 
-There are five Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
-targets, one in `lightly_studio_view` for the frontend, one in `lightly_studio_embed` for the
-embedding server package, one in the repository root that delegates to all three, and
-`make/python.mk`, which holds the targets every Python member shares - `static-checks`, `lint`,
-`type-check`, `format-check`, `format`, `lint-fix` and `check-uv-lock`. The members include that
-file instead of copying those commands, so they cannot drift and a new Python package gets them
-by including it too. Some commonly used commands:
+`lightly_studio` has the backend, build, e2e and migration targets, `lightly_studio_view` the
+frontend ones and `lightly_studio_embed` those for the embedding server package. The one in the
+repository root delegates to all three. `make/python.mk` is never run directly: it holds the
+targets the Python members share, and each includes it rather than copying them.
+
+Some commonly used commands:
 
 Run tests:
 
