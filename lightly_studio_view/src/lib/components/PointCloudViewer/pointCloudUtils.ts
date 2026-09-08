@@ -5,7 +5,10 @@ import { turboInto } from './colormap';
 export type ColorMode = 'none' | 'intensity' | 'height';
 
 /** Camera position and orbit target computed from point cloud bounds. */
-type CameraPlacement = { position: [number, number, number]; target: [number, number, number] };
+interface CameraPlacement {
+    position: [number, number, number];
+    target: [number, number, number];
+}
 
 /**
  * Build a color buffer from position and intensity data.
