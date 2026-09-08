@@ -43,11 +43,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
           REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+        # A release's author is whichever identity's token created it, so a
+        # workflow-created release always reads as github-actions[bot]. This
+        # workflow is dispatch-triggered, so the actor is the person who
+        # decided to release; the notes name them instead. Appending it here
+        # rather than when drafting keeps it out of a draft nobody published,
+        # and the draft check above keeps a re-run from adding it twice.
         run: |
           set -euo pipefail
           if [ "$(gh release view "${TAG}" --repo "${REPO}" --json isDraft --jq .isDraft)" != "true" ]; then
             echo "::error::${TAG} is not a draft release."
             exit 1
           fi
-          gh release edit "${TAG}" --repo "${REPO}" --draft=false
+          gh release view "${TAG}" --repo "${REPO}" --json body --jq .body \
+            > "${RUNNER_TEMP}/release-notes.md"
+          printf '\nReleased by @%s\n' "${ACTOR}" >> "${RUNNER_TEMP}/release-notes.md"
+          gh release edit "${TAG}" --repo "${REPO}" \
+            --draft=false \
+            --notes-file "${RUNNER_TEMP}/release-notes.md"
           echo "::notice::Published ${TAG}."
