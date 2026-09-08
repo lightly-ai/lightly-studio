@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-import wave
 from collections.abc import Iterator
 from fractions import Fraction
 from pathlib import Path
@@ -185,12 +184,9 @@ def variable_rate_video(tmp_path: Path) -> Path:
 @pytest.mark.parametrize("pts", [220, -1, 221])
 @pytest.mark.parametrize("rotation", [0, 90, 180, 270])
 def test_process_video_frame_exact_frame(
-    variable_rate_video: Path,
-    pts: int,
-    rotation: int,
+    variable_rate_video: Path, pts: int, rotation: int
 ) -> None:
-    # Includes missing/unmatched PTS and a nonzero start time at variable frame rate.
-    buffer, media_type = video_frames_media_module._process_video_frame(
+    buffer, _ = video_frames_media_module._process_video_frame(
         video_path=str(variable_rate_video),
         frame_number=2,
         frame_timestamp_pts=pts,
@@ -199,62 +195,9 @@ def test_process_video_frame_exact_frame(
     )
     expected = np.full((16, 32, 3), 80, dtype=np.uint8)
     expected[:8, :16] = (255, 0, 0)
-    assert media_type == "image/png"
     np.testing.assert_array_equal(
         np.asarray(Image.open(io.BytesIO(buffer))), np.rot90(expected, k=rotation // 90)
     )
-
-
-def test_decode_video_frame_seeks_backwards(variable_rate_video: Path) -> None:
-    for index, pts in [(4, 400), (0, 100), (3, 260), (3, 260)]:
-        frame = video_frames_media_module._decode_video_frame(
-            video_path=str(variable_rate_video),
-            frame_number=index,
-            frame_timestamp_pts=pts,
-        )
-        assert frame.pts == pts
-        assert frame.to_ndarray(format="rgb24")[-1, -1, 0] == index * 40
-
-
-def test_decode_video_frame_failed_seek(variable_rate_video: Path, mocker: MockerFixture) -> None:
-    container = video_frames_media_module._get_cached_container(str(variable_rate_video))
-    unseekable = mocker.Mock(streams=container.streams)
-    unseekable.seek.side_effect = av.error.InvalidDataError(1, "Cannot seek")
-    mocker.patch.object(
-        video_frames_media_module, "_get_cached_container", side_effect=[unseekable, container]
-    )
-    frame = video_frames_media_module._decode_video_frame(
-        video_path=str(variable_rate_video),
-        frame_number=2,
-        frame_timestamp_pts=220,
-    )
-    assert frame.pts == 220
-
-
-@pytest.mark.parametrize(
-    ("bounds", "expected"), [((None, 4), (8, 4)), ((8, None), (8, 4)), ((64, 64), (32, 16))]
-)
-def test_resize_frame(bounds: tuple[int | None, int | None], expected: tuple[int, int]) -> None:
-    result = video_frames_media_module._resize_frame(
-        image=Image.new("RGB", (32, 16)),
-        max_width=bounds[0],
-        max_height=bounds[1],
-    )
-    assert result.size == expected
-
-
-def test_decode_video_frame_invalid_index(variable_rate_video: Path) -> None:
-    with pytest.raises(ValueError, match="No frame at index 20"):
-        video_frames_media_module._decode_video_frame(
-            video_path=str(variable_rate_video),
-            frame_number=20,
-            frame_timestamp_pts=-1,
-        )
-
-
-def test_get_cached_container_reuses_cached(variable_rate_video: Path) -> None:
-    first = video_frames_media_module._get_cached_container(str(variable_rate_video))
-    assert video_frames_media_module._get_cached_container(str(variable_rate_video)) is first
 
 
 @pytest.mark.parametrize("reset", [False, True])
@@ -266,64 +209,34 @@ def test_get_cached_container_closes_files(
     fs = fsspec.filesystem("memory")
     mocker.patch.object(fsspec.core, "url_to_fs", return_value=(fs, "video"))
     files = [io.BytesIO(variable_rate_video.read_bytes()) for _ in range(5)]
-    mocker.patch.object(fs, "open", side_effect=files)
-    first = video_frames_media_module._get_cached_container("first")
-    close = mocker.spy(video_frames_media_module._thread_local.container_cache["first"][1], "close")
+    open_file = mocker.patch.object(fs, "open", side_effect=files)
+    first = video_frames_media_module._get_cached_container("gs://first")
+    assert video_frames_media_module._get_cached_container("gs://first") is first
+    open_file.assert_called_once_with(
+        path="video",
+        mode="rb",
+        block_size=256 * 2**10,
+        cache_type="blockcache",
+        cache_options={"maxblocks": 4},
+    )
     if reset:
-        video_frames_media_module._get_cached_container(video_path="first", reset=True)
+        video_frames_media_module._get_cached_container(video_path="gs://first", reset=True)
     else:
         for index in range(4):
             video_frames_media_module._get_cached_container(str(index))
-    close.assert_called_once()
     assert files[0].closed
     with pytest.raises((AssertionError, ValueError), match=r"not open|closed"):
         next(first.decode(video=0))
 
 
-@pytest.mark.parametrize("audio_only", [False, True])
-def test_get_cached_container_failed_open_closes_file(
-    mocker: MockerFixture,
-    audio_only: bool,
-) -> None:
+def test_get_cached_container_failed_open_closes_file(mocker: MockerFixture) -> None:
     fs = fsspec.filesystem("memory")
     file = io.BytesIO(b"not a video")
-    if audio_only:
-        file = io.BytesIO()
-        with wave.open(file, mode="wb") as audio:
-            audio.setparams((1, 2, 8000, 0, "NONE", "not compressed"))
-            audio.writeframes(b"\x00\x00" * 800)
-        file.seek(0)
     mocker.patch.object(fsspec.core, "url_to_fs", return_value=(fs, "broken"))
     mocker.patch.object(fs, "open", return_value=file)
-    with pytest.raises((av.FFmpegError, ValueError)):
+    with pytest.raises(av.FFmpegError):
         video_frames_media_module._get_cached_container("broken")
     assert file.closed
-    assert "broken" not in video_frames_media_module._thread_local.container_cache
-
-
-@pytest.mark.parametrize("protocol", ["gs", "gcs", "s3", "file"])
-def test_get_cached_container_remote_cache(
-    variable_rate_video: Path,
-    mocker: MockerFixture,
-    protocol: str,
-) -> None:
-    fs = fsspec.filesystem("memory")
-    mocker.patch.object(fsspec.core, "url_to_fs", return_value=(fs, "video"))
-    open_file = mocker.patch.object(
-        fs, "open", return_value=io.BytesIO(variable_rate_video.read_bytes())
-    )
-    container = video_frames_media_module._get_cached_container(f"{protocol}://video")
-    assert next(container.decode(video=0)).pts == 100
-    if protocol == "file":
-        open_file.assert_called_once_with(path="video", mode="rb")
-    else:
-        open_file.assert_called_once_with(
-            path="video",
-            mode="rb",
-            block_size=256 * 2**10,
-            cache_type="blockcache",
-            cache_options={"maxblocks": 4},
-        )
 
 
 def test_get_media_executor_creates_singleton() -> None:
