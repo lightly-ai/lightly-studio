@@ -5,7 +5,12 @@ import {
     createCuboidAnnotation,
     createPointCloudFrame
 } from './index';
-import { createAnnotationFixture } from './fixtures';
+import {
+    createAnnotationFixture,
+    createCameraFixture,
+    createFrameFixtures,
+    createWorkspaceFixture
+} from './fixtures';
 
 const SOURCE = {
     recordingId: 'rec-0',
@@ -154,5 +159,42 @@ describe('point-cloud domain contracts', () => {
         const sparseRotation = mutableRotation as unknown as typeof annotation.rotation;
         expect(() => createCuboidAnnotation({ ...annotation, center: sparseCenter })).toThrow();
         expect(() => createCuboidAnnotation({ ...annotation, rotation: sparseRotation })).toThrow();
+    });
+
+    it('rejects a keyframe annotation without a track', () => {
+        const annotation = createAnnotationFixture();
+        expect(() =>
+            createCuboidAnnotation({ ...annotation, trackId: null, keyframeId: 'kf-0' })
+        ).toThrow();
+    });
+});
+
+describe('point-cloud fixtures', () => {
+    it('createCameraFixture returns a calibrated camera with deterministic fields', () => {
+        const camera = createCameraFixture();
+        expect(camera.id).toBe('camera-0');
+        expect(camera.calibration).not.toBeNull();
+        expect(camera.image).not.toBeNull();
+        expect(camera.width).toBe(640);
+        expect(camera.height).toBe(480);
+    });
+
+    it('createFrameFixtures covers empty, normal, large, partial and malformed inputs', () => {
+        const fixtures = createFrameFixtures();
+        expect(fixtures.empty.bounds).toBeNull();
+        expect(fixtures.normal.bounds).not.toBeNull();
+        expect(fixtures.large.positions.length).toBeGreaterThan(1_000_000);
+        expect(fixtures.partial.intensity).toBeUndefined();
+        expect(fixtures.partial.cameras[0].image).toBeNull();
+        fixtures.malformed.forEach((input) => expect(() => createPointCloudFrame(input)).toThrow());
+    });
+
+    it('createWorkspaceFixture has consistent track and annotation class identities', () => {
+        const annotation = createAnnotationFixture();
+        const workspace = createWorkspaceFixture();
+        expect(workspace.track.id).toBe(annotation.trackId);
+        expect(workspace.track.keyframes[0].annotationId).toBe(annotation.id);
+        expect(workspace.annotationClass.id).toBe(annotation.annotationClassId);
+        expect(workspace.interaction.selection.annotationIds).toContain(annotation.id);
     });
 });
