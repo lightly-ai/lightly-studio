@@ -125,66 +125,6 @@ def test_embed_text_for_collection__no_default_model(
         )
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_collection_has_default_embedder__loads_and_reports_true(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    """The helper ensures the default is loaded, then reports it is available.
-
-    The check is ensure-and-check: no default exists up front, and the first call
-    registers one as a side effect before returning True.
-    """
-    collection = create_collection(session=db_session)
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
-    # No default embedding model exists before the call.
-    assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is None
-    )
-
-    has_default = embed_samples.collection_has_default_embedder(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    assert has_default is True
-    # The call registered a default model as its side effect.
-    assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is not None
-    )
-
-
-@pytest.mark.usefixtures("patched_manager")
-def test_collection_has_default_embedder__false_when_none_loadable(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    """The helper reports False when no default model can be loaded."""
-    collection = create_collection(session=db_session)
-    _disable_env_loader(mocker=mocker)
-
-    has_default = embed_samples.collection_has_default_embedder(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    assert has_default is False
-    assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is None
-    )
-
-
 def test_embed_image_samples(
     db_session: Session,
     patched_manager: EmbeddingManager,
@@ -441,6 +381,66 @@ def test_embed_frame_samples__no_default_model_skips(
 
     assert "No embedding model loaded" in caplog.text
     assert _stored_embeddings(session=db_session) == []
+
+
+@pytest.mark.usefixtures("patched_manager")
+def test_collection_has_default_embedder__loads_and_reports_true(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """The helper ensures the default is loaded, then reports it is available.
+
+    The check is ensure-and-check: no default exists up front, and the first call
+    registers one as a side effect before returning True.
+    """
+    collection = create_collection(session=db_session)
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    # No default embedding model exists before the call.
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        is None
+    )
+
+    has_default = embed_samples.collection_has_default_embedder(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert has_default is True
+    # The call registered a default model as its side effect.
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        is not None
+    )
+
+
+@pytest.mark.usefixtures("patched_manager")
+def test_collection_has_default_embedder__false_when_none_loadable(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """The helper reports False when no default model can be loaded."""
+    collection = create_collection(session=db_session)
+    _disable_env_loader(mocker=mocker)
+
+    has_default = embed_samples.collection_has_default_embedder(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert has_default is False
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        is None
+    )
 
 
 def _register_default_random_model(

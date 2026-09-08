@@ -60,29 +60,6 @@ def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
     return manager.embed_text(collection_id=collection_id, text_query=TextEmbedQuery(text=text))
 
 
-def collection_has_default_embedder(session: Session, collection_id: UUID) -> bool:
-    """Ensure the collection's default embedding model is loaded and report whether it exists.
-
-    This is an ensure-and-check, not a pure peek: on the first call for a collection,
-    ``load_or_get_default_model`` loads and registers the collection's default embedding
-    model as a side effect, then this returns whether a usable default model is (now)
-    available.
-
-    This differs from ``embedding_utils.collection_has_embeddings``, which checks whether
-    embeddings are already *stored* for the collection.
-
-    Args:
-        session: Database session for resolver operations.
-        collection_id: The collection whose default embedding model is ensured.
-
-    Returns:
-        True if the collection has a usable default embedding model, False otherwise.
-    """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
-    return model_id is not None
-
-
 def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
     """Embed image samples with the collection's default model and store the result.
 
@@ -186,3 +163,26 @@ def embed_frame_samples(
         images=pil_frames,
         show_progress=False,
     )
+
+
+def collection_has_default_embedder(session: Session, collection_id: UUID) -> bool:
+    """Ensure the collection's default embedding model is loaded and report whether it exists.
+
+    This is an ensure-and-check, not a pure peek: on the first call for a collection,
+    ``load_or_get_default_model`` loads and registers the collection's default embedding
+    model as a side effect, then this returns whether a usable default model is (now)
+    available.
+
+    This differs from ``embedding_utils.collection_has_embeddings``, which checks whether
+    embeddings are already *stored* for the collection.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The collection whose default embedding model is ensured.
+
+    Returns:
+        True if the collection has a usable default embedding model, False otherwise.
+    """
+    manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
+    return model_id is not None
