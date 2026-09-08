@@ -1,4 +1,4 @@
-name: Undraft Release
+name: Finish Release
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  undraft-release:
+  finish-release:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
