@@ -49,6 +49,7 @@ jobs:
             # E2E tests and examples are included for static checks.
             backend:
               - '.github/workflows/unit_test.yml'
+              - 'Makefile'
               - 'lightly_studio/Makefile'
               - 'lightly_studio/alembic.ini'
               - 'lightly_studio/dataset_examples/**'
@@ -77,6 +78,7 @@ jobs:
             # The second workspace member. Shares the lockfile, not the dependencies.
             lightly_studio_embed:
               - '.github/workflows/unit_test.yml'
+              - 'Makefile'
               - 'lightly_studio/ruff.toml'
               - 'lightly_studio_embed/**'
               - 'pyproject.toml'
