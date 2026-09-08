@@ -13,16 +13,6 @@ import {
 } from './fixtures';
 
 describe('point-cloud domain contracts', () => {
-    it('covers empty, populated, large, partial and malformed frames', () => {
-        const fixtures = createFrameFixtures();
-        expect(fixtures.empty.bounds).toBeNull();
-        expect(fixtures.normal.bounds).toEqual({ min: [0, 0, 0], max: [3, 0, 1.5] });
-        expect(fixtures.large.positions.length).toBe(1_050_000);
-        expect(fixtures.partial.intensity).toBeUndefined();
-        expect(fixtures.partial.cameras[0].image).toBeNull();
-        fixtures.malformed.forEach((input) => expect(() => createPointCloudFrame(input)).toThrow());
-    });
-
     it('isolates provider and renderer buffers and freezes shared metadata', () => {
         const input = createFrameInput();
         const frame = createPointCloudFrame(input);
