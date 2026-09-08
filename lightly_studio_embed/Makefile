@@ -1,5 +1,3 @@
-include ../make/python.mk
-
 .PHONY: clean
 clean:
 ifeq ($(OS),Windows_NT)
@@ -20,3 +18,5 @@ build: clean
 test:
 	@echo "Running tests..."
 	uv run pytest || [ $$? -eq 5 ]
+
+include ../make/python.mk

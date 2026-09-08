@@ -1,5 +1,3 @@
-include ../make/python.mk
-
 # Postgres E2E test configuration
 POSTGRES_CONTAINER_NAME := lightly-studio-postgres
 POSTGRES_PORT := 5433
@@ -300,3 +298,5 @@ else
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -exec rm -rf {} +
 endif
+
+include ../make/python.mk
