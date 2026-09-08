@@ -5,6 +5,11 @@ ifeq ($(OS),Windows_NT)
 	@echo "Checking Node.js installation..."
 	@powershell -Command "if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Write-Host 'Error: Node.js is not installed. Please install Node.js >=22.11.0 from https://nodejs.org/'; exit 1 }"
 	npm ci
+else ifeq ($(CI),true)
+# CI installs Node with actions/setup-node from the same .nvmrc, so there is nothing
+# left for nvm to do. Skipping it also keeps a remote installer out of the build,
+# which matters once a workflow builds the wheel in a job that can publish it.
+	npm ci
 else
 	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 	bash -c 'export NVM_DIR="$${HOME}/.nvm"; \
