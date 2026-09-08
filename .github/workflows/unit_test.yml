@@ -48,16 +48,17 @@ jobs:
             # E2E tests and examples are included for static checks.
             backend:
               - '.github/workflows/unit_test.yml'
-              - 'lightly_studio/src/**'
-              - 'lightly_studio/tests/**'
-              - 'lightly_studio/e2e-tests/**'
-              - 'lightly_studio/dataset_examples/**'
-              - 'lightly_studio/pyproject.toml'
-              - 'lightly_studio/uv.lock'
-              - 'lightly_studio/ruff.toml'
-              - 'lightly_studio/pytest.ini'
               - 'lightly_studio/Makefile'
               - 'lightly_studio/alembic.ini'
+              - 'lightly_studio/dataset_examples/**'
+              - 'lightly_studio/e2e-tests/**'
+              - 'lightly_studio/pyproject.toml'
+              - 'lightly_studio/pytest.ini'
+              - 'lightly_studio/ruff.toml'
+              - 'lightly_studio/src/**'
+              - 'lightly_studio/tests/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
             frontend:
               - '.github/workflows/unit_test.yml'
               - 'lightly_studio_view/**'
@@ -70,8 +71,8 @@ jobs:
               - 'fast_track/**'
             # Release tooling: CI-internal, so it has its own toolchain.
             release_tooling:
-              - '.github/workflows/unit_test.yml'
               - '.github/scripts/**'
+              - '.github/workflows/unit_test.yml'
 
   check-python:
     name: Static Checks Python
