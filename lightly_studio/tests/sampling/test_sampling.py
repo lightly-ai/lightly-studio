@@ -225,9 +225,9 @@ class TestSampling:
         }
 
         assert len(batches["first_batch"]) == 2
-        assert len(batches["second_batch"]) == 2
-        assert set(batches["first_batch"]).isdisjoint(batches["second_batch"])
-        assert set(batches["first_batch"] + batches["second_batch"]) == set(batches["single_batch"])
+        assert len(batches["second_batch"]) == 4
+        assert set(batches["first_batch"]) < set(batches["second_batch"])
+        assert set(batches["second_batch"]) == set(batches["single_batch"])
 
     def test_annotation_balancing(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
