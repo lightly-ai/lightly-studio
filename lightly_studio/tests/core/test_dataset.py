@@ -457,11 +457,7 @@ def test_generate_embeddings__no_generator(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    mocker.patch.object(
-        embedder_registry,
-        "_BUILTIN_SPACE_FACTORIES",
-        {},
-    )
+    mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=None)
     embedder_registry.registry = embedder_registry.EmbedderRegistry()
 
     session = db_manager.persistent_session()

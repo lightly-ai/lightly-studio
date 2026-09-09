@@ -484,8 +484,8 @@ def _register_default_random_model(
 
 
 def _disable_env_loader(mocker: MockerFixture) -> None:
-    """Make all built-in bootstrap factories unavailable."""
-    mocker.patch.object(embedder_registry, "_BUILTIN_SPACE_FACTORIES", {})
+    """Make all built-in bootstrap embedders unavailable."""
+    mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=None)
     embedder_registry.registry = embedder_registry.EmbedderRegistry()
 
 

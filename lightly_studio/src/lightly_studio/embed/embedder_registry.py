@@ -10,7 +10,6 @@ the caller's responsibility.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 
 from lightly_studio.embed.embedder import (
     Capability,
@@ -145,10 +144,9 @@ class EmbedderRegistry:
         registered = self._space_key_to_embedder.get(space_key)
         if registered is not None:
             return registered
-        factory = _BUILTIN_SPACE_FACTORIES.get(space_key)
-        if factory is None:
+        embedder = _load_builtin_embedder(space_key=space_key)
+        if embedder is None:
             return None
-        embedder = factory()
         self.register(embedder=embedder)
         return embedder
 
@@ -164,21 +162,16 @@ def _capabilities_of(embedder: Embedder) -> list[Capability]:
     ]
 
 
-def _create_mobileclip() -> Embedder:
-    from lightly_studio.embed.mobileclip_embedder import MobileCLIPEmbedder  # noqa: PLC0415
+def _load_builtin_embedder(space_key: str) -> Embedder | None:
+    """Construct the built-in embedder for a space key, or None if there is none."""
+    if space_key == "mobileclip_s0":
+        from lightly_studio.embed.mobileclip_embedder import MobileCLIPEmbedder  # noqa: PLC0415
 
-    return MobileCLIPEmbedder()
+        return MobileCLIPEmbedder()
+    if space_key == "PE-Core-T16-384":
+        from lightly_studio.embed.perception_encoder_embedder import (  # noqa: PLC0415
+            PerceptionEncoderEmbedder,
+        )
 
-
-def _create_perception_encoder() -> Embedder:
-    from lightly_studio.embed.perception_encoder_embedder import (  # noqa: PLC0415
-        PerceptionEncoderEmbedder,
-    )
-
-    return PerceptionEncoderEmbedder()
-
-
-_BUILTIN_SPACE_FACTORIES: dict[str, Callable[[], Embedder]] = {
-    "mobileclip_s0": _create_mobileclip,
-    "PE-Core-T16-384": _create_perception_encoder,
-}
+        return PerceptionEncoderEmbedder()
+    return None
