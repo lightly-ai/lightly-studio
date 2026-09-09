@@ -45,6 +45,10 @@
         untrack(() => {
             const bounds = pointCloudBuffer.updatePositions(currentBatch);
             if (!hasFitted && bounds && camera && controls) {
+                // Point clouds arrive Z-up, which the height color mode assumes too. Set it
+                // imperatively rather than as a prop so it is in place before the controls
+                // read it and before the first fit.
+                camera.up.set(0, 0, 1);
                 fitCameraToBounds(camera, controls, bounds);
                 hasFitted = true;
             }

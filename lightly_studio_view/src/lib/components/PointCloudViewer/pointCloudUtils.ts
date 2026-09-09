@@ -28,44 +28,52 @@ export function buildColorBuffer(
     colors: Float32Array,
     intensityRange?: [number, number]
 ): void {
-    if (colorMode === 'none') {
-        for (let i = 0; i < count; i++) {
-            colors[i * 3] = 0.5;
-            colors[i * 3 + 1] = 0.5;
-            colors[i * 3 + 2] = 0.5;
-        }
-        return;
-    }
-
-    let minVal: number;
-    let maxVal: number;
+    if (colorMode === 'none') return fillNeutral(count, colors);
 
     const useIntensity = colorMode === 'intensity';
-    if (useIntensity && intensityRange) {
-        [minVal, maxVal] = intensityRange;
-    } else {
-        minVal = Infinity;
-        maxVal = -Infinity;
-        for (let i = 0; i < count; i++) {
-            const v = useIntensity ? intensities[i] : positions[i * 3 + 2];
-            if (v < minVal) minVal = v;
-            if (v > maxVal) maxVal = v;
-        }
-    }
-
+    const [minVal, maxVal] =
+        useIntensity && intensityRange
+            ? intensityRange
+            : valueRange(positions, intensities, count, useIntensity);
     const range = maxVal - minVal;
     const invRange = range === 0 ? 0 : 1 / range;
 
     for (let i = 0; i < count; i++) {
         const raw = useIntensity ? intensities[i] : positions[i * 3 + 2];
-
-        let t = (raw - minVal) * invRange;
-        if (t < 0) t = 0;
-        else if (t > 1) t = 1;
-        if (useIntensity) t = Math.sqrt(t);
-
-        turboInto(t, colors, i * 3);
+        const t = clamp01((raw - minVal) * invRange);
+        turboInto(useIntensity ? Math.sqrt(t) : t, colors, i * 3);
     }
+}
+
+/** Neutral gray for every active point. */
+function fillNeutral(count: number, colors: Float32Array): void {
+    for (let i = 0; i < count; i++) {
+        colors[i * 3] = 0.5;
+        colors[i * 3 + 1] = 0.5;
+        colors[i * 3 + 2] = 0.5;
+    }
+}
+
+/** The range of whichever value the color mode maps: intensity, or height on the Z axis. */
+function valueRange(
+    positions: Float32Array,
+    intensities: Float32Array,
+    count: number,
+    useIntensity: boolean
+): [number, number] {
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    for (let i = 0; i < count; i++) {
+        const v = useIntensity ? intensities[i] : positions[i * 3 + 2];
+        if (v < minVal) minVal = v;
+        if (v > maxVal) maxVal = v;
+    }
+    return [minVal, maxVal];
+}
+
+function clamp01(value: number): number {
+    if (value < 0) return 0;
+    return value > 1 ? 1 : value;
 }
 
 /**
@@ -81,7 +89,7 @@ export function computeActiveBounds(positions: Float32Array, count: number): Box
  */
 export function computeCameraPlacement(bounds: Box3): CameraPlacement {
     if (bounds.isEmpty()) {
-        return { position: [0, 10, 20], target: [0, 0, 0] };
+        return { position: [0, -20, 10], target: [0, 0, 0] };
     }
 
     const center = bounds.getCenter(new Vector3());
@@ -89,8 +97,12 @@ export function computeCameraPlacement(bounds: Box3): CameraPlacement {
     const maxDim = Math.max(size.x, size.y, size.z, 1);
     const distance = maxDim * 1.5;
 
+    // Z is up, as the height color mode also assumes, so the wide offsets go on the ground
+    // plane and only a shallow one on the up axis. Offsetting mostly along Z instead would
+    // look straight down at the cloud. The negative Y puts the viewer behind and to one
+    // side of a forward-facing sensor rather than in front of it.
     return {
-        position: [center.x + distance * 0.5, center.y + distance * 0.5, center.z + distance],
+        position: [center.x + distance, center.y - distance, center.z + distance * 0.65],
         target: [center.x, center.y, center.z]
     };
 }

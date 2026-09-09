@@ -112,7 +112,7 @@ describe('computeCameraPlacement', () => {
     it('returns default placement for empty box', () => {
         const placement = computeCameraPlacement(new Box3());
 
-        expect(placement.position).toEqual([0, 10, 20]);
+        expect(placement.position).toEqual([0, -20, 10]);
         expect(placement.target).toEqual([0, 0, 0]);
     });
 
@@ -121,8 +121,18 @@ describe('computeCameraPlacement', () => {
 
         const placement = computeCameraPlacement(bounds);
 
-        expect(placement.position).toEqual([25, 15, 30]);
+        expect(placement.position).toEqual([40, -30, 19.5]);
         expect(placement.target).toEqual([10, 0, 0]);
+    });
+
+    it('keeps the up axis offset shallower than the ground ones', () => {
+        // Z is up: a placement dominated by the Z offset would look straight down.
+        const bounds = new Box3(new Vector3(0, 0, 0), new Vector3(10, 10, 10));
+
+        const [x, y, z] = computeCameraPlacement(bounds).position;
+
+        expect(Math.abs(z - 5)).toBeLessThan(Math.abs(x - 5));
+        expect(Math.abs(z - 5)).toBeLessThan(Math.abs(y - 5));
     });
 
     it('uses only the provided bounds', () => {

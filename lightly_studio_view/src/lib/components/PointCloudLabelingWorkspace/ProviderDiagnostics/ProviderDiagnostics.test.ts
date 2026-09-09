@@ -4,9 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { canonicalCoordinateFrame, createPointCloudFrame } from '../domain';
 import ProviderDiagnostics from './ProviderDiagnostics.svelte';
 
-const { useRecordingProbe } = vi.hoisted(() => ({ useRecordingProbe: vi.fn() }));
-vi.mock('./useRecordingProbe.svelte', () => ({ useRecordingProbe }));
-
 function frame(logTimeNs: string) {
     return createPointCloudFrame({
         id: `frame-${logTimeNs}`,
@@ -19,12 +16,12 @@ function frame(logTimeNs: string) {
     });
 }
 
-function probe(overrides: Record<string, unknown> = {}) {
-    const state = {
+function state(overrides: Record<string, unknown> = {}) {
+    const probe = {
         phase: 'ready',
         failure: undefined,
         failureDetail: undefined,
-        telemetry: [{ operation: 'decode', durationMs: 8.53, bytesRead: 457728 }],
+        telemetry: [{ operation: 'decode' as const, durationMs: 8.53, bytesRead: 457728 }],
         recording: {
             sizeBytes: '898890680',
             version: 'rev-1',
@@ -54,20 +51,19 @@ function probe(overrides: Record<string, unknown> = {}) {
         frame: frame('1785698974144734233'),
         isLoading: false,
         step: vi.fn((next: number) => {
-            state.position = next;
-            state.frame = frame(String(1785698974144734233n + BigInt(next)));
+            probe.position = next;
+            probe.frame = frame(String(1785698974144734233n + BigInt(next)));
         }),
         ...overrides
     };
-    useRecordingProbe.mockReturnValue(state);
-    return state;
+    return probe;
 }
 
 describe('ProviderDiagnostics', () => {
     it('reports the recording and the frame in view', () => {
-        probe();
+        const probe = state();
 
-        render(ProviderDiagnostics, { props: { sampleId: 'sample-1' } });
+        render(ProviderDiagnostics, { props: { probe } });
 
         expect(screen.getByText('857.2 MB')).toBeInTheDocument();
         expect(screen.getByText('131.5 s · 10.0 Hz')).toBeInTheDocument();
@@ -80,30 +76,30 @@ describe('ProviderDiagnostics', () => {
     });
 
     it('steps to the next frame on request', async () => {
-        const state = probe();
-        render(ProviderDiagnostics, { props: { sampleId: 'sample-1' } });
+        const probe = state();
+        render(ProviderDiagnostics, { props: { probe } });
 
         await userEvent.click(screen.getByLabelText('Next frame'));
 
-        expect(state.step).toHaveBeenCalledWith(1);
+        expect(probe.step).toHaveBeenCalledWith(1);
     });
 
     it('cannot step past either end of the listed window', () => {
-        probe({ frameCount: 1, atLimit: false });
+        const probe = state({ frameCount: 1, atLimit: false });
 
-        render(ProviderDiagnostics, { props: { sampleId: 'sample-1' } });
+        render(ProviderDiagnostics, { props: { probe } });
 
         expect(screen.getByLabelText('Previous frame')).toBeDisabled();
         expect(screen.getByLabelText('Next frame')).toBeDisabled();
     });
 
     it('shows why reading the recording failed, with the cause', () => {
-        probe({
+        const probe = state({
             failure: 'The MCAP recording could not be read or decoded.',
             failureDetail: "TypeError: Failed to execute 'fetch': Illegal invocation"
         });
 
-        render(ProviderDiagnostics, { props: { sampleId: 'sample-1' } });
+        render(ProviderDiagnostics, { props: { probe } });
 
         expect(screen.getByTestId('provider-diagnostics-error')).toHaveTextContent(
             'could not be read or decoded'

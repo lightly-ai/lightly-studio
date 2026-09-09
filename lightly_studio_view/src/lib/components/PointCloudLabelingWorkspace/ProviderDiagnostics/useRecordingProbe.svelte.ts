@@ -33,12 +33,17 @@ export interface ProbeRecording {
     frameRateHz: number | null;
 }
 
+export type RecordingProbe = ReturnType<typeof useRecordingProbe>;
+
 /**
- * Reads frames from one recording through the real session, for the diagnostics panel.
+ * Reads frames from one recording through the real session, for the scene and the panel.
  *
  * The session is a resource, so this hook owns its lifetime; the frames are values, so the
  * query client owns their caching, deduplication and cancellation. Stepping back is a cache
  * hit, and the next frame is prefetched behind the visible one rather than pre-empting it.
+ *
+ * @param sampleId - The MCAP sample to read. An empty id opens nothing, which is how a
+ * caller waits for a feature flag or a route parameter.
  */
 export function useRecordingProbe(sampleId: () => string) {
     const client = useQueryClient();
@@ -61,6 +66,7 @@ export function useRecordingProbe(sampleId: () => string) {
 
     $effect(() => {
         const id = sampleId();
+        if (!id) return;
         const url = getMcapRecordingURLById(id);
         let cancelled = false;
         // Outside the effect's reactive reads: reading `telemetry` back inside the callback

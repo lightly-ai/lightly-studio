@@ -10,6 +10,8 @@
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import ProviderDiagnostics from './ProviderDiagnostics/ProviderDiagnostics.svelte';
     import type { WorkspaceCrumb } from './types';
+    import type { PointCloudFrame } from './domain';
+    import type { RecordingProbe } from './ProviderDiagnostics/useRecordingProbe.svelte';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -30,12 +32,13 @@
         sourcePath?: readonly WorkspaceCrumb[];
         /** Overridable for tests/stories; production always starts at `empty` today. */
         status?: 'unsupported' | 'empty' | 'error';
+        /** The frame to draw. Absent until one has been decoded. */
+        frame?: PointCloudFrame;
         /**
-         * Temporary: reads one frame through the MCAP provider and reports what came back,
-         * so the data path is visible before the 3D scene exists. Remove together with
-         * `ProviderDiagnostics` once the viewport renders frames.
+         * Temporary: when given, reports what the MCAP provider read alongside the scene.
+         * Remove together with `ProviderDiagnostics`.
          */
-        showProviderDiagnostics?: boolean;
+        diagnostics?: RecordingProbe;
         onExit: () => void;
         onRetry?: () => void;
     }
@@ -44,7 +47,8 @@
         sampleId,
         sourcePath = [],
         status = 'empty',
-        showProviderDiagnostics = false,
+        frame,
+        diagnostics,
         onExit,
         onRetry
     }: Props = $props();
@@ -94,13 +98,13 @@
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
                             <ToolRail />
-                            {#if showProviderDiagnostics}
-                                <ProviderDiagnostics {sampleId} />
+                            {#if diagnostics}
+                                <ProviderDiagnostics probe={diagnostics} />
                             {/if}
-                            {#if status === 'empty'}
+                            {#if status === 'empty' && !frame}
                                 <WorkspaceStatusPanel status="empty" {onExit} />
                             {:else}
-                                <SceneViewport />
+                                <SceneViewport {frame} />
                             {/if}
                         </Pane>
                         <PaneResizer

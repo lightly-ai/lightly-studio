@@ -1,25 +1,23 @@
 <script lang="ts">
     import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from '@lucide/svelte';
     import { Button } from '$lib/components';
-    import { useRecordingProbe } from './useRecordingProbe.svelte';
+    import type { RecordingProbe } from './useRecordingProbe.svelte';
 
     /**
      * Temporary read-out of what the MCAP frame provider actually got (LIG-10661).
      *
-     * The 3D scene lands in a later issue, so until then this reads frames through the real
-     * session -- byte ranges, worker, decoder, query cache -- and reports the recording's
-     * channels, each frame's point counts, and every open/list/decode timing. Stepping loads
-     * one frame at a time, which is what the timeline will do; stepping back is a cache hit.
-     * Timings are also logged under `[mcap-provider]`. Delete this component once the viewport
-     * renders frames.
+     * Reports what the session actually read -- the recording's channels, each frame's point
+     * counts, the timeline length and rate, and every open/list/decode timing, also logged
+     * under `[mcap-provider]`. Stepping loads one frame at a time, which is what the timeline
+     * will do; stepping back is a cache hit. Delete this component, its hook and the
+     * workspace prop once the timeline drives the scene on its own.
      */
     interface Props {
-        sampleId: string;
+        /** The reading in progress. Owned by the route, so the scene shares one session. */
+        probe: RecordingProbe;
     }
 
-    let { sampleId }: Props = $props();
-
-    const probe = useRecordingProbe(() => sampleId);
+    let { probe }: Props = $props();
 
     const megabytes = (bytes: string) => `${(Number(bytes) / 1024 ** 2).toFixed(1)} MB`;
 </script>

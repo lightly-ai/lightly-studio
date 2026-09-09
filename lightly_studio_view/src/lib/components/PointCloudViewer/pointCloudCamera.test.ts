@@ -13,7 +13,7 @@ describe('fitCameraToBounds', () => {
 
         fitCameraToBounds(camera, undefined, bounds);
 
-        expect(camera.position.toArray()).toEqual([25, 15, 30]);
+        expect(camera.position.toArray()).toEqual([40, -30, 19.5]);
     });
 
     it('calls lookAt on camera when controls are absent', () => {

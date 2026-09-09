@@ -17,8 +17,8 @@ vi.mock('$lib/hooks', () => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
-// The temporary provider diagnostics panel reads frames through the query client; stub its
-// hook so this page's test runs without a QueryClientProvider. Remove with the panel.
+// This page reads frames through the query client; stub the hook so the test runs without a
+// QueryClientProvider.
 vi.mock(
     '$lib/components/PointCloudLabelingWorkspace/ProviderDiagnostics/useRecordingProbe.svelte',
     () => ({
@@ -28,6 +28,7 @@ vi.mock(
             frameCount: 0,
             atLimit: false,
             position: 0,
+            frame: undefined,
             isLoading: false,
             step: vi.fn()
         })
@@ -78,8 +79,11 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
         featureFlags.set(['point_cloud_rendering']);
         render(Page, { props: { data: mockPageData } });
 
-        await waitFor(() =>
-            expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument()
+        // The lazy chunk now pulls in the Three.js viewer, so importing it takes longer than
+        // the default timeout allows.
+        await waitFor(
+            () => expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument(),
+            { timeout: 15000 }
         );
     });
 });
