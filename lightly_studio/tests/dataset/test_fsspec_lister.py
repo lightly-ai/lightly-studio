@@ -79,17 +79,18 @@ def mock_fsspec_s3fs(moto_server: ThreadedMotoServer) -> Generator[None, None, N
     # Store original functions
     original_get_filesystem = fsspec_lister._get_filesystem
     original_fsspec_open = fsspec.open
+    s3_filesystem = s3fs.S3FileSystem(
+        client_kwargs={"endpoint_url": endpoint},
+        key="testing",
+        secret="testing",
+        token="testing",
+        skip_instance_cache=True,
+    )
 
     def mock_get_filesystem(path: str) -> Any:
         """Get filesystem that points to moto server."""
         if path.startswith("s3://"):
-            # Configure s3fs to use moto server
-            return s3fs.S3FileSystem(
-                client_kwargs={"endpoint_url": endpoint},
-                key="testing",
-                secret="testing",
-                token="testing",
-            )
+            return s3_filesystem
         return original_get_filesystem(path)
 
     def mock_fsspec_open(path: str, mode: str = "rb", **kwargs: Any) -> Any:

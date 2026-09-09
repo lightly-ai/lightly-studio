@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from lightly_studio.dataset.embedding_generator import (
-    ImageCrop,
-    RandomEmbeddingGenerator,
-)
+from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
+from lightly_studio.embed.types import ImageCrop
 
 
 class TestRandomEmbeddingGeneratorCrops:

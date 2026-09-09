@@ -27,8 +27,13 @@ from lightly_studio.resolvers.tag_resolver.remove_sample_ids_from_tag_id import 
 )
 from lightly_studio.resolvers.tag_resolver.remove_tag_from_sample import remove_tag_from_sample
 from lightly_studio.resolvers.tag_resolver.rename import rename
+from lightly_studio.resolvers.tag_resolver.split_samples import (
+    SplitDefinition,
+    split_samples,
+)
 
 __all__ = [
+    "SplitDefinition",
     "add_sample_ids_to_tag_id",
     "add_samples_to_tag_from_query",
     "add_tag_to_sample",
@@ -44,4 +49,5 @@ __all__ = [
     "remove_sample_ids_from_tag_id",
     "remove_tag_from_sample",
     "rename",
+    "split_samples",
 ]

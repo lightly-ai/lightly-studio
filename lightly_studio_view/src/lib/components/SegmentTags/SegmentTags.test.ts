@@ -4,6 +4,11 @@ import { writable } from 'svelte/store';
 import SegmentTags from './SegmentTags.svelte';
 import * as hooks from '$lib/hooks';
 import type { TagView } from '$lib/services/types';
+import useAuth from '$lib/hooks/useAuth/useAuth';
+
+vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+    default: vi.fn()
+}));
 
 vi.mock('./AddTagPopover.svelte', async () => {
     const module = await import('./AddTagPopover.mock.svelte');
@@ -70,6 +75,11 @@ describe('SegmentTags', () => {
         addExistingMock.mockReset();
         createAndAddMock.mockReset();
         loadTagsMock.mockReset();
+        vi.mocked(useAuth).mockReturnValue({
+            user: undefined,
+            token: undefined,
+            isAuthenticated: false
+        });
     });
 
     it('renders nothing when tags array is empty', () => {
@@ -122,6 +132,30 @@ describe('SegmentTags', () => {
 
         expect(screen.getByTestId('remove-tag-Tag 1')).toBeInTheDocument();
         expect(screen.getByTestId('remove-tag-Tag 2')).toBeInTheDocument();
+    });
+
+    it('keeps tags visible but hides tag mutations for viewers', () => {
+        vi.mocked(useAuth).mockReturnValue({
+            user: { username: 'viewer', email: 'viewer@example.com', role: 'viewer' },
+            token: 'viewer-token',
+            isAuthenticated: true
+        });
+
+        render(SegmentTags, {
+            props: {
+                tags: [{ tag_id: '1', name: 'Visible Tag' }],
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
+            }
+        });
+
+        expect(screen.getByTestId('segment-tag-name')).toHaveTextContent('Visible Tag');
+        expect(screen.queryByTestId('remove-tag-Visible Tag')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('mock-add-existing')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('mock-add-new')).not.toBeInTheDocument();
+        expect(removeTagFromSampleMock).not.toHaveBeenCalled();
+        expect(addExistingMock).not.toHaveBeenCalled();
+        expect(createAndAddMock).not.toHaveBeenCalled();
     });
 
     it('calls removeTagFromSample and onRefetch when remove button is clicked', async () => {

@@ -27,15 +27,10 @@ LIGHTLY_STUDIO_API_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_API_KEY", defaul
 # Anonymous usage tracking. Covers the Python package and the GUI, which reads the flag back from
 # the API. See lightly_studio/analytics/tracking.py.
 LIGHTLY_STUDIO_ANALYTICS_ENABLED: bool = env.bool("LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
-# The same project the webapp reports to, so backend and browser events land together. PostHog
-# project API keys are write-only and ship inside every client: this one is already in the webapp
-# bundle of every published wheel, so keeping it out of the source buys nothing. Set the variable
-# to point a build elsewhere, or to "" to disable tracking without touching the flag above.
-LIGHTLY_STUDIO_POSTHOG_KEY: str = env.str(
-    "LIGHTLY_STUDIO_POSTHOG_KEY", "phc_LB62TVP2O3S2goH4KASascsXRT14H7zfxHVfo7d2cLV"
-)
-# The EU instance, matching PUBLIC_POSTHOG_HOST in lightly_studio_view/.env. The two packages read
-# their configuration through different systems, so the value is written once on each side. Not an
+# Overrides the project to report against. Unset or empty, it follows the cohort of the
+# installation, see lightly_studio/analytics/posthog_project.py.
+LIGHTLY_STUDIO_POSTHOG_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_POSTHOG_KEY", default=None)
+# The EU instance. The GUI reads this back from the API rather than carrying its own copy. Not an
 # environment variable: the key above is the only part worth pointing elsewhere.
 LIGHTLY_STUDIO_POSTHOG_HOST: str = "https://eu.i.posthog.com"
 # Marks this machine as a Lightly dev or staff machine, so internal usage can be filtered out of

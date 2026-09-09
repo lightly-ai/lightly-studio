@@ -96,6 +96,57 @@ describe('buildHistogramOption', () => {
         expect(yAxis.axisLabel.formatter(0.30000000000000004)).toBe('0.3%');
     });
 
+    it('normalizes each comparison series by its own total, not the base histogram', () => {
+        // Two tags with the same shape but a 10x count difference must draw
+        // identical bars: percentage mode compares distributions, and a shared
+        // denominator would just replot the raw counts.
+        const option = buildHistogramOption(
+            { binEdges: [0, 0.5, 1], counts: [1000, 1000] },
+            undefined,
+            {
+                showAxes: true,
+                valueMode: 'percentage',
+                series: [
+                    {
+                        id: 'tag-a',
+                        label: 'Small',
+                        data: { binEdges: [0, 0.5, 1], counts: [3, 7] }
+                    },
+                    {
+                        id: 'tag-b',
+                        label: 'Large',
+                        data: { binEdges: [0, 0.5, 1], counts: [30, 70] }
+                    }
+                ]
+            }
+        );
+
+        const [small, large] = option.series as { data: BarDatum[] }[];
+        expect(small.data.map((bar) => bar.value)).toEqual([
+            [0.5, 30],
+            [1.5, 70]
+        ]);
+        expect(large.data.map((bar) => bar.value)).toEqual(small.data.map((bar) => bar.value));
+    });
+
+    it('reports the same share in the grouped tooltip as the bar it describes', () => {
+        const option = buildHistogramOption(
+            { binEdges: [0, 0.5, 1], counts: [1000, 1000] },
+            undefined,
+            {
+                showAxes: true,
+                valueMode: 'percentage',
+                series: [
+                    { id: 'tag-a', label: 'Small', data: { binEdges: [0, 0.5, 1], counts: [3, 7] } }
+                ]
+            }
+        );
+
+        const [small] = option.series as { data: BarDatum[] }[];
+        expect(small.data[1].value[1]).toBe(70);
+        expect(getTooltipFormatter(option)([{ dataIndex: 1, seriesIndex: 0 }])).toContain('70.0%');
+    });
+
     it('renders all bins in the accent color when no range is given', () => {
         expect(getColors(buildHistogramOption(normal)).every((c) => c === ACCENT)).toBe(true);
     });

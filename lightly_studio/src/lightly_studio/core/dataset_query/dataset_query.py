@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from typing import Generic, cast
 from uuid import UUID
 
@@ -386,6 +386,33 @@ class DatasetQuery(Generic[T]):
         # Use resolver to bulk assign tag (handles validation and edge cases)
         tag_resolver.add_sample_ids_to_tag_id(
             session=self.session, tag_id=tag.tag_id, sample_ids=sample_ids
+        )
+
+    def split(self, tag_sizes: Mapping[str, int], seed: int | None = None) -> dict[str, int]:
+        """Partition the current query result into newly-created sample tags.
+
+        Args:
+            tag_sizes: Ordered tag names and their positive relative sizes.
+            seed: Optional seed for reproducible assignments.
+
+        Returns:
+            The number of samples assigned to each created tag.
+
+        Raises:
+            ValueError: If this query is not for images or videos, split definitions
+                are invalid, a tag already exists, or the query is empty.
+        """
+        if self.dataset.sample_type not in {SampleType.IMAGE, SampleType.VIDEO}:
+            raise ValueError("Splitting is only supported for image and video datasets.")
+        return tag_resolver.split_samples(
+            session=self.session,
+            collection_id=self.dataset.collection_id,
+            sample_ids=[sample.sample_id for sample in self],
+            splits=[
+                tag_resolver.SplitDefinition(tag_name=name, relative_size=size)
+                for name, size in tag_sizes.items()
+            ],
+            seed=seed,
         )
 
     def sampling(self) -> Sampling:

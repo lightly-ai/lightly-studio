@@ -306,3 +306,90 @@ def test_postgres_collection_embedding_model__backfills_all_models(
     finally:
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()
+
+
+def test_postgres_embedding_model_api_key__added_and_dropped(
+    postgres_url: str | None,
+) -> None:
+    """The API key migration adds a nullable column and the downgrade removes it again."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    model_id = "00000000-0000-0000-0000-000000000003"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="a2b3c4d5e6f7",
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO embedding_model (
+                        name, embedding_dimension, dataset_id, embedding_model_id, created_at
+                    ) VALUES (
+                        'model', 128, :dataset_id, :model_id, NOW()
+                    )
+                    """
+                ),
+                parameters={"dataset_id": dataset_id, "model_id": model_id},
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="head",
+        )
+        columns = db_migrations._get_inspector(engine=engine).get_columns(
+            table_name="embedding_model"
+        )
+        api_key_column = next(column for column in columns if column["name"] == "api_key")
+        assert api_key_column["nullable"] is True
+
+        # The existing row needs no backfill, and the column accepts a key.
+        with engine.begin() as connection:
+            assert (
+                connection.execute(
+                    statement=text("SELECT api_key FROM embedding_model")
+                ).scalar_one()
+                is None
+            )
+            connection.execute(
+                statement=text("UPDATE embedding_model SET api_key = 'secret'"),
+            )
+
+        config.attributes.pop("connection", None)
+        command.check(config)
+
+        # The downgrade drops the column and keeps the row.
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.downgrade,
+            revision="a2b3c4d5e6f7",
+        )
+        columns = db_migrations._get_inspector(engine=engine).get_columns(
+            table_name="embedding_model"
+        )
+        assert "api_key" not in {column["name"] for column in columns}
+        with engine.connect() as connection:
+            remaining = connection.execute(
+                statement=text("SELECT embedding_model_id FROM embedding_model")
+            ).scalar_one()
+        assert str(remaining) == model_id
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()

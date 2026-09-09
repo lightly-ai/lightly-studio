@@ -18,6 +18,7 @@ class SampleType(str, Enum):
     ANNOTATION = "annotation"
     CAPTION = "caption"
     GROUP = "group"
+    MCAP = "mcap"
 
 
 class CollectionBase(SQLModel):

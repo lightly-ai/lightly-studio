@@ -56,6 +56,7 @@ from lightly_studio.models.group_component_definition import (
     GroupComponentDefinitionTable,
 )
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -126,6 +127,7 @@ def deep_copy(
     _copy_evaluation_runs(session=session, new_dataset_id=new_dataset_id, now=now)
 
     _copy_images(session=session, now=now)
+    _copy_mcaps(session=session, now=now)
     _copy_videos(session=session)
     _copy_video_frames(session=session)
     _copy_groups(session=session)
@@ -502,6 +504,25 @@ def _copy_images(session: Session, now: datetime) -> None:
     _copy_table(
         session=session,
         target=ImageTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_mcaps(session: Session, now: datetime) -> None:
+    """Copy mcap rows, remapping sample_id."""
+    src = _table(McapTable).alias("src")
+    map_sample = _map(_MAP_SAMPLE)
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"])
+    overrides = {
+        "sample_id": map_sample.c.new_id,
+        "created_at": literal(now),
+        "updated_at": literal(now),
+    }
+    _copy_table(
+        session=session,
+        target=McapTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

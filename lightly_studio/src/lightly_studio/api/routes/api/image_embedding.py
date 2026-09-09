@@ -10,29 +10,22 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi import Path as FastAPIPath
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_INTERNAL_SERVER_ERROR
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManager,
-    EmbeddingManagerProvider,
-)
+from lightly_studio.embed import embed_samples
 
 logger = logging.getLogger(__name__)
 
 image_embedding_router = APIRouter()
-EmbeddingManagerDep = Annotated[
-    EmbeddingManager,
-    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),  # noqa: PLW0108
-]
 
 
+# TODO(Michal, 09/2026): Switch to embedding with image file bytes instead of an uploaded file.
 @image_embedding_router.post(
     "/image_embedding/from_file/for_collection/{collection_id}", response_model=list[float]
 )
 def embed_image_from_file(
-    embedding_manager: EmbeddingManagerDep,
     collection_id: Annotated[UUID, FastAPIPath(title="The ID of the collection.")],
     file: Annotated[UploadFile, File(description="The image file to embed.")],
     embedding_model_id: Annotated[
@@ -41,6 +34,11 @@ def embed_image_from_file(
     ] = None,
 ) -> list[float]:
     """Retrieve embeddings for the uploaded image file."""
+    if embedding_model_id is not None:
+        raise NotImplementedError(
+            "Per-request embedding model override is not supported yet. Collection's "
+            "default embedding model is always used."
+        )
     try:
         suffix = Path(file.filename).suffix if file.filename else ".jpg"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -48,10 +46,8 @@ def embed_image_from_file(
             tmp_path = tmp.name
 
         try:
-            return embedding_manager.compute_image_embedding(
-                collection_id=collection_id,
-                filepath=tmp_path,
-                embedding_model_id=embedding_model_id,
+            return embed_samples.embed_image_for_collection(
+                collection_id=collection_id, filepath=tmp_path
             )
         finally:
             if os.path.exists(tmp_path):

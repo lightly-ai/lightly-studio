@@ -3,38 +3,17 @@
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
-from lightly_studio.dataset.embedding_result import EmbeddingResult
-from lightly_studio.models.embedding_model import EmbeddingSpaceDescription
-
-
-@dataclass(frozen=True)
-class ImageCrop:
-    """A rectangular region of an image to embed, given in pixel coordinates.
-
-    <span class="doc-badge doc-badge--beta">Beta</span>
-    """
-
-    filepath: str
-    """Path to the image the crop is taken from."""
-
-    x: int
-    """Left edge of the crop, in pixels from the image's left."""
-
-    y: int
-    """Top edge of the crop, in pixels from the image's top."""
-
-    width: int
-    """Crop width in pixels."""
-
-    height: int
-    """Crop height in pixels."""
+from lightly_studio.embed.types import (
+    EmbeddingResult,
+    EmbeddingSpaceSpec,
+    ImageCrop,
+)
 
 
 @runtime_checkable
@@ -51,24 +30,24 @@ class EmbeddingGenerator(Protocol):
     - During a GUI run to embed text or image search queries
 
     Generators are loaded at startup and need to identify themselves with
-    `get_embedding_model_input` which returns metadata about the loaded model.
+    `embedding_space_spec` which returns metadata about the loaded model.
 
     To provide custom embeddings, implement one of the protocols below (``ImageEmbeddingGenerator``
     and/or ``VideoEmbeddingGenerator``) and register it with ``set_default_embedding_model``
     before you add a dataset or start the GUI.
     """
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
 
         <span class="doc-badge doc-badge--beta">Beta</span>
 
-        Returns metadata about the model to be stored in the database.
-        The `embedding_model_hash` field is used to match the same EmbeddingGenerator
-        across multiple LightlyStudio runs.
+        Returns metadata about the embedding space to be stored in the database.
+        The `space_key` field is used to match the same embedding space across
+        multiple LightlyStudio runs.
 
         Returns:
-            A description of the embedding space.
+            A specification of the embedding space.
         """
 
     def embed_text(self, text: str) -> list[float]:
@@ -193,16 +172,15 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """
         self._dimension = dimension
 
-    def get_embedding_model_input(self) -> EmbeddingSpaceDescription:
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
 
         Returns:
-            A description of the embedding space.
+            A specification of the embedding space.
         """
-        return EmbeddingSpaceDescription(
-            name="Random",
-            embedding_model_hash="random_model",
-            embedding_dimension=self._dimension,
+        return EmbeddingSpaceSpec(
+            space_key="random_model",
+            dimension=self._dimension,
         )
 
     def embed_text(self, _text: str) -> list[float]:
