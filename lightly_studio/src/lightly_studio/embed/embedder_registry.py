@@ -157,7 +157,10 @@ class EmbedderRegistry:
         embedder = _load_builtin_embedder(space_key=space_key)
         if embedder is None:
             return None
-        self.register(embedder=embedder)
+        # Lazy loading only supplies an object for an already-chosen space; it must
+        # not re-decide bootstrap defaults (e.g. PE serving a video collection must
+        # not replace the MobileCLIP image defaults).
+        self.register(embedder=embedder, bootstrap_for=set())
         return embedder
 
     def _set_bootstrap_defaults(
