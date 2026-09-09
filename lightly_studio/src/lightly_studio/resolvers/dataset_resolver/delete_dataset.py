@@ -49,6 +49,9 @@ from lightly_studio.models.group_component_definition import (
 )
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,
+)
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.recording import RecordingTable
@@ -142,6 +145,8 @@ def delete_dataset(
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
     _delete_export_jobs(session=session, dataset_id=dataset_id)
     # Must precede collections (FK to collection, deleted in step 6).
+    # MCAP extension first: FK to group_component_definition.
+    _delete_mcap_group_component_definitions(session=session, dataset_id=dataset_id)
     _delete_group_component_definitions(session=session, dataset_id=dataset_id)
 
     # 6. Collections (single statement; self-FK satisfied at statement end).
@@ -388,6 +393,18 @@ def _delete_collection_embedding_models(session: Session, dataset_id: UUID) -> N
     session.exec(
         delete(CollectionEmbeddingModelTable).where(
             col(CollectionEmbeddingModelTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcap_group_component_definitions(session: Session, dataset_id: UUID) -> None:
+    """Delete MCAP group component definitions for the dataset's collections."""
+    session.exec(
+        delete(McapGroupComponentDefinitionTable).where(
+            col(McapGroupComponentDefinitionTable.collection_id).in_(
                 _collection_ids_subquery(dataset_id)
             )
         ),

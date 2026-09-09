@@ -1,0 +1,48 @@
+"""add mcap_group_component_definition.
+
+Adds the ``mcap_group_component_definition`` table (1:1 with
+``group_component_definition``).
+``mcap_data_type`` is ``video_frame`` or ``pointcloud``; ``channel_id`` is the same
+integer channel id as on ``mcap`` samples.
+
+DuckDB builds its schema with ``create_all``, so this migration only matters for tracked
+Postgres databases.
+
+Revision ID: f6a7b8c9d0e1
+Revises: c5d6e7f8a9b0
+Create Date: 2026-09-09 13:00:00.000000
+
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision: str = "f6a7b8c9d0e1"
+down_revision: str | Sequence[str] | None = "c5d6e7f8a9b0"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    op.create_table(
+        "mcap_group_component_definition",
+        sa.Column("mcap_data_type", sa.String(), nullable=False),
+        sa.Column("channel_id", sa.Integer(), nullable=False),
+        sa.Column("collection_id", sa.Uuid(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["collection_id"],
+            ["group_component_definition.collection_id"],
+        ),
+        sa.PrimaryKeyConstraint("collection_id"),
+    )
+
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    op.drop_table("mcap_group_component_definition")

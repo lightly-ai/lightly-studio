@@ -13,6 +13,10 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate
@@ -26,6 +30,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     export_job_resolver,
+    mcap_group_component_definition_resolver,
     mcap_group_sequence_resolver,
     metadata_resolver,
     recording_resolver,
@@ -271,6 +276,50 @@ def test_delete_dataset__with_group_component_definitions(db_session: Session) -
         is None
     )
     assert db_session.get(GroupComponentDefinitionTable, component_collection_id) is None
+
+
+def test_delete_dataset__with_mcap_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(
+        session=db_session, collection_name="to_delete", sample_type=SampleType.GROUP
+    )
+    collection_id = dataset.collection_id
+    dataset_id = dataset.dataset_id
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=collection_id,
+        components=[
+            ("image", SampleType.MCAP),
+            ("point_cloud", SampleType.MCAP),
+        ],
+    )
+    image_id = components["image"].collection_id
+    point_cloud_id = components["point_cloud"].collection_id
+    mcap_group_component_definition_resolver.create(
+        session=db_session,
+        collection_id=image_id,
+        mcap_data_type=McapDataType.VIDEO_FRAME,
+        channel_id=3,
+    )
+    mcap_group_component_definition_resolver.create(
+        session=db_session,
+        collection_id=point_cloud_id,
+        mcap_data_type=McapDataType.POINT_CLOUD,
+        channel_id=5,
+    )
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset_id,
+    )
+
+    # Assert
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert collection_resolver.get_by_id(session=db_session, collection_id=image_id) is None
+    assert db_session.get(GroupComponentDefinitionTable, image_id) is None
+    assert db_session.get(McapGroupComponentDefinitionTable, image_id) is None
+    assert db_session.get(McapGroupComponentDefinitionTable, point_cloud_id) is None
 
 
 def test_delete_dataset__with_sequences(db_session: Session) -> None:

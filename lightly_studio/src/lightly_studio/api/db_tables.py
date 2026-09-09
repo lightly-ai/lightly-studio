@@ -34,6 +34,9 @@ from lightly_studio.models.image import (
 from lightly_studio.models.mcap import (
     McapTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.mcap_group_sequence import (
     McapGroupSequenceTable,  # noqa: F401, required for SQLModel to work properly
 )
