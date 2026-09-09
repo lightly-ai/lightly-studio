@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useDatasetSplitDialog } from '$lib/components/DatasetSplit/useDatasetSplitDialog';
     import { page } from '$app/state';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
@@ -9,6 +10,7 @@
     import { get } from 'svelte/store';
     import { useGlobalStorage } from '$lib/hooks';
     import {
+        Split as SplitIcon,
         Puzzle as PuzzleIcon,
         Download as DownloadIcon,
         Settings as SettingsIcon,
@@ -34,6 +36,7 @@
         user?: LightlyEnterpriseSession['user'];
     }>();
 
+    const { openDatasetSplitDialog } = useDatasetSplitDialog();
     const { openClassifiersMenu } = useClassifiersMenu();
     const { openSamplingDialog } = useSamplingDialog();
     const { filteredSampleCount } = useGlobalStorage();
@@ -77,6 +80,16 @@
                         collection_id: page.params.collection_id!,
                         filtered_sample_count: get(filteredSampleCount)
                     })
+            });
+        }
+
+        if (hasSampling && isEditor && ['image', 'video'].includes(collection.sample_type)) {
+            items.push({
+                value: 'menu-dataset-split',
+                label: 'Split dataset',
+                icon: SplitIcon,
+                testId: 'menu-dataset-split',
+                onSelect: openDatasetSplitDialog
             });
         }
 

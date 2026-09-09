@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useDatasetSplitDialog } from '$lib/components/DatasetSplit/useDatasetSplitDialog';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
@@ -26,6 +27,7 @@
     );
 
     const { isDialogOpen: isClassifiersDialogOpen } = useClassifiersMenu();
+    const { isDatasetSplitDialogOpen, closeDatasetSplitDialog } = useDatasetSplitDialog();
     const { isSamplingDialogOpen } = useSamplingDialog();
     const { isExportDialogOpen } = useExportDialog();
     const { isOperatorsDialogOpen } = useOperatorsDialog();
@@ -68,5 +70,15 @@
 {#if $isSettingsDialogOpen}
     {#await import('$lib/components/Settings/SettingsDialog.svelte') then { default: SettingsDialog }}
         <SettingsDialog />
+    {/await}
+{/if}
+
+{#if hasSelection && $isDatasetSplitDialogOpen && (collection.sample_type === 'image' || collection.sample_type === 'video')}
+    {#await import('$lib/components/DatasetSplit/ConnectedDatasetSplitDialog/ConnectedDatasetSplitDialog.svelte') then { default: ConnectedDatasetSplitDialog }}
+        <ConnectedDatasetSplitDialog
+            collectionId={collection.collection_id}
+            sampleType={collection.sample_type}
+            onClose={closeDatasetSplitDialog}
+        />
     {/await}
 {/if}
