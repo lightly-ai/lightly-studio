@@ -10,7 +10,6 @@ the caller's responsibility.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
 
 from lightly_studio.embed.embedder import (
     Capability,
@@ -35,15 +34,15 @@ _CAPABILITY_TO_TYPE = {
     Capability.TEXT: TextEmbedder,
     Capability.IMAGE_BYTES: ImageBytesEmbedder,
 }
-# Capabilities whose bootstrap default is produced by an offline built-in embedder,
-# each mapped to the space_key used to bootstrap a collection default.
+# Built-in bootstrap defaults produced by offline embedders, each capability mapped
+# to the space_key used to bootstrap a collection default. Any capability can be
+# bootstrapped once an embedder is registered for it; these are only the seeds.
 _DEFAULT_BOOTSTRAP_SPACE_KEYS: dict[Capability, str] = {
     Capability.IMAGE_PATH: "mobileclip_s0",
     Capability.IMAGE_CROP_PATH: "mobileclip_s0",
     Capability.IMAGE_PIL: "mobileclip_s0",
     Capability.VIDEO_PATH: "PE-Core-T16-384",
 }
-_BOOTSTRAP_CAPABILITIES = frozenset(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
 
 
 class EmbedderRegistry:
@@ -61,15 +60,13 @@ class EmbedderRegistry:
         self._space_key_to_embedder: dict[str, Embedder] = {}
         self._bootstrap_space_keys: dict[Capability, str] = dict(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
 
-    def register(
-        self, embedder: Embedder, bootstrap_for: Iterable[Capability] | None = None
-    ) -> None:
+    def register(self, embedder: Embedder, bootstrap_for: set[Capability] | None = None) -> None:
         """Register an embedder for its embedding space and update bootstrap defaults.
 
         The embedding space is read from ``embedder.embedding_space_spec()``. If an
         embedder is already registered for the same space, it is replaced. The embedder
-        becomes the bootstrap default for the offline capabilities in ``bootstrap_for``
-        that it implements, replacing any previous default for those capabilities.
+        becomes the bootstrap default for the capabilities in ``bootstrap_for`` that it
+        implements, replacing any previous default for those capabilities.
 
         Args:
             embedder: The embedder to register.
@@ -99,12 +96,9 @@ class EmbedderRegistry:
 
         # Register
         self._space_key_to_embedder[space_key] = embedder
-        bootstrap_capabilities = (
-            capabilities
-            if bootstrap_for is None
-            else [capability for capability in bootstrap_for if capability in capabilities]
+        self._set_bootstrap_defaults(
+            space_key=space_key, capabilities=capabilities, bootstrap_for=bootstrap_for
         )
-        self._set_bootstrap_defaults(space_key=space_key, capabilities=bootstrap_capabilities)
 
     def get_bootstrap_space(self, capability: Capability) -> EmbeddingSpaceSpec | None:
         """Get the built-in embedding space to bootstrap for a capability, if available."""
@@ -166,9 +160,18 @@ class EmbedderRegistry:
         self.register(embedder=embedder)
         return embedder
 
-    def _set_bootstrap_defaults(self, space_key: str, capabilities: list[Capability]) -> None:
-        """Make the space the bootstrap default for the offline capabilities it implements."""
-        for capability in set(capabilities) & _BOOTSTRAP_CAPABILITIES:
+    def _set_bootstrap_defaults(
+        self,
+        space_key: str,
+        capabilities: set[Capability],
+        bootstrap_for: set[Capability] | None,
+    ) -> None:
+        """Make the space the bootstrap default for its capabilities within ``bootstrap_for``.
+
+        ``bootstrap_for`` of ``None`` means every capability the embedder implements.
+        """
+        defaults = capabilities if bootstrap_for is None else capabilities & bootstrap_for
+        for capability in defaults:
             self._bootstrap_space_keys[capability] = space_key
 
 
@@ -181,11 +184,11 @@ def get_registry() -> EmbedderRegistry:
     return _registry
 
 
-def _capabilities_of(embedder: Embedder) -> list[Capability]:
-    """List the capabilities an embedder implements, inferred from its type."""
-    return [
+def _capabilities_of(embedder: Embedder) -> set[Capability]:
+    """Get the capabilities an embedder implements, inferred from its type."""
+    return {
         capability for capability, cls in _CAPABILITY_TO_TYPE.items() if isinstance(embedder, cls)
-    ]
+    }
 
 
 def _load_builtin_embedder(space_key: str) -> Embedder | None:
