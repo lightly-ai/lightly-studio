@@ -9,9 +9,9 @@ slot of at most one sequence, and ``unique_seq_number_per_sequence`` keeps two s
 from sharing a position in the same sequence. ``timestamp_ns`` is a ``BIGINT`` because
 epoch nanoseconds overflow a 32-bit ``INTEGER``.
 
-Revision ID: b3c4d5e6f7a8
-Revises: a2b3c4d5e6f7
-Create Date: 2026-09-02 12:00:00.000000
+Revision ID: c5d6e7f8a9b0
+Revises: b3c4d5e6f7a8
+Create Date: 2026-09-08 08:00:00.000000
 
 """
 
@@ -24,8 +24,8 @@ from alembic import op
 from alembic_postgresql_enum import TableReference
 
 # revision identifiers, used by Alembic.
-revision: str = "b3c4d5e6f7a8"
-down_revision: str | Sequence[str] | None = "a2b3c4d5e6f7"
+revision: str = "c5d6e7f8a9b0"
+down_revision: str | Sequence[str] | None = "b3c4d5e6f7a8"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
