@@ -48,9 +48,9 @@ class _FirstPixelEmbedder(RandomEmbedder):
 @pytest.fixture
 def patched_manager() -> RandomEmbedder:
     """Register a fresh random embedder for every test."""
-    embedder_registry.reset()
+    embedder_registry.registry = embedder_registry.EmbedderRegistry()
     embedder = RandomEmbedder()
-    embedder_registry.register_embedder(embedder=embedder)
+    embedder_registry.registry.register_embedder(embedder=embedder)
     return embedder
 
 
@@ -359,7 +359,7 @@ def test_embed_frame_samples__matches_frames_to_sample_ids_in_order(
     assert len(frames.frame_sample_ids) == len(colors)
     pil_frames = [Image.new("RGB", (2, 2), color=color) for color in colors]
 
-    embedder_registry.register_embedder(embedder=_FirstPixelEmbedder())
+    embedder_registry.registry.register_embedder(embedder=_FirstPixelEmbedder())
     model = embed_samples.ensure_default_model(
         session=db_session,
         collection_id=frames.video_frames_collection_id,
@@ -473,9 +473,9 @@ def _register_default_random_model(
 ) -> UUID:
     """Register a random embedding generator as the collection's default and return its model ID."""
     if dimension != 3:
-        embedder_registry.reset()
+        embedder_registry.registry = embedder_registry.EmbedderRegistry()
         embedder = RandomEmbedder(dimension=dimension)
-    embedder_registry.register_embedder(embedder=embedder)
+    embedder_registry.registry.register_embedder(embedder=embedder)
     model = embed_samples.ensure_default_model(
         session=session, collection_id=collection_id, capability=Capability.IMAGE_PATH
     )
@@ -486,7 +486,7 @@ def _register_default_random_model(
 def _disable_env_loader(mocker: MockerFixture) -> None:
     """Make all built-in bootstrap factories unavailable."""
     mocker.patch.object(embedder_registry, "_BUILTIN_SPACE_FACTORIES", {})
-    embedder_registry.reset()
+    embedder_registry.registry = embedder_registry.EmbedderRegistry()
 
 
 def _stored_embeddings(session: Session) -> list[SampleEmbeddingTable]:

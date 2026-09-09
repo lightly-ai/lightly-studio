@@ -462,7 +462,7 @@ def test_generate_embeddings__no_generator(
         "_BUILTIN_SPACE_FACTORIES",
         {},
     )
-    embedder_registry.reset()
+    embedder_registry.registry = embedder_registry.EmbedderRegistry()
 
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)

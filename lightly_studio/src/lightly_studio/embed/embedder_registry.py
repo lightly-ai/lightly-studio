@@ -53,15 +53,19 @@ _DEFAULT_BOOTSTRAP_SPACE_KEYS: dict[Capability, str] = {
 
 
 class EmbedderRegistry:
-    """Stores at most one embedder per embedding space.
+    """Stores at most one embedder per embedding space and the bootstrap defaults.
 
     An embedder can provide several capabilities. The registry keeps one embedder
     per ``space_key``; registering another embedder for the same space replaces it.
+    Each capability maps to the ``space_key`` used to bootstrap a collection default
+    when none is saved yet. The typed getters return the space's embedder only when
+    it implements the requested capability, loading a built-in embedder on demand.
     """
 
     def __init__(self) -> None:
-        """Create an empty registry."""
+        """Create a registry seeded with the built-in bootstrap defaults."""
         self._space_key_to_embedder: dict[str, Embedder] = {}
+        self._bootstrap_space_keys: dict[Capability, str] = dict(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
 
     def register(self, embedder: Embedder) -> None:
         """Register an embedder for its embedding space.
@@ -92,50 +96,80 @@ class EmbedderRegistry:
             logger.warning("Replacing embedder for space %r.", space_key)
         self._space_key_to_embedder[space_key] = embedder
 
-    def get(self, space_key: str) -> Embedder | None:
-        """Get the registered provider for a space, regardless of capability."""
-        return self._space_key_to_embedder.get(space_key)
+    def register_embedder(
+        self, embedder: Embedder, default_for: Iterable[Capability] | None = None
+    ) -> None:
+        """Register a runtime provider and optionally select offline bootstrap defaults."""
+        capabilities = set(capabilities_of(embedder=embedder))
+        selected = capabilities & _OFFLINE_CAPABILITIES if default_for is None else set(default_for)
+        invalid = selected - capabilities
+        if invalid:
+            raise ValueError(
+                f"Embedder does not implement capabilities: {_format_capabilities(invalid)}."
+            )
+        online = selected - _OFFLINE_CAPABILITIES
+        if online:
+            raise ValueError(f"Capabilities cannot bootstrap: {_format_capabilities(online)}.")
 
-    def clear(self) -> None:
-        """Remove all registered embedders."""
-        self._space_key_to_embedder.clear()
+        self.register(embedder=embedder)
+        space_key = embedder.embedding_space_spec().space_key
+        for capability in selected:
+            self._bootstrap_space_keys[capability] = space_key
+
+    def bootstrap_space(self, capability: Capability) -> EmbeddingSpaceSpec | None:
+        """Get the built-in embedding space to bootstrap for a capability, if available."""
+        space_key = self._bootstrap_space_keys.get(capability)
+        if space_key is None:
+            return None
+        embedder = self._get_or_load(space_key=space_key)
+        if embedder is None or capability not in capabilities_of(embedder=embedder):
+            return None
+        return embedder.embedding_space_spec()
 
     def get_image_path_embedder(self, space_key: str) -> ImagePathEmbedder | None:
-        """Get the space's embedder if it embeds images by path, else None."""
-        embedder = self._space_key_to_embedder.get(space_key)
+        """Get the space's embedder if it embeds images by path, loading a built-in if needed."""
+        embedder = self._get_or_load(space_key=space_key)
         return embedder if isinstance(embedder, ImagePathEmbedder) else None
 
     def get_image_crop_path_embedder(self, space_key: str) -> ImageCropPathEmbedder | None:
-        """Get the space's embedder if it embeds image crops by path, else None."""
-        embedder = self._space_key_to_embedder.get(space_key)
+        """Get the space's embedder if it embeds image crops, loading a built-in if needed."""
+        embedder = self._get_or_load(space_key=space_key)
         return embedder if isinstance(embedder, ImageCropPathEmbedder) else None
 
     def get_video_path_embedder(self, space_key: str) -> VideoPathEmbedder | None:
-        """Get the space's embedder if it embeds videos by path, else None."""
-        embedder = self._space_key_to_embedder.get(space_key)
+        """Get the space's embedder if it embeds videos by path, loading a built-in if needed."""
+        embedder = self._get_or_load(space_key=space_key)
         return embedder if isinstance(embedder, VideoPathEmbedder) else None
 
     def get_image_pil_embedder(self, space_key: str) -> ImagePILEmbedder | None:
-        """Get the space's embedder if it embeds PIL images, else None."""
-        embedder = self._space_key_to_embedder.get(space_key)
+        """Get the space's embedder if it embeds PIL images, loading a built-in if needed."""
+        embedder = self._get_or_load(space_key=space_key)
         return embedder if isinstance(embedder, ImagePILEmbedder) else None
 
     def get_text_embedder(self, space_key: str) -> TextEmbedder | None:
-        """Get the space's embedder if it embeds text, else None."""
-        embedder = self._space_key_to_embedder.get(space_key)
+        """Get the space's embedder if it embeds text, loading a built-in if needed."""
+        embedder = self._get_or_load(space_key=space_key)
         return embedder if isinstance(embedder, TextEmbedder) else None
 
     def get_image_bytes_embedder(self, space_key: str) -> ImageBytesEmbedder | None:
-        """Get the space's embedder if it embeds images by bytes, else None."""
-        embedder = self._space_key_to_embedder.get(space_key)
+        """Get the space's embedder if it embeds images by bytes, loading a built-in if needed."""
+        embedder = self._get_or_load(space_key=space_key)
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
+
+    def _get_or_load(self, space_key: str) -> Embedder | None:
+        registered = self._space_key_to_embedder.get(space_key)
+        if registered is not None:
+            return registered
+        factory = _BUILTIN_SPACE_FACTORIES.get(space_key)
+        if factory is None:
+            return None
+        embedder = factory()
+        self.register(embedder=embedder)
+        return embedder
 
 
 # Process-wide registry shared by the app and by callers that look up embedders.
-_registry = EmbedderRegistry()
-# Bootstrap default space per capability, seeded from the built-ins and updated by
-# ``register_embedder``.
-_BOOTSTRAP_SPACE_KEYS: dict[Capability, str] = dict(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
+registry = EmbedderRegistry()
 
 
 def capabilities_of(embedder: Embedder) -> list[Capability]:
@@ -143,86 +177,6 @@ def capabilities_of(embedder: Embedder) -> list[Capability]:
     return [
         capability for capability, cls in _CAPABILITY_TO_TYPE.items() if isinstance(embedder, cls)
     ]
-
-
-def register_embedder(embedder: Embedder, default_for: Iterable[Capability] | None = None) -> None:
-    """Register a runtime provider and optionally select offline bootstrap defaults."""
-    capabilities = set(capabilities_of(embedder=embedder))
-    selected = capabilities & _OFFLINE_CAPABILITIES if default_for is None else set(default_for)
-    invalid = selected - capabilities
-    if invalid:
-        raise ValueError(
-            f"Embedder does not implement capabilities: {_format_capabilities(invalid)}."
-        )
-    online = selected - _OFFLINE_CAPABILITIES
-    if online:
-        raise ValueError(f"Capabilities cannot bootstrap: {_format_capabilities(online)}.")
-
-    _registry.register(embedder=embedder)
-    space_key = embedder.embedding_space_spec().space_key
-    for capability in selected:
-        _BOOTSTRAP_SPACE_KEYS[capability] = space_key
-
-
-def bootstrap_space(capability: Capability) -> EmbeddingSpaceSpec | None:
-    """Get the built-in embedding space to bootstrap for a capability, if one is available."""
-    space_key = _BOOTSTRAP_SPACE_KEYS.get(capability)
-    if space_key is None:
-        return None
-    embedder = _get_or_load(space_key=space_key)
-    if embedder is None or capability not in capabilities_of(embedder=embedder):
-        return None
-    return embedder.embedding_space_spec()
-
-
-def reset() -> None:
-    """Reset the registry and bootstrap defaults to built-ins. Intended for test isolation."""
-    _registry.clear()
-    _BOOTSTRAP_SPACE_KEYS.clear()
-    _BOOTSTRAP_SPACE_KEYS.update(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
-
-
-def get_image_path_embedder(space_key: str) -> ImagePathEmbedder | None:
-    """Get the space's image-path embedder, loading a built-in if needed."""
-    _get_or_load(space_key=space_key)
-    return _registry.get_image_path_embedder(space_key=space_key)
-
-
-def get_image_crop_path_embedder(space_key: str) -> ImageCropPathEmbedder | None:
-    """Get the space's image-crop-path embedder, loading a built-in if needed."""
-    _get_or_load(space_key=space_key)
-    return _registry.get_image_crop_path_embedder(space_key=space_key)
-
-
-def get_video_path_embedder(space_key: str) -> VideoPathEmbedder | None:
-    """Get the space's video-path embedder, loading a built-in if needed."""
-    _get_or_load(space_key=space_key)
-    return _registry.get_video_path_embedder(space_key=space_key)
-
-
-def get_image_pil_embedder(space_key: str) -> ImagePILEmbedder | None:
-    """Get the space's PIL-image embedder, loading a built-in if needed."""
-    _get_or_load(space_key=space_key)
-    return _registry.get_image_pil_embedder(space_key=space_key)
-
-
-def get_text_embedder(space_key: str) -> TextEmbedder | None:
-    """Get the space's text embedder, loading a built-in if needed."""
-    _get_or_load(space_key=space_key)
-    return _registry.get_text_embedder(space_key=space_key)
-
-
-def _get_or_load(space_key: str) -> Embedder | None:
-    return _registry.get(space_key) or _load_builtin(space_key=space_key)
-
-
-def _load_builtin(space_key: str) -> Embedder | None:
-    factory = _BUILTIN_SPACE_FACTORIES.get(space_key)
-    if factory is None:
-        return None
-    embedder = factory()
-    _registry.register(embedder=embedder)
-    return embedder
 
 
 def _create_mobileclip() -> Embedder:
