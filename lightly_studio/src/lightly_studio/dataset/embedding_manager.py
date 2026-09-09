@@ -397,15 +397,11 @@ class EmbeddingManager:
         if not isinstance(model, VideoEmbeddingGenerator):
             raise ValueError("Embedding model not compatible with videos.")
 
-        # Get the samples
-        filepaths = []
-        for sample_id in sample_ids:
-            sample = video_resolver.get_by_id(session=session, sample_id=sample_id)
-            if sample is not None:
-                filepaths.append(sample.file_path_abs)
-
-        if len(filepaths) != len(sample_ids):
+        # One batched query for all video paths. A length mismatch means an id has no video.
+        videos = video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+        if len(videos) != len(sample_ids):
             raise ValueError("Could not fetch all video paths for the provided IDs.")
+        filepaths = [video.file_path_abs for video in videos]
 
         # Generate embeddings for the samples.
         result = model.embed_videos(filepaths=filepaths)

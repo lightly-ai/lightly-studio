@@ -1,6 +1,6 @@
 """Command-line entry point for the release tooling.
 
-Backs the "Prepare Release" and "Publish Release" GitHub Actions workflows.
+Backs the "Prepare Release" and "Draft Release" GitHub Actions workflows.
 Each subcommand does one small, independently testable piece of preparing or
 publishing a release: promoting the changelog, assembling the release notes,
 and guarding against a handful of ways those can quietly go wrong. Bumping
