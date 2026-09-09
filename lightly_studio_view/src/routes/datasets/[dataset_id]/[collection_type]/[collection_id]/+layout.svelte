@@ -645,17 +645,18 @@
         groupedCountsParams(AnnotationType.SEGMENTATION_MASK)
     );
 
+    const classComparisonQueries: Record<
+        string,
+        ReturnType<typeof useImageAnnotationCountsBySampleTags>
+    > = {
+        all: distributionAllTagQuery,
+        [AnnotationType.CLASSIFICATION]: distributionClassificationTagQuery,
+        [AnnotationType.OBJECT_DETECTION]: distributionObjectDetectionTagQuery,
+        [AnnotationType.SEGMENTATION_MASK]: distributionSegmentationTagQuery
+    };
     const activeClassComparisonQuery = $derived(
         activeDistributionSourceId === 'classes'
-            ? activeDistributionGroupId === undefined || activeDistributionGroupId === 'all'
-                ? distributionAllTagQuery
-                : activeDistributionGroupId === AnnotationType.CLASSIFICATION
-                  ? distributionClassificationTagQuery
-                  : activeDistributionGroupId === AnnotationType.OBJECT_DETECTION
-                    ? distributionObjectDetectionTagQuery
-                    : activeDistributionGroupId === AnnotationType.SEGMENTATION_MASK
-                      ? distributionSegmentationTagQuery
-                      : undefined
+            ? classComparisonQueries[activeDistributionGroupId ?? 'all']
             : undefined
     );
 
@@ -814,11 +815,7 @@
         filter: distributionBaseFilter,
         binCount: histogramBinCount,
         field: activeMetadataField,
-        enabled:
-            distributionPanelVisible &&
-            activeDistributionSourceId === 'metadata' &&
-            activeMetadataField !== undefined &&
-            distributionSampleTagIds.length > 0
+        enabled: distributionPanelVisible
     }));
     const metadataTagDistributions = $derived(metadataTagDistributionsQuery.data ?? []);
     const metadataDistributionSource = $derived(

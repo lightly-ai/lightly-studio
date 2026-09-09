@@ -7,6 +7,10 @@ import '@testing-library/jest-dom';
 
 import { APP_ROUTES } from '$lib/routes';
 import type { PanelType } from '$lib/hooks/useGlobalStorage';
+import {
+    useImageAnnotationCountsBySampleTags,
+    useMetadataDistributionsBySampleTags
+} from '$lib/hooks';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
@@ -83,15 +87,6 @@ vi.mock('$lib/components/ConfusionCellFilterItem', async () => ({
 }));
 vi.mock('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte', async () => ({
     default: (await import('./DistributionPanelStub.test.svelte')).default
-}));
-
-const distributionTestState = vi.hoisted(() => ({
-    metadataQueryGetter: undefined as
-        | (() => {
-              field?: { name: string; type: string };
-              enabled: boolean;
-          })
-        | undefined
 }));
 
 vi.mock('$lib/hooks/useGlobalStorage');
@@ -177,12 +172,7 @@ vi.mock('$lib/hooks', () => ({
         isFetching: false,
         error: null
     })),
-    useMetadataDistributionsBySampleTags: vi.fn(
-        (getParams: () => { field?: { name: string; type: string }; enabled: boolean }) => {
-            distributionTestState.metadataQueryGetter = getParams;
-            return { data: undefined, isFetching: false, error: null };
-        }
-    ),
+    useMetadataDistributionsBySampleTags: vi.fn(() => ({ data: undefined })),
     useTags: vi.fn(() => ({
         tags: writable([{ tag_id: 'tag-a', name: 'Reviewed' }]),
         tagsSelected: writable(new Set())
@@ -225,7 +215,6 @@ function setPageRoute(routeId: string | null): void {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    distributionTestState.metadataQueryGetter = undefined;
 
     mockActivePanel = writable<PanelType>('none');
     mockFilterPanelCollapsed = writable(false);
@@ -255,6 +244,7 @@ describe('distribution comparison query selection', () => {
     it('enables only the active class or metadata comparison', async () => {
         const select = async (testId: string) => {
             await screen.getByTestId(testId).click();
+            // Flush the panel selection before reading reactive query parameters.
             await tick();
         };
         setPageRoute(APP_ROUTES.images);
@@ -267,22 +257,29 @@ describe('distribution comparison query selection', () => {
         await select('distribution-select-tag');
 
         await select('distribution-select-classes-all');
+        expect(screen.getByText('Annotation classes')).toBeInTheDocument();
+        expect(
+            vi
+                .mocked(useImageAnnotationCountsBySampleTags)
+                .mock.calls.map(([params]) => params().enabled)
+        ).toEqual([true, false, false, false]);
 
         for (const [field, type] of [
             ['city', 'categorical'],
             ['score', 'numeric']
         ] as const) {
             await select(`distribution-select-metadata-${field}`);
-            expect(distributionTestState.metadataQueryGetter?.()).toMatchObject({
+            expect(
+                vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()
+            ).toMatchObject({
                 field: { name: field, type },
                 enabled: true
             });
         }
 
         await select('distribution-select-metadata-undefined');
-        expect(distributionTestState.metadataQueryGetter?.()).toMatchObject({
-            field: undefined,
-            enabled: false
+        expect(vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()).toMatchObject({
+            field: undefined
         });
     });
 });

@@ -1,10 +1,11 @@
 <script lang="ts">
     interface Props {
+        sources: { id: string; label: string }[];
         onComparisonTagIdsChange?: (ids: string[]) => void;
         onGroupChange?: (sourceId: string, groupId: string | undefined) => void;
     }
 
-    let { onComparisonTagIdsChange, onGroupChange }: Props = $props();
+    let { sources, onComparisonTagIdsChange, onGroupChange }: Props = $props();
     const selections: [string, string | undefined][] = [
         ['classes', 'all'],
         ['metadata', 'city'],
@@ -23,4 +24,8 @@
     >
         {sourceId}/{groupId}
     </button>
+{/each}
+
+{#each sources as source}
+    <span>{source.label}</span>
 {/each}

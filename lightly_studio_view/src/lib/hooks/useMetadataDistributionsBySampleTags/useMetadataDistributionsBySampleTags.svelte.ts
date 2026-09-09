@@ -45,11 +45,11 @@ export interface SampleTagMetadataDistributions {
 }
 
 /**
- * Fetches the selected metadata distribution for each comparison tag.
+ * Selected metadata distribution for each selected sample tag.
  *
  * The panel renders these next to the current view's own distribution, so each
- * tag is queried with the current exploration filter narrowed to that tag. Only
- * the active field and response shape are requested.
+ * tag is queried with the current exploration filter narrowed to that tag - the
+ * rest of the filter is preserved and the tags never leak back into it.
  */
 export const useMetadataDistributionsBySampleTags = (getParams: () => MetadataComparisonParams) =>
     createQueries(() => {
@@ -89,25 +89,17 @@ const buildSampleTagQueries = ({
             filters: withSampleTagFilter(filter, id),
             fields: [field.name]
         };
-        if (field.type === 'numeric') {
-            return {
-                ...getMetadataHistogramsOptions({
-                    path: { collection_id: collectionId },
-                    body: {
-                        ...body,
-                        ...(binCount ? { bin_count: binCount } : {})
-                    }
-                }),
-                enabled: enabled && sampleTags.length > 0
-            };
-        }
-
         return {
-            ...getMetadataValueCountsOptions({
-                path: { collection_id: collectionId },
-                body
-            }),
-            enabled: enabled && sampleTags.length > 0
+            ...(field.type === 'numeric'
+                ? getMetadataHistogramsOptions({
+                      path: { collection_id: collectionId },
+                      body: { ...body, ...(binCount ? { bin_count: binCount } : {}) }
+                  })
+                : getMetadataValueCountsOptions({
+                      path: { collection_id: collectionId },
+                      body
+                  })),
+            enabled
         };
     });
 };
@@ -115,7 +107,7 @@ const buildSampleTagQueries = ({
 /**
  * Pairs each tag with its result. A tag whose request has not resolved is
  * dropped rather than rendered as an empty series, so one failing tag does not
- * discard the data of tags that did return.
+ * discard the data of the tags that did return.
  */
 const combineSampleTagResults = (
     sampleTags: SampleTagItem[],
