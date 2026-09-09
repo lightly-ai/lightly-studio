@@ -13,6 +13,14 @@ from typing import Protocol
 class Tracker(Protocol):
     """Delivers usage events to an analytics backend."""
 
+    def identify(self, email: str) -> None:
+        """Link the current anonymous ID to a known user email.
+
+        Args:
+            email: User email from the enterprise auth service.
+        """
+        ...
+
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         """Report a single event."""
         ...

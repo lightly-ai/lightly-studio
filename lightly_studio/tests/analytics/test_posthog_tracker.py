@@ -82,6 +82,35 @@ def test_init__leaves_a_handler_the_caller_attached_working(mocker: MockerFixtur
     assert len(own.records) == 1
 
 
+def test_identify(mocker: MockerFixture) -> None:
+    mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
+    mocker.patch.object(posthog_tracker, "_common_properties", return_value={"os": "Linux"})
+    client = mocker.patch.object(posthog_tracker, "Posthog").return_value
+
+    tracker = PostHogTracker(project_api_key="phc_test", host=POSTHOG_HOST)
+    tracker.identify(email="user@example.com")
+
+    client.alias.assert_called_once_with(
+        previous_id=str(INSTALL_ID), distinct_id="user@example.com"
+    )
+
+
+def test_identify__switches_distinct_id_for_subsequent_events(mocker: MockerFixture) -> None:
+    mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
+    mocker.patch.object(posthog_tracker, "_common_properties", return_value={"os": "Linux"})
+    client = mocker.patch.object(posthog_tracker, "Posthog").return_value
+
+    tracker = PostHogTracker(project_api_key="phc_test", host=POSTHOG_HOST)
+    tracker.identify(email="user@example.com")
+    tracker.track(event="enterprise_connected", properties={"auth_method": "token"})
+
+    client.capture.assert_called_once_with(
+        event="enterprise_connected",
+        distinct_id="user@example.com",
+        properties={"os": "Linux", "auth_method": "token"},
+    )
+
+
 def test_track(mocker: MockerFixture) -> None:
     mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
     mocker.patch.object(posthog_tracker, "_common_properties", return_value={"os": "Linux"})
