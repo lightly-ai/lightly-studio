@@ -79,6 +79,9 @@ class OperatorScope(str, Enum):
     MCAP = "mcap"
     """Operate on MCAP samples."""
 
+    SEQUENCE = "sequence"
+    """Operate on sequences."""
+
 
 def get_allowed_scopes_for_collection(
     sample_type: SampleType, is_root_collection: bool

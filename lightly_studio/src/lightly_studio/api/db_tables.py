@@ -40,6 +40,10 @@ from lightly_studio.models.metadata import (
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.sequence import (
+    SampleSequenceLinkTable,  # noqa: F401, required for SQLModel to work properly
+    SequenceTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.settings import (
     SettingTable,  # noqa: F401, required for SQLModel to work properly
 )
