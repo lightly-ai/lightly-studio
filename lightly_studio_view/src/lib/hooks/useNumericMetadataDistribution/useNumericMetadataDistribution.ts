@@ -25,31 +25,27 @@ export interface NumericMetadataHistogramOptions {
     collectionId: string;
     filter?: ImageFilter;
     binCount?: number;
-    /** Restrict the response to these numeric metadata fields. */
-    fields?: string[];
 }
 
 export const getNumericMetadataHistogramRequestOptions = ({
     collectionId,
     filter,
-    binCount,
-    fields
+    binCount
 }: NumericMetadataHistogramOptions) => ({
     path: { collection_id: collectionId },
-    ...(filter || binCount || fields
+    ...(filter || binCount
         ? {
               body: {
                   ...(filter ? { filters: filter } : {}),
-                  ...(binCount ? { bin_count: binCount } : {}),
-                  ...(fields ? { fields } : {})
+                  ...(binCount ? { bin_count: binCount } : {})
               }
           }
         : {})
 });
 
 /**
- * Queries value-distribution histograms of a collection's numeric metadata
- * fields, keyed by metadata name. Pass `fields` to request only visible fields.
+ * Queries the value-distribution histograms of all numeric metadata fields of
+ * a collection, keyed by metadata name.
  *
  * The bins come from {@link https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/api/routes/api/metadata.py `POST /collections/{id}/metadata/histograms`}: bin edges
  * span the full collection so the axis stays stable, while the counts respect
@@ -71,20 +67,17 @@ export const useNumericMetadataDistribution = (
         filter?: ImageFilter;
         /** Number of equal-width bins per histogram (server default: 20). */
         binCount?: number;
-        /** Restrict the response to these numeric metadata fields. */
-        fields?: string[];
         enabled?: boolean;
     }
 ) =>
     createQuery(() => {
-        const { collectionId, filter, binCount, fields, enabled = true } = getOptions();
+        const { collectionId, filter, binCount, enabled = true } = getOptions();
         // Computed inside the reactive function so a change to collectionId,
-        // filter, binCount, or fields updates the query key and triggers a refetch.
+        // filter, or binCount updates the query key and triggers a refetch.
         const requestOptions = getNumericMetadataHistogramRequestOptions({
             collectionId,
             filter,
-            binCount,
-            fields
+            binCount
         });
         return {
             ...getMetadataHistogramsOptions(requestOptions),
