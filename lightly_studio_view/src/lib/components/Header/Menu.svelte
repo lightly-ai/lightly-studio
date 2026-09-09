@@ -89,7 +89,7 @@
                 label: 'Split dataset',
                 icon: SplitIcon,
                 testId: 'menu-dataset-split',
-                onSelect: openDatasetSplitDialog
+                onSelect: () => openDatasetSplitDialog(collection.collection_id)
             });
         }
 

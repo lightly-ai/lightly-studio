@@ -1,11 +1,12 @@
 import { writable } from 'svelte/store';
 
-const isDatasetSplitDialogOpen = writable(false);
+const datasetSplitCollectionId = writable<string | null>(null);
 
 export function useDatasetSplitDialog() {
     return {
-        isDatasetSplitDialogOpen,
-        openDatasetSplitDialog: () => isDatasetSplitDialogOpen.set(true),
-        closeDatasetSplitDialog: () => isDatasetSplitDialogOpen.set(false)
+        datasetSplitCollectionId,
+        openDatasetSplitDialog: (collectionId: string) =>
+            datasetSplitCollectionId.set(collectionId),
+        closeDatasetSplitDialog: () => datasetSplitCollectionId.set(null)
     };
 }

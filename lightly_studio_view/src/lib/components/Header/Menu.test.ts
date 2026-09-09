@@ -25,7 +25,7 @@ const collection: CollectionView = {
     updated_at: new Date('2026-01-01')
 };
 
-const { closeDatasetSplitDialog } = useDatasetSplitDialog();
+const { openDatasetSplitDialog, closeDatasetSplitDialog } = useDatasetSplitDialog();
 
 async function openMenu() {
     await fireEvent.keyDown(screen.getByTestId('menu-trigger'), { key: 'Enter' });
@@ -59,6 +59,22 @@ describe('Split dataset menu', () => {
             expect(await screen.findByLabelText('Tag 1')).toHaveValue('train');
         }
     );
+
+    it('discards the open dialog when navigating or unmounting the host', async () => {
+        const props = { collection, isImages: true };
+        const host = render(MenuDialogHost, props);
+        openDatasetSplitDialog(collection.collection_id);
+        expect(await screen.findByRole('dialog')).toBeInTheDocument();
+        await host.rerender({ collection: { ...collection, collection_id: 'other-collection' } });
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        await host.rerender(props);
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        openDatasetSplitDialog(collection.collection_id);
+        expect(await screen.findByRole('dialog')).toBeInTheDocument();
+        host.unmount();
+        render(MenuDialogHost, props);
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
 
     it.each(['viewer', 'labeler', 'editor', 'admin'] as const)(
         'respects the %s role',
