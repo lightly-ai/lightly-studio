@@ -50,13 +50,20 @@ def _as_numbers(*, result: EmbeddingResult) -> tuple[list[int], list[list[float]
     embeddings up against the wrong request items.
     """
     try:
-        kept_indices = [operator.index(index) for index in result.kept_indices]
+        kept_indices = [_as_index(index) for index in result.kept_indices]
         embeddings = [[float(value) for value in row] for row in result.embeddings]
     except (OverflowError, TypeError, ValueError) as error:
         raise EmbedderContractError(
             f"kept_indices must hold integers and every embedding must hold numbers: {error}"
         ) from error
     return kept_indices, embeddings
+
+
+def _as_index(index: int) -> int:
+    """Read one kept index, rejecting a bool so a mask cannot pass for a list of indices."""
+    if isinstance(index, bool):
+        raise TypeError(f"{index!r} is a bool, not an index")
+    return operator.index(index)
 
 
 def _validate_kept_indices(*, kept_indices: list[int], item_count: int) -> None:

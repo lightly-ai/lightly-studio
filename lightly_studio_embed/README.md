@@ -34,8 +34,9 @@ class MyEmbedder(TextEmbedder, ImageBytesEmbedder):
 serve(MyEmbedder(), host="0.0.0.0", port=8080, api_key="the-key-you-paste-into-lightlystudio")
 ```
 
-The server speaks plain HTTP, so put a TLS-terminating proxy in front of any bind other than
-loopback — otherwise the bearer token travels in the clear. `serve` warns when it binds one.
+Pass `ssl_certfile` and `ssl_keyfile` for any bind other than loopback, or terminate TLS in a
+proxy in front of it — the bearer token travels in the request, so plain HTTP puts it in the
+clear. `serve` warns when neither is in place.
 
 `serve` mounts `GET /v1/describe`, which reports the identity, capabilities and limits of the
 server, plus one endpoint per capability the class implements — here `/v1/embed/texts` and

@@ -350,6 +350,48 @@ def test_serve__warns_on_a_public_bind_without_a_key(monkeypatch: pytest.MonkeyP
         server.serve(FakeTextEmbedder(), host="0.0.0.0")
 
 
+def test_serve__warns_on_a_public_bind_without_tls(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(uvicorn, "run", _do_not_run)
+
+    with pytest.warns(UserWarning, match="travels in the clear"):
+        server.serve(FakeTextEmbedder(), host="0.0.0.0", api_key="secret")
+
+
+def test_serve__forwards_the_tls_files(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def record(*_args: object, **kwargs: object) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(uvicorn, "run", record)
+
+    server.serve(
+        FakeTextEmbedder(),
+        host="0.0.0.0",
+        api_key="secret",
+        ssl_certfile="cert.pem",
+        ssl_keyfile="key.pem",
+    )
+
+    assert captured["ssl_certfile"] == "cert.pem"
+    assert captured["ssl_keyfile"] == "key.pem"
+
+
+def test_serve__silent_on_a_public_bind_with_tls(
+    monkeypatch: pytest.MonkeyPatch, recwarn: pytest.WarningsRecorder
+) -> None:
+    monkeypatch.setattr(uvicorn, "run", _do_not_run)
+
+    server.serve(FakeTextEmbedder(), host="0.0.0.0", api_key="secret", ssl_certfile="cert.pem")
+
+    assert len(recwarn) == 0
+
+
+def test_serve__keyfile_without_certfile() -> None:
+    with pytest.raises(ValueError, match="without ssl_certfile"):
+        server.serve(FakeTextEmbedder(), ssl_keyfile="key.pem")
+
+
 def test_serve__silent_on_a_loopback_bind(
     monkeypatch: pytest.MonkeyPatch, recwarn: pytest.WarningsRecorder
 ) -> None:

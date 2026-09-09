@@ -15,6 +15,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Annotated, Callable
 
 import uvicorn
@@ -61,13 +62,17 @@ class _Mount:
     guards: Sequence[fastapi_params.Depends]
 
 
-def serve(
+# PLR0913: `serve` is the one function a customer calls, and every argument is a knob they set
+# on their own. Folding them into a config object would only move the list somewhere else.
+def serve(  # noqa: PLR0913
     embedder: BaseEmbedder,
     *,
     host: str = "127.0.0.1",
     port: int = 8080,
     api_key: str | None = None,
     limits: ServerLimits | None = None,
+    ssl_certfile: str | Path | None = None,
+    ssl_keyfile: str | Path | None = None,
 ) -> None:
     """Serve an embedder over HTTP until the process is stopped.
 
@@ -75,36 +80,49 @@ def serve(
         embedder: The model to serve. Its capability classes decide which endpoints
             exist: a text-only embedder exposes no image or video routes.
         host: Interface to bind. The default is loopback only; pass ``"0.0.0.0"`` to
-            accept requests from other hosts. Terminate TLS in front of a bind like
-            that: the server speaks plain HTTP, so the bearer token would otherwise
-            travel in the clear.
+            accept requests from other hosts.
         port: TCP port to bind.
         api_key: Token a client must send as ``Authorization: Bearer <api_key>``.
             ``None`` leaves the server unauthenticated, which is only safe behind a
             loopback bind or a trusted network boundary.
         limits: Ceilings to advertise and enforce. Defaults to 64 items and 32 MiB
             per request.
+        ssl_certfile: PEM certificate chain to serve HTTPS with. Give it, or
+            terminate TLS in a proxy in front, for any bind other than loopback: the
+            bearer token travels in the request otherwise, in the clear. ``serve``
+            warns when neither is in place.
+        ssl_keyfile: Private key for ``ssl_certfile``, unless the certificate file
+            already carries it.
 
     Raises:
-        ValueError: If ``api_key`` is given but blank.
+        ValueError: If ``api_key`` is given but blank, or if ``ssl_keyfile`` is given
+            without ``ssl_certfile``.
     """
+    if ssl_keyfile is not None and ssl_certfile is None:
+        raise ValueError("ssl_keyfile was given without ssl_certfile, so TLS cannot start.")
     if host not in _LOOPBACK_HOSTS:
-        warnings.warn(_public_bind_warning(host=host, api_key=api_key), stacklevel=2)
+        exposure = _public_bind_warning(
+            host=host, api_key=api_key, has_tls=ssl_certfile is not None
+        )
+        if exposure is not None:
+            warnings.warn(exposure, stacklevel=2)
     app = create_app(embedder=embedder, api_key=api_key, limits=limits)
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run(app, host=host, port=port, ssl_certfile=ssl_certfile, ssl_keyfile=ssl_keyfile)
 
 
-def _public_bind_warning(*, host: str, api_key: str | None) -> str:
-    """Name what a bind reachable from other hosts exposes, so it is not a surprise."""
+def _public_bind_warning(*, host: str, api_key: str | None, has_tls: bool) -> str | None:
+    """Name what a bind reachable from other hosts exposes, or ``None`` if it is covered."""
     if api_key is None:
         return (
             f"Serving on {host} without an api_key: everyone who can reach the port can use "
             "the model. Pass api_key, or bind a loopback address."
         )
-    return (
-        f"Serving on {host} over plain HTTP: the bearer token travels in the clear. Put a "
-        "TLS-terminating proxy in front, or bind a loopback address."
-    )
+    if not has_tls:
+        return (
+            f"Serving on {host} over plain HTTP: the bearer token travels in the clear. Pass "
+            "ssl_certfile, terminate TLS in a proxy in front, or bind a loopback address."
+        )
+    return None
 
 
 def create_app(

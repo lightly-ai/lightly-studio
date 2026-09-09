@@ -75,6 +75,16 @@ def test_build_embeddings_response__kept_index_not_integral() -> None:
         )
 
 
+def test_build_embeddings_response__kept_indices_are_a_boolean_mask() -> None:
+    """A mask must not pass for indices, which is what bools would convert into."""
+    result = EmbeddingResult(embeddings=[[0.5, -0.5]], kept_indices=[False, True])
+
+    with pytest.raises(EmbedderContractError, match="is a bool, not an index"):
+        build_embeddings_response(
+            result=result, space_key="acme/model@v1", dimension=2, item_count=2
+        )
+
+
 def test_build_embeddings_response__value_too_large_for_a_float() -> None:
     result = EmbeddingResult(embeddings=[[10**400, 1.0]], kept_indices=[0])
 
