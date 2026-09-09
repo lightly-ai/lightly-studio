@@ -7,6 +7,9 @@
     import GroupComponent from '$lib/components/GroupComponent/GroupComponent.svelte';
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
+    import { usePointCloudNavigation } from './usePointCloudNavigation.svelte';
+
+    const { navigate: navigateToPointCloud } = usePointCloudNavigation();
 
     const {
         groupId,
@@ -68,6 +71,9 @@
             throw new Error('Component type is missing for the selected component');
         }
         if (componentType === SampleType.MCAP) {
+            if (navigateToPointCloud({ datasetId, collectionId, sampleId: compId, groupId })) {
+                selectedComponentId = compId;
+            }
             return;
         }
         selectedComponentId = compId;
