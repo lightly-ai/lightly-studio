@@ -3,9 +3,9 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+from lightly_studio_embed.types import ImageCrop
 from sqlmodel import Session
 
-from lightly_studio.embed.types import ImageCrop
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (

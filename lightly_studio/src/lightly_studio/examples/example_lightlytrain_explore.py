@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from lightly_studio_embed.types import EmbeddingResult
 from numpy.typing import NDArray
 from PIL import Image
 from torchvision import transforms  # type: ignore[import-untyped]
@@ -27,7 +28,6 @@ from lightly_studio.database import db_manager
 from lightly_studio.dataset import file_utils
 from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
-from lightly_studio.embed.types import EmbeddingResult
 
 MODEL_FILE = "out/embedding_model.pt"
 MAX_BATCH_SIZE = 128

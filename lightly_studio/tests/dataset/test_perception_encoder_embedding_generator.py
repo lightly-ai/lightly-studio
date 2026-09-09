@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+from lightly_studio_embed.types import ImageCrop
 from PIL import Image
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
@@ -12,7 +13,6 @@ from lightly_studio.dataset.perception_encoder_embedding_generator import (
     MODEL_NAME,
     PerceptionEncoderEmbeddingGenerator,
 )
-from lightly_studio.embed.types import ImageCrop
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 

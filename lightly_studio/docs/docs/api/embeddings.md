@@ -47,18 +47,18 @@ See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
 
 ### EmbeddingSpaceSpec
 
-::: lightly_studio.dataset.embedding_generator
+::: lightly_studio_embed.types
     options:
         members: [EmbeddingSpaceSpec]
 
 ### EmbeddingResult
 
-::: lightly_studio.embed.types
+::: lightly_studio_embed.types
     options:
         members: [EmbeddingResult]
 
 ### ImageCrop
 
-::: lightly_studio.dataset.embedding_generator
+::: lightly_studio_embed.types
     options:
         members: [ImageCrop]
