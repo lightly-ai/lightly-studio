@@ -3,7 +3,7 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { getSplitCounts, getSplitError } from '../splitPreview';
-    import DatasetSplitRow from './DatasetSplitRow/DatasetSplitRow.svelte';
+    import DatasetSplitRows from './DatasetSplitRows/DatasetSplitRows.svelte';
 
     interface Props {
         sampleCount: number;
@@ -57,21 +57,17 @@
 </script>
 
 <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-    <Dialog.Content>
+    <Dialog.Content class="max-h-[90dvh] overflow-y-auto">
         <Dialog.Header>
             <Dialog.Title>Split dataset</Dialog.Title>
             <Dialog.Description>
-                Randomly divide the {sampleCount} samples matching your current filters into three new
-                tags. Choose a name and weight for each tag. Larger weights get more samples; for example,
-                8:1:1 gives roughly 80%, 10%, and 10%. The counts below preview each tag’s share. Each
-                sample receives one of these tags.
+                Randomly divide the {sampleCount} samples matching your current filters into new tags.
+                Each sample receives one tag. Weights set the share: 8:1:1 gives roughly 80%, 10%, 10%.
             </Dialog.Description>
         </Dialog.Header>
         <form onsubmit={submit} novalidate class="space-y-4">
             <fieldset disabled={pending} class="space-y-3">
-                {#each splits as split, index (split)}
-                    <DatasetSplitRow bind:split={splits[index]} {index} count={counts[index]} />
-                {/each}
+                <DatasetSplitRows bind:splits {counts} {sampleCount} />
                 <label class="block space-y-1 text-sm">
                     Seed (optional)
                     <Input
@@ -81,8 +77,8 @@
                     />
                 </label>
                 <p id="dataset-split-seed-help" class="text-sm text-muted-foreground">
-                    Use the same whole-number seed to repeat a split of the same samples. Clear it
-                    for a random split each time.
+                    Reuse a seed to repeat the split of the same samples. Leave blank for a random
+                    split.
                 </p>
             </fieldset>
             {#if validationError || error}
