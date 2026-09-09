@@ -101,12 +101,13 @@ def connect(
         logger.exception("Failed to connect to LightlyStudio enterprise instance.")
         raise
 
+    auth_method = "token" if token else "api_key"
     if config.user_email:
         tracking.identify(email=config.user_email)
         tracking.track(
-            event=tracking.ENTERPRISE_CONNECTED,
+            event=tracking.ENTERPRISE_CONNECTION_ATTEMPTED,
             properties={
-                "auth_method": "token" if token else "api_key",
+                "auth_method": auth_method,
                 "has_cloud_credentials": bool(config.cloud_credentials),
             },
         )
@@ -118,6 +119,15 @@ def connect(
             logger.info(f"  {key}: configured")
 
     db_manager.connect(db_url=config.engine_url)
+
+    if config.user_email:
+        tracking.track(
+            event=tracking.ENTERPRISE_CONNECTION_ESTABLISHED,
+            properties={
+                "auth_method": auth_method,
+                "has_cloud_credentials": bool(config.cloud_credentials),
+            },
+        )
 
     logger.info(f"Successfully connected to LightlyStudio enterprise instance at {api_url}.")
 

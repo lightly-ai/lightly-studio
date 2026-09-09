@@ -23,7 +23,8 @@ from lightly_studio.dataset.env import (
 logger = logging.getLogger(__name__)
 
 APP_LAUNCHED = "app_launched"
-ENTERPRISE_CONNECTED = "enterprise_connected"
+ENTERPRISE_CONNECTION_ATTEMPTED = "enterprise_connection_attempted"
+ENTERPRISE_CONNECTION_ESTABLISHED = "enterprise_connection_established"
 
 
 class NoOpTracker(Tracker):

@@ -387,10 +387,16 @@ def test_connect__identifies_and_tracks_with_token(
     enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
 
     mock_identify.assert_called_once_with(email="user@example.com")
-    mock_track.assert_called_once_with(
-        event=tracking.ENTERPRISE_CONNECTED,
-        properties={"auth_method": "token", "has_cloud_credentials": False},
-    )
+    assert mock_track.call_args_list == [
+        mocker.call(
+            event=tracking.ENTERPRISE_CONNECTION_ATTEMPTED,
+            properties={"auth_method": "token", "has_cloud_credentials": False},
+        ),
+        mocker.call(
+            event=tracking.ENTERPRISE_CONNECTION_ESTABLISHED,
+            properties={"auth_method": "token", "has_cloud_credentials": False},
+        ),
+    ]
 
 
 def test_connect__identifies_and_tracks_with_api_key(
@@ -412,9 +418,40 @@ def test_connect__identifies_and_tracks_with_api_key(
     enterprise.connect(api_url="http://10.0.0.5:8100", api_key="ls_testkey")
 
     mock_identify.assert_called_once_with(email="user@example.com")
+    assert mock_track.call_args_list == [
+        mocker.call(
+            event=tracking.ENTERPRISE_CONNECTION_ATTEMPTED,
+            properties={"auth_method": "api_key", "has_cloud_credentials": True},
+        ),
+        mocker.call(
+            event=tracking.ENTERPRISE_CONNECTION_ESTABLISHED,
+            properties={"auth_method": "api_key", "has_cloud_credentials": True},
+        ),
+    ]
+
+
+def test_connect__tracks_attempted_but_not_established_when_db_connect_fails(
+    mocker: MockerFixture,
+) -> None:
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "user_email": "user@example.com",
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+    mocker.patch.object(db_manager, "connect", side_effect=ConnectionError("PostgreSQL unavailable"))
+    mock_identify = mocker.patch.object(tracking, "identify")
+    mock_track = mocker.patch.object(tracking, "track")
+
+    with pytest.raises(ConnectionError, match="PostgreSQL unavailable"):
+        enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    mock_identify.assert_called_once_with(email="user@example.com")
     mock_track.assert_called_once_with(
-        event=tracking.ENTERPRISE_CONNECTED,
-        properties={"auth_method": "api_key", "has_cloud_credentials": True},
+        event=tracking.ENTERPRISE_CONNECTION_ATTEMPTED,
+        properties={"auth_method": "token", "has_cloud_credentials": False},
     )
 
 
