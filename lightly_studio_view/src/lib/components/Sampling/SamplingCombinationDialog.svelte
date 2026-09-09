@@ -16,6 +16,7 @@
     import { useSamplingCombinationDialog } from './useSamplingCombinationDialog/useSamplingCombinationDialog';
     import { useStrategyOptions } from './useSamplingCombinationDialog/useStrategyOptions.svelte';
     import SampleCountInput from '$lib/components/Sampling/SampleCountInput/SampleCountInput.svelte';
+    import { PreselectedTagField } from './PreselectedTagField';
 
     const collectionId = $derived(page.params.collection_id!);
     const isVideoCollection = $derived(
@@ -45,6 +46,7 @@
         updateAbsolute,
         updatePercentage,
         selectionResultTagName,
+        preselectedTagId,
         filteredSampleCount,
         noSamples,
         notEnoughSamples,
@@ -204,7 +206,7 @@
                                     >Number of Samples</Label
                                 >
                                 <FieldTooltip
-                                    content="How many samples will be written to the output tag. Cannot exceed the number of samples matching the current filters."
+                                    content="How many new samples to select. Preselected samples do not count toward this number. Cannot exceed the matching samples that are not preselected."
                                 />
                             </div>
                             <SampleCountInput
@@ -219,7 +221,7 @@
                             <div class="flex items-center gap-1.5">
                                 <Label for="tag-name" class="text-foreground">Tag Name</Label>
                                 <FieldTooltip
-                                    content="A new sample tag will be created with this name to store the selection result."
+                                    content="The sample tag used to store the selection result. To grow the preselected tag, enter its name."
                                 />
                             </div>
                             <Input
@@ -231,6 +233,12 @@
                                 data-testid="sampling-dialog-tag-name-input"
                             />
                         </div>
+
+                        <PreselectedTagField
+                            tags={$tags}
+                            value={$preselectedTagId}
+                            onValueChange={(value) => preselectedTagId.set(value)}
+                        />
 
                         {#if $noSamples}
                             <p

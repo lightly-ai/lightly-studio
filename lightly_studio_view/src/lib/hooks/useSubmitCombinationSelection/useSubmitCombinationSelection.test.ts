@@ -119,6 +119,19 @@ describe('useSubmitCombinationSelection', () => {
         });
     });
 
+    it('passes the preselected tag to createSampling', async () => {
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
+
+        const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
+        await submit({ ...defaultSubmitParams, preselectedTagId: 'preselected-tag' });
+
+        expect(createSampling).toHaveBeenCalledWith(
+            expect.objectContaining({
+                body: expect.objectContaining({ preselected_tag_id: 'preselected-tag' })
+            })
+        );
+    });
+
     it('returns false and toasts error when createSampling fails', async () => {
         vi.mocked(createSampling).mockResolvedValue({
             data: undefined,

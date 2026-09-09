@@ -62,6 +62,7 @@ export function useSamplingCombinationDialog({
         }
     );
     const selectionResultTagName = writable('');
+    const preselectedTagId = writable<string | undefined>();
 
     function updateAbsolute(count: number) {
         if (!Number.isFinite(count)) {
@@ -126,6 +127,7 @@ export function useSamplingCombinationDialog({
         nSamplesToSelect.set(10);
         userEnteredPercentage.set(null); // let percentage re-derive from count
         selectionResultTagName.set('');
+        preselectedTagId.set(undefined);
     }
 
     async function submitSelection() {
@@ -135,7 +137,8 @@ export function useSamplingCombinationDialog({
             instances: get(instances),
             nSamplesToSelect: get(nSamplesToSelect) ?? 0,
             selectionResultTagName: get(selectionResultTagName),
-            selectionFilter: buildSelectionFilter()
+            selectionFilter: buildSelectionFilter(),
+            preselectedTagId: get(preselectedTagId)
         });
         if (success) resetForm();
     }
@@ -154,6 +157,7 @@ export function useSamplingCombinationDialog({
         updateAbsolute,
         updatePercentage,
         selectionResultTagName,
+        preselectedTagId,
         filteredSampleCount,
         noSamples,
         notEnoughSamples,

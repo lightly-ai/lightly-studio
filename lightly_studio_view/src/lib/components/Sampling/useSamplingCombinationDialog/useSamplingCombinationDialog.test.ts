@@ -379,7 +379,7 @@ describe('useSamplingCombinationDialog', () => {
             expect(submitFn).not.toHaveBeenCalled();
         });
 
-        it('calls submit with collectionId, instances, count, tag name, and filter', async () => {
+        it('calls submit with collectionId, instances, count, tag names, and filter', async () => {
             buildSelectionFilterFn.mockReturnValue({
                 sample_filter: { tag_ids: ['t-1'] },
                 filter_type: 'image'
@@ -387,6 +387,7 @@ describe('useSamplingCombinationDialog', () => {
             submitFn.mockResolvedValue(false);
             const hook = useSamplingCombinationDialog(defaultParams);
             makeValidForm(hook);
+            hook.preselectedTagId.set('preselected-tag');
             const event = { preventDefault: vi.fn() } as unknown as Event;
 
             hook.handleFormSubmit(event);
@@ -398,6 +399,7 @@ describe('useSamplingCombinationDialog', () => {
                     isVideoCollection: false,
                     nSamplesToSelect: 10,
                     selectionResultTagName: 'my-tag',
+                    preselectedTagId: 'preselected-tag',
                     selectionFilter: { sample_filter: { tag_ids: ['t-1'] }, filter_type: 'image' }
                 })
             );
@@ -525,7 +527,7 @@ describe('useSamplingCombinationDialog', () => {
     });
 
     describe('resetForm', () => {
-        it('calls onSubmitSuccess, resets nSamplesToSelect, and selectionResultTagName after successful submit', async () => {
+        it('resets the form after successful submit', async () => {
             submitFn.mockResolvedValue(true);
             const hook = useSamplingCombinationDialog(defaultParams);
             instances.set([
@@ -534,6 +536,7 @@ describe('useSamplingCombinationDialog', () => {
             filteredSampleCount.set(100);
             hook.nSamplesToSelect.set(50);
             hook.selectionResultTagName.set('result-tag');
+            hook.preselectedTagId.set('preselected-tag');
             const event = { preventDefault: vi.fn() } as unknown as Event;
 
             hook.handleFormSubmit(event);
@@ -542,6 +545,7 @@ describe('useSamplingCombinationDialog', () => {
             expect(resetStrategiesFn).toHaveBeenCalled();
             expect(get(hook.nSamplesToSelect)).toBe(10);
             expect(get(hook.selectionResultTagName)).toBe('');
+            expect(get(hook.preselectedTagId)).toBeUndefined();
         });
 
         it('does not reset form when submit fails', async () => {
