@@ -46,6 +46,10 @@
 
     type MenuAction = SelectItem & { onSelect: () => void };
 
+    const addAction = (items: MenuAction[], enabled: boolean, action: MenuAction) => {
+        if (enabled) items.push(action);
+    };
+
     const hasClassifier = $derived(isImages && hasEmbeddings);
     const hasSampling = $derived(isImages || isVideos);
     const hasExport = $derived(
@@ -59,69 +63,61 @@
     const menuActions = $derived.by<MenuAction[]>(() => {
         const items: MenuAction[] = [];
 
-        if (hasClassifier && isEditor) {
-            items.push({
-                value: 'menu-classifiers',
-                label: 'Few Shot Classifier',
-                icon: BrainCircuitIcon,
-                testId: 'menu-classifiers',
-                onSelect: openClassifiersMenu
-            });
-        }
+        addAction(items, hasClassifier && isEditor, {
+            value: 'menu-classifiers',
+            label: 'Few Shot Classifier',
+            icon: BrainCircuitIcon,
+            testId: 'menu-classifiers',
+            onSelect: openClassifiersMenu
+        });
 
-        if (hasSampling && isEditor) {
-            items.push({
-                value: 'menu-sampling',
-                label: 'Sampling',
-                icon: WandSparklesIcon,
-                testId: 'menu-sampling',
-                onSelect: () =>
-                    openSamplingDialog({
-                        collection_id: page.params.collection_id!,
-                        filtered_sample_count: get(filteredSampleCount)
-                    })
-            });
-        }
+        addAction(items, hasSampling && isEditor, {
+            value: 'menu-sampling',
+            label: 'Sampling',
+            icon: WandSparklesIcon,
+            testId: 'menu-sampling',
+            onSelect: () =>
+                openSamplingDialog({
+                    collection_id: page.params.collection_id!,
+                    filtered_sample_count: get(filteredSampleCount)
+                })
+        });
 
-        if (hasSampling && isEditor && ['image', 'video'].includes(collection.sample_type)) {
-            items.push({
+        addAction(
+            items,
+            hasSampling && isEditor && ['image', 'video'].includes(collection.sample_type),
+            {
                 value: 'menu-dataset-split',
                 label: 'Split dataset',
                 icon: SplitIcon,
                 testId: 'menu-dataset-split',
                 onSelect: () => openDatasetSplitDialog(collection.collection_id)
-            });
-        }
+            }
+        );
 
-        if (isEditor) {
-            items.push({
-                value: 'menu-operators',
-                label: 'Plugins',
-                icon: PuzzleIcon,
-                testId: 'menu-operators',
-                onSelect: openOperatorsDialog
-            });
-        }
+        addAction(items, isEditor, {
+            value: 'menu-operators',
+            label: 'Plugins',
+            icon: PuzzleIcon,
+            testId: 'menu-operators',
+            onSelect: openOperatorsDialog
+        });
 
-        if (hasExport) {
-            items.push({
-                value: 'menu-export',
-                label: 'Export',
-                icon: DownloadIcon,
-                testId: 'menu-export',
-                onSelect: () => openExportDialog({ collectionId: collection.collection_id })
-            });
-        }
+        addAction(items, hasExport, {
+            value: 'menu-export',
+            label: 'Export',
+            icon: DownloadIcon,
+            testId: 'menu-export',
+            onSelect: () => openExportDialog({ collectionId: collection.collection_id })
+        });
 
-        if (isEditor) {
-            items.push({
-                value: 'menu-settings',
-                label: 'Settings',
-                icon: SettingsIcon,
-                testId: 'menu-settings',
-                onSelect: openSettingsDialog
-            });
-        }
+        addAction(items, isEditor, {
+            value: 'menu-settings',
+            label: 'Settings',
+            icon: SettingsIcon,
+            testId: 'menu-settings',
+            onSelect: openSettingsDialog
+        });
 
         return items;
     });
