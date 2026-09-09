@@ -72,8 +72,9 @@ def get_metadata_histograms(
     collection_id: UUID,
     filters: ImageFilter | None = None,
     bin_count: int = _HISTOGRAM_BIN_COUNT,
+    fields: list[str] | None = None,
 ) -> dict[str, HistogramView]:
-    """Compute value-distribution histograms for all numeric metadata keys.
+    """Compute value-distribution histograms for selected numeric metadata keys.
 
     Bin edges always span the full (unfiltered) value range of each key, so
     the chart's x-axis stays stable while the counts change with the active
@@ -86,6 +87,7 @@ def get_metadata_histograms(
         collection_id: The collection's UUID.
         filters: Optional sample filters restricting which values are counted.
         bin_count: Number of equal-width bins per histogram.
+        fields: Optional numeric metadata keys to include; unknown and nonnumeric keys are ignored.
 
     Returns:
         Mapping of metadata key to its histogram.
@@ -94,7 +96,7 @@ def get_metadata_histograms(
 
     histograms: dict[str, HistogramView] = {}
     for key, metadata_type in merged.items():
-        if metadata_type not in NUMERIC_TYPE_NAMES:
+        if metadata_type not in NUMERIC_TYPE_NAMES or (fields is not None and key not in fields):
             continue
         stats = _get_metadata_min_max_count(
             session=session, collection_id=collection_id, metadata_key=key
