@@ -61,7 +61,14 @@ dependencies = [
     # Pinned below 7.0, which dropped Python 3.9. 6.9 covers every Python this package supports,
     # so one major runs everywhere rather than two that have to stay behaviourally identical.
     "posthog>=6.9,<7.0",
+    # The embedder base classes and the value types they pass live here, so a customer's own
+    # server and LightlyStudio's in-process embedders derive from one definition. Resolved
+    # from the workspace, so the two cannot drift apart between releases.
+    "lightly-studio-embed",
 ]
+
+[tool.uv.sources]
+lightly-studio-embed = { workspace = true }
 
 [project.scripts]
 lightly-studio = "lightly_studio.cli:main"

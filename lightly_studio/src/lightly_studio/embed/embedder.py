@@ -1,19 +1,51 @@
 """Capability-split embedder interfaces.
 
-Defines the ``Embedder`` base class and one abstract subclass per input a model
-can embed: images and crops by path, videos, PIL images, text, and images by
-bytes. A concrete model implements only the capabilities it supports, and
-callers pick an embedder by the capability they need.
+Defines one abstract subclass per input a model can embed: images and crops by
+path, videos, PIL images, text, and images by bytes. A concrete model implements
+only the capabilities it supports, and callers pick an embedder by the capability
+they need.
+
+``Embedder`` and the capabilities a remote model can serve over HTTP
+(``TextEmbedder``, ``ImageBytesEmbedder``, ``VideoBytesEmbedder``) come from
+``lightly-studio-embed`` and are re-exported here, so an embedder written against
+that package is the same type as one written against this one. The capabilities
+below it are local only: they take an fsspec path or a PIL image, neither of which
+crosses the wire.
 """
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from enum import Enum
 
+from lightly_studio_embed.embedder import (
+    BaseEmbedder,
+    ImageBytesEmbedder,
+    TextEmbedder,
+    VideoBytesEmbedder,
+)
 from PIL.Image import Image
 
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio.embed.types import EmbeddingResult, ImageCrop
+
+# The base class is named for its role in the customer-facing package; inside
+# LightlyStudio it has always been `Embedder`, and that name is public API.
+Embedder = BaseEmbedder
+
+# TODO(Michal, 09/2026): `ImageBytesEmbedder` is currently unused in-process. The
+# interactive path creates a temp file and uses `ImagePathEmbedder`.
+
+__all__ = [
+    "Capability",
+    "Embedder",
+    "ImageBytesEmbedder",
+    "ImageCropPathEmbedder",
+    "ImagePILEmbedder",
+    "ImagePathEmbedder",
+    "TextEmbedder",
+    "VideoBytesEmbedder",
+    "VideoPathEmbedder",
+]
 
 
 class Capability(str, Enum):
@@ -45,27 +77,6 @@ class Capability(str, Enum):
 
     VIDEO_BYTES = "video_bytes"
     """Ingest: video as raw file bytes. No local implementation yet."""
-
-
-class Embedder(ABC):
-    """Base class for every embedder.
-
-    <span class="doc-badge doc-badge--beta">Beta</span>
-
-    Subclasses add one abstract method per input they support. A concrete model
-    implements the subclasses for the capabilities it provides.
-    """
-
-    __slots__ = ()
-
-    @abstractmethod
-    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        """Describe the embedding space this embedder produces.
-
-        Returns:
-            Metadata identifying the embedding space, stored so the same space
-            can be recognized across LightlyStudio runs.
-        """
 
 
 class ImagePathEmbedder(Embedder):
@@ -146,48 +157,3 @@ class ImagePILEmbedder(Embedder):
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-
-
-class TextEmbedder(Embedder):
-    """Embeds text queries.
-
-    <span class="doc-badge doc-badge--beta">Beta</span>
-    """
-
-    __slots__ = ()
-
-    @abstractmethod
-    def embed_text(self, texts: list[str]) -> EmbeddingResult:
-        """Embed a batch of text strings.
-
-        Args:
-            texts: The strings to embed.
-
-        Returns:
-            The embeddings and the indices of the inputs they cover.
-        """
-
-
-class ImageBytesEmbedder(Embedder):
-    """Embeds images passed as raw bytes.
-
-    <span class="doc-badge doc-badge--beta">Beta</span>
-
-    For callers that have no path to read, such as an upload. JPEG, PNG and
-    WebP only.
-    """
-
-    __slots__ = ()
-
-    @abstractmethod
-    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
-        """Embed a batch of images given as encoded bytes.
-
-        Args:
-            images: Encoded image bytes (JPEG, PNG or WebP).
-
-        Returns:
-            The embeddings and the indices of the inputs they cover.
-        """
-        # TODO(Michal, 09/2026): Currently unused. The interactive path creates a temp
-        # file and uses ImagePathEmbedder.
