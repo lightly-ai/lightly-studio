@@ -8,8 +8,10 @@ from lightly_studio_embed.embedder import (
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
+    VideoBytesEmbedder,
     VideoPathEmbedder,
 )
+from lightly_studio_embed.server import create_app
 from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 
 __all__ = [
@@ -23,5 +25,7 @@ __all__ = [
     "ImagePILEmbedder",
     "ImagePathEmbedder",
     "TextEmbedder",
+    "VideoBytesEmbedder",
     "VideoPathEmbedder",
+    "create_app",
 ]
