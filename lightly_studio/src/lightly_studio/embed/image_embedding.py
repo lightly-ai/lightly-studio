@@ -110,7 +110,7 @@ def embed_pil_images_batched(
     images: list[Image.Image],
     context: EmbeddingContext,
     show_progress: bool,
-) -> NDArray[np.float32]:
+) -> EmbeddingResult:
     """Embed in-memory PIL images in batches, preserving input order.
 
     Args:
@@ -119,16 +119,16 @@ def embed_pil_images_batched(
         show_progress: Whether to show a tqdm progress bar.
 
     Returns:
-        Float32 array of shape ``(len(images), embedding_dimension)``.
+        An ``EmbeddingResult`` whose embeddings cover the readable images, with
+        ``kept_indices`` mapping each row back to its input position.
     """
-    result = _embed_items_batched(
+    return _embed_items_batched(
         items=images,
         preprocess_item=context.preprocess,
         context=context,
         show_progress=show_progress,
         progress=_EmbeddingProgress(desc="Generating frame embeddings", unit=" frames"),
     )
-    return result.embeddings
 
 
 def _embed_items_batched(
