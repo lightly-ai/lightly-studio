@@ -40,9 +40,12 @@ export function useDatasetSplit(getOptions: () => Options) {
             // Tags have a separate store; refresh both it and queries that may depend on tags.
             await Promise.all([loadTags(), client.invalidateQueries()]);
             toast.success(
-                counts
-                    .map(({ tag_name, sample_count }) => `${tag_name}: ${sample_count}`)
-                    .join(', ')
+                `Created the following tags: ${counts
+                    .map(
+                        ({ tag_name, sample_count }) =>
+                            `${tag_name} (${sample_count} ${sample_count === 1 ? 'sample' : 'samples'})`
+                    )
+                    .join(', ')}.`
             );
             onClose();
         } catch {

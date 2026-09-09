@@ -25,6 +25,9 @@ describe('DatasetSplitDialog', () => {
             tag_name,
             relative_size: 1
         }));
+        expect(onSubmit).toHaveBeenLastCalledWith({ splits, seed: 42 });
+        await fireEvent.input(screen.getByLabelText('Seed (optional)'), { target: { value: '' } });
+        await fireEvent.click(button);
         expect(onSubmit).toHaveBeenLastCalledWith({ splits });
         await fireEvent.input(screen.getByLabelText('Seed (optional)'), {
             target: { value: '-7' }

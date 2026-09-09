@@ -97,6 +97,8 @@ describe('useDatasetSplit', () => {
         await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
         expect(loadTags).toHaveBeenCalledOnce();
         expect(invalidate).toHaveBeenCalledOnce();
-        expect(toast.success).toHaveBeenCalledWith('training: 9');
+        expect(toast.success).toHaveBeenCalledWith(
+            'Created the following tags: training (9 samples).'
+        );
     });
 });

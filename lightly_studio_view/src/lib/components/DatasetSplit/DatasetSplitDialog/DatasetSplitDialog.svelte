@@ -30,7 +30,7 @@
         { tag_name: 'val', relative_size: 1 },
         { tag_name: 'test', relative_size: 1 }
     ]);
-    let seed = $state('');
+    let seed = $state('42');
     const splitError = $derived(getSplitError({ splits, sampleCount, existingTagNames }));
     const seedError = $derived(
         seed.trim() && !Number.isSafeInteger(Number(seed))
@@ -41,7 +41,6 @@
     const counts = $derived(splitError ? [] : getSplitCounts(sampleCount, splits));
 
     let submitting = false;
-
     async function submit(event: SubmitEvent) {
         event.preventDefault();
         if (submitting || pending || validationError) return;
@@ -62,7 +61,10 @@
         <Dialog.Header>
             <Dialog.Title>Split dataset</Dialog.Title>
             <Dialog.Description>
-                Split {sampleCount} matching samples into three tags using relative weights.
+                Randomly divide the {sampleCount} samples matching your current filters into three new
+                tags. Choose a name and weight for each tag. Larger weights get more samples; for example,
+                8:1:1 gives roughly 80%, 10%, and 10%. The counts below preview each tag’s share. Each
+                sample receives one of these tags.
             </Dialog.Description>
         </Dialog.Header>
         <form onsubmit={submit} novalidate class="space-y-4">
@@ -72,8 +74,16 @@
                 {/each}
                 <label class="block space-y-1 text-sm">
                     Seed (optional)
-                    <Input bind:value={seed} placeholder="Random" />
+                    <Input
+                        bind:value={seed}
+                        inputmode="numeric"
+                        aria-describedby="dataset-split-seed-help"
+                    />
                 </label>
+                <p id="dataset-split-seed-help" class="text-sm text-muted-foreground">
+                    Use the same whole-number seed to repeat a split of the same samples. Clear it
+                    for a random split each time.
+                </p>
             </fieldset>
             {#if validationError || error}
                 <p role="alert" class="text-sm text-destructive">{validationError || error}</p>
