@@ -12,7 +12,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.image import image_dataset
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
-from lightly_studio.embed import default_embedding_space, embedder_registry
+from lightly_studio.embed import embed_samples, embedder_registry
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
@@ -462,7 +462,7 @@ def test_generate_embeddings__no_generator(
         "_BUILTIN_SPACE_FACTORIES",
         {},
     )
-    default_embedding_space.reset()
+    embedder_registry.reset()
 
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
@@ -481,7 +481,7 @@ def test_generate_embeddings__empty_sample_ids(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    spy_resolve = mocker.spy(default_embedding_space, "resolve_or_bootstrap")
+    spy_resolve = mocker.spy(embed_samples, "ensure_default_model")
 
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)

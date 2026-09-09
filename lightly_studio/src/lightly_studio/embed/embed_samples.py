@@ -13,13 +13,14 @@ from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.embed import default_embedding_space, embedder_registry, embedding_storage
+from lightly_studio.embed import embedder_registry, embedding_storage
 from lightly_studio.embed.embedder import Capability, Embedder
 from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     embedding_model_resolver,
     image_resolver,
@@ -192,6 +193,25 @@ def collection_has_default_embedder(session: Session, collection_id: UUID) -> bo
     )
 
 
+def ensure_default_model(
+    session: Session, collection_id: UUID, capability: Capability
+) -> EmbeddingModelTable | None:
+    """Get the collection's default embedding model, bootstrapping one if none is set.
+
+    Returns None when no default is set and no built-in embedder can bootstrap the
+    capability.
+    """
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if model_id is not None:
+        return embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
+    space = embedder_registry.bootstrap_space(capability=capability)
+    if space is None:
+        return None
+    return _persist_default_model(session=session, collection_id=collection_id, space=space)
+
+
 def _validate_collection(session: Session, collection_id: UUID, expected: SampleType) -> None:
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
@@ -208,14 +228,17 @@ def _resolve_query_embedder(
     capability: Capability,
     get_embedder: Callable[[str], _EmbedderT | None],
 ) -> _EmbedderT:
-    spec = default_embedding_space.resolve(
-        session=session, collection_id=collection_id, capability=capability
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
     )
-    embedder = get_embedder(spec.space_key)
+    if model_id is None:
+        raise ValueError(f"Collection {collection_id} has no default embedding model.")
+    model = embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
+    if model is None:
+        raise ValueError(f"Default embedding model {model_id} could not be found.")
+    embedder = get_embedder(model.name)
     if embedder is None:
-        raise ValueError(
-            f"No {capability.value} embedder is available for space {spec.space_key!r}."
-        )
+        raise ValueError(f"No {capability.value} embedder is available for space {model.name!r}.")
     return embedder
 
 
@@ -225,36 +248,43 @@ def _resolve_for_embedding(
     capability: Capability,
     get_embedder: Callable[[str], _EmbedderT | None],
 ) -> tuple[_EmbedderT, UUID] | None:
-    try:
-        spec = default_embedding_space.resolve_or_bootstrap(
-            session=session, collection_id=collection_id, capability=capability
-        )
-    except (ImportError, ValueError) as exc:
-        logger.warning("No usable embedding model. Skipping embedding generation: %s", exc)
+    model = ensure_default_model(
+        session=session, collection_id=collection_id, capability=capability
+    )
+    if model is None:
+        logger.warning("No usable embedding model. Skipping embedding generation.")
         return None
-    embedder = get_embedder(spec.space_key)
+    embedder = get_embedder(model.name)
     if embedder is None:
         logger.warning(
             "No %s embedder for space %r. Skipping embedding generation.",
             capability.value,
-            spec.space_key,
+            model.name,
         )
         return None
-    model = _model_for_space(session=session, collection_id=collection_id, spec=spec)
     return embedder, model.embedding_model_id
 
 
-def _model_for_space(
-    session: Session, collection_id: UUID, spec: EmbeddingSpaceSpec
-) -> EmbeddingModelTable:
+def _persist_default_model(
+    session: Session, collection_id: UUID, space: EmbeddingSpaceSpec
+) -> EmbeddingModelTable | None:
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
-        raise ValueError("Provided collection_id could not be found.")
-    model = embedding_model_resolver.get_by_name(
-        session=session, dataset_id=collection.dataset_id, name=spec.space_key
+        return None
+    model = embedding_model_resolver.get_or_create(
+        session=session,
+        embedding_model=EmbeddingModelCreate(
+            name=space.space_key,
+            embedding_dimension=space.dimension,
+            dataset_id=collection.dataset_id,
+        ),
     )
-    if model is None:
-        raise ValueError(f"No embedding model found for embedding space {spec.space_key!r}.")
+    collection_embedding_model_resolver.get_or_add_collection_model(
+        session=session, collection_id=collection_id, embedding_model_id=model.embedding_model_id
+    )
+    collection_embedding_model_resolver.set_default(
+        session=session, collection_id=collection_id, embedding_model_id=model.embedding_model_id
+    )
     return model
 
 
