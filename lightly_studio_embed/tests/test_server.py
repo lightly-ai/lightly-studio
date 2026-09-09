@@ -1,18 +1,25 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
+
+import pytest
+import uvicorn
 from fastapi.testclient import TestClient
 
+from lightly_studio_embed import server
 from lightly_studio_embed.embedder import (
     EmbeddingResult,
     ImageBytesEmbedder,
     TextEmbedder,
     VideoBytesEmbedder,
 )
+from lightly_studio_embed.errors import CapabilityNotImplementedError
 from lightly_studio_embed.protocol import ServerLimits
 from lightly_studio_embed.server import create_app
 
 SPACE_KEY = "acme/model@v1"
 DIMENSION = 2
+_BOUNDARY = "b0undary"
 
 
 class FakeTextEmbedder(TextEmbedder):
@@ -63,15 +70,35 @@ class FakeBytesEmbedder(ImageBytesEmbedder, VideoBytesEmbedder):
         return _rows(count=len(videos))
 
 
-class UnimplementedTextEmbedder(FakeTextEmbedder):
+class UnfinishedTextEmbedder(FakeTextEmbedder):
     """A mounted capability whose method was never finished."""
 
+    def embed_text(self, texts: list[str]) -> EmbeddingResult:  # noqa: ARG002
+        raise CapabilityNotImplementedError
+
+
+class BrokenTextEmbedder(FakeTextEmbedder):
+    """A model that fails, the way torch does for an op its backend lacks."""
+
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
-        raise NotImplementedError
+        raise NotImplementedError("could not run 'aten::foo' on the 'MPS' backend")
 
 
 def _rows(*, count: int) -> EmbeddingResult:
     return EmbeddingResult(embeddings=[[0.5, -0.5]] * count, kept_indices=list(range(count)))
+
+
+def _chunked_multipart() -> Iterator[bytes]:
+    """One 4 MB part, streamed so that the request carries no ``Content-Length``."""
+    yield (
+        f'--{_BOUNDARY}\r\nContent-Disposition: form-data; name="files"; filename="a.jpg"\r\n\r\n'
+    ).encode()
+    yield b"x" * 4_000_000
+    yield f"\r\n--{_BOUNDARY}--\r\n".encode()
+
+
+def _do_not_run(*_args: object, **_kwargs: object) -> None:
+    """Stand in for ``uvicorn.run``, so ``serve`` returns instead of binding a port."""
 
 
 def test_create_app__describe() -> None:
@@ -224,11 +251,19 @@ def test_create_app__embed_while_not_ready() -> None:
 
 
 def test_create_app__capability_not_implemented() -> None:
-    client = TestClient(create_app(embedder=UnimplementedTextEmbedder()))
+    client = TestClient(create_app(embedder=UnfinishedTextEmbedder()))
 
     response = client.post("/v1/embed/texts", json={"texts": ["a red car"]})
 
     assert response.status_code == 501
+
+
+def test_create_app__model_raises_not_implemented_error() -> None:
+    client = TestClient(create_app(embedder=BrokenTextEmbedder()), raise_server_exceptions=False)
+
+    response = client.post("/v1/embed/texts", json={"texts": ["a red car"]})
+
+    assert response.status_code == 500
 
 
 def test_create_app__embedder_returns_wrong_dimension() -> None:
@@ -239,3 +274,78 @@ def test_create_app__embedder_returns_wrong_dimension() -> None:
 
     assert response.status_code == 500
     assert "dimension 2" in response.json()["detail"]
+
+
+def test_create_app__non_ascii_bearer_token() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
+
+    response = client.get("/v1/describe", headers={b"authorization": b"Bearer \xe9"})
+
+    assert response.status_code == 401
+
+
+def test_create_app__non_ascii_api_key() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="sécret"))
+
+    response = client.get("/v1/describe", headers={b"authorization": "Bearer sécret".encode()})
+
+    assert response.status_code == 200
+
+
+def test_create_app__blank_api_key() -> None:
+    with pytest.raises(ValueError, match="api_key is blank"):
+        create_app(embedder=FakeTextEmbedder(), api_key=" ")
+
+
+def test_create_app__chunked_body_over_max_request_bytes() -> None:
+    app = create_app(embedder=FakeBytesEmbedder(), limits=ServerLimits(max_request_bytes=8))
+    client = TestClient(app)
+
+    response = client.post(
+        "/v1/embed/images/bytes",
+        content=_chunked_multipart(),
+        headers={"Content-Type": f"multipart/form-data; boundary={_BOUNDARY}"},
+    )
+
+    assert response.request.headers["transfer-encoding"] == "chunked"
+    assert response.status_code == 413
+    assert "max_request_bytes" in response.json()["detail"]
+
+
+def test_create_app__unauthenticated_body_over_max_request_bytes() -> None:
+    """The token is checked before the body arrives, so the 401 comes first."""
+    app = create_app(embedder=FakeBytesEmbedder(), api_key="secret")
+    client = TestClient(app)
+
+    response = client.post(
+        "/v1/embed/images/bytes",
+        content=_chunked_multipart(),
+        headers={"Content-Type": f"multipart/form-data; boundary={_BOUNDARY}"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_create_app__malformed_request() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder()))
+
+    response = client.post("/v1/embed/texts", json={"texts": "a red car"})
+
+    assert response.status_code == 400
+
+
+def test_serve__warns_on_a_public_bind_without_a_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(uvicorn, "run", _do_not_run)
+
+    with pytest.warns(UserWarning, match="without an api_key"):
+        server.serve(FakeTextEmbedder(), host="0.0.0.0")
+
+
+def test_serve__silent_on_a_loopback_bind(
+    monkeypatch: pytest.MonkeyPatch, recwarn: pytest.WarningsRecorder
+) -> None:
+    monkeypatch.setattr(uvicorn, "run", _do_not_run)
+
+    server.serve(FakeTextEmbedder())
+
+    assert len(recwarn) == 0

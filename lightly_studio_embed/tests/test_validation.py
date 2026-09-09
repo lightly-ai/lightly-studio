@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 from lightly_studio_embed.embedder import EmbeddingResult
-from lightly_studio_embed.validation import EmbedderContractError, build_embeddings_response
+from lightly_studio_embed.errors import EmbedderContractError
+from lightly_studio_embed.validation import build_embeddings_response
 
 
 def test_build_embeddings_response() -> None:
@@ -59,6 +60,15 @@ def test_build_embeddings_response__value_not_finite() -> None:
     result = EmbeddingResult(embeddings=[[0.5, float("nan")]], kept_indices=[0])
 
     with pytest.raises(EmbedderContractError, match="not finite"):
+        build_embeddings_response(
+            result=result, space_key="acme/model@v1", dimension=2, item_count=1
+        )
+
+
+def test_build_embeddings_response__value_not_a_number() -> None:
+    result = EmbeddingResult(embeddings=[["not a number", 1.0]], kept_indices=[0])  # type: ignore[list-item]
+
+    with pytest.raises(EmbedderContractError, match="must hold numbers"):
         build_embeddings_response(
             result=result, space_key="acme/model@v1", dimension=2, item_count=1
         )

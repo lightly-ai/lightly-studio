@@ -37,7 +37,13 @@ serve(MyEmbedder(), host="0.0.0.0", port=8080, api_key="the-key-you-paste-into-l
 `serve` mounts `GET /v1/describe`, which reports the identity, capabilities and limits of the
 server, plus one endpoint per capability the class implements — here `/v1/embed/texts` and
 `/v1/embed/images/bytes`, and nothing else. An input the model cannot decode is left out of
-`kept_indices` rather than failing the batch.
+`kept_indices` rather than failing the batch, and a method you have not finished yet raises
+`CapabilityNotImplementedError`, which answers 501.
+
+The bytes endpoints take a `multipart/form-data` body with one part per item, in the field
+`files`. Every path and that field name are constants in `lightly_studio_embed.protocol`,
+alongside the wire models, so an implementation in another language has one definition to
+follow.
 
 Nothing is published to PyPI yet. Once it is released, installing it will be:
 

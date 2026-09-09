@@ -9,11 +9,8 @@ from __future__ import annotations
 import math
 
 from lightly_studio_embed.embedder import EmbeddingResult
+from lightly_studio_embed.errors import EmbedderContractError
 from lightly_studio_embed.protocol import EmbeddingsResponse
-
-
-class EmbedderContractError(RuntimeError):
-    """Raised when an embedder returns a result the protocol does not allow."""
 
 
 def build_embeddings_response(
@@ -34,8 +31,7 @@ def build_embeddings_response(
         EmbedderContractError: If the result does not match the declared dimension,
             the number of kept indices, or the items of the request.
     """
-    kept_indices = list(result.kept_indices)
-    embeddings = [[float(value) for value in row] for row in result.embeddings]
+    kept_indices, embeddings = _as_numbers(result=result)
     _validate_kept_indices(kept_indices=kept_indices, item_count=item_count)
     _validate_embeddings(embeddings=embeddings, kept_count=len(kept_indices), dimension=dimension)
     return EmbeddingsResponse(
@@ -44,6 +40,18 @@ def build_embeddings_response(
         kept_indices=kept_indices,
         embeddings=embeddings,
     )
+
+
+def _as_numbers(*, result: EmbeddingResult) -> tuple[list[int], list[list[float]]]:
+    """Convert the result to plain numbers, so a non-numeric row fails as a contract error."""
+    try:
+        kept_indices = [int(index) for index in result.kept_indices]
+        embeddings = [[float(value) for value in row] for row in result.embeddings]
+    except (TypeError, ValueError) as error:
+        raise EmbedderContractError(
+            f"kept_indices must hold integers and every embedding must hold numbers: {error}"
+        ) from error
+    return kept_indices, embeddings
 
 
 def _validate_kept_indices(*, kept_indices: list[int], item_count: int) -> None:

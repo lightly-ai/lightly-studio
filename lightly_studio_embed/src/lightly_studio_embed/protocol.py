@@ -1,10 +1,10 @@
 """Wire models of the LightlyStudio embedding protocol, version 1.
 
 Holds the request and response bodies, the capability strings that name the
-endpoints, and the paths they are mounted under. This is the shared definition of
-the contract: the server in this package answers with these models and
-``lightly-studio`` validates the same ones on the client side, so the two halves
-cannot drift apart.
+endpoints, the paths they are mounted under, and the multipart field the bytes
+endpoints read. This is the shared definition of the contract: the server in this
+package answers with these models and ``lightly-studio`` validates the same ones on
+the client side, so the two halves cannot drift apart.
 
 A capability ``{subject}_{transport}`` is served by
 ``POST /v1/embed/{subjects}/{transport}``; ``text`` carries no transport segment
@@ -20,6 +20,19 @@ from pydantic import BaseModel, Field
 PROTOCOL_VERSION = "1.0"
 
 BASE_PATH = "/v1"
+
+DESCRIBE_PATH = f"{BASE_PATH}/describe"
+
+EMBED_TEXTS_PATH = f"{BASE_PATH}/embed/texts"
+
+EMBED_IMAGES_BYTES_PATH = f"{BASE_PATH}/embed/images/bytes"
+
+EMBED_VIDEOS_BYTES_PATH = f"{BASE_PATH}/embed/videos/bytes"
+
+# Specified for a server that implements the URL transports; `serve` mounts neither.
+EMBED_IMAGES_URLS_PATH = f"{BASE_PATH}/embed/images/urls"
+
+EMBED_VIDEOS_URLS_PATH = f"{BASE_PATH}/embed/videos/urls"
 
 # Multipart form field the bytes endpoints read, one part per item in input order.
 FILES_FIELD_NAME = "files"
@@ -89,6 +102,21 @@ class EmbedTextsRequest(BaseModel):
 
     texts: list[str]
     """The strings to embed, in the order the embeddings are returned for."""
+
+
+class EmbedUrlsRequest(BaseModel):
+    """Body of the URL transports, ``POST /v1/embed/{images,videos}/urls``.
+
+    Defined so that a server implementing them has one definition to validate
+    against, even though ``serve`` mounts no URL route yet.
+    """
+
+    urls: list[str]
+    """Presigned URLs the server fetches, in the order the embeddings are returned for.
+
+    A URL the server cannot fetch is a per-item failure: it is left out of
+    ``kept_indices`` rather than failing the batch.
+    """
 
 
 class EmbeddingsResponse(BaseModel):

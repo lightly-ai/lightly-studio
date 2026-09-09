@@ -7,6 +7,10 @@ supports and ``serve`` mounts exactly the matching endpoints.
 The signatures mirror ``lightly_studio.embed.embedder``. The duplication is
 deliberate: this package installs next to a customer's own torch pins, so it
 cannot depend on ``lightly-studio``.
+
+A method that is mounted but unfinished raises
+``lightly_studio_embed.CapabilityNotImplementedError``, which the server answers
+501. Every other error is a failure of the model and answers 500.
 """
 
 from __future__ import annotations

@@ -5,29 +5,28 @@ endpoints plus ``/v1/describe``, and runs uvicorn. Version 1 serves the ``texts`
 ``images/bytes`` and ``videos/bytes`` transports; the URL transports are specified
 but not mounted, because LightlyStudio does not call them yet and capabilities are
 advertised, so adding them later is purely additive.
+
+The bearer token and the request size ceiling are enforced in ASGI middleware
+rather than in dependencies, because FastAPI reads and parses the whole body before
+it solves a dependency: as dependencies, both checks would arrive after an
+untrusted peer had already decided how much the server buffers.
 """
 
 from __future__ import annotations
 
 import secrets
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Annotated, Callable
 
 import uvicorn
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    File,
-    HTTPException,
-    Request,
-    Response,
-    UploadFile,
-    status,
-)
+from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi import params as fastapi_params
-from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, Response
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from lightly_studio_embed import protocol, validation
 from lightly_studio_embed.embedder import (
@@ -37,6 +36,7 @@ from lightly_studio_embed.embedder import (
     TextEmbedder,
     VideoBytesEmbedder,
 )
+from lightly_studio_embed.errors import CapabilityNotImplementedError, EmbedderContractError
 from lightly_studio_embed.protocol import (
     DescribeResponse,
     EmbeddingsResponse,
@@ -44,7 +44,6 @@ from lightly_studio_embed.protocol import (
     ServerLimits,
     WireCapability,
 )
-from lightly_studio_embed.validation import EmbedderContractError
 
 # How long a client should wait before retrying a model that is still loading.
 _RETRY_AFTER_SECONDS = "5"
@@ -52,6 +51,9 @@ _RETRY_AFTER_SECONDS = "5"
 # Spelled out, because starlette renamed its constant for this status and the old name warns
 # on new versions while the new one is missing on the versions `requires-python` still allows.
 _STATUS_PAYLOAD_TOO_LARGE = 413
+
+# Binding to one of these keeps the port unreachable from other hosts.
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 _MultipartFiles = Annotated[list[UploadFile], File(alias=protocol.FILES_FIELD_NAME)]
 
@@ -87,7 +89,16 @@ def serve(
             loopback bind or a trusted network boundary.
         limits: Ceilings to advertise and enforce. Defaults to 64 items and 32 MiB
             per request.
+
+    Raises:
+        ValueError: If ``api_key`` is given but blank.
     """
+    if api_key is None and host not in _LOOPBACK_HOSTS:
+        warnings.warn(
+            f"Serving on {host} without an api_key: everyone who can reach the port can use "
+            "the model. Pass api_key, or bind a loopback address.",
+            stacklevel=2,
+        )
     app = create_app(embedder=embedder, api_key=api_key, limits=limits)
     uvicorn.run(app, host=host, port=port)
 
@@ -110,21 +121,90 @@ def create_app(
 
     Returns:
         An application serving ``/v1/describe`` and the embedder's capabilities.
+
+    Raises:
+        ValueError: If ``api_key`` is given but blank, which would otherwise leave a
+            server that looks authenticated while accepting an empty token.
     """
+    if api_key is not None and not api_key.strip():
+        raise ValueError("api_key is blank. Pass a token, or None to serve unauthenticated.")
+    resolved_limits = limits if limits is not None else ServerLimits()
     app = FastAPI(title="LightlyStudio embedding server")
     app.add_exception_handler(EmbedderContractError, _handle_contract_error)
-    resolved_limits = limits if limits is not None else ServerLimits()
-    router = APIRouter(
-        prefix=protocol.BASE_PATH, dependencies=[Depends(_authorization(api_key=api_key))]
-    )
+    app.add_exception_handler(RequestValidationError, _handle_invalid_request)
+    # Added innermost first, so the token is checked before a body is even counted.
+    app.add_middleware(_RequestSizeLimit, max_request_bytes=resolved_limits.max_request_bytes)
+    app.add_middleware(_BearerAuth, api_key=api_key)
+    router = APIRouter()
     _mount_describe(router=router, embedder=embedder, limits=resolved_limits)
     _mount_embed_routes(router=router, embedder=embedder, limits=resolved_limits)
     app.include_router(router)
     return app
 
 
+class _BearerAuth:
+    """Rejects a request whose bearer token is missing or wrong.
+
+    The header is compared as the raw bytes the client sent. Decoding it first would
+    make a single non-ASCII byte, in the header or in ``api_key``, raise inside
+    ``secrets.compare_digest`` and answer 500 where the protocol wants 401.
+    """
+
+    def __init__(self, app: ASGIApp, *, api_key: str | None) -> None:
+        self.app = app
+        self.expected = None if api_key is None else f"Bearer {api_key}".encode()
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if self.expected is None or scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        if not secrets.compare_digest(_authorization_header(scope=scope), self.expected):
+            await _unauthorized()(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
+class _RequestSizeLimit:
+    """Rejects a body that grows past the advertised ceiling while it arrives.
+
+    ``Content-Length`` is not enough on its own: an HTTP/1.1 client may leave it out
+    and stream the body chunked, which is the shape the ceiling most needs to bound,
+    since starlette spools every multipart part over 1 MiB to disk.
+    """
+
+    def __init__(self, app: ASGIApp, *, max_request_bytes: int) -> None:
+        self.app = app
+        self.max_request_bytes = max_request_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        await self.app(scope, self._counted(receive=receive), send)
+
+    def _counted(self, *, receive: Receive) -> Receive:
+        """Wrap ``receive`` so the body is measured as the server hands it over."""
+        received = 0
+
+        async def receive_counted() -> Message:
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_request_bytes:
+                    # Raised through the route into FastAPI's own handler for it.
+                    raise HTTPException(
+                        status_code=_STATUS_PAYLOAD_TOO_LARGE,
+                        detail="The request body is over the advertised max_request_bytes of "
+                        f"{self.max_request_bytes}.",
+                    )
+            return message
+
+        return receive_counted
+
+
 def _mount_describe(*, router: APIRouter, embedder: BaseEmbedder, limits: ServerLimits) -> None:
-    @router.get("/describe")
+    @router.get(protocol.DESCRIBE_PATH)
     def describe() -> DescribeResponse:
         return DescribeResponse(
             protocol_version=protocol.PROTOCOL_VERSION,
@@ -141,18 +221,26 @@ def _mount_embed_routes(*, router: APIRouter, embedder: BaseEmbedder, limits: Se
         router=router,
         embedder=embedder,
         limits=limits,
-        guards=[Depends(_readiness(embedder=embedder)), Depends(_request_size(limits=limits))],
+        guards=[Depends(_readiness(embedder=embedder))],
     )
     if isinstance(embedder, TextEmbedder):
         _mount_texts(mount=mount, embed=embedder.embed_text)
     if isinstance(embedder, ImageBytesEmbedder):
-        _mount_bytes(mount=mount, path="/embed/images/bytes", embed=embedder.embed_image_bytes)
+        _mount_bytes(
+            mount=mount,
+            path=protocol.EMBED_IMAGES_BYTES_PATH,
+            embed=embedder.embed_image_bytes,
+        )
     if isinstance(embedder, VideoBytesEmbedder):
-        _mount_bytes(mount=mount, path="/embed/videos/bytes", embed=embedder.embed_video_bytes)
+        _mount_bytes(
+            mount=mount,
+            path=protocol.EMBED_VIDEOS_BYTES_PATH,
+            embed=embedder.embed_video_bytes,
+        )
 
 
 def _mount_texts(*, mount: _Mount, embed: Callable[[list[str]], EmbeddingResult]) -> None:
-    @mount.router.post("/embed/texts", dependencies=mount.guards)
+    @mount.router.post(protocol.EMBED_TEXTS_PATH, dependencies=mount.guards)
     def embed_texts(request: EmbedTextsRequest) -> EmbeddingsResponse:
         _check_batch_size(item_count=len(request.texts), limits=mount.limits)
         result = _embed(lambda: embed(request.texts))
@@ -169,9 +257,16 @@ def _mount_bytes(
     @mount.router.post(path, dependencies=mount.guards)
     def embed_bytes(files: _MultipartFiles) -> EmbeddingsResponse:
         _check_batch_size(item_count=len(files), limits=mount.limits)
-        items = [file.file.read() for file in files]
+        items = [_read_part(file=file) for file in files]
         result = _embed(lambda: embed(items))
         return _respond(result=result, mount=mount, item_count=len(items))
+
+
+def _read_part(*, file: UploadFile) -> bytes:
+    """Read one multipart part, releasing the copy starlette spooled for it."""
+    data = file.file.read()
+    file.file.close()
+    return data
 
 
 def _capabilities(*, embedder: BaseEmbedder) -> list[WireCapability]:
@@ -184,10 +279,10 @@ def _capabilities(*, embedder: BaseEmbedder) -> list[WireCapability]:
 
 
 def _embed(call: Callable[[], EmbeddingResult]) -> EmbeddingResult:
-    """Run an embedder call, mapping a method left unimplemented to 501."""
+    """Run an embedder call, mapping a capability left unfinished to 501."""
     try:
         return call()
-    except NotImplementedError as error:
+    except CapabilityNotImplementedError as error:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="The server mounts this capability but does not implement it.",
@@ -212,19 +307,12 @@ def _check_batch_size(*, item_count: int, limits: ServerLimits) -> None:
         )
 
 
-def _authorization(*, api_key: str | None) -> Callable[[Request], None]:
-    def verify(request: Request) -> None:
-        if api_key is None:
-            return
-        header = request.headers.get("authorization", "")
-        if not secrets.compare_digest(header, f"Bearer {api_key}"):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing or invalid bearer token.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-    return verify
+def _authorization_header(*, scope: Scope) -> bytes:
+    """Read the raw ``Authorization`` header. ASGI lowercases the names for us."""
+    for name, value in scope["headers"]:
+        if name == b"authorization":
+            return bytes(value)
+    return b""
 
 
 def _readiness(*, embedder: BaseEmbedder) -> Callable[[], None]:
@@ -239,21 +327,28 @@ def _readiness(*, embedder: BaseEmbedder) -> Callable[[], None]:
     return verify
 
 
-def _request_size(*, limits: ServerLimits) -> Callable[[Request], None]:
-    def verify(request: Request) -> None:
-        content_length = request.headers.get("content-length", "")
-        if content_length.isdigit() and int(content_length) > limits.max_request_bytes:
-            raise HTTPException(
-                status_code=_STATUS_PAYLOAD_TOO_LARGE,
-                detail=f"The request body is over the advertised max_request_bytes of "
-                f"{limits.max_request_bytes}.",
-            )
-
-    return verify
+def _unauthorized() -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"detail": "Missing or invalid bearer token."},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def _handle_contract_error(_request: Request, exc: Exception) -> Response:
     """Answer 500 naming what the embedder returned, rather than shipping it."""
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": str(exc)}
+    )
+
+
+def _handle_invalid_request(_request: Request, exc: Exception) -> Response:
+    """Answer 400, because the protocol reserves 422 for input it cannot use.
+
+    FastAPI answers 422 for both by default, and the two carry opposite advice for a
+    client: a malformed request is its own bug, unusable input is the batch's.
+    """
+    errors = exc.errors() if isinstance(exc, RequestValidationError) else []
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": jsonable_encoder(errors)}
     )
