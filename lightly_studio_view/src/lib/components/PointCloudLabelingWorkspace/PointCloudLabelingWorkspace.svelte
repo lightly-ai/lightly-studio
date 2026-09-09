@@ -8,6 +8,7 @@
     import AnnotationPanel from './AnnotationPanel/AnnotationPanel.svelte';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
+    import ProviderDiagnostics from './ProviderDiagnostics/ProviderDiagnostics.svelte';
     import type { WorkspaceCrumb } from './types';
 
     /**
@@ -29,11 +30,24 @@
         sourcePath?: readonly WorkspaceCrumb[];
         /** Overridable for tests/stories; production always starts at `empty` today. */
         status?: 'unsupported' | 'empty' | 'error';
+        /**
+         * Temporary: reads one frame through the MCAP provider and reports what came back,
+         * so the data path is visible before the 3D scene exists. Remove together with
+         * `ProviderDiagnostics` once the viewport renders frames.
+         */
+        showProviderDiagnostics?: boolean;
         onExit: () => void;
         onRetry?: () => void;
     }
 
-    let { sampleId, sourcePath = [], status = 'empty', onExit, onRetry }: Props = $props();
+    let {
+        sampleId,
+        sourcePath = [],
+        status = 'empty',
+        showProviderDiagnostics = false,
+        onExit,
+        onRetry
+    }: Props = $props();
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
@@ -80,6 +94,9 @@
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
                             <ToolRail />
+                            {#if showProviderDiagnostics}
+                                <ProviderDiagnostics {sampleId} />
+                            {/if}
                             {#if status === 'empty'}
                                 <WorkspaceStatusPanel status="empty" {onExit} />
                             {:else}

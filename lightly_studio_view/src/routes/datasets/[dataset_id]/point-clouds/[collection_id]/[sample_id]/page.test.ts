@@ -17,6 +17,23 @@ vi.mock('$lib/hooks', () => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
+// The temporary provider diagnostics panel reads frames through the query client; stub its
+// hook so this page's test runs without a QueryClientProvider. Remove with the panel.
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/ProviderDiagnostics/useRecordingProbe.svelte',
+    () => ({
+        useRecordingProbe: () => ({
+            phase: 'idle',
+            telemetry: [],
+            frameCount: 0,
+            atLimit: false,
+            position: 0,
+            isLoading: false,
+            step: vi.fn()
+        })
+    })
+);
+
 // This page reads datasetId/collectionId/sampleId from path params and
 // collectionType/groupId from query params; the rest of PageData comes from parent layout loads.
 const mockPageData = {
