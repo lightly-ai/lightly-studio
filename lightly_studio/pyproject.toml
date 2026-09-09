@@ -27,6 +27,9 @@ dependencies = [
     "pgvector>=0.4.0",
     "fastapi>=0.115.5",
     "fsspec>=2023.1.0",
+    # Reads the summary index of an .mcap recording to create locator samples. Payload
+    # decoding is the browser's job, so the ROS message support packages are not needed.
+    "mcap>=1.4.0",
     "sqlalchemy-utils>=0.41.0",
     "sqlmodel>=0.0.22",
     "typing-extensions>=4.12.2",
