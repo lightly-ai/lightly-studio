@@ -48,7 +48,7 @@ def upgrade() -> None:
     op.create_table(
         "sample_sequence_link",
         sa.Column("sample_id", sa.Uuid(), nullable=False),
-        sa.Column("sequence_id", sa.Uuid(), nullable=False),
+        sa.Column("sequence_sample_id", sa.Uuid(), nullable=False),
         sa.Column("seq_number", sa.Integer(), nullable=False),
         sa.Column("timestamp_ns", sa.BigInteger(), nullable=True),
         sa.ForeignKeyConstraint(
@@ -56,16 +56,18 @@ def upgrade() -> None:
             ["sample.sample_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["sequence_id"],
+            ["sequence_sample_id"],
             ["sequence.sample_id"],
         ),
         sa.PrimaryKeyConstraint("sample_id"),
-        sa.UniqueConstraint("sequence_id", "seq_number", name="unique_seq_number_per_sequence"),
+        sa.UniqueConstraint(
+            "sequence_sample_id", "seq_number", name="unique_seq_number_per_sequence"
+        ),
     )
     op.create_index(
-        op.f("ix_sample_sequence_link_sequence_id"),
+        op.f("ix_sample_sequence_link_sequence_sample_id"),
         "sample_sequence_link",
-        ["sequence_id"],
+        ["sequence_sample_id"],
         unique=False,
     )
     op.sync_enum_values(  # type: ignore[attr-defined]
@@ -107,6 +109,8 @@ def downgrade() -> None:
         affected_columns=_SAMPLE_TYPE_COLUMNS,
         enum_values_to_rename=[],
     )
-    op.drop_index(op.f("ix_sample_sequence_link_sequence_id"), table_name="sample_sequence_link")
+    op.drop_index(
+        op.f("ix_sample_sequence_link_sequence_sample_id"), table_name="sample_sequence_link"
+    )
     op.drop_table("sample_sequence_link")
     op.drop_table("sequence")

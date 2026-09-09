@@ -802,7 +802,7 @@ def _copy_sample_group_links(session: Session) -> None:
 
 
 def _copy_sample_sequence_links(session: Session) -> None:
-    """Copy sample-sequence links, remapping sample_id and sequence_id.
+    """Copy sample-sequence links, remapping sample_id and sequence_sample_id.
 
     ``seq_number`` and ``timestamp_ns`` are copied verbatim, so the copied sequence keeps
     the order and the timestamps of the original.
@@ -811,11 +811,11 @@ def _copy_sample_sequence_links(session: Session) -> None:
     map_sample = _map(_MAP_SAMPLE)
     map_sequence = _map(_MAP_SAMPLE, alias="map_sequence")
     from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"]).join(
-        map_sequence, map_sequence.c.old_id == src.c["sequence_id"]
+        map_sequence, map_sequence.c.old_id == src.c["sequence_sample_id"]
     )
     overrides = {
         "sample_id": map_sample.c.new_id,
-        "sequence_id": map_sequence.c.new_id,
+        "sequence_sample_id": map_sequence.c.new_id,
     }
     _copy_table(
         session=session,
