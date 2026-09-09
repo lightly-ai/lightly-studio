@@ -36,6 +36,41 @@ describe('DatasetSplitDialog', () => {
         expect(onSubmit).toHaveBeenLastCalledWith({ splits, seed: -7 });
     });
 
+    it('adds five splits, validates new names and submits their weights', async () => {
+        const onSubmit = vi.fn();
+        render(DatasetSplitDialog, { ...defaultProps, sampleCount: 5, onSubmit });
+        const add = screen.getByRole('button', { name: 'Add split' });
+        for (const index of [4, 5]) {
+            await fireEvent.click(add);
+            expect(screen.getByRole('button', { name: 'Split dataset' })).toBeDisabled();
+            await fireEvent.input(screen.getByLabelText(`Tag ${index}`), {
+                target: { value: `chunk-${index}` }
+            });
+        }
+        expect(add).toBeDisabled();
+        expect(screen.getByLabelText('Split 1 sample count')).toHaveTextContent('3 samples');
+        await fireEvent.click(screen.getByRole('button', { name: 'Split dataset' }));
+        expect(onSubmit).toHaveBeenCalledWith({
+            splits: ['train', 'val', 'test', 'chunk-4', 'chunk-5'].map((tag_name, index) => ({
+                tag_name,
+                relative_size: index === 0 ? 8 : 1
+            })),
+            seed: 42
+        });
+    });
+
+    it('removes a middle split while preserving remaining values and requires two splits', async () => {
+        render(DatasetSplitDialog, defaultProps);
+        await fireEvent.click(screen.getByRole('button', { name: 'Remove split 2' }));
+        expect(screen.getByLabelText('Tag 2')).toHaveValue('test');
+        expect(screen.getByLabelText('Split 1 sample count')).toHaveTextContent('10 samples');
+        expect(screen.getByLabelText('Split 2 sample count')).toHaveTextContent('1 sample');
+        expect(screen.getAllByRole('button', { name: /Remove split/ })).toHaveLength(2);
+        for (const button of screen.getAllByRole('button', { name: /Remove split/ })) {
+            expect(button).toBeDisabled();
+        }
+    });
+
     it.each([
         ['Tag 1', 'val', 'different name'],
         ['Tag 1', 'existing', 'already exists'],
@@ -62,6 +97,8 @@ describe('DatasetSplitDialog', () => {
         await rerender({ pending: true });
         const button = screen.getByRole('button', { name: 'Splitting…' });
         expect(button).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Add split' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Remove split 1' })).toBeDisabled();
         await fireEvent.submit(button.closest('form')!);
         expect(onSubmit).not.toHaveBeenCalled();
         await rerender({ pending: false, error: 'Unable to split dataset.' });
