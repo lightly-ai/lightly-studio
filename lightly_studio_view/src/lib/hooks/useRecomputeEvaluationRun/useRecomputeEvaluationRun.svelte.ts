@@ -4,7 +4,7 @@ import {
     recomputeEvaluationRunMutation
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
-import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite/createAnnotationsInfiniteOptions';
+import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite';
 import { toast } from 'svelte-sonner';
 
 interface UseRecomputeEvaluationRunParams {

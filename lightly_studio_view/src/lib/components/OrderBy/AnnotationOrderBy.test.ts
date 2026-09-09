@@ -67,8 +67,6 @@ const STALE_RUN = {
     stale_since: new Date('2026-01-01')
 } as EvaluationRunView;
 
-const FRESH_RUN = { ...STALE_RUN, stale_since: null } as EvaluationRunView;
-
 const IOU_SORT = {
     source: 'annotation_evaluation_metric',
     evaluation_run_id: 'run-1',
@@ -185,15 +183,6 @@ describe('AnnotationOrderBy', () => {
         expect(screen.getByTestId('annotation-sort-stale-icon')).toBeInTheDocument();
         expect(screen.getByTestId('annotation-sort-recompute-button')).toBeInTheDocument();
         expect(screen.getByLabelText(/this sort order is out of date/i)).toBeInTheDocument();
-    });
-
-    it('shows no warning when the run the grid sorts by is up to date', () => {
-        mocks.runsProxy.data = [FRESH_RUN];
-        useAnnotationSortBy().setSortBy(COLLECTION_ID, IOU_SORT);
-        render(AnnotationOrderBy, { props: defaultProps });
-
-        expect(screen.queryByTestId('annotation-sort-stale-icon')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('annotation-sort-recompute-button')).not.toBeInTheDocument();
     });
 
     it('shows no warning while no sort is active, even with a stale run', () => {

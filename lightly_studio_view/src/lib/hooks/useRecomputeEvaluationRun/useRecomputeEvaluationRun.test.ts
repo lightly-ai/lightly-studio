@@ -5,7 +5,7 @@ import {
     getEvaluationSampleMetricsInfoQueryKey
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { toast } from 'svelte-sonner';
-import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite/createAnnotationsInfiniteOptions';
+import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite';
 import { useRecomputeEvaluationRun } from './useRecomputeEvaluationRun.svelte';
 
 vi.mock('@tanstack/svelte-query', async (importOriginal) => {
