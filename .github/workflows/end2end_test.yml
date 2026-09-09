@@ -65,6 +65,7 @@ jobs:
             'lightly_studio_view/tailwind.config.ts',
             'lightly_studio_view/tsconfig.json',
             'lightly_studio_view/vite.config.ts',
+            'make/**',
             'pyproject.toml',
             'uv.lock'
           ) }}" >> $GITHUB_OUTPUT
