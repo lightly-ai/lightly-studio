@@ -8,6 +8,7 @@ embedder only when it implements that capability.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 from lightly_studio.embed.embedder import (
     Capability,
@@ -19,6 +20,7 @@ from lightly_studio.embed.embedder import (
     TextEmbedder,
     VideoPathEmbedder,
 )
+from lightly_studio.embed.types import EmbeddingSpaceSpec
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ class EmbedderRegistry:
         """
         spec = embedder.embedding_space_spec()
         space_key = spec.space_key
-        if not _capabilities_of(embedder=embedder):
+        if not capabilities_of(embedder=embedder):
             raise ValueError(f"Embedder {type(embedder).__name__!r} implements no capability.")
         registered = self._space_key_to_embedder.get(space_key)
         if registered is not None:
@@ -114,8 +116,97 @@ class EmbedderRegistry:
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
 
-def _capabilities_of(embedder: Embedder) -> list[Capability]:
+def capabilities_of(embedder: Embedder) -> list[Capability]:
     """List the capabilities an embedder implements, inferred from its type."""
     return [
         capability for capability, cls in _CAPABILITY_TO_TYPE.items() if isinstance(embedder, cls)
     ]
+
+
+# Process-wide registry shared by the app and by callers that look up embedders.
+_registry = EmbedderRegistry()
+
+
+def register(embedder: Embedder) -> None:
+    """Register an embedder in the process-wide registry."""
+    _registry.register(embedder=embedder)
+
+
+def clear() -> None:
+    """Remove every embedder from the process-wide registry. Intended for test isolation."""
+    _registry.clear()
+
+
+def get_image_path_embedder(space_key: str) -> ImagePathEmbedder | None:
+    """Get the space's image-path embedder, loading a built-in if needed."""
+    embedder = _get_or_load(space_key=space_key)
+    return embedder if isinstance(embedder, ImagePathEmbedder) else None
+
+
+def get_image_crop_path_embedder(space_key: str) -> ImageCropPathEmbedder | None:
+    """Get the space's image-crop-path embedder, loading a built-in if needed."""
+    embedder = _get_or_load(space_key=space_key)
+    return embedder if isinstance(embedder, ImageCropPathEmbedder) else None
+
+
+def get_video_path_embedder(space_key: str) -> VideoPathEmbedder | None:
+    """Get the space's video-path embedder, loading a built-in if needed."""
+    embedder = _get_or_load(space_key=space_key)
+    return embedder if isinstance(embedder, VideoPathEmbedder) else None
+
+
+def get_image_pil_embedder(space_key: str) -> ImagePILEmbedder | None:
+    """Get the space's PIL-image embedder, loading a built-in if needed."""
+    embedder = _get_or_load(space_key=space_key)
+    return embedder if isinstance(embedder, ImagePILEmbedder) else None
+
+
+def get_text_embedder(space_key: str) -> TextEmbedder | None:
+    """Get the space's text embedder, loading a built-in if needed."""
+    embedder = _get_or_load(space_key=space_key)
+    return embedder if isinstance(embedder, TextEmbedder) else None
+
+
+def get_spec(space_key: str) -> EmbeddingSpaceSpec | None:
+    """Get the embedding space spec of the space's embedder, or None if there is none."""
+    embedder = _get_or_load(space_key=space_key)
+    return None if embedder is None else embedder.embedding_space_spec()
+
+
+def has_capability(space_key: str, capability: Capability) -> bool:
+    """Report whether the space has an embedder that provides the capability."""
+    embedder = _get_or_load(space_key=space_key)
+    return embedder is not None and capability in capabilities_of(embedder=embedder)
+
+
+def _get_or_load(space_key: str) -> Embedder | None:
+    return _registry.get(space_key) or _load_builtin(space_key=space_key)
+
+
+def _load_builtin(space_key: str) -> Embedder | None:
+    factory = _BUILTIN_SPACE_FACTORIES.get(space_key)
+    if factory is None:
+        return None
+    embedder = factory()
+    _registry.register(embedder=embedder)
+    return embedder
+
+
+def _create_mobileclip() -> Embedder:
+    from lightly_studio.embed.mobileclip_embedder import MobileCLIPEmbedder  # noqa: PLC0415
+
+    return MobileCLIPEmbedder()
+
+
+def _create_perception_encoder() -> Embedder:
+    from lightly_studio.embed.perception_encoder_embedder import (  # noqa: PLC0415
+        PerceptionEncoderEmbedder,
+    )
+
+    return PerceptionEncoderEmbedder()
+
+
+_BUILTIN_SPACE_FACTORIES: dict[str, Callable[[], Embedder]] = {
+    "mobileclip_s0": _create_mobileclip,
+    "PE-Core-T16-384": _create_perception_encoder,
+}

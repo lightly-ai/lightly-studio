@@ -11,7 +11,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
-from lightly_studio.embed import default_embedder_resolver, embed_samples
+from lightly_studio.embed import default_embedding_space, embed_samples, embedder_registry
 from lightly_studio.embed.embedder import Capability
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.embed.types import EmbeddingResult
@@ -48,9 +48,9 @@ class _FirstPixelEmbedder(RandomEmbedder):
 @pytest.fixture
 def patched_manager() -> RandomEmbedder:
     """Register a fresh random embedder for every test."""
-    default_embedder_resolver.reset()
+    default_embedding_space.reset()
     embedder = RandomEmbedder()
-    default_embedder_resolver.register_embedder(embedder=embedder)
+    default_embedding_space.register_embedder(embedder=embedder)
     return embedder
 
 
@@ -359,13 +359,16 @@ def test_embed_frame_samples__matches_frames_to_sample_ids_in_order(
     assert len(frames.frame_sample_ids) == len(colors)
     pil_frames = [Image.new("RGB", (2, 2), color=color) for color in colors]
 
-    default_embedder_resolver.register_embedder(embedder=_FirstPixelEmbedder())
-    _, model = default_embedder_resolver.resolve_or_bootstrap(
+    default_embedding_space.register_embedder(embedder=_FirstPixelEmbedder())
+    default_embedding_space.resolve_or_bootstrap(
         session=db_session,
         collection_id=frames.video_frames_collection_id,
         capability=Capability.IMAGE_PIL,
     )
-    model_id = model.embedding_model_id
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=frames.video_frames_collection_id
+    )
+    assert model_id is not None
 
     embed_samples.embed_frame_samples(
         session=db_session,
@@ -472,19 +475,23 @@ def _register_default_random_model(
 ) -> UUID:
     """Register a random embedding generator as the collection's default and return its model ID."""
     if dimension != 3:
-        default_embedder_resolver.reset()
+        default_embedding_space.reset()
         embedder = RandomEmbedder(dimension=dimension)
-    default_embedder_resolver.register_embedder(embedder=embedder)
-    _, model = default_embedder_resolver.resolve_or_bootstrap(
+    default_embedding_space.register_embedder(embedder=embedder)
+    default_embedding_space.resolve_or_bootstrap(
         session=session, collection_id=collection_id, capability=Capability.IMAGE_PATH
     )
-    return model.embedding_model_id
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    assert model_id is not None
+    return model_id
 
 
 def _disable_env_loader(mocker: MockerFixture) -> None:
     """Make all built-in bootstrap factories unavailable."""
-    mocker.patch.object(default_embedder_resolver, "_BUILTIN_SPACE_FACTORIES", {})
-    default_embedder_resolver.reset()
+    mocker.patch.object(embedder_registry, "_BUILTIN_SPACE_FACTORIES", {})
+    default_embedding_space.reset()
 
 
 def _stored_embeddings(session: Session) -> list[SampleEmbeddingTable]:
