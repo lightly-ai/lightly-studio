@@ -34,7 +34,7 @@ class _EnterpriseConnectResponse(BaseModel):
     """
 
     engine_url: str
-    email: str | None = None
+    user_email: str | None = None
     cloud_credentials: dict[str, str] | None = None
 
 
@@ -101,8 +101,8 @@ def connect(
         logger.exception("Failed to connect to LightlyStudio enterprise instance.")
         raise
 
-    if config.email:
-        tracking.identify(email=config.email)
+    if config.user_email:
+        tracking.identify(email=config.user_email)
         tracking.track(
             event=tracking.ENTERPRISE_CONNECTED,
             properties={

@@ -378,7 +378,7 @@ def test_connect__identifies_and_tracks_with_token(
     mock_response.ok = True
     mock_response.json.return_value = {
         "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
-        "email": "user@example.com",
+        "user_email": "user@example.com",
     }
     mocker.patch.object(requests, "get", return_value=mock_response)
     mock_identify = mocker.patch.object(tracking, "identify")
@@ -402,7 +402,7 @@ def test_connect__identifies_and_tracks_with_api_key(
     mock_response.ok = True
     mock_response.json.return_value = {
         "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
-        "email": "user@example.com",
+        "user_email": "user@example.com",
         "cloud_credentials": {"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "secret"},
     }
     mocker.patch.object(requests, "post", return_value=mock_response)
