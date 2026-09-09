@@ -140,12 +140,11 @@ class PerceptionEncoderEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        embeddings = image_embedding.embed_pil_images_batched(
+        return image_embedding.embed_pil_images_batched(
             images=images,
             context=self._embedding_context(),
             show_progress=True,
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
 
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched image embedding."""
