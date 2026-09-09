@@ -44,7 +44,9 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
         get_embedder=embedder_registry.get_registry().get_image_path_embedder,
     )
     result = embedder.embed_images(paths=[filepath])
-    return _single_embedding(result.embeddings, result.kept_indices, "image")
+    return _single_embedding(
+        embeddings=result.embeddings, kept_indices=result.kept_indices, input_name="image"
+    )
 
 
 def embed_text_for_collection(session: Session, collection_id: UUID, text: str) -> list[float]:
@@ -59,7 +61,9 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
     except ValueError as exc:
         raise ValueError(f"Text search is disabled for this collection: {exc}") from exc
     result = embedder.embed_text(texts=[text])
-    return _single_embedding(result.embeddings, result.kept_indices, "text")
+    return _single_embedding(
+        embeddings=result.embeddings, kept_indices=result.kept_indices, input_name="text"
+    )
 
 
 def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
