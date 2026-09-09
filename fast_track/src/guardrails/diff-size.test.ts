@@ -47,7 +47,7 @@ describe('diffSizeGuardrail', () => {
             makeCtx([
                 { path: 'a.py', status: 'modified', additions: 10, deletions: 0 },
                 {
-                    path: 'lightly_studio/uv.lock',
+                    path: 'uv.lock',
                     status: 'modified',
                     additions: 5000,
                     deletions: 0
@@ -95,7 +95,7 @@ describe('diffSizeGuardrail', () => {
 
 describe('isExcluded', () => {
     it('matches exact lock file paths', () => {
-        expect(isExcluded('lightly_studio/uv.lock')).toBe(true);
+        expect(isExcluded('uv.lock')).toBe(true);
         expect(isExcluded('lightly_studio_view/package-lock.json')).toBe(true);
         expect(isExcluded('fast_track/package-lock.json')).toBe(true);
     });

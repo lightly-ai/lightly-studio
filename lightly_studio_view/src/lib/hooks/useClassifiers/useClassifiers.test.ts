@@ -135,11 +135,11 @@ describe('useClassifiers Hook', () => {
                 );
             const downloadSpy = vi.spyOn(utils, 'triggerDownloadBlob').mockImplementation(() => {});
             const { saveClassifier, error } = useClassifiers();
-            await saveClassifier('test-id', 'sklearn');
+            await saveClassifier('test-id');
 
             // Verify SDK call
             expect(saveSpy).toHaveBeenCalledWith({
-                path: { classifier_id: 'test-id', export_type: 'sklearn' },
+                path: { classifier_id: 'test-id' },
                 parseAs: 'blob'
             });
 
@@ -155,9 +155,7 @@ describe('useClassifiers Hook', () => {
             const { saveClassifier, error } = useClassifiers();
 
             // The main hook should catch the error from the utility and set it in its error store
-            await expect(saveClassifier('test-id', 'lightly')).rejects.toThrow(
-                'Failed to save classifier'
-            );
+            await expect(saveClassifier('test-id')).rejects.toThrow('Failed to save classifier');
             expect(get(error)).toEqual(testError);
         });
 

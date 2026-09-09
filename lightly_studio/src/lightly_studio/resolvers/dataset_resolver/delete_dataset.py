@@ -48,6 +48,7 @@ from lightly_studio.models.group_component_definition import (
     GroupComponentDefinitionTable,
 )
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -118,6 +119,7 @@ def delete_dataset(
     _delete_groups(session=session, dataset_id=dataset_id)
     _delete_videos(session=session, dataset_id=dataset_id)
     _delete_images(session=session, dataset_id=dataset_id)
+    _delete_mcaps(session=session, dataset_id=dataset_id)
 
     # 5. Samples and collection/dataset-scoped entities.
     _delete_samples(session=session, dataset_id=dataset_id)
@@ -295,6 +297,14 @@ def _delete_images(session: Session, dataset_id: UUID) -> None:
     """Delete images for the dataset's samples."""
     session.exec(
         delete(ImageTable).where(col(ImageTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcaps(session: Session, dataset_id: UUID) -> None:
+    """Delete mcap rows for the dataset's samples."""
+    session.exec(
+        delete(McapTable).where(col(McapTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 

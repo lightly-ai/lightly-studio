@@ -67,6 +67,9 @@
         if (!componentType) {
             throw new Error('Component type is missing for the selected component');
         }
+        if (componentType === SampleType.MCAP) {
+            return;
+        }
         selectedComponentId = compId;
         navigateToComponentDetails(compId, componentType);
     };
@@ -76,7 +79,7 @@
     {#snippet renderItem({ index })}
         {@const component = components[index]}
 
-        {#if !component.details}
+        {#if !component.details || component.details.type === SampleType.MCAP}
             <div class="flex h-60 w-60 items-center justify-center rounded bg-gray-700">
                 No details
             </div>

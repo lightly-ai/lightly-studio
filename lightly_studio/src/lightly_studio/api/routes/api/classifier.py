@@ -11,9 +11,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.few_shot_classifier.classifier import (
-    ExportType,
-)
 from lightly_studio.few_shot_classifier.classifier_manager import (
     ClassifierManagerProvider,
 )
@@ -145,24 +142,16 @@ def drop_temp_classifier(
     classifier_manager.drop_temp_classifier(classifier_id=classifier_id)
 
 
-class SaveClassifierRequest(BaseModel):
-    """Request for saving classifier to a file."""
-
-    file_path: str
-
-
 @classifier_router.post(
-    "/classifiers/{classifier_id}/save_classifier_to_file/{export_type}",
+    "/classifiers/{classifier_id}/save_classifier_to_file",
 )
 def save_classifier_to_file(
     classifier_id: UUID,
-    export_type: ExportType,
 ) -> StreamingResponse:
     """Save the classifier to a file.
 
     Args:
         classifier_id: The ID of the classifier.
-        export_type: The type of export (e.g., "sklearn", "lightly").
 
     Returns:
         StreamingResponse containing the pickled classifier file.
@@ -170,9 +159,7 @@ def save_classifier_to_file(
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
     # Use BytesIO to capture the file content and send it as a response.
     buffer = io.BytesIO()
-    classifier_manager.save_classifier_to_buffer(
-        classifier_id=classifier_id, buffer=buffer, export_type=export_type
-    )
+    classifier_manager.save_classifier_to_buffer(classifier_id=classifier_id, buffer=buffer)
     buffer.seek(0)
 
     # Get classifier name for the filename

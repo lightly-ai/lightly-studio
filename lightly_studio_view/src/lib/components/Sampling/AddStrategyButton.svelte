@@ -11,6 +11,7 @@
         metadataWeightingDisabledReason?: string;
         classBalancingDisabledReason?: string;
         metadataBalancingDisabledReason?: string;
+        subpartDiversityDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
         onMenuOpen?: () => void;
     }
@@ -21,6 +22,7 @@
         metadataWeightingDisabledReason,
         classBalancingDisabledReason,
         metadataBalancingDisabledReason,
+        subpartDiversityDisabledReason,
         onAdd,
         onMenuOpen
     }: Props = $props();
@@ -39,6 +41,7 @@
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;
         if (type === 'metadata_balancing') return metadataBalancingDisabledReason;
+        if (type === 'subpart_diversity') return subpartDiversityDisabledReason;
         return undefined;
     }
 

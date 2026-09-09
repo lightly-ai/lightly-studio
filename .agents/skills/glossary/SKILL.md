@@ -22,3 +22,10 @@ Add new topics as their own `##` section below.
 | A group of annotations, e.g. ground truth, a model's predictions | **annotation source** | `annotation_source` | annotation collection, collection, collection name, label source |
 | Creating annotations | **labeling** | - | the noun 'label' |
 
+## Data ingest
+
+| Concept | Term | Avoid |
+|---|---|---|
+| Images added without any annotations | **raw images** | image folder, unlabeled images |
+| Videos added without any annotations | **raw videos** | video folder |
+

@@ -24,7 +24,7 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcome,
     FileOutcomeReport,
 )
-from lightly_studio.dataset.embedding_result import EmbeddingResult
+from lightly_studio.embed.types import EmbeddingResult
 from lightly_studio.utils import batching, executor, parallelize
 
 _ItemT = TypeVar("_ItemT")

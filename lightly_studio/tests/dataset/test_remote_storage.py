@@ -7,6 +7,20 @@ from pytest_mock import MockerFixture
 from lightly_studio.dataset import env, remote_storage
 
 
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/videos/a.mp4", False),
+        ("file:///videos/a.mp4", False),
+        ("local:///videos/a.mp4", False),
+        ("s3://bucket/a.mp4", True),
+        ("gs://bucket/a.mp4", True),
+    ],
+)
+def test_is_remote(path: str, expected: bool) -> None:
+    assert remote_storage.is_remote(path=path) is expected
+
+
 def test_image_probe_workers(mocker: MockerFixture) -> None:
     mocker.patch.object(env, "LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 7)
 

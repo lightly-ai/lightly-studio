@@ -8,7 +8,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio.dataset.embedding_generator import ImageCrop
+from lightly_studio.embed.types import ImageCrop
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable

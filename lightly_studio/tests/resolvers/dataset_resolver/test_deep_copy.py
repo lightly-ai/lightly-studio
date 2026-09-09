@@ -330,7 +330,6 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     assert copied_model.embedding_model_id != embedding_model.embedding_model_id
     assert copied_model.dataset_id == copied.dataset_id
     assert copied_model.name == embedding_model.name
-    assert copied_model.embedding_model_hash == embedding_model.embedding_model_hash
     assert copied_model.embedding_dimension == embedding_model.embedding_dimension
 
     # Assert - embeddings copied

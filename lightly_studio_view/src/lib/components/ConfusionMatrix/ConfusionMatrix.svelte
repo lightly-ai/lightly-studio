@@ -9,6 +9,7 @@
         VisualMapComponent
     } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
+    import { cn } from '$lib/utils';
     import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
     import { OTHER_LABEL } from './topNMatrix';
@@ -33,6 +34,8 @@
         showLegend?: boolean;
         /** Enables inside (scroll/pinch) zoom on both axes. */
         zoomable?: boolean;
+        /** Fill the parent container height instead of using a calculated pixel value. */
+        fillHeight?: boolean;
         /** Color intensity multiplier (> 0, default 1). */
         colorIntensity?: number;
         /** Map color from log10(count) instead of the raw count (default true). */
@@ -50,6 +53,7 @@
         matrix,
         showLegend = false,
         zoomable = false,
+        fillHeight = false,
         colorIntensity = 1,
         logScale = true,
         onCellClick
@@ -106,8 +110,8 @@
 {:else}
     <div
         bind:this={container}
-        class="w-full"
-        style="height: {heightPx}px;"
+        class={cn('w-full', fillHeight && 'min-h-0 flex-1')}
+        style={fillHeight ? undefined : `height: ${heightPx}px;`}
         data-testid="confusion-matrix"
     ></div>
     {#if showLegend}

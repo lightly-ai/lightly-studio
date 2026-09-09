@@ -11,7 +11,7 @@ After you have your changes ready, and you create a new pull request, a maintain
 
 ## Requirements
 - Python **3.9–3.14** (3.9 recommended)
-- Uv version **0.12.6** (pinned exactly, see `required-version` in `lightly_studio/pyproject.toml`)
+- Uv version **0.12.6** (pinned exactly, see `required-version` in the root `pyproject.toml`)
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 
 ## Development Quickstart
@@ -42,10 +42,33 @@ make static-checks
 make test
 
 # Frontend
-cd lightly_studio_view
+cd ../lightly_studio_view
+make static-checks
+make test
+
+# Embedding server package
+cd ../lightly_studio_embed
 make static-checks
 make test
 ```
+
+### The uv Workspace
+
+The Python packages are members of one [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
+whose root is the repository root:
+
+- `lightly_studio` - the application, published as `lightly-studio`.
+- `lightly_studio_embed` - the server a customer runs in front of their own embedding model,
+  published as `lightly-studio-embed`. Its dependencies stay limited to an HTTP server, so that it
+  installs next to a customer's own CUDA and torch pins.
+
+They share one `uv.lock` and one `.venv`, both at the repository root, so that the two packages
+cannot resolve the same dependency to different versions, and one set of check commands from
+`make/python.mk`. Running `make static-checks` or `make test` at the root covers every Python
+member. `uv run` in a member directory installs
+that member's dependencies into the shared environment without removing the other's, so switching
+between members costs nothing. An explicit `uv sync` does prune, so the next `uv run` in the other
+member reinstalls what it needs.
 
 When you update the code, follow our coding guidelines in [.agents/skills](./.agents/skills).
 They are [Agent Skills](https://agentskills.io). Skills do not load automatically. Load the
@@ -156,6 +179,49 @@ there instead, otherwise nothing reads it.
 
 `LIGHTLY_STUDIO_INTERNAL=1`, in `.env` or the environment, does the same for a single run.
 
+### Test with a Private Mundig Development Wheel
+
+Lightly developers with access to the private Artifact Registry can test an unreleased
+`lightly-mundig` wheel without changing `pyproject.toml` or `uv.lock`.
+
+1. Install the authentication helper once and authenticate with Google Cloud:
+
+```bash
+uv tool install keyring --with keyrings.google-artifactregistry-auth
+gcloud auth application-default login
+```
+
+2. Configure the environment variables to use the private index:
+
+```bash
+export UV_INDEX="https://oauth2accesstoken@europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/"
+export UV_KEYRING_PROVIDER=subprocess
+export MUNDIG_DEV_VERSION="<dev-version>"
+```
+
+3. Run tests with the development wheel layered over the public version in the lockfile:
+
+```bash
+cd lightly_studio
+uv run --with "lightly-mundig==$MUNDIG_DEV_VERSION" pytest tests/path/to/test_file.py
+```
+
+For a longer development session, install the wheel directly into the project environment. Set
+`UV_NO_SYNC=1` to prevent `uv run` commands, including those invoked by `make test`, from restoring
+the public version from the lockfile. This does not affect explicit `uv sync` commands:
+
+```bash
+cd lightly_studio
+uv sync --locked --all-groups --all-extras
+uv pip install --reinstall "lightly-mundig==$MUNDIG_DEV_VERSION"
+export UV_NO_SYNC=1
+make test
+```
+
+This workflow is local only. CI uses the public Mundig version pinned in `pyproject.toml`. Publish
+the required Mundig version to PyPI and update the pin in `pyproject.toml` before expecting CI to
+pass.
+
 ### Run Examples
 
 Choose a script in `lightly_studio/src/lightly_studio/examples` directory and run it like this:
@@ -188,9 +254,12 @@ npm run dev
 
 ### Exploring the Makefile
 
-There are three Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
-targets, one in `lightly_studio_view` for the frontend, and one in the repository root that
-delegates to both. Some commonly used commands:
+`lightly_studio` has the backend, build, e2e and migration targets, `lightly_studio_view` the
+frontend ones and `lightly_studio_embed` those for the embedding server package. The one in the
+repository root delegates to all three. `make/python.mk` is never run directly: it holds the
+targets the Python members share, and each includes it rather than copying them.
+
+Some commonly used commands:
 
 Run tests:
 
