@@ -30,9 +30,9 @@ UNKNOWN_VERSION = "unknown"
 class PostHogTracker(Tracker):
     """Sends usage events to PostHog.
 
-    Events are initially keyed on the anonymous installation ID. After ``identify`` is called, the
-    tracker switches to the user's email as the distinct ID and all subsequent events are keyed on
-    that instead.
+    Events are keyed on the anonymous installation ID. If ``identify`` is called (e.g. after
+    enterprise authentication), the tracker switches to the user's email as the distinct ID and all
+    subsequent events are keyed on that instead.
 
     Events are queued and delivered by a background thread, so ``track`` does not block. Call
     ``shutdown`` before the process ends, otherwise queued events are lost.
