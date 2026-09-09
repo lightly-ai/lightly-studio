@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
+import numpy as np
+from numpy.typing import NDArray
 from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
@@ -12,6 +14,7 @@ from tqdm import tqdm
 from lightly_studio.embed import default_embedder_resolver, embedding_storage
 from lightly_studio.embed.embedder import (
     Capability,
+    Embedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
@@ -83,19 +86,19 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
     _validate_collection(
         session=session, collection_id=annotation_collection_id, expected=SampleType.ANNOTATION
     )
-    resolved = _resolve_offline(
-        session=session,
-        collection_id=annotation_collection_id,
-        capability=Capability.IMAGE_CROP_PATH,
-    )
-    if resolved is None:
-        return
     if (
         sample_resolver.count_by_collection_id(
             session=session, collection_id=annotation_collection_id
         )
         == 0
     ):
+        return
+    resolved = _resolve_offline(
+        session=session,
+        collection_id=annotation_collection_id,
+        capability=Capability.IMAGE_CROP_PATH,
+    )
+    if resolved is None:
         return
     embedder, model_id = resolved
     if not isinstance(embedder, ImageCropPathEmbedder):
@@ -194,7 +197,9 @@ def _validate_collection(session: Session, collection_id: UUID, expected: Sample
         )
 
 
-def _resolve_offline(session: Session, collection_id: UUID, capability: Capability):
+def _resolve_offline(
+    session: Session, collection_id: UUID, capability: Capability
+) -> tuple[Embedder, UUID] | None:
     try:
         embedder, model = default_embedder_resolver.resolve_or_bootstrap(
             session=session, collection_id=collection_id, capability=capability
@@ -224,7 +229,9 @@ def _store_result(
     )
 
 
-def _single_embedding(embeddings, kept_indices: list[int], input_name: str) -> list[float]:
+def _single_embedding(
+    embeddings: NDArray[np.float32], kept_indices: list[int], input_name: str
+) -> list[float]:
     if kept_indices != [0] or len(embeddings) != 1:
         raise ValueError(f"The {input_name} input could not be embedded.")
-    return embeddings[0].tolist()
+    return [float(value) for value in embeddings[0]]

@@ -214,6 +214,14 @@ def test_embed_annotation_collection__no_default_model_skips(
 ) -> None:
     """With no default model, annotation embedding is skipped and nothing stored."""
     collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=db_session,
         collection_id=collection.collection_id,
@@ -228,6 +236,26 @@ def test_embed_annotation_collection__no_default_model_skips(
 
     assert "No usable embedding model" in caplog.text
     assert _stored_embeddings(session=db_session) == []
+
+
+@pytest.mark.usefixtures("patched_manager")
+def test_embed_annotation_collection__empty_does_not_bootstrap(db_session: Session) -> None:
+    """An empty annotation collection does not persist a default embedding model."""
+    collection = create_collection(session=db_session)
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    embed_samples.embed_annotation_collection(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    assert model_id is None
 
 
 def test_embed_video_samples(
