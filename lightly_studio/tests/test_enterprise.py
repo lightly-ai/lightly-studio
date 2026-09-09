@@ -441,7 +441,9 @@ def test_connect__tracks_attempted_but_not_established_when_db_connect_fails(
         "user_email": "user@example.com",
     }
     mocker.patch.object(requests, "get", return_value=mock_response)
-    mocker.patch.object(db_manager, "connect", side_effect=ConnectionError("PostgreSQL unavailable"))
+    mocker.patch.object(
+        db_manager, "connect", side_effect=ConnectionError("PostgreSQL unavailable")
+    )
     mock_identify = mocker.patch.object(tracking, "identify")
     mock_track = mocker.patch.object(tracking, "track")
 
