@@ -1,4 +1,11 @@
-export { createMcapFrameProvider } from './createMcapFrameProvider';
+export { createRecordingSession } from './createRecordingSession';
+export type {
+    FrameRange,
+    RecordingMetadata,
+    RecordingSession,
+    SessionOptions,
+    TelemetryEvent
+} from './createRecordingSession';
 export { ProviderError } from './providerError';
 export { resolveMcapSource } from './resolveMcapSource';
-export type { McapSource, FrameLocator } from './source';
+export type { FrameLocator, McapSource } from './source';

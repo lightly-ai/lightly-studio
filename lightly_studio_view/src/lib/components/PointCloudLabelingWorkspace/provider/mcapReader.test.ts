@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { decompress } from 'lz4js';
 import { canonicalCoordinateFrame, createPointCloudFrame } from '../domain';
 import { mcapFixture } from './mcapFixture';
 import { openMcap } from './mcapReader';
+
+// Spied rather than replaced: listing frames must not decompress a single chunk, while
+// decoding one obviously has to.
+vi.mock('lz4js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('lz4js')>();
+    return { ...actual, decompress: vi.fn(actual.decompress) };
+});
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -90,6 +98,28 @@ describe('openMcap', () => {
         );
         const frame = createPointCloudFrame(await session.loadFrame(range.frames[0], 10));
         expect(frame.positions.copy()).toEqual(new Float32Array([1, 2, 3]));
+    });
+
+    it('lists a window from the message index, without decompressing chunks', async () => {
+        const { bytes, channelId, timestamp } = await mcapFixture({ compressed: true });
+        serve(bytes);
+        const session = await openMcap(sourceFor(bytes), new AbortController().signal);
+        vi.mocked(decompress).mockClear();
+        const readBefore = session.readable.bytesRead;
+
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+
+        expect(range.frames.map((frame) => frame.occurrence)).toEqual([0, 1]);
+        expect(decompress).not.toHaveBeenCalled();
+        // The index region is a fraction of the chunk it belongs to.
+        expect(session.readable.bytesRead - readBefore).toBeLessThan(bytes.length / 4);
+
+        await session.loadFrame(range.frames[0], 10);
+        expect(decompress).toHaveBeenCalled();
     });
 
     it('rejects recordings without identity, version, or clock metadata', async () => {

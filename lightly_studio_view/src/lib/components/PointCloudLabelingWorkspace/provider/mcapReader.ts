@@ -10,6 +10,11 @@ import { ProviderError } from './providerError';
 import { frameIdentity, type FrameLocator, type McapSource } from './source';
 
 const maxChunkBytes = 64 * 1024 * 1024;
+/** MCAP record framing: one opcode byte plus a little-endian u64 content length. */
+const RECORD_HEADER_BYTES = 9;
+const MESSAGE_INDEX_OPCODE = 0x07;
+/** One message index entry: a u64 log time and a u64 offset into the chunk. */
+const INDEX_ENTRY_BYTES = 16;
 
 /** Indexed recording session; instantiated and used exclusively inside a worker. */
 export async function openMcap(source: McapSource, signal: AbortSignal) {
@@ -106,24 +111,62 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
         endTimeNs: string,
         limit = 1000
     ) {
-        const channel = validateRange(channelId, startTimeNs, endTimeNs, limit);
+        validateRange(channelId, startTimeNs, endTimeNs, limit);
+        const start = BigInt(startTimeNs);
+        const end = BigInt(endTimeNs);
         const frames: FrameLocator[] = [];
         let lastTime = '';
         let occurrence = 0;
-        for await (const message of reader.readMessages({
-            topics: [channel.topic],
-            startTime: BigInt(startTimeNs),
-            endTime: BigInt(endTimeNs)
-        })) {
+        for (const chunk of chunksCovering(channelId, start, end)) {
             signal.throwIfAborted();
-            if (message.channelId !== channelId) continue;
-            if (frames.length === limit) return { frames, truncated: true };
-            const logTimeNs = message.logTime.toString();
-            occurrence = logTimeNs === lastTime ? occurrence + 1 : 0;
-            frames.push({ channelId, logTimeNs, occurrence });
-            lastTime = logTimeNs;
+            for (const logTime of await readMessageTimes(chunk, channelId)) {
+                if (logTime < start || logTime > end) continue;
+                if (frames.length === limit) return { frames, truncated: true };
+                const logTimeNs = logTime.toString();
+                occurrence = logTimeNs === lastTime ? occurrence + 1 : 0;
+                frames.push({ channelId, logTimeNs, occurrence });
+                lastTime = logTimeNs;
+            }
         }
         return { frames, truncated: false };
+    }
+
+    /**
+     * Chunks whose time span overlaps the window and that carry this channel, in file order.
+     *
+     * Chunk indexes are already in memory from the summary, so narrowing by time costs
+     * nothing and keeps the reads below proportional to the window rather than the recording.
+     */
+    function chunksCovering(channelId: number, start: bigint, end: bigint) {
+        return reader.chunkIndexes
+            .filter(
+                (chunk) =>
+                    chunk.messageEndTime >= start &&
+                    chunk.messageStartTime <= end &&
+                    chunk.messageIndexOffsets.has(channelId)
+            )
+            .sort((left, right) => Number(left.chunkStartOffset - right.chunkStartOffset));
+    }
+
+    /**
+     * Reads one chunk's message index and returns this channel's log times, in order.
+     *
+     * The index region sits outside the chunk and is never compressed, so listing a window
+     * reads a few kilobytes per chunk instead of decompressing the chunks themselves. That is
+     * the whole point of doing this by hand rather than iterating messages and dropping their
+     * payloads.
+     */
+    async function readMessageTimes(
+        chunk: (typeof reader.chunkIndexes)[number],
+        channelId: number
+    ): Promise<bigint[]> {
+        let regionStart: bigint | undefined;
+        for (const offset of chunk.messageIndexOffsets.values()) {
+            if (regionStart === undefined || offset < regionStart) regionStart = offset;
+        }
+        if (regionStart === undefined) return [];
+        const region = await readable.read(regionStart, chunk.messageIndexLength);
+        return parseMessageIndexTimes(region, channelId);
     }
 
     function validateRange(
@@ -168,6 +211,40 @@ function messageReader(schema: { name: string; data: Uint8Array }) {
             `The schema '${schema.name}' on this channel could not be parsed.`,
             error instanceof Error ? `${error.name}: ${error.message}` : String(error)
         );
+    }
+}
+
+/**
+ * Extracts one channel's log times from a chunk's message index region.
+ *
+ * The region is a sequence of MCAP records: a one-byte opcode, a little-endian u64 content
+ * length, then the content. A MessageIndex's content is the channel id, then a
+ * length-prefixed array of (log time, offset) pairs, of which only the times are wanted.
+ * `@mcap/core` parses these internally but exposes neither its reader nor the parsed
+ * indexes, and its public path to them decompresses the chunk as well.
+ */
+function parseMessageIndexTimes(region: Uint8Array, channelId: number): bigint[] {
+    const view = new DataView(region.buffer, region.byteOffset, region.byteLength);
+    const times: bigint[] = [];
+    let at = 0;
+    while (at + RECORD_HEADER_BYTES <= region.byteLength) {
+        const opcode = view.getUint8(at);
+        const contentStart = at + RECORD_HEADER_BYTES;
+        const contentEnd = contentStart + Number(view.getBigUint64(at + 1, true));
+        if (contentEnd > region.byteLength || contentEnd <= contentStart) break;
+        if (opcode === MESSAGE_INDEX_OPCODE && view.getUint16(contentStart, true) === channelId) {
+            collectTimes(view, contentStart, times);
+        }
+        at = contentEnd;
+    }
+    return times.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+}
+
+function collectTimes(view: DataView, contentStart: number, times: bigint[]): void {
+    const recordsStart = contentStart + 2 + 4;
+    const recordsEnd = recordsStart + view.getUint32(contentStart + 2, true);
+    for (let at = recordsStart; at + INDEX_ENTRY_BYTES <= recordsEnd; at += INDEX_ENTRY_BYTES) {
+        times.push(view.getBigUint64(at, true));
     }
 }
 
