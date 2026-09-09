@@ -73,4 +73,3 @@ def test_create__invalid_extension(db_session: Session, mcap_path: str) -> None:
             collection_id=collection.collection_id,
             mcap_path=mcap_path,
         )
-
