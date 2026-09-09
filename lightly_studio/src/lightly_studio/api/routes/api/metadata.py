@@ -61,6 +61,9 @@ class MetadataHistogramsRequest(BaseModel):
     bin_count: int = Field(
         _DEFAULT_BIN_COUNT, ge=1, le=200, description="Number of equal-width bins per histogram"
     )
+    fields: list[str] | None = Field(
+        None, description="Numeric fields to histogram; all numeric fields are computed when absent"
+    )
 
 
 @metadata_router.post("/metadata/histograms", response_model=dict[str, HistogramView])
@@ -69,7 +72,7 @@ def get_metadata_histograms(
     collection_id: Annotated[UUID, Path(title="collection Id")],
     request: MetadataHistogramsRequest | None = None,
 ) -> dict[str, HistogramView]:
-    """Compute value-distribution histograms for all numeric metadata keys.
+    """Compute value-distribution histograms for selected numeric metadata keys.
 
     Bin edges always span the full (unfiltered) value range of each key so the
     chart axis stays stable; the counts reflect the given filters. Each key's
@@ -79,7 +82,7 @@ def get_metadata_histograms(
     Args:
         session: The database session.
         collection_id: The ID of the collection.
-        request: Optional request body carrying the active sample filters.
+        request: Optional request body carrying the active sample filters and bin count.
 
     Returns:
         Mapping of metadata key to its histogram.
@@ -89,6 +92,7 @@ def get_metadata_histograms(
         collection_id=collection_id,
         filters=request.filters if request else None,
         bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
+        fields=request.fields if request else None,
     )
 
 
@@ -113,10 +117,11 @@ def get_metadata_value_counts(
 ) -> dict[str, MetadataValueCountsView]:
     """Compute categorical metadata value counts under optional sample filters.
 
-    Returns the top 20 most frequent concrete values per key; less-frequent
-    concrete values are aggregated into ``other_count`` and samples with a
-    missing (null) value are counted in ``missing_count``.  Each key's own
-    metadata filter is excluded from its counts (faceted-search behavior).
+    Returns the top 20 most frequent concrete values per key, followed by an
+    ``__other__`` row aggregating the less frequent concrete values and a
+    ``__missing__`` row counting the samples with an absent or null value. Each
+    key's own metadata filter is excluded from its counts (faceted-search
+    behavior).
 
     Args:
         session: The database session.

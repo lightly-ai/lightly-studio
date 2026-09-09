@@ -33,7 +33,7 @@ jobs:
         working-directory: fast_track
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         # Never pushes — keep the git token out of the checkout. This job runs PR code
         # (builds and tests) with the workflow token, and the job's `if` restricts it to
         # same-repo PRs, so untrusted fork code never runs in that context.

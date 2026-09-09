@@ -39,6 +39,33 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
     return db_model
 
 
+def set_api_key(
+    session: Session, embedding_model_id: UUID, api_key: str | None
+) -> EmbeddingModelTable:
+    """Set the API key of an embedding model, replacing any key already stored.
+
+    Args:
+        session: The database session.
+        embedding_model_id: The embedding model to update.
+        api_key: The bearer token for the remote embedding backend, or None to clear it.
+
+    Returns:
+        The updated embedding model.
+
+    Raises:
+        ValueError: If no embedding model with the given ID exists.
+    """
+    db_embedding_model = get_by_id(session=session, embedding_model_id=embedding_model_id)
+    if db_embedding_model is None:
+        raise ValueError(f"Embedding model with id {embedding_model_id} not found.")
+
+    db_embedding_model.api_key = api_key
+    session.add(db_embedding_model)
+    session.commit()
+    session.refresh(db_embedding_model)
+    return db_embedding_model
+
+
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
     """Retrieve a single embedding model by ID."""
     return session.exec(

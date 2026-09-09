@@ -137,7 +137,6 @@ class ClassifierManager:
         classifier = RandomForest(
             name=name,
             classes=class_list,
-            embedding_model_hash=embedding_model.name,
             embedding_model_name=embedding_model.name,
         )
 

@@ -3,60 +3,17 @@
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
-from lightly_studio.dataset.embedding_result import EmbeddingResult
-
-
-@dataclass(frozen=True)
-class EmbeddingSpaceSpec:
-    """Identity and shape of the embedding space an EmbeddingGenerator produces.
-
-    <span class="doc-badge doc-badge--beta">Beta</span>
-
-    Returned by ``EmbeddingGenerator.embedding_space_spec`` and stored in the
-    database so the same embedding space can be recognized across LightlyStudio runs.
-    """
-
-    space_key: str
-    """Stable identifier for the embedding space.
-
-    Two generators that share a ``space_key`` are treated as producing the same
-    embedding space, so their vectors are comparable. Change it whenever the produced
-    vectors become incomparable, e.g. for a model version change. Can be any string,
-    e.g. ``your-company/model-family@version``.
-    """
-
-    dimension: int
-    """Length of each embedding vector this generator produces."""
-
-
-@dataclass(frozen=True)
-class ImageCrop:
-    """A rectangular region of an image to embed, given in pixel coordinates.
-
-    <span class="doc-badge doc-badge--beta">Beta</span>
-    """
-
-    filepath: str
-    """Path to the image the crop is taken from."""
-
-    x: int
-    """Left edge of the crop, in pixels from the image's left."""
-
-    y: int
-    """Top edge of the crop, in pixels from the image's top."""
-
-    width: int
-    """Crop width in pixels."""
-
-    height: int
-    """Crop height in pixels."""
+from lightly_studio.embed.types import (
+    EmbeddingResult,
+    EmbeddingSpaceSpec,
+    ImageCrop,
+)
 
 
 @runtime_checkable

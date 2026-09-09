@@ -9,61 +9,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
-- Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
-- Python SDK: Order video queries by `VideoSampleField.created_at`.
-- Python SDK: Continue sampling from an existing tagged selection with the
-  `preselected_tag_name` parameter. Passing the same name as `sampling_result_tag_name`
-  grows that tag with the newly selected samples instead of requiring a fresh tag.
-- Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
-- Compare the annotation class distribution of any sample tag against the current view in the Distribution panel.
-- Compare metadata distributions of any sample tag against the current view in the Distribution panel. Categorical metadata renders as grouped bars and numerical metadata as grouped histograms sharing the same bins.
-- Azure Blob Storage is supported in the LightlyStudio Enterprise version.
-- Make annotation classes selectable in distribution plot.
-- Switch categorical and numerical metadata distributions between sample counts and percentages.
-- Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
-- Python SDK: Balance a sampling over the values of a categorical metadata field with
-  `Sampling.metadata_balancing()`, using the same `uniform`, `input`, and explicit target
-  distributions as annotation class balancing.
-- Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the
-  values of a categorical metadata field such as weather or city.
-
-
 ### Changed
 
-- Speed up cloud storage (S3, GCS, Azure blob) indexing by enabling parallel requests.
-- Speed up cloud image indexing by reading image dimensions in small chunks instead of downloading most of each image.
-- Speed up object embeddings by loading input images in parallel.
-- Stepping to the previous or next image now drives an index range scan instead of scanning the
-  sort index from the start. On PostgreSQL with 1M images, one neighbour lookup went from 92ms
-  to 0.03ms.
-- Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
-- Python SDK (beta): Simplified embedding generator interface. Implement `embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of the former `get_embedding_model_input`.
-
-- Stepping to the previous or next annotation in the annotation details view no longer sorts the
-  whole collection on every click, for annotations on images and on video frames. On PostgreSQL
-  with 4M annotations a click went from 6.3s to 1.3s; the neighbour lookup itself went from ~6s
-  to 3ms, and the remaining 1.2s is the exact position and total counts.
+- Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.
+- Change the video decoding backend for the GUI from OpenCV to PyAV, resulting in up to 6× faster decoding performance for parallel streams when loading the grid view and scrolling.
 
 ### Deprecated
 
 ### Removed
 
-- Removed the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
-  format and always writes the scikit-learn format, which is the only one LightlyStudio can load.
-
 ### Fixed
-
-- Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
-- Hide every bounding box and its annotation counts when all annotation sources are unchecked, instead of showing them all.
-- Keep long-lived PostgreSQL connections alive.
-- The "Load Classifier (.pkl)" button now opens the file picker. The button covered the invisible
-  file input that was meant to receive the click, so nothing happened.
-- Numerical metadata distributions in percentage mode now scale each compared tag independently, so bars match the tooltip.
 
 ### Security
 
-- Scope export downloads to the collection they were prepared for, so an export key from one collection can no longer be used to download an export prepared for a different collection.
+## \[1.1.0\] - 2026-09-07
+
+### Added
+
+- Distribution plot
+    - Compare the annotation class distribution by sample tag.
+    - Compare metadata distributions by sample tag.
+    - Make annotation classes selectable in distribution plot.
+    - Switch categorical and numerical metadata distributions between sample counts and percentages.
+
+- Sampling
+    - Python SDK: Continue sampling from an existing tagged selection with the `preselected_tag_name` parameter. Passing the same name as `sampling_result_tag_name` grows that tag with the newly selected samples instead of requiring a fresh tag.
+    - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
+    - Python SDK: Balance a sampling over the values of a categorical metadata field with `Sampling.metadata_balancing()`, using the same `uniform`, `input`, and explicit target distributions as annotation class balancing.
+    - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the values of a categorical metadata field such as weather or city.
+    - Python SDK: Select images by the diversity of their annotation crop embeddings with `Sampling.subpart_diversity()`.
+
+- Sort annotations and samples
+    - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+    - Python SDK: Order video queries by `VideoSampleField.created_at`.
+    - Add an order-by control to the videos grid.
+
+- Other
+    - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+    - Azure Blob Storage is supported in the LightlyStudio Enterprise version.
+    - Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
+    - Recompute stale evaluation runs from the GUI or API after annotation changes.
+    - Python SDK: Create and read MCAP locator samples.
+
+### Changed
+
+- Performance
+    - BREAKING: Change embedding model schema in the database. DuckDB users need to re-index their data. PostgreSQL users (Enterprise) are unaffected, the migration is automatic.
+    - Speed up cloud storage (S3, GCS, Azure blob) indexing by enabling parallel requests.
+    - Speed up cloud image indexing by reading image dimensions in small chunks instead of downloading most of each image.
+    - Speed up object embeddings by loading input images in parallel.
+    - Speed up the previous and next navigation in the GUI for large datasets.
+    - Bump lightly-mundig to 0.1.15; its sampling algorithms are up to 7x faster.
+
+- Python SDK
+    - Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
+    - Python SDK: COCO and YOLO imports now accept `tag_depth > 1` to tag samples by several leading directory levels.
+    - Python SDK (beta): Simplified embedding generator interface. Implement `embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of the former `get_embedding_model_input`.
+    - Python SDK: Split a dataset into new sample tags with `DatasetQuery.split()`
+
+### Deprecated
+
+### Removed
+
+- Remove the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
+  format and always writes the scikit-learn format, which is the only one LightlyStudio can load.
+- Drop the legacy `embedding_model_hash` field from the classifier export format. Classifiers
+  exported by older versions can no longer be loaded.
+
+### Fixed
+
+- Distribution plot
+    - Numerical metadata distributions in percentage mode now scale each compared tag independently, so bars match the tooltip.
+    - Categorical metadata distributions now include aggregated "Other" and "Missing" bars, so percentages are shares of all samples instead of only the values shown.
+
+- Permissions
+    - Viewer users can no longer create or delete tags; existing tags remain visible.
+
+- Other
+    - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
+    - Hide every bounding box and its annotation counts when all annotation sources are unchecked, instead of showing them all.
+    - Keep long-lived PostgreSQL connections alive.
+    - Fix a bug where the "Load Classifier (.pkl)" button failed to open the file picker.
+
+- Security
+    - Scope export downloads to the collection they were prepared for, so an export key from one collection can no longer be used to download an export prepared for a different collection.
 
 ## \[1.0.5\] - 2026-08-14
 
@@ -118,6 +147,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add metadata filter chips to the left sidebar
 - Display classification annotations in the annotations grid.
 - Show a preview image when hovering over the 2d embedding plot.
+- Python SDK: `ImageDataset.add_samples_from_coco` and `add_samples_from_yolo` now accept `tag_depth` to tag imported samples by their folder structure, in addition to the split tag.
 
 ### Changed
 

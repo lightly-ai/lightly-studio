@@ -23,7 +23,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=["0", "1"],
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
         # Create a list of AnnotatedEmbedding objects
@@ -51,7 +50,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=classes,
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
         # Step 1: Define embeddings for training
@@ -101,7 +99,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=classes,
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
         # Step 1: Define embeddings for training
@@ -137,7 +134,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=["1"],
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
         with pytest.raises(
@@ -154,7 +150,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=classes,
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
         # Step 1: Define embeddings for training
@@ -183,7 +178,6 @@ class TestRandomForestClassifier:
             RandomForest(
                 name="classifier_name",
                 classes=[],
-                embedding_model_hash="hash",
                 embedding_model_name="name",
             )
 
@@ -221,7 +215,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=classes,
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
         classifier.train(annotated_embeddings)
@@ -237,7 +230,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=classes,
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
         classifier.train(annotated_embeddings)
@@ -253,7 +245,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=["0", "1"],
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
         # Step 1: Define embeddings for training
@@ -290,7 +281,6 @@ class TestRandomForestClassifier:
         classifier = RandomForest(
             name="classifier_name",
             classes=["0", "1"],
-            embedding_model_hash="hash",
             embedding_model_name="name",
         )
 

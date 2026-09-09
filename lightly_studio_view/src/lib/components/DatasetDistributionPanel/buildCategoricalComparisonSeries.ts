@@ -42,10 +42,9 @@ export const buildCategoricalComparisonSeries = (
                 count: bucket.count
             })),
             // The percentage denominator, set here so a top-N view cannot shrink
-            // it. The backend returns only the most frequent values per key
-            // (`_TOP_VALUE_COUNT` in `categorical_value_counts.py`), so this is
-            // the total over the values it returned for the tag, not the tag's
-            // sample count.
+            // it. The backend closes the gap between its top values and the
+            // tag's sample count with the `other` and `missing` buckets, so this
+            // sums to every sample the tag holds.
             totalCount: buckets.reduce((sum, bucket) => sum + bucket.count, 0)
         };
     });

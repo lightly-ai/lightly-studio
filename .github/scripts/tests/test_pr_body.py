@@ -15,4 +15,4 @@ def test_render_pr_body__review_checklist():
 
 def test_render_pr_body__says_merging_publishes_nothing():
     body = pr_body.render_pr_body(section_body="### Added\n\n- Added thing one.", version="1.0.6")
-    assert "Merging publishes nothing" in body
+    assert "opens a **draft** GitHub release" in body

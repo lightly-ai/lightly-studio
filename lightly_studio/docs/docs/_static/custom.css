@@ -608,6 +608,14 @@ body {
   font-size: 0.65rem;
 }
 
+/* `search.suggest` renders the type-ahead completion into a sibling element that
+   Material sizes to match the input. The input above is shrunk to 0.65rem, so the
+   suggestion has to follow or the grey ghost word lands offset behind the typed
+   text and reads as duplicated. */
+.md-search__suggest {
+  font-size: 0.65rem;
+}
+
 /* `--ls-muted`, not `--ls-faint`: the field is filled with the muted surface,
    and the faint grey is only 4.3:1 against it. */
 .md-search__input::placeholder {
@@ -858,7 +866,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   cursor: default;
   font-family: var(--ls-font-mono);
   font-size: var(--ls-label-size);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: var(--ls-label-tracking);
   margin: 0;
   padding: 0 0.4rem 0.5rem;
@@ -866,18 +874,18 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 /* Level 2 ("Core Concepts", "Python API"): a run of pages inside a section that
-   is long enough to want a heading of its own. It reads as one of the items
-   around it, a half-step heavier, with its children indented under it and a
-   chevron to collapse them — not as a third label register. The section caption
+   is long enough to want a heading of its own. It reads as a plain item like the
+   ones around it — same size and color — with its children indented under it and a
+   chevron to collapse them, not as a third label register. The section caption
    above is what does the grouping; this only says where a run starts. */
 .md-sidebar--primary
   .md-nav[data-md-level="1"]
   > .md-nav__list
   > .md-nav__item--nested
   > :is(.md-nav__link, .md-nav__container) {
-  color: var(--ls-ink);
+  color: var(--ls-body);
   font-size: 0.65rem;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* A section caption is a label, not a destination; nothing to hover. */
@@ -1190,24 +1198,15 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 /* The opening paragraph is the page's summary, so it is set a size up and
    closed by a rule — the mock's 17px standfirst over 15px body. Selected as
    `> p:first-of-type` rather than by a class, because it holds on every page
-   without an author marking it up.
-
-   The rule runs the full article width while the text keeps the reading
-   measure, which needs those two to come from different boxes. So the box is
-   full width and the measure is cut out of it with padding: a percentage
-   padding resolves against the containing block's width, so the content box
-   lands at exactly 32rem and the border spans the 873px behind it. `max()`
-   floors it at zero for the viewports where the article is already narrower
-   than the measure, where the paragraph should just fill the column. */
+   without an author marking it up. Its border runs the full article column, as
+   does the paragraph itself. */
 .md-typeset > p:first-of-type {
   border-bottom: 1px solid var(--ls-line-hair);
   color: var(--ls-body);
   font-size: 0.85rem;
   line-height: 1.6;
   margin-bottom: 1.3rem;
-  max-width: none;
   padding-bottom: 1.1rem;
-  padding-inline-end: max(0px, 100% - 32rem);
 }
 
 /* An `h2` straight after the standfirst would put its own top margin under
@@ -1216,27 +1215,10 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   margin-top: 0;
 }
 
-/* Reading measure, ~75 characters. */
-.md-typeset :is(p, ul, ol, blockquote) {
-  max-width: 32rem;
-}
-
-/* Anything that is not running prose keeps the full content width: figures,
-   card grids, and lists that wrap a code sample, table or tab set. Without
-   this a fenced block inside a numbered step gets clipped to the measure. */
-.md-typeset p:has(> :is(img, video, iframe)),
-.md-typeset .grid,
-.md-typeset :is(ul, ol):has(:is(pre, table, .highlight, .tabbed-set, .grid, img)) {
-  max-width: none;
-}
-
-/* A caption under a figure is centred by the author but still clipped to the
-   measure above, which pins its box to the left edge — so its axis lands 61px
-   short of the full-width figure it belongs to. Centre the box instead of
-   widening it: the axes line up and the text keeps a readable measure. */
-.md-typeset p[align="center"] {
-  margin-inline: auto;
-}
+/* Running prose has no reading measure of its own: paragraphs, lists and
+   blockquotes fill the article column (`.md-content__inner`, 44rem), which is the
+   readable line length here — so figures, card grids and code samples need no
+   width exception either. */
 
 .md-typeset a {
   color: var(--ls-accent);

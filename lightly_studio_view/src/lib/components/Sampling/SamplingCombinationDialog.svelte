@@ -113,6 +113,7 @@
     // strategy is supported since all samples share a single embedding space.
     const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
     const hasDeduplication = $derived($instances.some((i) => i.type === 'deduplication'));
+    const hasSubpartDiversity = $derived($instances.some((i) => i.type === 'subpart_diversity'));
 </script>
 
 <Dialog.Root
@@ -156,6 +157,11 @@
                                 metadataBalancingDisabledReason={!strategyOptions.hasCategoricalMetadataFields
                                     ? 'No categorical metadata fields found. Index string or boolean metadata on your samples to enable this strategy.'
                                     : undefined}
+                                subpartDiversityDisabledReason={isVideoCollection
+                                    ? 'Not available for video collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
+                                    : hasSubpartDiversity
+                                      ? 'Only one subpart diversity strategy can be added per selection.'
+                                      : undefined}
                                 onAdd={handleAddStrategy}
                                 onMenuOpen={handleMenuOpen}
                             />
@@ -170,11 +176,13 @@
                                         tags={$tags}
                                         annotationLabels={strategyOptions.annotationLabels}
                                         annotationSourceOptions={strategyOptions.annotationSourceOptions}
+                                        croppableAnnotationSourceOptions={strategyOptions.croppableAnnotationSourceOptions}
                                         metadataFieldNames={strategyOptions.metadataFieldNames}
                                         categoricalMetadataFieldNames={strategyOptions.categoricalMetadataFieldNames}
                                         metadataValuesByKey={strategyOptions.metadataValuesByKey}
                                         isDuplicateDisabled={instance.type === 'diversity' ||
-                                            instance.type === 'deduplication'}
+                                            instance.type === 'deduplication' ||
+                                            instance.type === 'subpart_diversity'}
                                         onRemove={() =>
                                             handleRemoveStrategy(instance.id, instance.type)}
                                         onDuplicate={() =>
