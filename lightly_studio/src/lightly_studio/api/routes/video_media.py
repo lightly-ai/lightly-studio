@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncGenerator
 
-import fsspec
-from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Header, HTTPException, Request, Response
 
+from lightly_studio.api.routes import byte_range
 from lightly_studio.api.routes.api import status
 from lightly_studio.database import db_manager
 from lightly_studio.models import video
@@ -16,113 +14,12 @@ from lightly_studio.models import video
 app_router = APIRouter(prefix="/videos/media")
 
 
-def _parse_range_header(range_header: str | None, file_size: int) -> tuple[int, int] | None:
-    """Parse the Range header and return (start, end) byte positions.
-
-    Args:
-        range_header: The Range header value (e.g., "bytes=0-1023")
-        file_size: The total size of the file in bytes.
-
-    Returns:
-        Tuple of (start, end) byte positions, or None if range is invalid.
-    """
-    if not range_header or not range_header.startswith("bytes="):
-        return None
-
-    try:
-        range_spec = range_header[6:]  # Remove "bytes=" prefix
-        if "-" not in range_spec:
-            return None
-
-        start_str, end_str = range_spec.split("-", 1)
-        start = int(start_str) if start_str else 0
-        end = int(end_str) if end_str else file_size - 1
-
-        # Validate range
-        if start < 0 or end >= file_size or start > end:
-            return None
-
-        return (start, end)
-    except (ValueError, AttributeError):
-        return None
-
-
-async def _stream_file_range(
-    fs: fsspec.AbstractFileSystem,
-    fs_path: str,
-    start: int,
-    end: int,
-    request: Request,
-) -> AsyncGenerator[bytes, None]:
-    """Stream a specific byte range from a file.
-
-    Args:
-        fs: The filesystem instance.
-        fs_path: The path to the file.
-        start: Start byte position.
-        end: End byte position.
-        request: FastAPI request object for disconnect detection.
-    """
-    content_length = end - start + 1
-    chunk_size = 1024 * 1024  # 1MB chunks
-
-    try:
-        with fs.open(fs_path, "rb") as f:
-            f.seek(start)
-            remaining = content_length
-
-            while remaining > 0:
-                # Check if client disconnected
-                if await request.is_disconnected():
-                    break
-
-                read_size = min(chunk_size, remaining)
-                chunk = f.read(read_size)
-                if not chunk:
-                    break
-                yield chunk
-                remaining -= len(chunk)
-    except Exception:
-        # Handle file read errors gracefully
-        pass
-
-
-async def _stream_full_file(
-    fs: fsspec.AbstractFileSystem,
-    fs_path: str,
-    request: Request,
-) -> AsyncGenerator[bytes, None]:
-    """Stream the entire file.
-
-    Args:
-        fs: The filesystem instance.
-        fs_path: The path to the file.
-        request: FastAPI request object for disconnect detection.
-    """
-    chunk_size = 1024 * 1024  # 1MB chunks
-
-    try:
-        with fs.open(fs_path, "rb") as f:
-            while True:
-                # Check if client disconnected
-                if await request.is_disconnected():
-                    break
-
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                yield chunk
-    except Exception:
-        # Handle file read errors gracefully
-        pass
-
-
 @app_router.get("/{sample_id}")
-async def serve_video_by_sample_id(
+def serve_video_by_sample_id(
     sample_id: str,
     request: Request,
     range_header: str | None = Header(None, alias="range"),
-) -> StreamingResponse:
+) -> Response:
     """Serve a video by sample ID with HTTP Range request support.
 
     This endpoint supports HTTP Range requests, which are essential for
@@ -137,7 +34,8 @@ async def serve_video_by_sample_id(
         range_header: The HTTP Range header value.
 
     Returns:
-        StreamingResponse with the video data, supporting partial content.
+        The requested byte range of the video, or the whole video when no range was
+        asked for.
     """
     # Avoid SessionDep here: FastAPI runs its sync-generator dependency on
     # Starlette's threadpool, exhausting threadpool slots under load. Manage
@@ -151,41 +49,12 @@ async def serve_video_by_sample_id(
             )
         file_path = sample_record.file_path_abs
 
-    content_type = _get_content_type(file_path)
-
     try:
-        fs, fs_path = fsspec.core.url_to_fs(file_path)
-        file_size = fs.size(fs_path)
-
-        # Parse range header if present
-        range_tuple = _parse_range_header(range_header, file_size)
-
-        if range_tuple:
-            # Partial content request
-            start, end = range_tuple
-            content_length = end - start + 1
-
-            return StreamingResponse(
-                _stream_file_range(fs, fs_path, start, end, request),
-                status_code=206,  # Partial Content
-                media_type=content_type,
-                headers={
-                    "Accept-Ranges": "bytes",
-                    "Content-Range": f"bytes {start}-{end}/{file_size}",
-                    "Content-Length": str(content_length),
-                    "Cache-Control": "public, max-age=3600",
-                },
-            )
-
-        # Full file request
-        return StreamingResponse(
-            _stream_full_file(fs, fs_path, request),
-            media_type=content_type,
-            headers={
-                "Accept-Ranges": "bytes",
-                "Content-Length": str(file_size),
-                "Cache-Control": "public, max-age=3600",
-            },
+        return byte_range.serve_file(
+            file_path=file_path,
+            request=request,
+            range_header=range_header,
+            media_type=_get_content_type(file_path),
         )
     except FileNotFoundError as exc:
         raise HTTPException(

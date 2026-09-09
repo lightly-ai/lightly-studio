@@ -55,9 +55,12 @@ class McapView(SQLModel):
     type: SampleType = SampleType.MCAP
     sample_id: UUID
     channel_id: int
-    log_time_ns: int
-    capture_timestamp_ns: int
-    keyframe_log_time_ns: Optional[int] = None
+    # Nanosecond times are strings on the wire. They run past the range a JSON number
+    # holds exactly, so a client parsing them as doubles would round them and seek to a
+    # different message than the one this sample names.
+    log_time_ns: str
+    capture_timestamp_ns: str
+    keyframe_log_time_ns: Optional[str] = None
 
     sample: SampleView
 
@@ -71,8 +74,10 @@ class McapView(SQLModel):
         return cls(
             sample_id=mcap.sample_id,
             channel_id=mcap.channel_id,
-            log_time_ns=mcap.log_time_ns,
-            capture_timestamp_ns=mcap.capture_timestamp_ns,
-            keyframe_log_time_ns=mcap.keyframe_log_time_ns,
+            log_time_ns=str(mcap.log_time_ns),
+            capture_timestamp_ns=str(mcap.capture_timestamp_ns),
+            keyframe_log_time_ns=(
+                None if mcap.keyframe_log_time_ns is None else str(mcap.keyframe_log_time_ns)
+            ),
             sample=SampleView.model_validate(mcap.sample),
         )

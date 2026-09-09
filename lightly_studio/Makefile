@@ -9,6 +9,13 @@ POSTGRES_SHM_SIZE ?= 2g
 POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 
+# Point-cloud labeling workspace (LIG-10657). Recordings are far too large to keep in the
+# repository, so pass one in: the same path is both indexed into locator samples and served
+# by the media endpoint, which is what the browser reads byte ranges from.
+MCAP_PATH ?= datasets/mcap/perception.mcap
+MCAP_MAX_FRAMES ?= 200
+MCAP_TOPIC ?=
+
 # Installs the uv version that `required-version` in pyproject.toml pins, so a local
 # `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
 UV_VERSION := 0.12.6
@@ -114,6 +121,18 @@ start-e2e-distribution: build
 .PHONY: start-e2e-video-groups
 start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
+
+# Override the recording, how many frames are indexed, and which channel, e.g.:
+#   make start-e2e-mcap-point-cloud MCAP_PATH=~/recordings/perception.mcap MCAP_MAX_FRAMES=500
+.PHONY: start-e2e-mcap-point-cloud
+start-e2e-mcap-point-cloud: build
+	@echo "Starting server for e2e point-cloud tests from $(MCAP_PATH)..."
+	MCAP_PATH=$(MCAP_PATH) \
+	MCAP_MAX_FRAMES=$(MCAP_MAX_FRAMES) \
+	MCAP_TOPIC=$(MCAP_TOPIC) \
+	LIGHTLY_STUDIO_MCAP_RECORDING_PATH=$(MCAP_PATH) \
+	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=1 \
+		uv run e2e-tests/index_mcap_point_cloud.py
 
 .PHONY: start-postgres
 start-postgres: stop-postgres

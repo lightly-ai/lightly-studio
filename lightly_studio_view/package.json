@@ -49,6 +49,7 @@
     "@types/eslint": "^9.6.0",
     "@types/jest": "^29.5.14",
     "@types/lodash-es": "^4.17.12",
+    "@types/lz4js": "^0.2.2",
     "@vitest/coverage-v8": "^3.2.4",
     "autoprefixer": "^10.4.20",
     "bits-ui": "^1.8.0",
@@ -77,6 +78,9 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@foxglove/rosmsg": "^5.0.5",
+    "@foxglove/rosmsg2-serialization": "^3.1.2",
+    "@mcap/core": "^2.2.2",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.9",
@@ -92,6 +96,7 @@
     "embedding-atlas": "^0.21.0",
     "langium": "^4.2.2",
     "lodash-es": "^4.17.22",
+    "lz4js": "^0.2.0",
     "monaco-editor": "^0.55.1",
     "paneforge": "^1.0.2",
     "posthog-js": "^1.276.0",
@@ -100,6 +105,7 @@
     "svelte-virtual": "^1.0.0-next.22",
     "uuid": "^13.0.0",
     "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1"
+    "vscode-languageserver": "^9.0.1",
+    "zstddec": "^0.2.0"
   }
 }

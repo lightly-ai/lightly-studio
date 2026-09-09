@@ -72,7 +72,9 @@
             <WorkspaceStatusPanel status="loading" />
         {:then module}
             {@const Workspace = module.default}
-            <Workspace {sampleId} {sourcePath} onExit={handleExit} />
+            <!-- showProviderDiagnostics is temporary: it surfaces what the MCAP frame
+                 provider reads until the 3D scene lands. See ProviderDiagnostics. -->
+            <Workspace {sampleId} {sourcePath} onExit={handleExit} showProviderDiagnostics />
         {:catch}
             <WorkspaceStatusPanel status="error" onRetry={retryLoadWorkspace} onExit={handleExit} />
         {/await}
