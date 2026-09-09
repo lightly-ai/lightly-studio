@@ -42,7 +42,7 @@ _DEFAULT_BOOTSTRAP_SPACE_KEYS: dict[Capability, str] = {
     Capability.IMAGE_PIL: "mobileclip_s0",
     Capability.VIDEO_PATH: "PE-Core-T16-384",
 }
-_OFFLINE_CAPABILITIES = frozenset(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
+_BOOTSTRAP_CAPABILITIES = frozenset(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
 
 
 class EmbedderRegistry:
@@ -97,10 +97,10 @@ class EmbedderRegistry:
         """
         self.register(embedder=embedder)
         space_key = embedder.embedding_space_spec().space_key
-        for capability in set(_capabilities_of(embedder=embedder)) & _OFFLINE_CAPABILITIES:
+        for capability in set(_capabilities_of(embedder=embedder)) & _BOOTSTRAP_CAPABILITIES:
             self._bootstrap_space_keys[capability] = space_key
 
-    def bootstrap_space(self, capability: Capability) -> EmbeddingSpaceSpec | None:
+    def get_bootstrap_space(self, capability: Capability) -> EmbeddingSpaceSpec | None:
         """Get the built-in embedding space to bootstrap for a capability, if available."""
         embedder = self._get_or_bootstrap(space_key=None, capability=capability)
         if embedder is None or capability not in _capabilities_of(embedder=embedder):
@@ -162,7 +162,12 @@ class EmbedderRegistry:
 
 
 # Process-wide registry shared by the app and by callers that look up embedders.
-registry = EmbedderRegistry()
+_registry = EmbedderRegistry()
+
+
+def get_registry() -> EmbedderRegistry:
+    """Get the process-wide embedder registry."""
+    return _registry
 
 
 def _capabilities_of(embedder: Embedder) -> list[Capability]:
