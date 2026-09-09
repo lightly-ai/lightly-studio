@@ -10,7 +10,7 @@ the caller's responsibility.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 
 from lightly_studio.embed.embedder import (
     Capability,
@@ -35,21 +35,15 @@ _CAPABILITY_TO_TYPE = {
     Capability.TEXT: TextEmbedder,
     Capability.IMAGE_BYTES: ImageBytesEmbedder,
 }
-# Capabilities whose bootstrap default can be produced by an offline built-in embedder.
-_OFFLINE_CAPABILITIES = frozenset(
-    {
-        Capability.IMAGE_PATH,
-        Capability.IMAGE_CROP_PATH,
-        Capability.VIDEO_PATH,
-        Capability.IMAGE_PIL,
-    }
-)
+# Capabilities whose bootstrap default is produced by an offline built-in embedder,
+# each mapped to the space_key used to bootstrap a collection default.
 _DEFAULT_BOOTSTRAP_SPACE_KEYS: dict[Capability, str] = {
     Capability.IMAGE_PATH: "mobileclip_s0",
     Capability.IMAGE_CROP_PATH: "mobileclip_s0",
     Capability.IMAGE_PIL: "mobileclip_s0",
     Capability.VIDEO_PATH: "PE-Core-T16-384",
 }
+_OFFLINE_CAPABILITIES = frozenset(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
 
 
 class EmbedderRegistry:
@@ -83,7 +77,7 @@ class EmbedderRegistry:
         """
         spec = embedder.embedding_space_spec()
         space_key = spec.space_key
-        if not capabilities_of(embedder=embedder):
+        if not _capabilities_of(embedder=embedder):
             raise ValueError(f"Embedder {type(embedder).__name__!r} implements no capability.")
         registered = self._space_key_to_embedder.get(space_key)
         if registered is not None:
@@ -96,24 +90,15 @@ class EmbedderRegistry:
             logger.warning("Replacing embedder for space %r.", space_key)
         self._space_key_to_embedder[space_key] = embedder
 
-    def register_embedder(
-        self, embedder: Embedder, default_for: Iterable[Capability] | None = None
-    ) -> None:
-        """Register a runtime provider and optionally select offline bootstrap defaults."""
-        capabilities = set(capabilities_of(embedder=embedder))
-        selected = capabilities & _OFFLINE_CAPABILITIES if default_for is None else set(default_for)
-        invalid = selected - capabilities
-        if invalid:
-            raise ValueError(
-                f"Embedder does not implement capabilities: {_format_capabilities(invalid)}."
-            )
-        online = selected - _OFFLINE_CAPABILITIES
-        if online:
-            raise ValueError(f"Capabilities cannot bootstrap: {_format_capabilities(online)}.")
+    def register_embedder(self, embedder: Embedder) -> None:
+        """Register a runtime provider and make it the offline bootstrap default.
 
+        The embedder becomes the bootstrap default for every offline capability it
+        implements, replacing any previous default for those capabilities.
+        """
         self.register(embedder=embedder)
         space_key = embedder.embedding_space_spec().space_key
-        for capability in selected:
+        for capability in set(_capabilities_of(embedder=embedder)) & _OFFLINE_CAPABILITIES:
             self._bootstrap_space_keys[capability] = space_key
 
     def bootstrap_space(self, capability: Capability) -> EmbeddingSpaceSpec | None:
@@ -122,7 +107,7 @@ class EmbedderRegistry:
         if space_key is None:
             return None
         embedder = self._get_or_load(space_key=space_key)
-        if embedder is None or capability not in capabilities_of(embedder=embedder):
+        if embedder is None or capability not in _capabilities_of(embedder=embedder):
             return None
         return embedder.embedding_space_spec()
 
@@ -172,7 +157,7 @@ class EmbedderRegistry:
 registry = EmbedderRegistry()
 
 
-def capabilities_of(embedder: Embedder) -> list[Capability]:
+def _capabilities_of(embedder: Embedder) -> list[Capability]:
     """List the capabilities an embedder implements, inferred from its type."""
     return [
         capability for capability, cls in _CAPABILITY_TO_TYPE.items() if isinstance(embedder, cls)
@@ -191,10 +176,6 @@ def _create_perception_encoder() -> Embedder:
     )
 
     return PerceptionEncoderEmbedder()
-
-
-def _format_capabilities(capabilities: set[Capability]) -> str:
-    return ", ".join(sorted(capability.value for capability in capabilities))
 
 
 _BUILTIN_SPACE_FACTORIES: dict[str, Callable[[], Embedder]] = {

@@ -24,7 +24,7 @@ def store_embeddings(
     show_progress: bool = True,
 ) -> None:
     """Validate and atomically store embeddings for sample IDs."""
-    embeddings = validate_and_coerce_embeddings(
+    embeddings = _validate_and_coerce_embeddings(
         session=session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
     )
     with tqdm(
@@ -49,7 +49,7 @@ def store_embeddings(
     session.commit()
 
 
-def validate_and_coerce_embeddings(
+def _validate_and_coerce_embeddings(
     session: Session,
     model_id: UUID,
     sample_ids: list[UUID],
