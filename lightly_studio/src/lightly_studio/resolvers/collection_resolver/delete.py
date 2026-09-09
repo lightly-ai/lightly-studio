@@ -18,6 +18,11 @@ def delete(session: Session, collection_id: UUID) -> bool:
     if not collection:
         return False
 
+    mcap_definition = session.get(McapGroupComponentDefinitionTable, collection_id)
+    if mcap_definition is not None:
+        session.delete(mcap_definition)
+        session.commit()
+
     if collection.group_component_definition is not None:
         # MCAP extension first: FK to group_component_definition.
         mcap_definition = session.get(McapGroupComponentDefinitionTable, collection_id)
