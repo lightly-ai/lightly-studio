@@ -10,7 +10,10 @@
         existingTagNames: string[];
         pending?: boolean;
         error?: string;
-        onSubmit: (values: { splits: Parameters<typeof getSplitCounts>[1]; seed?: number }) => void;
+        onSubmit: (values: {
+            splits: Parameters<typeof getSplitCounts>[1];
+            seed?: number;
+        }) => void | Promise<void>;
         onClose: () => void;
     }
 
@@ -37,13 +40,20 @@
     const validationError = $derived(splitError || seedError);
     const counts = $derived(splitError ? [] : getSplitCounts(sampleCount, splits));
 
-    function submit(event: SubmitEvent) {
+    let submitting = false;
+
+    async function submit(event: SubmitEvent) {
         event.preventDefault();
-        if (pending || validationError) return;
-        onSubmit({
-            splits: splits.map((split) => ({ ...split, tag_name: split.tag_name.trim() })),
-            ...(seed.trim() ? { seed: Number(seed) } : {})
-        });
+        if (submitting || pending || validationError) return;
+        submitting = true;
+        try {
+            await onSubmit({
+                splits: splits.map((split) => ({ ...split, tag_name: split.tag_name.trim() })),
+                ...(seed.trim() ? { seed: Number(seed) } : {})
+            });
+        } finally {
+            submitting = false;
+        }
     }
 </script>
 
