@@ -26,7 +26,9 @@ def get_or_create_sample_tag_by_name(
         The existing or newly created sample tag.
     """
     existing_tag = tag_resolver.get_by_name(
-        session=session, tag_name=tag_name, collection_id=collection_id
+        session=session,
+        tag_name=tag_name,
+        collection_id=collection_id,
     )
     if existing_tag:
         return existing_tag
