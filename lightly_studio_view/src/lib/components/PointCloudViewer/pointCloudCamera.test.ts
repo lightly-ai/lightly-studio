@@ -57,4 +57,19 @@ describe('fitCameraToBounds', () => {
         expect(dampingDuringUpdate).toBe(false);
         expect(controls.enableDamping).toBe(true);
     });
+
+    it('preserves enableDamping false when controls start with damping disabled', () => {
+        const camera = new PerspectiveCamera();
+        const controls = { enableDamping: false, target: new Vector3(), update: vi.fn() };
+        let dampingDuringUpdate: boolean | undefined;
+        controls.update = vi.fn(() => {
+            dampingDuringUpdate = controls.enableDamping;
+        });
+
+        fitCameraToBounds(camera, controls as never, new Box3());
+
+        expect(dampingDuringUpdate).toBe(false);
+        expect(controls.enableDamping).toBe(false);
+        expect(controls.update).toHaveBeenCalledOnce();
+    });
 });
