@@ -3,7 +3,11 @@ from __future__ import annotations
 import numpy as np
 from fastapi.testclient import TestClient
 
-from lightly_studio_embed.embedder import TextEmbedder
+from lightly_studio_embed.embedder import (
+    ImageBytesEmbedder,
+    TextEmbedder,
+    VideoBytesEmbedder,
+)
 from lightly_studio_embed.errors import CapabilityNotImplementedError
 from lightly_studio_embed.protocol import ServerLimits
 from lightly_studio_embed.server import create_app
@@ -31,6 +35,24 @@ class FakeTextEmbedder(TextEmbedder):
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         self.received = texts
         return self.result if self.result is not None else _rows(count=len(texts))
+
+
+class FakeBytesEmbedder(ImageBytesEmbedder, VideoBytesEmbedder):
+    """Embeds images and videos, recording the bytes it was handed."""
+
+    def __init__(self) -> None:
+        self.received: list[bytes] = []
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION)
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        self.received = images
+        return _rows(count=len(images))
+
+    def embed_video_bytes(self, videos: list[bytes]) -> EmbeddingResult:
+        self.received = videos
+        return _rows(count=len(videos))
 
 
 class UnfinishedTextEmbedder(FakeTextEmbedder):
@@ -68,12 +90,27 @@ def test_create_app__describe() -> None:
     }
 
 
+def test_create_app__describe_bytes_capabilities() -> None:
+    client = TestClient(create_app(embedder=FakeBytesEmbedder()))
+
+    response = client.get("/v1/describe")
+
+    assert response.json()["capabilities"] == ["image_bytes", "video_bytes"]
+
+
 def test_create_app__describe_not_ready() -> None:
     client = TestClient(create_app(embedder=FakeTextEmbedder(ready=False)))
 
     response = client.get("/v1/describe")
 
     assert response.json()["ready"] is False
+
+
+def test_create_app__text_only_mounts_no_other_route() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder()))
+
+    assert client.post("/v1/embed/images/bytes", files={"files": b"\xff\xd8"}).status_code == 404
+    assert client.post("/v1/embed/videos/bytes", files={"files": b"\x00\x00"}).status_code == 404
 
 
 def test_create_app__embed_texts() -> None:
@@ -100,6 +137,33 @@ def test_create_app__embed_texts_with_skipped_item() -> None:
 
     assert response.status_code == 200
     assert response.json()["kept_indices"] == [1]
+
+
+def test_create_app__embed_images_bytes() -> None:
+    embedder = FakeBytesEmbedder()
+    client = TestClient(create_app(embedder=embedder))
+
+    response = client.post(
+        "/v1/embed/images/bytes",
+        files=[
+            ("files", ("a.jpg", b"\xff\xd8a", "image/jpeg")),
+            ("files", ("b.png", b"\x89P", "image/png")),
+        ],
+    )
+
+    assert response.status_code == 200
+    assert response.json()["kept_indices"] == [0, 1]
+    assert embedder.received == [b"\xff\xd8a", b"\x89P"]
+
+
+def test_create_app__embed_videos_bytes() -> None:
+    embedder = FakeBytesEmbedder()
+    client = TestClient(create_app(embedder=embedder))
+
+    response = client.post("/v1/embed/videos/bytes", files=[("files", ("a.mp4", b"\x00moov"))])
+
+    assert response.status_code == 200
+    assert embedder.received == [b"\x00moov"]
 
 
 def test_create_app__batch_over_max_batch_size() -> None:
