@@ -24,11 +24,11 @@ class SampleSequenceLinkTable(SQLModel, table=True):
 
     __tablename__ = "sample_sequence_link"
     __table_args__ = (
-        UniqueConstraint("sequence_id", "seq_number", name="unique_seq_number_per_sequence"),
+        UniqueConstraint("sequence_sample_id", "seq_number", name="unique_seq_number_per_sequence"),
     )
     # Primary key, so a sample sits in at most one slot of at most one sequence.
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
-    sequence_id: UUID = Field(foreign_key="sequence.sample_id", index=True)
+    sequence_sample_id: UUID = Field(foreign_key="sequence.sample_id", index=True)
     seq_number: int
     # BigInteger: epoch nanoseconds overflow a 32-bit INTEGER on PostgreSQL.
     timestamp_ns: Optional[int] = Field(default=None, sa_type=BigInteger)

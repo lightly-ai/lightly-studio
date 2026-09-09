@@ -261,7 +261,7 @@ def test_delete_dataset__with_sequences(db_session: Session) -> None:
     db_session.flush()
     db_session.add(
         SampleSequenceLinkTable(
-            sample_id=sample_ids[1], sequence_id=sequence.sample_id, seq_number=0
+            sample_id=sample_ids[1], sequence_sample_id=sequence.sample_id, seq_number=0
         )
     )
     db_session.commit()
@@ -280,7 +280,7 @@ def test_delete_dataset__with_sequences(db_session: Session) -> None:
     assert (
         db_session.exec(
             select(SampleSequenceLinkTable).where(
-                col(SampleSequenceLinkTable.sequence_id) == sequence_id
+                col(SampleSequenceLinkTable.sequence_sample_id) == sequence_id
             )
         ).all()
         == []
