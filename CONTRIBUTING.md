@@ -45,15 +45,30 @@ make test
 cd ../lightly_studio_view
 make static-checks
 make test
+
+# Embedding server package
+cd ../lightly_studio_embed
+make static-checks
+make test
 ```
 
 ### The uv Workspace
 
-`lightly_studio` is a member of a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
-whose root is the repository root. The `uv.lock` and the `.venv` both live there, so that every
-package added to the workspace later resolves its dependencies against the same lockfile.
+The Python packages are members of one [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
+whose root is the repository root:
 
-`uv` finds them by walking up from wherever it runs, so the commands above are unchanged by this.
+- `lightly_studio` - the application, published as `lightly-studio`.
+- `lightly_studio_embed` - the server a customer runs in front of their own embedding model,
+  published as `lightly-studio-embed`. Its dependencies stay limited to an HTTP server, so that it
+  installs next to a customer's own CUDA and torch pins.
+
+They share one `uv.lock` and one `.venv`, both at the repository root, so that the two packages
+cannot resolve the same dependency to different versions, and one set of check commands from
+`make/python.mk`. Running `make static-checks` or `make test` at the root covers every Python
+member. `uv run` in a member directory installs
+that member's dependencies into the shared environment without removing the other's, so switching
+between members costs nothing. An explicit `uv sync` does prune, so the next `uv run` in the other
+member reinstalls what it needs.
 
 When you update the code, follow our coding guidelines in [.agents/skills](./.agents/skills).
 They are [Agent Skills](https://agentskills.io). Skills do not load automatically. Load the
@@ -239,9 +254,12 @@ npm run dev
 
 ### Exploring the Makefile
 
-There are three Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
-targets, one in `lightly_studio_view` for the frontend, and one in the repository root that
-delegates to both. Some commonly used commands:
+`lightly_studio` has the backend, build, e2e and migration targets, `lightly_studio_view` the
+frontend ones and `lightly_studio_embed` those for the embedding server package. The one in the
+repository root delegates to all three. `make/python.mk` is never run directly: it holds the
+targets the Python members share, and each includes it rather than copying them.
+
+Some commonly used commands:
 
 Run tests:
 
