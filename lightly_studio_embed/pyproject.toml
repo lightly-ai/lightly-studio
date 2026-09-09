@@ -23,8 +23,14 @@ classifiers = [
 dependencies = [
     "fastapi>=0.115.5",
     "pydantic>=2.0",
-    # Starlette parses the multipart bodies of the bytes endpoints through it.
-    "python-multipart>=0.0.18",
+    # Starlette parses the multipart bodies of the bytes endpoints through it. The floor is
+    # the first release fixing CVE-2026-53540, after a run of parser DoS advisories
+    # (CVE-2026-40347, CVE-2026-42561, CVE-2026-53537..53539). Python 3.9 is stuck on
+    # 0.0.20, the last release that supports it, so a 3.9 host keeps those weaknesses in its
+    # multipart parser.
+    # TODO(Iunir, 09/2026): Drop the 3.9 pin once `lightly-studio` drops Python 3.9.
+    "python-multipart>=0.0.31; python_version >= '3.10'",
+    "python-multipart>=0.0.20; python_version < '3.10'",
     "uvicorn>=0.32.1",
 ]
 

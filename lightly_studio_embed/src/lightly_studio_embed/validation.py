@@ -7,6 +7,7 @@ process, than as a similarity search that misbehaves inside LightlyStudio.
 from __future__ import annotations
 
 import math
+import operator
 
 from lightly_studio_embed.embedder import EmbeddingResult
 from lightly_studio_embed.errors import EmbedderContractError
@@ -43,11 +44,15 @@ def build_embeddings_response(
 
 
 def _as_numbers(*, result: EmbeddingResult) -> tuple[list[int], list[list[float]]]:
-    """Convert the result to plain numbers, so a non-numeric row fails as a contract error."""
+    """Convert the result to plain numbers, so a non-numeric row fails as a contract error.
+
+    ``operator.index`` rather than ``int``, which would truncate a float index and line the
+    embeddings up against the wrong request items.
+    """
     try:
-        kept_indices = [int(index) for index in result.kept_indices]
+        kept_indices = [operator.index(index) for index in result.kept_indices]
         embeddings = [[float(value) for value in row] for row in result.embeddings]
-    except (TypeError, ValueError) as error:
+    except (OverflowError, TypeError, ValueError) as error:
         raise EmbedderContractError(
             f"kept_indices must hold integers and every embedding must hold numbers: {error}"
         ) from error

@@ -37,6 +37,10 @@ EMBED_VIDEOS_URLS_PATH = f"{BASE_PATH}/embed/videos/urls"
 # Multipart form field the bytes endpoints read, one part per item in input order.
 FILES_FIELD_NAME = "files"
 
+# Spelled out, because starlette renamed its constant for this status and the old name warns
+# on new versions while the new one is missing on the versions `requires-python` still allows.
+STATUS_PAYLOAD_TOO_LARGE = 413
+
 DEFAULT_MAX_BATCH_SIZE = 64
 
 DEFAULT_MAX_REQUEST_BYTES = 32 * 1024 * 1024

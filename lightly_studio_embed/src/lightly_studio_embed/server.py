@@ -6,15 +6,12 @@ endpoints plus ``/v1/describe``, and runs uvicorn. Version 1 serves the ``texts`
 but not mounted, because LightlyStudio does not call them yet and capabilities are
 advertised, so adding them later is purely additive.
 
-The bearer token and the request size ceiling are enforced in ASGI middleware
-rather than in dependencies, because FastAPI reads and parses the whole body before
-it solves a dependency: as dependencies, both checks would arrive after an
-untrusted peer had already decided how much the server buffers.
+The bearer token and the request size ceiling are enforced in the ASGI middleware
+of ``lightly_studio_embed.middleware``, which runs ahead of routing.
 """
 
 from __future__ import annotations
 
-import secrets
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -26,7 +23,6 @@ from fastapi import params as fastapi_params
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from lightly_studio_embed import protocol, validation
 from lightly_studio_embed.embedder import (
@@ -37,6 +33,7 @@ from lightly_studio_embed.embedder import (
     VideoBytesEmbedder,
 )
 from lightly_studio_embed.errors import CapabilityNotImplementedError, EmbedderContractError
+from lightly_studio_embed.middleware import BearerAuth, RequestSizeLimit
 from lightly_studio_embed.protocol import (
     DescribeResponse,
     EmbeddingsResponse,
@@ -47,10 +44,6 @@ from lightly_studio_embed.protocol import (
 
 # How long a client should wait before retrying a model that is still loading.
 _RETRY_AFTER_SECONDS = "5"
-
-# Spelled out, because starlette renamed its constant for this status and the old name warns
-# on new versions while the new one is missing on the versions `requires-python` still allows.
-_STATUS_PAYLOAD_TOO_LARGE = 413
 
 # Binding to one of these keeps the port unreachable from other hosts.
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
@@ -82,7 +75,9 @@ def serve(
         embedder: The model to serve. Its capability classes decide which endpoints
             exist: a text-only embedder exposes no image or video routes.
         host: Interface to bind. The default is loopback only; pass ``"0.0.0.0"`` to
-            accept requests from other hosts.
+            accept requests from other hosts. Terminate TLS in front of a bind like
+            that: the server speaks plain HTTP, so the bearer token would otherwise
+            travel in the clear.
         port: TCP port to bind.
         api_key: Token a client must send as ``Authorization: Bearer <api_key>``.
             ``None`` leaves the server unauthenticated, which is only safe behind a
@@ -93,14 +88,23 @@ def serve(
     Raises:
         ValueError: If ``api_key`` is given but blank.
     """
-    if api_key is None and host not in _LOOPBACK_HOSTS:
-        warnings.warn(
-            f"Serving on {host} without an api_key: everyone who can reach the port can use "
-            "the model. Pass api_key, or bind a loopback address.",
-            stacklevel=2,
-        )
+    if host not in _LOOPBACK_HOSTS:
+        warnings.warn(_public_bind_warning(host=host, api_key=api_key), stacklevel=2)
     app = create_app(embedder=embedder, api_key=api_key, limits=limits)
     uvicorn.run(app, host=host, port=port)
+
+
+def _public_bind_warning(*, host: str, api_key: str | None) -> str:
+    """Name what a bind reachable from other hosts exposes, so it is not a surprise."""
+    if api_key is None:
+        return (
+            f"Serving on {host} without an api_key: everyone who can reach the port can use "
+            "the model. Pass api_key, or bind a loopback address."
+        )
+    return (
+        f"Serving on {host} over plain HTTP: the bearer token travels in the clear. Put a "
+        "TLS-terminating proxy in front, or bind a loopback address."
+    )
 
 
 def create_app(
@@ -133,74 +137,13 @@ def create_app(
     app.add_exception_handler(EmbedderContractError, _handle_contract_error)
     app.add_exception_handler(RequestValidationError, _handle_invalid_request)
     # Added innermost first, so the token is checked before a body is even counted.
-    app.add_middleware(_RequestSizeLimit, max_request_bytes=resolved_limits.max_request_bytes)
-    app.add_middleware(_BearerAuth, api_key=api_key)
+    app.add_middleware(RequestSizeLimit, max_request_bytes=resolved_limits.max_request_bytes)
+    app.add_middleware(BearerAuth, api_key=api_key)
     router = APIRouter()
     _mount_describe(router=router, embedder=embedder, limits=resolved_limits)
     _mount_embed_routes(router=router, embedder=embedder, limits=resolved_limits)
     app.include_router(router)
     return app
-
-
-class _BearerAuth:
-    """Rejects a request whose bearer token is missing or wrong.
-
-    The header is compared as the raw bytes the client sent. Decoding it first would
-    make a single non-ASCII byte, in the header or in ``api_key``, raise inside
-    ``secrets.compare_digest`` and answer 500 where the protocol wants 401.
-    """
-
-    def __init__(self, app: ASGIApp, *, api_key: str | None) -> None:
-        self.app = app
-        self.expected = None if api_key is None else f"Bearer {api_key}".encode()
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if self.expected is None or scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-        if not secrets.compare_digest(_authorization_header(scope=scope), self.expected):
-            await _unauthorized()(scope, receive, send)
-            return
-        await self.app(scope, receive, send)
-
-
-class _RequestSizeLimit:
-    """Rejects a body that grows past the advertised ceiling while it arrives.
-
-    ``Content-Length`` is not enough on its own: an HTTP/1.1 client may leave it out
-    and stream the body chunked, which is the shape the ceiling most needs to bound,
-    since starlette spools every multipart part over 1 MiB to disk.
-    """
-
-    def __init__(self, app: ASGIApp, *, max_request_bytes: int) -> None:
-        self.app = app
-        self.max_request_bytes = max_request_bytes
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-        await self.app(scope, self._counted(receive=receive), send)
-
-    def _counted(self, *, receive: Receive) -> Receive:
-        """Wrap ``receive`` so the body is measured as the server hands it over."""
-        received = 0
-
-        async def receive_counted() -> Message:
-            nonlocal received
-            message = await receive()
-            if message["type"] == "http.request":
-                received += len(message.get("body", b""))
-                if received > self.max_request_bytes:
-                    # Raised through the route into FastAPI's own handler for it.
-                    raise HTTPException(
-                        status_code=_STATUS_PAYLOAD_TOO_LARGE,
-                        detail="The request body is over the advertised max_request_bytes of "
-                        f"{self.max_request_bytes}.",
-                    )
-            return message
-
-        return receive_counted
 
 
 def _mount_describe(*, router: APIRouter, embedder: BaseEmbedder, limits: ServerLimits) -> None:
@@ -301,18 +244,10 @@ def _respond(*, result: EmbeddingResult, mount: _Mount, item_count: int) -> Embe
 def _check_batch_size(*, item_count: int, limits: ServerLimits) -> None:
     if item_count > limits.max_batch_size:
         raise HTTPException(
-            status_code=_STATUS_PAYLOAD_TOO_LARGE,
+            status_code=protocol.STATUS_PAYLOAD_TOO_LARGE,
             detail=f"The request carries {item_count} items, over the advertised "
             f"max_batch_size of {limits.max_batch_size}.",
         )
-
-
-def _authorization_header(*, scope: Scope) -> bytes:
-    """Read the raw ``Authorization`` header. ASGI lowercases the names for us."""
-    for name, value in scope["headers"]:
-        if name == b"authorization":
-            return bytes(value)
-    return b""
 
 
 def _readiness(*, embedder: BaseEmbedder) -> Callable[[], None]:
@@ -325,14 +260,6 @@ def _readiness(*, embedder: BaseEmbedder) -> Callable[[], None]:
             )
 
     return verify
-
-
-def _unauthorized() -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"detail": "Missing or invalid bearer token."},
-        headers={"WWW-Authenticate": "Bearer"},
-    )
 
 
 def _handle_contract_error(_request: Request, exc: Exception) -> Response:

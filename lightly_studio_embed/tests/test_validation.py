@@ -65,6 +65,25 @@ def test_build_embeddings_response__value_not_finite() -> None:
         )
 
 
+def test_build_embeddings_response__kept_index_not_integral() -> None:
+    """A float index is rejected rather than truncated onto the wrong request item."""
+    result = EmbeddingResult(embeddings=[[0.5, -0.5]], kept_indices=[0.9])  # type: ignore[list-item]
+
+    with pytest.raises(EmbedderContractError, match="must hold integers"):
+        build_embeddings_response(
+            result=result, space_key="acme/model@v1", dimension=2, item_count=2
+        )
+
+
+def test_build_embeddings_response__value_too_large_for_a_float() -> None:
+    result = EmbeddingResult(embeddings=[[10**400, 1.0]], kept_indices=[0])
+
+    with pytest.raises(EmbedderContractError, match="must hold numbers"):
+        build_embeddings_response(
+            result=result, space_key="acme/model@v1", dimension=2, item_count=1
+        )
+
+
 def test_build_embeddings_response__value_not_a_number() -> None:
     result = EmbeddingResult(embeddings=[["not a number", 1.0]], kept_indices=[0])  # type: ignore[list-item]
 

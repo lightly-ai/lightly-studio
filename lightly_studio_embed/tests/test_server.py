@@ -97,6 +97,16 @@ def _chunked_multipart() -> Iterator[bytes]:
     yield f"\r\n--{_BOUNDARY}--\r\n".encode()
 
 
+def _unreadable_body() -> Iterator[bytes]:
+    """A body that raises the moment anything reads it.
+
+    Starlette answers 400 when a body fails to parse, so a request that comes back 401 is
+    one whose body was never touched.
+    """
+    raise AssertionError("The request body was read before the bearer token was checked.")
+    yield b""  # Unreachable, and only here to make this a generator.
+
+
 def _do_not_run(*_args: object, **_kwargs: object) -> None:
     """Stand in for ``uvicorn.run``, so ``serve`` returns instead of binding a port."""
 
@@ -312,14 +322,13 @@ def test_create_app__chunked_body_over_max_request_bytes() -> None:
     assert "max_request_bytes" in response.json()["detail"]
 
 
-def test_create_app__unauthenticated_body_over_max_request_bytes() -> None:
-    """The token is checked before the body arrives, so the 401 comes first."""
-    app = create_app(embedder=FakeBytesEmbedder(), api_key="secret")
-    client = TestClient(app)
+def test_create_app__unauthenticated_request_body_is_never_read() -> None:
+    """The token is checked first: reading this body would answer 400 instead of 401."""
+    client = TestClient(create_app(embedder=FakeBytesEmbedder(), api_key="secret"))
 
     response = client.post(
         "/v1/embed/images/bytes",
-        content=_chunked_multipart(),
+        content=_unreadable_body(),
         headers={"Content-Type": f"multipart/form-data; boundary={_BOUNDARY}"},
     )
 
