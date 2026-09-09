@@ -476,8 +476,8 @@ See [Search and Filter](search_and_filter.md#query-in-python) for more filtering
 ### Continuing from preselected samples
 
 Use `preselected_tag_name` to select a new batch while taking an earlier batch into
-account. The preselected samples influence the strategy but are not added to the new
-result tag. `n_samples_to_select` is the number of new samples to select.
+account. The preselected samples influence the strategy and appear before the newly
+selected samples in the result. `n_samples_to_select` is the number of new samples to select.
 
 ```py
 sampling = dataset.query().sampling()
