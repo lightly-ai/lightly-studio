@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from typing import Literal, overload
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.embed.embedder import Capability, Embedder
+from lightly_studio.embed.embedder import (
+    Capability,
+    Embedder,
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    ImagePILEmbedder,
+    TextEmbedder,
+    VideoPathEmbedder,
+)
 from lightly_studio.embed.embedder_registry import EmbedderRegistry, _capabilities_of
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
@@ -72,27 +82,61 @@ def register_embedder(embedder: Embedder, default_for: Iterable[Capability] | No
         _BOOTSTRAP_SPACE_KEYS[capability] = space_key
 
 
+@overload
+def resolve(
+    session: Session, collection_id: UUID, capability: Literal[Capability.IMAGE_PATH]
+) -> tuple[ImagePathEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve(
+    session: Session, collection_id: UUID, capability: Literal[Capability.IMAGE_CROP_PATH]
+) -> tuple[ImageCropPathEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve(
+    session: Session, collection_id: UUID, capability: Literal[Capability.VIDEO_PATH]
+) -> tuple[VideoPathEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve(
+    session: Session, collection_id: UUID, capability: Literal[Capability.IMAGE_PIL]
+) -> tuple[ImagePILEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve(
+    session: Session, collection_id: UUID, capability: Literal[Capability.TEXT]
+) -> tuple[TextEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve(
+    session: Session, collection_id: UUID, capability: Literal[Capability.IMAGE_BYTES]
+) -> tuple[ImageBytesEmbedder, EmbeddingModelTable]: ...
 def resolve(
     session: Session, collection_id: UUID, capability: Capability
 ) -> tuple[Embedder, EmbeddingModelTable]:
     """Resolve an existing persisted default and require the requested capability."""
-    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
-        session=session, collection_id=collection_id
-    )
-    if model_id is None:
-        raise ValueError(f"Collection {collection_id} has no default embedding model.")
-    model = embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
-    if model is None:
-        raise ValueError(f"Default embedding model {model_id} could not be found.")
-    embedder = _registry.get(model.name) or _load_builtin(model.name)
-    if embedder is None:
-        raise ValueError(f"No embedder is registered for embedding space {model.name!r}.")
-    _validate_spec(embedder=embedder, model=model)
-    if capability not in _capabilities_of(embedder=embedder):
-        raise ValueError(f"Embedding space {model.name!r} does not support {capability.value}.")
-    return embedder, model
+    return _resolve(session=session, collection_id=collection_id, capability=capability)
 
 
+@overload
+def resolve_or_bootstrap(
+    session: Session, collection_id: UUID, capability: Literal[Capability.IMAGE_PATH]
+) -> tuple[ImagePathEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve_or_bootstrap(
+    session: Session, collection_id: UUID, capability: Literal[Capability.IMAGE_CROP_PATH]
+) -> tuple[ImageCropPathEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve_or_bootstrap(
+    session: Session, collection_id: UUID, capability: Literal[Capability.VIDEO_PATH]
+) -> tuple[VideoPathEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve_or_bootstrap(
+    session: Session, collection_id: UUID, capability: Literal[Capability.IMAGE_PIL]
+) -> tuple[ImagePILEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve_or_bootstrap(
+    session: Session, collection_id: UUID, capability: Literal[Capability.TEXT]
+) -> tuple[TextEmbedder, EmbeddingModelTable]: ...
+@overload
+def resolve_or_bootstrap(
+    session: Session, collection_id: UUID, capability: Literal[Capability.IMAGE_BYTES]
+) -> tuple[ImageBytesEmbedder, EmbeddingModelTable]: ...
 def resolve_or_bootstrap(
     session: Session, collection_id: UUID, capability: Capability
 ) -> tuple[Embedder, EmbeddingModelTable]:
@@ -100,7 +144,7 @@ def resolve_or_bootstrap(
     if collection_embedding_model_resolver.has_default_by_collection_id(
         session=session, collection_id=collection_id
     ):
-        return resolve(session=session, collection_id=collection_id, capability=capability)
+        return _resolve(session=session, collection_id=collection_id, capability=capability)
     space_key = _BOOTSTRAP_SPACE_KEYS.get(capability)
     if space_key is None:
         raise ValueError(f"No bootstrap embedder is configured for {capability.value}.")
@@ -140,6 +184,26 @@ def reset() -> None:
             Capability.VIDEO_PATH: "PE-Core-T16-384",
         }
     )
+
+
+def _resolve(
+    session: Session, collection_id: UUID, capability: Capability
+) -> tuple[Embedder, EmbeddingModelTable]:
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if model_id is None:
+        raise ValueError(f"Collection {collection_id} has no default embedding model.")
+    model = embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
+    if model is None:
+        raise ValueError(f"Default embedding model {model_id} could not be found.")
+    embedder = _registry.get(model.name) or _load_builtin(model.name)
+    if embedder is None:
+        raise ValueError(f"No embedder is registered for embedding space {model.name!r}.")
+    _validate_spec(embedder=embedder, model=model)
+    if capability not in _capabilities_of(embedder=embedder):
+        raise ValueError(f"Embedding space {model.name!r} does not support {capability.value}.")
+    return embedder, model
 
 
 def _load_builtin(space_key: str) -> Embedder | None:

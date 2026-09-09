@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from typing import TypeVar
 from uuid import UUID
 
 import numpy as np
@@ -12,17 +14,10 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.embed import default_embedder_resolver, embedding_storage
-from lightly_studio.embed.embedder import (
-    Capability,
-    Embedder,
-    ImageCropPathEmbedder,
-    ImagePathEmbedder,
-    ImagePILEmbedder,
-    TextEmbedder,
-    VideoPathEmbedder,
-)
+from lightly_studio.embed.embedder import Capability, Embedder
 from lightly_studio.embed.types import EmbeddingResult
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -35,14 +30,14 @@ from lightly_studio.utils import batching
 logger = logging.getLogger(__name__)
 ANNOTATION_EMBED_BATCH_SIZE = 2048
 
+_EmbedderT = TypeVar("_EmbedderT", bound=Embedder)
+
 
 def embed_image_for_collection(session: Session, collection_id: UUID, filepath: str) -> list[float]:
     """Embed one image with an existing collection default, without storing it."""
     embedder, _ = default_embedder_resolver.resolve(
         session=session, collection_id=collection_id, capability=Capability.IMAGE_PATH
     )
-    if not isinstance(embedder, ImagePathEmbedder):
-        raise ValueError("Image embedding is disabled for this collection.")
     result = embedder.embed_images(paths=[filepath])
     return _single_embedding(result.embeddings, result.kept_indices, "image")
 
@@ -55,8 +50,6 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
         )
     except ValueError as exc:
         raise ValueError(f"Text search is disabled for this collection: {exc}") from exc
-    if not isinstance(embedder, TextEmbedder):
-        raise ValueError("Text search is disabled for this collection.")
     result = embedder.embed_text(texts=[text])
     return _single_embedding(result.embeddings, result.kept_indices, "text")
 
@@ -67,13 +60,13 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
     if not sample_ids:
         return
     resolved = _resolve_offline(
-        session=session, collection_id=collection_id, capability=Capability.IMAGE_PATH
+        lambda: default_embedder_resolver.resolve_or_bootstrap(
+            session=session, collection_id=collection_id, capability=Capability.IMAGE_PATH
+        )
     )
     if resolved is None:
         return
     embedder, model_id = resolved
-    if not isinstance(embedder, ImagePathEmbedder):
-        return
     images = image_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
     if len(images) != len(sample_ids):
         raise ValueError("Could not fetch all image paths for the provided IDs.")
@@ -94,15 +87,15 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
     ):
         return
     resolved = _resolve_offline(
-        session=session,
-        collection_id=annotation_collection_id,
-        capability=Capability.IMAGE_CROP_PATH,
+        lambda: default_embedder_resolver.resolve_or_bootstrap(
+            session=session,
+            collection_id=annotation_collection_id,
+            capability=Capability.IMAGE_CROP_PATH,
+        )
     )
     if resolved is None:
         return
     embedder, model_id = resolved
-    if not isinstance(embedder, ImageCropPathEmbedder):
-        return
     sample_ids = annotation_resolver.get_unembedded_annotation_ids(
         session=session,
         annotation_collection_id=annotation_collection_id,
@@ -131,13 +124,13 @@ def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[
     if not sample_ids:
         return
     resolved = _resolve_offline(
-        session=session, collection_id=collection_id, capability=Capability.VIDEO_PATH
+        lambda: default_embedder_resolver.resolve_or_bootstrap(
+            session=session, collection_id=collection_id, capability=Capability.VIDEO_PATH
+        )
     )
     if resolved is None:
         return
     embedder, model_id = resolved
-    if not isinstance(embedder, VideoPathEmbedder):
-        return
     videos = video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
     if len(videos) != len(sample_ids):
         raise ValueError("Could not fetch all video paths for the provided IDs.")
@@ -157,13 +150,13 @@ def embed_frame_samples(
     if len(sample_ids) != len(pil_frames):
         raise ValueError("Expected the same number of sample IDs and images.")
     resolved = _resolve_offline(
-        session=session, collection_id=collection_id, capability=Capability.IMAGE_PIL
+        lambda: default_embedder_resolver.resolve_or_bootstrap(
+            session=session, collection_id=collection_id, capability=Capability.IMAGE_PIL
+        )
     )
     if resolved is None:
         return
     embedder, model_id = resolved
-    if not isinstance(embedder, ImagePILEmbedder):
-        return
     result = embedder.embed_images_pil(images=pil_frames)
     _store_result(
         session=session,
@@ -181,7 +174,9 @@ def collection_has_default_embedder(session: Session, collection_id: UUID) -> bo
     )
     return (
         _resolve_offline(
-            session=session, collection_id=collection_id, capability=Capability.IMAGE_PIL
+            lambda: default_embedder_resolver.resolve_or_bootstrap(
+                session=session, collection_id=collection_id, capability=Capability.IMAGE_PIL
+            )
         )
         is not None
     )
@@ -198,12 +193,10 @@ def _validate_collection(session: Session, collection_id: UUID, expected: Sample
 
 
 def _resolve_offline(
-    session: Session, collection_id: UUID, capability: Capability
-) -> tuple[Embedder, UUID] | None:
+    resolve_default: Callable[[], tuple[_EmbedderT, EmbeddingModelTable]],
+) -> tuple[_EmbedderT, UUID] | None:
     try:
-        embedder, model = default_embedder_resolver.resolve_or_bootstrap(
-            session=session, collection_id=collection_id, capability=capability
-        )
+        embedder, model = resolve_default()
     except (ImportError, ValueError) as exc:
         logger.warning("No usable embedding model. Skipping embedding generation: %s", exc)
         return None
