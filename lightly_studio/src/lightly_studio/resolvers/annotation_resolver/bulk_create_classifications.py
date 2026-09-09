@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -69,11 +70,11 @@ def bulk_create_classifications(
     )
     created_annotation_ids: list[UUID] = []
     skipped_count = 0
-    streamed_parent_sample_ids_query = parent_sample_ids_query.execution_options(
-        yield_per=batching.DEFAULT_BATCH_SIZE
-    )
 
-    for parent_sample_ids in batching.batched(session.exec(streamed_parent_sample_ids_query)):
+    for parent_sample_ids in _iter_parent_sample_id_pages(
+        session=session,
+        parent_sample_ids_query=parent_sample_ids_query,
+    ):
         result = _bulk_create_classifications_for_source(
             session=session,
             parent_sample_ids=parent_sample_ids,
@@ -93,6 +94,42 @@ def bulk_create_classifications(
         result=result,
     )
     return result
+
+
+def _iter_parent_sample_id_pages(
+    session: Session,
+    parent_sample_ids_query: SelectOfScalar[UUID],
+) -> Iterator[list[UUID]]:
+    """Yield the sample ids matched by the query in pages of bounded size.
+
+    Every page is read with its own statement, so that writes between two pages cannot
+    interfere with an open cursor. Pages are keyset-based: the next page starts after the
+    last id of the previous one, which stays correct even when the writes change which
+    samples the query matches.
+
+    Args:
+        session: SQLAlchemy session for database operations.
+        parent_sample_ids_query: Query selecting the parent sample ids to page through.
+
+    Yields:
+        Pages of sample ids, ordered by sample id.
+    """
+    last_parent_sample_id: UUID | None = None
+    while True:
+        page_query = select(SampleTable.sample_id).where(
+            col(SampleTable.sample_id).in_(parent_sample_ids_query)
+        )
+        if last_parent_sample_id is not None:
+            page_query = page_query.where(col(SampleTable.sample_id) > last_parent_sample_id)
+        parent_sample_ids = list(
+            session.exec(
+                page_query.order_by(col(SampleTable.sample_id)).limit(batching.DEFAULT_BATCH_SIZE)
+            ).all()
+        )
+        if not parent_sample_ids:
+            return
+        yield parent_sample_ids
+        last_parent_sample_id = parent_sample_ids[-1]
 
 
 def _bulk_create_classifications_for_source(
