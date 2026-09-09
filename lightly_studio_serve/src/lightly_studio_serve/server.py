@@ -1,16 +1,22 @@
 """Makes the HTTP endpoints of the protocol from an embedder.
 
 ``create_app`` reads the capability classes that the embedder implements. It mounts one
-endpoint for each class, and it always mounts ``/v1/describe``. Version 1 serves the
-``texts``, ``images/bytes`` and ``videos/bytes`` transports.
+endpoint for each class, and it always mounts ``/v1/describe``. ``serve`` runs that
+application with uvicorn. Version 1 serves the ``texts``, ``images/bytes`` and
+``videos/bytes`` transports.
+
+The ASGI middleware in ``lightly_studio_serve.middleware`` applies the bearer token, the
+readiness of the model and the request size limit. That middleware runs before the router.
 """
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
+import warnings
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Annotated, Any, Callable
 
+import uvicorn
 from fastapi import APIRouter, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -25,6 +31,7 @@ from lightly_studio_serve.embedder import (
     VideoBytesEmbedder,
 )
 from lightly_studio_serve.errors import EmbedderContractError
+from lightly_studio_serve.middleware import BearerAuth, Readiness, RequestSizeLimit
 from lightly_studio_serve.protocol import (
     DescribeResponse,
     EmbeddingsResponse,
@@ -33,8 +40,8 @@ from lightly_studio_serve.protocol import (
 )
 from lightly_studio_serve.types import EmbeddingResult
 
-# Seconds that a client waits before it sends the request to a loading model again.
-_RETRY_AFTER_SECONDS = "5"
+# A port on one of these addresses is not reachable from other hosts.
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 _MultipartFiles = Annotated[list[UploadFile], File(alias=protocol.FILES_FIELD_NAME)]
 
@@ -57,8 +64,61 @@ class _Mount:
     limits: ServerLimits
 
 
-def create_app(embedder: Embedder, limits: ServerLimits | None = None) -> FastAPI:
-    """Build the application that serves an embedder.
+# PLR0913: A customer sets each argument of `serve`. A config object moves the same list.
+def serve(  # noqa: PLR0913
+    embedder: Embedder,
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    api_key: str | None = None,
+    limits: ServerLimits | None = None,
+    ssl_certfile: str | Path | None = None,
+    ssl_keyfile: str | Path | None = None,
+) -> None:
+    """Serve an embedder over HTTP until the process stops.
+
+    Args:
+        embedder: The model to serve. Its capability classes set which endpoints
+            exist. A text-only embedder has no image route and no video route. It
+            must accept calls from more than one thread.
+        host: The interface to bind. The default binds loopback only. Give
+            ``"0.0.0.0"`` to accept requests from other hosts.
+        port: The TCP port to bind.
+        api_key: The token that a client must send as
+            ``Authorization: Bearer <api_key>``. ``None`` leaves the server open.
+            That is safe only on a loopback address or inside a network that you
+            trust.
+        limits: The limits to report and to apply. The default is 1024 items and
+            32 MiB for each request.
+        ssl_certfile: The PEM certificate chain for HTTPS. Give this file for any
+            address that is not loopback. You can also end TLS at a proxy in front of
+            the server. Without one of these, the bearer token crosses the network in
+            clear text. ``serve`` gives a warning when it has no certificate.
+        ssl_keyfile: The private key for ``ssl_certfile``. Omit it if the
+            certificate file already holds the key.
+
+    Raises:
+        ValueError: If ``api_key`` is an empty or blank string, if you give
+            ``ssl_keyfile`` without ``ssl_certfile``, or if the embedder implements
+            no capability that version 1 serves.
+    """
+    if ssl_keyfile is not None and ssl_certfile is None:
+        raise ValueError("ssl_keyfile was given without ssl_certfile, so TLS cannot start.")
+    if host not in _LOOPBACK_HOSTS:
+        exposure = _public_bind_warning(
+            host=host, api_key=api_key, has_tls=ssl_certfile is not None
+        )
+        if exposure is not None:
+            warnings.warn(exposure, stacklevel=2)
+    app = create_app(embedder=embedder, api_key=api_key, limits=limits)
+    uvicorn.run(app, host=host, port=port, ssl_certfile=ssl_certfile, ssl_keyfile=ssl_keyfile)
+
+
+def create_app(
+    embedder: Embedder,
+    api_key: str | None = None,
+    limits: ServerLimits | None = None,
+) -> FastAPI:
+    """Build the application ``serve`` runs.
 
     Use this function to mount the protocol in an application of your own. You can
     also use it to test an embedder with a test client and no open port.
@@ -67,6 +127,8 @@ def create_app(embedder: Embedder, limits: ServerLimits | None = None) -> FastAP
         embedder: The model to serve. Its capability classes set which endpoints
             exist. A text-only embedder has no image route and no video route. It
             must accept calls from more than one thread.
+        api_key: The token that a client must send as
+            ``Authorization: Bearer <api_key>``.
         limits: The limits to report and to apply. The default is 1024 items and
             32 MiB for each request.
 
@@ -75,8 +137,12 @@ def create_app(embedder: Embedder, limits: ServerLimits | None = None) -> FastAP
         embedder.
 
     Raises:
-        ValueError: If the embedder implements no capability that version 1 serves.
+        ValueError: If ``api_key`` is an empty or blank string, because such a server
+            looks authenticated but accepts an empty token, or if the embedder
+            implements no capability that version 1 serves.
     """
+    if api_key is not None and not api_key.strip():
+        raise ValueError("api_key is blank. Pass a token, or None to serve unauthenticated.")
     resolved_limits = limits if limits is not None else ServerLimits()
     app = FastAPI(title="LightlyStudio embedding server")
     app.add_exception_handler(EmbedderContractError, _handle_contract_error)
@@ -91,30 +157,28 @@ def create_app(embedder: Embedder, limits: ServerLimits | None = None) -> FastAP
             f"{type(embedder).__name__} implements no capability that version 1 serves, so "
             f"the server would have no embed endpoint. Implement one of {served}."
         )
-    _guard_readiness(app=app, embedder=embedder, paths=embed_paths)
+    # Innermost first, so the server checks the token before it looks at a body at all.
+    app.add_middleware(RequestSizeLimit, max_request_bytes=resolved_limits.max_request_bytes)
+    app.add_middleware(Readiness, embedder=embedder, paths=embed_paths)
+    app.add_middleware(BearerAuth, api_key=api_key)
     app.include_router(router)
     return app
 
 
-def _guard_readiness(app: FastAPI, embedder: Embedder, paths: frozenset[str]) -> None:
-    """Answer 503 on an embed path while the model loads, before the body is read.
-
-    A dependency of a route runs after FastAPI has parsed the body, so an upload to a
-    loading model would first be spooled to disk. ``/v1/describe`` stays outside the guard,
-    because a client polls it to learn when to retry.
-    """
-
-    @app.middleware("http")
-    async def verify_readiness(
-        request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        if request.url.path in paths and not embedder.ready:
-            return JSONResponse(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                content={"detail": "The model is still loading."},
-                headers={"Retry-After": _RETRY_AFTER_SECONDS},
-            )
-        return await call_next(request)
+def _public_bind_warning(host: str, api_key: str | None, has_tls: bool) -> str | None:
+    """Name the risk of an address that other hosts can reach, or ``None`` if there is none."""
+    if api_key is None:
+        return (
+            f"Serving on {host} without an api_key. Every host that can reach the port can "
+            "use the model. Give api_key, or bind a loopback address."
+        )
+    if not has_tls:
+        return (
+            f"Serving on {host} over plain HTTP. The bearer token goes over the network in "
+            "clear text. Give ssl_certfile, or end TLS at a proxy in front of the server, or "
+            "bind a loopback address."
+        )
+    return None
 
 
 def _mount_describe(router: APIRouter, embedder: Embedder, limits: ServerLimits) -> None:
