@@ -142,14 +142,15 @@ class EmbedderRegistry:
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
     def _get_or_bootstrap(self, space_key: str | None, capability: Capability) -> Embedder | None:
-        """Resolve the space's embedder, falling back to the capability's bootstrap default."""
+        """Resolve the space's embedder, falling back to the capability's bootstrap default.
+
+        Loads and registers a built-in embedder on demand when the space is not
+        already registered.
+        """
         if space_key is None:
             space_key = self._bootstrap_space_keys.get(capability)
         if space_key is None:
             return None
-        return self._get_or_load(space_key=space_key)
-
-    def _get_or_load(self, space_key: str) -> Embedder | None:
         registered = self._space_key_to_embedder.get(space_key)
         if registered is not None:
             return registered
