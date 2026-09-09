@@ -348,6 +348,21 @@ class TestSampling:
             self=mocker.ANY, weights=[16.0, 50.0, 35.0], strength=1.0
         )
 
+    def test_metadata_weighting__non_numeric_raises(self, db_session: Session) -> None:
+        collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+            session=db_session, metadata=["fast", "slow", "medium"], metadata_key="speed"
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, db_session)
+
+        with pytest.raises(ValueError, match="is not a number"):
+            query.sampling().metadata_weighting(
+                n_samples_to_select=2,
+                metadata_key="speed",
+                sampling_result_tag_name="weight_sampling",
+            )
+
     def test_metadata_weighting__video_frames(
         self,
         patch_collection: None,  # noqa: ARG002
