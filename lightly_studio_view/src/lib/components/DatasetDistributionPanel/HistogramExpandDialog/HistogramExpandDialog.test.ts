@@ -111,4 +111,17 @@ describe('HistogramExpandDialog', () => {
 
         expect(onBinCountChange).toHaveBeenCalledWith(10);
     });
+
+    it('shows and updates the shared percentage mode', async () => {
+        const onValueModeChange = vi.fn();
+        const user = userEvent.setup();
+        renderDialog({ valueMode: 'percentage', onValueModeChange });
+
+        expect(
+            screen.getByTestId('dataset-distribution-expanded-histogram-summary')
+        ).toHaveTextContent('100% of 100 samples');
+        await user.click(screen.getByTestId('dataset-distribution-expanded-histogram-value-mode'));
+        await user.click(await screen.findByRole('option', { name: 'Number' }));
+        expect(onValueModeChange).toHaveBeenCalledWith('number');
+    });
 });

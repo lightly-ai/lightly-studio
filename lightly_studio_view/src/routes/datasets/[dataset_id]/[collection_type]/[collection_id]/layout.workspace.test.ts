@@ -154,6 +154,7 @@ vi.mock('$lib/hooks', () => ({
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({ data: undefined })),
+    useMetadataDistributionsBySampleTags: vi.fn(() => ({ data: undefined })),
     useTags: vi.fn(() => ({ tags: writable([]), tagsSelected: writable(new Set()) }))
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({

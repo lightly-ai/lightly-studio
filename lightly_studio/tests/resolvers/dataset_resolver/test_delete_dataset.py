@@ -5,18 +5,21 @@ from pathlib import Path
 
 import pytest
 from pytest_mock import MockerFixture
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
+from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
+from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     dataset_resolver,
-    default_embedding_space_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
@@ -210,10 +213,77 @@ def test_delete_dataset__with_default_embedding_space(db_session: Session) -> No
     # Assert - collection and its default embedding space deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
     assert (
-        default_embedding_space_resolver.get_by_collection_id(
+        collection_embedding_model_resolver.get_default_by_collection_id(
             session=db_session, collection_id=collection_id
         )
         is None
+    )
+
+
+def test_delete_dataset__with_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(
+        session=db_session, collection_name="to_delete", sample_type=SampleType.GROUP
+    )
+    collection_id = dataset.collection_id  # Capture before delete
+    dataset_id = dataset.dataset_id  # Capture before delete
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=collection_id,
+        components=[("front_camera", SampleType.IMAGE)],
+    )
+    component_collection_id = components["front_camera"].collection_id  # Capture before delete
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset_id,
+    )
+
+    # Assert - collection, its component, and the component definition are all deleted
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=component_collection_id)
+        is None
+    )
+    assert db_session.get(GroupComponentDefinitionTable, component_collection_id) is None
+
+
+def test_delete_dataset__with_sequences(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id) for _ in range(2)],
+    )
+    sequence = SequenceTable(sample_id=sample_ids[0])
+    db_session.add(sequence)
+    db_session.flush()
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=sample_ids[1], sequence_sample_id=sequence.sample_id, seq_number=0
+        )
+    )
+    db_session.commit()
+    sequence_id = sequence.sample_id
+    collection_id = collection.collection_id
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+    )
+
+    # Assert - collection, sequence, and its links are all deleted
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert db_session.get(SequenceTable, sequence_id) is None
+    assert (
+        db_session.exec(
+            select(SampleSequenceLinkTable).where(
+                col(SampleSequenceLinkTable.sequence_sample_id) == sequence_id
+            )
+        ).all()
+        == []
     )
 
 

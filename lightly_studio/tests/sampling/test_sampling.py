@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -16,8 +17,10 @@ from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
+    MetadataBalancingStrategy,
     MetadataWeightingStrategy,
     SamplingConfig,
+    SubpartDiversityStrategy,
 )
 from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
@@ -74,6 +77,7 @@ class TestSampling:
             session=dataset.session,
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
+            set_as_default=True,
         )
         for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
@@ -118,6 +122,7 @@ class TestSampling:
             session=dataset.session,
             collection_id=frames.collection_id,
             embedding_model_name="embedding_model_1",
+            set_as_default=True,
         )
         for i, frame in enumerate(frames):
             helpers_resolvers.create_sample_embedding(
@@ -276,6 +281,40 @@ class TestSampling:
             input_sample_ids=expected_sample_ids,
         )
 
+    def test_metadata_balancing(self, db_session: Session, mocker: MockerFixture) -> None:
+        collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+            session=db_session,
+            metadata=["sunny", "sunny", "rainy"],
+            metadata_key="weather",
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        all_samples = image_resolver.get_all_by_collection_id(
+            session=db_session, pagination=None, collection_id=collection_id
+        ).samples
+        query = DatasetQuery(collection_table, db_session)
+        spy_sampling_via_db = mocker.spy(sampling_file, "sampling_via_database")
+
+        query.sampling().metadata_balancing(
+            n_samples_to_select=2,
+            sampling_result_tag_name="balanced_weather",
+            metadata_key="weather",
+            target_distribution="uniform",
+        )
+
+        spy_sampling_via_db.assert_called_once_with(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=collection_id,
+                n_samples_to_select=2,
+                sampling_result_tag_name="balanced_weather",
+                strategies=[
+                    MetadataBalancingStrategy(metadata_key="weather", target_distribution="uniform")
+                ],
+            ),
+            input_sample_ids=[sample.sample_id for sample in all_samples],
+        )
+
     def test_metadata_weighting(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
             session=db_session, metadata=[16.0, 50.0, 35.0], metadata_key="speed"
@@ -308,6 +347,21 @@ class TestSampling:
         spy_mundig_add_weighting.assert_called_once_with(
             self=mocker.ANY, weights=[16.0, 50.0, 35.0], strength=1.0
         )
+
+    def test_metadata_weighting__non_numeric_raises(self, db_session: Session) -> None:
+        collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+            session=db_session, metadata=["fast", "slow", "medium"], metadata_key="speed"
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, db_session)
+
+        with pytest.raises(ValueError, match="is not a number"):
+            query.sampling().metadata_weighting(
+                n_samples_to_select=2,
+                metadata_key="speed",
+                sampling_result_tag_name="weight_sampling",
+            )
 
     def test_metadata_weighting__video_frames(
         self,
@@ -396,3 +450,98 @@ class TestSampling:
             ),
             input_sample_ids=expected_sample_ids,
         )
+
+    def test_subpart_diversity(self, db_session: Session, mocker: MockerFixture) -> None:
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+            session=db_session, n_samples=5, embedding_model_names=["crop_model"]
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, db_session)
+        spy_sampling_via_db = mocker.spy(sampling_file, "sampling_via_database")
+
+        query.sampling().subpart_diversity(
+            n_samples_to_select=3,
+            sampling_result_tag_name="subpart_sampling",
+        )
+
+        expected_sample_ids = [
+            sample.sample_id for sample in DatasetQuery(collection_table, db_session)
+        ]
+        spy_sampling_via_db.assert_called_once_with(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=collection_id,
+                n_samples_to_select=3,
+                sampling_result_tag_name="subpart_sampling",
+                strategies=[SubpartDiversityStrategy(annotation_source_id=None)],
+            ),
+            input_sample_ids=expected_sample_ids,
+        )
+
+    def test_subpart_diversity__annotation_source(
+        self, db_session: Session, mocker: MockerFixture
+    ) -> None:
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+            session=db_session, n_samples=5, embedding_model_names=["crop_model"]
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        label = helpers_resolvers.create_annotation_label(
+            session=db_session,
+            root_collection_id=collection_id,
+            label_name="obj",
+        )
+        all_samples = image_resolver.get_all_by_collection_id(
+            session=db_session, pagination=None, collection_id=collection_id
+        ).samples
+        annotations = helpers_resolvers.create_annotations(
+            session=db_session,
+            collection_id=collection_id,
+            annotations=[
+                AnnotationDetails(
+                    sample_id=all_samples[0].sample_id,
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.OBJECT_DETECTION,
+                ),
+            ],
+            collection_name="my_source",
+        )
+        annotation_source_id = annotations[0].annotation_collection_id
+        query = DatasetQuery(collection_table, db_session)
+        mock_sampling_via_db = mocker.patch.object(sampling_file, "sampling_via_database")
+
+        query.sampling().subpart_diversity(
+            n_samples_to_select=3,
+            sampling_result_tag_name="subpart_sampling",
+            annotation_source="my_source",
+        )
+
+        expected_sample_ids = [
+            sample.sample_id for sample in DatasetQuery(collection_table, db_session)
+        ]
+        mock_sampling_via_db.assert_called_once_with(
+            session=db_session,
+            config=SamplingConfig(
+                collection_id=collection_id,
+                n_samples_to_select=3,
+                sampling_result_tag_name="subpart_sampling",
+                strategies=[SubpartDiversityStrategy(annotation_source_id=annotation_source_id)],
+            ),
+            input_sample_ids=expected_sample_ids,
+        )
+
+    def test_subpart_diversity__annotation_source_not_found(self, db_session: Session) -> None:
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+            session=db_session, n_samples=5, embedding_model_names=["crop_model"]
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, db_session)
+
+        with pytest.raises(ValueError, match="'nonexistent'"):
+            query.sampling().subpart_diversity(
+                n_samples_to_select=3,
+                sampling_result_tag_name="subpart_sampling",
+                annotation_source="nonexistent",
+            )

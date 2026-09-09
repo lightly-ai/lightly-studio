@@ -93,4 +93,23 @@ describe('HistogramToolbar', () => {
             '100 samples ·'
         );
     });
+
+    it('switches to percentage mode and updates the summary', async () => {
+        const onValueModeChange = vi.fn();
+        const user = userEvent.setup();
+        render(HistogramToolbar, {
+            props: {
+                ...defaultProps,
+                valueMode: 'percentage',
+                onValueModeChange
+            }
+        });
+
+        expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
+            '100% of 100 annotations'
+        );
+        await user.click(screen.getByTestId('dataset-distribution-histogram-value-mode'));
+        await user.click(await screen.findByRole('option', { name: 'Number' }));
+        expect(onValueModeChange).toHaveBeenCalledWith('number');
+    });
 });

@@ -13,12 +13,15 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.image import ImageTable
+from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver
 from lightly_studio.services.annotations_service.create_annotation import (
     AnnotationCreateParams,
     create_annotation,
 )
+from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
 
 
 def test_create_annotation_object_detection(
@@ -187,3 +190,56 @@ def test_create_annotation_classification_with_temporal_span(
     assert result.temporal_span_details is not None
     assert result.temporal_span_details.start_time_s == 2.5
     assert result.temporal_span_details.end_time_s == 8.0
+
+
+def test_create_annotation__marks_evaluation_run_stale(db_session: Session) -> None:
+    image_collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=image_collection.collection_id)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=image_collection.collection_id,
+        label_name="cat",
+    )
+    gt_collection = collection_resolver.create(
+        session=db_session,
+        collection=CollectionCreate(
+            name="gt",
+            sample_type=SampleType.ANNOTATION,
+            parent_collection_id=image_collection.collection_id,
+        ),
+    )
+    pred_collection = create_collection(
+        session=db_session,
+        sample_type=SampleType.ANNOTATION,
+        parent_collection_id=image_collection.collection_id,
+    )
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            dataset_id=image_collection.dataset_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+    assert run.stale_since is None
+
+    create_annotation(
+        session=db_session,
+        annotation=AnnotationCreateParams(
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            collection_id=image_collection.collection_id,
+            parent_sample_id=image.sample_id,
+            annotation_collection_name="gt",
+            x=10,
+            y=10,
+            width=20,
+            height=20,
+        ),
+    )
+
+    refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+    assert refreshed is not None
+    assert refreshed.stale_since is not None

@@ -8,6 +8,7 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import SampleGroupLinkTable
+from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.models.sample import SampleTable
 
 
@@ -29,9 +30,13 @@ def get_group_component_with_type(
         .join(
             SampleTable, col(CollectionTable.parent_collection_id) == col(SampleTable.collection_id)
         )
+        .join(
+            GroupComponentDefinitionTable,
+            col(GroupComponentDefinitionTable.collection_id) == col(CollectionTable.collection_id),
+        )
         .where(
             SampleTable.sample_id == sample_id,
-            CollectionTable.group_component_name == key,
+            GroupComponentDefinitionTable.group_component_name == key,
         )
     )
     comp_collection = session.exec(comp_collection_statement).one_or_none()

@@ -36,18 +36,23 @@ from lightly_studio.models.annotation_collection_coverage import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.default_embedding_space import DefaultEmbeddingSpaceTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
+from lightly_studio.models.group_component_definition import (
+    GroupComponentDefinitionTable,
+)
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -102,6 +107,8 @@ def delete_dataset(
     _delete_sample_tag_links(session=session, dataset_id=dataset_id)
     # Must precede groups (SampleGroupLinkTable.parent_sample_id -> GroupTable).
     _delete_sample_group_links(session=session, dataset_id=dataset_id)
+    # Must precede sequences (SampleSequenceLinkTable.sequence_sample_id -> SequenceTable).
+    _delete_sample_sequence_links(session=session, dataset_id=dataset_id)
 
     # 3. Sample attachments.
     _delete_sample_embeddings(session=session, dataset_id=dataset_id)
@@ -113,19 +120,23 @@ def delete_dataset(
 
     # 4. Sample type tables.
     _delete_groups(session=session, dataset_id=dataset_id)
+    _delete_sequences(session=session, dataset_id=dataset_id)
     _delete_videos(session=session, dataset_id=dataset_id)
     _delete_images(session=session, dataset_id=dataset_id)
+    _delete_mcaps(session=session, dataset_id=dataset_id)
 
     # 5. Samples and collection/dataset-scoped entities.
     _delete_samples(session=session, dataset_id=dataset_id)
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
     # Must precede embedding_model and collections (FKs to both, deleted below and in step 6).
-    _delete_default_embedding_spaces(session=session, dataset_id=dataset_id)
+    _delete_collection_embedding_models(session=session, dataset_id=dataset_id)
     _delete_embedding_models(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
     _delete_export_jobs(session=session, dataset_id=dataset_id)
+    # Must precede collections (FK to collection, deleted in step 6).
+    _delete_group_component_definitions(session=session, dataset_id=dataset_id)
 
     # 6. Collections (single statement; self-FK satisfied at statement end).
     _delete_collections(session=session, dataset_id=dataset_id)
@@ -165,6 +176,16 @@ def _delete_sample_group_links(session: Session, dataset_id: UUID) -> None:
     session.exec(
         delete(SampleGroupLinkTable).where(
             col(SampleGroupLinkTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_sample_sequence_links(session: Session, dataset_id: UUID) -> None:
+    """Delete sample-sequence links for the dataset's samples."""
+    session.exec(
+        delete(SampleSequenceLinkTable).where(
+            col(SampleSequenceLinkTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
@@ -278,6 +299,16 @@ def _delete_groups(session: Session, dataset_id: UUID) -> None:
     )
 
 
+def _delete_sequences(session: Session, dataset_id: UUID) -> None:
+    """Delete sequence records for the dataset's samples."""
+    session.exec(
+        delete(SequenceTable).where(
+            col(SequenceTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
 def _delete_videos(session: Session, dataset_id: UUID) -> None:
     """Delete videos for the dataset's samples."""
     session.exec(
@@ -290,6 +321,14 @@ def _delete_images(session: Session, dataset_id: UUID) -> None:
     """Delete images for the dataset's samples."""
     session.exec(
         delete(ImageTable).where(col(ImageTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcaps(session: Session, dataset_id: UUID) -> None:
+    """Delete mcap rows for the dataset's samples."""
+    session.exec(
+        delete(McapTable).where(col(McapTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
@@ -320,11 +359,25 @@ def _delete_tags(session: Session, dataset_id: UUID) -> None:
     )
 
 
-def _delete_default_embedding_spaces(session: Session, dataset_id: UUID) -> None:
-    """Delete default embedding spaces for the dataset's collections."""
+def _delete_collection_embedding_models(session: Session, dataset_id: UUID) -> None:
+    """Delete all embedding-model links for the dataset's collections."""
     session.exec(
-        delete(DefaultEmbeddingSpaceTable).where(
-            col(DefaultEmbeddingSpaceTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        delete(CollectionEmbeddingModelTable).where(
+            col(CollectionEmbeddingModelTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_group_component_definitions(session: Session, dataset_id: UUID) -> None:
+    """Delete group component definitions for the dataset's collections."""
+    session.exec(
+        delete(GroupComponentDefinitionTable).where(
+            col(GroupComponentDefinitionTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )

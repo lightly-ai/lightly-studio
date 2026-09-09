@@ -6,6 +6,8 @@ import type {
     SampleTagAnnotationCountsView
 } from '$lib/api/lightly_studio_local/types.gen';
 import type { HistogramData, HistogramRange } from '$lib/components/Histogram';
+import type { HistogramSeries } from '$lib/components/Histogram';
+import type { CategoryCountSeries } from '$lib/components/BarChart';
 import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
 import type { CategoricalMetadataValue } from '$lib/services/types';
 
@@ -63,8 +65,12 @@ export interface DistributionSourceGroup {
     data?: CategoryCount[];
     /** Counts grouped by the sample tags selected for comparison. */
     comparisonData?: SampleTagAnnotationCountsView[];
+    /** Generic grouped-bar series, used by categorical metadata comparisons. */
+    comparisonSeries?: CategoryCountSeries[];
     /** Numeric bin distribution rendered as a histogram. Mutually exclusive with `data`. */
     histogram?: HistogramData;
+    /** Named histograms sharing the base histogram's bin edges. */
+    histogramSeries?: HistogramSeries[];
     /**
      * Currently selected value range for a histogram group (e.g. the active
      * metadata filter). Bins outside it render dimmed.
@@ -73,6 +79,13 @@ export interface DistributionSourceGroup {
     /** Controlled categorical distribution and selection state. */
     categorical?: {
         buckets: CategoricalMetadataBucket[];
+        /**
+         * Buckets contributed by the comparison tags. A tag can hold a value the
+         * current view has filtered away, so `buckets` alone cannot describe every
+         * bar on the shared axis; the panel falls back to these when resolving a
+         * click, keeping comparison-only bars filterable.
+         */
+        comparisonBuckets?: CategoricalMetadataBucket[];
         /**
          * Buckets from the same query with all sidebar filters applied.
          * When provided, each bar shows a grey background at the full `count`
@@ -99,13 +112,29 @@ export interface DistributionSource {
     data?: CategoryCount[];
     /** Counts grouped by the sample tags selected for comparison. */
     comparisonData?: SampleTagAnnotationCountsView[];
+    /** Generic grouped-bar series, used by categorical metadata comparisons. */
+    comparisonSeries?: CategoryCountSeries[];
     /** Numeric bin distribution rendered as a histogram. Mutually exclusive with `data`. */
     histogram?: HistogramData;
+    /** Named histograms sharing the base histogram's bin edges. */
+    histogramSeries?: HistogramSeries[];
     /**
      * Currently selected value range for a source-level histogram (e.g. the active
      * filter). Bins outside it render dimmed.
      */
     selectedRange?: HistogramRange;
+    /**
+     * Whether the request backing `comparisonSeries` / `histogramSeries` is in
+     * flight. Surfaced as a status line so an empty chart is not read as
+     * "no samples".
+     */
+    comparisonLoading?: boolean;
+    /**
+     * Message for a failed comparison request. A tag whose request failed
+     * contributes no series at all, so without this the chart would silently
+     * show fewer tags than the user selected.
+     */
+    comparisonError?: string;
     /** Sub-groups for a source that fans out into fields (e.g. metadata keys). */
     groups?: DistributionSourceGroup[];
     /** Noun for the header summary and value axis (default 'annotations'). */

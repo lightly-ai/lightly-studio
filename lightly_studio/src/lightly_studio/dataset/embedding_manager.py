@@ -19,12 +19,15 @@ from lightly_studio.dataset.embedding_generator import (
     VideoEmbeddingGenerator,
 )
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
+from lightly_studio.models.embedding_model import (
+    EmbeddingModelCreate,
+    EmbeddingModelTable,
+)
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
-    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -156,7 +159,7 @@ class EmbeddingManager:
             collection_id: The ID of the collection to associate with the model.
                 And to register as default, if requested.
             embedding_generator: The model implementation used for embeddings.
-            set_as_default: Whether to set this model as the default.
+            set_as_default: If True, make this model the collection's default.
 
         Returns:
             The created EmbeddingModel.
@@ -165,38 +168,41 @@ class EmbeddingManager:
         if collection is None:
             raise ValueError("Provided collection_id could not be found.")
 
-        embedding_space = embedding_generator.get_embedding_model_input()
-        embedding_model = EmbeddingModelCreate(
-            name=embedding_space.name,
-            parameter_count_in_mb=embedding_space.parameter_count_in_mb,
-            embedding_model_hash=embedding_space.embedding_model_hash,
-            embedding_dimension=embedding_space.embedding_dimension,
-            collection_id=collection_id,
+        space_spec = embedding_generator.embedding_space_spec()
+        model_create = EmbeddingModelCreate(
+            name=space_spec.space_key,
+            embedding_dimension=space_spec.dimension,
             dataset_id=collection.dataset_id,
         )
         db_model = embedding_model_resolver.get_or_create(
             session=session,
-            embedding_model=embedding_model,
+            embedding_model=model_create,
         )
         model_id = db_model.embedding_model_id
 
         self._models[model_id] = embedding_generator
 
-        # Record the default in two places: the in-memory map caches the loaded generator
-        # for this process, and the default_embedding_space table persists the choice for
-        # query-layer callers (default_embedding_space_resolver.get_by_collection_id).
-        if set_as_default or collection_id not in self._collection_id_to_default_model_id:
+        # Register the model with the collection.
+        collection_model_link = collection_embedding_model_resolver.get_or_add_collection_model(
+            session=session, collection_id=collection_id, embedding_model_id=model_id
+        )
+        # TODO(Michal, 08/2026): The default is stored both in the database and in
+        # `_collection_id_to_default_model_id`. The database is the source of truth,
+        # while the dictionary only tracks models loaded at runtime. Split these
+        # responsibilities during the EmbeddingManager refactor.
+        if collection_model_link.is_default:
             self._collection_id_to_default_model_id[collection_id] = model_id
-        if (
-            set_as_default
-            or default_embedding_space_resolver.get_by_collection_id(
-                session=session, collection_id=collection_id
-            )
-            is None
-        ):
-            default_embedding_space_resolver.set_default(
+            return db_model
+
+        # Determine if the model should be set as default.
+        has_no_default_in_db = not collection_embedding_model_resolver.has_default_by_collection_id(
+            session=session, collection_id=collection_id
+        )
+        if set_as_default or has_no_default_in_db:
+            collection_embedding_model_resolver.set_default(
                 session=session, collection_id=collection_id, embedding_model_id=model_id
             )
+            self._collection_id_to_default_model_id[collection_id] = model_id
 
         return db_model
 
@@ -391,15 +397,11 @@ class EmbeddingManager:
         if not isinstance(model, VideoEmbeddingGenerator):
             raise ValueError("Embedding model not compatible with videos.")
 
-        # Get the samples
-        filepaths = []
-        for sample_id in sample_ids:
-            sample = video_resolver.get_by_id(session=session, sample_id=sample_id)
-            if sample is not None:
-                filepaths.append(sample.file_path_abs)
-
-        if len(filepaths) != len(sample_ids):
+        # One batched query for all video paths. A length mismatch means an id has no video.
+        videos = video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+        if len(videos) != len(sample_ids):
             raise ValueError("Could not fetch all video paths for the provided IDs.")
+        filepaths = [video.file_path_abs for video in videos]
 
         # Generate embeddings for the samples.
         result = model.embed_videos(filepaths=filepaths)

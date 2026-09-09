@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import * as echarts from 'echarts/core';
 import type { ECharts } from 'echarts/core';
+import { LegendComponent } from 'echarts/components';
 import { pixelToBinIndex } from './createHistogramChart';
 
 // createHistogramChart.ts registers echarts modules at import time; stub them so
@@ -19,6 +21,16 @@ const makeChart = (): ECharts =>
     ({
         convertFromPixel: (_finder: unknown, offsetX: number) => offsetX / 10
     }) as unknown as ECharts;
+
+describe('echarts registration', () => {
+    // The grouped histogram declares a legend, but echarts only instantiates
+    // components that were registered here. Registering it in the test file
+    // alone would make the option look fine while the app rendered no legend.
+    it('registers the legend component the comparison series needs', () => {
+        const [registered] = vi.mocked(echarts.use).mock.calls[0];
+        expect(registered).toContain(LegendComponent);
+    });
+});
 
 describe('pixelToBinIndex', () => {
     it('floors a fractional bin index to the containing bin', () => {

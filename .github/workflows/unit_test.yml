@@ -10,6 +10,12 @@ on:
 
 env:
   NODE_OPTIONS: --max-old-space-size=4096
+  # Every run restores the uv cache, only main writes one: per-ref copies are
+  # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
+  # The Python version is part of the uv cache key, so each step passes the one its job runs:
+  # the 3.9 jobs share an entry instead of the release-tooling key, whose deps are ~30MB.
+  UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -26,9 +32,11 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend || 'true' }}
       docs: ${{ steps.filter.outputs.docs || 'true' }}
       fast_track: ${{ steps.filter.outputs.fast_track || 'true' }}
+      release_tooling: ${{ steps.filter.outputs.release_tooling || 'true' }}
+      lightly_studio_embed: ${{ steps.filter.outputs.lightly_studio_embed || 'true' }}
     steps:
       - name: Checkout Code # Needed for merge_group event
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Filter changed paths
         id: filter
@@ -41,16 +49,19 @@ jobs:
             # E2E tests and examples are included for static checks.
             backend:
               - '.github/workflows/unit_test.yml'
-              - 'lightly_studio/src/**'
-              - 'lightly_studio/tests/**'
-              - 'lightly_studio/e2e-tests/**'
-              - 'lightly_studio/dataset_examples/**'
-              - 'lightly_studio/pyproject.toml'
-              - 'lightly_studio/uv.lock'
-              - 'lightly_studio/ruff.toml'
-              - 'lightly_studio/pytest.ini'
+              - 'Makefile'
               - 'lightly_studio/Makefile'
               - 'lightly_studio/alembic.ini'
+              - 'lightly_studio/dataset_examples/**'
+              - 'lightly_studio/e2e-tests/**'
+              - 'lightly_studio/pyproject.toml'
+              - 'lightly_studio/pytest.ini'
+              - 'lightly_studio/ruff.toml'
+              - 'lightly_studio/src/**'
+              - 'lightly_studio/tests/**'
+              - 'make/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
             frontend:
               - '.github/workflows/unit_test.yml'
               - 'lightly_studio_view/**'
@@ -61,6 +72,19 @@ jobs:
             fast_track:
               - '.github/workflows/unit_test.yml'
               - 'fast_track/**'
+            # Release tooling: CI-internal, so it has its own toolchain.
+            release_tooling:
+              - '.github/scripts/**'
+              - '.github/workflows/unit_test.yml'
+            # The embedding server package. Shares the lockfile, not the dependencies.
+            lightly_studio_embed:
+              - '.github/workflows/unit_test.yml'
+              - 'Makefile'
+              - 'lightly_studio/ruff.toml'
+              - 'lightly_studio_embed/**'
+              - 'make/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
 
   check-python:
     name: Static Checks Python
@@ -69,15 +93,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -100,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -110,11 +136,19 @@ jobs:
           python-version: "3.9"
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
+
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: lightly_studio_view/.nvmrc
+          cache: npm
+          cache-dependency-path: lightly_studio_view/package-lock.json
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -157,20 +191,29 @@ jobs:
             make_target: test-postgres
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
+          python-version: ${{ matrix.python }}
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: lightly_studio_view/.nvmrc
+          cache: npm
+          cache-dependency-path: lightly_studio_view/package-lock.json
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -201,7 +244,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -211,11 +254,19 @@ jobs:
           python-version: "3.9"
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
+
+      - name: Set Up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: lightly_studio_view/.nvmrc
+          cache: npm
+          cache-dependency-path: lightly_studio_view/package-lock.json
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -246,15 +297,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
+          python-version: "3.9"
           enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -280,7 +333,7 @@ jobs:
         working-directory: fast_track
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Pin Node from .nvmrc, matching the local Makefile's nvm setup.
       - name: Set Up Node
@@ -299,6 +352,89 @@ jobs:
       - name: Tests
         run: npm run test
 
+  check-release-tooling:
+    name: Static Checks + Tests Release Tooling
+    needs: detect
+    if: needs.detect.outputs.release_tooling == 'true'
+    runs-on: ubuntu-latest
+    # This job runs code the pull request itself supplies - pytest collects the
+    # PR's conftest.py, and `uv run --with` resolves tools from PyPI at job
+    # time. The repository default is a write-scoped token, so pin this job to
+    # read-only and keep the token out of .git/config.
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .github/scripts
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+          enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
+
+      - name: Static checks
+        run: make static-checks
+
+      - name: Tests
+        run: make test
+
+  check-lightly-studio-embed:
+    name: Static Checks + Tests LightlyStudio Embed (${{ matrix.python }})
+    needs: detect
+    if: needs.detect.outputs.lightly_studio_embed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor and the ceiling of `requires-python`; nothing in the package is version
+        # specific.
+        python: ["3.9", "3.14"]
+    # This job runs Makefile targets the pull request itself supplies. The repository default is
+    # a write-scoped token, so it is pinned to read-only and kept out of .git/config, the same
+    # way check-release-tooling is.
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: lightly_studio_embed
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
+
+      - name: Set Up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      # No install step: the package has no extras and no non-default groups, so `uv run`
+      # installs everything these targets need.
+      - name: Static checks
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: make static-checks
+
+      - name: Tests
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: make test
+
   # The single required status check: always runs, so gated jobs can be skipped
   # without stranding the merge queue. Require this in the branch ruleset.
   unit-success:
@@ -312,6 +448,8 @@ jobs:
       - test-frontend
       - check-docs
       - check-fast-track
+      - check-release-tooling
+      - check-lightly-studio-embed
     if: always()
     steps:
       - name: Verify required jobs
@@ -323,6 +461,8 @@ jobs:
           FRONTEND_TESTS: ${{ needs.test-frontend.result }}
           DOCS: ${{ needs.check-docs.result }}
           FAST_TRACK: ${{ needs.check-fast-track.result }}
+          RELEASE_TOOLING: ${{ needs.check-release-tooling.result }}
+          LIGHTLY_STUDIO_EMBED: ${{ needs.check-lightly-studio-embed.result }}
         run: |
           python3 - <<'PY'
           import os
@@ -341,6 +481,8 @@ jobs:
               "Frontend tests": os.environ["FRONTEND_TESTS"],
               "Build Docs": os.environ["DOCS"],
               "Static Checks + Tests Fast Track": os.environ["FAST_TRACK"],
+              "Static Checks + Tests Release Tooling": os.environ["RELEASE_TOOLING"],
+              "Static Checks + Tests LightlyStudio Embed": os.environ["LIGHTLY_STUDIO_EMBED"],
           }
           allowed = {"success", "skipped"}
 

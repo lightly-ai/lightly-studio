@@ -291,4 +291,99 @@ describe('StrategyCard', () => {
             expect(screen.getByTestId('annotation-source-option-predictions')).toBeInTheDocument();
         });
     });
+
+    describe('metadata_balancing', () => {
+        const metadataBalancingInstance: StrategyInstance = {
+            id: 'abc',
+            type: 'metadata_balancing',
+            params: {
+                metadata_key: 'weather',
+                target_distribution_mode: 'uniform',
+                target_distribution: [],
+                strength: 1
+            },
+            isExpanded: true
+        };
+
+        it('renders its own form and not the class balancing form', () => {
+            render(StrategyCard, {
+                props: { ...defaultProps, instance: metadataBalancingInstance }
+            });
+
+            expect(screen.getByTestId('metadata-balancing-form')).toBeInTheDocument();
+            expect(screen.queryByTestId('class-balancing-form')).not.toBeInTheDocument();
+        });
+
+        it('forwards categoricalMetadataFieldNames to the metadata key select', () => {
+            render(StrategyCard, {
+                props: {
+                    ...defaultProps,
+                    instance: metadataBalancingInstance,
+                    categoricalMetadataFieldNames: ['weather', 'city']
+                }
+            });
+
+            expect(screen.getByTestId('metadata-balancing-abc-key')).toBeInTheDocument();
+        });
+
+        it('offers the values of the selected key as row options in dictionary mode', async () => {
+            render(StrategyCard, {
+                props: {
+                    ...defaultProps,
+                    instance: {
+                        ...metadataBalancingInstance,
+                        params: {
+                            ...metadataBalancingInstance.params,
+                            target_distribution_mode: 'dictionary',
+                            target_distribution: [{ class_name: '', weight: 0 }]
+                        }
+                    },
+                    categoricalMetadataFieldNames: ['weather'],
+                    metadataValuesByKey: { weather: ['sunny', 'rainy'] }
+                }
+            });
+
+            await fireEvent.keyDown(screen.getByTestId('metadata-balancing-abc-class-name-0'), {
+                key: 'Enter'
+            });
+
+            expect(
+                await screen.findByTestId('metadata-balancing-abc-class-name-0-sunny')
+            ).toBeInTheDocument();
+            expect(
+                screen.getByTestId('metadata-balancing-abc-class-name-0-rainy')
+            ).toBeInTheDocument();
+        });
+    });
+
+    describe('subpart_diversity', () => {
+        it('forwards croppableAnnotationSourceOptions to the subpart diversity form', async () => {
+            const instance: StrategyInstance = {
+                id: 'abc',
+                type: 'subpart_diversity',
+                params: { annotation_source_id: '', strength: 1 },
+                isExpanded: true
+            };
+
+            render(StrategyCard, {
+                props: {
+                    ...defaultProps,
+                    instance,
+                    croppableAnnotationSourceOptions: [
+                        { id: 'col-1', name: 'detections' },
+                        { id: 'col-2', name: 'masks' }
+                    ]
+                }
+            });
+
+            await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), {
+                key: 'Enter'
+            });
+
+            expect(
+                await screen.findByTestId('annotation-source-option-detections')
+            ).toBeInTheDocument();
+            expect(screen.getByTestId('annotation-source-option-masks')).toBeInTheDocument();
+        });
+    });
 });

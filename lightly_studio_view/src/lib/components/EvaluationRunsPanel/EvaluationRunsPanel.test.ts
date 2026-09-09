@@ -17,6 +17,13 @@ vi.mock('./TriggerEvaluationDialog/TriggerEvaluationDialog.svelte', async () => 
     return { default: module.default };
 });
 
+vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte', () => ({
+    useRecomputeEvaluationRun: () => ({
+        mutation: { isPending: false },
+        recompute: vi.fn()
+    })
+}));
+
 const noop = () => {};
 
 const makeRun = (
@@ -24,6 +31,7 @@ const makeRun = (
 ): EvaluationRunView => ({
     evaluation_run_configuration: {},
     created_at: new Date('2026-01-01T00:00:00Z'),
+    stale_since: null,
     gt_annotation_source: 'gt_v1',
     pred_annotation_source: 'pred_v1',
     ...overrides

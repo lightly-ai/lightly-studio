@@ -28,6 +28,7 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,
 )
 from lightly_studio.models.image import ImageCreate, ImageTable
+from lightly_studio.models.mcap import McapCreate, McapTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
@@ -37,10 +38,11 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
-    default_embedding_space_resolver,
     embedding_model_resolver,
     image_resolver,
+    mcap_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -108,6 +110,32 @@ def create_image(
     image = image_resolver.get_by_id(session=session, sample_id=sample_ids[0])
     assert image is not None
     return image
+
+
+def create_mcap(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    channel_id: int = 0,
+    log_time_ns: int = 0,
+    capture_timestamp_ns: int = 0,
+    keyframe_log_time_ns: int | None = 0,
+) -> McapTable:
+    """Helper function to create an mcap sample."""
+    sample_ids = mcap_resolver.create_many(
+        session=session,
+        collection_id=collection_id,
+        samples=[
+            McapCreate(
+                channel_id=channel_id,
+                log_time_ns=log_time_ns,
+                capture_timestamp_ns=capture_timestamp_ns,
+                keyframe_log_time_ns=keyframe_log_time_ns,
+            )
+        ],
+    )
+    mcap = mcap_resolver.get_by_id(session=session, sample_id=sample_ids[0])
+    assert mcap is not None
+    return mcap
 
 
 @dataclass
@@ -298,39 +326,42 @@ def create_annotations(
     return list(annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids))
 
 
-def create_embedding_model(  # noqa: PLR0913
+def create_embedding_model(
     session: Session,
     collection_id: UUID,
     embedding_model_name: str = "example_embedding_model",
-    embedding_model_hash: str = "example_hash",
-    parameter_count_in_mb: int = 100,
     embedding_dimension: int = 128,
     set_as_default: bool = False,
 ) -> EmbeddingModelTable:
     """Helper function to create a embedding model.
 
-    With ``set_as_default`` the model is recorded as the collection's default embedding
-    model, so ``default_embedding_space_resolver.get_by_collection_id`` resolves to it. It
-    is off by default to avoid the ``default_embedding_space`` foreign key blocking model
-    or collection deletes in tests that do not need a default.
+    The model is linked to the collection, so it resolves through ``get_model_id_by_name`` and
+    ``get_all_by_collection_id``, matching production where every registered model is linked.
+    With ``set_as_default`` it is also recorded as the collection default, so
+    ``get_default_by_collection_id`` resolves to it.
     """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
 
-    model = embedding_model_resolver.create(
+    # TODO(Michal, 08/2026): Make collection_id optional here: link only when it is given, so
+    # unlinked models become expressible. The collection_embedding_model link is then the sole
+    # source of collection membership.
+    model = embedding_model_resolver.get_or_create(
         session=session,
         embedding_model=EmbeddingModelCreate(
-            collection_id=collection_id,
             dataset_id=collection.dataset_id,
             name=embedding_model_name,
-            embedding_model_hash=embedding_model_hash,
-            parameter_count_in_mb=parameter_count_in_mb,
             embedding_dimension=embedding_dimension,
         ),
     )
+    collection_embedding_model_resolver.get_or_add_collection_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=model.embedding_model_id,
+    )
     if set_as_default:
-        default_embedding_space_resolver.set_default(
+        collection_embedding_model_resolver.set_default(
             session=session,
             collection_id=collection_id,
             embedding_model_id=model.embedding_model_id,

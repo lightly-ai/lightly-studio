@@ -85,6 +85,20 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     })
 }));
 
+let categoricalMetadataData: Record<string, { kind: string; value?: string }[]> | undefined =
+    undefined;
+
+vi.mock(
+    '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte',
+    () => ({
+        useCategoricalMetadataDistribution: () => ({
+            get data() {
+                return categoricalMetadataData;
+            }
+        })
+    })
+);
+
 const submitMock = vi.fn();
 let isSubmittingStore: Writable<boolean>;
 let loadingMessageStore: Writable<string>;
@@ -111,6 +125,7 @@ describe('SamplingCombinationDialog', () => {
         tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag', kind: 'sample' as const }]);
         annotationLabelsData = [];
         annotationCollectionsData = [];
+        categoricalMetadataData = undefined;
         submitMock.mockResolvedValue(undefined);
     });
 
@@ -490,5 +505,80 @@ describe('SamplingCombinationDialog', () => {
         });
 
         expect(screen.getByTestId('sampling-dialog-submit')).toBeDisabled();
+    });
+
+    it('can add a subpart diversity strategy and submit the correct API payload', async () => {
+        submitMock.mockResolvedValue(false);
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-subpart_diversity'));
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
+
+        await waitFor(() => {
+            expect(submitMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    instances: expect.arrayContaining([
+                        expect.objectContaining({ type: 'subpart_diversity' })
+                    ])
+                })
+            );
+        });
+    });
+
+    it('disables subpart diversity in the add strategy menu after one has been added', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-subpart_diversity'));
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
+    it('disables the duplicate button on a subpart diversity strategy card', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+        await fireEvent.pointerUp(await screen.findByTestId('add-strategy-subpart_diversity'));
+
+        const duplicateButton = await screen.findByTestId(/strategy-card-duplicate-/);
+        expect(duplicateButton).toBeDisabled();
+    });
+
+    it('disables subpart diversity in the add strategy menu for video collections', async () => {
+        pageMock.data.collection.sample_type = 'video';
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
+    it('disables subpart diversity in the add strategy menu for video_frame collections', async () => {
+        pageMock.data.collection.sample_type = 'video_frame';
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
     });
 });

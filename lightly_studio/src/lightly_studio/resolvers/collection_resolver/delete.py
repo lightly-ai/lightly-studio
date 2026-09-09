@@ -15,6 +15,11 @@ def delete(session: Session, collection_id: UUID) -> bool:
     if not collection:
         return False
 
+    if collection.group_component_definition is not None:
+        session.delete(collection.group_component_definition)
+        collection.group_component_definition = None
+        session.commit()
+
     session.delete(collection)
     session.commit()
     return True

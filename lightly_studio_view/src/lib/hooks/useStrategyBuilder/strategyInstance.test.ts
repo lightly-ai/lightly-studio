@@ -37,6 +37,21 @@ describe('cloneStrategyParams', () => {
 
         expect(clone.target_distribution[0].class_name).toBe('cat');
     });
+
+    it('deep-clones metadata_balancing target_distribution rows', () => {
+        const original = {
+            metadata_key: 'weather',
+            target_distribution_mode: 'dictionary' as const,
+            target_distribution: [{ class_name: 'sunny', weight: 1 }],
+            strength: 1
+        };
+        const clone = cloneStrategyParams('metadata_balancing', original);
+
+        original.target_distribution[0].class_name = 'rainy';
+
+        expect(clone.target_distribution).not.toBe(original.target_distribution);
+        expect(clone.target_distribution[0].class_name).toBe('sunny');
+    });
 });
 
 describe('createStrategyInstance', () => {

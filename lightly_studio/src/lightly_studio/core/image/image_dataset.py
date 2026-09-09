@@ -30,7 +30,7 @@ from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister, remote_storage
-from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.embed import embed_samples
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -394,6 +394,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         annotation_source: str | None = None,
         embed_annotations: bool = True,
         limit: int | None = None,
+        tag_depth: int = 0,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
 
@@ -408,11 +409,18 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed_annotations: If True, generate embeddings for the annotation crops.
             limit: Maximum number of samples to load, in total across all processed
                 splits. By default, all samples are loaded.
+            tag_depth: Tags each sample by the directory levels of its image path below the
+                split's images directory. `tag_depth=0` (default) skips this; `tag_depth=N`
+                creates a tag for each of the first `N` directory levels. These tags are
+                added on top of the split tag.
 
         Raises:
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If tag_depth is negative, or if limit is not None and not greater
+                than 0.
         """
         fsspec_lister.validate_limit(limit)
+        if tag_depth < 0:
+            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         data_yaml = Path(data_yaml).absolute()
 
         if not data_yaml.is_file() or data_yaml.suffix != ".yaml":
@@ -454,6 +462,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 tag=split,
                 embed=False,
             )
+            # Tag samples by their directory levels below the split's images directory.
+            add_images.tag_samples_by_directory(
+                session=self.session,
+                collection_id=self.collection_id,
+                input_path=images_path,
+                sample_ids=created_sample_ids,
+                tag_depth=tag_depth,
+            )
 
             all_created_sample_ids.extend(created_sample_ids)
             if remaining is not None:
@@ -484,6 +500,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         annotation_source: str | None = None,
         embed_annotations: bool = True,
         limit: int | None = None,
+        tag_depth: int = 0,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
 
@@ -500,11 +517,18 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 a default source is used.
             embed_annotations: If True, generate embeddings for the annotation crops.
             limit: Maximum number of samples to load. By default, all samples are loaded.
+            tag_depth: Tags each sample by the directory levels of its image path below
+                `images_path`. `tag_depth=0` (default) skips this; `tag_depth=N` creates a
+                tag for each of the first `N` directory levels (see `add_images_from_path`).
+                These tags are added on top of the `split` tag.
 
         Raises:
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If tag_depth is negative, or if limit is not None and not greater
+                than 0.
         """
         fsspec_lister.validate_limit(limit)
+        if tag_depth < 0:
+            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
         if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
@@ -538,6 +562,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
+        )
+        # Tag samples by their directory levels below the images directory.
+        add_images.tag_samples_by_directory(
+            session=self.session,
+            collection_id=self.collection_id,
+            input_path=images_path,
+            sample_ids=created_sample_ids,
+            tag_depth=tag_depth,
         )
         _generate_embeddings_annotations(
             session=self.session,
@@ -795,19 +827,8 @@ def _generate_embeddings_image(
     if not sample_ids:
         return
 
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
-        session=session, collection_id=collection_id
-    )
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
-        return
-
-    embedding_manager.embed_images(
-        session=session,
-        collection_id=collection_id,
-        sample_ids=sample_ids,
-        embedding_model_id=model_id,
+    embed_samples.embed_image_samples(
+        session=session, collection_id=collection_id, sample_ids=sample_ids
     )
 
 
@@ -840,18 +861,8 @@ def _generate_embeddings_annotations(
     )
     if annotation_collection_id is None:
         return
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
-        session=session,
-        collection_id=annotation_collection_id,
-    )
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping annotation embedding generation.")
-        return
-    embedding_manager.embed_annotations(
-        session=session,
-        annotation_collection_id=annotation_collection_id,
-        embedding_model_id=model_id,
+    embed_samples.embed_annotation_collection(
+        session=session, annotation_collection_id=annotation_collection_id
     )
 
 

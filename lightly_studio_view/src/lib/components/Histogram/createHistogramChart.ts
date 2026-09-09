@@ -1,9 +1,9 @@
 import * as echarts from 'echarts/core';
 import { CustomChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent } from 'echarts/components';
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
-echarts.use([CustomChart, GridComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([CustomChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 interface CreateHistogramChartOptions {
     /** Element the chart mounts into; also observed for resizes. */

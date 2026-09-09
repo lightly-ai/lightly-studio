@@ -18,8 +18,8 @@ from lightly_studio.database import db_manager
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
     collection_resolver,
-    embedding_model_resolver,
     metadata_resolver,
     tag_resolver,
 )
@@ -154,11 +154,11 @@ class Dataset(Generic[T], ABC):
                 The name of the metadata to store the typicality values in. If not give, the default
                 name "typicality" is used.
         """
-        embedding_model_id = embedding_model_resolver.get_by_name(
+        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
             session=self.session,
             collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,
-        ).embedding_model_id
+        )
         compute_typicality.compute_typicality_metadata(
             session=self.session,
             collection_id=self.collection_id,
@@ -187,11 +187,11 @@ class Dataset(Generic[T], ABC):
         Returns:
             The name of the metadata storing the similarity values.
         """
-        embedding_model_id = embedding_model_resolver.get_by_name(
+        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
             session=self.session,
             collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,
-        ).embedding_model_id
+        )
         query_tag = tag_resolver.get_by_name(
             session=self.session, tag_name=query_tag_name, collection_id=self.collection_id
         )

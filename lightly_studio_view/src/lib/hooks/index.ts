@@ -8,8 +8,9 @@ export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution/useNumericMetadataDistribution';
-export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
+export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution';
+export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution';
+export { useMetadataDistributionsBySampleTags } from '$lib/hooks/useMetadataDistributionsBySampleTags';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
 export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
@@ -21,7 +22,6 @@ export { useFileDrop } from '$lib/hooks/useFileDrop/useFileDrop';
 export { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
 export { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
 export { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
-export { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
 export { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 export { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
 export { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
@@ -73,3 +73,4 @@ export {
     type OperatorParameterType
 } from '$lib/hooks/useOperators';
 export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
+export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte';

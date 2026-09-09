@@ -1,11 +1,7 @@
 import posthog from 'posthog-js';
 import { browser } from '$app/environment';
-import {
-    PUBLIC_POSTHOG_KEY,
-    PUBLIC_POSTHOG_DEV_KEY,
-    PUBLIC_POSTHOG_HOST
-} from '$env/static/public';
 import { version } from '$lib/version.json';
+import { getAnalyticsConfig } from '$lib/api/lightly_studio_local/sdk.gen';
 // Imported by its own path: $lib/hooks re-exports usePostHog, so going through the barrel would
 // make the two modules import each other.
 import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
@@ -38,32 +34,31 @@ export const usePostHog = () => {
     const init = async () => {
         if (!browser || initialized) return;
 
-        // A failed request leaves the flags empty, so a backend that cannot be reached is never
-        // tracked against.
+        const configResponse = getAnalyticsConfig().catch((error: unknown) => {
+            console.warn('Failed to read the analytics configuration', error);
+            return undefined;
+        });
+
         const { featureFlags, ready } = useFeatureFlags();
         await ready;
         if (!get(featureFlags).includes(ANALYTICS_FEATURE)) return;
-        // Re-check: concurrent callers both get past the guard above before this resolves.
+
+        const config = (await configResponse)?.data;
+        if (!config) return;
         if (initialized) return;
 
-        const apiKey = PUBLIC_POSTHOG_KEY || PUBLIC_POSTHOG_DEV_KEY;
-        const apiHost = PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
-
-        if (!apiKey) {
-            console.warn('PostHog API key not configured');
-            return;
-        }
-
-        posthog.init(apiKey, {
-            api_host: apiHost,
+        posthog.init(config.posthog_key, {
+            api_host: config.posthog_host,
             person_profiles: 'identified_only',
             capture_pageview: true,
             capture_pageleave: true,
             capture_exceptions: true
         });
         posthog.register({ app_version: version });
-
         initialized = true;
+
+        // One distinct id per install, shared with the Python SDK, instead of two.
+        posthog.identify(config.install_id);
     };
 
     /**

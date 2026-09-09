@@ -10,6 +10,7 @@ import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
 import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
+import { useInvalidateEvaluationRunsQueries } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 import { page } from '$app/state';
 
 export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () => string }) => {
@@ -17,6 +18,7 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
     const client = useQueryClient();
     const { trackEvent } = usePostHog();
     const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
+    const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
 
     const refetch = (collectionId: string) => {
         invalidateAnnotationGridQueries(collectionId);
@@ -28,6 +30,8 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
         client.invalidateQueries({
             queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: collectionId } })
         });
+        // Annotation mutations can mark evaluation runs as stale, so refresh the runs list.
+        invalidateEvaluationRunsQueries();
     };
 
     const createAnnotation = (inputs: AnnotationCreateInput) =>

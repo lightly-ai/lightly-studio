@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     image_resolver,
@@ -27,17 +28,24 @@ from lightly_studio.sampling.sampling_config import (
     MetadataBalancingStrategy,
     SamplingConfig,
     SamplingStrategy,
+    SubpartDiversityStrategy,
 )
 from lightly_studio.sampling.sampling_via_db import (
     _aggregate_class_distributions,
     _check_result_tag_name_free,
+    _get_subpart_embeddings,
     sampling_via_database,
 )
 from tests.helpers_resolvers import (
     AnnotationDetails,
+    ImageStub,
     create_annotation_label,
     create_annotations,
+    create_collection,
+    create_embedding_model,
     create_image,
+    create_images,
+    create_sample_embedding,
     create_tag,
     fill_db_with_samples_and_embeddings,
 )
@@ -1368,6 +1376,640 @@ def test_aggregate_class_distributions() -> None:
         dtype=np.float32,
     )
     np.testing.assert_array_equal(class_distributions, expected_distributions)
+
+
+def test_sampling_via_database__subpart_diversity__annotation_source_id(
+    db_session: Session,
+) -> None:
+    """Subpart diversity with annotation_source_id set selects samples correctly."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+            ImageStub(path="p2.jpg"),
+        ],
+    )
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=parent_images[2].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+    )
+    annotation_collection_id = annotations[0].annotation_collection_id
+    crop_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[1].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=[0.0, 1.0],
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[2].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=[0.5, 0.5],
+    )
+
+    config = SamplingConfig(
+        collection_id=parent_collection.collection_id,
+        n_samples_to_select=2,
+        sampling_result_tag_name="subpart-tag",
+        strategies=[
+            SubpartDiversityStrategy(
+                annotation_source_id=annotation_collection_id,
+                embedding_model_name="crop_model",
+            )
+        ],
+    )
+
+    sampling_via_database(
+        session=db_session,
+        config=config,
+        input_sample_ids=[img.sample_id for img in parent_images],
+    )
+
+    tags = tag_resolver.get_all_by_collection_id(
+        db_session, collection_id=parent_collection.collection_id
+    )
+    assert len(tags) == 1
+    assert tags[0].name == "subpart-tag"
+    samples_in_tag = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+    ).samples
+    assert len(samples_in_tag) == 2
+    assert {sample.file_path_abs for sample in samples_in_tag} == {"p0.jpg", "p1.jpg"}
+
+
+def test_sampling_via_database__subpart_diversity__no_annotation_source_id(
+    db_session: Session,
+) -> None:
+    """Subpart diversity without annotation_source_id succeeds with a single collection."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+            ImageStub(path="p2.jpg"),
+        ],
+    )
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=parent_images[2].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+    )
+    annotation_collection_id = annotations[0].annotation_collection_id
+    crop_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[1].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=[0.0, 1.0],
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[2].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=[0.5, 0.5],
+    )
+
+    config = SamplingConfig(
+        collection_id=parent_collection.collection_id,
+        n_samples_to_select=2,
+        sampling_result_tag_name="subpart-tag",
+        strategies=[
+            SubpartDiversityStrategy(
+                embedding_model_name="crop_model",
+            )
+        ],
+    )
+
+    sampling_via_database(
+        session=db_session,
+        config=config,
+        input_sample_ids=[img.sample_id for img in parent_images],
+    )
+
+    tags = tag_resolver.get_all_by_collection_id(
+        db_session, collection_id=parent_collection.collection_id
+    )
+    assert len(tags) == 1
+    assert tags[0].name == "subpart-tag"
+    samples_in_tag = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+    ).samples
+    assert len(samples_in_tag) == 2
+    assert {sample.file_path_abs for sample in samples_in_tag} == {"p0.jpg", "p1.jpg"}
+
+
+def test_sampling_via_database__subpart_diversity__multiple_annotation_collections(
+    db_session: Session,
+) -> None:
+    """Subpart diversity without annotation_source_id succeeds across multiple collections."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+            ImageStub(path="p2.jpg"),
+        ],
+    )
+    # Collection A: crops for p0 and p1.
+    annotations_a = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        collection_name="source-a",
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+    )
+    crop_model_a = create_embedding_model(
+        session=db_session,
+        collection_id=annotations_a[0].annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations_a[0].sample_id,
+        embedding_model_id=crop_model_a.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations_a[1].sample_id,
+        embedding_model_id=crop_model_a.embedding_model_id,
+        embedding=[0.0, 1.0],
+    )
+    # Collection B: crop for p2.
+    annotations_b = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        collection_name="source-b",
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[2].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+    )
+    crop_model_b = create_embedding_model(
+        session=db_session,
+        collection_id=annotations_b[0].annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations_b[0].sample_id,
+        embedding_model_id=crop_model_b.embedding_model_id,
+        embedding=[0.5, 0.5],
+    )
+
+    config = SamplingConfig(
+        collection_id=parent_collection.collection_id,
+        n_samples_to_select=2,
+        sampling_result_tag_name="subpart-tag",
+        strategies=[SubpartDiversityStrategy(embedding_model_name="crop_model")],
+    )
+
+    sampling_via_database(
+        session=db_session,
+        config=config,
+        input_sample_ids=[img.sample_id for img in parent_images],
+    )
+
+    tags = tag_resolver.get_all_by_collection_id(
+        db_session, collection_id=parent_collection.collection_id
+    )
+    assert len(tags) == 1
+    assert tags[0].name == "subpart-tag"
+    samples_in_tag = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
+    ).samples
+    assert len(samples_in_tag) == 2
+    assert {sample.file_path_abs for sample in samples_in_tag} == {"p0.jpg", "p1.jpg"}
+
+
+def test_get_subpart_embeddings__middle_crop_unembedded(
+    db_session: Session,
+) -> None:
+    """Crop embeddings are looked up by ID, not by position, when the middle crop has no embedding.
+
+    Regression: the previous zip(crop_ids, embeddings) shifted every embedding after a gap,
+    assigning crop_C's embedding to crop_B's slot and leaving crop_C with no embedding.
+    """
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+            ImageStub(path="p2.jpg"),
+        ],
+    )
+    # Three crops in the same annotation collection:
+    # p0 → crop_A (embedded), p1 → crop_B (no embedding), p2 → crop_C (embedded).
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=parent_images[2].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+    )
+    annotation_collection_id = annotations[0].annotation_collection_id
+    crop_a = annotations[0]
+    crop_c = annotations[2]
+
+    crop_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    emb_a = [1.0, 0.0]
+    emb_c = [0.0, 1.0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=crop_a.sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_a,
+    )
+    # crop_b has no embedding — this is the gap that previously caused misalignment.
+    create_sample_embedding(
+        session=db_session,
+        sample_id=crop_c.sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_c,
+    )
+
+    strat = SubpartDiversityStrategy(
+        annotation_source_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    result = _get_subpart_embeddings(
+        session=db_session,
+        strat=strat,
+        input_sample_ids=[img.sample_id for img in parent_images],
+    )
+
+    # p0 (crop_A): gets its own embedding.
+    assert len(result[0]) == 1
+    np.testing.assert_array_equal(result[0][0], emb_a)
+    # p1 (crop_B): has no embedding — must not borrow crop_C's.
+    assert result[1] == []
+    # p2 (crop_C): gets its own embedding, not consumed by crop_B's slot.
+    assert len(result[2]) == 1
+    np.testing.assert_array_equal(result[2][0], emb_c)
+
+
+def test_get_subpart_embeddings__inconsistent_dimensions_across_collections(
+    db_session: Session,
+) -> None:
+    """Raises ValueError when annotation collections have different embedding dimensions."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+        ],
+    )
+
+    # p0 gets an annotation in collection_a with a 2-D default embedding model.
+    annotations_a = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+        collection_name="coll_a",
+    )
+    coll_a_id = annotations_a[0].annotation_collection_id
+    model_a = create_embedding_model(
+        session=db_session,
+        collection_id=coll_a_id,
+        embedding_model_name="model_2d",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations_a[0].sample_id,
+        embedding_model_id=model_a.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+
+    # p1 gets an annotation in collection_b with a 3-D default embedding model.
+    annotations_b = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+        collection_name="coll_b",
+    )
+    coll_b_id = annotations_b[0].annotation_collection_id
+    model_b = create_embedding_model(
+        session=db_session,
+        collection_id=coll_b_id,
+        embedding_model_name="model_3d",
+        embedding_dimension=3,
+        set_as_default=True,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=annotations_b[0].sample_id,
+        embedding_model_id=model_b.embedding_model_id,
+        embedding=[1.0, 0.0, 0.0],
+    )
+
+    # embedding_model_name=None resolves each collection's default model,
+    # which have different dimensions.
+    strat = SubpartDiversityStrategy(
+        embedding_model_name=None,
+    )
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Subpart embeddings have inconsistent dimensions across "
+            r"annotation collections: collection "
+            + re.escape(str(coll_a_id))
+            + r" has dimension 2, but collection "
+            + re.escape(str(coll_b_id))
+            + r" has dimension 3\."
+        ),
+    ):
+        _get_subpart_embeddings(
+            session=db_session,
+            strat=strat,
+            input_sample_ids=[img.sample_id for img in parent_images],
+        )
+
+
+def test_get_subpart_embeddings__excludes_classification_annotations(
+    db_session: Session,
+) -> None:
+    """Classification annotations are excluded — only OD and segmentation contribute."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+        ],
+    )
+    # p0 → object detection crop (should be included).
+    od_annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            ),
+        ],
+    )
+    # p1 → classification crop (should be excluded).
+    cls_annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+        ],
+    )
+    annotation_collection_id = od_annotations[0].annotation_collection_id
+
+    crop_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    emb_od = [1.0, 0.0]
+    emb_cls = [0.0, 1.0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=od_annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_od,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=cls_annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_cls,
+    )
+
+    strat = SubpartDiversityStrategy(embedding_model_name="crop_model")
+    result = _get_subpart_embeddings(
+        session=db_session,
+        strat=strat,
+        input_sample_ids=[img.sample_id for img in parent_images],
+    )
+
+    # p0 (OD): included — its crop embedding is returned.
+    assert len(result[0]) == 1
+    np.testing.assert_array_equal(result[0][0], emb_od)
+    # p1 (classification): excluded — even though its crop has an embedding.
+    assert result[1] == []
+
+
+def test_get_subpart_embeddings__excludes_classification__with_annotation_source(
+    db_session: Session,
+) -> None:
+    """Classification annotations are excluded even when annotation_source_id is set."""
+    parent_collection = create_collection(session=db_session, collection_name="parent")
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="obj",
+    )
+    parent_images = create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            ImageStub(path="p0.jpg"),
+            ImageStub(path="p1.jpg"),
+        ],
+    )
+    # Both annotations go into the same named collection.
+    od_annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            ),
+        ],
+        collection_name="source",
+    )
+    cls_annotations = create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+        ],
+        collection_name="source",
+    )
+    annotation_collection_id = od_annotations[0].annotation_collection_id
+
+    crop_model = create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    emb_od = [1.0, 0.0]
+    emb_cls = [0.0, 1.0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=od_annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_od,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=cls_annotations[0].sample_id,
+        embedding_model_id=crop_model.embedding_model_id,
+        embedding=emb_cls,
+    )
+
+    strat = SubpartDiversityStrategy(
+        annotation_source_id=annotation_collection_id,
+        embedding_model_name="crop_model",
+    )
+    result = _get_subpart_embeddings(
+        session=db_session,
+        strat=strat,
+        input_sample_ids=[img.sample_id for img in parent_images],
+    )
+
+    # p0 (OD): included — its crop embedding is returned.
+    assert len(result[0]) == 1
+    np.testing.assert_array_equal(result[0][0], emb_od)
+    # p1 (classification): excluded — even though its crop has an embedding.
+    assert result[1] == []
 
 
 def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:

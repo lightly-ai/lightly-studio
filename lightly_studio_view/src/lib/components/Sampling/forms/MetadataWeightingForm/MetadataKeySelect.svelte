@@ -5,8 +5,14 @@
         value: string;
         fieldNames: string[];
         onValueChange: (value: string) => void;
+        testId?: string;
     }
-    let { value, fieldNames, onValueChange }: Props = $props();
+    let {
+        value,
+        fieldNames,
+        onValueChange,
+        testId = 'strategy-metadata-key-input'
+    }: Props = $props();
 
     const items = $derived(fieldNames.map((name) => ({ value: name, label: name })));
 </script>
@@ -17,5 +23,5 @@
     {onValueChange}
     placeholder="Select a metadata field"
     class="w-full"
-    testId="strategy-metadata-key-input"
+    {testId}
 />

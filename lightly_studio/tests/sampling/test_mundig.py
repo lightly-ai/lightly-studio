@@ -146,6 +146,49 @@ class TestMundig:
             # `target` only has 1 class
             mundig.add_class_balancing(class_distributions=class_distributions, target=[0.5])
 
+    def test_add_subpart_diversity__single_subpart_per_sample(self) -> None:
+        """Test subpart diversity with exactly one subpart per sample."""
+        mundig = Mundig()
+        mundig.add_subpart_diversity([[[1.0]], [[3.0]], [[5.0]]])
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [0, 2]
+
+    def test_add_subpart_diversity__multiple_subparts_per_sample(self) -> None:
+        """Test subpart diversity with varying numbers of subparts per sample."""
+        mundig = Mundig()
+        # Samples 0 and 1 cluster at opposite ends; sample 2 is in the middle.
+        # Selecting 2 samples should pick one from each cluster end.
+        mundig.add_subpart_diversity(
+            [
+                [[1.0, 0.0], [0.9, 0.1]],  # 2 subparts near [1, 0]
+                [[0.0, 1.0], [0.1, 0.9]],  # 2 subparts near [0, 1]
+                [[0.5, 0.5]],  # 1 subpart in the middle
+            ]
+        )
+        sampled = mundig.run(n_samples=2)
+        assert set(sampled) == {0, 1}
+
+    def test_add_subpart_diversity__empty_subpart_list(self) -> None:
+        """Test subpart diversity when at least one sample has no subparts."""
+        mundig = Mundig()
+        mundig.add_subpart_diversity(
+            [
+                [[1.0]],  # 1 subpart
+                [],  # 0 subparts — still eligible for selection
+                [[5.0]],  # 1 subpart
+            ]
+        )
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [0, 2]
+
+    def test_add_subpart_diversity__all_empty_subpart_lists(self) -> None:
+        """Test subpart diversity when every sample has no subparts."""
+        mundig = Mundig()
+        mundig.add_subpart_diversity([[], [], []])
+        mundig.add_weighting([1.0, 3.0, 2.0])
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [1, 2]
+
     def test_mundig_rust_error(self) -> None:
         """Test the error handling for Rust exceptions.
 

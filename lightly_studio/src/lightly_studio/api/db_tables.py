@@ -19,20 +19,30 @@ from lightly_studio.models.collection import (
 from lightly_studio.models.dataset import (
     DatasetTable,  # noqa: F401, required for SQLModel to work properly
 )
-from lightly_studio.models.default_embedding_space import (
-    DefaultEmbeddingSpaceTable,  # noqa: F401, required for SQLModel to work properly
+from lightly_studio.models.collection_embedding_model import (
+    CollectionEmbeddingModelTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.group_component_definition import (
+    GroupComponentDefinitionTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.image import (
     ImageTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.mcap import (
+    McapTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.metadata import (
     SampleMetadataTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.sequence import (
+    SampleSequenceLinkTable,  # noqa: F401, required for SQLModel to work properly
+    SequenceTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.settings import (
     SettingTable,  # noqa: F401, required for SQLModel to work properly

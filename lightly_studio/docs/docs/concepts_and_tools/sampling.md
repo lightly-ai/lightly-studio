@@ -26,6 +26,8 @@ Each strategy optimizes for a different goal. Start from what you are trying to 
 | Rank images by a number I have and keep the top ones (e.g. model confidence) | [Metadata weighting](#metadata-weighting) |
 | Find more images based on failure cases | [Similarity](#similarity) |
 | Balance how many objects of each class I have | [Class balancing](#class-balancing) |
+| Balance the selection over a metadata field | [Metadata balancing](#metadata-balancing) |
+| Pick a diverse subset based on the objects images contain, not overall scene appearance | [Subpart diversity](#subpart-diversity) |
 
 You are not limited to one strategy. See
 [Combining multiple strategies](#combining-multiple-strategies) to weight several in a single run.
@@ -288,9 +290,130 @@ The three `target_distribution` options are:
 
 | Value | Behavior |
 |---|---|
-| `"uniform"` | Equal share for every class present in the dataset |
+| `"uniform"` | Equal share for every class present in the candidate input set |
 | `"input"` | Mirrors the class distribution of the candidate input set |
-| `{class: ratio, ...}` | Explicit target ratios; must sum to 1.0 |
+| `{class: ratio, ...}` | Explicit target ratios. Give a ratio to only some classes; the other classes then share the remainder to 1.0 |
+
+### Metadata balancing
+
+!!! tip "When to use"
+    Your data is concentrated on a few conditions and you want the selection spread over them
+    evenly, for example equal amounts of every weather or every recording city. Unlike
+    [class balancing](#class-balancing), this needs no annotations: it balances a metadata field
+    you already have.
+
+Metadata balancing selects samples based on the distribution of the values of one metadata field.
+The field must be categorical, which means its values are strings or booleans. To rank samples by a
+numeric field instead, use [metadata weighting](#metadata-weighting).
+
+```py
+import lightly_studio as ls
+
+# Load your dataset
+dataset = ls.ImageDataset.load_or_create()
+
+# Option 1: Balance the values uniformly (e.g. equal amounts of every weather)
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_uniform",
+    metadata_key="weather",
+    target_distribution="uniform",
+)
+
+# Option 2: Mirror the value distribution of the input set
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_input",
+    metadata_key="weather",
+    target_distribution="input",
+)
+
+# Option 3: Define a specific target distribution (e.g. 30% sunny, 70% rainy)
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_custom",
+    metadata_key="weather",
+    target_distribution={"sunny": 0.3, "rainy": 0.7},
+)
+```
+
+The `target_distribution` options are the same as for [class balancing](#class-balancing), but they
+apply to the values of the metadata field:
+
+| Value | Behavior |
+|---|---|
+| `"uniform"` | Equal share for every value present in the candidate input set |
+| `"input"` | Mirrors the value distribution of the candidate input set |
+| `{value: ratio, ...}` | Explicit target ratios. Give a ratio to only some values; the other values then share the remainder to 1.0 |
+
+A boolean field is balanced over its two values. Name them with `True` and `False`, or with
+the lowercase strings `"true"` and `"false"`:
+
+```py
+# Select 20% blurry images and 80% sharp ones.
+dataset.query().sampling().metadata_balancing(
+    n_samples_to_select=50,
+    sampling_result_tag_name="balanced_blur",
+    metadata_key="is_blurry",
+    target_distribution={True: 0.2, False: 0.8},
+)
+```
+
+Samples that have no value for the field stay available for selection, but the strategy does not
+move the selection towards or away from them. To balance more than one field, combine one strategy
+per field with [multiple strategies](#combining-multiple-strategies). Each field is then balanced on
+its own, not over the combinations of their values.
+
+### Subpart diversity
+
+!!! tip "When to use"
+    Your dataset has object detection annotations and you care about the diversity of *objects*
+    rather than *scenes*. Two images can look visually similar at the scene level yet contain very
+    different objects; subpart diversity picks parent images by maximizing the spread of their
+    annotation crop embeddings, so the selected set covers as wide a range of objects as possible.
+
+!!! note "Annotations required"
+    This strategy requires annotation crops with embeddings. When you load data with
+    `add_samples_from_coco`, crop embeddings are generated automatically
+    (`embed_annotations=True` by default), so no extra embedding step is needed.
+
+Subpart diversity selects parent images based on the diversity of their annotation crop
+embeddings rather than full-image embeddings. Each parent image contributes the embeddings of
+all its annotation crops, and sampling maximizes diversity across those crop embeddings. Because
+diversity is measured at the crop level, two images that look nearly identical at the scene level
+are treated very differently when they contain different objects.
+
+```py
+import lightly_studio as ls
+
+# Load the dataset with COCO object detection annotations.
+# Crop embeddings are generated automatically by add_samples_from_coco.
+dataset = ls.ImageDataset.create()
+dataset.add_samples_from_coco(
+    annotations_json="/path/to/annotations.json",
+    images_path="/path/to/images",
+    annotation_type=ls.AnnotationType.OBJECT_DETECTION,
+)
+
+# Select 20 images whose object crops are as diverse as possible.
+dataset.query().sampling().subpart_diversity(
+    n_samples_to_select=20,
+    sampling_result_tag_name="diverse_objects",
+)
+```
+
+By default, crop embeddings from all annotation sources are merged. To restrict diversity
+to a specific annotation source, pass `annotation_source`:
+
+```py
+dataset.query().sampling().subpart_diversity(
+    n_samples_to_select=20,
+    sampling_result_tag_name="diverse_objects_from_one_source",
+    annotation_source="ground_truth",
+)
+```
+
+See [`Sampling.subpart_diversity`](../api/sampling.md#lightly_studio.sampling.sample.Sampling.subpart_diversity) for the full API reference.
 
 ## Running a sampling
 

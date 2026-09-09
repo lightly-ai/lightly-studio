@@ -57,7 +57,11 @@ def _include_object(
 
     Used only by ``revision --autogenerate``; ``upgrade`` does not call this hook.
     """
-    return not (type_ == "index" and name == "uq_collection_name_root")
+    postgres_only_indexes = {
+        "uq_collection_name_root",
+        "uq_collection_embedding_model_default",
+    }
+    return not (type_ == "index" and name in postgres_only_indexes)
 
 
 def _run_migrations_on(connection: Connection) -> None:

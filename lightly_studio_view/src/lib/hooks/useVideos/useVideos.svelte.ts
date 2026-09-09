@@ -2,11 +2,7 @@ import { getAllVideosInfiniteOptions } from '$lib/api/lightly_studio_local/@tans
 
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { writable } from 'svelte/store';
-import type {
-    VideoFilter,
-    VideoSortFieldExpr,
-    VideoView
-} from '$lib/api/lightly_studio_local/types.gen';
+import type { VideoFilter, VideoSortFieldExpr, VideoView } from '$lib/api/lightly_studio_local';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 
 export const useVideos = (

@@ -1,6 +1,12 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import { truncate } from 'lodash-es';
-import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
+import {
+    CHART_AXIS_LABEL,
+    CHART_EMPHASIS,
+    CHART_LINE_COLOR,
+    CHART_TEXT_COLOR,
+    formatFloat
+} from '$lib/utils';
 import type { CategoryCount, CategoryCountSeries } from './types';
 import { assignSeriesColors } from './seriesColors';
 import { buildGroupedSeries, categoryKey } from './buildGroupedSeries';
@@ -92,10 +98,12 @@ export function buildEchartsOption(
         // this, a max count of 1 makes ECharts split [0,1] into 0.2 steps and
         // render fractional labels (0, 0.2, 0.4 …).
         minInterval: valueMode === 'number' ? 1 : undefined,
-        max: valueMode === 'percentage' ? 100 : undefined,
+        // Percentage mode is *not* pinned to 100%: ECharts scales the axis to the
+        // tallest bar (rounded up to a nice tick), so a distribution whose biggest
+        // share is 12% fills the plot instead of hugging the baseline.
         axisLabel:
             valueMode === 'percentage'
-                ? { ...CHART_AXIS_LABEL, formatter: (value: number) => `${value}%` }
+                ? { ...CHART_AXIS_LABEL, formatter: (value: number) => `${formatFloat(value)}%` }
                 : CHART_AXIS_LABEL,
         splitLine: { lineStyle: { color: CHART_LINE_COLOR } }
     };

@@ -20,6 +20,7 @@ Stay updated with the latest developments, tips, and tutorials by following us:
 ## Usage Tracking
 
 LightlyStudio reports anonymous usage data: an ID generated on first run, how the app was started,
+whether the installation is a released package, a build from source, a CI run or a Lightly machine,
 and the LightlyStudio, Python and OS versions. No image data, file paths or annotations leave your
 machine.
 

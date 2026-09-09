@@ -182,11 +182,12 @@ describe('buildEchartsOption', () => {
             ],
             { series: groupedSeries, valueMode: 'percentage' }
         ) as {
-            yAxis: { max: number };
+            yAxis: { max?: number };
             series: { data: number[] }[];
         };
 
-        expect(option.yAxis.max).toBe(100);
+        // The axis is left unpinned so it scales to the tallest bar, not to 100%.
+        expect(option.yAxis.max).toBeUndefined();
         expect(option.series.map((series) => series.data)).toEqual([
             [100, 0],
             [100, 0]

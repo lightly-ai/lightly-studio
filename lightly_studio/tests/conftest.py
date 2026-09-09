@@ -18,6 +18,7 @@ from testcontainers.postgres import PostgresContainer  # type: ignore[import-unt
 from lightly_studio.analytics import tracking
 from lightly_studio.api import features
 from lightly_studio.api.app import app
+from lightly_studio.api.routes.api import analytics
 from lightly_studio.database import db_manager
 from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
 from lightly_studio.dataset import embedding_manager
@@ -75,9 +76,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 def _disable_analytics(mocker: MockerFixture) -> None:
     """Keep the suite off the network whatever the developer's environment configures.
 
-    Runs before any module level fixture, so a test that patches these itself still wins.
+    Runs before any module level fixture, so a test that patches these itself still wins. The route
+    is switched off too, so that no test leaves an install id in the developer's cache directory.
     """
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
+    mocker.patch.object(analytics, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
     mocker.patch.object(tracking, "_tracker", None)
 
 
@@ -234,7 +237,6 @@ def collections(db_session: Session) -> list[CollectionTable]:
 def embedding_model_input(collection: CollectionTable) -> EmbeddingModelCreate:
     """Create an EmbeddingModelCreate instance."""
     return EmbeddingModelCreate(
-        collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         embedding_dimension=3,
         name="test_model",

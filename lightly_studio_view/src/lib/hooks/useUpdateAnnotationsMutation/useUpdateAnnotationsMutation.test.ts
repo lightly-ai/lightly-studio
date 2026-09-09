@@ -31,7 +31,7 @@ describe('useUpdateAnnotationsMutation', () => {
         } as unknown as ReturnType<typeof useQueryClient>);
     });
 
-    it('invalidates annotation-bearing grids after a successful update', async () => {
+    it('invalidates annotation-bearing grids and evaluation runs after a successful update', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
                 opts.onSuccess();
@@ -47,6 +47,9 @@ describe('useUpdateAnnotationsMutation', () => {
 
         expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith();
         expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: [{ _id: 'getEvaluationRuns' }]
+        });
     });
 
     it('fires annotation_label_updated when a single update with label_name succeeds', async () => {

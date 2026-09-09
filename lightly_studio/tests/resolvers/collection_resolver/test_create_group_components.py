@@ -27,13 +27,15 @@ def test_create_group_components(db_session: Session) -> None:
         components["video"].collection_id,
     }
 
-    assert components["image"].group_component_index == 0
-    assert components["image"].group_component_name == "image"
+    assert components["image"].group_component_definition is not None
+    assert components["image"].group_component_definition.group_component_index == 0
+    assert components["image"].group_component_definition.group_component_name == "image"
     assert components["image"].sample_type == SampleType.IMAGE
     assert components["image"].name == "root_comp_0"
 
-    assert components["video"].group_component_index == 1
-    assert components["video"].group_component_name == "video"
+    assert components["video"].group_component_definition is not None
+    assert components["video"].group_component_definition.group_component_index == 1
+    assert components["video"].group_component_definition.group_component_name == "video"
     assert components["video"].sample_type == SampleType.VIDEO
     assert components["video"].name == "root_comp_1"
 

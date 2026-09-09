@@ -12,6 +12,7 @@ import TagsMenu from './TagsMenu.svelte';
 import type { TagByFilterBody } from '$lib/api/lightly_studio_local';
 import type { TagView } from '$lib/services/types';
 import { toast } from 'svelte-sonner';
+import useAuth from '$lib/hooks/useAuth/useAuth';
 
 type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
 
@@ -68,6 +69,10 @@ vi.mock('svelte-sonner', () => ({
     }
 }));
 
+vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+    default: vi.fn()
+}));
+
 const sampleTag: TagView = {
     tag_id: 'tag-1',
     name: 'Vehicle',
@@ -82,6 +87,11 @@ const mockResponse = new Response(null, { status: 200 });
 describe('TagsMenu', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(useAuth).mockReturnValue({
+            user: undefined,
+            token: undefined,
+            isAuthenticated: false
+        });
         mocks.tags = [sampleTag];
         mocks.tagsSelected = new Set<string>();
         mocks.selectedSampleIdsByCollection = {};
@@ -317,6 +327,43 @@ describe('TagsMenu', () => {
         });
 
         expect(screen.getByPlaceholderText('Assign tag to selection')).toBeDisabled();
+    });
+
+    it('keeps tag filters but hides tag mutations for viewers', () => {
+        vi.mocked(useAuth).mockReturnValue({
+            user: { username: 'viewer', email: 'viewer@example.com', role: 'viewer' },
+            token: 'viewer-token',
+            isAuthenticated: true
+        });
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        expect(screen.getByText('Vehicle')).toBeVisible();
+        expect(screen.queryByPlaceholderText('Assign tag to selection')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('tag-actions-trigger-tag-1')).not.toBeInTheDocument();
+    });
+
+    it('shows tag mutations for labelers', () => {
+        vi.mocked(useAuth).mockReturnValue({
+            user: { username: 'labeler', email: 'labeler@example.com', role: 'labeler' },
+            token: 'labeler-token',
+            isAuthenticated: true
+        });
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        expect(screen.getByPlaceholderText('Assign tag to selection')).toBeVisible();
+        expect(screen.getByTestId('tag-actions-trigger-tag-1')).toBeVisible();
     });
 
     it('shows a toast when tag assignment throws unexpectedly', async () => {

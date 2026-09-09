@@ -201,7 +201,9 @@ subsets, and export the result. See the
 
 ## 🤝 Contribute
 
-We welcome contributions! Please check our issues page for current tasks and improvements, or propose new issues yourself.
+We welcome contributions! Please check our issues page for current tasks and improvements, or
+propose new issues yourself. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and
+validation instructions.
 
 ## 💬 Contact
 

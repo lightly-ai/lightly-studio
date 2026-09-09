@@ -5,23 +5,19 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlmodel import VARCHAR, Column, Field, SQLModel
+from sqlalchemy import UniqueConstraint
+from sqlmodel import Field, SQLModel
 
 
-class EmbeddingSpaceDescription(SQLModel):
-    """Description of an embedding space."""
-
-    name: str
-    parameter_count_in_mb: int | None = None
-    embedding_model_hash: str = Field(default="", sa_column=Column(VARCHAR(128)))
-    embedding_dimension: int
-
-
-class EmbeddingModelBase(EmbeddingSpaceDescription):
+class EmbeddingModelBase(SQLModel):
     """Base class for the EmbeddingModel."""
 
-    collection_id: UUID = Field(default=None, foreign_key="collection.collection_id", index=True)
+    name: str
+    embedding_dimension: int
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
+    remote_embedder_url: str | None = None
+    # Secret: `repr=False` keeps it out of logged rows, and it must never reach a response model.
+    api_key: str | None = Field(default=None, repr=False)
 
 
 class EmbeddingModelCreate(EmbeddingModelBase):
@@ -32,5 +28,6 @@ class EmbeddingModelTable(EmbeddingModelBase, table=True):
     """This class defines the EmbeddingModel model."""
 
     __tablename__ = "embedding_model"
+    __table_args__ = (UniqueConstraint("dataset_id", "name", name="unique_embedding_model_name"),)
     embedding_model_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)

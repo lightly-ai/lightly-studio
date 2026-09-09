@@ -1,8 +1,12 @@
-import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ClassBalancingForm from './ClassBalancingForm.svelte';
 
 describe('ClassBalancingForm', () => {
+    beforeEach(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
     it('does not show the target distribution section when target_distribution_mode is uniform', () => {
         render(ClassBalancingForm, {
             props: {
@@ -55,5 +59,34 @@ describe('ClassBalancingForm', () => {
         });
 
         expect(screen.getByTestId('class-balancing-add-row')).toBeInTheDocument();
+    });
+
+    it('keeps the target distribution when the annotation source changes', async () => {
+        const onUpdate = vi.fn();
+
+        render(ClassBalancingForm, {
+            props: {
+                instanceId: 'test',
+                params: {
+                    annotation_source_id: 'source-1',
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: 'cat', weight: 0.5 }],
+                    strength: 1
+                },
+                annotationLabels: ['cat', 'dog'],
+                annotationSourceOptions: [
+                    { id: 'source-1', name: 'ground-truth' },
+                    { id: 'source-2', name: 'predictions' }
+                ],
+                onUpdate
+            }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), { key: 'Enter' });
+        await fireEvent.pointerUp(
+            await screen.findByTestId('annotation-source-option-predictions')
+        );
+
+        expect(onUpdate).toHaveBeenCalledWith({ annotation_source_id: 'source-2' });
     });
 });

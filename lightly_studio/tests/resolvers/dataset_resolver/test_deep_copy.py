@@ -3,7 +3,7 @@
 import uuid
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -15,12 +15,14 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     dataset_resolver,
-    default_embedding_space_resolver,
     embedding_model_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
@@ -318,16 +320,18 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     )
 
     # Assert - embedding model is copied with new ID
-    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
-    assert len(copied_embedding_models) == 1
-    copied_model = copied_embedding_models[0]
+    assert len(copied_model_ids) == 1
+    copied_model = embedding_model_resolver.get_by_id(
+        session=db_session, embedding_model_id=copied_model_ids[0]
+    )
+    assert copied_model is not None
     assert copied_model.embedding_model_id != embedding_model.embedding_model_id
     assert copied_model.dataset_id == copied.dataset_id
     assert copied_model.name == embedding_model.name
-    assert copied_model.embedding_model_hash == embedding_model.embedding_model_hash
     assert copied_model.embedding_dimension == embedding_model.embedding_dimension
 
     # Assert - embeddings copied
@@ -375,18 +379,101 @@ def test_deep_copy__with_default_embedding_space(db_session: Session) -> None:
     )
 
     # Assert - the copied collection's default resolves to the copied model, not the original.
-    copied_models = embedding_model_resolver.get_all_by_collection_id(
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
-    assert len(copied_models) == 1
-    copied_model_id = copied_models[0].embedding_model_id
+    assert len(copied_model_ids) == 1
+    copied_model_id = copied_model_ids[0]
     assert copied_model_id != embedding_model.embedding_model_id
 
-    copied_default_id = default_embedding_space_resolver.get_by_collection_id(
+    copied_default_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=db_session, collection_id=copied.collection_id
     )
     assert copied_default_id == copied_model_id
+
+
+def test_deep_copy__with_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(
+        session=db_session, collection_name="original", sample_type=SampleType.GROUP
+    )
+    original_components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=original.collection_id,
+        components=[("front_camera", SampleType.IMAGE)],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copied group has its own component definition, not the original's.
+    copied_components = collection_resolver.get_group_components(
+        session=db_session, parent_collection_id=copied.collection_id
+    )
+    assert len(copied_components) == 1
+    copied_component = copied_components["front_camera"]
+    assert copied_component.collection_id != original_components["front_camera"].collection_id
+    assert copied_component.group_component_definition is not None
+    assert copied_component.group_component_definition.group_component_name == "front_camera"
+    assert copied_component.group_component_definition.group_component_index == 0
+
+
+def test_deep_copy__with_sequences(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id) for _ in range(3)],
+    )
+    sequence = SequenceTable(sample_id=sample_ids[0])
+    db_session.add(sequence)
+    db_session.flush()
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=sample_ids[1],
+            sequence_sample_id=sequence.sample_id,
+            seq_number=0,
+            timestamp_ns=1785699091646722462,
+        )
+    )
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=sample_ids[2], sequence_sample_id=sequence.sample_id, seq_number=1
+        )
+    )
+    db_session.commit()
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copy has its own sequence, keyed by a fresh sample_id.
+    copied_sequences = db_session.exec(
+        select(SequenceTable)
+        .join(SampleTable, col(SequenceTable.sample_id) == col(SampleTable.sample_id))
+        .where(col(SampleTable.collection_id) == copied.collection_id)
+    ).all()
+    assert len(copied_sequences) == 1
+    copied_sequence_id = copied_sequences[0].sample_id
+    assert copied_sequence_id != sequence.sample_id
+
+    # Assert - the copied links point at the copied samples, in the original order.
+    copied_links = db_session.exec(
+        select(SampleSequenceLinkTable)
+        .where(col(SampleSequenceLinkTable.sequence_sample_id) == copied_sequence_id)
+        .order_by(col(SampleSequenceLinkTable.seq_number).asc())
+    ).all()
+    assert [link.seq_number for link in copied_links] == [0, 1]
+    assert [link.timestamp_ns for link in copied_links] == [1785699091646722462, None]
+    assert {link.sample_id for link in copied_links}.isdisjoint(sample_ids)
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
@@ -467,15 +554,15 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
     )
 
     # Assert - copied collection still has embeddings
-    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
-    assert len(copied_embedding_models) == 1
+    assert len(copied_model_ids) == 1
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
-        embedding_model_id=copied_embedding_models[0].embedding_model_id,
+        embedding_model_id=copied_model_ids[0],
     )
     assert len(copied_embeddings) == 1
 

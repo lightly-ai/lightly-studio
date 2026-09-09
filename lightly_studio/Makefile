@@ -9,13 +9,23 @@ POSTGRES_SHM_SIZE ?= 2g
 POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 
+# Installs the uv version that `required-version` in pyproject.toml pins, so a local
+# `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
+UV_VERSION := 0.12.6
+
 .PHONY: install-uv
 install-uv:
 ifeq ($(OS),Windows_NT)
-	powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+	powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/$(UV_VERSION)/install.ps1 | iex"
 else
-	@if ! command -v uv &> /dev/null; then \
-		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+	@if [ "$$(uv --version 2>/dev/null | awk '{print $$2}')" != "$(UV_VERSION)" ]; then \
+		set -e; \
+		installer=$$(mktemp); \
+		trap 'rm -f "$$installer"' EXIT; \
+		curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh -o "$$installer"; \
+		sh "$$installer"; \
+		[ "$$(uv --version 2>/dev/null | awk '{print $$2}')" = "$(UV_VERSION)" ] || \
+			echo "Installed uv $(UV_VERSION). Restart your shell, or fix your PATH if another uv shadows it."; \
 	fi
 endif
 
@@ -26,20 +36,22 @@ install-optional-deps:
 	@echo "Installing with optional dependencies..."
 	uv sync --all-groups --all-extras
 
+# `--out-dir dist` on every `uv build` below: in a uv workspace `uv build` defaults to the
+# workspace root, so without it the wheel would land in ../dist instead of lightly_studio/dist.
 .PHONY: build
 build: clean build-lightly_studio_view
 	@echo "Building a distribution package..."
-	uv build
+	uv build --out-dir dist
 
 .PHONY: build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; $(MAKE) -C ../lightly_studio_view build"
+	@powershell -Command "$(MAKE) -C ../lightly_studio_view build"
 	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
-	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) $(MAKE) -C ../lightly_studio_view build
+	$(MAKE) -C ../lightly_studio_view build
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
 	cp ../lightly_studio_view/src/lib/version.json src/lightly_studio/dist_lightly_studio_view_app/version-info.json
 endif
@@ -48,17 +60,17 @@ endif
 .PHONY: build-dirty
 build-dirty: build-dirty-lightly_studio_view
 	@echo "Building a distribution package..."
-	uv build
+	uv build --out-dir dist
 
 .PHONY: build-dirty-lightly_studio_view
 build-dirty-lightly_studio_view: export-schema export-version
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; $(MAKE) -C ../lightly_studio_view build-dirty"
+	@powershell -Command "$(MAKE) -C ../lightly_studio_view build-dirty"
 	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
-	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) $(MAKE) -C ../lightly_studio_view build-dirty
+	$(MAKE) -C ../lightly_studio_view build-dirty
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
 	cp ../lightly_studio_view/src/lib/version.json src/lightly_studio/dist_lightly_studio_view_app/version-info.json
 endif
@@ -269,39 +281,6 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini check
 endif
 
-.PHONY: check-uv-lock
-check-uv-lock:
-	@echo "Ensuring uv.lock is up to date..."
-	uv lock --check
-
-.PHONY: lint
-lint:
-	@echo "Linting project with ruff..."
-	uv run ruff check
-
-.PHONY: type-check
-type-check:
-	@echo "Checking types with mypy..."
-	uv run mypy .
-
-.PHONY: format-check
-format-check:
-	@echo "Checking format with ruff..."
-	uv run ruff format --check
-
-.PHONY: static-checks
-static-checks: check-uv-lock lint type-check format-check
-
-.PHONY: format
-format:
-	@echo "Formatting project with ruff..."
-	uv run ruff format
-	uv run ruff check --fix
-
-.PHONY: lint-fix
-lint-fix:
-	uv run ruff check --fix
-
 .PHONY: clean
 clean:
 ifeq ($(OS),Windows_NT)
@@ -319,3 +298,5 @@ else
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -exec rm -rf {} +
 endif
+
+include ../make/python.mk

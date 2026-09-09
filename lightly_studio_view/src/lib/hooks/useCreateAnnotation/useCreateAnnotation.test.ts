@@ -66,6 +66,9 @@ describe('useCreateAnnotation', () => {
         expect(invalidateQueries).toHaveBeenCalledWith({
             queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: 'col-1' } })
         });
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: [{ _id: 'getEvaluationRuns' }]
+        });
     });
 
     it('fires annotation_created with correct properties on success', async () => {

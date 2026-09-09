@@ -4,6 +4,7 @@
     import { Select, type SelectItem } from '$lib/components/Select';
     import { formatFloat, formatInteger } from '$lib/utils';
     import type { HistogramData } from '$lib/components/Histogram';
+    import { ValueModeSelect, type ValueMode } from '../PanelHeader/ValueModeSelect';
 
     interface Props {
         histogram: HistogramData;
@@ -12,6 +13,8 @@
         histogramBinCount: number;
         binCountItems: SelectItem[];
         onHistogramBinCountChange?: (binCount: number) => void;
+        valueMode?: ValueMode;
+        onValueModeChange?: (mode: ValueMode) => void;
         onExpand: () => void;
     }
 
@@ -22,6 +25,8 @@
         histogramBinCount,
         binCountItems,
         onHistogramBinCountChange,
+        valueMode = 'number',
+        onValueModeChange,
         onExpand
     }: Props = $props();
 </script>
@@ -31,13 +36,20 @@
         class="text-xs text-muted-foreground"
         data-testid="dataset-distribution-histogram-summary"
     >
-        {formatInteger(histogramTotal)}
+        {valueMode === 'percentage' ? '100% of ' : ''}{formatInteger(histogramTotal)}
         {valueNoun} · {histogram.counts.length}
         {histogram.counts.length === 1 ? 'bin' : 'bins'} · {formatFloat(
             histogram.binEdges[0]
         )}–{formatFloat(histogram.binEdges[histogram.binEdges.length - 1])}
     </span>
     <div class="flex items-center gap-1">
+        {#if onValueModeChange}
+            <ValueModeSelect
+                value={valueMode}
+                testId="dataset-distribution-histogram-value-mode"
+                onChange={onValueModeChange}
+            />
+        {/if}
         {#if onHistogramBinCountChange}
             <Select
                 items={binCountItems}

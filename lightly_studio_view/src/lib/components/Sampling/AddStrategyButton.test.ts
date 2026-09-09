@@ -90,6 +90,21 @@ describe('AddStrategyButton', () => {
         );
     });
 
+    it('disables the metadata balancing option when a reason is provided', async () => {
+        render(AddStrategyButton, {
+            props: {
+                metadataBalancingDisabledReason: 'No categorical metadata available',
+                onAdd: vi.fn()
+            }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-metadata_balancing')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
     it('does not call onAdd when a disabled option is clicked', async () => {
         const onAdd = vi.fn();
 
@@ -146,5 +161,31 @@ describe('AddStrategyButton', () => {
         await fireEvent.pointerUp(button);
 
         expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
+
+    it('shows the subpart diversity option in the menu', async () => {
+        render(AddStrategyButton, {
+            props: { onAdd: vi.fn() }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toBeInTheDocument();
+    });
+
+    it('disables the subpart diversity option when a reason is provided', async () => {
+        render(AddStrategyButton, {
+            props: {
+                subpartDiversityDisabledReason:
+                    'Only one subpart diversity strategy can be added per selection.',
+                onAdd: vi.fn()
+            }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
     });
 });

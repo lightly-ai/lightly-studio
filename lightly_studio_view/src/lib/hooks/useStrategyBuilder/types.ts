@@ -36,6 +36,18 @@ export interface ClassBalancingParams {
     strength: number;
 }
 
+export interface MetadataBalancingParams {
+    metadata_key: string;
+    target_distribution_mode: ClassBalancingTargetDistributionMode;
+    target_distribution: ClassBalancingTargetRow[];
+    strength: number;
+}
+
+export interface SubpartDiversityParams {
+    annotation_source_id: string;
+    strength: number;
+}
+
 export interface StrategyParamsByType {
     diversity: DiversityParams;
     deduplication: DeduplicationParams;
@@ -43,6 +55,8 @@ export interface StrategyParamsByType {
     similarity: SimilarityParams;
     metadata_weighting: MetadataWeightingParams;
     class_balancing: ClassBalancingParams;
+    metadata_balancing: MetadataBalancingParams;
+    subpart_diversity: SubpartDiversityParams;
 }
 
 export type StrategyType = keyof StrategyParamsByType;
@@ -96,6 +110,18 @@ export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description:
         label: 'Class Balancing',
         description:
             'Selects samples to reach a target class distribution using annotation labels. Use to fix class imbalance or enforce custom class proportions.'
+    },
+    {
+        type: 'metadata_balancing',
+        label: 'Metadata Balancing',
+        description:
+            'Selects samples to reach a target distribution over a categorical metadata field such as weather or city. Use to even out a dataset skewed by a recorded condition.'
+    },
+    {
+        type: 'subpart_diversity',
+        label: 'Subpart Diversity',
+        description:
+            'Selects samples based on the diversity of their annotation subparts (crops). Use to build varied training sets at the sub-image level.'
     }
 ] satisfies Array<{ type: StrategyType; label: string; description: string }>;
 
@@ -113,6 +139,16 @@ export const STRATEGY_DEFAULTS: { [K in StrategyType]: StrategyParamsByType[K] }
         annotation_source_id: '',
         target_distribution_mode: 'uniform',
         target_distribution: [],
+        strength: 1
+    },
+    metadata_balancing: {
+        metadata_key: '',
+        target_distribution_mode: 'uniform',
+        target_distribution: [],
+        strength: 1
+    },
+    subpart_diversity: {
+        annotation_source_id: '',
         strength: 1
     }
 };

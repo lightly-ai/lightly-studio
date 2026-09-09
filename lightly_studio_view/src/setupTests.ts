@@ -20,6 +20,17 @@ vi.mock('$env/static/public', () => ({
     PUBLIC_LIGHTLY_STUDIO_API_URL: 'http://mock-url.com/api'
 }));
 
+// jsdom does not implement HTMLMediaElement playback methods. Stub them so
+// components that call pause()/play() in effects don't throw "Not implemented".
+Object.defineProperty(window.HTMLMediaElement.prototype, 'pause', {
+    writable: true,
+    value: vi.fn()
+});
+Object.defineProperty(window.HTMLMediaElement.prototype, 'play', {
+    writable: true,
+    value: vi.fn().mockResolvedValue(undefined)
+});
+
 // jsdom has no ResizeObserver. Track instances so tests can trigger the callback manually
 // (jsdom reports scrollWidth/clientWidth as 0, so observers never fire on their own).
 class MockResizeObserver implements ResizeObserver {

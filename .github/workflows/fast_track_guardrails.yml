@@ -33,7 +33,7 @@ jobs:
         working-directory: fast_track
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         # Never pushes — keep the git token out of the checkout. This job runs PR code
         # (builds and tests) with the workflow token, and the job's `if` restricts it to
         # same-repo PRs, so untrusted fork code never runs in that context.
@@ -70,11 +70,12 @@ jobs:
 
       - name: Set Up uv
         if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.8.17"
+          version: "0.12.6"
           python-version: "3.9"
           enable-cache: true
+          save-cache: false
 
       - name: Install backend dependencies
         if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'

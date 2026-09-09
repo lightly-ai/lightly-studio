@@ -31,7 +31,7 @@ describe('useDeleteAnnotation', () => {
         } as unknown as ReturnType<typeof useQueryClient>);
     });
 
-    it('invalidates annotation-bearing grids after a successful delete', async () => {
+    it('invalidates annotation-bearing grids and evaluation runs after a successful delete', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
                 opts.onSuccess();
@@ -43,6 +43,9 @@ describe('useDeleteAnnotation', () => {
 
         expect(useInvalidateAnnotationGridQueries).toHaveBeenCalledWith();
         expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: [{ _id: 'getEvaluationRuns' }]
+        });
     });
 
     it('fires annotation_deleted with collection_id and annotation_type on success', async () => {
