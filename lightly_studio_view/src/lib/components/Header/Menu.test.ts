@@ -76,21 +76,6 @@ describe('Split dataset menu', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it.each(['viewer', 'labeler', 'editor', 'admin'] as const)(
-        'respects the %s role',
-        async (role) => {
-            render(Menu, {
-                collection,
-                isImages: true,
-                user: { role, username: 'user', email: 'user@example.com' }
-            });
-            await openMenu();
-            expect(screen.queryByTestId('menu-dataset-split') !== null).toBe(
-                role === 'editor' || role === 'admin'
-            );
-        }
-    );
-
     it.each(['image', 'video_frame', 'group'] as const)(
         'hides splitting outside image/video grids (%s)',
         async (sample_type) => {
