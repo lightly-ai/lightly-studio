@@ -572,7 +572,7 @@ def patch_collection(
     )
 
     embedder_registry._registry = embedder_registry.EmbedderRegistry()
-    embedder_registry.get_registry().register_embedder(embedder=RandomEmbedder())
+    embedder_registry.get_registry().register(embedder=RandomEmbedder())
 
     # Create test-specific lightly_studio_active_features.
     mocker.patch.object(features, "lightly_studio_active_features", [])

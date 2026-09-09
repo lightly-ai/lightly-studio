@@ -50,7 +50,7 @@ def patched_manager() -> RandomEmbedder:
     """Register a fresh random embedder for every test."""
     embedder_registry._registry = embedder_registry.EmbedderRegistry()
     embedder = RandomEmbedder()
-    embedder_registry.get_registry().register_embedder(embedder=embedder)
+    embedder_registry.get_registry().register(embedder=embedder)
     return embedder
 
 
@@ -359,7 +359,7 @@ def test_embed_frame_samples__matches_frames_to_sample_ids_in_order(
     assert len(frames.frame_sample_ids) == len(colors)
     pil_frames = [Image.new("RGB", (2, 2), color=color) for color in colors]
 
-    embedder_registry.get_registry().register_embedder(embedder=_FirstPixelEmbedder())
+    embedder_registry.get_registry().register(embedder=_FirstPixelEmbedder())
     model = embed_samples.ensure_default_model(
         session=db_session,
         collection_id=frames.video_frames_collection_id,
@@ -475,7 +475,7 @@ def _register_default_random_model(
     if dimension != 3:
         embedder_registry._registry = embedder_registry.EmbedderRegistry()
         embedder = RandomEmbedder(dimension=dimension)
-    embedder_registry.get_registry().register_embedder(embedder=embedder)
+    embedder_registry.get_registry().register(embedder=embedder)
     model = embed_samples.ensure_default_model(
         session=session, collection_id=collection_id, capability=Capability.IMAGE_PATH
     )
