@@ -1,8 +1,9 @@
 """Load a LightlyTrain model into LightlyStudio and explore its embeddings.
 
 Part 2 of a two-script example. Run ``example_lightlytrain_train_and_export.py``
-first to produce ``out/embedding_model.pt``. This script loads that model, embeds
-the dataset with it on the fly, selects a diverse subset, and opens the app.
+first to produce ``out/embedding_model.pt``, the distilled ``dinov3/vitt16``
+student. This script loads that model, embeds the dataset with it on the fly,
+selects a diverse subset, and opens the app.
 
 The environment that runs this needs the same ``lightly-train`` version used to
 export the model, because ``torch.load`` unpickles LightlyTrain's model class:
@@ -35,20 +36,6 @@ IMAGE_SIZE = 224
 # normalize_args, pass the matching mean/std here.
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
-
-# Imagenette's folders are WordNet IDs; map them to readable class names.
-WNID_TO_NAME = {
-    "n01440764": "tench",
-    "n02102040": "English springer",
-    "n02979186": "cassette player",
-    "n03000684": "chain saw",
-    "n03028079": "church",
-    "n03394916": "French horn",
-    "n03417042": "garbage truck",
-    "n03425413": "gas pump",
-    "n03445777": "golf ball",
-    "n03888257": "parachute",
-}
 
 
 class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
@@ -145,26 +132,57 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
 
 
 # 1. Point at the same dataset used for training (train_and_export.py downloaded it).
-IMAGE_PATH = "imagenette2-320/val"
+IMAGE_PATH = Path("data/CUB_200_2011/images")
+# The plot gets one color per species, and 200 colors are hard to tell apart. These
+# two settings load a smaller slice so the plot stays readable. Set both to None to
+# load all 200 species and all 11,788 images.
+NUM_SPECIES: int | None = 20
+IMAGES_PER_SPECIES: int | None = 50
 
-# 2. Load the model into LightlyStudio. Register the generator BEFORE creating the
+# 2. Check the inputs before connecting, because cleanup_existing=True below deletes
+# the local database. Both paths are relative, so the usual mistake is the working
+# directory.
+for required_path in (IMAGE_PATH, Path(MODEL_FILE)):
+    if not required_path.exists():
+        raise SystemExit(
+            f"{required_path} not found (cwd={Path.cwd()}). "
+            "Run example_lightlytrain_train_and_export.py first."
+        )
+
+# 3. Load the model into LightlyStudio. Register the generator BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
 # cleanup_existing=True resets the local database each run; remove it to keep prior runs.
 db_manager.connect(cleanup_existing=True)
 ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
-dataset.add_images_from_path(path=IMAGE_PATH)
 
-# Label each image with its class, so you can color the plot by class in the GUI.
+# This script expects one subfolder per class with the images directly inside, the
+# layout CUB-200-2011 ships. Anything else is rejected rather than loaded wrong.
+species_dirs = sorted(p for p in IMAGE_PATH.iterdir() if p.is_dir() and p.name[0] != ".")
+if not species_dirs:
+    raise SystemExit(
+        f"{IMAGE_PATH} has no class subfolders. For a flat folder of images, replace "
+        "this block with a single dataset.add_images_from_path(path=IMAGE_PATH) call "
+        "and drop the labelling loop below."
+    )
+
+# One call per species, so each species contributes at most IMAGES_PER_SPECIES images.
+# A single call would cap the total across all species instead.
+for species_dir in species_dirs[:NUM_SPECIES]:
+    dataset.add_images_from_path(path=species_dir, limit=IMAGES_PER_SPECIES)
+
+# Label each image with its species, so you can color the plot by species in the GUI.
+# CUB folders look like "001.Black_footed_Albatross".
 for sample in dataset:
-    class_name = WNID_TO_NAME[Path(sample.file_path_abs).parent.name]
-    sample.add_annotation(CreateClassification(class_name=class_name), annotation_source="class")
+    folder = Path(sample.file_path_abs).parent.name
+    species = folder.split(".", 1)[-1].replace("_", " ")
+    sample.add_annotation(CreateClassification(class_name=species), annotation_source="species")
 
-# 3. Curate in code: select a diverse subset. The result is stored as a tag you can
+# 4. Curate in code: select a diverse subset. The result is stored as a tag you can
 # open in the app. You can also do this interactively with the lasso in the GUI.
 dataset.query().sampling().diverse(
     n_samples_to_select=32, sampling_result_tag_name="diverse_subset"
 )
 
-# 4. Explore the embedding map. Open the printed URL and pick the Embed panel.
+# 5. Explore the embedding map. Open the printed URL and pick the Embed panel.
 ls.start_gui(open_browser=True)

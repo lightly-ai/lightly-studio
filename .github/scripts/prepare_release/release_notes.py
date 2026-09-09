@@ -1,6 +1,6 @@
 """Assemble the GitHub release body: the changelog section, then GitHub's own notes.
 
-Backs the "Publish Release" workflow. The `CHANGELOG.md` section leads because
+Backs the "Draft Release" workflow. The `CHANGELOG.md` section leads because
 it is the text the team edited and reviewed on the release PR; GitHub's
 auto-generated notes follow as the full commit-level record.
 
@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import re
 
-# Discord caps a message body at 4096 characters, so the marker sits before the
-# generated section rather than at the end of the notes.
-DISCORD_STOP_MARKER = "<!-- STOP DISCORD MESSAGE -->"
+# The changelog section starts at "### Added", so it needs a heading of its own
+# to sit level with the "## What's Changed" of the generated half below it.
+_CHANGELOG_HEADING = "## Changelog"
 
 # Ticket ids as they occur in this repo's PR titles: leading "LIG-10603: ",
 # leading "LIG-10374 ", and trailing "(LIG-10323)" or "(LIG-10089, 2/3)". A
@@ -44,8 +44,8 @@ def render_release_notes(changelog_section: str, generated_notes: str) -> str:
         The Markdown body for the GitHub release.
     """
     return (
+        f"{_CHANGELOG_HEADING}\n\n"
         f"{changelog_section.strip()}\n\n"
-        f"{DISCORD_STOP_MARKER}\n\n"
         f"{sanitize_generated_notes(generated_notes).strip()}\n"
     )
 

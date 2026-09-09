@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from sqlmodel import Session
 
@@ -225,3 +227,72 @@ def test_get_or_create__same_name_different_datasets(db_session: Session) -> Non
     assert model_2_by_name is not None
     assert model_1_by_name.embedding_model_id == model_1.embedding_model_id
     assert model_2_by_name.embedding_model_id == model_2.embedding_model_id
+
+
+def test_set_api_key(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    embedding_model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    updated = embedding_model_resolver.set_api_key(
+        session=db_session,
+        embedding_model_id=embedding_model.embedding_model_id,
+        api_key="secret",
+    )
+
+    assert updated.api_key == "secret"
+    stored = embedding_model_resolver.get_by_id(
+        session=db_session, embedding_model_id=embedding_model.embedding_model_id
+    )
+    assert stored is not None
+    assert stored.api_key == "secret"
+
+
+def test_set_api_key__replaces_existing_key(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    embedding_model = embedding_model_resolver.create(
+        session=db_session,
+        embedding_model=EmbeddingModelCreate(
+            dataset_id=collection.dataset_id,
+            name="remote_model",
+            embedding_dimension=128,
+            api_key="old_secret",
+        ),
+    )
+
+    updated = embedding_model_resolver.set_api_key(
+        session=db_session,
+        embedding_model_id=embedding_model.embedding_model_id,
+        api_key="new_secret",
+    )
+
+    assert updated.api_key == "new_secret"
+
+
+def test_set_api_key__clears_key(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    embedding_model = embedding_model_resolver.create(
+        session=db_session,
+        embedding_model=EmbeddingModelCreate(
+            dataset_id=collection.dataset_id,
+            name="remote_model",
+            embedding_dimension=128,
+            api_key="secret",
+        ),
+    )
+
+    updated = embedding_model_resolver.set_api_key(
+        session=db_session, embedding_model_id=embedding_model.embedding_model_id, api_key=None
+    )
+
+    assert updated.api_key is None
+
+
+def test_set_api_key__unknown_model_raises(db_session: Session) -> None:
+    unknown_id = uuid4()
+
+    with pytest.raises(ValueError, match=f"Embedding model with id {unknown_id} not found."):
+        embedding_model_resolver.set_api_key(
+            session=db_session, embedding_model_id=unknown_id, api_key="secret"
+        )

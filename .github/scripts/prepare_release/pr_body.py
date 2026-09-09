@@ -7,7 +7,7 @@ from __future__ import annotations
 _GUARDS = """\
 The workflow already checked that:
 
-- exactly `CHANGELOG.md`, `lightly_studio/pyproject.toml` and `lightly_studio/uv.lock` changed,
+- exactly `CHANGELOG.md`, `lightly_studio/pyproject.toml` and `uv.lock` changed,
 - the `uv.lock` diff is only this version bump,
 - `CHANGELOG.md` keeps an empty `[Unreleased]` skeleton and every earlier release is byte-identical,
 - Labelformat is pinned by version, not by git sha.
@@ -45,6 +45,6 @@ def render_pr_body(section_body: str, version: str) -> str:
         f"{_GUARDS}\n\n"
         f"{_CHECKLIST}\n\n"
         f"Merging tags this commit and opens a **draft** GitHub release. Nothing is public "
-        f"until the wheel is on PyPI and someone runs Undraft Release; PyPI and the docs are "
+        f"until the wheel is on PyPI and someone runs Finish Release; PyPI and the docs are "
         f"still manual.\n"
     )
