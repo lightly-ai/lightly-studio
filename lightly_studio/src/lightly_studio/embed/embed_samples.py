@@ -201,11 +201,9 @@ def ensure_default_model(
     Returns None when no default is set and no built-in embedder can bootstrap the
     capability.
     """
-    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
-        session=session, collection_id=collection_id
-    )
-    if model_id is not None:
-        return embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
+    model = _get_default_model(session=session, collection_id=collection_id)
+    if model is not None:
+        return model
     space = embedder_registry.get_registry().get_bootstrap_space(capability=capability)
     if space is None:
         return None
@@ -222,20 +220,24 @@ def _validate_collection(session: Session, collection_id: UUID, expected: Sample
         )
 
 
+def _get_default_model(session: Session, collection_id: UUID) -> EmbeddingModelTable | None:
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if model_id is None:
+        return None
+    return embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
+
+
 def _resolve_query_embedder(
     session: Session,
     collection_id: UUID,
     capability: Capability,
     get_embedder: Callable[[str], _EmbedderT | None],
 ) -> _EmbedderT:
-    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
-        session=session, collection_id=collection_id
-    )
-    if model_id is None:
-        raise ValueError(f"Collection {collection_id} has no default embedding model.")
-    model = embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
+    model = _get_default_model(session=session, collection_id=collection_id)
     if model is None:
-        raise ValueError(f"Default embedding model {model_id} could not be found.")
+        raise ValueError(f"Collection {collection_id} has no default embedding model.")
     embedder = get_embedder(model.name)
     if embedder is None:
         raise ValueError(f"No {capability.value} embedder is available for space {model.name!r}.")
