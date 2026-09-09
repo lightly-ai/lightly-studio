@@ -75,6 +75,14 @@ class EmbedderRegistry:
             logger.warning("Replacing embedder for space %r.", space_key)
         self._space_key_to_embedder[space_key] = embedder
 
+    def get(self, space_key: str) -> Embedder | None:
+        """Get the registered provider for a space, regardless of capability."""
+        return self._space_key_to_embedder.get(space_key)
+
+    def clear(self) -> None:
+        """Remove all registered embedders."""
+        self._space_key_to_embedder.clear()
+
     def get_image_path_embedder(self, space_key: str) -> ImagePathEmbedder | None:
         """Get the space's embedder if it embeds images by path, else None."""
         embedder = self._space_key_to_embedder.get(space_key)
