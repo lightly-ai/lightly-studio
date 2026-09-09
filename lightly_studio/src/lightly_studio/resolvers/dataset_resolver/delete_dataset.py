@@ -49,6 +49,7 @@ from lightly_studio.models.group_component_definition import (
 )
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
@@ -121,6 +122,8 @@ def delete_dataset(
 
     # 4. Sample type tables.
     _delete_groups(session=session, dataset_id=dataset_id)
+    # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable).
+    _delete_mcap_group_sequences(session=session, dataset_id=dataset_id)
     _delete_sequences(session=session, dataset_id=dataset_id)
     _delete_videos(session=session, dataset_id=dataset_id)
     _delete_images(session=session, dataset_id=dataset_id)
@@ -305,6 +308,16 @@ def _delete_groups(session: Session, dataset_id: UUID) -> None:
     """Delete group records for the dataset's samples."""
     session.exec(
         delete(GroupTable).where(col(GroupTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcap_group_sequences(session: Session, dataset_id: UUID) -> None:
+    """Delete MCAP group sequence rows for the dataset's sequences."""
+    session.exec(
+        delete(McapGroupSequenceTable).where(
+            col(McapGroupSequenceTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 

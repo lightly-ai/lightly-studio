@@ -13,6 +13,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
@@ -25,6 +26,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     export_job_resolver,
+    mcap_group_sequence_resolver,
     metadata_resolver,
     recording_resolver,
     sample_embedding_resolver,
@@ -274,20 +276,21 @@ def test_delete_dataset__with_group_component_definitions(db_session: Session) -
 def test_delete_dataset__with_sequences(db_session: Session) -> None:
     # Arrange
     collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
-    sample_ids = sample_resolver.create_many(
+    sequence_id = mcap_group_sequence_resolver.create(
         session=db_session,
-        samples=[SampleCreate(collection_id=collection.collection_id) for _ in range(2)],
+        collection_id=collection.collection_id,
+        mcap_path="/bags/drive_001.mcap",
     )
-    sequence = SequenceTable(sample_id=sample_ids[0])
-    db_session.add(sequence)
-    db_session.flush()
+    linked_sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id)],
+    )
     db_session.add(
         SampleSequenceLinkTable(
-            sample_id=sample_ids[1], sequence_sample_id=sequence.sample_id, seq_number=0
+            sample_id=linked_sample_ids[0], sequence_sample_id=sequence_id, seq_number=0
         )
     )
     db_session.commit()
-    sequence_id = sequence.sample_id
     collection_id = collection.collection_id
 
     # Act
@@ -296,9 +299,10 @@ def test_delete_dataset__with_sequences(db_session: Session) -> None:
         dataset_id=collection.dataset_id,
     )
 
-    # Assert - collection, sequence, and its links are all deleted
+    # Assert - collection, sequence, MCAP specialisation, and links are all deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
     assert db_session.get(SequenceTable, sequence_id) is None
+    assert db_session.get(McapGroupSequenceTable, sequence_id) is None
     assert (
         db_session.exec(
             select(SampleSequenceLinkTable).where(
