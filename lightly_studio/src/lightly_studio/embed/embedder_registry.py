@@ -102,43 +102,52 @@ class EmbedderRegistry:
 
     def bootstrap_space(self, capability: Capability) -> EmbeddingSpaceSpec | None:
         """Get the built-in embedding space to bootstrap for a capability, if available."""
-        space_key = self._bootstrap_space_keys.get(capability)
-        if space_key is None:
-            return None
-        embedder = self._get_or_load(space_key=space_key)
+        embedder = self._get_or_bootstrap(space_key=None, capability=capability)
         if embedder is None or capability not in _capabilities_of(embedder=embedder):
             return None
         return embedder.embedding_space_spec()
 
-    def get_image_path_embedder(self, space_key: str) -> ImagePathEmbedder | None:
-        """Get the space's embedder if it embeds images by path, loading a built-in if needed."""
-        embedder = self._get_or_load(space_key=space_key)
+    def get_image_path_embedder(self, space_key: str | None = None) -> ImagePathEmbedder | None:
+        """Get the space's image-path embedder, or the bootstrap default when space_key is None."""
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.IMAGE_PATH)
         return embedder if isinstance(embedder, ImagePathEmbedder) else None
 
-    def get_image_crop_path_embedder(self, space_key: str) -> ImageCropPathEmbedder | None:
-        """Get the space's embedder if it embeds image crops, loading a built-in if needed."""
-        embedder = self._get_or_load(space_key=space_key)
+    def get_image_crop_path_embedder(
+        self, space_key: str | None = None
+    ) -> ImageCropPathEmbedder | None:
+        """Get the space's image-crop embedder, or the bootstrap default when space_key is None."""
+        embedder = self._get_or_bootstrap(
+            space_key=space_key, capability=Capability.IMAGE_CROP_PATH
+        )
         return embedder if isinstance(embedder, ImageCropPathEmbedder) else None
 
-    def get_video_path_embedder(self, space_key: str) -> VideoPathEmbedder | None:
-        """Get the space's embedder if it embeds videos by path, loading a built-in if needed."""
-        embedder = self._get_or_load(space_key=space_key)
+    def get_video_path_embedder(self, space_key: str | None = None) -> VideoPathEmbedder | None:
+        """Get the space's video-path embedder, or the bootstrap default when space_key is None."""
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.VIDEO_PATH)
         return embedder if isinstance(embedder, VideoPathEmbedder) else None
 
-    def get_image_pil_embedder(self, space_key: str) -> ImagePILEmbedder | None:
-        """Get the space's embedder if it embeds PIL images, loading a built-in if needed."""
-        embedder = self._get_or_load(space_key=space_key)
+    def get_image_pil_embedder(self, space_key: str | None = None) -> ImagePILEmbedder | None:
+        """Get the space's PIL-image embedder, or the bootstrap default when space_key is None."""
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.IMAGE_PIL)
         return embedder if isinstance(embedder, ImagePILEmbedder) else None
 
-    def get_text_embedder(self, space_key: str) -> TextEmbedder | None:
-        """Get the space's embedder if it embeds text, loading a built-in if needed."""
-        embedder = self._get_or_load(space_key=space_key)
+    def get_text_embedder(self, space_key: str | None = None) -> TextEmbedder | None:
+        """Get the space's text embedder, or the bootstrap default when space_key is None."""
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.TEXT)
         return embedder if isinstance(embedder, TextEmbedder) else None
 
-    def get_image_bytes_embedder(self, space_key: str) -> ImageBytesEmbedder | None:
-        """Get the space's embedder if it embeds images by bytes, loading a built-in if needed."""
-        embedder = self._get_or_load(space_key=space_key)
+    def get_image_bytes_embedder(self, space_key: str | None = None) -> ImageBytesEmbedder | None:
+        """Get the space's image-bytes embedder, or the bootstrap default when space_key is None."""
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.IMAGE_BYTES)
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
+
+    def _get_or_bootstrap(self, space_key: str | None, capability: Capability) -> Embedder | None:
+        """Resolve the space's embedder, falling back to the capability's bootstrap default."""
+        if space_key is None:
+            space_key = self._bootstrap_space_keys.get(capability)
+        if space_key is None:
+            return None
+        return self._get_or_load(space_key=space_key)
 
     def _get_or_load(self, space_key: str) -> Embedder | None:
         registered = self._space_key_to_embedder.get(space_key)
