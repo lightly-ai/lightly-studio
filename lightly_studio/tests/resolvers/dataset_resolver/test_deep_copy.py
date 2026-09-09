@@ -15,7 +15,10 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.models.mcap_group_component_definition import McapDataType
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate, SampleTable
@@ -31,7 +34,6 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     image_resolver,
-    mcap_group_component_definition_resolver,
     mcap_group_sequence_resolver,
     metadata_resolver,
     object_track_resolver,
@@ -481,12 +483,7 @@ def test_deep_copy__with_group_component_definitions(db_session: Session) -> Non
     assert copied_component.group_component_definition is not None
     assert copied_component.group_component_definition.group_component_name == "front_camera"
     assert copied_component.group_component_definition.group_component_index == 0
-    assert (
-        mcap_group_component_definition_resolver.get_by_collection_id(
-            session=db_session, collection_id=copied_component.collection_id
-        )
-        is None
-    )
+    assert db_session.get(McapGroupComponentDefinitionTable, copied_component.collection_id) is None
 
 
 def test_deep_copy__with_mcap_group_component_definitions(db_session: Session) -> None:
@@ -502,18 +499,21 @@ def test_deep_copy__with_mcap_group_component_definitions(db_session: Session) -
             ("point_cloud", SampleType.MCAP),
         ],
     )
-    mcap_group_component_definition_resolver.create(
-        session=db_session,
-        collection_id=original_components["image"].collection_id,
-        mcap_data_type=McapDataType.VIDEO_FRAME,
-        channel_id=3,
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=original_components["image"].collection_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            channel_id=3,
+        )
     )
-    mcap_group_component_definition_resolver.create(
-        session=db_session,
-        collection_id=original_components["point_cloud"].collection_id,
-        mcap_data_type=McapDataType.POINT_CLOUD,
-        channel_id=5,
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=original_components["point_cloud"].collection_id,
+            mcap_data_type=McapDataType.POINT_CLOUD,
+            channel_id=5,
+        )
     )
+    db_session.commit()
 
     # Act
     copied = dataset_resolver.deep_copy(
@@ -532,11 +532,11 @@ def test_deep_copy__with_mcap_group_component_definitions(db_session: Session) -
     assert copied_image.collection_id != original_components["image"].collection_id
     assert copied_point_cloud.collection_id != original_components["point_cloud"].collection_id
 
-    copied_image_mcap = mcap_group_component_definition_resolver.get_by_collection_id(
-        session=db_session, collection_id=copied_image.collection_id
+    copied_image_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, copied_image.collection_id
     )
-    copied_point_cloud_mcap = mcap_group_component_definition_resolver.get_by_collection_id(
-        session=db_session, collection_id=copied_point_cloud.collection_id
+    copied_point_cloud_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, copied_point_cloud.collection_id
     )
     assert copied_image_mcap is not None
     assert copied_image_mcap.mcap_data_type == McapDataType.VIDEO_FRAME
@@ -545,8 +545,8 @@ def test_deep_copy__with_mcap_group_component_definitions(db_session: Session) -
     assert copied_point_cloud_mcap.mcap_data_type == McapDataType.POINT_CLOUD
     assert copied_point_cloud_mcap.channel_id == 5
 
-    original_image_mcap = mcap_group_component_definition_resolver.get_by_collection_id(
-        session=db_session, collection_id=original_components["image"].collection_id
+    original_image_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, original_components["image"].collection_id
     )
     assert original_image_mcap is not None
 

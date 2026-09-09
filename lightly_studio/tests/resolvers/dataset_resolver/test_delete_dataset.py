@@ -30,7 +30,6 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     export_job_resolver,
-    mcap_group_component_definition_resolver,
     mcap_group_sequence_resolver,
     metadata_resolver,
     recording_resolver,
@@ -295,18 +294,21 @@ def test_delete_dataset__with_mcap_group_component_definitions(db_session: Sessi
     )
     image_id = components["image"].collection_id
     point_cloud_id = components["point_cloud"].collection_id
-    mcap_group_component_definition_resolver.create(
-        session=db_session,
-        collection_id=image_id,
-        mcap_data_type=McapDataType.VIDEO_FRAME,
-        channel_id=3,
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=image_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            channel_id=3,
+        )
     )
-    mcap_group_component_definition_resolver.create(
-        session=db_session,
-        collection_id=point_cloud_id,
-        mcap_data_type=McapDataType.POINT_CLOUD,
-        channel_id=5,
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=point_cloud_id,
+            mcap_data_type=McapDataType.POINT_CLOUD,
+            channel_id=5,
+        )
     )
+    db_session.commit()
 
     # Act
     dataset_resolver.delete_dataset(
