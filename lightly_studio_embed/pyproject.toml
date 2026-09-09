@@ -33,6 +33,8 @@ dependencies = [
 [dependency-groups]
 # The same floors as the repository's other Python packages, so the tooling behaves alike.
 dev = [
+    # The FastAPI test client is an httpx transport.
+    "httpx>=0.27.2",
     "mypy>=1.19.1",
     "pytest>=8.3.3",
     "ruff>=0.7.4",

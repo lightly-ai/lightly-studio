@@ -16,6 +16,7 @@ from lightly_studio_embed.protocol import (
     ServerLimits,
     WireCapability,
 )
+from lightly_studio_embed.server import create_app
 from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "TextEmbedder",
     "VideoBytesEmbedder",
     "WireCapability",
+    "create_app",
 ]
