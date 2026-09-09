@@ -10,6 +10,7 @@ the caller's responsibility.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 
 from lightly_studio.embed.embedder import (
     Capability,
@@ -60,16 +61,20 @@ class EmbedderRegistry:
         self._space_key_to_embedder: dict[str, Embedder] = {}
         self._bootstrap_space_keys: dict[Capability, str] = dict(_DEFAULT_BOOTSTRAP_SPACE_KEYS)
 
-    def register(self, embedder: Embedder) -> None:
+    def register(
+        self, embedder: Embedder, bootstrap_for: Iterable[Capability] | None = None
+    ) -> None:
         """Register an embedder for its embedding space and update bootstrap defaults.
 
         The embedding space is read from ``embedder.embedding_space_spec()``. If an
         embedder is already registered for the same space, it is replaced. The embedder
-        also becomes the bootstrap default for every offline capability it implements,
-        replacing any previous default for those capabilities.
+        becomes the bootstrap default for the offline capabilities in ``bootstrap_for``
+        that it implements, replacing any previous default for those capabilities.
 
         Args:
             embedder: The embedder to register.
+            bootstrap_for: The capabilities to make this the bootstrap default for.
+                ``None`` means every capability the embedder implements.
 
         Raises:
             ValueError: If the embedder implements no capability, or if it shares
@@ -94,7 +99,12 @@ class EmbedderRegistry:
 
         # Register
         self._space_key_to_embedder[space_key] = embedder
-        self._set_bootstrap_defaults(space_key=space_key, capabilities=capabilities)
+        bootstrap_capabilities = (
+            capabilities
+            if bootstrap_for is None
+            else [capability for capability in bootstrap_for if capability in capabilities]
+        )
+        self._set_bootstrap_defaults(space_key=space_key, capabilities=bootstrap_capabilities)
 
     def get_bootstrap_space(self, capability: Capability) -> EmbeddingSpaceSpec | None:
         """Get the built-in embedding space to bootstrap for a capability, if available."""
