@@ -52,6 +52,7 @@ describe('useMetadataDistributionsBySampleTags', () => {
     it('creates numeric and categorical queries for every selected tag', () => {
         useMetadataDistributionsBySampleTags(() => ({
             collectionId: 'collection-1',
+            field: { name: 'score', type: 'numeric' },
             sampleTags: [
                 { id: 'tag-a', label: 'Reviewed' },
                 { id: 'tag-b', label: 'Priority' }
@@ -59,7 +60,7 @@ describe('useMetadataDistributionsBySampleTags', () => {
             binCount: 50
         }));
 
-        expect(capturedOptions.queries).toHaveLength(4);
+        expect(capturedOptions.queries).toHaveLength(2);
         expect(capturedOptions.queries[0].queryKey).toContainEqual(
             expect.objectContaining({
                 body: expect.objectContaining({
@@ -70,7 +71,7 @@ describe('useMetadataDistributionsBySampleTags', () => {
                 })
             })
         );
-        expect(capturedOptions.queries[3].queryKey).toContainEqual(
+        expect(capturedOptions.queries[1].queryKey).toContainEqual(
             expect.objectContaining({
                 body: expect.objectContaining({
                     filters: expect.objectContaining({
@@ -84,6 +85,7 @@ describe('useMetadataDistributionsBySampleTags', () => {
     it('combines available categorical and numeric results without hiding partial data', () => {
         useMetadataDistributionsBySampleTags(() => ({
             collectionId: 'collection-1',
+            field: { name: 'score', type: 'numeric' },
             sampleTags: [
                 { id: 'tag-a', label: 'Reviewed' },
                 { id: 'tag-b', label: 'Priority' }
@@ -96,17 +98,7 @@ describe('useMetadataDistributionsBySampleTags', () => {
                 isFetching: false,
                 error: null
             },
-            {
-                data: { city: { value_counts: [{ value: 'Zurich', count: 4 }] } },
-                isFetching: false,
-                error: null
-            },
-            { data: undefined, isFetching: false, error: new Error('numeric failed') },
-            {
-                data: { city: { value_counts: [{ value: '__missing__', count: 2 }] } },
-                isFetching: false,
-                error: null
-            }
+            { data: undefined, isFetching: false, error: new Error('numeric failed') }
         ]);
 
         expect(result).toMatchObject({
@@ -115,13 +107,7 @@ describe('useMetadataDistributionsBySampleTags', () => {
                     id: 'tag-a',
                     label: 'Reviewed',
                     histograms: { score: { binEdges: [0, 1, 2], counts: [3, 1] } },
-                    categorical: { city: [{ label: 'Zurich', count: 4 }] }
-                },
-                {
-                    id: 'tag-b',
-                    label: 'Priority',
-                    histograms: {},
-                    categorical: { city: [{ kind: 'missing', label: 'Missing', count: 2 }] }
+                    categorical: {}
                 }
             ],
             error: new Error('numeric failed')
