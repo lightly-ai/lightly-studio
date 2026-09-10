@@ -27,7 +27,7 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
     """Test get_metadata_info endpoint."""
     collection_id = uuid4()
     # Create mock metadata objects that will be returned by
-    # get_all_metadata_keys_and_schema.
+    # get_metadata_info.
     mock_metadata = [
         MetadataInfoView(name="key1", type="string"),
         MetadataInfoView(
@@ -40,7 +40,7 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
         MetadataInfoView(name="key3", type="float", min=0.0, max=1.0),
     ]
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
         return_value=mock_metadata,
     )
 
@@ -63,12 +63,25 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
             assert data[i]["histogram"]["counts"] == metadata.histogram.counts
 
 
+def test_get_metadata_info__omits_histograms(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
+        return_value=[],
+    )
+    response = test_client.get(f"/api/collections/{collection_id}/metadata/info")
+    assert response.status_code == HTTP_STATUS_OK
+    assert resolver.call_args.kwargs == {"session": ANY, "collection_id": collection_id}
+
+
 def test_get_metadata_info__empty_response(test_client: TestClient, mocker: MockerFixture) -> None:
     """Test get_metadata_info endpoint with no metadata."""
     collection_id = uuid4()
-    # Mock get_all_metadata_keys_and_schema to return an empty list.
+    # Mock get_metadata_info to return an empty list.
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
         return_value=[],
     )
 

@@ -5,16 +5,14 @@ import sqlalchemy
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
-    get_all_metadata_keys_and_schema,
-)
+from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import get_metadata_info
 from tests.helpers_resolvers import (
     create_collection,
     create_image,
 )
 
 
-def test_get_all_metadata_keys_and_schema__with_numerical_values(
+def test_get_metadata_info__with_numerical_values(
     db_session: Session,
 ) -> None:
     """Test getting metadata keys and schema with min/max values for numerical types."""
@@ -52,7 +50,7 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     sample3["is_processed"] = True
 
     # Get metadata info
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
 
     # Verify the result structure.
     assert len(result) == 4  # temperature, count, location, is_processed
@@ -63,34 +61,28 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     location_info = next(item for item in result if item.name == "location")
     is_processed_info = next(item for item in result if item.name == "is_processed")
 
-    # Check temperature (float type with min/max and histogram).
+    # Check temperature (float type with min/max).
     assert temperature_info.type == "float"
     assert temperature_info.min == pytest.approx(15.2)
     assert temperature_info.max == pytest.approx(30.0)
-    assert temperature_info.histogram is not None
-    assert sum(temperature_info.histogram.counts) == 3
 
-    # Check count (integer type with min/max and histogram).
+    # Check count (integer type with min/max).
     assert count_info.type == "integer"
     assert count_info.min == 5
     assert count_info.max == 20
-    assert count_info.histogram is not None
-    assert sum(count_info.histogram.counts) == 3
 
-    # Check location (string type without min/max/histogram).
+    # Check location (string type without min/max).
     assert location_info.type == "string"
     assert location_info.min is None
     assert location_info.max is None
-    assert location_info.histogram is None
 
-    # Check is_processed (boolean type without min/max/histogram).
+    # Check is_processed (boolean type without min/max).
     assert is_processed_info.type == "boolean"
     assert is_processed_info.min is None
     assert is_processed_info.max is None
-    assert is_processed_info.histogram is None
 
 
-def test_get_all_metadata_keys_and_schema__sparse_numerical_values(
+def test_get_metadata_info__sparse_numerical_values(
     db_session: Session,
 ) -> None:
     """Each numeric key keeps its own bounds when values are sparse across samples."""
@@ -105,9 +97,7 @@ def test_get_all_metadata_keys_and_schema__sparse_numerical_values(
     second["count"] = 4
     db_session.commit()
 
-    result = get_all_metadata_keys_and_schema(
-        session=db_session, collection_id=collection.collection_id
-    )
+    result = get_metadata_info(session=db_session, collection_id=collection.collection_id)
     by_name = {item.name: item for item in result}
     assert by_name["temperature"].min == pytest.approx(-2.5)
     assert by_name["temperature"].max == pytest.approx(-2.5)
@@ -115,10 +105,10 @@ def test_get_all_metadata_keys_and_schema__sparse_numerical_values(
     assert by_name["count"].max == 4
 
 
-def test_get_all_metadata_keys_and_schema__batches_numeric_bounds(
+def test_get_metadata_info__batches_numeric_bounds(
     db_session: Session, mocker: MockerFixture
 ) -> None:
-    """Info uses one schema query, one bounds query, and one histogram per key."""
+    """Info uses one schema query and one bounds query."""
     collection = create_collection(session=db_session)
     for index in range(2):
         sample = create_image(
@@ -135,13 +125,18 @@ def test_get_all_metadata_keys_and_schema__batches_numeric_bounds(
     engine = db_session.get_bind()
     sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
     try:
-        get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+        result = get_metadata_info(session=db_session, collection_id=collection_id)
     finally:
         sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
-    assert listener.call_count == 4
+    assert listener.call_count == 2
+    assert {item.name: (item.min, item.max) for item in result} == {
+        "temperature": (0.0, 1.0),
+        "count": (0, 1),
+    }
+    assert all(item.histogram is None for item in result)
 
 
-def test_get_all_metadata_keys_and_schema__no_numerical_values(
+def test_get_metadata_info__no_numerical_values(
     db_session: Session,
 ) -> None:
     """Test getting metadata keys and schema with only non-numerical types."""
@@ -161,7 +156,7 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
     sample["tags"] = ["tag1", "tag2"]
 
     # Get metadata info.
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
 
     # Verify the result structure.
     assert len(result) == 3  # location, is_processed, tags
@@ -172,7 +167,7 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
         assert item.max is None
 
 
-def test_get_all_metadata_keys_and_schema__empty_collection(
+def test_get_metadata_info__empty_collection(
     db_session: Session,
 ) -> None:
     """Test getting metadata keys and schema for collection with no metadata."""
@@ -187,16 +182,16 @@ def test_get_all_metadata_keys_and_schema__empty_collection(
     )
 
     # Get metadata info.
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
 
     # Should return empty list.
     assert result == []
 
 
-def test_get_all_metadata_keys_and_schema__histogram_bins(
+def test_get_metadata_info__numeric_bounds(
     db_session: Session,
 ) -> None:
-    """Test that a numeric field returns histogram bins that span min..max."""
+    """Test that numeric metadata info returns stable bounds."""
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
@@ -210,23 +205,17 @@ def test_get_all_metadata_keys_and_schema__histogram_bins(
         ).sample
         sample["score"] = i
 
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
     score_info = next(item for item in result if item.name == "score")
 
-    assert score_info.histogram is not None
-    histogram = score_info.histogram
-    # Edges are one longer than counts and span the value range.
-    assert len(histogram.bin_edges) == len(histogram.counts) + 1
-    assert histogram.bin_edges[0] == pytest.approx(0.0)
-    assert histogram.bin_edges[-1] == pytest.approx(9.0)
-    # Every value is counted exactly once.
-    assert sum(histogram.counts) == len(values)
+    assert score_info.min == pytest.approx(0.0)
+    assert score_info.max == pytest.approx(9.0)
 
 
-def test_get_all_metadata_keys_and_schema__histogram_constant_values(
+def test_get_metadata_info__constant_numeric_bounds(
     db_session: Session,
 ) -> None:
-    """Test histogram for a field where all values are identical."""
+    """Test bounds for a constant numeric field."""
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
@@ -238,16 +227,14 @@ def test_get_all_metadata_keys_and_schema__histogram_constant_values(
         ).sample
         sample["score"] = 7.0
 
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
     score_info = next(item for item in result if item.name == "score")
 
     assert score_info.min == pytest.approx(7.0)
     assert score_info.max == pytest.approx(7.0)
-    assert score_info.histogram is not None
-    assert sum(score_info.histogram.counts) == 3
 
 
-def test_get_all_metadata_keys_and_schema__key_with_dot(
+def test_get_metadata_info__key_with_dot(
     db_session: Session,
 ) -> None:
     """A dot in the key is part of the key, so the stats read the value it holds."""
@@ -262,11 +249,9 @@ def test_get_all_metadata_keys_and_schema__key_with_dot(
         ).sample
         sample["sensor.temp"] = float(i)
 
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
     temp_info = next(item for item in result if item.name == "sensor.temp")
 
     assert temp_info.type == "float"
     assert temp_info.min == pytest.approx(0.0)
     assert temp_info.max == pytest.approx(2.0)
-    assert temp_info.histogram is not None
-    assert sum(temp_info.histogram.counts) == 3
