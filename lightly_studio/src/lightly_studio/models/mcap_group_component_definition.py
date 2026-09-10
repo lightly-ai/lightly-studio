@@ -14,7 +14,7 @@ class McapDataType(str, Enum):
     """Kind of MCAP data stored in a group component slot."""
 
     VIDEO_FRAME = "video_frame"
-    POINT_CLOUD = "pointcloud"
+    POINT_CLOUD = "point_cloud"
 
 
 class McapGroupComponentDefinitionBase(SQLModel):
