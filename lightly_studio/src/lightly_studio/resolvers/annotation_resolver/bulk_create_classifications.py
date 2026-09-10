@@ -73,6 +73,7 @@ def bulk_create_classifications(
 
     for parent_sample_ids in _iter_parent_sample_id_pages(
         session=session,
+        parent_collection_id=parent_collection_id,
         parent_sample_ids_query=parent_sample_ids_query,
     ):
         result = _bulk_create_classifications_for_source(
@@ -98,9 +99,13 @@ def bulk_create_classifications(
 
 def _iter_parent_sample_id_pages(
     session: Session,
+    parent_collection_id: UUID,
     parent_sample_ids_query: SelectOfScalar[UUID],
 ) -> Iterator[list[UUID]]:
     """Yield the sample ids matched by the query in pages of bounded size.
+
+    Only samples that belong to the parent collection are yielded, so that a query
+    reaching beyond it cannot create annotations under a foreign parent sample.
 
     Every page is read with its own statement, so that writes between two pages cannot
     interfere with an open cursor. Pages are keyset-based: the next page starts after the
@@ -109,6 +114,7 @@ def _iter_parent_sample_id_pages(
 
     Args:
         session: SQLAlchemy session for database operations.
+        parent_collection_id: Collection the parent samples must belong to.
         parent_sample_ids_query: Query selecting the parent sample ids to page through.
 
     Yields:
@@ -116,8 +122,10 @@ def _iter_parent_sample_id_pages(
     """
     last_parent_sample_id: UUID | None = None
     while True:
-        page_query = select(SampleTable.sample_id).where(
-            col(SampleTable.sample_id).in_(parent_sample_ids_query)
+        page_query = (
+            select(SampleTable.sample_id)
+            .where(col(SampleTable.sample_id).in_(parent_sample_ids_query))
+            .where(SampleTable.collection_id == parent_collection_id)
         )
         if last_parent_sample_id is not None:
             page_query = page_query.where(col(SampleTable.sample_id) > last_parent_sample_id)
