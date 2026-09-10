@@ -131,19 +131,18 @@ class EmbedderRegistry:
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
     def _get_or_bootstrap(self, space_key: str | None, capability: Capability) -> Embedder | None:
-        selected_key = (
-            space_key if space_key is not None else self._bootstrap_spaces.get(capability)
-        )
-        if selected_key is None:
+        """Resolve a registered embedder or lazily load the selected built-in."""
+        if space_key is None:
+            space_key = self._bootstrap_spaces.get(capability)
+        if space_key is None:
             return None
-        embedder = self._space_key_to_embedder.get(selected_key)
+        registered = self._space_key_to_embedder.get(space_key)
+        if registered is not None:
+            return registered
+        embedder = _load_builtin_embedder(space_key=space_key)
         if embedder is None:
-            embedder = _load_builtin_embedder(space_key=selected_key)
-            if embedder is not None:
-                self.register(embedder=embedder, bootstrap_for=set())
-        capability_type = _CAPABILITY_TO_TYPE.get(capability)
-        if capability_type is None or not isinstance(embedder, capability_type):
             return None
+        self.register(embedder=embedder, bootstrap_for=set())
         return embedder
 
     def _set_bootstrap_defaults(
