@@ -58,7 +58,7 @@ class _FakeImageEmbedder(ImagePathEmbedder):
         )
 
 
-class _FakeVideoEmbedder(VideoPathEmbedder, ImagePathEmbedder):
+class _FakeVideoImageEmbedder(VideoPathEmbedder, ImagePathEmbedder):
     def __init__(self, space_key: str) -> None:
         self._space_key = space_key
 
@@ -168,7 +168,7 @@ class TestEmbedderRegistry:
     ) -> None:
         registry = EmbedderRegistry()
         embedder = _FakeTextImageEmbedder(space_key="space-a")
-        video = _FakeVideoEmbedder(space_key="PE-Core-T16-384")
+        video = _FakeVideoImageEmbedder(space_key="PE-Core-T16-384")
         mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=video)
 
         registry.register(
@@ -226,7 +226,7 @@ class TestEmbedderRegistry:
 
     def test_get_video_path_embedder__loads_builtin_once(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()
-        pe = _FakeVideoEmbedder(space_key="PE-Core-T16-384")
+        pe = _FakeVideoImageEmbedder(space_key="PE-Core-T16-384")
         mobileclip = _FakeImageEmbedder(space_key="mobileclip_s0")
         load_builtin = mocker.patch.object(
             embedder_registry, "_load_builtin_embedder", side_effect=[pe, mobileclip]
