@@ -1,6 +1,6 @@
 ---
 name: python-guide
-description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering, protocols vs ABCs, TODO and comment format, assertions, positional vs keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
+description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, assertions, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
 ---
 
 # Python Code Guidelines
