@@ -1,17 +1,50 @@
 <script lang="ts">
-    import { Box } from '@lucide/svelte';
+    import { Canvas } from '@threlte/core';
+    import PointCloudScene from '../../PointCloudViewer/PointCloudScene.svelte';
+    import type { ColorMode } from '../../PointCloudViewer/pointCloudUtils';
+    import type { PointBatch } from '../../PointCloudViewer/pointCloudBuffer';
+    import CuboidLayer from '../CuboidLayer/CuboidLayer.svelte';
+    import type { AnnotationClass, Bounds3, CuboidAnnotation } from '../domain';
 
-    /**
-     * Placeholder for the interactive 3D scene. The real renderer is Three.js-based and must
-     * keep being imported lazily (e.g. `await import(...)`) from within this component so its
-     * bundle only loads once the workspace is actually open, never from the route shell.
-     */
+    /** Composes the shared Threlte scene from the point cloud and annotation layers. */
+    interface Props {
+        /** Point positions and intensities consumed by the existing renderer. */
+        batch?: PointBatch;
+        /** Point color mapping mode. */
+        colorMode?: ColorMode;
+        /** Screen-space point size in pixels. */
+        pointSize?: number;
+        /** Optional intensity range used by intensity coloring. */
+        intensityRange?: [number, number];
+        /** Static cuboid annotations rendered over the point cloud. */
+        cuboids?: readonly CuboidAnnotation[];
+        /** Classes used to color cuboid annotations. */
+        annotationClasses?: readonly AnnotationClass[];
+        /** Bounds of the displayed point cloud. */
+        pointCloudBounds?: Bounds3;
+    }
+
+    const EMPTY_BATCH: PointBatch = {
+        positions: new Float32Array(0),
+        intensities: new Float32Array(0),
+        count: 0
+    };
+    const EMPTY_BOUNDS: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
+
+    let {
+        batch = EMPTY_BATCH,
+        colorMode = 'none',
+        pointSize = 2,
+        intensityRange,
+        cuboids = [],
+        annotationClasses = [],
+        pointCloudBounds = EMPTY_BOUNDS
+    }: Props = $props();
 </script>
 
-<div
-    class="flex flex-1 flex-col items-center justify-center gap-2 bg-muted/30 text-muted-foreground"
-    data-testid="workspace-scene-viewport"
->
-    <Box class="size-8" aria-hidden="true" />
-    <p class="text-sm">3D scene</p>
+<div class="h-full w-full" data-testid="workspace-scene-viewport">
+    <Canvas>
+        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
+        <CuboidLayer {cuboids} {annotationClasses} {pointCloudBounds} />
+    </Canvas>
 </div>
