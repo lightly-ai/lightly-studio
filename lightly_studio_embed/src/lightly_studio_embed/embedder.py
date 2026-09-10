@@ -13,7 +13,7 @@ from enum import Enum
 
 from PIL.Image import Image
 
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 
 
 class Capability(str, Enum):

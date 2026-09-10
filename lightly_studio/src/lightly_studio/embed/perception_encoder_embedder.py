@@ -8,6 +8,14 @@ import fsspec
 import numpy as np
 import torch
 from av import FFmpegError, container
+from lightly_studio_embed.embedder import (
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    ImagePILEmbedder,
+    TextEmbedder,
+    VideoPathEmbedder,
+)
+from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from PIL import Image
 from tqdm import tqdm
 
@@ -18,14 +26,6 @@ from lightly_studio.core.file_outcome_report import (
     MissingInputFileError,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.embed.embedder import (
-    ImageCropPathEmbedder,
-    ImagePathEmbedder,
-    ImagePILEmbedder,
-    TextEmbedder,
-    VideoPathEmbedder,
-)
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 

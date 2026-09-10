@@ -194,7 +194,7 @@ from lightly_studio.core.annotation import CreateClassification
 from lightly_studio.dataset import file_utils
 from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
-from lightly_studio.embed.types import EmbeddingResult
+from lightly_studio import EmbeddingResult
 
 # train_and_export.py already downloaded CUB-200-2011 to data/CUB_200_2011/.
 IMAGE_PATH = Path("data/CUB_200_2011/images")
