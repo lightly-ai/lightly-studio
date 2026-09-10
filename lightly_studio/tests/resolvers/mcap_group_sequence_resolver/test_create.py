@@ -31,6 +31,27 @@ def test_create(db_session: Session) -> None:
     assert sample.collection_id == collection.collection_id
 
 
+@pytest.mark.parametrize(
+    "mcap_path",
+    [
+        "s3://bucket/bags/drive_001.mcap",
+        "https://bucket.s3.amazonaws.com/bags/drive_001.mcap?X-Amz-Signature=abc123",
+    ],
+)
+def test_create__uri(db_session: Session, mcap_path: str) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+
+    sample_id = mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=collection.collection_id,
+        mcap_path=mcap_path,
+    )
+
+    row = mcap_group_sequence_resolver.get_by_id(session=db_session, sample_id=sample_id)
+    assert row is not None
+    assert row.mcap_path == mcap_path
+
+
 def test_create__missing_collection(db_session: Session) -> None:
     with pytest.raises(ValueError, match=r"Collection with id .* not found"):
         mcap_group_sequence_resolver.create(
@@ -63,7 +84,15 @@ def test_create__empty_path(db_session: Session, mcap_path: str) -> None:
         )
 
 
-@pytest.mark.parametrize("mcap_path", ["/bags/drive_001.bag", "/bags/drive_001", "drive.mcap.bak"])
+@pytest.mark.parametrize(
+    "mcap_path",
+    [
+        "/bags/drive_001.bag",
+        "/bags/drive_001",
+        "drive.mcap.bak",
+        "https://bucket.s3.amazonaws.com/bags/drive_001.bag?X-Amz-Signature=abc123",
+    ],
+)
 def test_create__invalid_extension(db_session: Session, mcap_path: str) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
 
