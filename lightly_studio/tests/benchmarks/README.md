@@ -246,8 +246,8 @@ through the aggregation resolvers the GUI sidebar fires on load, each of which e
 from every metadata row:
 
 - **write** — bulk insert metadata for every sample.
-- **metadata_info** — `get_all_metadata_keys_and_schema` (the `/metadata/info` endpoint flagged as
-  slow in LIG-10726).
+- **metadata_info** — `get_metadata_info` (the `/metadata/info` endpoint flagged as slow in
+  LIG-10726).
 - **histograms** — `get_metadata_histograms` (numeric value distributions).
 - **value_counts** — `get_metadata_value_counts` (categorical value counts).
 

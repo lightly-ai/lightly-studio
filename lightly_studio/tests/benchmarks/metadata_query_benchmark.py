@@ -5,8 +5,7 @@ writing metadata via ``metadata_resolver.bulk_update_metadata`` and reading it b
 the aggregation resolvers the GUI sidebar fires on load, each of which extracts JSON keys from
 every metadata row:
 
-- ``get_metadata_info.get_all_metadata_keys_and_schema`` (the ``/metadata/info`` endpoint,
-  flagged as slow in LIG-10726),
+- ``get_metadata_info`` (the ``/metadata/info`` endpoint, flagged as slow in LIG-10726),
 - ``get_metadata_info.get_metadata_histograms`` (numeric value distributions),
 - ``categorical_value_counts.get_metadata_value_counts`` (categorical value counts).
 
@@ -52,13 +51,15 @@ from tqdm import tqdm
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import (
-    collection_resolver,
-    metadata_resolver,
-    sample_resolver,
+from lightly_studio.resolvers import collection_resolver, sample_resolver
+from lightly_studio.resolvers.metadata_resolver.sample.bulk_update_metadata import (
+    bulk_update_metadata,
 )
-from lightly_studio.resolvers.metadata_resolver.sample import (
-    categorical_value_counts,
+from lightly_studio.resolvers.metadata_resolver.sample.categorical_value_counts import (
+    get_metadata_value_counts,
+)
+from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
+    get_metadata_histograms,
     get_metadata_info,
 )
 from lightly_studio.utils import batching
@@ -241,7 +242,7 @@ def _run_write_benchmark(
         tqdm(total=len(sample_metadata), desc="Writing", unit=" samples") as progress,
     ):
         for batch in batching.batched(items=sample_metadata, batch_size=config.write_batch_size):
-            metadata_resolver.bulk_update_metadata(session=session, sample_metadata=list(batch))
+            bulk_update_metadata(session=session, sample_metadata=list(batch))
             progress.update(len(batch))
 
     elapsed = time.perf_counter() - started
@@ -255,9 +256,9 @@ def _run_write_benchmark(
 def _run_read_benchmarks(config: BenchmarkConfig, collection_id: UUID) -> list[PhaseResult]:
     """Run each aggregation read path and return its phase result."""
     read_phases: list[tuple[str, Callable[..., Any]]] = [
-        ("metadata_info", get_metadata_info.get_all_metadata_keys_and_schema),
-        ("histograms", get_metadata_info.get_metadata_histograms),
-        ("value_counts", categorical_value_counts.get_metadata_value_counts),
+        ("metadata_info", get_metadata_info),
+        ("histograms", get_metadata_histograms),
+        ("value_counts", get_metadata_value_counts),
     ]
     return [
         _run_read_benchmark(name=name, read_fn=read_fn, config=config, collection_id=collection_id)
