@@ -49,7 +49,7 @@ def get_metadata_info(
 
     Returns:
         List of metadata info objects with 'name', 'type', and, for numerical
-        types, 'min', 'max', and 'histogram'.
+        types, 'min' and 'max'.
     """
     merged = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
 
@@ -62,7 +62,7 @@ def get_metadata_info(
     for key, metadata_type in merged.items():
         metadata_info = MetadataInfoView(name=key, type=metadata_type)
 
-        # Add min, max, and histogram for numerical types.
+        # Add min and max for numerical types.
         if metadata_type in NUMERIC_TYPE_NAMES:
             stats = bounds.get(key)
             if stats is not None:

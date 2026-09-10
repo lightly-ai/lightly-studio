@@ -69,10 +69,16 @@ def test_get_metadata_info__omits_histograms(
     collection_id = uuid4()
     resolver = mocker.patch(
         "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
-        return_value=[],
+        return_value=[MetadataInfoView(name="score", type="float", min=0.0, max=1.0)],
     )
     response = test_client.get(f"/api/collections/{collection_id}/metadata/info")
     assert response.status_code == HTTP_STATUS_OK
+    metadata = response.json()[0]
+    assert metadata["name"] == "score"
+    assert metadata["type"] == "float"
+    assert metadata["min"] == 0.0
+    assert metadata["max"] == 1.0
+    assert metadata.get("histogram") is None
     assert resolver.call_args.kwargs == {"session": ANY, "collection_id": collection_id}
 
 
