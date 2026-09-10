@@ -26,7 +26,7 @@ c = MyClass()
 ```
 
 Exceptions from the guidelines:
-- We allow direct function import from `typing`, `dataclasses`, `abc` and SQL ORM functions.
+- We allow direct function import from `typing`, `dataclasses`, `abc`, `sqlmodel`, `sqlalchemy`
 
 ## File layout
 
@@ -72,7 +72,7 @@ Use the following format: `# TODO({name}, {mm}/{yyyy}): Blah blah`
 
 ## Comments
 
-Use simple english ASD-STE100, avoid bloat. Describe the current state, not the change. Prefer properly formatted comments with a leading capital and punctuation. Final full stop may be omitted for a single sentence.
+Use ASD-STE100 Simplified Technical English, avoid bloat. Describe the current state, not the change. Prefer properly formatted comments with a leading capital and punctuation. Final full stop may be omitted for a single sentence.
 
 ```python
 # This is a proper comment. It spans multiple sentences.
@@ -131,7 +131,7 @@ def _get_std(sequence: Sequence[float]) -> float:
 
 ## Positional vs. Keyword Arguments
 
-Prefer calling functions using keyword arguments. Do not declare arguments as keyword args (omit `*`).
+Call functions using keyword arguments, whether or not the arguments are declared keyword-only with `*`. Do not declare arguments as keyword-only with `*` in our code.
 
 ```python
 def fn(hello: str, person: str) -> None:
@@ -143,7 +143,8 @@ fn(hello="Grüezi", person="Bob")
 The exception of using positional arguments is allowed for
 
 - if the keyword arguments are not known, e.g. because the function is only given through typing: `transform: Callable[[Tensor], Tensor]` must be called as `transformed = transform(tensor)`
-- for common standard library and core frameworks like e.g. `print`, `math.exp`, `zip`, `isinstance`, `dict.get`, `datetime`, `pytest`, `numpy`, `pytorch`, `logging` etc.
+- for common standard library functions like e.g. `print`, `math.exp`, `zip`, `isinstance`, `dict.get`, etc.
+- For common functions from core frameworks such as `datetime`, `pytest`, `numpy`, `pytorch`, `logging`, etc.
 - For SQL ORM functions like `select`, `col`, etc.
 
 ## `__init__.py` files
