@@ -142,7 +142,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
             images=images,
             context=self._embedding_context(),
             show_progress=show_progress,
-        )
+        ).embeddings
 
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched image embedding."""

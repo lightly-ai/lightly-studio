@@ -9,9 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add a Split dataset menu action to divide images or videos into tagged splits using the current filters.
+- Add a Glossary page to the docs.
+
 ### Changed
 
 - Speed up distribution plot tag comparisons by up to 4.9x by requesting and calculating only the metadata field being viewed.
+- Improved categorical metadata loading performance, reducing database work and page-load latency for large datasets.
+- Improved metadata loading by reducing numeric database queries from 13 to 8 and making responses up to 25% faster.
 - Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.
 - Change the video decoding backend for the GUI from OpenCV to PyAV, resulting in up to 6× faster decoding performance for parallel streams when loading the grid view and scrolling.
 

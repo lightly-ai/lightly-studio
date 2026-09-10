@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import NamedTuple
 from uuid import UUID
 
+import sqlalchemy
 from sqlalchemy import Integer, cast, func
 from sqlmodel import Session, col, select
 
@@ -20,6 +23,14 @@ from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
 
 # Number of bins used for numeric metadata histograms.
 _HISTOGRAM_BIN_COUNT = 20
+
+
+class _NumericMetadataStats(NamedTuple):
+    """Unfiltered numeric metadata statistics used to build a response."""
+
+    min_value: float
+    max_value: float
+    value_count: int
 
 
 def get_all_metadata_keys_and_schema(
@@ -41,20 +52,22 @@ def get_all_metadata_keys_and_schema(
     """
     merged = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
 
+    numeric_keys = [key for key, kind in merged.items() if kind in NUMERIC_TYPE_NAMES]
+    bounds = _get_metadata_min_max_counts(
+        session=session, collection_id=collection_id, metadata_keys=numeric_keys
+    )
+
     result = []
     for key, metadata_type in merged.items():
         metadata_info = MetadataInfoView(name=key, type=metadata_type)
 
         # Add min, max, and histogram for numerical types.
         if metadata_type in NUMERIC_TYPE_NAMES:
-            stats = _get_metadata_min_max_count(
-                session=session, collection_id=collection_id, metadata_key=key
-            )
+            stats = bounds.get(key)
             if stats is not None:
-                min_value, max_value, _ = stats
                 cast_type = int if metadata_type == "integer" else float
-                metadata_info.min = cast_type(min_value)
-                metadata_info.max = cast_type(max_value)
+                metadata_info.min = cast_type(stats.min_value)
+                metadata_info.max = cast_type(stats.max_value)
                 metadata_info.histogram = _compute_histogram(
                     session=session,
                     collection_id=collection_id,
@@ -94,15 +107,16 @@ def get_metadata_histograms(
     """
     merged = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
 
+    numeric_keys = [
+        key
+        for key, kind in merged.items()
+        if kind in NUMERIC_TYPE_NAMES and (fields is None or key in fields)
+    ]
+    bounds = _get_metadata_min_max_counts(
+        session=session, collection_id=collection_id, metadata_keys=numeric_keys
+    )
     histograms: dict[str, HistogramView] = {}
-    for key, metadata_type in merged.items():
-        if metadata_type not in NUMERIC_TYPE_NAMES or (fields is not None and key not in fields):
-            continue
-        stats = _get_metadata_min_max_count(
-            session=session, collection_id=collection_id, metadata_key=key
-        )
-        if stats is None:
-            continue
+    for key, stats in bounds.items():
         histograms[key] = _compute_histogram(
             session=session,
             collection_id=collection_id,
@@ -114,56 +128,67 @@ def get_metadata_histograms(
     return histograms
 
 
-def _get_metadata_min_max_count(
+def _get_metadata_min_max_counts(
     session: Session,
     collection_id: UUID,
-    metadata_key: str,
-) -> tuple[float, float, int] | None:
-    """Aggregate the min, max, and count for a numerical metadata key in SQL.
+    metadata_keys: Sequence[str],
+) -> dict[str, _NumericMetadataStats]:
+    """Aggregate min, max, and non-null count for numerical metadata keys.
 
     Args:
         session: The database session.
         collection_id: The collection's UUID.
-        metadata_key: The metadata key to aggregate.
+        metadata_keys: The numerical metadata keys to aggregate.
 
     Returns:
-        A ``(min, max, count)`` tuple, or ``None`` if the key has no values.
+        A mapping from each key with at least one value to its numeric statistics.
+        Keys with no values are omitted.
     """
-    value_expr = db_json.json_extract_key_as_float(
-        column=SampleMetadataTable.data, key=metadata_key
-    )
-    json_not_null_expr = db_json.json_extract_key_as_text(
-        column=SampleMetadataTable.data, key=metadata_key
-    ).isnot(None)
+    if not metadata_keys:
+        return {}
 
-    query = (
-        select(
-            func.min(value_expr),
-            func.max(value_expr),
-            func.count(value_expr),
+    aggregates: list[sqlalchemy.ColumnElement[float] | sqlalchemy.ColumnElement[int]] = []
+    aggregate_labels: list[tuple[str, str, str]] = []
+    for index, key in enumerate(metadata_keys):
+        value = db_json.json_extract_key_as_float(column=SampleMetadataTable.data, key=key)
+        # Each aggregate ignores its own NULLs so sparse keys remain independent.
+        labels = (f"min_{index}", f"max_{index}", f"count_{index}")
+        aggregate_labels.append(labels)
+        aggregates.extend(
+            (
+                func.min(value).label(labels[0]),
+                func.max(value).label(labels[1]),
+                func.count(value).label(labels[2]),
+            )
         )
+    query = (
+        sqlalchemy.select(*aggregates)
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
             col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
         )
-        .where(
-            SampleTable.collection_id == collection_id,
-            json_not_null_expr,
-        )
+        .where(col(SampleTable.collection_id) == collection_id)
     )
-
-    row = session.exec(query).first()
-    if row is None or row[0] is None or row[1] is None or row[2] == 0:
-        return None
-    return float(row[0]), float(row[1]), int(row[2])
+    row = session.execute(query).mappings().one()
+    values = {label: row[label] for labels in aggregate_labels for label in labels}
+    stats: dict[str, _NumericMetadataStats] = {}
+    for key, labels in zip(metadata_keys, aggregate_labels):
+        count = int(values[labels[2]])
+        if count > 0:
+            stats[key] = _NumericMetadataStats(
+                min_value=float(values[labels[0]]),
+                max_value=float(values[labels[1]]),
+                value_count=count,
+            )
+    return stats
 
 
 def _compute_histogram(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     metadata_key: str,
-    stats: tuple[float, float, int],
+    stats: _NumericMetadataStats,
     filters: ImageFilter | None = None,
     bin_count: int = _HISTOGRAM_BIN_COUNT,
 ) -> HistogramView:
@@ -182,16 +207,18 @@ def _compute_histogram(  # noqa: PLR0913
         session: The database session.
         collection_id: The collection's UUID.
         metadata_key: The metadata key to bin.
-        stats: The ``(min, max, count)`` returned by ``_get_metadata_min_max_count``.
-            The min/max always describe the *unfiltered* domain so the bin
-            edges stay stable while filters change.
+        stats: The unfiltered numeric statistics returned by
+            ``_get_metadata_min_max_counts``. The min/max always describe the
+            unfiltered domain so the bin edges stay stable while filters change.
         filters: Optional sample filters restricting which values are counted.
         bin_count: Number of equal-width bins.
 
     Returns:
         The histogram with bin edges and per-bin counts.
     """
-    min_value, max_value, total_count = stats
+    min_value = stats.min_value
+    max_value = stats.max_value
+    total_count = stats.value_count
     if max_value == min_value:
         count = (
             total_count

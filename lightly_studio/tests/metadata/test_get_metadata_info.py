@@ -1,6 +1,8 @@
 """Test metadata info resolver."""
 
 import pytest
+import sqlalchemy
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
@@ -86,6 +88,57 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     assert is_processed_info.min is None
     assert is_processed_info.max is None
     assert is_processed_info.histogram is None
+
+
+def test_get_all_metadata_keys_and_schema__sparse_numerical_values(
+    db_session: Session,
+) -> None:
+    """Each numeric key keeps its own bounds when values are sparse across samples."""
+    collection = create_collection(session=db_session)
+    first = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/sparse-1.png"
+    ).sample
+    second = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/sparse-2.png"
+    ).sample
+    first["temperature"] = -2.5
+    second["count"] = 4
+    db_session.commit()
+
+    result = get_all_metadata_keys_and_schema(
+        session=db_session, collection_id=collection.collection_id
+    )
+    by_name = {item.name: item for item in result}
+    assert by_name["temperature"].min == pytest.approx(-2.5)
+    assert by_name["temperature"].max == pytest.approx(-2.5)
+    assert by_name["count"].min == 4
+    assert by_name["count"].max == 4
+
+
+def test_get_all_metadata_keys_and_schema__batches_numeric_bounds(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Info uses one schema query, one bounds query, and one histogram per key."""
+    collection = create_collection(session=db_session)
+    for index in range(2):
+        sample = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/batch-{index}.png",
+        ).sample
+        sample["temperature"] = float(index)
+        sample["count"] = index
+    db_session.commit()
+    collection_id = collection.collection_id
+
+    listener = mocker.Mock()
+    engine = db_session.get_bind()
+    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+    try:
+        get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+    assert listener.call_count == 4
 
 
 def test_get_all_metadata_keys_and_schema__no_numerical_values(

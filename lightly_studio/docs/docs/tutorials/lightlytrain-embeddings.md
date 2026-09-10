@@ -261,7 +261,7 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
     ) -> NDArray[np.float32]:
         return image_embedding.embed_pil_images_batched(
             images=images, context=self._context(), show_progress=show_progress
-        )
+        ).embeddings
 
     def embed_text(self, text: str) -> list[float]:
         raise NotImplementedError("Vision-only model; text search is unavailable.")
