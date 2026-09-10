@@ -1,58 +1,83 @@
 <script lang="ts">
-    import { T } from '@threlte/core';
-    import { Vector3 } from 'three';
-    import type { AnnotationClass, Bounds3, CuboidAnnotation } from '../domain';
-    import { createCuboidWireframeGeometry } from './cuboidGeometry';
+    import { T, useThrelte } from '@threlte/core';
+    import { interactivity } from '@threlte/extras';
+    import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import CuboidGizmo from './CuboidGizmo.svelte';
+    import CuboidVisual from './CuboidVisual.svelte';
+    import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
+    import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
+    import { addCuboidSelectionListeners } from './cuboidSelection';
 
-    /** Renders static annotation cuboids and their local +x heading indicators. */
+    interactivity();
+
+    /** Renders cuboid annotations with selection, hover highlights, and manipulation handles. */
     interface Props {
         /** Cuboids to render in the active point-cloud frame. */
-        cuboids: readonly CuboidAnnotation[];
+        cuboids: readonly Domain.CuboidAnnotation[];
         /** Annotation classes used to resolve each cuboid's display color. */
-        annotationClasses: readonly AnnotationClass[];
+        annotationClasses: readonly Domain.AnnotationClass[];
+        /** Identity of the currently selected cuboid, or null. */
+        selectedAnnotationId?: string | null;
+        /** Identity of the currently hovered cuboid, or null. */
+        hoveredAnnotationId?: string | null;
+        /** Tool that determines whether cuboids can be selected. */
+        activeTool?: Domain.WorkspaceTool;
         /** Bounds of the point cloud containing the cuboids. */
-        pointCloudBounds: Bounds3;
+        pointCloudBounds: Domain.Bounds3;
+        /** Fires when the user selects or deselects a cuboid. */
+        onselect?: (annotationId: string | null) => void;
+        /** Fires when the pointer enters or leaves a cuboid. */
+        onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
     }
 
-    interface RenderCuboid {
-        annotation: CuboidAnnotation;
-        geometry: ReturnType<typeof createCuboidWireframeGeometry>;
-        headingOrigin: Vector3;
-        arrowLength: number;
-    }
+    let {
+        cuboids,
+        annotationClasses,
+        selectedAnnotationId = null,
+        hoveredAnnotationId = null,
+        activeTool = 'select',
+        onselect,
+        onhover
+    }: Props = $props();
 
-    let { cuboids, annotationClasses }: Props = $props();
-    let renderCuboids = $state<RenderCuboid[]>([]);
+    const { renderer } = useThrelte();
+    let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
+    let cuboidClicked = false;
 
     $effect(() => {
-        const nextCuboids = cuboids.map((annotation) => ({
-            annotation,
-            geometry: createCuboidWireframeGeometry(annotation.size),
-            headingOrigin: new Vector3(annotation.size[0] / 2, 0, 0),
-            arrowLength: Math.max(annotation.size[0] * 0.35, 0.75)
-        }));
-        renderCuboids = nextCuboids;
-
-        return () => nextCuboids.forEach(({ geometry }) => geometry.dispose());
+        const next = createCuboidRenderItems(cuboids);
+        renderCuboids = next;
+        return () => disposeCuboidRenderItems(next);
     });
 
-    function classColor(annotationClassId: string): string {
-        return annotationClasses.find(({ id }) => id === annotationClassId)?.color ?? '#ffffff';
-    }
+    $effect(() => {
+        return addCuboidSelectionListeners({
+            canvas: renderer.domElement,
+            activeTool,
+            onselect,
+            isCuboidClicked: () => cuboidClicked,
+            resetCuboidClicked: () => (cuboidClicked = false)
+        });
+    });
 </script>
 
 {#each renderCuboids as item (item.annotation.id)}
-    {@const color = classColor(item.annotation.annotationClassId)}
-    <T.Group
-        position={[...item.annotation.center]}
-        quaternion={[...item.annotation.rotation]}
-        userData={{ annotationId: item.annotation.id }}
-    >
-        <T.LineSegments geometry={item.geometry}>
-            <T.LineBasicMaterial {color} />
-        </T.LineSegments>
-        <T.ArrowHelper
-            args={[new Vector3(1, 0, 0), item.headingOrigin, item.arrowLength, color, 0.35, 0.2]}
+    {@const base = resolveCuboidColor(annotationClasses, item.annotation.annotationClassId)}
+    {@const isSelected = selectedAnnotationId === item.annotation.id}
+    {@const isHovered = hoveredAnnotationId === item.annotation.id}
+    {@const color = highlightCuboidColor(base, isSelected, isHovered)}
+    <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
+        <CuboidVisual
+            {item}
+            baseColor={base}
+            edgeColor={color}
+            {activeTool}
+            {onselect}
+            {onhover}
+            onselected={() => (cuboidClicked = true)}
         />
+        {#if isSelected}
+            <CuboidGizmo />
+        {/if}
     </T.Group>
 {/each}
