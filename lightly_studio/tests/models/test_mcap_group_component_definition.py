@@ -49,7 +49,9 @@ class TestMcapDataTypeColumn:
         assert image is not None
         assert point_cloud is not None
         assert image.mcap_data_type == McapDataType.VIDEO_FRAME
+        assert image.channel_id == 3
         assert point_cloud.mcap_data_type == McapDataType.POINT_CLOUD
+        assert point_cloud.channel_id == 5
 
     def test_rejects_value_outside_enum(self, db_session: Session) -> None:
         """The database refuses a raw insert with an unknown MCAP data type.
