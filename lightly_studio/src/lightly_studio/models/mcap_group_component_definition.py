@@ -4,6 +4,8 @@
 on this table.
 """
 
+from __future__ import annotations
+
 from enum import Enum
 from uuid import UUID
 
@@ -21,6 +23,11 @@ class McapGroupComponentDefinitionBase(SQLModel):
     """Base class for the McapGroupComponentDefinition model."""
 
     mcap_data_type: McapDataType
+
+    """The id used to match this slot against calibration/transform data, e.g. ``"main"`` or
+    ``"livox_front_left"``. Not the Studio slot name (e.g. ``"front"``). ``None`` when the slot
+    has no associated calibration/transform."""
+    frame_id: str | None = None
 
     """The MCAP channel id, unique within the source bag. Same meaning as ``mcap.channel_id``."""
     channel_id: int

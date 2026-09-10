@@ -4,7 +4,8 @@ Adds the ``mcap_group_component_definition`` table (1:1 with
 ``group_component_definition``).
 ``mcap_data_type`` is a native ``mcapdatatype`` enum storing the member names
 ``VIDEO_FRAME`` and ``POINT_CLOUD``; ``channel_id`` is the same
-integer channel id as on ``mcap`` samples.
+integer channel id as on ``mcap`` samples; ``frame_id`` is an optional id used to match
+this slot against calibration/transform data.
 
 DuckDB builds its schema with ``create_all``, so this migration only matters for tracked
 Postgres databases.
@@ -38,6 +39,7 @@ def upgrade() -> None:
     op.create_table(
         "mcap_group_component_definition",
         sa.Column("mcap_data_type", _MCAP_DATA_TYPE, nullable=False),
+        sa.Column("frame_id", sa.String(), nullable=True),
         sa.Column("channel_id", sa.Integer(), nullable=False),
         sa.Column("collection_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(

@@ -30,6 +30,7 @@ class TestMcapDataTypeColumn:
             McapGroupComponentDefinitionTable(
                 collection_id=image_id,
                 mcap_data_type=McapDataType.VIDEO_FRAME,
+                frame_id="main",
                 channel_id=3,
             )
         )
@@ -49,8 +50,10 @@ class TestMcapDataTypeColumn:
         assert image is not None
         assert point_cloud is not None
         assert image.mcap_data_type == McapDataType.VIDEO_FRAME
+        assert image.frame_id == "main"
         assert image.channel_id == 3
         assert point_cloud.mcap_data_type == McapDataType.POINT_CLOUD
+        assert point_cloud.frame_id is None
         assert point_cloud.channel_id == 5
 
     def test_rejects_value_outside_enum(self, db_session: Session) -> None:

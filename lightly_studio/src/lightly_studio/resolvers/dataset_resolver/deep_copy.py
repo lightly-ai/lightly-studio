@@ -945,8 +945,8 @@ def _copy_group_component_definitions(session: Session) -> None:
 def _copy_mcap_group_component_definitions(session: Session) -> None:
     """Copy MCAP group component definitions, remapping collection_id.
 
-    ``mcap_data_type`` and ``channel_id`` are copied verbatim. Classic IMAGE/VIDEO
-    definitions have no row here, so they copy nothing.
+    ``mcap_data_type``, ``frame_id``, and ``channel_id`` are copied verbatim. Classic
+    IMAGE/VIDEO definitions have no row here, so they copy nothing.
     """
     src = _table(McapGroupComponentDefinitionTable).alias("src")
     map_collection = _map(_MAP_COLLECTION)
