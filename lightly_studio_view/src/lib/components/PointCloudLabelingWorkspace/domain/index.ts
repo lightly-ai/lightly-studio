@@ -30,4 +30,5 @@ export {
 } from './coordinates';
 export { createPointCloudFrame } from './pointCloudFrame';
 export { exportPointCloudFrame } from './frameTransfer';
+export { createAnnotationFixture } from './fixtures';
 export type { PointCloudFrameTransfer } from './frameTransfer';
