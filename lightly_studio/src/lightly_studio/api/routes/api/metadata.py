@@ -49,9 +49,7 @@ def get_metadata_info(
         List of metadata info objects with name, type, and optionally min/max values
         for numerical metadata types.
     """
-    return metadata_info_resolver.get_metadata_info(
-        session=session, collection_id=collection_id
-    )
+    return metadata_info_resolver.get_metadata_info(session=session, collection_id=collection_id)
 
 
 class MetadataHistogramsRequest(BaseModel):
