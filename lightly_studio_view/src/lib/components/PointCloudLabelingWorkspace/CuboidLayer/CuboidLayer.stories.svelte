@@ -93,3 +93,16 @@
     }}
     template={scene}
 />
+
+<Story
+    name="Hovered cuboid"
+    args={{ cuboids: [multipleCuboids[2]], hoveredAnnotationId: multipleCuboids[2].id }}
+    parameters={{
+        docs: {
+            description: {
+                story: 'The cuboid hover tooltip shows annotation metadata at the cuboid center.'
+            }
+        }
+    }}
+    template={scene}
+/>
