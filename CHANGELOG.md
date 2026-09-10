@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improved metadata loading by reducing latency by up to 70% and increasing throughput by up to 4× under concurrent requests.
 - Speed up distribution plot tag comparisons by up to 4.9x by requesting and calculating only the metadata field being viewed.
 - Improved categorical metadata loading performance, reducing database work and page-load latency for large datasets.
 - Improved metadata loading by reducing numeric database queries from 13 to 8 and making responses up to 25% faster.
