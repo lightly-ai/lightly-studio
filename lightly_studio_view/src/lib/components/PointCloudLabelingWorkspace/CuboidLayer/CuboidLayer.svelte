@@ -3,6 +3,7 @@
     import { interactivity } from '@threlte/extras';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidGizmo from './CuboidGizmo.svelte';
+    import CuboidTooltip from './CuboidTooltip/CuboidTooltip.svelte';
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
@@ -63,6 +64,9 @@
 
 {#each renderCuboids as item (item.annotation.id)}
     {@const base = resolveCuboidColor(annotationClasses, item.annotation.annotationClassId)}
+    {@const annotationClassName =
+        annotationClasses.find(({ id }) => id === item.annotation.annotationClassId)?.name ??
+        item.annotation.annotationClassId}
     {@const isSelected = selectedAnnotationId === item.annotation.id}
     {@const isHovered = hoveredAnnotationId === item.annotation.id}
     {@const color = highlightCuboidColor(base, isSelected, isHovered)}
@@ -78,6 +82,9 @@
         />
         {#if isSelected}
             <CuboidGizmo />
+        {/if}
+        {#if isHovered}
+            <CuboidTooltip {annotationClassName} annotation={item.annotation} />
         {/if}
     </T.Group>
 {/each}
