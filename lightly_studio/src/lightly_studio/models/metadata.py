@@ -44,6 +44,8 @@ NUMERIC_TYPE_NAMES = ("integer", "float")
 # Schema type names whose values are discrete and aggregated by exact value.
 CATEGORICAL_TYPE_NAMES = ("string", "boolean")
 
+# JSONB is the same JSON stored pre-parsed as binary, so metadata queries skip
+# reparsing on every access.
 _PG_JSONB_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 

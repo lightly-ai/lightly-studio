@@ -284,9 +284,7 @@ def _run_read_benchmark(
     elapsed = time.perf_counter() - started
     peak_mib = tracemalloc.get_traced_memory()[1] / _BYTES_PER_MIB
     tracemalloc.stop()
-    return PhaseResult(
-        name=name, wall_seconds=elapsed, peak_mib=peak_mib, count=config.num_samples
-    )
+    return PhaseResult(name=name, wall_seconds=elapsed, peak_mib=peak_mib, count=config.num_samples)
 
 
 def _print_report(
