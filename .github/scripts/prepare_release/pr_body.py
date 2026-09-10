@@ -45,6 +45,7 @@ def render_pr_body(section_body: str, version: str) -> str:
         f"{_GUARDS}\n\n"
         f"{_CHECKLIST}\n\n"
         f"Merging tags this commit and opens a **draft** GitHub release. Nothing is public "
-        f"until the wheel is on PyPI and someone runs Finish Release; PyPI and the docs are "
-        f"still manual.\n"
+        f"until someone runs Finish Release with `target: pypi`, which builds the wheel, "
+        f"publishes it to PyPI and "
+        f"un-drafts the release; the docs are still manual.\n"
     )
