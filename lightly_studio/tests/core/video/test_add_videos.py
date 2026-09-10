@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 import fsspec
+import numpy as np
 import pytest
 from av import container
 from av.codec.context import ThreadType
@@ -478,6 +479,247 @@ def test__create_video_frame_samples__embed_frames(
 
     video_container.close()
     video_file.close()
+
+
+def _extract_frame_rows(
+    session: Session, video_path: Path, target_fps: float | None = None
+) -> list[tuple[int, int, float, int]]:
+    """Extract frames into a fresh collection and return the stored rows.
+
+    Args:
+        session: The database session.
+        video_path: The video to extract frames from.
+        target_fps: Optional target frame rate for subsampling.
+
+    Returns:
+        One (frame_number, frame_timestamp_pts, frame_timestamp_s, rotation_deg) tuple per
+        frame, ordered by frame number.
+    """
+    collection = create_collection(session, sample_type=SampleType.VIDEO)
+    video_sample_ids = video_resolver.create_many(
+        session=session,
+        collection_id=collection.collection_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=str(video_path),
+                file_name=video_path.name,
+                width=64,
+                height=48,
+                duration_s=3.0,
+                fps=10,
+            )
+        ],
+    )
+    frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
+    )
+    video_container = container.open(file=str(video_path))
+    try:
+        add_videos._create_video_frame_samples(
+            context=FrameExtractionContext(
+                session=session,
+                collection_id=frames_collection_id,
+                video_sample_id=video_sample_ids[0],
+            ),
+            video_container=video_container,
+            video_channel=0,
+            target_fps=target_fps,
+        )
+    finally:
+        video_container.close()
+
+    frames = video_frame_resolver.get_all_by_collection_id(
+        session=session, collection_id=frames_collection_id
+    ).samples
+    return sorted(
+        (
+            frame.frame_number,
+            frame.frame_timestamp_pts,
+            frame.frame_timestamp_s,
+            frame.rotation_deg,
+        )
+        for frame in frames
+    )
+
+
+def test__create_video_frame_samples__packet_timing_matches_decoding(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    """Rows read from packet headers are identical to rows built by decoding."""
+    video_path = create_video_file(
+        output_path=tmp_path / "b_frames.mp4", width=64, height=48, num_frames=30, fps=10
+    )
+
+    from_packets = _extract_frame_rows(session=db_session, video_path=video_path)
+
+    # Without usable packet headers the extraction rewinds and decodes instead.
+    mocker.patch.object(add_videos, "_read_frame_timing_from_packets", return_value=None)
+    from_decoding = _extract_frame_rows(session=db_session, video_path=video_path)
+
+    assert from_packets == from_decoding
+    assert len(from_packets) == 30
+
+
+def test__create_video_frame_samples__numbers_frames_in_display_order(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """B-frames are stored out of display order, so frame_number must follow the pts."""
+    video_path = create_video_file(
+        output_path=tmp_path / "b_frames.mp4", width=64, height=48, num_frames=30, fps=10
+    )
+    video_container = container.open(file=str(video_path))
+    packet_pts = [
+        packet.pts
+        for packet in video_container.demux(video_container.streams.video[0])
+        if packet.pts is not None
+    ]
+    video_container.close()
+    # The fixture is only meaningful while the encoder emits reordered packets.
+    assert packet_pts[:3] != sorted(packet_pts[:3])
+
+    rows = _extract_frame_rows(session=db_session, video_path=video_path)
+
+    frame_numbers = [row[0] for row in rows]
+    pts_values = [row[1] for row in rows]
+    assert frame_numbers == list(range(30))
+    assert pts_values == sorted(pts_values)
+
+
+def test__create_video_frame_samples__does_not_decode_without_embedding(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    """Frame rows come from packet headers when no embedding needs the pixels."""
+    video_path = create_video_file(
+        output_path=tmp_path / "no_decode.mp4", width=64, height=48, num_frames=10, fps=10
+    )
+    decode_spy = mocker.spy(add_videos, "_decode_video_frame_samples")
+
+    rows = _extract_frame_rows(session=db_session, video_path=video_path)
+
+    assert len(rows) == 10
+    decode_spy.assert_not_called()
+
+
+def test__create_video_frame_samples__packet_timing_applies_target_fps(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    """Subsampling selects the same frames on the packet path and the decode path."""
+    video_path = create_video_file(
+        output_path=tmp_path / "subsampled.mp4", width=64, height=48, num_frames=30, fps=10
+    )
+
+    from_packets = _extract_frame_rows(session=db_session, video_path=video_path, target_fps=2.0)
+
+    mocker.patch.object(add_videos, "_read_frame_timing_from_packets", return_value=None)
+    from_decoding = _extract_frame_rows(session=db_session, video_path=video_path, target_fps=2.0)
+
+    assert from_packets == from_decoding
+    assert [row[0] for row in from_packets] == list(range(0, 30, 5))
+
+
+def test__read_frame_timing_from_packets(tmp_path: Path) -> None:
+    video_path = create_video_file(
+        output_path=tmp_path / "timing.mp4", width=64, height=48, num_frames=10, fps=10
+    )
+    video_container = container.open(file=str(video_path))
+
+    timing = add_videos._read_frame_timing_from_packets(
+        video_container=video_container,
+        video_stream=video_container.streams.video[0],
+    )
+
+    video_container.close()
+    assert timing is not None
+    assert len(timing.pts_values) == 10
+    assert timing.pts_values == sorted(timing.pts_values)
+    assert timing.rotation_deg == 0
+
+
+def test__read_frame_timing_from_packets__returns_none_for_untrusted_count(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    video_path = create_video_file(
+        output_path=tmp_path / "untrusted.mp4", width=64, height=48, num_frames=10, fps=10
+    )
+    video_container = container.open(file=str(video_path))
+    mocker.patch.object(add_videos, "_frame_count_is_trusted", return_value=False)
+
+    timing = add_videos._read_frame_timing_from_packets(
+        video_container=video_container,
+        video_stream=video_container.streams.video[0],
+    )
+
+    video_container.close()
+    assert timing is None
+
+
+@pytest.mark.parametrize(
+    ("rotation_matrix", "expected_rotation_deg"),
+    [
+        ([1, 0, 0, 0, 1, 0, 0, 0, 1 << 30], 0),
+        ([0, -(1 << 16), 0, 1 << 16, 0, 0, 0, 0, 1 << 30], 90),
+        ([-(1 << 16), 0, 0, 0, -(1 << 16), 0, 0, 0, 1 << 30], 180),
+        ([0, 1 << 16, 0, -(1 << 16), 0, 0, 0, 0, 1 << 30], 270),
+    ],
+)
+def test__read_frame_properties(
+    rotation_matrix: list[int], expected_rotation_deg: int, mocker: MockerFixture
+) -> None:
+    frame = mocker.MagicMock()
+    frame.side_data = {"DISPLAYMATRIX": np.array(rotation_matrix, dtype=np.int32).tobytes()}
+    frame.interlaced_frame = False
+    packet = mocker.MagicMock()
+    packet.decode.return_value = [frame]
+
+    rotation_deg, interlaced = add_videos._read_frame_properties(packet=packet)
+
+    assert rotation_deg == expected_rotation_deg
+    assert interlaced is False
+
+
+def test__read_frame_properties__no_frame_yet(mocker: MockerFixture) -> None:
+    """A decoder holds back the first packets, which then carry no frame."""
+    packet = mocker.MagicMock()
+    packet.decode.return_value = []
+
+    rotation_deg, interlaced = add_videos._read_frame_properties(packet=packet)
+
+    assert rotation_deg is None
+    assert interlaced is False
+
+
+@pytest.mark.parametrize(
+    ("frame_count", "interlaced", "declared_frame_count", "expected"),
+    [
+        # The container header confirms the packet count.
+        (30, False, 30, True),
+        # One packet did not become one frame.
+        (30, False, 31, False),
+        # Matroska and WebM leave the frame count at zero.
+        (30, False, 0, True),
+        # Interlaced content stores a frame as two fields.
+        (30, True, 30, False),
+        (30, True, 0, False),
+    ],
+)
+def test__frame_count_is_trusted(
+    frame_count: int,
+    interlaced: bool,
+    declared_frame_count: int,
+    expected: bool,
+    mocker: MockerFixture,
+) -> None:
+    video_stream = mocker.MagicMock()
+    video_stream.frames = declared_frame_count
+
+    assert (
+        add_videos._frame_count_is_trusted(
+            frame_count=frame_count, interlaced=interlaced, video_stream=video_stream
+        )
+        is expected
+    )
 
 
 @pytest.mark.parametrize(

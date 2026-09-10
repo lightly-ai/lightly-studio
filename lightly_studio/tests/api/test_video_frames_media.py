@@ -22,8 +22,10 @@ from sqlmodel import Session
 import lightly_studio.api.routes.video_frames_media as video_frames_media_module
 import lightly_studio.utils.executor as executor_module
 from lightly_studio.api.routes.video_frames_media import FrameTransformOptions
+from lightly_studio.core.video import add_videos
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.settings import GridViewThumbnailQualityType
+from lightly_studio.resolvers import video_frame_resolver
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_video_with_frames
 
@@ -301,3 +303,75 @@ def test_stream_frame_multiple_frames_same_video(
     # All should succeed (caching helps with performance)
     assert len(responses) == 3
     assert all(r.status_code == 200 for r in responses)
+
+
+def _create_lossless_video(output_path: Path, num_frames: int) -> Path:
+    """Create a lossless video whose frames all differ, so a frame can be identified.
+
+    Args:
+        output_path: Path where the video file is written.
+        num_frames: Number of frames to generate.
+
+    Returns:
+        The path to the created video file.
+    """
+    with av.open(str(output_path), mode="w") as output_container:
+        stream = cast(VideoStream, output_container.add_stream("ffv1", rate=10))
+        stream.width, stream.height = 32, 16
+        stream.pix_fmt = "bgr0"
+        for frame_number in range(num_frames):
+            pixels = np.full((16, 32, 3), frame_number * 8, dtype=np.uint8)
+            frame = av.VideoFrame.from_ndarray(pixels, format="rgb24")
+            frame.pts = frame_number
+            for packet in stream.encode(frame):
+                output_container.mux(packet)
+        for packet in stream.encode():
+            output_container.mux(packet)
+    return output_path
+
+
+def test_process_video_frame__serves_frames_ingested_without_decoding(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Timestamps read from packet headers must seek to the frame they belong to.
+
+    A timestamp that is off by one unit still looks valid in the database, but the seek
+    misses and the frame is served from a linear scan. Comparing the served pixels
+    against the frames of the source video is what shows the timestamps are exact.
+    """
+    video_path = _create_lossless_video(output_path=tmp_path / "lossless.mkv", num_frames=8)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    _, frame_sample_ids = add_videos.load_into_collection_from_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video_paths=[str(video_path)],
+        show_progress=False,
+    )
+    assert len(frame_sample_ids) == 8
+
+    with av.open(str(video_path)) as source_container:
+        source_frames = list(source_container.decode(source_container.streams.video[0]))
+        expected_frames = [frame.to_ndarray(format="rgb24") for frame in source_frames]
+        expected_pts = [frame.pts for frame in source_frames]
+
+    # Assert the timestamps directly. Serving alone does not prove them: a wrong
+    # timestamp makes the seek miss, and the frame is then found by a linear scan on
+    # frame_number, which returns the right pixels from the wrong code path.
+    stored_pts = [
+        video_frame_resolver.get_by_id(session=db_session, sample_id=sample_id).frame_timestamp_pts
+        for sample_id in frame_sample_ids
+    ]
+    assert stored_pts == expected_pts
+
+    for sample_id in frame_sample_ids:
+        video_frame = video_frame_resolver.get_by_id(session=db_session, sample_id=sample_id)
+        buffer, _ = video_frames_media_module._process_video_frame(
+            video_path=str(video_path),
+            frame_number=video_frame.frame_number,
+            frame_timestamp_pts=video_frame.frame_timestamp_pts,
+            rotation_deg=video_frame.rotation_deg,
+            transform=FrameTransformOptions(GridViewThumbnailQualityType.RAW, None, None),
+        )
+        served = np.asarray(Image.open(io.BytesIO(buffer)))
+        np.testing.assert_array_equal(served, expected_frames[video_frame.frame_number])
