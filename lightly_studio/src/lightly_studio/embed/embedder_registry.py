@@ -91,9 +91,11 @@ class EmbedderRegistry:
                 )
             logger.warning("Replacing embedder for space %r.", space_key)
         self._space_key_to_embedder[space_key] = embedder
-        requested_capabilities = capabilities if bootstrap_for is None else bootstrap_for
-        for capability in requested_capabilities.intersection(capabilities):
-            self._bootstrap_spaces[capability] = space_key
+        self._set_bootstrap_defaults(
+            space_key=space_key,
+            capabilities=capabilities,
+            bootstrap_for=bootstrap_for,
+        )
 
     def get_image_path_embedder(self, space_key: str | None = None) -> ImagePathEmbedder | None:
         """Get the space's embedder if it embeds images by path, else None."""
@@ -147,6 +149,17 @@ class EmbedderRegistry:
         if capability_type is None or not isinstance(embedder, capability_type):
             return None
         return embedder
+
+    def _set_bootstrap_defaults(
+        self,
+        space_key: str,
+        capabilities: set[Capability],
+        bootstrap_for: set[Capability] | None,
+    ) -> None:
+        """Set the space as the bootstrap default for requested capabilities it supports."""
+        requested_capabilities = capabilities if bootstrap_for is None else bootstrap_for
+        for capability in requested_capabilities.intersection(capabilities):
+            self._bootstrap_spaces[capability] = space_key
 
 
 _registry = EmbedderRegistry()
