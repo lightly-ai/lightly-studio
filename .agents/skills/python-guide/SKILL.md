@@ -26,7 +26,7 @@ c = MyClass()
 ```
 
 Exceptions from the guidelines:
-- We allow direct function import from `typing`
+- We allow direct function import from `typing`, `dataclasses`, `abc` and SQL ORM functions.
 
 ## File layout
 
@@ -72,7 +72,7 @@ Use the following format: `# TODO({name}, {mm}/{yyyy}): Blah blah`
 
 ## Comments
 
-Prefer properly formatted comments with a leading capital and punctuation. Final full stop may be omitted for a single sentence.
+Use simple english ASD-STE100, avoid bloat. Describe the current state, not the change. Prefer properly formatted comments with a leading capital and punctuation. Final full stop may be omitted for a single sentence.
 
 ```python
 # This is a proper comment. It spans multiple sentences.
@@ -131,7 +131,7 @@ def _get_std(sequence: Sequence[float]) -> float:
 
 ## Positional vs. Keyword Arguments
 
-In general: Call functions using keyword arguments.
+Prefer calling functions using keyword arguments. Do not declare arguments as keyword args (omit `*`).
 
 ```python
 def fn(hello: str, person: str) -> None:
@@ -142,10 +142,9 @@ fn(hello="Grüezi", person="Bob")
 
 The exception of using positional arguments is allowed for
 
-- functions with only 1 argument, e.g. `def is_palindrome(a: str)`
-- functions where confusing the arguments does not matter, e.g `def add(a: int, b: int)`
 - if the keyword arguments are not known, e.g. because the function is only given through typing: `transform: Callable[[Tensor], Tensor]` must be called as `transformed = transform(tensor)`
-- for common standard library functions like e.g. `print`, `math.exp`
+- for common standard library and core frameworks like e.g. `print`, `math.exp`, `zip`, `isinstance`, `dict.get`, `datetime`, `pytest`, `numpy`, `pytorch`, `logging` etc.
+- For SQL ORM functions like `select`, `col`, etc.
 
 ## `__init__.py` files
 
@@ -296,7 +295,7 @@ def test_foo(mocker: MockerFixture):
     mock_obj = mocker.MagicMock()
 ```
 
-## Naming
+## Test Naming and File Structure
 
 Tests must be located in a folder structure parallel
 to `src/{package_name}` and use the following naming conventions:
