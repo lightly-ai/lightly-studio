@@ -15,12 +15,10 @@ on:
         options: [pypi, testpypi]
         default: pypi
 
-# Nothing at workflow level: each job below asks for exactly what it needs.
 permissions: {}
 
-# A second dispatch for the same tag while the first waits for its environment
-# approval would try to publish it twice. Queued rather than cancelled, because
-# cancelling a run mid-upload is worse than making it wait.
+# Queued rather than cancelled: cancelling a run mid-upload is worse than
+# making a second dispatch for the same tag wait.
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.tag }}
   cancel-in-progress: false
@@ -30,21 +28,18 @@ env:
   NODE_OPTIONS: --max-old-space-size=4096
 
 jobs:
-  # Ahead of the build rather than beside the upload: the publish job sits
-  # behind an approval gate, so a tag that was never drafted or is already
-  # released should be rejected before it costs half an hour of build and a
-  # reviewer's approval. Its own job because GitHub shows draft releases only to
-  # identities with push access, so this needs `contents: write` and the build
-  # job below must not have it. Nothing here runs repository code - no checkout.
+  # Its own job ahead of the build, so a tag that was never drafted or is
+  # already released costs neither the build nor a reviewer's approval. It
+  # cannot live in `build`: GitHub shows draft releases only to identities with
+  # push access. No checkout, so it runs no repository code.
   precheck:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
     steps:
-      # Skipped for a rehearsal, which never touches the release. This is also
-      # what keeps a re-dispatch from appending "Released by" twice: once the
-      # release is live, the next dispatch stops here.
+      # Also the idempotency guard: once the release is live, the next dispatch
+      # stops here instead of appending "Released by" twice.
       - name: Require a draft release
         if: inputs.target == 'pypi'
         env:
@@ -58,10 +53,8 @@ jobs:
             exit 1
           fi
 
-  # Split from the publish deliberately. This job runs the tagged commit's own
-  # code - `uv sync`, `npm ci`, `npm run build` - so it must not be able to mint
-  # a PyPI credential: it has no `id-token: write`, and the only thing it hands
-  # onwards is the built distribution.
+  # Runs the tagged commit's own code, so it must not be able to mint a PyPI
+  # credential: no `id-token: write`, and all it hands onwards is the artifact.
   build:
     needs: precheck
     runs-on: ubuntu-latest
@@ -71,19 +64,15 @@ jobs:
     env:
       TAG: ${{ inputs.tag }}
     steps:
-      # `refs/tags/` rather than the bare tag: actions/checkout resolves an
-      # unqualified ref as a branch first, so a branch sharing the tag's name
-      # would build the branch while the publish un-drafts the tag's release.
-      # Both carry the same `[project].version`, so the assert below cannot see it.
+      # `refs/tags/` because actions/checkout resolves an unqualified ref as a
+      # branch first, and a branch sharing the tag's name would be built in the
+      # tag's place - undetectably, since both carry the same version.
       - name: Checkout the release commit
         uses: actions/checkout@v7
         with:
           ref: refs/tags/${{ inputs.tag }}
           persist-credentials: false
 
-      # The tag is what a person typed; the version is what would be uploaded.
-      # A mismatch means the tag does not point where whoever dispatched this
-      # believes it does, and PyPI would happily accept the wrong version.
       - name: Assert the tag matches the version it points at
         env:
           PYTHONPATH: ${{ github.workspace }}/.github/scripts
@@ -101,42 +90,33 @@ jobs:
         with:
           python-version: "3.12"
 
-      # No enable-cache, unlike the test workflows. A cache written by another
-      # workflow is an input to the artifact that gets published, so this job
-      # builds from the lockfile alone.
+      # No enable-cache, unlike the test workflows: a cache written by another
+      # workflow would be an input to what gets published.
       - name: Set Up Uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
 
-      # The wheel bundles the built frontend, so the build needs Node. Taken
-      # from .nvmrc, the same version the Makefile's nvm path picks locally.
+      # The wheel bundles the built frontend, so the build needs Node.
       - name: Set Up Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: lightly_studio_view/.nvmrc
 
-      # `--locked` rather than the Makefile's `install-optional-deps`, which is
-      # a plain `uv sync`: that re-resolves and rewrites uv.lock when it is
-      # stale against the tagged pyproject.toml, and `make build` then runs
-      # export-schema and export-version under the resulting environment - so a
-      # stale lock would change the schema and generated client inside the
-      # published wheel with no signal. Locally re-resolving is what you want,
-      # which is why the target itself is left alone.
+      # `--locked` rather than the Makefile's plain `uv sync`, which re-resolves
+      # a lock that is stale against the tagged pyproject.toml. `make build`
+      # then runs export-schema under that environment, so a stale lock would
+      # change the schema inside the published wheel with no signal.
       - name: Install Dependencies
         working-directory: lightly_studio
         run: uv sync --locked --all-groups --all-extras
 
-      # `make build` builds the frontend, copies it in, and runs `uv build`. In
-      # a uv workspace the lock is at the root but the distributions still land
-      # in lightly_studio/dist.
       - name: Build the Distributions
         working-directory: lightly_studio
         run: make build
 
-      # Long enough to outlast the pypi environment's approval gate, which can
-      # sit for days: an artifact that expired while a reviewer was away would
-      # fail the release after the approval had already been spent.
+      # A week, to outlast the pypi environment's approval gate: an artifact
+      # expiring mid-approval would fail the release after it was granted.
       - name: Upload the Distributions
         uses: actions/upload-artifact@v7
         with:
@@ -145,16 +125,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # The only job that can publish. It runs no code from the release commit: it
-  # downloads the distributions, uploads them, and un-drafts the GitHub release.
   publish:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # The environment is what PyPI's trusted publisher checks the OIDC claim
-    # against, so only this job of this file can publish. `pypi` carries the
-    # approval gate and is restricted to main; `testpypi` has neither, so a
-    # rehearsal runs unattended.
+    # What PyPI's trusted publisher checks the OIDC claim against, so only this
+    # job of this file can publish. `pypi` carries the approval gate and is
+    # restricted to main; `testpypi` has neither, so a rehearsal is unattended.
     environment: ${{ inputs.target }}
     permissions:
       contents: write
@@ -168,13 +145,10 @@ jobs:
           name: dist
           path: dist
 
-      # The PyPA action rather than `uv publish`, which uploads PEP 740
-      # attestations but does not create them - this action mints the
-      # trusted-publishing token and signs the distributions with the same
-      # identity the index checks the certificate against. It is given no
-      # password, so a misconfigured publisher fails here rather than quietly
-      # looking for a token that does not exist. `skip-existing` lets a run that
-      # uploaded but failed to un-draft be re-dispatched.
+      # Not `uv publish`, which uploads PEP 740 attestations but does not create
+      # them. Given no password, so a misconfigured publisher fails here rather
+      # than falling back to looking for a token. `skip-existing` lets a run
+      # that uploaded but failed to un-draft be re-dispatched.
       - name: Publish to the Index
         uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
@@ -183,15 +157,10 @@ jobs:
             || 'https://test.pypi.org/legacy/' }}
           skip-existing: true
 
-      # Only for a real release: a TestPyPI rehearsal must not mark a GitHub
-      # release live.
-      #
       # A release's author is whichever identity's token created it, so a
       # workflow-created release always reads as github-actions[bot]. This
-      # workflow is dispatch-triggered, so the actor is the person who decided
-      # to release; the notes name them instead. Appending it here rather than
-      # when drafting keeps it out of a draft nobody published, and the
-      # `precheck` guard keeps a re-dispatch from appending it twice.
+      # workflow is dispatch-triggered, so the notes name the person who decided
+      # to release instead.
       - name: Publish the draft release
         if: inputs.target == 'pypi'
         env:
