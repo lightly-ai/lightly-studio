@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Improved initial metadata loading performance by up to 30% for large datasets by removing duplicate histogram calculations.
+
 ### Fixed
 
 ### Security
