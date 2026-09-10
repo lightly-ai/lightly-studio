@@ -72,7 +72,8 @@ class EmbedderRegistry:
             embedder: The embedder to register.
             bootstrap_for: Capabilities for which this embedder becomes the bootstrap
                 choice. By default, all implemented capabilities are updated. An empty
-                set leaves the bootstrap choices unchanged.
+                set leaves the bootstrap choices unchanged. Requested capabilities
+                the embedder does not implement are ignored.
 
         Raises:
             ValueError: If the embedder implements no capability, or if it shares
@@ -135,7 +136,7 @@ class EmbedderRegistry:
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
     def _get_or_bootstrap(self, space_key: str | None, capability: Capability) -> Embedder | None:
-        """Resolve a registered embedder or lazily load the selected built-in."""
+        """Resolve a registered embedder or lazily load and cache the selected built-in."""
         if space_key is None:
             space_key = self._bootstrap_spaces.get(capability)
         if space_key is None:
@@ -156,8 +157,8 @@ class EmbedderRegistry:
         bootstrap_for: set[Capability] | None,
     ) -> None:
         """Set the space as the bootstrap default for requested capabilities it supports."""
-        requested_capabilities = capabilities if bootstrap_for is None else bootstrap_for
-        for capability in requested_capabilities.intersection(capabilities):
+        defaults = capabilities if bootstrap_for is None else capabilities & bootstrap_for
+        for capability in defaults:
             self._bootstrap_spaces[capability] = space_key
 
 
