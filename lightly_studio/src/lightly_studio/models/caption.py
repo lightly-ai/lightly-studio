@@ -45,6 +45,16 @@ class CaptionTable(SQLModel, table=True):
         },
     )
 
+    # Metadata of this caption's sample, e.g. the caption-segment match score.
+    metadata_dict: Mapped[Optional["SampleMetadataTable"]] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "CaptionTable.sample_id == foreign(SampleMetadataTable.sample_id)",
+            "lazy": "selectin",
+            "uselist": False,
+            "viewonly": True,
+        },
+    )
+
 
 class CaptionCreate(SQLModel):
     """Input model for creating captions."""
@@ -64,3 +74,12 @@ class CaptionView(SQLModel):
     sample_id: UUID
     text: str
     temporal_span_details: Optional[TemporalSpanView] = None
+    metadata_dict: Optional["SampleMetadataView"] = None
+
+
+# Import at the bottom to avoid a circular import with the metadata model, which
+# imports the sample model that in turn imports this module.
+from lightly_studio.models.metadata import (  # noqa: E402
+    SampleMetadataTable,
+    SampleMetadataView,
+)

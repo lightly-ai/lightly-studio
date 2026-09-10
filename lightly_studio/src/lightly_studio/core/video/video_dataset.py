@@ -19,7 +19,7 @@ from lightly_studio.core.video import add_annotations, add_videos
 from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
-from lightly_studio.dataset import fsspec_lister
+from lightly_studio.dataset import fsspec_lister, video_quality
 from lightly_studio.embed import embed_samples
 from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -125,6 +125,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         embed_frames: bool = True,
         target_fps: float | None = None,
         limit: int | None = None,
+        extract_frames: bool = True,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
 
@@ -142,6 +143,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 frame rate, only selected frames are kept. frame_number values remain
                 original. Must be greater than 0.
             limit: Maximum number of samples to load. By default, all samples are loaded.
+            extract_frames: If True, decode and persist a child sample per (subsampled)
+                frame. If False, only the video sample and its header metadata are stored
+                and the decode pass is skipped. target_fps is then irrelevant.
         """
         if target_fps is not None and target_fps <= 0:
             raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
@@ -160,6 +164,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             num_decode_threads=num_decode_threads,
             target_fps=target_fps,
             embed_frames=embed_frames,
+            extract_frames=extract_frames,
         )
         created_sample_ids = list(video_path_to_id.values())
 
@@ -262,6 +267,35 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             root_collection_id=self.collection_id,
             annotations_json=annotations_json,
             collection_name=annotation_source,
+        )
+
+    def compute_quality_scores(
+        self,
+        *,
+        num_frames: int | None = None,
+        max_edge: int | None = None,
+    ) -> int:
+        """Score blur, lighting, and motion for videos and store as metadata.
+
+        Samples a few frames per video, computes classical CV quality signals, and
+        writes aggregates under metadata keys such as ``blur_score``,
+        ``lighting_score``, and ``motion_score``. Use metadata filters in the GUI
+        or Python query API to screen low-quality videos.
+
+        Args:
+            num_frames: Number of uniformly spaced frames to sample per video.
+                Defaults to ``video_quality.DEFAULT_NUM_FRAMES``.
+            max_edge: Max longest-edge length after resize (stabilizes thresholds).
+                Defaults to ``video_quality.DEFAULT_MAX_EDGE``.
+
+        Returns:
+            Number of videos successfully scored.
+        """
+        return video_quality.compute_and_store_quality_metadata(
+            session=self.session,
+            collection_id=self.collection_id,
+            num_frames=num_frames if num_frames is not None else video_quality.DEFAULT_NUM_FRAMES,
+            max_edge=max_edge if max_edge is not None else video_quality.DEFAULT_MAX_EDGE,
         )
 
 

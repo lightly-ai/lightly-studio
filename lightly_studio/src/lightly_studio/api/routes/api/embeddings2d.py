@@ -70,7 +70,9 @@ def get_2d_embeddings(
 
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
-    if filters:
+    # Caption collections have no grid filter resolvers yet; show every embedding
+    # point as included. The frontend still posts an ImageFilter (same as images).
+    if filters and collection.sample_type != SampleType.CAPTION:
         matching_sample_ids = _get_matching_sample_ids(
             session=session,
             collection_id=collection_id,
@@ -176,6 +178,9 @@ def _validate_filter_type(
     if collection.sample_type == SampleType.VIDEO and isinstance(filters, VideoFilter):
         return
     if collection.sample_type == SampleType.ANNOTATION and isinstance(filters, AnnotationsFilter):
+        return
+    # Captions reuse the image filter payload from the plot UI; filtering is a no-op.
+    if collection.sample_type == SampleType.CAPTION and isinstance(filters, ImageFilter):
         return
     raise HTTPException(
         status_code=HTTP_STATUS_BAD_REQUEST,

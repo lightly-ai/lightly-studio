@@ -1,0 +1,840 @@
+"""Parse Faster Whisper JSON, or vendor WebVTT, into timed transcript units."""
+
+from __future__ import annotations
+
+import json
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+from lightly_studio.dataset import webvtt
+
+CaptionUnit = Literal["segment", "word", "action_phrase", "narration_chunk"]
+
+MAX_NARRATION_CHUNK_WORDS = 30
+NARRATION_CLAUSE_MIN_WORDS = 12
+NARRATION_PAUSE_THRESHOLD_S = 1.0
+# Matches the old VAD ``min_silence_ms=500`` so word-derived silences stay comparable.
+_DERIVED_SILENCE_THRESHOLD_S = 0.5
+
+_ACTION_VERBS = frozenset(
+    {
+        "add",
+        "arrange",
+        "assemble",
+        "attach",
+        "bite",
+        "break",
+        "brush",
+        "button",
+        "carry",
+        "catch",
+        "chop",
+        "clean",
+        "click",
+        "close",
+        "connect",
+        "cook",
+        "cut",
+        "detach",
+        "dig",
+        "disconnect",
+        "disassemble",
+        "drag",
+        "drill",
+        "drink",
+        "drop",
+        "dry",
+        "eat",
+        "empty",
+        "fill",
+        "fix",
+        "flip",
+        "fold",
+        "grab",
+        "hammer",
+        "hang",
+        "hold",
+        "insert",
+        "lift",
+        "lower",
+        "mix",
+        "move",
+        "open",
+        "pack",
+        "peel",
+        "pick",
+        "place",
+        "plant",
+        "plug",
+        "point",
+        "pour",
+        "press",
+        "pull",
+        "push",
+        "put",
+        "remove",
+        "repair",
+        "rinse",
+        "roll",
+        "rotate",
+        "rub",
+        "scoop",
+        "scratch",
+        "screw",
+        "scrub",
+        "sew",
+        "shake",
+        "slice",
+        "sort",
+        "stack",
+        "stir",
+        "stitch",
+        "take",
+        "throw",
+        "tie",
+        "touch",
+        "turn",
+        "twist",
+        "type",
+        "unbutton",
+        "unfold",
+        "unpack",
+        "unplug",
+        "untie",
+        "use",
+        "wash",
+        "water",
+        "wear",
+        "wipe",
+        "wrap",
+        "write",
+        "zip",
+    }
+)
+_IRREGULAR_ACTION_VERBS = {
+    "ate": "eat",
+    "bit": "bite",
+    "broke": "break",
+    "caught": "catch",
+    "drank": "drink",
+    "dropped": "drop",
+    "held": "hold",
+    "put": "put",
+    "took": "take",
+    "threw": "throw",
+    "wore": "wear",
+    "wrote": "write",
+}
+_CLAUSE_CONNECTORS = frozenset({"after", "and", "before", "but", "then", "while"})
+_TRAILING_FILLERS = frozenset({"and", "but", "so", "then"})
+_TOKEN_PATTERN = re.compile(r"[^a-z0-9'-]+")
+
+
+@dataclass(frozen=True)
+class TimedTranscriptCaption:
+    """Caption text and its temporal bounds in a video."""
+
+    text: str
+    start_time_s: float
+    end_time_s: float
+
+
+@dataclass(frozen=True)
+class ActionPhraseSettings:
+    """Controls action-phrase extraction and its video matching window."""
+
+    pause_threshold_s: float = 0.8
+    window_padding_s: float = 1.0
+    min_window_duration_s: float = 2.5
+    max_words: int = 12
+
+
+@dataclass(frozen=True)
+class _TimedWord:
+    raw_text: str
+    token: str
+    start_time_s: float
+    end_time_s: float
+
+
+@dataclass(frozen=True)
+class SilenceSpan:
+    """Detected silence and its temporal bounds in a video."""
+
+    start_time_s: float
+    end_time_s: float
+
+    @property
+    def duration_s(self) -> float:
+        """Return the silence duration in seconds."""
+        return self.end_time_s - self.start_time_s
+
+
+@dataclass(frozen=True)
+class WhisperTranscript:
+    """Normalized Whisper transcription result.
+
+    Attributes:
+        caption_unit: How ``captions`` are actually chunked, which is not always the
+            unit that was requested: a source without word timings, such as WebVTT,
+            makes ``narration_chunk`` fall back to one caption per segment.
+    """
+
+    text: str
+    word_count: int
+    language: str | None
+    language_probability: float | None
+    duration_s: float | None
+    speech_duration_s: float | None
+    silences: tuple[SilenceSpan, ...]
+    captions: tuple[TimedTranscriptCaption, ...]
+    caption_unit: CaptionUnit = "segment"
+
+    @property
+    def silence_duration_s(self) -> float:
+        """Return the total detected silence duration in seconds."""
+        return sum(silence.duration_s for silence in self.silences)
+
+    @property
+    def silence_ratio(self) -> float | None:
+        """Return the fraction of the video covered by detected silence."""
+        if self.duration_s is None or self.duration_s <= 0.0:
+            return None
+        return min(1.0, self.silence_duration_s / self.duration_s)
+
+    def words_per_minute(self, duration_s: float | None = None) -> float | None:
+        """Return words per minute over the complete video duration.
+
+        Args:
+            duration_s: Complete video duration. Defaults to the transcript duration.
+
+        Returns:
+            Words per minute, or ``None`` when the duration is unavailable or invalid.
+        """
+        resolved_duration_s = self.duration_s if duration_s is None else duration_s
+        if resolved_duration_s is None or resolved_duration_s <= 0.0:
+            return None
+        return self.word_count * 60.0 / resolved_duration_s
+
+
+def load_whisper_transcript(
+    path: Path,
+    *,
+    caption_unit: CaptionUnit = "segment",
+    video_duration_s: float | None = None,
+    action_phrase_settings: ActionPhraseSettings | None = None,
+) -> WhisperTranscript:
+    """Load Whisper JSON and select the requested timed transcript unit.
+
+    Args:
+        path: Whisper JSON generated by ``scripts/transcribe_with_faster_whisper.py``,
+            or a ``.vtt`` subtitle file a vendor shipped instead.
+        caption_unit: Granularity to expose as LightlyStudio captions.
+        video_duration_s: Optional upper bound used to clamp Whisper timestamps.
+        action_phrase_settings: Extraction settings used for action phrases.
+
+    Returns:
+        The normalized transcript and its timed captions.
+
+    Raises:
+        ValueError: If the payload structure or caption unit is invalid.
+    """
+    text = path.read_text(encoding="utf-8")
+    # WebVTT is adapted rather than parsed separately: one cue becomes one segment,
+    # so every caption unit below keeps working on a single payload shape.
+    payload: Any = (
+        webvtt.parse_webvtt(text=text, source=str(path))
+        if path.suffix.lower() == webvtt.VTT_SUFFIX
+        else json.loads(text)
+    )
+    return parse_whisper_transcript(
+        payload=payload,
+        source=str(path),
+        caption_unit=caption_unit,
+        video_duration_s=video_duration_s,
+        action_phrase_settings=action_phrase_settings,
+    )
+
+
+def parse_whisper_transcript(
+    payload: Any,
+    *,
+    source: str = "transcript",
+    caption_unit: CaptionUnit = "segment",
+    video_duration_s: float | None = None,
+    action_phrase_settings: ActionPhraseSettings | None = None,
+) -> WhisperTranscript:
+    """Select the requested timed transcript unit from an already-parsed payload.
+
+    Args:
+        payload: Whisper JSON as parsed from its blob, of any shape.
+        source: Name of the payload's origin, used in error messages only.
+        caption_unit: Granularity to expose as LightlyStudio captions.
+        video_duration_s: Optional upper bound used to clamp Whisper timestamps.
+        action_phrase_settings: Extraction settings used for action phrases.
+
+    Returns:
+        The normalized transcript and its timed captions.
+
+    Raises:
+        ValueError: If the payload structure or caption unit is invalid.
+    """
+    if not isinstance(payload, dict):
+        raise ValueError(f"Whisper transcript must be a JSON object: '{source}'.")
+
+    segments = resolve_segments(payload=payload, source=source)
+
+    if caption_unit == "segment":
+        raw_captions = segments
+    elif caption_unit == "word":
+        raw_captions = _get_words(segments=segments, source=source)
+    elif caption_unit == "action_phrase":
+        raw_words = _get_words(segments=segments, source=source)
+        captions = _extract_action_phrases(
+            raw_words=raw_words,
+            video_duration_s=video_duration_s,
+            settings=action_phrase_settings or ActionPhraseSettings(),
+        )
+        raw_captions = []
+    elif caption_unit == "narration_chunk":
+        raw_words = _get_words(segments=segments, source=source)
+        captions = _extract_narration_chunks(
+            raw_words=raw_words,
+            video_duration_s=video_duration_s,
+        )
+        raw_captions = segments if not captions else []
+    else:
+        raise ValueError(f"Unsupported caption unit: '{caption_unit}'.")
+
+    # ``narration_chunk`` falls back to one caption per segment when the source
+    # carries no word timings, as WebVTT does not, so the unit that was asked for is
+    # not always the one used. The check short-circuits before ``captions``, which the
+    # segment and word branches never bind.
+    effective_unit: CaptionUnit = (
+        "segment" if caption_unit == "narration_chunk" and not captions else caption_unit
+    )
+    should_parse_raw_captions = caption_unit in ("segment", "word") or (
+        caption_unit == "narration_chunk" and not captions
+    )
+    if should_parse_raw_captions:
+        captions = tuple(
+            caption
+            for raw_caption in raw_captions
+            if (
+                caption := _parse_caption(
+                    raw_caption=raw_caption,
+                    video_duration_s=video_duration_s,
+                )
+            )
+            is not None
+        )
+    text = str(payload.get("text", "")).strip()
+    language = payload.get("language")
+    payload_duration_s = _as_float(payload.get("duration_s"))
+    payload_silences = payload.get("silences")
+    return WhisperTranscript(
+        text=text,
+        word_count=_count_words(segments=segments, transcript_text=text),
+        language=language if isinstance(language, str) else None,
+        language_probability=_as_float(payload.get("language_probability")),
+        # Newer transcripts omit ``duration_s``; the last word's end time is the best
+        # available proxy for the spoken span (video duration is applied downstream).
+        duration_s=(
+            payload_duration_s
+            if payload_duration_s is not None
+            else _derive_duration_s(segments=segments)
+        ),
+        speech_duration_s=(
+            _as_float(payload.get("speech_duration_s"))
+            if payload.get("speech_duration_s") is not None
+            else _derive_speech_duration_s(segments=segments)
+        ),
+        # Newer transcripts omit ``silences``; derive them from inter-word gaps.
+        silences=(
+            _parse_silences(payload_silences)
+            if isinstance(payload_silences, list)
+            else _derive_silences(segments=segments)
+        ),
+        captions=captions,
+        caption_unit=effective_unit,
+    )
+
+
+def resolve_segments(payload: Mapping[str, Any], *, source: str = "transcript") -> list[Any]:
+    """Return a payload's segments, wrapping a flat ``words`` list when needed.
+
+    Newer delivery transcripts ship a flat top-level ``words`` list and no
+    ``segments``. Wrapping it in one synthetic segment keeps every word-based unit,
+    the word count, and the segment-timestamp path working unchanged.
+
+    Args:
+        payload: Whisper JSON as parsed from its blob.
+        source: Name of the payload's origin, used in error messages only.
+
+    Returns:
+        The segments to read text and timings from.
+
+    Raises:
+        ValueError: If the payload carries neither ``segments`` nor ``words``.
+    """
+    segments = payload.get("segments")
+    if isinstance(segments, list):
+        return segments
+    top_level_words = payload.get("words")
+    if isinstance(top_level_words, list):
+        text = str(payload.get("text", ""))
+        return [_segment_from_words(words=top_level_words, text=text)]
+    raise ValueError(f"Whisper transcript must contain a segments list: '{source}'.")
+
+
+def transcript_from_document(document: Mapping[str, Any]) -> WhisperTranscript:
+    """Read a delivered transcript document back into a transcript.
+
+    The document is read verbatim. Nothing is derived, clamped, or recomputed, so
+    the result matches the transcript the document was serialized from. Timestamps
+    are named ``start`` and ``end`` there, as they are in every vendor payload.
+
+    Args:
+        document: A transcript JSON body as written into a delivery batch.
+
+    Returns:
+        The transcript the document describes.
+    """
+    raw_captions = document.get("captions")
+    captions = tuple(
+        caption
+        for raw_caption in (raw_captions if isinstance(raw_captions, list) else [])
+        if (caption := _parse_caption(raw_caption=raw_caption, video_duration_s=None)) is not None
+    )
+    word_count = _as_float(document.get("word_count"))
+    language = document.get("language")
+    return WhisperTranscript(
+        text=str(document.get("text", "")).strip(),
+        word_count=int(word_count) if word_count is not None else 0,
+        language=language if isinstance(language, str) else None,
+        language_probability=_as_float(document.get("language_probability")),
+        duration_s=_as_float(document.get("duration_s")),
+        speech_duration_s=_as_float(document.get("speech_duration_s")),
+        silences=_parse_silences(document.get("silences")),
+        captions=captions,
+        caption_unit=_document_caption_unit(document.get("caption_unit")),
+    )
+
+
+def _extract_narration_chunks(
+    raw_words: list[Any],
+    video_duration_s: float | None,
+) -> tuple[TimedTranscriptCaption, ...]:
+    words = tuple(
+        word for raw_word in raw_words if (word := _parse_word(raw_word=raw_word)) is not None
+    )
+    chunks = _split_words_into_narration_chunks(words=words)
+    captions = (
+        TimedTranscriptCaption(
+            text=" ".join(word.raw_text.strip() for word in chunk),
+            start_time_s=chunk[0].start_time_s,
+            end_time_s=_clamp_end_time(
+                end_time_s=chunk[-1].end_time_s,
+                video_duration_s=video_duration_s,
+            ),
+        )
+        for chunk in chunks
+        if chunk
+    )
+    # Clamping the end to the video duration can invert a chunk whose words start
+    # after the video ends (transcript/video duration mismatch); drop those.
+    return tuple(caption for caption in captions if caption.start_time_s < caption.end_time_s)
+
+
+def _split_words_into_narration_chunks(
+    words: tuple[_TimedWord, ...],
+) -> tuple[tuple[_TimedWord, ...], ...]:
+    chunks: list[tuple[_TimedWord, ...]] = []
+    current: list[_TimedWord] = []
+    for word in words:
+        if _starts_new_narration_chunk(current=current, word=word):
+            chunks.append(tuple(current))
+            current = []
+        current.append(word)
+        if _ends_narration_chunk(current=current, word=word):
+            chunks.append(tuple(current))
+            current = []
+    if current:
+        chunks.append(tuple(current))
+    return tuple(chunks)
+
+
+def _starts_new_narration_chunk(current: list[_TimedWord], word: _TimedWord) -> bool:
+    if not current:
+        return False
+    if word.start_time_s - current[-1].end_time_s >= NARRATION_PAUSE_THRESHOLD_S:
+        return True
+    return len(current) >= NARRATION_CLAUSE_MIN_WORDS and word.token in _CLAUSE_CONNECTORS
+
+
+def _ends_narration_chunk(current: list[_TimedWord], word: _TimedWord) -> bool:
+    if len(current) >= MAX_NARRATION_CHUNK_WORDS:
+        return True
+    if word.raw_text.rstrip().endswith((".", "?", "!", ";")):
+        return True
+    return len(current) >= NARRATION_CLAUSE_MIN_WORDS and word.raw_text.rstrip().endswith(",")
+
+
+def _clamp_end_time(end_time_s: float, video_duration_s: float | None) -> float:
+    if video_duration_s is None:
+        return end_time_s
+    return min(end_time_s, video_duration_s)
+
+
+def _extract_action_phrases(
+    raw_words: list[Any],
+    video_duration_s: float | None,
+    settings: ActionPhraseSettings,
+) -> tuple[TimedTranscriptCaption, ...]:
+    _validate_action_phrase_settings(settings=settings)
+    words = tuple(
+        word for raw_word in raw_words if (word := _parse_word(raw_word=raw_word)) is not None
+    )
+    chunks = _split_words_into_action_chunks(words=words, settings=settings)
+    return tuple(
+        caption
+        for chunk in chunks
+        if (
+            caption := _action_chunk_to_caption(
+                words=chunk,
+                video_duration_s=video_duration_s,
+                settings=settings,
+            )
+        )
+        is not None
+    )
+
+
+def _validate_action_phrase_settings(settings: ActionPhraseSettings) -> None:
+    if settings.pause_threshold_s < 0.0:
+        raise ValueError("Action phrase pause threshold must not be negative.")
+    if settings.window_padding_s < 0.0:
+        raise ValueError("Action phrase window padding must not be negative.")
+    if settings.min_window_duration_s <= 0.0:
+        raise ValueError("Action phrase minimum window duration must be positive.")
+    if settings.max_words <= 0:
+        raise ValueError("Action phrase maximum word count must be positive.")
+
+
+def _parse_word(raw_word: Any) -> _TimedWord | None:
+    if not isinstance(raw_word, dict):
+        return None
+    raw_text = str(raw_word.get("word", "")).strip()
+    token = _normalize_token(raw_text)
+    start_time_s = _as_float(raw_word.get("start"))
+    end_time_s = _as_float(raw_word.get("end"))
+    # Vendors emit zero-duration words for fast speech. Dropping those would delete
+    # them from the narration text, so only a genuinely inverted span is rejected.
+    # Chunks built entirely from them still collapse and are discarded downstream.
+    if not token or start_time_s is None or end_time_s is None or start_time_s > end_time_s:
+        return None
+    return _TimedWord(
+        raw_text=raw_text,
+        token=token,
+        start_time_s=max(0.0, start_time_s),
+        end_time_s=end_time_s,
+    )
+
+
+def _split_words_into_action_chunks(
+    words: tuple[_TimedWord, ...],
+    settings: ActionPhraseSettings,
+) -> tuple[tuple[_TimedWord, ...], ...]:
+    chunks: list[tuple[_TimedWord, ...]] = []
+    current: list[_TimedWord] = []
+    for index, word in enumerate(words):
+        if current and word.start_time_s - current[-1].end_time_s >= settings.pause_threshold_s:
+            chunks.append(tuple(current))
+            current = []
+
+        should_split_at_connector = (
+            bool(current)
+            and word.token in _CLAUSE_CONNECTORS
+            and _contains_action(words=current)
+            and _has_action_soon(words=words, start_index=index + 1)
+        )
+        if should_split_at_connector:
+            chunks.append(tuple(current))
+            current = []
+        else:
+            current.append(word)
+
+        if len(current) >= settings.max_words or word.raw_text.endswith((".", "?", "!", ";")):
+            chunks.append(tuple(current))
+            current = []
+
+    if current:
+        chunks.append(tuple(current))
+    return tuple(chunks)
+
+
+def _has_action_soon(
+    words: tuple[_TimedWord, ...],
+    start_index: int,
+    lookahead: int = 3,
+) -> bool:
+    return any(
+        _get_action_base(word.token) is not None
+        for word in words[start_index : start_index + lookahead]
+    )
+
+
+def _contains_action(words: list[_TimedWord]) -> bool:
+    return any(_get_action_base(word.token) is not None for word in words)
+
+
+def _action_chunk_to_caption(
+    words: tuple[_TimedWord, ...],
+    video_duration_s: float | None,
+    settings: ActionPhraseSettings,
+) -> TimedTranscriptCaption | None:
+    action_index_and_base = next(
+        (
+            (index, action_base)
+            for index, word in enumerate(words)
+            if (action_base := _get_action_base(word.token)) is not None
+        ),
+        None,
+    )
+    if action_index_and_base is None:
+        return None
+    action_index, action_base = action_index_and_base
+    phrase_words = [word.token for word in words[action_index:]]
+    phrase_words[0] = action_base
+    while phrase_words and phrase_words[-1] in _TRAILING_FILLERS:
+        phrase_words.pop()
+    if not phrase_words:
+        return None
+
+    start_time_s, end_time_s = _get_matching_window(
+        start_time_s=words[action_index].start_time_s,
+        end_time_s=words[-1].end_time_s,
+        video_duration_s=video_duration_s,
+        settings=settings,
+    )
+    if start_time_s >= end_time_s:
+        return None
+    return TimedTranscriptCaption(
+        text=" ".join(phrase_words),
+        start_time_s=start_time_s,
+        end_time_s=end_time_s,
+    )
+
+
+def _get_matching_window(
+    start_time_s: float,
+    end_time_s: float,
+    video_duration_s: float | None,
+    settings: ActionPhraseSettings,
+) -> tuple[float, float]:
+    start_time_s = max(0.0, start_time_s - settings.window_padding_s)
+    end_time_s += settings.window_padding_s
+    if video_duration_s is not None:
+        end_time_s = min(video_duration_s, end_time_s)
+
+    missing_duration_s = settings.min_window_duration_s - (end_time_s - start_time_s)
+    if missing_duration_s > 0.0:
+        start_time_s -= missing_duration_s / 2.0
+        end_time_s += missing_duration_s / 2.0
+    if start_time_s < 0.0:
+        end_time_s -= start_time_s
+        start_time_s = 0.0
+    if video_duration_s is not None and end_time_s > video_duration_s:
+        start_time_s = max(0.0, start_time_s - (end_time_s - video_duration_s))
+        end_time_s = video_duration_s
+    return start_time_s, end_time_s
+
+
+def _get_action_base(token: str) -> str | None:
+    if token in _IRREGULAR_ACTION_VERBS:
+        return _IRREGULAR_ACTION_VERBS[token]
+    candidates = [token]
+    if token.endswith("ing") and _has_nontrivial_stem(token=token, suffix="ing"):
+        stem = token[:-3]
+        candidates.extend((stem, f"{stem}e", stem[:-1] if _ends_in_double_letter(stem) else stem))
+    if token.endswith("ied") and _has_nontrivial_stem(token=token, suffix="ied"):
+        candidates.append(f"{token[:-3]}y")
+    elif token.endswith("ed") and _has_nontrivial_stem(token=token, suffix="ed"):
+        stem = token[:-2]
+        candidates.extend((stem, f"{stem}e", stem[:-1] if _ends_in_double_letter(stem) else stem))
+    if token.endswith("es") and _has_nontrivial_stem(token=token, suffix="es"):
+        candidates.extend((token[:-2], token[:-1]))
+    elif token.endswith("s") and _has_nontrivial_stem(token=token, suffix="s"):
+        candidates.append(token[:-1])
+    return next((candidate for candidate in candidates if candidate in _ACTION_VERBS), None)
+
+
+def _ends_in_double_letter(value: str) -> bool:
+    return len(value) >= len("aa") and value[-1] == value[-2]
+
+
+def _has_nontrivial_stem(token: str, suffix: str) -> bool:
+    return len(token) > len(suffix) + 1
+
+
+def _normalize_token(value: str) -> str:
+    return _TOKEN_PATTERN.sub("", value.lower())
+
+
+def _segment_from_words(words: list[Any], text: str) -> dict[str, Any]:
+    starts = [s for word in words if (s := _as_float(_word_field(word, "start"))) is not None]
+    ends = [e for word in words if (e := _as_float(_word_field(word, "end"))) is not None]
+    return {
+        "text": text,
+        "start": min(starts) if starts else 0.0,
+        "end": max(ends) if ends else 0.0,
+        "words": words,
+    }
+
+
+def _derive_speech_duration_s(segments: list[Any]) -> float | None:
+    total = 0.0
+    for segment in segments:
+        for word in _iter_words(segment):
+            start = _as_float(_word_field(word, "start"))
+            end = _as_float(_word_field(word, "end"))
+            if start is not None and end is not None and end > start:
+                total += end - start
+    return total if total > 0.0 else None
+
+
+def _derive_duration_s(segments: list[Any]) -> float | None:
+    ends = [
+        end
+        for segment in segments
+        for word in _iter_words(segment)
+        if (end := _as_float(_word_field(word, "end"))) is not None
+    ]
+    return max(ends) if ends else None
+
+
+def _derive_silences(
+    segments: list[Any],
+    threshold_s: float = _DERIVED_SILENCE_THRESHOLD_S,
+) -> tuple[SilenceSpan, ...]:
+    """Treat each inter-word gap of at least ``threshold_s`` as a silence span.
+
+    The default matches the old VAD ``min_silence_ms=500`` so word-derived silences
+    stay comparable to the shipped ones. Leading/trailing silence is not inferred:
+    only gaps between spoken words are counted.
+    """
+    bounds = sorted(
+        (start, end)
+        for segment in segments
+        for word in _iter_words(segment)
+        if (start := _as_float(_word_field(word, "start"))) is not None
+        and (end := _as_float(_word_field(word, "end"))) is not None
+    )
+    silences = [
+        SilenceSpan(start_time_s=prev_end, end_time_s=next_start)
+        for (_, prev_end), (next_start, _) in zip(bounds, bounds[1:])
+        if next_start - prev_end >= threshold_s
+    ]
+    return tuple(silences)
+
+
+def _iter_words(segment: Any) -> list[Any]:
+    """Return a segment's words, tolerating vendors that ship neither as a list."""
+    if not isinstance(segment, dict):
+        return []
+    words = segment.get("words", [])
+    return words if isinstance(words, list) else []
+
+
+def _word_field(word: Any, key: str) -> Any:
+    return word.get(key) if isinstance(word, dict) else None
+
+
+def _get_words(segments: list[Any], source: str) -> list[Any]:
+    words: list[Any] = []
+    for segment in segments:
+        if not isinstance(segment, dict):
+            raise ValueError(f"Whisper segment must be a JSON object: '{source}'.")
+        segment_words = segment.get("words", [])
+        if not isinstance(segment_words, list):
+            raise ValueError(f"Whisper segment words must be a list: '{source}'.")
+        words.extend(segment_words)
+    return words
+
+
+def _count_words(segments: list[Any], transcript_text: str) -> int:
+    timestamped_word_count = 0
+    for segment in segments:
+        if not isinstance(segment, dict):
+            continue
+        segment_words = segment.get("words")
+        if not isinstance(segment_words, list):
+            continue
+        timestamped_word_count += sum(
+            isinstance(word, dict) and bool(str(word.get("word", "")).strip())
+            for word in segment_words
+        )
+    if timestamped_word_count > 0:
+        return timestamped_word_count
+    return len(transcript_text.split())
+
+
+def _parse_caption(
+    raw_caption: Any,
+    video_duration_s: float | None,
+) -> TimedTranscriptCaption | None:
+    if not isinstance(raw_caption, dict):
+        return None
+
+    text = str(raw_caption.get("text", raw_caption.get("word", ""))).strip()
+    start_time_s = _as_float(raw_caption.get("start"))
+    end_time_s = _as_float(raw_caption.get("end"))
+    if not text or start_time_s is None or end_time_s is None:
+        return None
+
+    start_time_s = max(0.0, start_time_s)
+    if video_duration_s is not None:
+        end_time_s = min(video_duration_s, end_time_s)
+    if start_time_s >= end_time_s:
+        return None
+
+    return TimedTranscriptCaption(
+        text=text,
+        start_time_s=start_time_s,
+        end_time_s=end_time_s,
+    )
+
+
+def _parse_silences(raw_silences: Any) -> tuple[SilenceSpan, ...]:
+    if not isinstance(raw_silences, list):
+        return ()
+    silences = []
+    for raw_silence in raw_silences:
+        if not isinstance(raw_silence, dict):
+            continue
+        start_time_s = _as_float(raw_silence.get("start"))
+        end_time_s = _as_float(raw_silence.get("end"))
+        if start_time_s is None or end_time_s is None or start_time_s >= end_time_s:
+            continue
+        silences.append(SilenceSpan(start_time_s=start_time_s, end_time_s=end_time_s))
+    return tuple(silences)
+
+
+def _as_float(value: Any) -> float | None:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    return float(value)
+
+
+def _document_caption_unit(value: Any) -> CaptionUnit:
+    """Return the caption unit a delivered document recorded, defaulting to segment.
+
+    A document written before the field existed, or one carrying an unknown value,
+    reads back as segment rather than raising: the captions are already parsed by
+    then, and the unit only labels how they were chunked.
+    """
+    units: tuple[CaptionUnit, ...] = ("segment", "word", "action_phrase", "narration_chunk")
+    return value if value in units else "segment"

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import fsspec
 import numpy as np
 import pytest
 import torch
+from av import container
 from PIL import Image
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
+from lightly_studio.embed import perception_encoder_embedder
 from lightly_studio.embed.perception_encoder_embedder import (
     MODEL_NAME,
     PerceptionEncoderEmbedder,
@@ -224,3 +227,61 @@ class TestPerceptionEncoderEmbedder:
         assert np.isclose(text_probs[0], 0.7, atol=1e-1)
         assert np.isclose(text_probs[1], 0.15, atol=1e-1)
         assert np.isclose(text_probs[2], 0.15, atol=1e-1)
+
+    def test_embed_video_segments__empty(self) -> None:
+        perception_encoder = PerceptionEncoderEmbedder()
+        embeddings = perception_encoder.embed_video_segments(
+            filepath="unused.mp4",
+            intervals=[],
+        )
+        assert embeddings.shape == (0, 512)
+
+    def test_embed_video_segments__invalid_interval(self) -> None:
+        perception_encoder = PerceptionEncoderEmbedder()
+        with pytest.raises(ValueError, match="Invalid interval"):
+            perception_encoder.embed_video_segments(
+                filepath="unused.mp4",
+                intervals=[(-1.0, 1.0)],
+            )
+
+    def test_embed_video_segments(self) -> None:
+        perception_encoder = PerceptionEncoderEmbedder()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+
+        embeddings = perception_encoder.embed_video_segments(
+            filepath=str(dog_video_path),
+            intervals=[(0.0, 0.5), (0.5, 1.0)],
+        )
+
+        assert embeddings.shape == (2, 512)
+        # Distinct intervals should generally produce distinct embeddings.
+        assert not np.allclose(embeddings[0], embeddings[1])
+
+    def test_embed_video_segment_frames(self) -> None:
+        perception_encoder = PerceptionEncoderEmbedder()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+
+        embeddings = perception_encoder.embed_video_segment_frames(
+            filepath=str(dog_video_path),
+            intervals=[(0.0, 0.5), (0.5, 1.0)],
+        )
+
+        expected_frames = perception_encoder_embedder.VIDEO_FRAMES_PER_SAMPLE
+        assert embeddings.shape == (2, expected_frames, 512)
+        assert np.allclose(np.linalg.norm(embeddings, axis=2), 1.0, atol=1e-4)
+
+    def test_embed_video_segments__matches_full_video_when_covering_duration(self) -> None:
+        perception_encoder = PerceptionEncoderEmbedder()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+
+        fs, fs_path = fsspec.core.url_to_fs(url=str(dog_video_path))
+        with fs.open(path=fs_path, mode="rb") as video_file, container.open(file=video_file) as vc:
+            stream = vc.streams.video[0]
+            duration_s = float(stream.duration) * float(stream.time_base)
+
+        full_video = perception_encoder.embed_videos([str(dog_video_path)]).embeddings[0]
+        segment = perception_encoder.embed_video_segments(
+            filepath=str(dog_video_path),
+            intervals=[(0.0, duration_s)],
+        )[0]
+        assert np.allclose(full_video, segment, atol=1e-4)
