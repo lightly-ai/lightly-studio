@@ -19,7 +19,6 @@ from lightly_studio.embed.embedder import (
     TextEmbedder,
     VideoPathEmbedder,
 )
-from lightly_studio.embed.types import EmbeddingSpaceSpec
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +77,7 @@ class EmbedderRegistry:
         """
         spec = embedder.embedding_space_spec()
         space_key = spec.space_key
-        capabilities = set(_capabilities_of(embedder=embedder))
+        capabilities = _capabilities_of(embedder=embedder)
         if not capabilities:
             raise ValueError(f"Embedder {type(embedder).__name__!r} implements no capability.")
         registered = self._space_key_to_embedder.get(space_key)
@@ -99,42 +98,39 @@ class EmbedderRegistry:
 
     def get_image_path_embedder(self, space_key: str | None = None) -> ImagePathEmbedder | None:
         """Get the space's embedder if it embeds images by path, else None."""
-        embedder = self._get_embedder(space_key=space_key, capability=Capability.IMAGE_PATH)
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.IMAGE_PATH)
         return embedder if isinstance(embedder, ImagePathEmbedder) else None
 
     def get_image_crop_path_embedder(
         self, space_key: str | None = None
     ) -> ImageCropPathEmbedder | None:
         """Get the space's embedder if it embeds image crops by path, else None."""
-        embedder = self._get_embedder(space_key=space_key, capability=Capability.IMAGE_CROP_PATH)
+        embedder = self._get_or_bootstrap(
+            space_key=space_key, capability=Capability.IMAGE_CROP_PATH
+        )
         return embedder if isinstance(embedder, ImageCropPathEmbedder) else None
 
     def get_video_path_embedder(self, space_key: str | None = None) -> VideoPathEmbedder | None:
         """Get the space's embedder if it embeds videos by path, else None."""
-        embedder = self._get_embedder(space_key=space_key, capability=Capability.VIDEO_PATH)
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.VIDEO_PATH)
         return embedder if isinstance(embedder, VideoPathEmbedder) else None
 
     def get_image_pil_embedder(self, space_key: str | None = None) -> ImagePILEmbedder | None:
         """Get the space's embedder if it embeds PIL images, else None."""
-        embedder = self._get_embedder(space_key=space_key, capability=Capability.IMAGE_PIL)
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.IMAGE_PIL)
         return embedder if isinstance(embedder, ImagePILEmbedder) else None
 
     def get_text_embedder(self, space_key: str | None = None) -> TextEmbedder | None:
         """Get the space's embedder if it embeds text, else None."""
-        embedder = self._get_embedder(space_key=space_key, capability=Capability.TEXT)
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.TEXT)
         return embedder if isinstance(embedder, TextEmbedder) else None
 
     def get_image_bytes_embedder(self, space_key: str | None = None) -> ImageBytesEmbedder | None:
         """Get the space's embedder if it embeds images by bytes, else None."""
-        embedder = self._get_embedder(space_key=space_key, capability=Capability.IMAGE_BYTES)
+        embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.IMAGE_BYTES)
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
-    def get_bootstrap_space(self, capability: Capability) -> EmbeddingSpaceSpec | None:
-        """Get the embedding space selected to bootstrap a capability, if available."""
-        embedder = self._get_embedder(space_key=None, capability=capability)
-        return embedder.embedding_space_spec() if embedder is not None else None
-
-    def _get_embedder(self, space_key: str | None, capability: Capability) -> Embedder | None:
+    def _get_or_bootstrap(self, space_key: str | None, capability: Capability) -> Embedder | None:
         selected_key = (
             space_key if space_key is not None else self._bootstrap_spaces.get(capability)
         )
@@ -170,11 +166,11 @@ def get_registry() -> EmbedderRegistry:
     return _registry
 
 
-def _capabilities_of(embedder: Embedder) -> list[Capability]:
-    """List the capabilities an embedder implements, inferred from its type."""
-    return [
+def _capabilities_of(embedder: Embedder) -> set[Capability]:
+    """Get the capabilities an embedder implements, inferred from its type."""
+    return {
         capability for capability, cls in _CAPABILITY_TO_TYPE.items() if isinstance(embedder, cls)
-    ]
+    }
 
 
 def _load_builtin_embedder(space_key: str) -> Embedder | None:

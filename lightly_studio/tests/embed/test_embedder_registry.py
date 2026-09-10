@@ -249,16 +249,6 @@ class TestEmbedderRegistry:
         assert registry.get_image_path_embedder(space_key="mobileclip_s0") is builtin
         assert registry.get_image_path_embedder() is custom
 
-    def test_get_bootstrap_space(self) -> None:
-        registry = EmbedderRegistry()
-        embedder = _FakeTextImageEmbedder(space_key="space-a", dimension=7)
-        registry.register(embedder=embedder)
-
-        assert registry.get_bootstrap_space(Capability.TEXT) == EmbeddingSpaceSpec(
-            space_key="space-a", dimension=7
-        )
-        assert registry.get_bootstrap_space(Capability.IMAGE_BYTES) is None
-
 
 def test_get_registry__returns_process_wide_instance() -> None:
     assert embedder_registry.get_registry() is embedder_registry.get_registry()
