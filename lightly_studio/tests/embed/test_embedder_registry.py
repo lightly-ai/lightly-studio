@@ -2,14 +2,14 @@ import logging
 
 import numpy as np
 import pytest
-
-from lightly_studio.embed.embedder import (
+from lightly_studio_embed.embedder import (
     Embedder,
     ImagePathEmbedder,
     TextEmbedder,
 )
+from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec
+
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec
 
 
 class _FakeTextImageEmbedder(TextEmbedder, ImagePathEmbedder):

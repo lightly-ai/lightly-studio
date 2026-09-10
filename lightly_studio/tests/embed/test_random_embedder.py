@@ -1,8 +1,8 @@
 import numpy as np
+from lightly_studio_embed.types import ImageCrop
 from PIL import Image
 
 from lightly_studio.embed.random_embedder import RandomEmbedder
-from lightly_studio.embed.types import ImageCrop
 
 
 class TestRandomEmbedder:
