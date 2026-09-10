@@ -2,8 +2,10 @@
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { Canvas, T } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
-    import { createAnnotationFixture } from '../domain/fixtures';
-    import { createCuboidAnnotation } from '../domain';
+    import {
+        createAnnotationFixture,
+        createCuboidAnnotation
+    } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidLayer from './CuboidLayer.svelte';
 
     const classes = [
@@ -44,7 +46,10 @@
         parameters: { layout: 'fullscreen' },
         args: {
             annotationClasses: classes,
-            pointCloudBounds: bounds
+            pointCloudBounds: bounds,
+            selectedAnnotationId: null,
+            hoveredAnnotationId: null,
+            activeTool: 'select' as const
         }
     });
 </script>
@@ -70,6 +75,19 @@
         docs: {
             description: {
                 story: 'Five cuboids at varying yaw angles rendered as class-colored wireframes with heading arrows.'
+            }
+        }
+    }}
+    template={scene}
+/>
+
+<Story
+    name="Selected cuboid"
+    args={{ cuboids: multipleCuboids, selectedAnnotationId: 'annotation-2' }}
+    parameters={{
+        docs: {
+            description: {
+                story: 'The center cuboid is selected. A visual transform gizmo appears at its center and edges are brighter.'
             }
         }
     }}
