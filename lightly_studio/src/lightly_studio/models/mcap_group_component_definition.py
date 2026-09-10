@@ -7,7 +7,6 @@ on this table.
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import String
 from sqlmodel import Field, SQLModel
 
 
@@ -21,7 +20,7 @@ class McapDataType(str, Enum):
 class McapGroupComponentDefinitionBase(SQLModel):
     """Base class for the McapGroupComponentDefinition model."""
 
-    mcap_data_type: McapDataType = Field(sa_type=String)
+    mcap_data_type: McapDataType
 
     """The MCAP channel id, unique within the source bag. Same meaning as ``mcap.channel_id``."""
     channel_id: int

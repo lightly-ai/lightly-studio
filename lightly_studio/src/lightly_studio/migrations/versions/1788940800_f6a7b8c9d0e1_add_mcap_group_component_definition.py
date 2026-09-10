@@ -2,7 +2,8 @@
 
 Adds the ``mcap_group_component_definition`` table (1:1 with
 ``group_component_definition``).
-``mcap_data_type`` is ``video_frame`` or ``pointcloud``; ``channel_id`` is the same
+``mcap_data_type`` is a native ``mcapdatatype`` enum storing the member names
+``VIDEO_FRAME`` and ``POINT_CLOUD``; ``channel_id`` is the same
 integer channel id as on ``mcap`` samples.
 
 DuckDB builds its schema with ``create_all``, so this migration only matters for tracked
@@ -27,12 +28,16 @@ down_revision: str | Sequence[str] | None = "c5d6e7f8a9b0"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+# Native enum type, matching ``sampletype`` on ``collection``. Adding a member later
+# needs an ``op.sync_enum_values`` migration.
+_MCAP_DATA_TYPE = sa.Enum("VIDEO_FRAME", "POINT_CLOUD", name="mcapdatatype")
+
 
 def upgrade() -> None:
     """Upgrade schema."""
     op.create_table(
         "mcap_group_component_definition",
-        sa.Column("mcap_data_type", sa.String(), nullable=False),
+        sa.Column("mcap_data_type", _MCAP_DATA_TYPE, nullable=False),
         sa.Column("channel_id", sa.Integer(), nullable=False),
         sa.Column("collection_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -46,3 +51,5 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_table("mcap_group_component_definition")
+    # ``drop_table`` leaves the enum type behind, which breaks a later re-upgrade.
+    _MCAP_DATA_TYPE.drop(op.get_bind(), checkfirst=True)
