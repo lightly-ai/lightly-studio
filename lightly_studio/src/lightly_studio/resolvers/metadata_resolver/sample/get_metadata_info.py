@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import NamedTuple
 from uuid import UUID
 
 import sqlalchemy
@@ -22,6 +23,14 @@ from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
 
 # Number of bins used for numeric metadata histograms.
 _HISTOGRAM_BIN_COUNT = 20
+
+
+class _NumericMetadataStats(NamedTuple):
+    """Unfiltered numeric metadata statistics used to build a response."""
+
+    min: float
+    max: float
+    count: int
 
 
 def get_all_metadata_keys_and_schema(
@@ -56,10 +65,9 @@ def get_all_metadata_keys_and_schema(
         if metadata_type in NUMERIC_TYPE_NAMES:
             stats = bounds.get(key)
             if stats is not None:
-                min_value, max_value, _ = stats
                 cast_type = int if metadata_type == "integer" else float
-                metadata_info.min = cast_type(min_value)
-                metadata_info.max = cast_type(max_value)
+                metadata_info.min = cast_type(stats.min)
+                metadata_info.max = cast_type(stats.max)
                 metadata_info.histogram = _compute_histogram(
                     session=session,
                     collection_id=collection_id,
@@ -124,7 +132,7 @@ def _get_metadata_min_max_counts(
     session: Session,
     collection_id: UUID,
     metadata_keys: Sequence[str],
-) -> dict[str, tuple[float, float, int]]:
+) -> dict[str, _NumericMetadataStats]:
     """Aggregate min, max, and non-null count for numerical metadata keys.
 
     Args:
@@ -133,8 +141,8 @@ def _get_metadata_min_max_counts(
         metadata_keys: The numerical metadata keys to aggregate.
 
     Returns:
-        A mapping from each key with at least one value to its ``(min, max, count)``
-        tuple. Keys with no values are omitted.
+        A mapping from each key with at least one value to its numeric statistics.
+        Keys with no values are omitted.
     """
     if not metadata_keys:
         return {}
@@ -164,11 +172,13 @@ def _get_metadata_min_max_counts(
     )
     row = session.execute(query).mappings().one()
     values = {label: row[label] for labels in aggregate_labels for label in labels}
-    stats: dict[str, tuple[float, float, int]] = {}
+    stats: dict[str, _NumericMetadataStats] = {}
     for key, labels in zip(metadata_keys, aggregate_labels):
         count = int(values[labels[2]])
         if count > 0:
-            stats[key] = (float(values[labels[0]]), float(values[labels[1]]), count)
+            stats[key] = _NumericMetadataStats(
+                min=float(values[labels[0]]), max=float(values[labels[1]]), count=count
+            )
     return stats
 
 
@@ -176,7 +186,7 @@ def _compute_histogram(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     metadata_key: str,
-    stats: tuple[float, float, int],
+    stats: _NumericMetadataStats,
     filters: ImageFilter | None = None,
     bin_count: int = _HISTOGRAM_BIN_COUNT,
 ) -> HistogramView:
@@ -195,16 +205,18 @@ def _compute_histogram(  # noqa: PLR0913
         session: The database session.
         collection_id: The collection's UUID.
         metadata_key: The metadata key to bin.
-        stats: The ``(min, max, count)`` returned by ``_get_metadata_min_max_counts``.
-            The min/max always describe the *unfiltered* domain so the bin
-            edges stay stable while filters change.
+        stats: The unfiltered numeric statistics returned by
+            ``_get_metadata_min_max_counts``. The min/max always describe the
+            unfiltered domain so the bin edges stay stable while filters change.
         filters: Optional sample filters restricting which values are counted.
         bin_count: Number of equal-width bins.
 
     Returns:
         The histogram with bin edges and per-bin counts.
     """
-    min_value, max_value, total_count = stats
+    min_value = stats.min
+    max_value = stats.max
+    total_count = stats.count
     if max_value == min_value:
         count = (
             total_count
