@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import userEvent from '@testing-library/user-event';
 import { canonicalCoordinateFrame, createPointCloudFrame } from '../domain';
 import ProviderDiagnostics from './ProviderDiagnostics.svelte';
 
@@ -46,14 +45,12 @@ function state(overrides: Record<string, unknown> = {}) {
             frameRateHz: 10.0
         },
         frameCount: 5,
-        atLimit: true,
+        hasMore: true,
         position: 0,
         frame: frame('1785698974144734233'),
         isLoading: false,
-        step: vi.fn((next: number) => {
-            probe.position = next;
-            probe.frame = frame(String(1785698974144734233n + BigInt(next)));
-        }),
+        previous: vi.fn(),
+        next: vi.fn(),
         ...overrides
     };
     return probe;
@@ -70,27 +67,16 @@ describe('ProviderDiagnostics', () => {
         expect(screen.getByText('9 of 11,053')).toBeInTheDocument();
         expect(screen.getByText('1785698974144734233')).toBeInTheDocument();
         expect(screen.getByText('/tf')).toBeInTheDocument();
-        expect(screen.getByTestId('provider-frame-position')).toHaveTextContent('1 / 5+');
         expect(screen.getByText(/8\.5 ms/)).toBeInTheDocument();
         expect(screen.getByText(/447 KB/)).toBeInTheDocument();
     });
 
-    it('steps to the next frame on request', async () => {
+    it('leaves frame navigation to the timeline', () => {
         const probe = state();
-        render(ProviderDiagnostics, { props: { probe } });
-
-        await userEvent.click(screen.getByLabelText('Next frame'));
-
-        expect(probe.step).toHaveBeenCalledWith(1);
-    });
-
-    it('cannot step past either end of the listed window', () => {
-        const probe = state({ frameCount: 1, atLimit: false });
 
         render(ProviderDiagnostics, { props: { probe } });
 
-        expect(screen.getByLabelText('Previous frame')).toBeDisabled();
-        expect(screen.getByLabelText('Next frame')).toBeDisabled();
+        expect(screen.queryByLabelText('Next frame')).not.toBeInTheDocument();
     });
 
     it('shows why reading the recording failed, with the cause', () => {

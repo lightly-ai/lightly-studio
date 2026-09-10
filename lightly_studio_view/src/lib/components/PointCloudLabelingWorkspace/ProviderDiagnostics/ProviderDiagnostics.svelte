@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from '@lucide/svelte';
-    import { Button } from '$lib/components';
+    import { AlertTriangle, Loader2 } from '@lucide/svelte';
     import type { RecordingProbe } from './useRecordingProbe.svelte';
 
     /**
@@ -8,9 +7,8 @@
      *
      * Reports what the session actually read -- the recording's channels, each frame's point
      * counts, the timeline length and rate, and every open/list/decode timing, also logged
-     * under `[mcap-provider]`. Stepping loads one frame at a time, which is what the timeline
-     * will do; stepping back is a cache hit. Delete this component, its hook and the
-     * workspace prop once the timeline drives the scene on its own.
+     * under `[mcap-provider]`. Navigation lives in the timeline; this only reports. Delete
+     * this component and the workspace prop once the timings are no longer interesting.
      */
     interface Props {
         /** The reading in progress. Owned by the route, so the scene shares one session. */
@@ -72,30 +70,6 @@
                 <dd class="truncate font-mono">{frame.timestamp.nanoseconds}</dd>
             {/if}
         </dl>
-
-        <div class="flex items-center gap-2 pt-2">
-            <Button
-                icon={ChevronLeft}
-                variant="outline"
-                ariaLabel="Previous frame"
-                buttonProps={{
-                    onclick: () => probe.step(probe.position - 1),
-                    disabled: probe.position === 0
-                }}
-            />
-            <span class="font-mono text-muted-foreground" data-testid="provider-frame-position">
-                {probe.position + 1} / {probe.frameCount}{probe.atLimit ? '+' : ''}
-            </span>
-            <Button
-                icon={ChevronRight}
-                variant="outline"
-                ariaLabel="Next frame"
-                buttonProps={{
-                    onclick: () => probe.step(probe.position + 1),
-                    disabled: probe.position >= probe.frameCount - 1
-                }}
-            />
-        </div>
 
         <p class="pt-2 text-muted-foreground">Channels</p>
         <ul class="pt-1">
