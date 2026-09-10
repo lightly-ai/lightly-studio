@@ -89,7 +89,7 @@
     {/snippet}
 
     {#if isSelected}
-        <CuboidGizmo annotation={item.annotation} {oncuboidupdate}>
+        <CuboidGizmo annotation={item.annotation} {activeTool} {oncuboidupdate}>
             {@render visual()}
         </CuboidGizmo>
     {:else}

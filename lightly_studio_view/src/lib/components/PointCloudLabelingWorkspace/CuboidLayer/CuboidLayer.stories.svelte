@@ -42,6 +42,22 @@
 
     // State for the interactive translate story. Shared across story mounts
     // (acceptable for single-story interactive testing in Storybook).
+    const rotateState = writable({
+        cuboids: [
+            createCuboidAnnotation({
+                ...createAnnotationFixture(),
+                id: 'rotate-test',
+                annotationClassId: 'vehicle',
+                center: [0, 0, 1] as const,
+                size: [4.5, 1.8, 1.5] as const,
+                rotation: [0, 0, 0, 1] as const,
+                trackId: null,
+                keyframeId: null
+            })
+        ],
+        selectedId: 'rotate-test' as string | null
+    });
+
     const translateState = writable({
         cuboids: [
             createCuboidAnnotation({
@@ -119,6 +135,38 @@
     </div>
 {/snippet}
 
+{#snippet rotateScene()}
+    {@const [qx, qy, qz, qw] = $rotateState.cuboids[0].rotation}
+    <div class="relative h-screen w-screen bg-black">
+        <div class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white">
+            <p class="mb-1 font-semibold text-white/60">Rotation (drag rings to update)</p>
+            <p>X: {qx.toFixed(3)} &nbsp; Y: {qy.toFixed(3)} &nbsp; Z: {qz.toFixed(3)} &nbsp; W: {qw.toFixed(3)}</p>
+        </div>
+        <Canvas>
+            <T.Color attach="background" args={['#10141c']} />
+            <T.PerspectiveCamera position={[18, -22, 16]} makeDefault fov={50}>
+                <OrbitControls target={[0, 0, 0]} enableDamping />
+            </T.PerspectiveCamera>
+            <T.AmbientLight intensity={1.5} />
+            <T.GridHelper args={[24, 24, '#344054', '#202938']} rotation={[Math.PI / 2, 0, 0]} />
+            <CuboidLayer
+                cuboids={$rotateState.cuboids}
+                annotationClasses={classes}
+                pointCloudBounds={bounds}
+                selectedAnnotationId={$rotateState.selectedId}
+                hoveredAnnotationId={null}
+                activeTool="rotate"
+                onselect={(id) => rotateState.update((s) => ({ ...s, selectedId: id }))}
+                oncuboidupdate={(updated) =>
+                    rotateState.update((s) => ({
+                        ...s,
+                        cuboids: s.cuboids.map((c) => (c.id === updated.id ? updated : c))
+                    }))}
+            />
+        </Canvas>
+    </div>
+{/snippet}
+
 <Story
     name="Cuboid gallery"
     args={{ cuboids: multipleCuboids }}
@@ -168,4 +216,16 @@
         }
     }}
     template={translateScene}
+/>
+
+<Story
+    name="Rotate (interactive)"
+    parameters={{
+        docs: {
+            description: {
+                story: 'Drag the blue Z ring to rotate the cuboid around its vertical axis. The HUD shows the yaw angle updating on drag end.'
+            }
+        }
+    }}
+    template={rotateScene}
 />
