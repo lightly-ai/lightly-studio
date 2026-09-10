@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
+from typing import Any
 
 import fsspec
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -12,11 +15,21 @@ from fastapi.responses import StreamingResponse
 from lightly_studio.api.routes.api import status
 from lightly_studio.database import db_manager
 from lightly_studio.models import video
+from lightly_studio.utils.executor import get_media_executor
 
 app_router = APIRouter(prefix="/videos/media")
 
 
-def _parse_range_header(range_header: str | None, file_size: int) -> tuple[int, int] | None:
+@dataclass(frozen=True)
+class RangeRequest:
+    """The result of parsing a single HTTP byte range request."""
+
+    start: int | None = None
+    end: int | None = None
+    is_unsatisfiable: bool = False
+
+
+def _parse_range_header(range_header: str | None, file_size: int) -> RangeRequest:
     """Parse the Range header and return (start, end) byte positions.
 
     Args:
@@ -24,97 +37,102 @@ def _parse_range_header(range_header: str | None, file_size: int) -> tuple[int, 
         file_size: The total size of the file in bytes.
 
     Returns:
-        Tuple of (start, end) byte positions, or None if range is invalid.
+        The requested byte range, or an unsatisfiable result. Unsupported ranges
+        return an empty result and retain full-file delivery.
     """
     if not range_header or not range_header.startswith("bytes="):
-        return None
+        return RangeRequest()
+
+    range_spec = range_header[6:]
+    if "," in range_spec:
+        return RangeRequest()
+
+    start_str, separator, end_str = range_spec.partition("-")
+    if not separator or (not start_str and not end_str):
+        return RangeRequest(is_unsatisfiable=True)
 
     try:
-        range_spec = range_header[6:]  # Remove "bytes=" prefix
-        if "-" not in range_spec:
-            return None
+        if not start_str:
+            suffix_length = int(end_str)
+            if suffix_length <= 0 or file_size == 0:
+                return RangeRequest(is_unsatisfiable=True)
+            return RangeRequest(start=max(file_size - suffix_length, 0), end=file_size - 1)
 
-        start_str, end_str = range_spec.split("-", 1)
-        start = int(start_str) if start_str else 0
-        end = int(end_str) if end_str else file_size - 1
+        start = int(start_str)
+        if start < 0 or start >= file_size:
+            return RangeRequest(is_unsatisfiable=True)
 
-        # Validate range
-        if start < 0 or end >= file_size or start > end:
-            return None
+        end = file_size - 1 if not end_str else min(int(end_str), file_size - 1)
+        if end < start:
+            return RangeRequest(is_unsatisfiable=True)
+        return RangeRequest(start=start, end=end)
+    except ValueError:
+        return RangeRequest(is_unsatisfiable=True)
 
-        return (start, end)
-    except (ValueError, AttributeError):
-        return None
+
+def _get_filesystem_and_size(file_path: str) -> tuple[fsspec.AbstractFileSystem, str, int]:
+    """Resolve a video path and its size outside the event loop."""
+    fs, fs_path = fsspec.core.url_to_fs(file_path)
+    return fs, fs_path, fs.size(fs_path)
 
 
-async def _stream_file_range(
+def _open_file(fs: fsspec.AbstractFileSystem, fs_path: str) -> Any:
+    """Open a file for streaming outside the event loop."""
+    return fs.open(fs_path, "rb")
+
+
+def _read_file_chunk(file: Any, size: int) -> bytes:
+    """Read a chunk from an open file outside the event loop."""
+    return file.read(size)
+
+
+def _seek_file(file: Any, start: int) -> None:
+    """Seek an open file outside the event loop."""
+    file.seek(start)
+
+
+def _close_file(file: Any) -> None:
+    """Close an open file outside the event loop."""
+    file.close()
+
+
+async def _stream_file(
     fs: fsspec.AbstractFileSystem,
     fs_path: str,
     start: int,
-    end: int,
+    content_length: int,
     request: Request,
 ) -> AsyncGenerator[bytes, None]:
-    """Stream a specific byte range from a file.
+    """Stream a file or byte range without blocking the event loop.
 
     Args:
         fs: The filesystem instance.
         fs_path: The path to the file.
         start: Start byte position.
-        end: End byte position.
-        request: FastAPI request object for disconnect detection.
-    """
-    content_length = end - start + 1
-    chunk_size = 1024 * 1024  # 1MB chunks
-
-    try:
-        with fs.open(fs_path, "rb") as f:
-            f.seek(start)
-            remaining = content_length
-
-            while remaining > 0:
-                # Check if client disconnected
-                if await request.is_disconnected():
-                    break
-
-                read_size = min(chunk_size, remaining)
-                chunk = f.read(read_size)
-                if not chunk:
-                    break
-                yield chunk
-                remaining -= len(chunk)
-    except Exception:
-        # Handle file read errors gracefully
-        pass
-
-
-async def _stream_full_file(
-    fs: fsspec.AbstractFileSystem,
-    fs_path: str,
-    request: Request,
-) -> AsyncGenerator[bytes, None]:
-    """Stream the entire file.
-
-    Args:
-        fs: The filesystem instance.
-        fs_path: The path to the file.
+        content_length: Number of bytes to stream.
         request: FastAPI request object for disconnect detection.
     """
     chunk_size = 1024 * 1024  # 1MB chunks
-
+    loop = asyncio.get_running_loop()
+    executor = get_media_executor("video_media")
+    file = await loop.run_in_executor(executor, _open_file, fs, fs_path)
     try:
-        with fs.open(fs_path, "rb") as f:
-            while True:
-                # Check if client disconnected
-                if await request.is_disconnected():
-                    break
+        if start:
+            await loop.run_in_executor(executor, _seek_file, file, start)
 
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                yield chunk
-    except Exception:
-        # Handle file read errors gracefully
-        pass
+        remaining = content_length
+        while remaining > 0:
+            if await request.is_disconnected():
+                break
+
+            read_size = min(chunk_size, remaining)
+            chunk = await loop.run_in_executor(executor, _read_file_chunk, file, read_size)
+            if not chunk:
+                raise OSError("Video stream ended before the declared content length")
+            yield chunk
+            remaining -= len(chunk)
+    finally:
+        await loop.run_in_executor(executor, _close_file, file)
 
 
 @app_router.get("/{sample_id}")
@@ -154,19 +172,29 @@ async def serve_video_by_sample_id(
     content_type = _get_content_type(file_path)
 
     try:
-        fs, fs_path = fsspec.core.url_to_fs(file_path)
-        file_size = fs.size(fs_path)
+        fs, fs_path, file_size = await asyncio.get_running_loop().run_in_executor(
+            get_media_executor("video_media"),
+            _get_filesystem_and_size,
+            file_path,
+        )
 
         # Parse range header if present
-        range_tuple = _parse_range_header(range_header, file_size)
+        range_request = _parse_range_header(range_header, file_size)
 
-        if range_tuple:
+        if range_request.is_unsatisfiable:
+            return StreamingResponse(
+                content=iter(()),
+                status_code=416,
+                headers={"Content-Range": f"bytes */{file_size}"},
+            )
+
+        if range_request.start is not None and range_request.end is not None:
             # Partial content request
-            start, end = range_tuple
+            start, end = range_request.start, range_request.end
             content_length = end - start + 1
 
             return StreamingResponse(
-                _stream_file_range(fs, fs_path, start, end, request),
+                _stream_file(fs, fs_path, start, content_length, request),
                 status_code=206,  # Partial Content
                 media_type=content_type,
                 headers={
@@ -179,7 +207,7 @@ async def serve_video_by_sample_id(
 
         # Full file request
         return StreamingResponse(
-            _stream_full_file(fs, fs_path, request),
+            _stream_file(fs, fs_path, 0, file_size, request),
             media_type=content_type,
             headers={
                 "Accept-Ranges": "bytes",
