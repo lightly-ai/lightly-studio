@@ -121,14 +121,11 @@ class MobileCLIPEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        # TODO(Iunir, 09/2026): Let embed_pil_images_batched return an EmbeddingResult so
-        # the kept indices come from it instead of being assumed complete here.
-        embeddings = image_embedding.embed_pil_images_batched(
+        return image_embedding.embed_pil_images_batched(
             images=images,
             context=self._embedding_context(),
             show_progress=True,
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         """Embed texts with MobileCLIP.

@@ -167,6 +167,7 @@ nav:
     - Plugins: concepts_and_tools/plugins.md
     - Cloud Storage: dataset_setup/cloud_storage.md
   - Resources:
+    - Glossary: glossary.md
     - Python API:
       - Dataset: api/dataset.md
       - Sample: api/sample.md
@@ -249,6 +250,7 @@ plugins:
           - concepts_and_tools/plugins.md
           - dataset_setup/cloud_storage.md
         Resources:
+          - glossary.md
           - api/dataset.md
           - api/sample.md
           - api/dataset_query.md
