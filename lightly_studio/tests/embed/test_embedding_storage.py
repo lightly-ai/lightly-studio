@@ -11,10 +11,14 @@ from sqlmodel import Session, select
 
 from lightly_studio.embed import embedding_storage
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import sample_embedding_resolver
-from tests.helpers_resolvers import create_embedding_model, create_image
+from tests.helpers_resolvers import (
+    ImageStub,
+    create_embedding_model,
+    create_image,
+    create_images,
+)
 
 _EMBEDDING_DIMENSION = 3
 
@@ -188,14 +192,19 @@ def test_store_embeddings__rejects_invalid_embeddings_before_write(
 def test_store_embeddings__casts_and_batches_embeddings(
     db_session: Session,
     collection: CollectionTable,
-    samples: list[ImageTable],
     mocker: MockerFixture,
 ) -> None:
     """Storage casts float64 values and inserts them in bounded batches."""
     mocker.patch.object(embedding_storage, "EMBEDDING_INSERTION_BATCH_SIZE", 4)
     create_many_spy = mocker.spy(sample_embedding_resolver, "create_many")
     model_id = _create_model(session=db_session, collection=collection)
-    sample_ids = [sample.sample_id for sample in samples]
+    # 10 samples with batch size 4 -> 3 batches of sizes 4, 4, and 2.
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub() for _ in range(10)],
+    )
+    sample_ids = [image.sample_id for image in images]
     embeddings = np.zeros((len(sample_ids), _EMBEDDING_DIMENSION), dtype=np.float64)
 
     embedding_storage.store_embeddings(
