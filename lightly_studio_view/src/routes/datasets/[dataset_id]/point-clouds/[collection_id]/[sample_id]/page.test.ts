@@ -26,11 +26,12 @@ vi.mock(
             phase: 'idle',
             telemetry: [],
             frameCount: 0,
-            atLimit: false,
+            hasMore: false,
             position: 0,
             frame: undefined,
             isLoading: false,
-            step: vi.fn()
+            previous: vi.fn(),
+            next: vi.fn()
         })
     })
 );

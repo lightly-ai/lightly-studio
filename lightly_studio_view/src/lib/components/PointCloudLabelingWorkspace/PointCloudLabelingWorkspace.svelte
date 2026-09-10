@@ -9,7 +9,7 @@
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import ProviderDiagnostics from './ProviderDiagnostics/ProviderDiagnostics.svelte';
-    import type { WorkspaceCrumb } from './types';
+    import type { FrameNavigation, WorkspaceCrumb } from './types';
     import type { PointCloudFrame } from './domain';
     import type { RecordingProbe } from './ProviderDiagnostics/useRecordingProbe.svelte';
 
@@ -34,6 +34,8 @@
         status?: 'unsupported' | 'empty' | 'error';
         /** The frame to draw. Absent until one has been decoded. */
         frame?: PointCloudFrame;
+        /** Frame stepping for the timeline. Absent leaves its controls disabled. */
+        navigation?: FrameNavigation;
         /**
          * Temporary: when given, reports what the MCAP provider read alongside the scene.
          * Remove together with `ProviderDiagnostics`.
@@ -48,6 +50,7 @@
         sourcePath = [],
         status = 'empty',
         frame,
+        navigation,
         diagnostics,
         onExit,
         onRetry
@@ -134,7 +137,7 @@
                             </div>
                         </PaneResizer>
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline />
+                            <FrameTimeline {navigation} />
                         </Pane>
                     </PaneGroup>
                 </Pane>

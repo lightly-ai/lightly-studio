@@ -84,6 +84,7 @@
                 {sampleId}
                 {sourcePath}
                 frame={probe.frame}
+                navigation={probe}
                 diagnostics={probe}
                 onExit={handleExit}
             />
