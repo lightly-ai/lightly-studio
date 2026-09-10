@@ -47,6 +47,10 @@ class EmbedderRegistry:
     per ``space_key``; registering another embedder for the same space replaces
     it. The typed getters return the space's embedder only when it implements the
     requested capability.
+
+    Calling a getter without a ``space_key`` selects that capability's bootstrap
+    space. Initially, MobileCLIP and Perception Encoder serve as default bootstraps
+    for preselected capabilities. Bootstraps are updated when a custom embedder is registered.
     """
 
     def __init__(self) -> None:
