@@ -28,6 +28,8 @@
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
+        /** Fires when a drag ends with the updated cuboid geometry. */
+        oncuboidupdate?: (cuboid: Domain.CuboidAnnotation) => void;
     }
 
     let {
@@ -37,7 +39,8 @@
         hoveredAnnotationId = null,
         activeTool = 'select',
         onselect,
-        onhover
+        onhover,
+        oncuboidupdate
     }: Props = $props();
 
     const { renderer } = useThrelte();
@@ -66,7 +69,7 @@
     {@const isSelected = selectedAnnotationId === item.annotation.id}
     {@const isHovered = hoveredAnnotationId === item.annotation.id}
     {@const color = highlightCuboidColor(base, isSelected, isHovered)}
-    <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
+    {#snippet visual()}
         <CuboidVisual
             {item}
             baseColor={base}
@@ -76,8 +79,15 @@
             {onhover}
             onselected={() => (cuboidClicked = true)}
         />
-        {#if isSelected}
-            <CuboidGizmo />
-        {/if}
-    </T.Group>
+    {/snippet}
+
+    {#if isSelected}
+        <CuboidGizmo annotation={item.annotation} {oncuboidupdate}>
+            {@render visual()}
+        </CuboidGizmo>
+    {:else}
+        <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
+            {@render visual()}
+        </T.Group>
+    {/if}
 {/each}
