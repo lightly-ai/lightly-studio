@@ -1,3 +1,4 @@
+import { untrack } from 'svelte';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { getMcapRecordingURLById } from '$lib/utils/getMcapRecordingURLById/getMcapRecordingURLById';
 import {
@@ -10,12 +11,13 @@ import {
 } from '../provider';
 
 /**
- * Locators listed up front.
+ * Locators listed before the first frame is shown.
  *
- * Listing reads message indexes, so a window is cheap, but it is still a window: stepping
- * loads what it needs rather than paying for the whole timeline now.
+ * One, so opening a recording costs the summary index, a single message-index read and one
+ * decode. Later frames are discovered as navigation reaches them, and the one after the
+ * visible frame is listed and warmed in the background.
  */
-const FRAME_WINDOW = 5;
+const INITIAL_FRAMES = 1;
 /**
  * Frames are about 100 KB each and the query cache evicts by age, not by bytes, so this is
  * what bounds how much of a scrubbed timeline stays resident.
@@ -54,6 +56,16 @@ export function useRecordingProbe(sampleId: () => string) {
     let failureDetail = $state<string | undefined>(undefined);
     let telemetry = $state<TelemetryEvent[]>([]);
     let index = $state(0);
+    /**
+     * Locators found after the first, as navigation reached them.
+     *
+     * Raw, not deeply reactive: these are posted to a worker, and a deep state proxy cannot
+     * be structured-cloned. The array is replaced rather than mutated, so assignment is all
+     * the reactivity it needs.
+     */
+    let discovered = $state.raw<FrameLocator[]>([]);
+    /** Set once a listing past the last known frame comes back empty. */
+    let exhausted = $state(false);
 
     const log = (message: string, detail?: unknown) =>
         console.info(`[mcap-provider] ${message}`, detail ?? '');
@@ -76,6 +88,8 @@ export function useRecordingProbe(sampleId: () => string) {
         phase = 'starting';
         session = undefined;
         index = 0;
+        discovered = [];
+        exhausted = false;
         failure = undefined;
         failureDetail = undefined;
         telemetry = [];
@@ -110,14 +124,15 @@ export function useRecordingProbe(sampleId: () => string) {
         };
     });
 
-    const framesQuery = createQuery(() => ({
+    const firstQuery = createQuery(() => ({
         queryKey: ['mcap-frames', session?.source.recordingId, session?.source.version],
-        queryFn: ({ signal }: { signal: AbortSignal }) => listWindow(session!, signal),
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+            listFrom(session!, session!.metadata.firstLogTimeNs!, INITIAL_FRAMES, signal),
         enabled: session !== undefined,
         staleTime: Infinity
     }));
 
-    const frames = $derived<readonly FrameLocator[]>(framesQuery.data ?? []);
+    const frames = $derived<readonly FrameLocator[]>([...(firstQuery.data ?? []), ...discovered]);
     const locator = $derived(frames[index]);
 
     const frameQuery = createQuery(() => ({
@@ -125,12 +140,43 @@ export function useRecordingProbe(sampleId: () => string) {
         enabled: session !== undefined && locator !== undefined
     }));
 
-    // Warm the next frame once the visible one has arrived. Safe now: a queued read cannot
-    // pre-empt a visible one, and abandoning one that has not started costs nothing.
+    /**
+     * Makes sure a frame after the current one is known, listing one more if not.
+     *
+     * @returns Whether there is a frame to move to.
+     */
+    async function ensureNext(): Promise<boolean> {
+        const known = frames;
+        const current = index;
+        if (!session || known.length === 0) return false;
+        if (known.length > current + 1) return true;
+        if (exhausted) return false;
+
+        const last = known[known.length - 1];
+        // Start at the last known time rather than after it: a channel can carry several
+        // messages at one log time, and those are separate frames.
+        const found = await listFrom(session, last.logTimeNs, last.occurrence + 2);
+        const ahead = found.filter((candidate) => isAfter(candidate, last));
+        if (ahead.length === 0) {
+            exhausted = true;
+            return false;
+        }
+        discovered = [...discovered, ...ahead];
+        return true;
+    }
+
+    // Warm the frame after the visible one, listing it first if it is not known yet. Safe
+    // now: a queued read cannot pre-empt a visible one, and abandoning one that has not
+    // started costs nothing. Untracked because it writes what it reads.
     $effect(() => {
-        const next = frames[index + 1];
-        if (!session || !frameQuery.data || !next) return;
-        void client.prefetchQuery(frameOptions(session, next));
+        const current = session;
+        if (!current || !frameQuery.data) return;
+        untrack(() => {
+            void ensureNext().then(() => {
+                const next = frames[index + 1];
+                if (next) void client.prefetchQuery(frameOptions(current, next));
+            });
+        });
     });
 
     function frameOptions(current: RecordingSession | undefined, at: FrameLocator | undefined) {
@@ -154,10 +200,10 @@ export function useRecordingProbe(sampleId: () => string) {
             return phase;
         },
         get failure() {
-            return failure ?? errorMessage(framesQuery.error ?? frameQuery.error);
+            return failure ?? errorMessage(firstQuery.error ?? frameQuery.error);
         },
         get failureDetail() {
-            return failureDetail ?? errorDetail(framesQuery.error ?? frameQuery.error);
+            return failureDetail ?? errorDetail(firstQuery.error ?? frameQuery.error);
         },
         get telemetry() {
             return telemetry;
@@ -168,8 +214,8 @@ export function useRecordingProbe(sampleId: () => string) {
         get frameCount() {
             return frames.length;
         },
-        get atLimit() {
-            return frames.length === FRAME_WINDOW;
+        get hasMore() {
+            return !exhausted;
         },
         get position() {
             return index;
@@ -178,10 +224,15 @@ export function useRecordingProbe(sampleId: () => string) {
             return frameQuery.data;
         },
         get isLoading() {
-            return framesQuery.isPending || frameQuery.isFetching;
+            return firstQuery.isPending || frameQuery.isFetching;
         },
-        step(next: number) {
-            if (next >= 0 && next < frames.length) index = next;
+        previous() {
+            if (index > 0) index -= 1;
+        },
+        next() {
+            void ensureNext().then((moved) => {
+                if (moved) index += 1;
+            });
         }
     };
 }
@@ -205,20 +256,30 @@ async function open(
     });
 }
 
-async function listWindow(
+async function listFrom(
     session: RecordingSession,
-    signal: AbortSignal
+    startTimeNs: string,
+    limit: number,
+    signal?: AbortSignal
 ): Promise<readonly FrameLocator[]> {
     const channel = supportedChannel(session);
     return session.listFrames(
         {
             channelId: channel.channelId,
-            startTimeNs: session.metadata.firstLogTimeNs!,
+            startTimeNs,
             endTimeNs: session.metadata.lastLogTimeNs!,
-            limit: FRAME_WINDOW
+            limit
         },
         signal
     );
+}
+
+/** Log time order, with the occurrence breaking ties between messages sharing a time. */
+function isAfter(candidate: FrameLocator, last: FrameLocator): boolean {
+    const time = BigInt(candidate.logTimeNs);
+    const lastTime = BigInt(last.logTimeNs);
+    if (time !== lastTime) return time > lastTime;
+    return candidate.occurrence > last.occurrence;
 }
 
 export function supportedChannel(session: RecordingSession) {
