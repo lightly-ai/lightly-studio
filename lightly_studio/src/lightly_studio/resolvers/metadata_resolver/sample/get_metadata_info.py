@@ -33,14 +33,15 @@ class _NumericMetadataStats(NamedTuple):
     value_count: int
 
 
-def get_all_metadata_keys_and_schema(
+def get_metadata_info(
     session: Session,
     collection_id: UUID,
 ) -> list[MetadataInfoView]:
     """Get all unique metadata keys and their schema for a collection.
 
     For numerical types (``integer`` and ``float``) the returned info also
-    contains the min/max values and a value-distribution histogram.
+    contains the min/max values for numerical types. Histograms are computed by
+    :func:`get_metadata_histograms`.
 
     Args:
         session: The database session.
@@ -68,13 +69,6 @@ def get_all_metadata_keys_and_schema(
                 cast_type = int if metadata_type == "integer" else float
                 metadata_info.min = cast_type(stats.min_value)
                 metadata_info.max = cast_type(stats.max_value)
-                metadata_info.histogram = _compute_histogram(
-                    session=session,
-                    collection_id=collection_id,
-                    metadata_key=key,
-                    stats=stats,
-                )
-
         result.append(metadata_info)
 
     return result
