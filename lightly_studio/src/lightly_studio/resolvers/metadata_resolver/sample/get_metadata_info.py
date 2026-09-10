@@ -28,9 +28,9 @@ _HISTOGRAM_BIN_COUNT = 20
 class _NumericMetadataStats(NamedTuple):
     """Unfiltered numeric metadata statistics used to build a response."""
 
-    min: float
-    max: float
-    count: int
+    min_value: float
+    max_value: float
+    value_count: int
 
 
 def get_all_metadata_keys_and_schema(
@@ -66,8 +66,8 @@ def get_all_metadata_keys_and_schema(
             stats = bounds.get(key)
             if stats is not None:
                 cast_type = int if metadata_type == "integer" else float
-                metadata_info.min = cast_type(stats.min)
-                metadata_info.max = cast_type(stats.max)
+                metadata_info.min = cast_type(stats.min_value)
+                metadata_info.max = cast_type(stats.max_value)
                 metadata_info.histogram = _compute_histogram(
                     session=session,
                     collection_id=collection_id,
@@ -177,7 +177,9 @@ def _get_metadata_min_max_counts(
         count = int(values[labels[2]])
         if count > 0:
             stats[key] = _NumericMetadataStats(
-                min=float(values[labels[0]]), max=float(values[labels[1]]), count=count
+                min_value=float(values[labels[0]]),
+                max_value=float(values[labels[1]]),
+                value_count=count,
             )
     return stats
 
@@ -214,9 +216,9 @@ def _compute_histogram(  # noqa: PLR0913
     Returns:
         The histogram with bin edges and per-bin counts.
     """
-    min_value = stats.min
-    max_value = stats.max
-    total_count = stats.count
+    min_value = stats.min_value
+    max_value = stats.max_value
+    total_count = stats.value_count
     if max_value == min_value:
         count = (
             total_count
