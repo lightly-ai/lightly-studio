@@ -4,10 +4,10 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from lightly_studio_embed.types import ImageCrop
 from PIL import Image
 
 from lightly_studio.dataset.mobileclip_embedding_generator import MobileCLIPEmbeddingGenerator
-from lightly_studio.embed.types import ImageCrop
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
