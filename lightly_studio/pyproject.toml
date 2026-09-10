@@ -61,7 +61,14 @@ dependencies = [
     # Pinned below 7.0, which dropped Python 3.9. 6.9 covers every Python this package supports,
     # so one major runs everywhere rather than two that have to stay behaviourally identical.
     "posthog>=6.9,<7.0",
+    # Holds the embedder base classes and their value types. `tool.uv.sources` below
+    # resolves it from the workspace for local development. The bound applies to an
+    # install from PyPI, so publish `lightly-studio-embed` before you release this package.
+    "lightly-studio-embed>=0.1.0",
 ]
+
+[tool.uv.sources]
+lightly-studio-embed = { workspace = true }
 
 [project.scripts]
 lightly-studio = "lightly_studio.cli:main"

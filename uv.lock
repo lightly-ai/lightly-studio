@@ -3171,6 +3171,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "labelformat" },
     { name = "lightly-mundig" },
+    { name = "lightly-studio-embed" },
     { name = "open-clip-torch" },
     { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "opencv-python-headless", version = "4.13.0.92", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -3266,6 +3267,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "labelformat", specifier = ">=0.1.17" },
     { name = "lightly-mundig", specifier = "==0.1.15" },
+    { name = "lightly-studio-embed", editable = "lightly_studio_embed" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
     { name = "pandas", specifier = ">=2.2.3,<3.0" },
@@ -3323,6 +3325,11 @@ source = { editable = "lightly_studio_embed" }
 dependencies = [
     { name = "fastapi", version = "0.128.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fastapi", version = "0.135.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "pillow", version = "12.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pydantic" },
     { name = "uvicorn", version = "0.39.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "uvicorn", version = "0.42.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -3339,6 +3346,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.5" },
+    { name = "numpy", specifier = ">=1.26.4" },
+    { name = "pillow", specifier = ">=11.0.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "uvicorn", specifier = ">=0.32.1" },
 ]

@@ -18,10 +18,16 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
 ]
 
-# An HTTP server and nothing else. This package installs next to a customer's own CUDA and
-# torch pins, so anything heavier would fight them.
+# An HTTP server, numpy and Pillow. This package installs next to the CUDA and torch pins of
+# the customer. A heavier dependency can conflict with those pins.
 dependencies = [
     "fastapi>=0.115.5",
+    # `EmbeddingResult.embeddings` is a numpy array. `lightly-studio` imports that class
+    # from here and indexes the array. The floor is the last release that supports
+    # Python 3.9, so one floor covers all versions that `requires-python` allows.
+    "numpy>=1.26.4",
+    # Types `ImagePILEmbedder`. The floor is the version that `lightly-studio` resolves.
+    "pillow>=11.0.0",
     "pydantic>=2.0",
     "uvicorn>=0.32.1",
 ]

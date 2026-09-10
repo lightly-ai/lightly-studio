@@ -6,14 +6,13 @@ import random
 from typing import Protocol, runtime_checkable
 
 import numpy as np
-from numpy.typing import NDArray
-from PIL import Image
-
-from lightly_studio.embed.types import (
+from lightly_studio_embed.types import (
     EmbeddingResult,
     EmbeddingSpaceSpec,
     ImageCrop,
 )
+from numpy.typing import NDArray
+from PIL import Image
 
 
 @runtime_checkable

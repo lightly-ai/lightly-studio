@@ -11,19 +11,19 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from PIL import Image
-
-from lightly_studio.dataset import file_utils
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.embed import image_crop_embedding, image_embedding
-from lightly_studio.embed.embedder import (
+from lightly_studio_embed.embedder import (
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
 )
+from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from PIL import Image
+
+from lightly_studio.dataset import file_utils
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
+from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.vendor import mobileclip
 
 MODEL_NAME = "mobileclip_s0"
