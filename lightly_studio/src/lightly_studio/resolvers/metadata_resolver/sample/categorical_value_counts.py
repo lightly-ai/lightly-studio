@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID
 
 import sqlmodel
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Session
 
@@ -28,6 +29,23 @@ _TOP_VALUE_COUNT = 20
 # lightly_studio_view/src/lib/services/types.ts.
 _OTHER_VALUE_SENTINEL = "__other__"
 _MISSING_VALUE_SENTINEL = "__missing__"
+
+
+@dataclass(frozen=True)
+class _GroupedValueCount:
+    """A grouped metadata value and its count."""
+
+    value: str | None
+    count: int
+
+
+@dataclass(frozen=True)
+class _GroupedValueCounts:
+    """Grouped values together with totals for the complete result."""
+
+    values: list[_GroupedValueCount]
+    total_count: int
+    missing_count: int
 
 
 def get_metadata_value_counts(
@@ -84,8 +102,14 @@ def _get_field_value_counts(
     metadata_type: str,
     filters: ImageFilter | None,
 ) -> MetadataValueCountsView:
+    """Build the response from one grouped query for this metadata field.
+
+    The query returns the most frequent concrete values and window totals for
+    all samples in scope. Missing values are kept outside the top-value limit
+    so they can be returned as the separate ``__missing__`` bucket.
+    """
     value_expr = db_json.json_extract_key_as_text(column=SampleMetadataTable.data, key=metadata_key)
-    rows = _get_top_value_counts(
+    grouped_counts = _get_top_value_counts(
         session=session,
         collection_id=collection_id,
         value_expr=value_expr,
@@ -93,22 +117,16 @@ def _get_field_value_counts(
     )
     value_counts = [
         MetadataValueCountView(
-            value=_parse_value(value=value, metadata_type=metadata_type), count=int(count)
+            value=_parse_value(value=row.value, metadata_type=metadata_type), count=row.count
         )
-        for value, count in rows
+        for row in grouped_counts.values
+        if row.value is not None
     ]
-    total_count, non_null_count = _get_scope_counts(
-        session=session,
-        collection_id=collection_id,
-        value_expr=value_expr,
-        filters=filters,
-    )
-    # Built here rather than through ``_parse_value``, which would coerce the
-    # sentinels to ``False`` on a boolean field.
-    other_count = non_null_count - sum(int(count) for _, count in rows)
+    total_count = grouped_counts.total_count
+    missing_count = grouped_counts.missing_count
+    other_count = total_count - missing_count - sum(entry.count for entry in value_counts)
     if other_count > 0:
         value_counts.append(MetadataValueCountView(value=_OTHER_VALUE_SENTINEL, count=other_count))
-    missing_count = total_count - non_null_count
     if missing_count > 0:
         value_counts.append(
             MetadataValueCountView(value=_MISSING_VALUE_SENTINEL, count=missing_count)
@@ -121,10 +139,11 @@ def _get_top_value_counts(
     collection_id: UUID,
     value_expr: ColumnElement[str],
     filters: ImageFilter | None,
-) -> list[tuple[str, int]]:
+) -> _GroupedValueCounts:
+    """Return top concrete groups plus totals from the complete grouped result."""
     count_expr = func.count().label("value_count")
     query = (
-        sqlmodel.select(value_expr, count_expr)
+        sqlmodel.select(value_expr.label("value"), count_expr)
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
@@ -132,52 +151,41 @@ def _get_top_value_counts(
             isouter=True,
         )
         .where(SampleTable.collection_id == collection_id)
-        .where(value_expr.isnot(None))
         .group_by(value_expr)
-        .order_by(count_expr.desc(), value_expr.asc())
-        .limit(_TOP_VALUE_COUNT)
     )
     query = metadata_helpers.apply_image_filters(
         query=query, collection_id=collection_id, filters=filters
     )
-    return [(str(value), int(count)) for value, count in session.execute(query).all()]
-
-
-def _get_scope_counts(
-    session: Session,
-    collection_id: UUID,
-    value_expr: ColumnElement[str],
-    filters: ImageFilter | None,
-) -> tuple[int, int]:
-    """Count the samples in scope and those holding a concrete value.
-
-    Args:
-        session: The database session.
-        collection_id: The collection whose samples are counted.
-        value_expr: Expression extracting the metadata value of the counted field.
-        filters: Optional image filters restricting the counted samples. Must be
-            the same filters the value counts were taken under, so the totals
-            describe the same scope.
-
-    Returns:
-        The number of samples in scope and, of those, the number whose value is
-        neither absent nor null.
-    """
-    query = (
-        sqlmodel.select(func.count(), func.count(value_expr))
-        .select_from(SampleTable)
-        .join(
-            SampleMetadataTable,
-            sqlmodel.col(SampleMetadataTable.sample_id) == sqlmodel.col(SampleTable.sample_id),
-            isouter=True,
+    grouped = query.subquery()
+    value, count = grouped.c.value, grouped.c.value_count
+    total_count_expr = func.sum(count).over().label("total_count")
+    missing_count_expr = (
+        func.sum(case((value.is_(None), count), else_=0)).over().label("missing_count")
+    )
+    totals_query = sqlmodel.select(
+        value,
+        count,
+        total_count_expr,
+        missing_count_expr,
+    ).order_by(value.is_(None), count.desc(), value.asc())
+    grouped_values: list[_GroupedValueCount] = []
+    total_count = 0
+    missing_count = 0
+    for value, count, total, missing in session.execute(totals_query).fetchmany(_TOP_VALUE_COUNT):
+        if not grouped_values:
+            total_count = int(total)
+            missing_count = int(missing)
+        grouped_values.append(
+            _GroupedValueCount(
+                value=str(value) if value is not None else None,
+                count=int(count),
+            )
         )
-        .where(SampleTable.collection_id == collection_id)
+    return _GroupedValueCounts(
+        values=grouped_values,
+        total_count=total_count,
+        missing_count=missing_count,
     )
-    query = metadata_helpers.apply_image_filters(
-        query=query, collection_id=collection_id, filters=filters
-    )
-    total_count, non_null_count = session.execute(query).one()
-    return int(total_count), int(non_null_count)
 
 
 def _parse_value(value: str, metadata_type: str) -> str | bool:
