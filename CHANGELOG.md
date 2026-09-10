@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add a Glossary page to the docs.
 
 ### Changed
+- Speed up video embedding by decoding video frames in parallel.
 
 - Improved metadata loading by reducing numeric database queries from 13 to 8 and making responses up to 25% faster.
 - Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.

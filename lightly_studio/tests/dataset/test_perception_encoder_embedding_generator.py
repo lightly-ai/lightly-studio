@@ -9,6 +9,7 @@ from PIL import Image
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.dataset.perception_encoder_embedding_generator import (
+    MAX_BATCH_SIZE,
     MODEL_NAME,
     PerceptionEncoderEmbeddingGenerator,
 )
@@ -138,6 +139,39 @@ class TestPerceptionEncoderEmbeddingGenerator:
         assert result.embeddings.shape == (2, 512)
         # The two kept rows embed the same video, so they must match.
         assert np.allclose(result.embeddings[0], result.embeddings[1])
+
+    def test_embed_videos__preserves_order_across_batches_with_skips(self, tmp_path: Path) -> None:
+        """Keep embeddings aligned to input positions across batch boundaries.
+
+        The decode runs on a read-ahead pool. This input spans more than one batch, with
+        broken and missing files interleaved, so a reorder or a misaligned skip in the
+        concurrent pipeline shows as a wrong ``kept_indices`` or a mismatched row.
+        """
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        dog_video_path = str(FIXTURES_DIR / "dog.mp4")
+        broken_path = tmp_path / "broken.mp4"
+        broken_path.write_bytes(b"not a valid video")
+        missing_path = str(tmp_path / "missing.mp4")
+
+        total = MAX_BATCH_SIZE * 2 + 3
+        filepaths: list[str] = []
+        expected_kept: list[int] = []
+        for index in range(total):
+            if index % 5 == 0:
+                filepaths.append(missing_path)
+            elif index % 7 == 0:
+                filepaths.append(str(broken_path))
+            else:
+                filepaths.append(dog_video_path)
+                expected_kept.append(index)
+
+        result = perception_encoder.embed_videos(filepaths)
+
+        assert result.kept_indices == expected_kept
+        assert result.embeddings.shape == (len(expected_kept), 512)
+        # Every kept row embeds the same video, so any reorder or misalignment shows here.
+        for row in result.embeddings:
+            assert np.allclose(row, result.embeddings[0], atol=1e-4)
 
     def test_embed_videos__raises_when_all_files_broken(self, tmp_path: Path) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
