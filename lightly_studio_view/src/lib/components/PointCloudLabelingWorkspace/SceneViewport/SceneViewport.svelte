@@ -38,6 +38,8 @@
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
         onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
+        /** Fires when a drag ends with the updated cuboid geometry. */
+        oncuboidupdate?: (cuboid: CuboidAnnotation) => void;
     }
 
     const EMPTY_BATCH: PointBatch = {
@@ -59,8 +61,10 @@
         hoveredAnnotationId = null,
         activeTool = 'select',
         onselect,
-        onhover
+        onhover,
+        oncuboidupdate
     }: Props = $props();
+
 </script>
 
 <div class="h-full w-full" data-testid="workspace-scene-viewport">
@@ -75,6 +79,7 @@
             {activeTool}
             {onselect}
             {onhover}
+            {oncuboidupdate}
         />
     </Canvas>
 </div>

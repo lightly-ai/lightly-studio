@@ -6,6 +6,7 @@
         createAnnotationFixture,
         createCuboidAnnotation
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import { writable } from 'svelte/store';
     import CuboidLayer from './CuboidLayer.svelte';
 
     const classes = [
@@ -39,6 +40,24 @@
         });
     });
 
+    // State for the interactive translate story. Shared across story mounts
+    // (acceptable for single-story interactive testing in Storybook).
+    const translateState = writable({
+        cuboids: [
+            createCuboidAnnotation({
+                ...createAnnotationFixture(),
+                id: 'translate-test',
+                annotationClassId: 'vehicle',
+                center: [0, 0, 1] as const,
+                size: [4.5, 1.8, 1.5] as const,
+                rotation: [0, 0, 0, 1] as const,
+                trackId: null,
+                keyframeId: null
+            })
+        ],
+        selectedId: 'translate-test' as string | null
+    });
+
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/CuboidLayer',
         component: CuboidLayer,
@@ -64,6 +83,38 @@
             <T.AmbientLight intensity={1.5} />
             <T.GridHelper args={[24, 24, '#344054', '#202938']} rotation={[Math.PI / 2, 0, 0]} />
             <CuboidLayer {...args} />
+        </Canvas>
+    </div>
+{/snippet}
+
+{#snippet translateScene()}
+    {@const c = $translateState.cuboids[0].center}
+    <div class="relative h-screen w-screen bg-black">
+        <div class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white">
+            <p class="mb-1 font-semibold text-white/60">Centre (drag to update)</p>
+            <p>X: {c[0].toFixed(2)} &nbsp; Y: {c[1].toFixed(2)} &nbsp; Z: {c[2].toFixed(2)}</p>
+        </div>
+        <Canvas>
+            <T.Color attach="background" args={['#10141c']} />
+            <T.PerspectiveCamera position={[18, -22, 16]} makeDefault fov={50}>
+                <OrbitControls target={[0, 0, 0]} enableDamping />
+            </T.PerspectiveCamera>
+            <T.AmbientLight intensity={1.5} />
+            <T.GridHelper args={[24, 24, '#344054', '#202938']} rotation={[Math.PI / 2, 0, 0]} />
+            <CuboidLayer
+                cuboids={$translateState.cuboids}
+                annotationClasses={classes}
+                pointCloudBounds={bounds}
+                selectedAnnotationId={$translateState.selectedId}
+                hoveredAnnotationId={null}
+                activeTool="translate"
+                onselect={(id) => translateState.update((s) => ({ ...s, selectedId: id }))}
+                oncuboidupdate={(updated) =>
+                    translateState.update((s) => ({
+                        ...s,
+                        cuboids: s.cuboids.map((c) => (c.id === updated.id ? updated : c))
+                    }))}
+            />
         </Canvas>
     </div>
 {/snippet}
@@ -105,4 +156,16 @@
         }
     }}
     template={scene}
+/>
+
+<Story
+    name="Translate (interactive)"
+    parameters={{
+        docs: {
+            description: {
+                story: 'Select the cuboid, switch to the translate tool, then drag the gizmo. The HUD shows the live centre coordinates updating on drag end.'
+            }
+        }
+    }}
+    template={translateScene}
 />
