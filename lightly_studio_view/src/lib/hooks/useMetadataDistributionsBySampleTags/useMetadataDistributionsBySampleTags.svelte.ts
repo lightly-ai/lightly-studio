@@ -57,7 +57,7 @@ export const useMetadataDistributionsBySampleTags = (getParams: () => MetadataCo
         return {
             queries: buildSampleTagQueries(params),
             combine: (results: MetadataQueryResult[]) =>
-                combineSampleTagResults(params.sampleTags, params.field, results)
+                combineSampleTagResults(params.sampleTags, results, params.field)
         };
     });
 
@@ -111,8 +111,8 @@ const buildSampleTagQueries = ({
  */
 const combineSampleTagResults = (
     sampleTags: SampleTagItem[],
-    field: MetadataComparisonField | undefined,
-    results: MetadataQueryResult[]
+    results: MetadataQueryResult[],
+    field?: MetadataComparisonField
 ): {
     data: SampleTagMetadataDistributions[];
     isFetching: boolean;

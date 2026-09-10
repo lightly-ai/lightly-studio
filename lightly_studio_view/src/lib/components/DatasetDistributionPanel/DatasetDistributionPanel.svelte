@@ -78,7 +78,8 @@
         selectedComparisonTagIds?: string[];
         /** Updates the independent comparison selection without changing the grid filter. */
         onComparisonTagIdsChange?: (ids: string[]) => void;
-        onGroupChange?: (sourceId: string, groupId: string | undefined) => void;
+        /** Called when the active distribution source or group changes. */
+        onGroupChange?: (sourceId: string, groupId?: string) => void;
     }
 
     const {
