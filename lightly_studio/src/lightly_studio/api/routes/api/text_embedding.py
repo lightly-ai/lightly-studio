@@ -8,8 +8,9 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Path, Query
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_INTERNAL_SERVER_ERROR,
+    HTTP_STATUS_BAD_REQUEST,
 )
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.embed import embed_samples
 
 text_embedding_router = APIRouter()
@@ -20,6 +21,7 @@ text_embedding_router = APIRouter()
 )
 def embed_text(
     collection_id: Annotated[UUID, Path(title="The ID of the collection for which to embed.")],
+    session: SessionDep,
     query_text: str = Query(..., description="The text to embed."),
     embedding_model_id: Annotated[
         UUID | None,
@@ -34,11 +36,11 @@ def embed_text(
         )
     try:
         text_embeddings = embed_samples.embed_text_for_collection(
-            collection_id=collection_id, text=query_text
+            session=session, collection_id=collection_id, text=query_text
         )
     except ValueError as exc:
         raise HTTPException(
-            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+            status_code=HTTP_STATUS_BAD_REQUEST,
             detail=f"{exc}",
         ) from None
 

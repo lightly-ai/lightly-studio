@@ -9,10 +9,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManager,
-    EmbeddingManagerProvider,
-)
+from lightly_studio.embed import embed_samples
 from tests import helpers_resolvers
 
 
@@ -20,19 +17,7 @@ def test_embed_text(db_session: Session, mocker: MockerFixture, test_client: Tes
     # Create a db as the text_embeddings defaults to root_collection
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
-    # Initialize the embedding_manager with a mock variant so it does not update
-    # the singleton.
-    mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
-    )
-    # Mock the EmbeddingManager return value.
-    mocker.patch.object(
-        EmbeddingManager,
-        "embed_text",
-        return_value=[0.1, 0.2, 0.3],
-    )
+    mocker.patch.object(embed_samples, "embed_text_for_collection", return_value=[0.1, 0.2, 0.3])
 
     # Make the request to the `/text_embedding` endpoint.
     params: Mapping[str, str] = {

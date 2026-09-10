@@ -12,7 +12,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.image import image_dataset
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
-from lightly_studio.dataset import embedding_manager
+from lightly_studio.embed import embed_samples, embedder_registry
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
@@ -457,11 +457,8 @@ def test_generate_embeddings__no_generator(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=None,
-    )
+    mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=None)
+    embedder_registry._registry = embedder_registry.EmbedderRegistry()
 
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
@@ -480,7 +477,7 @@ def test_generate_embeddings__empty_sample_ids(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    spy_load_model = mocker.spy(embedding_manager, "_load_embedding_generator_from_env")
+    spy_resolve = mocker.spy(embed_samples, "ensure_default_model")
 
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
@@ -492,4 +489,4 @@ def test_generate_embeddings__empty_sample_ids(
     )
 
     # Model loading should be skipped when sample_ids is empty
-    spy_load_model.assert_not_called()
+    spy_resolve.assert_not_called()
