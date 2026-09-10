@@ -8,6 +8,21 @@ const DEFAULT_FRAME_LIMIT = 1000;
 
 const ignore = () => undefined;
 
+/**
+ * Copies a locator field by field before it crosses to the worker.
+ *
+ * Commands are structured-cloned, which fails on anything the caller happens to be holding
+ * it in -- a Svelte deep state proxy, most easily. Naming the fields also keeps unrelated
+ * properties out of the cache key the worker sees.
+ */
+function plain(locator: FrameLocator): FrameLocator {
+    return {
+        channelId: locator.channelId,
+        logTimeNs: locator.logTimeNs,
+        occurrence: locator.occurrence
+    };
+}
+
 export type RecordingMetadata = NonNullable<WorkerResult['metadata']>;
 
 export interface FrameRange {
@@ -125,7 +140,9 @@ export async function createRecordingSession(options: SessionOptions): Promise<R
                 enqueue(async (current) => {
                     const command = {
                         kind: 'range' as const,
-                        ...range,
+                        channelId: range.channelId,
+                        startTimeNs: range.startTimeNs,
+                        endTimeNs: range.endTimeNs,
                         limit: range.limit ?? DEFAULT_FRAME_LIMIT
                     };
                     const result = await request(command, 'list', current);
@@ -135,7 +152,7 @@ export async function createRecordingSession(options: SessionOptions): Promise<R
                 enqueue(async (current) => {
                     const pointBudget = frameOptions?.pointBudget ?? DEFAULT_POINT_BUDGET;
                     const result = await request(
-                        { kind: 'frame', locator, pointBudget },
+                        { kind: 'frame', locator: plain(locator), pointBudget },
                         'decode',
                         current
                     );

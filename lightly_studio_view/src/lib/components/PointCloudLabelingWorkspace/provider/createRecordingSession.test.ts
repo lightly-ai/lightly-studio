@@ -109,6 +109,28 @@ describe('createRecordingSession', () => {
         );
     });
 
+    it('posts commands that survive being cloned into the worker', async () => {
+        const task = setup();
+        const session = await task.open();
+        // Callers hold locators in whatever they like — a Svelte deep state proxy, here —
+        // and a proxy cannot be structured-cloned.
+        const proxied = new Proxy({ ...locator }, {});
+
+        await session.readFrame(proxied);
+        await session.listFrames(
+            new Proxy({ channelId: 1, startTimeNs: '1', endTimeNs: '2', limit: 5 }, {})
+        );
+
+        for (const request of task.commands) {
+            expect(() => structuredClone(request)).not.toThrow();
+        }
+        expect(task.commands.at(-2)?.command).toEqual({
+            kind: 'frame',
+            locator: { channelId: 1, logTimeNs: '100', occurrence: 0 },
+            pointBudget: 350_000
+        });
+    });
+
     it('lists frame locators for a window', async () => {
         const task = setup();
         const session = await task.open();
