@@ -15,6 +15,7 @@ from typing import TypeVar
 import fsspec
 import numpy as np
 import torch
+from lightly_studio_embed.types import EmbeddingResult
 from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
@@ -24,7 +25,6 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcome,
     FileOutcomeReport,
 )
-from lightly_studio.embed.types import EmbeddingResult
 from lightly_studio.utils import batching, executor, parallelize
 
 _ItemT = TypeVar("_ItemT")

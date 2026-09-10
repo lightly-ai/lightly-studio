@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
+from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from numpy.typing import NDArray
 from PIL import Image
 from pytest_mock import MockerFixture
@@ -20,7 +21,6 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
 )
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
