@@ -34,6 +34,12 @@ LIGHTLY_STUDIO_POSTHOG_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_POSTHOG_KEY"
 # Gates the browser-side point-cloud labeling workspace (LIG-10657). Off by default while the
 # workspace is still being built out across several issues; see lightly_studio/api/features.py.
 LIGHTLY_STUDIO_POINT_CLOUD_ENABLED: bool = env.bool("LIGHTLY_STUDIO_POINT_CLOUD_ENABLED", False)
+# Development-only override that points every MCAP sample at one recording, so the point-cloud
+# workspace can be driven end to end before recording paths are stored per recording. See
+# lightly_studio/core/mcap/recording_source.py.
+LIGHTLY_STUDIO_MCAP_RECORDING_PATH: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_MCAP_RECORDING_PATH", default=None
+)
 # The EU instance. The GUI reads this back from the API rather than carrying its own copy. Not an
 # environment variable: the key above is the only part worth pointing elsewhere.
 LIGHTLY_STUDIO_POSTHOG_HOST: str = "https://eu.i.posthog.com"

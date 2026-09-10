@@ -33,9 +33,9 @@ class TestMcapView:
 
         assert mcap_view.sample_id == sample.sample_id
         assert mcap_view.channel_id == 3
-        assert mcap_view.log_time_ns == 100
-        assert mcap_view.capture_timestamp_ns == 95
-        assert mcap_view.keyframe_log_time_ns == 90
+        assert mcap_view.log_time_ns == "100"
+        assert mcap_view.capture_timestamp_ns == "95"
+        assert mcap_view.keyframe_log_time_ns == "90"
         assert mcap_view.sample.sample_id == sample.sample_id
 
     def test_from_mcap_table__point_cloud(self, db_session: Session) -> None:

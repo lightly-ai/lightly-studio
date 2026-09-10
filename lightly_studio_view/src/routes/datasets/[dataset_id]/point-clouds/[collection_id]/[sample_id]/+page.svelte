@@ -6,6 +6,7 @@
     import { page } from '$app/state';
     import WorkspaceStatusPanel from '$lib/components/PointCloudLabelingWorkspace/WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from '$lib/components/PointCloudLabelingWorkspace/types';
+    import { useRecordingProbe } from '$lib/components/PointCloudLabelingWorkspace/ProviderDiagnostics/useRecordingProbe.svelte';
 
     // The backend only reports this once LIGHTLY_STUDIO_POINT_CLOUD_ENABLED is set, so
     // this one string keeps the route (and the entry point in GroupsComponentsMenu) in sync with
@@ -56,6 +57,11 @@
     const loadWorkspace = () =>
         import('$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte');
 
+    // Reading the recording is owned here, not by the workspace: the scene and the
+    // diagnostics panel then share one session, and transport knowledge stays out of the
+    // component. An empty sample id opens nothing, so nothing is read until the flag is on.
+    const probe = useRecordingProbe(() => (isEnabled ? sampleId : ''));
+
     let workspaceModule = $state(loadWorkspace());
     const retryLoadWorkspace = () => {
         workspaceModule = loadWorkspace();
@@ -72,7 +78,16 @@
             <WorkspaceStatusPanel status="loading" />
         {:then module}
             {@const Workspace = module.default}
-            <Workspace {sampleId} {sourcePath} onExit={handleExit} />
+            <!-- `diagnostics` is temporary: it surfaces what the frame provider read
+                 alongside the scene. See ProviderDiagnostics. -->
+            <Workspace
+                {sampleId}
+                {sourcePath}
+                frame={probe.frame}
+                navigation={probe}
+                diagnostics={probe}
+                onExit={handleExit}
+            />
         {:catch}
             <WorkspaceStatusPanel status="error" onRetry={retryLoadWorkspace} onExit={handleExit} />
         {/await}

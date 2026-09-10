@@ -30,7 +30,8 @@ def get_group_previews(
 
     Returns:
         Dictionary mapping group sample_id to ImageView or VideoView of the first
-        sample in that group. Images are preferred over videos when both exist.
+        sample in that group. Images are preferred over videos when both exist. MCAP
+        components have no preview, so every group maps to None.
     """
     component_collections = collection_resolver.get_group_components(
         session=session,
@@ -89,6 +90,11 @@ def get_group_previews(
             )
             | unmatched_group_id_to_none
         )
+    if first_component_type == SampleType.MCAP:
+        # An MCAP component is a seek key into a recording, not an image. There is nothing to
+        # snapshot until a frame is decoded, which happens in the browser.
+        mcap_previews: dict[UUID, ImageView | None] = dict.fromkeys(group_sample_ids)
+        return mcap_previews
     raise ValueError(f"Unsupported sample type for group snapshot: {first_component_type}")
 
 

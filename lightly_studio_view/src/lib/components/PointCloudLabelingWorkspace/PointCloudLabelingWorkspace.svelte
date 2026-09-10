@@ -8,7 +8,10 @@
     import AnnotationPanel from './AnnotationPanel/AnnotationPanel.svelte';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
-    import type { WorkspaceCrumb } from './types';
+    import ProviderDiagnostics from './ProviderDiagnostics/ProviderDiagnostics.svelte';
+    import type { FrameNavigation, WorkspaceCrumb } from './types';
+    import type { PointCloudFrame } from './domain';
+    import type { RecordingProbe } from './ProviderDiagnostics/useRecordingProbe.svelte';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -29,11 +32,29 @@
         sourcePath?: readonly WorkspaceCrumb[];
         /** Overridable for tests/stories; production always starts at `empty` today. */
         status?: 'unsupported' | 'empty' | 'error';
+        /** The frame to draw. Absent until one has been decoded. */
+        frame?: PointCloudFrame;
+        /** Frame stepping for the timeline. Absent leaves its controls disabled. */
+        navigation?: FrameNavigation;
+        /**
+         * Temporary: when given, reports what the MCAP provider read alongside the scene.
+         * Remove together with `ProviderDiagnostics`.
+         */
+        diagnostics?: RecordingProbe;
         onExit: () => void;
         onRetry?: () => void;
     }
 
-    let { sampleId, sourcePath = [], status = 'empty', onExit, onRetry }: Props = $props();
+    let {
+        sampleId,
+        sourcePath = [],
+        status = 'empty',
+        frame,
+        navigation,
+        diagnostics,
+        onExit,
+        onRetry
+    }: Props = $props();
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
@@ -80,10 +101,13 @@
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
                             <ToolRail />
-                            {#if status === 'empty'}
+                            {#if diagnostics}
+                                <ProviderDiagnostics probe={diagnostics} />
+                            {/if}
+                            {#if status === 'empty' && !frame}
                                 <WorkspaceStatusPanel status="empty" {onExit} />
                             {:else}
-                                <SceneViewport />
+                                <SceneViewport {frame} />
                             {/if}
                         </Pane>
                         <PaneResizer
@@ -113,7 +137,7 @@
                             </div>
                         </PaneResizer>
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline />
+                            <FrameTimeline {navigation} />
                         </Pane>
                     </PaneGroup>
                 </Pane>

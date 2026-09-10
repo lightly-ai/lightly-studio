@@ -17,6 +17,25 @@ vi.mock('$lib/hooks', () => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
+// This page reads frames through the query client; stub the hook so the test runs without a
+// QueryClientProvider.
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/ProviderDiagnostics/useRecordingProbe.svelte',
+    () => ({
+        useRecordingProbe: () => ({
+            phase: 'idle',
+            telemetry: [],
+            frameCount: 0,
+            hasMore: false,
+            position: 0,
+            frame: undefined,
+            isLoading: false,
+            previous: vi.fn(),
+            next: vi.fn()
+        })
+    })
+);
+
 // This page reads datasetId/collectionId/sampleId from path params and
 // collectionType/groupId from query params; the rest of PageData comes from parent layout loads.
 const mockPageData = {
@@ -61,8 +80,11 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
         featureFlags.set(['point_cloud_rendering']);
         render(Page, { props: { data: mockPageData } });
 
-        await waitFor(() =>
-            expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument()
+        // The lazy chunk now pulls in the Three.js viewer, so importing it takes longer than
+        // the default timeout allows.
+        await waitFor(
+            () => expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument(),
+            { timeout: 15000 }
         );
     });
 });

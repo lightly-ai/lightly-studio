@@ -1,13 +1,34 @@
 <script lang="ts">
     import { ChevronLeft, ChevronRight, Play } from '@lucide/svelte';
     import { Button } from '$lib/components';
+    import type { FrameNavigation } from '../types';
 
     /**
-     * Frame navigation, object tracks and keyframes for the active recording. Placeholder ruler
-     * and lanes until frame loading lands; controls are disabled rather than wired to no-ops.
+     * Frame navigation, object tracks and keyframes for the active recording.
+     *
+     * Stepping is wired when a `navigation` is given; the ruler and lanes are still
+     * placeholders, and playback stays disabled until it exists.
      */
+    interface Props {
+        navigation?: FrameNavigation;
+    }
+
+    let { navigation }: Props = $props();
+
     const ticks = Array.from({ length: 24 }, (_, index) => index);
     const lanes = ['Track 1', 'Track 2'];
+
+    // More frames are listed on demand, so the end is only reached when nothing is known
+    // ahead and the channel has nothing left either.
+    const isAtLastFrame = $derived(
+        !!navigation && !navigation.hasMore && navigation.position >= navigation.frameCount - 1
+    );
+
+    const label = $derived(
+        navigation
+            ? `Frame ${navigation.position + 1} / ${navigation.frameCount}${navigation.hasMore ? '+' : ''}`
+            : 'Frame — / —'
+    );
 </script>
 
 <div
@@ -19,7 +40,12 @@
             variant="ghost"
             icon={ChevronLeft}
             ariaLabel="Previous frame"
-            buttonProps={{ disabled: true, size: 'sm', class: 'h-7 w-7 p-0' }}
+            buttonProps={{
+                disabled: !navigation || navigation.position === 0,
+                onclick: () => navigation?.previous(),
+                size: 'sm',
+                class: 'h-7 w-7 p-0'
+            }}
         />
         <Button
             variant="ghost"
@@ -31,9 +57,19 @@
             variant="ghost"
             icon={ChevronRight}
             ariaLabel="Next frame"
-            buttonProps={{ disabled: true, size: 'sm', class: 'h-7 w-7 p-0' }}
+            buttonProps={{
+                disabled: !navigation || isAtLastFrame,
+                onclick: () => navigation?.next(),
+                size: 'sm',
+                class: 'h-7 w-7 p-0'
+            }}
         />
-        <span class="ml-2 text-xs text-muted-foreground">Frame — / —</span>
+        <span class="ml-2 text-xs text-muted-foreground" data-testid="workspace-frame-position">
+            {label}
+        </span>
+        {#if navigation?.isLoading}
+            <span class="text-xs text-muted-foreground">loading…</span>
+        {/if}
     </div>
     <div class="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-2 py-1.5">
         <div class="flex h-4 shrink-0 items-end gap-px" aria-hidden="true">

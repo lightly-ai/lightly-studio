@@ -17,7 +17,8 @@ Object.defineProperty(window, 'matchMedia', {
 
 vi.mock('$env/static/public', () => ({
     PUBLIC_SAMPLES_URL: 'http://mock-url.com',
-    PUBLIC_LIGHTLY_STUDIO_API_URL: 'http://mock-url.com/api'
+    PUBLIC_LIGHTLY_STUDIO_API_URL: 'http://mock-url.com/api',
+    PUBLIC_MCAP_MEDIA_URL: '/mcap/media'
 }));
 
 // jsdom does not implement HTMLMediaElement playback methods. Stub them so
