@@ -94,6 +94,11 @@ jobs:
               --pyproject "${RUNNER_TEMP}/detect.toml" || return 1
           }
 
+          # Written to a file rather than read from a process substitution, whose exit
+          # status errexit does not see: a failure here would otherwise leave the loop
+          # with nothing to read and skip every release silently.
+          python3 -m prepare_release list-packages > "${RUNNER_TEMP}/packages"
+
           : > "${RUNNER_TEMP}/detected"
           while read -r distribution pyproject; do
             before_status=0
@@ -113,7 +118,7 @@ jobs:
               echo "${distribution}" >> "${RUNNER_TEMP}/detected"
               echo "${distribution}: ${before_version} -> ${after_version}."
             fi
-          done < <(python3 -m prepare_release list-packages)
+          done < "${RUNNER_TEMP}/packages"
 
           packages="$(jq -Rcs 'split("\n") | map(select(length > 0))' < "${RUNNER_TEMP}/detected")"
           echo "packages=${packages}" >> "$GITHUB_OUTPUT"
