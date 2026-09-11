@@ -18,7 +18,9 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
 )
-from lightly_studio.embed import embed_samples
+from lightly_studio.embed import embed_samples, embedder_registry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
@@ -57,6 +59,15 @@ def patched_manager(mocker: MockerFixture) -> EmbeddingManager:
     manager = EmbeddingManager()
     mocker.patch.object(EmbeddingManagerProvider, "get_embedding_manager", return_value=manager)
     return manager
+
+
+@pytest.fixture
+def patched_registry(mocker: MockerFixture) -> EmbedderRegistry:
+    """Route embed_samples to a fresh registry so tests never touch the shared singleton."""
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    return registry
 
 
 def test_embed_image_for_collection(
@@ -125,11 +136,12 @@ def test_embed_text_for_collection__no_default_model(
         )
 
 
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_image_samples(
     db_session: Session,
     patched_manager: EmbeddingManager,
 ) -> None:
-    """Image samples are embedded and stored under the collection's default model."""
+    """Image samples are stored under the collection's default model, embedded by the registry."""
     collection = create_collection(session=db_session)
     samples = create_images(
         db_session=db_session,
@@ -151,20 +163,52 @@ def test_embed_image_samples(
     assert count == len(sample_ids)
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_embed_image_samples__no_default_model_skips(
+@pytest.mark.usefixtures("patched_registry")
+def test_embed_image_samples__no_default_registers_registry_default(
     db_session: Session,
-    mocker: MockerFixture,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """With no default model, embedding is skipped, a warning logged, nothing stored."""
+    """With no default model, the registry's image embedder is used and set as default."""
     collection = create_collection(session=db_session)
     samples = create_images(
         db_session=db_session,
         collection_id=collection.collection_id,
         images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
     )
-    _disable_env_loader(mocker=mocker)
+    sample_ids = [sample.sample_id for sample in samples]
+
+    embed_samples.embed_image_samples(
+        session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
+    )
+
+    # The registry embedder's space is registered as the collection's default.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert model_id is not None
+    count = sample_embedding_resolver.get_embedding_count(
+        session=db_session, collection_id=collection.collection_id, embedding_model_id=model_id
+    )
+    assert count == len(sample_ids)
+
+
+def test_embed_image_samples__no_registered_embedder_skips(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """With a default model but no embedder for its space, embedding is skipped."""
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
+    )
+    _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=collection.collection_id
+    )
+    # An empty registry cannot supply an embedder for the default model's space.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
     sample_ids = [sample.sample_id for sample in samples]
 
     with caplog.at_level(level=logging.WARNING):
