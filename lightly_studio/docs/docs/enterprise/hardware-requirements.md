@@ -9,7 +9,6 @@ client used with Enterprise.
 |---|---|---|
 | CPU | 4 cores | 8-core x86 CPU (non-ARM) |
 | System memory | 8 GB | 16 GB |
-| Free disk storage | 10 GB | 40 GB |
 | Operating system | macOS, Windows, or Linux | Windows or Linux |
 | CPU architecture | x86 or ARM | x86 (non-ARM) |
 | GPU | Not required | NVIDIA CUDA-compatible GPU with CUDA 12 |
@@ -24,11 +23,14 @@ Python client requirements above and do not apply to Lightly-hosted Enterprise.
 
 | Resource | Minimum | Recommended |
 |---|---|---|
-| CPU |  8 cores |  8 cores |
-| System memory | 16 GB | 32 GB |
-| Free disk storage | 40 GB | 60 GB |
+| CPU |  4 cores |  8 cores |
+| System memory | 8 GB | 16 GB |
+| Free disk storage | 20 GB + space for datasets | 40 GB + space for datasets |
 | Dataset size | Below 250,000 samples | 250,000–10 million samples |
-| GPU | Not required | CUDA-compatible GPU |
+| Operating system | macOS, Windows, or Linux | Linux |
+| CPU architecture | x86 or ARM | x86 (non-ARM) |
+| Container runtime | Docker | Docker |
+| GPU | Not required | NVIDIA CUDA-compatible GPU with CUDA 12 |
 
 The on-premise host also needs a supported container runtime and network access
 for Python clients and browsers. See [On-Premise Deployment](on-premise.md) for
