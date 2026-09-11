@@ -5,7 +5,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageView
 from lightly_studio.models.video import VideoView
 from lightly_studio.resolvers import collection_resolver, group_resolver
-from tests.helpers_resolvers import ImageStub, create_collection, create_images
+from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_mcap
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
@@ -117,6 +117,36 @@ def test_get_group_previews__with_videos(db_session: Session) -> None:
     assert isinstance(snapshot, VideoView)
     assert snapshot.sample_id == video1.sample_id
     assert snapshot.file_name == "video1.mp4"
+
+
+def test_get_group_previews__with_mcap_components(db_session: Session) -> None:
+    group_collection = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_collection.collection_id,
+        components=[("lidar", SampleType.MCAP)],
+    )
+    mcap_samples = [
+        create_mcap(
+            session=db_session,
+            collection_id=components["lidar"].collection_id,
+            log_time_ns=log_time_ns,
+        )
+        for log_time_ns in (10, 20)
+    ]
+    group_ids = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_collection.collection_id,
+        groups=[{sample.sample_id} for sample in mcap_samples],
+    )
+
+    previews = group_resolver.get_group_previews(
+        session=db_session,
+        group_collection_id=group_collection.collection_id,
+        group_sample_ids=group_ids,
+    )
+
+    assert previews == dict.fromkeys(group_ids)
 
 
 def test_get_group_previews__prefers_images_over_videos(db_session: Session) -> None:
