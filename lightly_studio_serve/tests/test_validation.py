@@ -3,9 +3,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from lightly_studio_embed.errors import EmbedderContractError
-from lightly_studio_embed.types import EmbeddingResult
-from lightly_studio_embed.validation import build_embeddings_response
+from lightly_studio_serve.errors import EmbedderContractError
+from lightly_studio_serve.types import EmbeddingResult
+from lightly_studio_serve.validation import build_embeddings_response
 
 SPACE_KEY = "acme/model@v1"
 

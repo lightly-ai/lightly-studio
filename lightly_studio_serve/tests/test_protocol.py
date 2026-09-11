@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from lightly_studio_embed.embedder import Capability
-from lightly_studio_embed.protocol import (
+from lightly_studio_serve.embedder import Capability
+from lightly_studio_serve.protocol import (
     MAX_ABS_EMBEDDING_VALUE,
     WIRE_CAPABILITIES,
     DescribeResponse,

@@ -2,14 +2,14 @@ import logging
 
 import numpy as np
 import pytest
-from lightly_studio_embed.embedder import (
+from lightly_studio_serve.embedder import (
     Capability,
     Embedder,
     ImagePathEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
 )
-from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 
 from lightly_studio.embed import embedder_registry

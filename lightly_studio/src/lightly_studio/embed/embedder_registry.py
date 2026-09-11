@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from lightly_studio_embed.embedder import (
+from lightly_studio_serve.embedder import (
     Capability,
     Embedder,
     ImageBytesEmbedder,

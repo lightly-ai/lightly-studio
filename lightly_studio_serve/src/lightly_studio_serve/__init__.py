@@ -1,6 +1,6 @@
 """Serve your own embedding model to LightlyStudio over HTTP."""
 
-from lightly_studio_embed.embedder import (
+from lightly_studio_serve.embedder import (
     Capability,
     Embedder,
     ImageBytesEmbedder,
@@ -10,7 +10,7 @@ from lightly_studio_embed.embedder import (
     TextEmbedder,
     VideoPathEmbedder,
 )
-from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 
 __all__ = [
     "Capability",

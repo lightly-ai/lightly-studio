@@ -8,7 +8,7 @@ from typing import Any
 import fsspec
 import numpy as np
 import torch
-from lightly_studio_embed.types import EmbeddingResult, ImageCrop
+from lightly_studio_serve.types import EmbeddingResult, ImageCrop
 from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm

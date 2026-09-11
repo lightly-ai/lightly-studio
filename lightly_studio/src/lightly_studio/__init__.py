@@ -26,7 +26,7 @@ from lightly_studio.dataset.embedding_generator import (
     ImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
 )
-from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.dataset.embedding_manager import set_default_embedding_model
 from lightly_studio.models.collection import SampleType
 from lightly_studio.enterprise import connect

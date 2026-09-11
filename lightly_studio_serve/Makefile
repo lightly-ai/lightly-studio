@@ -10,7 +10,7 @@ endif
 .PHONY: build
 build: clean
 	@echo "Building a distribution package..."
-	uv build --package lightly-studio-embed --out-dir dist
+	uv build --package lightly-studio-serve --out-dir dist
 
 .PHONY: test
 test:
