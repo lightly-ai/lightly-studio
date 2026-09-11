@@ -15,6 +15,13 @@ POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 MCAP_PATH ?= datasets/mcap/perception.mcap
 MCAP_MAX_FRAMES ?= 200
 MCAP_TOPIC ?=
+# The recording is both indexed and served from the same path, and the workspace route only
+# opens while the feature flag is on, so the two always travel together.
+MCAP_ENV := MCAP_PATH=$(MCAP_PATH) \
+	MCAP_MAX_FRAMES=$(MCAP_MAX_FRAMES) \
+	MCAP_TOPIC=$(MCAP_TOPIC) \
+	LIGHTLY_STUDIO_MCAP_RECORDING_PATH=$(MCAP_PATH) \
+	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=1
 
 # Installs the uv version that `required-version` in pyproject.toml pins, so a local
 # `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
@@ -124,15 +131,20 @@ start-e2e-video-groups: build
 
 # Override the recording, how many frames are indexed, and which channel, e.g.:
 #   make start-e2e-mcap-point-cloud MCAP_PATH=~/recordings/perception.mcap MCAP_MAX_FRAMES=500
+# The script prints every point-cloud channel it finds, and the workspace URL to open: the
+# route is not linked from the navigation yet.
 .PHONY: start-e2e-mcap-point-cloud
 start-e2e-mcap-point-cloud: build
 	@echo "Starting server for e2e point-cloud tests from $(MCAP_PATH)..."
-	MCAP_PATH=$(MCAP_PATH) \
-	MCAP_MAX_FRAMES=$(MCAP_MAX_FRAMES) \
-	MCAP_TOPIC=$(MCAP_TOPIC) \
-	LIGHTLY_STUDIO_MCAP_RECORDING_PATH=$(MCAP_PATH) \
-	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=1 \
-		uv run e2e-tests/index_mcap_point_cloud.py
+	$(MCAP_ENV) uv run e2e-tests/index_mcap_point_cloud.py
+
+# The same recording, rebuilding only the frontend bundle the server serves: the fast loop
+# while working on the workspace itself, since `build` reinstalls node modules and rebuilds
+# the wheel on every run. Takes the same MCAP_* overrides.
+.PHONY: start-mcap-point-cloud
+start-mcap-point-cloud: build-dirty-lightly_studio_view
+	@echo "Starting the point-cloud workspace from $(MCAP_PATH)..."
+	$(MCAP_ENV) uv run e2e-tests/index_mcap_point_cloud.py
 
 .PHONY: start-postgres
 start-postgres: stop-postgres
