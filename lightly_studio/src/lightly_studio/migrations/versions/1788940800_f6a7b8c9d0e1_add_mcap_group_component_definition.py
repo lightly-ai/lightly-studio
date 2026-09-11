@@ -11,7 +11,7 @@ DuckDB builds its schema with ``create_all``, so this migration only matters for
 Postgres databases.
 
 Revision ID: f6a7b8c9d0e1
-Revises: c5d6e7f8a9b0
+Revises: f7a8b9c0d1e2
 Create Date: 2026-09-09 13:00:00.000000
 
 """
@@ -25,7 +25,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "f6a7b8c9d0e1"
-down_revision: str | Sequence[str] | None = "c5d6e7f8a9b0"
+down_revision: str | Sequence[str] | None = "f7a8b9c0d1e2"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
