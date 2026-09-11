@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { isTextInputTarget } from '$lib/utils';
+    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     type SteppingNavigationProps = {
         hasPrevious: boolean;
@@ -10,12 +10,6 @@
     };
     const { hasPrevious, hasNext, onNext, onPrevious, isDrawing }: SteppingNavigationProps =
         $props();
-
-    const isOverlayTarget = (target: EventTarget | null): boolean =>
-        target instanceof Element &&
-        target.closest(
-            '[role="dialog"], [role="menu"], [role="listbox"], [data-popover-content]'
-        ) !== null;
 
     const handleKeyDownEvent = (event: KeyboardEvent) => {
         if (
