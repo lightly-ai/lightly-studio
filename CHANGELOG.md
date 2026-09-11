@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add a Split dataset menu action to divide images or videos into tagged splits using the current filters.
 - Add a Glossary page to the docs.
+- Add bulk classification editing for selected images in the GUI.
 
 ### Changed
 
