@@ -536,11 +536,16 @@ def test_deep_copy__with_sequences(db_session: Session) -> None:
 
 def test_deep_copy__with_mcap_group_sequences(db_session: Session) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
-    mcap_path = "/bags/drive_001.mcap"
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
     mcap_sample_id = mcap_group_sequence_resolver.create(
         session=db_session,
         collection_id=collection.collection_id,
-        mcap_path=mcap_path,
+        recording_id=recording_id,
     )
     classic_sample_ids = sample_resolver.create_many(
         session=db_session,
@@ -569,7 +574,12 @@ def test_deep_copy__with_mcap_group_sequences(db_session: Session) -> None:
         select(McapGroupSequenceTable).where(col(McapGroupSequenceTable.sample_id).in_(copied_ids))
     ).all()
     assert len(copied_mcap_rows) == 1
-    assert copied_mcap_rows[0].mcap_path == mcap_path
+    assert copied_mcap_rows[0].recording_id != recording_id
+    copied_recording = recording_resolver.get_by_id(
+        session=db_session, recording_id=copied_mcap_rows[0].recording_id
+    )
+    assert copied_recording is not None
+    assert copied_recording.uri == "/bags/drive_001.mcap"
     assert copied_mcap_rows[0].sample_id != mcap_sample_id
 
 

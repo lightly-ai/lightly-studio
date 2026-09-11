@@ -122,7 +122,8 @@ def delete_dataset(
 
     # 4. Sample type tables.
     _delete_groups(session=session, dataset_id=dataset_id)
-    # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable).
+    # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable) and
+    # recordings, deleted in step 5 (McapGroupSequenceTable.recording_id -> RecordingTable).
     _delete_mcap_group_sequences(session=session, dataset_id=dataset_id)
     _delete_sequences(session=session, dataset_id=dataset_id)
     _delete_videos(session=session, dataset_id=dataset_id)

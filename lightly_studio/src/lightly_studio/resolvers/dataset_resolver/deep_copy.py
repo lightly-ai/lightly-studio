@@ -629,11 +629,17 @@ def _copy_sequences(session: Session) -> None:
 
 
 def _copy_mcap_group_sequences(session: Session) -> None:
-    """Copy MCAP group sequences, remapping sample_id and copying mcap_path."""
+    """Copy MCAP group sequences, remapping sample_id and recording_id."""
     src = _table(McapGroupSequenceTable).alias("src")
     map_sample = _map(_MAP_SAMPLE)
-    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"])
-    overrides = {"sample_id": map_sample.c.new_id}
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"]).join(
+        map_recording, map_recording.c.old_id == src.c["recording_id"]
+    )
+    overrides = {
+        "sample_id": map_sample.c.new_id,
+        "recording_id": map_recording.c.new_id,
+    }
     _copy_table(
         session=session,
         target=McapGroupSequenceTable,

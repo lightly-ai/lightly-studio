@@ -276,10 +276,16 @@ def test_delete_dataset__with_group_component_definitions(db_session: Session) -
 def test_delete_dataset__with_sequences(db_session: Session) -> None:
     # Arrange
     collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
     sequence_id = mcap_group_sequence_resolver.create(
         session=db_session,
         collection_id=collection.collection_id,
-        mcap_path="/bags/drive_001.mcap",
+        recording_id=recording_id,
     )
     linked_sample_ids = sample_resolver.create_many(
         session=db_session,

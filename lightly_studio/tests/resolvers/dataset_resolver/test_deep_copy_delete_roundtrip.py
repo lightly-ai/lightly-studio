@@ -200,7 +200,7 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
         session=session,
         tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=root.dataset_id)],
     )
-    recording_resolver.create(
+    recording_id = recording_resolver.create(
         session=session,
         dataset_id=root.dataset_id,
         uri=f"/data/{name}.mcap",
@@ -274,7 +274,7 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
     mcap_group_sequence_resolver.create(
         session=session,
         collection_id=sequence_collection.collection_id,
-        mcap_path=f"/{name}/drive.mcap",
+        recording_id=recording_id,
     )
     classic_sample_ids = sample_resolver.create_many(
         session=session,
