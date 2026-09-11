@@ -1,30 +1,39 @@
 name: Draft Release
 
 on:
-  # Merging the "Bump version to X.Y.Z" pull request is the decision to
-  # release, so it is what starts this. The path filter is only a cheap
-  # pre-filter; what is released is worked out below.
+  # Merging the "Bump <package> version to X.Y.Z" pull request is the decision
+  # to release, so it is what starts this. The path filter is only a cheap
+  # pre-filter; which package is released, if any, is worked out below.
   push:
     branches: [main]
-    paths: ["lightly_studio/pyproject.toml"]
+    paths:
+      - "lightly_studio/pyproject.toml"
+      - "lightly_studio_serve/pyproject.toml"
   # Retry hatch for a run that failed on something transient. It reaches the
   # same commit as the push would, so it is safe to run at any time.
   workflow_dispatch:
+    inputs:
+      package:
+        description: Package to draft a release for.
+        type: choice
+        options: [lightly-studio, lightly-studio-serve]
+        default: lightly-studio
 
 permissions:
   contents: write
-
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
 
 env:
   PYTHONPATH: ${{ github.workspace }}/.github/scripts
 
 jobs:
-  draft-release:
+  # Which packages this push changed the version of, not merely whose pyproject.toml it edited.
+  detect:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      packages: ${{ steps.detect.outputs.packages }}
     steps:
       # The tooling is taken from main, never from the released commit: running
       # that commit's own release code would execute it with a write token.
@@ -34,11 +43,107 @@ jobs:
           ref: main
           persist-credentials: false
 
+      - name: Decide which packages this run is about
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          DISPATCHED_PACKAGE: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != "push" ]; then
+            packages="$(jq -cn --arg p "${DISPATCHED_PACKAGE}" '[$p]')"
+            echo "packages=${packages}" >> "$GITHUB_OUTPUT"
+            echo "Dispatched run: drafting ${DISPATCHED_PACKAGE}."
+            exit 0
+          fi
+
+          # Resolved first, so that the 404 below can only mean "no such file at that commit".
+          for ref in "${BEFORE}" "${AFTER}"; do
+            if ! gh api "repos/${GITHUB_REPOSITORY}/commits/${ref}" --jq .sha > /dev/null; then
+              echo "::error::Cannot resolve ${ref}; use the workflow_dispatch hatch instead."
+              exit 1
+            fi
+          done
+
+          # Exit 2 is "no such file"; exit 1 is any other failure and stops the run.
+          version_at() {
+            if ! gh api "repos/${GITHUB_REPOSITORY}/contents/$2?ref=$1" \
+                   -H "Accept: application/vnd.github.raw" \
+                   > "${RUNNER_TEMP}/detect.toml" 2>"${RUNNER_TEMP}/detect-err"; then
+              if grep -q "(HTTP 404)" "${RUNNER_TEMP}/detect-err"; then
+                return 2
+              fi
+              echo "::error::Could not read $2 at $1:" >&2
+              cat "${RUNNER_TEMP}/detect-err" >&2
+              return 1
+            fi
+            python3 -m prepare_release read-version \
+              --pyproject "${RUNNER_TEMP}/detect.toml" || return 1
+          }
+
+          # A file, not a process substitution, whose exit status errexit does not see.
+          python3 -m prepare_release list-packages > "${RUNNER_TEMP}/packages"
+
+          : > "${RUNNER_TEMP}/detected"
+          while read -r distribution pyproject; do
+            before_status=0
+            after_status=0
+            before_version="$(version_at "${BEFORE}" "${pyproject}")" || before_status=$?
+            after_version="$(version_at "${AFTER}" "${pyproject}")" || after_status=$?
+            if [ "${before_status}" -eq 1 ] || [ "${after_status}" -eq 1 ]; then
+              exit 1
+            fi
+            # Missing on either side: adding a package is not a release of it.
+            if [ "${before_status}" -ne 0 ] || [ "${after_status}" -ne 0 ]; then
+              continue
+            fi
+            if [ "${before_version}" != "${after_version}" ]; then
+              echo "${distribution}" >> "${RUNNER_TEMP}/detected"
+              echo "${distribution}: ${before_version} -> ${after_version}."
+            fi
+          done < "${RUNNER_TEMP}/packages"
+
+          packages="$(jq -Rcs 'split("\n") | map(select(length > 0))' < "${RUNNER_TEMP}/detected")"
+          echo "packages=${packages}" >> "$GITHUB_OUTPUT"
+          echo "::notice::Packages to draft: ${packages}"
+
+  draft-release:
+    needs: detect
+    if: needs.detect.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      # One package failing must not cancel the other mid-tag.
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.detect.outputs.packages) }}
+    # Per package: the same package must not draft twice at once.
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.package }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout the release tooling
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      # Everything that differs between the packages comes from here.
+      - name: Resolve the package
+        id: package
+        run: |
+          python3 -m prepare_release package-config \
+            --package "${{ matrix.package }}" >> "$GITHUB_OUTPUT"
+
       - name: Find the version and the commit that set it
         id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
           PUSHED: ${{ github.sha }}
+          PYPROJECT: ${{ steps.package.outputs.pyproject }}
+          TAG_PREFIX: ${{ steps.package.outputs.tag_prefix }}
         # A merge queue batch lands as a single push, so the commit that
         # triggered this run is the tip of the batch and not necessarily the
         # version bump - which is how a release ends up containing more than
@@ -50,7 +155,7 @@ jobs:
         run: |
           set -euo pipefail
           version_at() {
-            gh api "repos/${GITHUB_REPOSITORY}/contents/lightly_studio/pyproject.toml?ref=$1" \
+            gh api "repos/${GITHUB_REPOSITORY}/contents/${PYPROJECT}?ref=$1" \
               -H "Accept: application/vnd.github.raw" > "${RUNNER_TEMP}/pyproject-$1.toml"
             python3 -m prepare_release read-version --pyproject "${RUNNER_TEMP}/pyproject-$1.toml"
           }
@@ -65,28 +170,42 @@ jobs:
           fi
 
           version="$(version_at "${tip}")"
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/commits?path=${PYPROJECT}&sha=${tip}&per_page=100" \
+            --jq '.[].sha' > "${RUNNER_TEMP}/commits"
           bump=""
           reached_previous_version=false
-          for commit in $(gh api \
-            "repos/${GITHUB_REPOSITORY}/commits?path=lightly_studio/pyproject.toml&sha=${tip}&per_page=100" \
-            --jq '.[].sha'); do
+          while read -r commit; do
             if [ "$(version_at "${commit}")" = "${version}" ]; then
               bump="${commit}"
             else
               reached_previous_version=true
               break
             fi
-          done
+          done < "${RUNNER_TEMP}/commits"
 
-          if [ -z "${bump}" ] || [ "${reached_previous_version}" = false ]; then
-            echo "::error::Could not identify the commit that set version ${version}."
+          if [ -z "${bump}" ]; then
+            echo "::error::No commit touching ${PYPROJECT} carries version ${version}."
             exit 1
+          fi
+
+          if [ "${reached_previous_version}" = false ]; then
+            # A full page may just be truncated, which is not the same as no earlier version.
+            if [ "$(wc -l < "${RUNNER_TEMP}/commits")" -ge 100 ]; then
+              echo "::error::Could not identify the commit that set version ${version}:"
+              echo "::error::the walk hit the page limit without reaching an earlier version."
+              exit 1
+            fi
+            # A first release: nothing earlier to leave out, and the tip is where the
+            # changelog exists.
+            echo "::notice::No earlier version of ${PYPROJECT}; releasing ${version} from the tip."
+            bump="${tip}"
           fi
 
           {
             echo "sha=${bump}"
             echo "version=${version}"
-            echo "tag=v${version}"
+            echo "tag=${TAG_PREFIX}v${version}"
           } >> "$GITHUB_OUTPUT"
           echo "Version ${version} was set by ${bump}."
 
@@ -171,14 +290,33 @@ jobs:
           TAG: ${{ steps.resolve.outputs.tag }}
           SHA: ${{ steps.resolve.outputs.sha }}
           VERSION: ${{ steps.resolve.outputs.version }}
+          CHANGELOG: ${{ steps.package.outputs.changelog }}
+          TAG_PREFIX: ${{ steps.package.outputs.tag_prefix }}
         run: |
           set -euo pipefail
-          gh api "repos/${GITHUB_REPOSITORY}/contents/CHANGELOG.md?ref=${SHA}" \
+          gh api "repos/${GITHUB_REPOSITORY}/contents/${CHANGELOG}?ref=${SHA}" \
             -H "Accept: application/vnd.github.raw" > "${RUNNER_TEMP}/CHANGELOG.md"
-          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
-            -f tag_name="${TAG}" \
-            -f target_commitish="${SHA}" \
-            --jq .body > "${RUNNER_TEMP}/generated-notes.md"
+
+          # This package's own last release, so the notes cannot cover the other's commits.
+          # Paginated because releases come back newest-first across both; a file rather
+          # than `head`, which would SIGPIPE `gh` and trip `pipefail`.
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq \
+            ".[] | select(.draft == false and .prerelease == false) | .tag_name
+              | select(startswith(\"${TAG_PREFIX}v\"))" > "${RUNNER_TEMP}/releases"
+          previous="$(head -n 1 "${RUNNER_TEMP}/releases")"
+
+          if [ -n "${previous}" ]; then
+            echo "Release notes cover ${previous}..${TAG}."
+            gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="${TAG}" \
+              -f target_commitish="${SHA}" \
+              -f previous_tag_name="${previous}" \
+              --jq .body > "${RUNNER_TEMP}/generated-notes.md"
+          else
+            # Nothing of its own to diff against: the changelog section stands alone.
+            echo "::notice::No earlier ${TAG_PREFIX}v* release; the notes are the changelog section alone."
+            : > "${RUNNER_TEMP}/generated-notes.md"
+          fi
           python3 -m prepare_release render-release-notes \
             --changelog "${RUNNER_TEMP}/CHANGELOG.md" \
             --version "${VERSION}" \
@@ -193,13 +331,14 @@ jobs:
           TAG: ${{ steps.resolve.outputs.tag }}
           SHA: ${{ steps.resolve.outputs.sha }}
           VERSION: ${{ steps.resolve.outputs.version }}
+          DISPLAY_NAME: ${{ steps.package.outputs.display_name }}
         # Created through the API so the checkout keeps `persist-credentials: false`;
         # `gh release create` would only make a lightweight tag.
         run: |
           set -euo pipefail
           tag_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags" \
             -f tag="${TAG}" \
-            -f message="LightlyStudio ${VERSION}" \
+            -f message="${DISPLAY_NAME} ${VERSION}" \
             -f object="${SHA}" \
             -f type=commit \
             --jq .sha)"

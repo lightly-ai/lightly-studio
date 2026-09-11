@@ -3,6 +3,9 @@
 Serve your own embedding model to [LightlyStudio](https://github.com/lightly-ai/lightly-studio)
 over HTTP, so that your model's weights never leave your machine.
 
+**The HTTP server is not implemented yet.** So far the package holds the base classes and the
+types that LightlyStudio and a server will share.
+
 The package depends on an HTTP server, numpy and Pillow. It does not depend on torch, CUDA or
 LightlyStudio. You can therefore install it next to your own pins.
 

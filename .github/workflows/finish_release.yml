@@ -4,7 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Tag of the draft release to publish, e.g. v1.2.3.
+        description: >-
+          Tag of the draft release to publish, e.g. v1.2.3 or
+          lightly-studio-serve/v0.1.2. The tag decides which package is
+          published, so there is nothing here that can disagree with it.
         type: string
         required: true
       target:
@@ -63,6 +66,7 @@ jobs:
       contents: read
     env:
       TAG: ${{ inputs.tag }}
+      PYTHONPATH: ${{ github.workspace }}/.github/scripts
     steps:
       # `refs/tags/` because actions/checkout resolves an unqualified ref as a
       # branch first, and a branch sharing the tag's name would be built in the
@@ -73,14 +77,20 @@ jobs:
           ref: refs/tags/${{ inputs.tag }}
           persist-credentials: false
 
+      # `v1.2.3` is lightly-studio; every other package tags as `<distribution>/v1.2.3`.
+      - name: Resolve the package
+        id: package
+        run: |
+          python3 -m prepare_release package-config --tag "${TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Assert the tag matches the version it points at
         env:
-          PYTHONPATH: ${{ github.workspace }}/.github/scripts
+          PYPROJECT: ${{ steps.package.outputs.pyproject }}
+          TAG_PREFIX: ${{ steps.package.outputs.tag_prefix }}
         run: |
           set -euo pipefail
-          version="$(python3 -m prepare_release read-version \
-            --pyproject lightly_studio/pyproject.toml)"
-          if [ "v${version}" != "${TAG}" ]; then
+          version="$(python3 -m prepare_release read-version --pyproject "${PYPROJECT}")"
+          if [ "${TAG_PREFIX}v${version}" != "${TAG}" ]; then
             echo "::error::${TAG} points at a commit whose version is ${version}."
             exit 1
           fi
@@ -97,8 +107,9 @@ jobs:
         with:
           version: "0.12.6"
 
-      # The wheel bundles the built frontend, so the build needs Node.
+      # Only the wheel that bundles the built frontend needs Node.
       - name: Set Up Node.js
+        if: steps.package.outputs.needs_node == 'true'
         uses: actions/setup-node@v6
         with:
           node-version-file: lightly_studio_view/.nvmrc
@@ -108,12 +119,21 @@ jobs:
       # then runs export-schema under that environment, so a stale lock would
       # change the schema inside the published wheel with no signal.
       - name: Install Dependencies
-        working-directory: lightly_studio
+        working-directory: ${{ steps.package.outputs.directory }}
         run: uv sync --locked --all-groups --all-extras
 
       - name: Build the Distributions
-        working-directory: lightly_studio
+        working-directory: ${{ steps.package.outputs.directory }}
         run: make build
+
+      # Before the upload, so a wheel that fails it never reaches the publish job.
+      - name: Check the Wheel's Dependencies
+        if: steps.package.outputs.forbidden_dependencies != ''
+        working-directory: ${{ steps.package.outputs.directory }}
+        run: |
+          python3 -m prepare_release check-wheel-dependencies \
+            --package "${{ steps.package.outputs.distribution }}" \
+            --dist dist
 
       # A week, to outlast the pypi environment's approval gate: an artifact
       # expiring mid-approval would fail the release after it was granted.
@@ -121,7 +141,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: dist
-          path: lightly_studio/dist
+          path: ${{ steps.package.outputs.directory }}/dist
           if-no-files-found: error
           retention-days: 7
 
