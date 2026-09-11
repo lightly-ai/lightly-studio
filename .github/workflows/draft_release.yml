@@ -26,15 +26,10 @@ env:
   PYTHONPATH: ${{ github.workspace }}/.github/scripts
 
 jobs:
-  # Which packages this push is about, decided before anything is tagged. A
-  # release of one package must leave the other's version untouched, so that is
-  # what is asked: not "was a pyproject.toml edited" - a dependency bump does
-  # that too - but "did this package's version change".
+  # Which packages this push changed the version of, not merely whose pyproject.toml it edited.
   detect:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Reads only: the write the workflow needs is the tag and the release, both
-    # of which happen in draft-release.
     permissions:
       contents: read
     outputs:
@@ -64,9 +59,7 @@ jobs:
             exit 0
           fi
 
-          # Both sides of the push are resolved first, so that the 404 below can only
-          # mean "no such file at that commit". A 404 on an unresolvable ref reads
-          # the same, and would otherwise turn a broken run into a silent no-op.
+          # Resolved first, so that the 404 below can only mean "no such file at that commit".
           for ref in "${BEFORE}" "${AFTER}"; do
             if ! gh api "repos/${GITHUB_REPOSITORY}/commits/${ref}" --jq .sha > /dev/null; then
               echo "::error::Cannot resolve ${ref}; use the workflow_dispatch hatch instead."
@@ -74,11 +67,7 @@ jobs:
             fi
           done
 
-          # The version of $2 at commit $1. Exit 2 says the file does not exist
-          # there; every other failure is exit 1 and stops the run. Errexit cannot
-          # carry that: the caller suppresses it, and dropping a release because
-          # the API blipped is worse than failing loudly. Diagnostics go to stderr,
-          # because stdout of this function is the version the caller captures.
+          # Exit 2 is "no such file"; exit 1 is any other failure and stops the run.
           version_at() {
             if ! gh api "repos/${GITHUB_REPOSITORY}/contents/$2?ref=$1" \
                    -H "Accept: application/vnd.github.raw" \
@@ -94,9 +83,7 @@ jobs:
               --pyproject "${RUNNER_TEMP}/detect.toml" || return 1
           }
 
-          # Written to a file rather than read from a process substitution, whose exit
-          # status errexit does not see: a failure here would otherwise leave the loop
-          # with nothing to read and skip every release silently.
+          # A file, not a process substitution, whose exit status errexit does not see.
           python3 -m prepare_release list-packages > "${RUNNER_TEMP}/packages"
 
           : > "${RUNNER_TEMP}/detected"
@@ -108,9 +95,7 @@ jobs:
             if [ "${before_status}" -eq 1 ] || [ "${after_status}" -eq 1 ]; then
               exit 1
             fi
-            # A package that does not exist on both sides of the push is not being
-            # released: adding one is not a release of it, and the first release
-            # goes through Prepare Release like every other.
+            # Missing on either side: adding a package is not a release of it.
             if [ "${before_status}" -ne 0 ] || [ "${after_status}" -ne 0 ]; then
               continue
             fi
@@ -130,13 +115,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
-      # Each package's release stands on its own, so one failing must not cancel
-      # the other halfway through tagging.
+      # One package failing must not cancel the other mid-tag.
       fail-fast: false
       matrix:
         package: ${{ fromJSON(needs.detect.outputs.packages) }}
-    # Per package: two packages drafting at once is fine, the same package
-    # drafting twice at once is not.
+    # Per package: the same package must not draft twice at once.
     concurrency:
       group: ${{ github.workflow }}-${{ matrix.package }}
       cancel-in-progress: false
@@ -147,8 +130,7 @@ jobs:
           ref: main
           persist-credentials: false
 
-      # Everything that differs between the packages comes from here, so the steps
-      # below name no package of their own.
+      # Everything that differs between the packages comes from here.
       - name: Resolve the package
         id: package
         run: |
@@ -208,19 +190,14 @@ jobs:
           fi
 
           if [ "${reached_previous_version}" = false ]; then
-            # A full page means the walk may simply have been truncated before it
-            # reached the previous version, which must not be read as there being
-            # none.
+            # A full page may just be truncated, which is not the same as no earlier version.
             if [ "$(wc -l < "${RUNNER_TEMP}/commits")" -ge 100 ]; then
               echo "::error::Could not identify the commit that set version ${version}:"
               echo "::error::the walk hit the page limit without reaching an earlier version."
               exit 1
             fi
-            # Otherwise this version has been in the file since it first appeared,
-            # so no commit ever "set" it and there is nothing earlier to leave out -
-            # the whole history up to the tip is this first release. The tip is also
-            # the only commit where the rest of the release inputs are guaranteed to
-            # exist: the commit that introduced the package predates its changelog.
+            # A first release: nothing earlier to leave out, and the tip is where the
+            # changelog exists.
             echo "::notice::No earlier version of ${PYPROJECT}; releasing ${version} from the tip."
             bump="${tip}"
           fi
@@ -320,16 +297,9 @@ jobs:
           gh api "repos/${GITHUB_REPOSITORY}/contents/${CHANGELOG}?ref=${SHA}" \
             -H "Accept: application/vnd.github.raw" > "${RUNNER_TEMP}/CHANGELOG.md"
 
-          # Left to itself, generate-notes takes the previous release whatever
-          # package it belongs to, so the notes would cover the other package's
-          # commits. The window is pinned to this package's own last release
-          # instead. `lightly-studio`'s empty prefix selects exactly the `v*`
-          # tags, which are its own.
-          # `--paginate` because releases come back newest-first across every package,
-          # so this package's own last release drops off page one once the other has
-          # released enough times. Written to a file rather than piped into `head`,
-          # which would SIGPIPE `gh` and trip `pipefail`. Prereleases are skipped, as
-          # GitHub's own default does.
+          # This package's own last release, so the notes cannot cover the other's commits.
+          # Paginated because releases come back newest-first across both; a file rather
+          # than `head`, which would SIGPIPE `gh` and trip `pipefail`.
           gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq \
             ".[] | select(.draft == false and .prerelease == false) | .tag_name
               | select(startswith(\"${TAG_PREFIX}v\"))" > "${RUNNER_TEMP}/releases"
@@ -343,10 +313,7 @@ jobs:
               -f previous_tag_name="${previous}" \
               --jq .body > "${RUNNER_TEMP}/generated-notes.md"
           else
-            # A first release has nothing of its own to diff against, and left to
-            # itself generate-notes would reach for the newest release of any
-            # package - so a first `lightly-studio-serve` release would be handed
-            # LightlyStudio's commits. The changelog section stands alone instead.
+            # Nothing of its own to diff against: the changelog section stands alone.
             echo "::notice::No earlier ${TAG_PREFIX}v* release; the notes are the changelog section alone."
             : > "${RUNNER_TEMP}/generated-notes.md"
           fi

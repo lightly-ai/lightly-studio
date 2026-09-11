@@ -60,8 +60,7 @@ jobs:
           make static-checks
           make test
 
-      # Everything that differs between the packages comes from here, so the steps
-      # below name no package of their own.
+      # Everything that differs between the packages comes from here.
       - name: Resolve the package
         id: package
         run: |

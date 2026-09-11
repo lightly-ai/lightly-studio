@@ -46,9 +46,7 @@ def render_release_notes(changelog_section: str, generated_notes: str) -> str:
     """
     generated = sanitize_generated_notes(generated_notes).strip()
     if not generated:
-        # A first release of a package has no earlier tag to diff against, so the
-        # Draft Release workflow hands this nothing rather than another package's
-        # commits. The changelog section is then the whole body.
+        # A first release has no earlier tag to diff against.
         return f"{_CHANGELOG_HEADING}\n\n{changelog_section.strip()}\n"
     return f"{_CHANGELOG_HEADING}\n\n{changelog_section.strip()}\n\n{generated}\n"
 

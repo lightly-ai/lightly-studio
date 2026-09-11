@@ -73,10 +73,7 @@ PACKAGES = (
         changelog="lightly_studio_serve/CHANGELOG.md",
         tag_prefix="lightly-studio-serve/",
         needs_node=False,
-        # The wheel is installed next to a customer's own CUDA and torch pins, so none of
-        # the heavy things LightlyStudio itself needs may arrive with it - not even
-        # through a transitive dependency. Matched as substrings of the normalized name,
-        # which is what catches the whole `nvidia-*-cu12` and `torch*` families at once.
+        # Substrings of the normalized name, so one entry covers a whole family.
         forbidden_dependencies=(
             "torch",
             "cuda",

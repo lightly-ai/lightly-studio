@@ -19,8 +19,7 @@ from pathlib import Path
 from prepare_release.errors import PrepareReleaseError
 from prepare_release.packages import Package
 
-# PEP 503 name normalization, so `nvidia_cublas_cu12` and `NVIDIA-cuBLAS-cu12` are the
-# same name to match against.
+# PEP 503 name normalization.
 _NAME_SEPARATOR_RE = re.compile(r"[-_.]+")
 
 
@@ -77,8 +76,7 @@ def assert_no_forbidden_dependencies(installed: Sequence[str], package: Package)
         PrepareReleaseError: A forbidden name is installed.
     """
     own_name = normalize_name(package.distribution)
-    # Both sides are normalized: a pattern written `opencv_python` or `NVIDIA` would
-    # otherwise never match a normalized name, and this guard would fail open.
+    # Both sides normalized, so a pattern written `opencv_python` cannot fail open.
     patterns = [normalize_name(pattern) for pattern in package.forbidden_dependencies]
     offenders = sorted(
         name

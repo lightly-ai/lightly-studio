@@ -77,8 +77,7 @@ jobs:
           ref: refs/tags/${{ inputs.tag }}
           persist-credentials: false
 
-      # The tag prefix says which package this is: `v1.2.3` is lightly-studio,
-      # every other package tags as `<distribution>/v1.2.3`.
+      # `v1.2.3` is lightly-studio; every other package tags as `<distribution>/v1.2.3`.
       - name: Resolve the package
         id: package
         run: |
@@ -127,10 +126,7 @@ jobs:
         working-directory: ${{ steps.package.outputs.directory }}
         run: make build
 
-      # Between the build and the upload, so a wheel that fails it never reaches
-      # the publish job. Only packages that declare something forbidden are
-      # resolved: installing LightlyStudio's own tree to learn it contains torch
-      # would cost minutes to confirm what its pyproject.toml already says.
+      # Before the upload, so a wheel that fails it never reaches the publish job.
       - name: Check the Wheel's Dependencies
         if: steps.package.outputs.forbidden_dependencies != ''
         working-directory: ${{ steps.package.outputs.directory }}
@@ -154,9 +150,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # What PyPI's trusted publisher checks the OIDC claim against, so only this
-    # job of this file can publish. Each package configures its own publisher
-    # against the same claim; which one is uploaded to is decided by the name in
-    # the artifact, not by the claim. `pypi` carries the approval gate and is
+    # job of this file can publish. `pypi` carries the approval gate and is
     # restricted to main; `testpypi` has neither, so a rehearsal is unattended.
     environment: ${{ inputs.target }}
     permissions:
