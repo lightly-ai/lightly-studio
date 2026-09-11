@@ -1,8 +1,7 @@
 """Recording model.
 
-A recording is the physical bag file (e.g. an ``.mcap``) that a dataset was indexed from. It is a
-dataset-scoped sidecar, not a sample or collection: it stores where the bytes are (``uri``) and
-what format they are, nothing else.
+A recording is the physical file (e.g. an ``.mcap``) that a dataset was indexed from. It stores
+where the bytes are (``uri``) and what format they are.
 """
 
 from enum import Enum
@@ -20,7 +19,7 @@ class RecordingFormat(str, Enum):
 class RecordingBase(SQLModel):
     """Shared fields for the Recording model."""
 
-    format: str
+    format: RecordingFormat
     uri: str
 
 

@@ -53,19 +53,6 @@ def test_create__empty_uri(db_session: Session, uri: str) -> None:
         )
 
 
-@pytest.mark.parametrize("format_", ["", "   "])
-def test_create__empty_format(db_session: Session, format_: str) -> None:
-    collection = create_collection(session=db_session)
-
-    with pytest.raises(ValueError, match="format_"):
-        recording_resolver.create(
-            session=db_session,
-            dataset_id=collection.dataset_id,
-            uri="/data/recording.mcap",
-            format_=format_,
-        )
-
-
 def test_create__duplicate_uri_allowed(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 
