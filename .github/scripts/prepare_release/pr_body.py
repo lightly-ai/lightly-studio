@@ -47,13 +47,18 @@ def _guards(package: Package) -> str:
 
     Keep in sync with prepare_release.yml.
     """
+    workspace = "".join(
+        f"\n- the requirement on `{name}` admits the version in the tree, and its floor is "
+        "published on PyPI,"
+        for name in package.workspace_dependencies
+    )
     return f"""\
 The workflow already checked that:
 
 - exactly `{package.changelog}`, `{package.pyproject}` and `uv.lock` changed,
 - the `uv.lock` diff is only this version bump,
 - `{package.changelog}` keeps an empty `[Unreleased]` skeleton and every earlier release is \
-byte-identical,
+byte-identical,{workspace}
 - Labelformat is pinned by version, not by git sha.
 
 What is left is editorial, and it is what this review is for."""
