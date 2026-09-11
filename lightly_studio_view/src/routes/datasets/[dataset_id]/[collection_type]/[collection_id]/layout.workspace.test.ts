@@ -216,7 +216,7 @@ function setPageRoute(routeId: string | null): void {
 beforeEach(() => {
     vi.clearAllMocks();
 
-    mockActivePanel = writable<PanelType>('none');
+    mockActivePanel = writable<PanelType>('embeddingPlot');
     mockFilterPanelCollapsed = writable(false);
 
     vi.mocked(useGlobalStorageModule.useGlobalStorage).mockReturnValue({

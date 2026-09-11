@@ -95,7 +95,7 @@ test('We can see clicked element when navigating back from details', async ({
     page,
     annotationsPage
 }) => {
-    await page.setViewportSize({ width: 800, height: 400 });
+    await page.setViewportSize({ width: 1024, height: 400 });
 
     const viewport = page.getByTestId('annotations-grid');
     await expect(viewport).toBeVisible();

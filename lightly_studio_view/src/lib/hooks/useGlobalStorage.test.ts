@@ -19,6 +19,20 @@ describe('useGlobalStorage', () => {
         storage.clearSelectedSampleAnnotationCrops(testCollectionId2);
     });
 
+    describe('Active panel', () => {
+        it('defaults to the embedding plot', () => {
+            expect(get(storage.activePanel)).toBe('embeddingPlot');
+        });
+
+        it('shares a manual close across consumers', () => {
+            storage.setActivePanel('none');
+
+            expect(get(useGlobalStorage().activePanel)).toBe('none');
+
+            storage.setActivePanel('embeddingPlot');
+        });
+    });
+
     describe('Sample selection', () => {
         it('should select a sample', () => {
             storage.toggleSampleSelection('sample1', testCollectionId);
