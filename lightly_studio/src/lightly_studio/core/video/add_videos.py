@@ -19,6 +19,7 @@ import numpy as np
 from av import FFmpegError, container
 from av.codec.context import ThreadType
 from av.container import InputContainer
+from av.packet import Packet
 from av.video.frame import VideoFrame as AVVideoFrame
 from av.video.stream import VideoStream
 from labelformat.model.instance_segmentation_track import (
@@ -71,6 +72,10 @@ SAMPLE_BATCH_SIZE = 128
 _MAX_FETCH_WORKERS = 3
 _MAX_BUFFERED_VIDEO_BYTES = 128 * 2**20
 
+# Bound the search for the rotation matrix. A decoder holds back the first packets of a
+# stream, so the first frame arrives a few packets in, or the stream cannot be decoded.
+_MAX_ROTATION_DECODE_PACKETS = 64
+
 # Video file extensions
 # These are commonly supported by PyAV/FFmpeg.
 VIDEO_EXTENSIONS = {
@@ -115,6 +120,16 @@ class _FetchedVideo:
     path: str
     content: bytes | None = None
     error: InputFileError | None = None
+
+
+@dataclass
+class _PacketFrameTiming:
+    """Frame timing read from packet headers instead of from decoded frames."""
+
+    pts_values: list[int]
+    """Presentation timestamp of every frame, in ascending (display) order."""
+    rotation_deg: int
+    """Rotation in degrees, shared by every frame of the stream."""
 
 
 def load_into_collection_from_paths(  # noqa: PLR0913
@@ -532,10 +547,12 @@ def _create_video_frame_samples(
     num_decode_threads: int | None = None,
     target_fps: float | None = None,
 ) -> list[UUID]:
-    """Create video frame samples for a video by parsing all frames.
+    """Create video frame samples for a video.
 
-    This function decodes all frames to extract metadata. When frame embedding is enabled,
-    embeddings are generated from the decoded frames in the same pass.
+    A frame row holds timing and rotation, and packet headers already carry the timing.
+    Reading the headers is roughly 20 times faster than decoding every frame, so the full
+    decode runs only when embedding needs the pixels, or when the headers of this file
+    cannot be trusted.
 
     Args:
         context: Frame extraction context (session, dataset and parent video).
@@ -549,11 +566,208 @@ def _create_video_frame_samples(
     Returns:
         A list of UUIDs of the created video frame samples.
     """
+    video_stream = video_container.streams.video[video_channel]
+    # Threading has to be set before the codec opens, and reading the rotation below
+    # opens it.
+    _configure_stream_threading(video_stream=video_stream, num_decode_threads=num_decode_threads)
+
+    if not context.embed_frames:
+        timing = _read_frame_timing_from_packets(
+            video_container=video_container, video_stream=video_stream
+        )
+        if timing is not None:
+            return _create_frame_samples_from_timing(
+                context=context,
+                video_stream=video_stream,
+                timing=timing,
+                target_fps=target_fps,
+            )
+        # Reading the headers consumed the container. Rewind so that the decode below
+        # starts from the first frame again.
+        video_container.seek(0, stream=video_stream, backward=True, any_frame=False)
+
+    return _decode_video_frame_samples(
+        context=context,
+        video_container=video_container,
+        video_stream=video_stream,
+        target_fps=target_fps,
+    )
+
+
+def _read_frame_timing_from_packets(
+    video_container: InputContainer, video_stream: VideoStream
+) -> _PacketFrameTiming | None:
+    """Read the timing of every frame from packet headers, without decoding the video.
+
+    A packet carries the presentation timestamp of its frame, so the frame rows can be
+    built from the headers alone. Rotation is the exception, and not because the format
+    hides it: the display matrix sits in the container header, and ffprobe reads it
+    without decoding. PyAV binds DISPLAYMATRIX only on a decoded frame, so the first
+    packet that yields one is decoded to read it. That frame also carries the interlacing
+    that ``_frame_count_is_trusted`` needs, which PyAV exposes nowhere else either. Both
+    properties apply to the whole stream.
+
+    Args:
+        video_container: The PyAV container with the opened video, positioned at the start.
+        video_stream: The video stream whose packets are read.
+
+    Returns:
+        The timing of every frame in display order, or None when the headers cannot be
+        trusted and the caller has to decode the video instead.
+    """
+    pts_values: list[int] = []
+    rotation_deg: int | None = None
+    interlaced = False
+    decode_attempts = 0
+
+    for packet in video_container.demux(video_stream):
+        # A demux run ends with an empty packet that flushes the decoder. It holds no
+        # frame, and it is the only packet without a timestamp in a well-formed stream.
+        if packet.size == 0:
+            continue
+        # A frame with no timestamp cannot be ordered here, nor seeked to when the GUI
+        # later serves it. Damaged and dropped packets never become frames.
+        if packet.pts is None or packet.is_corrupt or packet.is_discard:
+            return None
+        pts_values.append(packet.pts)
+        if rotation_deg is None and decode_attempts < _MAX_ROTATION_DECODE_PACKETS:
+            decode_attempts += 1
+            rotation_deg, interlaced = _read_frame_properties(packet=packet)
+
+    if rotation_deg is None or not _frame_count_is_trusted(
+        frame_count=len(pts_values), interlaced=interlaced, video_stream=video_stream
+    ):
+        return None
+
+    # Packets arrive in decode order, which places a B-frame before the frames it
+    # interpolates between. Sorting restores the display order that frame_number counts.
+    pts_values.sort()
+    return _PacketFrameTiming(pts_values=pts_values, rotation_deg=rotation_deg)
+
+
+def _read_frame_properties(packet: Packet) -> tuple[int | None, bool]:
+    """Get the rotation and the interlacing of the first frame a packet yields.
+
+    Args:
+        packet: The packet to decode.
+
+    Returns:
+        The rotation in degrees and whether the frame is interlaced, or (None, False)
+        when the packet yields no frame yet.
+    """
+    # Packets of a video stream decode into video frames, which the return type of
+    # ``decode`` does not express on its own.
+    for frame in cast("list[AVVideoFrame]", packet.decode()):
+        return _get_frame_rotation_deg(frame=frame), bool(frame.interlaced_frame)
+    return None, False
+
+
+def _frame_count_is_trusted(frame_count: int, interlaced: bool, video_stream: VideoStream) -> bool:
+    """Check whether one packet held one frame for the whole stream.
+
+    A packet is normally one frame, but interlaced content stores a frame as two fields
+    and breaks that. Where the container header declares a frame count, it confirms the
+    packet count directly. Matroska and WebM leave the count at zero, and then the
+    absence of interlacing is the only available signal.
+
+    Args:
+        frame_count: The number of frames counted from packet headers.
+        interlaced: Whether the decoded reference frame is interlaced.
+        video_stream: The video stream whose header is checked.
+
+    Returns:
+        True if the frame count can be trusted.
+    """
+    if interlaced:
+        return False
+    declared_frame_count = video_stream.frames
+    if declared_frame_count <= 0:
+        return True
+    return frame_count == declared_frame_count
+
+
+def _create_frame_samples_from_timing(
+    context: FrameExtractionContext,
+    video_stream: VideoStream,
+    timing: _PacketFrameTiming,
+    target_fps: float | None,
+) -> list[UUID]:
+    """Persist frame samples from timing that was read without decoding.
+
+    Args:
+        context: Frame extraction context (session, dataset and parent video).
+        video_stream: The video stream the timing was read from.
+        timing: The timing of every frame, in display order.
+        target_fps: Optional target frame rate for subsampling. If set and lower than the
+            source frame rate, only a subset of frames is persisted; kept frames retain
+            their original frame_number. If omitted, all frames are persisted.
+
+    Returns:
+        A list of UUIDs of the created video frame samples.
+    """
+    time_base = video_stream.time_base if video_stream.time_base else None
+    original_fps = float(video_stream.average_rate) if video_stream.average_rate else 0.0
+
+    created_sample_ids: list[UUID] = []
+    samples_to_create: list[VideoFrameCreate] = []
+    for frame_number, frame_timestamp_pts in enumerate(timing.pts_values):
+        if not _should_keep_frame(
+            decoded_index=frame_number, target_fps=target_fps, original_fps=original_fps
+        ):
+            continue
+
+        samples_to_create.append(
+            VideoFrameCreate(
+                frame_number=frame_number,
+                frame_timestamp_s=(
+                    float(frame_timestamp_pts * time_base) if time_base is not None else -1.0
+                ),
+                frame_timestamp_pts=frame_timestamp_pts,
+                parent_sample_id=context.video_sample_id,
+                rotation_deg=timing.rotation_deg,
+            )
+        )
+        if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
+            created_sample_ids.extend(
+                _flush_frame_batch(
+                    context=context, samples_to_create=samples_to_create, pil_frames=[]
+                )
+            )
+            samples_to_create = []
+
+    if samples_to_create:
+        created_sample_ids.extend(
+            _flush_frame_batch(context=context, samples_to_create=samples_to_create, pil_frames=[])
+        )
+
+    return created_sample_ids
+
+
+def _decode_video_frame_samples(
+    context: FrameExtractionContext,
+    video_container: InputContainer,
+    video_stream: VideoStream,
+    target_fps: float | None = None,
+) -> list[UUID]:
+    """Create video frame samples for a video by decoding all frames.
+
+    This function decodes all frames to extract metadata. When frame embedding is enabled,
+    embeddings are generated from the decoded frames in the same pass.
+
+    Args:
+        context: Frame extraction context (session, dataset and parent video).
+        video_container: The PyAV container with the opened video.
+        video_stream: The video stream from which frames are decoded.
+        target_fps: Optional target frame rate for subsampling. If set and lower than the
+            source frame rate, only a subset of frames is persisted; kept frames retain
+            their original frame_number. If omitted, all frames are persisted.
+
+    Returns:
+        A list of UUIDs of the created video frame samples.
+    """
     created_sample_ids: list[UUID] = []
     samples_to_create: list[VideoFrameCreate] = []
     pil_frames: list[Image.Image] = []
-    video_stream = video_container.streams.video[video_channel]
-    _configure_stream_threading(video_stream=video_stream, num_decode_threads=num_decode_threads)
 
     # Get time base for converting PTS to seconds
     time_base = video_stream.time_base if video_stream.time_base else None
@@ -645,8 +859,9 @@ def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: i
     try:
         codec_context.thread_type = ThreadType.AUTO
         codec_context.thread_count = num_decode_threads
-    except av.FFmpegError:
-        # Some codecs do not support threading—ignore silently.
+    except (av.FFmpegError, RuntimeError):
+        # Some codecs do not support threading, and an already open codec rejects the
+        # change. Neither stops the decode, so keep the single-threaded default.
         logger.warning(
             "Could not set up multithreading to decode videos, will use a single thread."
         )
