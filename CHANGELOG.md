@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add a Split dataset menu action to divide images or videos into tagged splits using the current filters.
 - Add a Glossary page to the docs.
+- Python SDK: Check a dataset's object-detection annotations for integrity problems with `dataset.validate(annotation_source)`, which returns a report of degenerate (zero or negative size) and out-of-bounds boxes.
 
 ### Changed
 
