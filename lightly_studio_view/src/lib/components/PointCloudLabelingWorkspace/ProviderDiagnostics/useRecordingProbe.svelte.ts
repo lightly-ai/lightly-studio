@@ -245,9 +245,12 @@ async function open(
     const source = await resolveMcapSource({
         sampleId,
         url,
-        // The probe assumes one frame for every recording. Confirming the real sensor
-        // convention per recording is part of resolving a source properly.
-        coordinateFrameId: 'lidar'
+        // The frame every sensor is aligned into, not the frame of any one of them: these
+        // recordings publish their lidars relative to the vehicle cabin. The reader falls
+        // back to the read channel's own frame when a recording names its vehicle frame
+        // differently, so this stays a default rather than a requirement. Confirming it
+        // per recording is part of resolving a source properly.
+        coordinateFrameId: 'CABIN'
     });
     return createRecordingSession({
         source,
