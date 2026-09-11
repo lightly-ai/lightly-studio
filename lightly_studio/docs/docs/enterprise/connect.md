@@ -16,6 +16,9 @@ admin account.
 - `lightly_studio` installed (`pip install lightly-studio`). Use exactly the same version as the
   server for best compatibility. You can check the server version in the GUI footer.
 
+For hardware guidance for the machine running the Python client, see
+[Hardware Requirements](hardware-requirements.md#python-client-requirements).
+
 ## Step 1: Get Your Connection Credentials
 
 1. Open your LightlyStudio Enterprise instance in the browser.
