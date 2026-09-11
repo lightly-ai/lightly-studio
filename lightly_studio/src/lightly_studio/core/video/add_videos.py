@@ -600,9 +600,12 @@ def _read_frame_timing_from_packets(
     """Read the timing of every frame from packet headers, without decoding the video.
 
     A packet carries the presentation timestamp of its frame, so the frame rows can be
-    built from the headers alone. Rotation is the exception: PyAV exposes DISPLAYMATRIX
-    only on a decoded frame, so the first packet that yields a frame is decoded to read
-    it. The matrix applies to the whole stream.
+    built from the headers alone. Rotation is the exception, and not because the format
+    hides it: the display matrix sits in the container header, and ffprobe reads it
+    without decoding. PyAV binds DISPLAYMATRIX only on a decoded frame, so the first
+    packet that yields one is decoded to read it. That frame also carries the interlacing
+    that ``_frame_count_is_trusted`` needs, which PyAV exposes nowhere else either. Both
+    properties apply to the whole stream.
 
     Args:
         video_container: The PyAV container with the opened video, positioned at the start.
