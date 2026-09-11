@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import numpy as np
+from lightly_studio_serve.types import EmbeddingResult
 from numpy.typing import NDArray
 from sqlmodel import Session
 from tqdm import tqdm
@@ -16,6 +17,23 @@ from lightly_studio.utils import batching
 # Number of embeddings inserted per database round-trip. Larger batches mean fewer
 # round-trips but higher peak memory. 1024 balances the two.
 EMBEDDING_INSERTION_BATCH_SIZE = 1024
+
+
+def store_embedding_result(
+    session: Session, model_id: UUID, sample_ids: list[UUID], result: EmbeddingResult
+) -> None:
+    """Validate kept input indices and store their corresponding sample embeddings."""
+    indices = result.kept_indices
+    if any(index < 0 or index >= len(sample_ids) for index in indices):
+        raise ValueError("Embedding kept indices are out of range.")
+    if any(left >= right for left, right in zip(indices, indices[1:])):
+        raise ValueError("Embedding kept indices must be strictly increasing.")
+    store_embeddings(
+        session=session,
+        model_id=model_id,
+        sample_ids=[sample_ids[index] for index in indices],
+        embeddings=result.embeddings,
+    )
 
 
 def store_embeddings(

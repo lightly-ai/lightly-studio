@@ -24,6 +24,9 @@ from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
 from lightly_studio.dataset.embedding_manager import EmbeddingManager, EmbeddingManagerProvider
+from lightly_studio.embed import embedder_registry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
@@ -570,6 +573,10 @@ def patch_collection(
         "_load_embedding_generator_from_env",
         return_value=RandomEmbeddingGenerator(),
     )
+
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder())
+    mocker.patch.object(embedder_registry, "_registry", registry)
 
     # Create test-specific lightly_studio_active_features.
     mocker.patch.object(features, "lightly_studio_active_features", [])

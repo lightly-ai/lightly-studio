@@ -51,7 +51,6 @@ def test_resolve_for_embedding__persists_bootstrap_default(
     resolved = embed_samples._resolve_for_embedding(
         session=db_session,
         collection_id=collection.collection_id,
-        capability=Capability.IMAGE_PATH,
         get_embedder=registry.get_image_path_embedder,
     )
 
@@ -85,7 +84,6 @@ def test_resolve_for_embedding__preserves_existing_default(
     resolved = embed_samples._resolve_for_embedding(
         session=db_session,
         collection_id=collection.collection_id,
-        capability=Capability.IMAGE_PATH,
         get_embedder=registry.get_image_path_embedder,
     )
 
@@ -121,7 +119,6 @@ def test_resolve_for_embedding__reloads_persisted_builtin_by_key(
     resolved = embed_samples._resolve_for_embedding(
         session=db_session,
         collection_id=collection.collection_id,
-        capability=Capability.IMAGE_PATH,
         get_embedder=registry.get_image_path_embedder,
     )
 
@@ -147,7 +144,6 @@ def test_resolve_for_embedding__custom_default_requires_reregistration(
     unavailable = embed_samples._resolve_for_embedding(
         session=db_session,
         collection_id=collection.collection_id,
-        capability=Capability.IMAGE_PATH,
         get_embedder=registry.get_image_path_embedder,
     )
     custom = _FakeImageEmbedder(space_key="custom", dimension=2)
@@ -155,7 +151,6 @@ def test_resolve_for_embedding__custom_default_requires_reregistration(
     available = embed_samples._resolve_for_embedding(
         session=db_session,
         collection_id=collection.collection_id,
-        capability=Capability.IMAGE_PATH,
         get_embedder=registry.get_image_path_embedder,
     )
 
@@ -183,7 +178,6 @@ def test_resolve_for_embedding__rejects_runtime_dimension_conflict(
         embed_samples._resolve_for_embedding(
             session=db_session,
             collection_id=collection.collection_id,
-            capability=Capability.IMAGE_PATH,
             get_embedder=registry.get_image_path_embedder,
         )
 
@@ -255,6 +249,5 @@ def test_resolve_for_embedding__rejects_dataset_model_dimension_conflict(
         embed_samples._resolve_for_embedding(
             session=db_session,
             collection_id=collection.collection_id,
-            capability=Capability.IMAGE_PATH,
             get_embedder=registry.get_image_path_embedder,
         )

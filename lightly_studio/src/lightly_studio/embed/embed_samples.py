@@ -1,12 +1,7 @@
 """Class-free interface for embedding samples and queries.
 
-Wraps the shared embedding logic behind plain module functions so callers no longer
-reach for the ``EmbeddingManager`` singleton, resolve the default model, and check it
-by hand. Each function resolves the collection's default embedding model itself.
-
-The functions currently delegate to the ``EmbeddingManager`` singleton. The internals
-will be swapped for the capability-typed ``EmbedderRegistry`` later; the function
-signatures are the stable surface callers migrate to now.
+Image ingestion uses the capability-typed registry. Other callers delegate to the
+legacy embedding manager while they are migrated.
 """
 
 from __future__ import annotations
@@ -24,11 +19,14 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManagerProvider,
     TextEmbedQuery,
 )
+from lightly_studio.embed import embedder_registry, embedding_storage
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     collection_resolver,
     embedding_model_resolver,
+    image_resolver,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,24 +72,38 @@ def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
 def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
     """Embed image samples with the collection's default model and store the result.
 
-    Does nothing (and logs a warning) if the collection has no usable default model.
+    Creates a missing default from the image-path bootstrap provider. Logs a warning
+    and skips embedding if no compatible provider is available. Invalid sample IDs
+    fail before default creation; later embedding failures leave the default persisted.
 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
         sample_ids: Image sample IDs to embed.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {collection_id} not found.")
+    if collection.sample_type != SampleType.IMAGE:
+        raise ValueError("Image embedding requires an image collection.")
+    if not sample_ids:
         return
-
-    manager.embed_images(
+    images = image_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+    if len(images) != len(sample_ids):
+        raise ValueError("Some image sample IDs were not found.")
+    if any(image.sample.collection_id != collection_id for image in images):
+        raise ValueError("Image samples must belong to the requested collection.")
+    resolved = _resolve_for_embedding(
         session=session,
         collection_id=collection_id,
-        sample_ids=sample_ids,
-        embedding_model_id=model_id,
+        get_embedder=embedder_registry.get_registry().get_image_path_embedder,
+    )
+    if resolved is None:
+        return
+    embedder, model_id = resolved
+    result = embedder.embed_images(paths=[image.file_path_abs for image in images])
+    embedding_storage.store_embedding_result(
+        session=session, model_id=model_id, sample_ids=sample_ids, result=result
     )
 
 
@@ -202,7 +214,6 @@ def collection_has_default_embedder(session: Session, collection_id: UUID) -> bo
 def _resolve_for_embedding(
     session: Session,
     collection_id: UUID,
-    capability: Capability,
     get_embedder: Callable[[str | None], _EmbedderT | None],
 ) -> tuple[_EmbedderT, UUID] | None:
     """Resolve or create the collection default for offline embedding."""
@@ -217,8 +228,7 @@ def _resolve_for_embedding(
     embedder = get_embedder(model.name)
     if embedder is None:
         logger.warning(
-            "No %s embedder for space %r. Skipping embedding generation.",
-            capability.value,
+            "No compatible embedder for space %r. Skipping embedding generation.",
             model.name,
         )
         return None
