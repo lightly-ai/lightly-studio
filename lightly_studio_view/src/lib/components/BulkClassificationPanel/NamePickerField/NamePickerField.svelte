@@ -1,6 +1,8 @@
 <script lang="ts">
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
-    import type { ListItem } from '$lib/components/SelectList/types';
+    import type { ComponentProps } from 'svelte';
+    import { SelectList } from '$lib/components/SelectList';
+
+    type ListItem = ComponentProps<typeof SelectList>['items'][number];
 
     interface Props {
         label: string;
@@ -37,7 +39,6 @@
         className="w-full"
         contentClassName="w-[var(--bits-popover-anchor-width)]"
         onSelect={handleSelect}
-        onKeyboardConfirm={handleSelect}
         {disabled}
     />
 </div>
