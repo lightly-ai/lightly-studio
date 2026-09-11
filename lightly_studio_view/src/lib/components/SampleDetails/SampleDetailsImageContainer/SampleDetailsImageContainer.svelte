@@ -25,6 +25,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
+    import { isMediaDirectUrlsEnabled, withProxyMediaMode } from '$lib/utils';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -70,6 +71,21 @@
     let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
     const { isPending, handlePendingChange } = usePendingState();
+    let displayedImageUrl = $state('');
+    let fallbackAttempted = false;
+
+    $effect(() => {
+        displayedImageUrl = imageUrl;
+        fallbackAttempted = false;
+    });
+
+    async function handleImageError() {
+        const failedUrl = displayedImageUrl;
+        if (fallbackAttempted || !(await isMediaDirectUrlsEnabled())) return;
+        if (displayedImageUrl !== failedUrl) return;
+        fallbackAttempted = true;
+        displayedImageUrl = withProxyMediaMode(failedUrl);
+    }
 
     let sampleId = $derived(sample.sampleId);
     // The local hidden set is the single source of truth for visibility on the
@@ -244,9 +260,10 @@
     {#snippet zoomableContent({ scale })}
         <foreignObject x="0" y="0" width={sample.width} height={sample.height}>
             <img
-                src={imageUrl}
+                src={displayedImageUrl}
                 alt=""
                 draggable="false"
+                onerror={handleImageError}
                 style={`height: 100%; width: 100%; filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
             />
         </foreignObject>

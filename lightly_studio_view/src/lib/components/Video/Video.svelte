@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL, PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
+    import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
-    import { getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
+    import { useRecoverableVideo } from '$lib/hooks';
+    import { getGridFrameURL, getGridThumbnailRequestSize, getVideoURLById } from '$lib/utils';
     import { findFrame } from '$lib/utils/frame';
 
     interface VideoProps {
@@ -19,6 +20,8 @@
         handleMouseLeave?: (event: MouseEvent) => void;
         onplay?: () => void;
         onseeked?: (event: Event) => void;
+        mediaSourceUrl?: string;
+        recoveryWatchdogMs?: number;
     }
 
     let {
@@ -35,21 +38,23 @@
         handleMouseEnter = () => {},
         handleMouseLeave = () => {},
         onplay = () => {},
-        onseeked = () => {}
+        onseeked = () => {},
+        mediaSourceUrl = $bindable(''),
+        recoveryWatchdogMs
     }: VideoProps = $props();
 
     let previousIndex: number | null = null;
     let frameRequestId: number | null = null;
     let previousVideoSampleId: string | null = null;
-    let sourceLoadError = $state<string | null>(null);
+    const recovery = useRecoverableVideo({
+        getVideoEl: () => videoEl,
+        getSourceUrl: () => getVideoURLById(video.sample_id),
+        getWatchdogMs: () => recoveryWatchdogMs
+    });
 
-    // HTMLMediaElement.error.code values.
-    const MEDIA_ERROR_MESSAGES: Record<number, string> = {
-        1: 'Video loading was canceled.',
-        2: 'Network error while loading the video.',
-        3: 'Video decoding failed.',
-        4: 'Video source is unavailable or unsupported.'
-    };
+    $effect(() => {
+        mediaSourceUrl = recovery.sourceUrl;
+    });
     const posterUrl = $derived.by(() => {
         if (frames.length === 0) {
             return null;
@@ -100,19 +105,6 @@
         }
     }
 
-    function handleVideoError() {
-        clearFrameLoop();
-        previousIndex = null;
-        const errorCode = videoEl?.error?.code;
-        sourceLoadError =
-            (errorCode != null ? MEDIA_ERROR_MESSAGES[errorCode] : null) ??
-            'Failed to load video source.';
-    }
-
-    function handleVideoLoadedData() {
-        sourceLoadError = null;
-    }
-
     $effect(() => {
         if (!videoEl) return;
 
@@ -125,8 +117,6 @@
             videoEl.load();
         }
 
-        sourceLoadError = null;
-        videoEl.src = `${PUBLIC_VIDEOS_MEDIA_URL}/${currentVideoSampleId}`;
         previousVideoSampleId = currentVideoSampleId;
         startFrameLoop();
 
@@ -143,22 +133,21 @@
         {playsinline}
         {preload}
         {controls}
+        src={recovery.sourceUrl}
         class={className}
         onmouseenter={handleMouseEnter}
         onmouseleave={handleMouseLeave}
         {onplay}
         {onseeked}
-        onerror={handleVideoError}
-        onloadeddata={handleVideoLoadedData}
         poster={posterUrl}
     ></video>
-    {#if sourceLoadError}
+    {#if recovery.terminalError}
         <div
             role="status"
             aria-live="polite"
             class="absolute inset-0 z-[10] flex items-center justify-center bg-black/70 p-2 text-center text-xs font-medium text-white"
         >
-            {sourceLoadError}
+            {recovery.terminalError}
         </div>
     {/if}
 </div>

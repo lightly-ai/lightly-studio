@@ -100,6 +100,7 @@
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
+    import { withProxyMediaMode } from '$lib/utils';
     const { data, children } = $props();
     const {
         collection,
@@ -229,7 +230,7 @@
                 return;
             }
 
-            const response = await fetch(url);
+            const response = await fetch(withProxyMediaMode(url));
             if (!response.ok) {
                 throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
             }

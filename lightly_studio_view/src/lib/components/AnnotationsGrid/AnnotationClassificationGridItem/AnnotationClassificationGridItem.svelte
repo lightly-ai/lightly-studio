@@ -5,6 +5,7 @@
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import { getThumbnailUrl, getSampleDimensions } from './getThumbnailData';
     import type { CropWindow } from '../AnnotationItem/renderCropObjectUrl';
+    import { resolveImageMediaSource } from '$lib/utils';
 
     interface Props {
         /** The classification annotation with its parent sample data. */
@@ -47,6 +48,18 @@
     );
 
     const sampleDimensions = $derived(getSampleDimensions(annotation));
+    let backgroundUrl = $state('');
+    const backgroundImage = $derived(backgroundUrl ? `url("${backgroundUrl}")` : 'none');
+
+    $effect(() => {
+        const sourceUrl = thumbnailUrl;
+        const controller = new AbortController();
+        backgroundUrl = '';
+        void resolveImageMediaSource(sourceUrl, controller.signal).then((resolvedUrl) => {
+            if (!controller.signal.aborted) backgroundUrl = resolvedUrl ?? '';
+        });
+        return () => controller.abort();
+    });
 
     // Emit a full-image CropWindow so classification tiles participate in drag-to-search.
     // windowX/Y=0 covers the entire sample — there is no bounding box to crop for classification.
@@ -69,7 +82,7 @@
     class="relative overflow-hidden rounded-lg bg-black"
     class:grid-item-selected={selected}
     aria-selected={selected}
-    style="width: {containerWidth}px; height: {containerHeight}px; background-image: url('{thumbnailUrl}'); background-size: cover; background-position: center;"
+    style="width: {containerWidth}px; height: {containerHeight}px; background-image: {backgroundImage}; background-size: cover; background-position: center;"
 >
     <SampleClassificationPills sample={{ annotations: [annotation.annotation] }} showAllSources />
 </div>

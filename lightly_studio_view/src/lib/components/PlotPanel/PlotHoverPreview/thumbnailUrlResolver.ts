@@ -41,7 +41,7 @@ async function getAnnotationThumbnail(
     }
     return {
         // Crop coordinates use the original sample resolution, so load the raw image.
-        url: getImageThumbnailURL(data.parent_sample_id, 'raw', cacheBuster),
+        url: getImageThumbnailURL(data.parent_sample_id, 'raw', cacheBuster, 'proxy'),
         annotation: data
     };
 }
@@ -49,14 +49,16 @@ async function getAnnotationThumbnail(
 function getImageThumbnailURL(
     sampleId: string,
     quality: 'raw' | 'high',
-    cacheBuster?: string
+    cacheBuster?: string,
+    mode?: 'proxy'
 ): string {
     return getGridImageURL({
         sampleId,
         quality,
         renderedWidth: THUMBNAIL_SIZE,
         renderedHeight: THUMBNAIL_SIZE,
-        cacheBuster
+        cacheBuster,
+        mode
     });
 }
 

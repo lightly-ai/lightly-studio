@@ -1,6 +1,5 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import {
         getAllFrames,
         type FrameView,
@@ -31,6 +30,7 @@
     } = $props();
 
     let videoEl: HTMLVideoElement | null = $state(null);
+    let mediaSourceUrl = $state('');
 
     let currentFrame: FrameView | null = $state(null);
 
@@ -51,7 +51,7 @@
 
             if (videoEl) {
                 if (!videoEl.getAttribute('src')) {
-                    videoEl.src = `${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`;
+                    videoEl.src = mediaSourceUrl;
                 }
 
                 if (videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -160,6 +160,7 @@
 >
     <Video
         bind:videoEl
+        bind:mediaSourceUrl
         {video}
         {frames}
         update={onUpdate}

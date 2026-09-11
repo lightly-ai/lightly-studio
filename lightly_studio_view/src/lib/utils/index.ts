@@ -16,6 +16,12 @@ export { isImageView } from './isImageView/isImageView';
 export { isVideoView } from './isVideoView/isVideoView';
 export { getImageURL as getImageURLById } from './getImageURL';
 export {
+    isMediaDirectUrlsEnabled,
+    MEDIA_RECOVERY_WATCHDOG_MS,
+    resolveImageMediaSource,
+    withProxyMediaMode
+} from './mediaRecovery';
+export {
     getGridFrameURL,
     getGridImageURL,
     getGridThumbnailRequestSize,

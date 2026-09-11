@@ -86,8 +86,8 @@
         {:else}
             <GroupComponent
                 src={utils.isImageView(component.details)
-                    ? utils.getImageURLById(component.details.sample_id)
-                    : utils.getVideoURLById(component.details.sample_id)}
+                    ? utils.getImageURLById(component.details.sample_id, { mode: 'proxy' })
+                    : utils.getVideoURLById(component.details.sample_id, { mode: 'proxy' })}
                 type={utils.isImageView(component.details) ? 'image' : 'video'}
                 title={component.collection.group_component_name}
             />
