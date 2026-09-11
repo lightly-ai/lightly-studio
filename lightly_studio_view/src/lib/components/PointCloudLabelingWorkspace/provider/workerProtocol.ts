@@ -6,7 +6,7 @@ import type { ProviderError } from './providerError';
 type Session = Awaited<ReturnType<typeof openMcap>>;
 export type WorkerCommand =
     | { kind: 'open'; source: McapSource }
-    | { kind: 'frame'; locator: FrameLocator; pointBudget: number }
+    | { kind: 'frame'; locator: FrameLocator; pointBudget: number; fuseChannels?: boolean }
     | { kind: 'range'; channelId: number; startTimeNs: string; endTimeNs: string; limit: number };
 
 export interface WorkerRequest {

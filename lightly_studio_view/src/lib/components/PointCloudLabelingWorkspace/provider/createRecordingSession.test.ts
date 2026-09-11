@@ -127,7 +127,21 @@ describe('createRecordingSession', () => {
         expect(task.commands.at(-2)?.command).toEqual({
             kind: 'frame',
             locator: { channelId: 1, logTimeNs: '100', occurrence: 0 },
-            pointBudget: 350_000
+            pointBudget: 350_000,
+            fuseChannels: true
+        });
+    });
+
+    it('asks for the read channel alone when a caller wants a cheap frame', async () => {
+        const task = setup();
+        const session = await task.open();
+
+        await session.readFrame(locator, { pointBudget: 1000, fuseChannels: false });
+
+        expect(task.commands.at(-1)?.command).toMatchObject({
+            kind: 'frame',
+            pointBudget: 1000,
+            fuseChannels: false
         });
     });
 

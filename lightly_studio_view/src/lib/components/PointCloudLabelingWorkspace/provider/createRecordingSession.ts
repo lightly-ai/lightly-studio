@@ -65,7 +65,15 @@ export interface RecordingSession {
     listFrames(range: FrameRange, signal?: AbortSignal): Promise<readonly FrameLocator[]>;
     readFrame(
         locator: FrameLocator,
-        options?: { pointBudget?: number },
+        options?: {
+            pointBudget?: number;
+            /**
+             * False reads only the channel the locator names, leaving the other sensors out.
+             * A cheap frame for a first paint: it costs one channel's bytes rather than
+             * every channel's, and is placed in the same coordinate frame as the full one.
+             */
+            fuseChannels?: boolean;
+        },
         signal?: AbortSignal
     ): Promise<PointCloudFrame>;
     dispose(): void;
@@ -152,7 +160,12 @@ export async function createRecordingSession(options: SessionOptions): Promise<R
                 enqueue(async (current) => {
                     const pointBudget = frameOptions?.pointBudget ?? DEFAULT_POINT_BUDGET;
                     const result = await request(
-                        { kind: 'frame', locator: plain(locator), pointBudget },
+                        {
+                            kind: 'frame',
+                            locator: plain(locator),
+                            pointBudget,
+                            fuseChannels: frameOptions?.fuseChannels ?? true
+                        },
                         'decode',
                         current
                     );

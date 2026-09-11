@@ -80,7 +80,7 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
     /** Read at most once per recording: extrinsics are static, and every frame needs them. */
     let publishedTransforms: Promise<TransformGraph> | undefined;
 
-    async function loadFrame(locator: FrameLocator, pointBudget: number) {
+    async function loadFrame(locator: FrameLocator, pointBudget: number, fuseChannels = true) {
         validateLocator(locator);
         const channel = reader.channelsById.get(locator.channelId);
         const schema = channel && reader.schemasById.get(channel.schemaId);
@@ -100,7 +100,7 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
             signal.throwIfAborted();
             if (message.channelId !== locator.channelId || occurrence++ !== locator.occurrence)
                 continue;
-            return fuseFrame(channel, message, locator, pointBudget);
+            return fuseFrame(channel, message, locator, pointBudget, fuseChannels);
         }
         throw new ProviderError(
             'source',
@@ -115,16 +115,25 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
      * is listed on leaves everything the other sensors saw empty. The anchor message still
      * decides the frame's identity, timestamp and stream, which keeps listing, navigation
      * and annotation identity unchanged by what is fused into it.
+     *
+     * `fuseChannels` false reads the anchor alone, for a caller that wants something on the
+     * screen before the rest of the sensors have been read. It is still placed into the same
+     * target frame, so the fuller frame that replaces it lands on top of it rather than
+     * somewhere else.
      */
     async function fuseFrame(
         channel: Channel,
         message: TypedMcapRecords['Message'],
         locator: FrameLocator,
-        pointBudget: number
+        pointBudget: number,
+        fuseChannels: boolean
     ) {
-        const budget = Math.max(1, Math.floor(pointBudget / lidarChannels.length));
+        const channelCount = fuseChannels ? lidarChannels.length : 1;
+        const budget = Math.max(1, Math.floor(pointBudget / channelCount));
         const anchor = decodeCloud(channel, message.data, budget);
-        const siblings = await readSiblings(channel.id, message.logTime, budget);
+        const siblings = fuseChannels
+            ? await readSiblings(channel.id, message.logTime, budget)
+            : [];
         const { targetFrameId, transforms } = await alignment(anchor.frameId);
         const fused = fuseClouds([anchor, ...siblings], transforms);
         return {

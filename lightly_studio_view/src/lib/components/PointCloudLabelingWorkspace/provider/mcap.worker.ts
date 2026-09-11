@@ -18,7 +18,11 @@ async function runCommand(command: WorkerCommand, result: WorkerResult): Promise
     }
     if (!session) throw new ProviderError('source', 'Open a recording before requesting frames.');
     if (command.kind === 'frame') {
-        result.frame = await session.loadFrame(command.locator, command.pointBudget);
+        result.frame = await session.loadFrame(
+            command.locator,
+            command.pointBudget,
+            command.fuseChannels ?? true
+        );
         return;
     }
     result.range = await session.listFrames(

@@ -24,6 +24,17 @@ const INITIAL_FRAMES = 1;
  */
 const FRAME_GC_TIME_MS = 60_000;
 const TELEMETRY_LIMIT = 8;
+/**
+ * Points the opening frame is drawn from, from the read channel alone.
+ *
+ * Opening a recording waits on bytes, not on arithmetic: a frame's chunk has to come over
+ * the wire before anything can be drawn, and a fused frame waits for one chunk per sensor.
+ * This first read asks for one sensor and a fraction of its points, which is enough to see
+ * the scene; the full frame replaces it in place, in the same coordinate frame, as soon as
+ * it arrives. Only the opening frame is read this way -- stepping goes straight to the
+ * full one, which the prefetch behind the viewer has usually warmed already.
+ */
+const PREVIEW_POINT_BUDGET = 25_000;
 
 export interface ProbeRecording {
     sizeBytes: string;
@@ -66,6 +77,8 @@ export function useRecordingProbe(sampleId: () => string) {
     let discovered = $state.raw<FrameLocator[]>([]);
     /** Set once a listing past the last known frame comes back empty. */
     let exhausted = $state(false);
+    /** Cleared by the first full frame: the cheap read is for the opening wait only. */
+    let awaitingFirstFrame = $state(true);
 
     const log = (message: string, detail?: unknown) =>
         console.info(`[mcap-provider] ${message}`, detail ?? '');
@@ -90,6 +103,7 @@ export function useRecordingProbe(sampleId: () => string) {
         index = 0;
         discovered = [];
         exhausted = false;
+        awaitingFirstFrame = true;
         failure = undefined;
         failureDetail = undefined;
         telemetry = [];
@@ -135,10 +149,25 @@ export function useRecordingProbe(sampleId: () => string) {
     const frames = $derived<readonly FrameLocator[]>([...(firstQuery.data ?? []), ...discovered]);
     const locator = $derived(frames[index]);
 
+    const previewQuery = createQuery(() => ({
+        ...frameOptions(session, locator, true),
+        enabled: session !== undefined && locator !== undefined && awaitingFirstFrame
+    }));
+
     const frameQuery = createQuery(() => ({
         ...frameOptions(session, locator),
-        enabled: session !== undefined && locator !== undefined
+        // Held back until the preview has been asked for. The session runs one command at a
+        // time in call order, so without this the full read takes the worker first and the
+        // cheap one arrives behind it, which is the wait it exists to fill.
+        enabled:
+            session !== undefined &&
+            locator !== undefined &&
+            (!awaitingFirstFrame || previewQuery.isFetched)
     }));
+
+    $effect(() => {
+        if (frameQuery.data) awaitingFirstFrame = false;
+    });
 
     /**
      * Makes sure a frame after the current one is known, listing one more if not.
@@ -179,7 +208,11 @@ export function useRecordingProbe(sampleId: () => string) {
         });
     });
 
-    function frameOptions(current: RecordingSession | undefined, at: FrameLocator | undefined) {
+    function frameOptions(
+        current: RecordingSession | undefined,
+        at: FrameLocator | undefined,
+        preview = false
+    ) {
         return {
             queryKey: [
                 'mcap-frame',
@@ -187,9 +220,15 @@ export function useRecordingProbe(sampleId: () => string) {
                 current?.source.version,
                 at?.channelId,
                 at?.logTimeNs,
-                at?.occurrence
+                at?.occurrence,
+                preview
             ],
-            queryFn: ({ signal }: { signal: AbortSignal }) => current!.readFrame(at!, {}, signal),
+            queryFn: ({ signal }: { signal: AbortSignal }) =>
+                current!.readFrame(
+                    at!,
+                    preview ? { pointBudget: PREVIEW_POINT_BUDGET, fuseChannels: false } : {},
+                    signal
+                ),
             gcTime: FRAME_GC_TIME_MS,
             staleTime: Infinity
         };
@@ -221,10 +260,11 @@ export function useRecordingProbe(sampleId: () => string) {
             return index;
         },
         get frame() {
-            return frameQuery.data;
+            return frameQuery.data ?? previewQuery.data;
         },
         get isLoading() {
-            return firstQuery.isPending || frameQuery.isFetching;
+            // A drawn preview is still a frame in progress: the full one is what settles it.
+            return firstQuery.isPending || frameQuery.isFetching || previewQuery.isFetching;
         },
         previous() {
             if (index > 0) index -= 1;

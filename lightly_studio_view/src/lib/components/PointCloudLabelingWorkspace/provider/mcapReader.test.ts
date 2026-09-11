@@ -253,6 +253,38 @@ describe('openMcap with several lidar channels', () => {
         expect(frame.positions.length).toBe(6);
     });
 
+    it('reads the anchor channel alone when asked not to fuse', async () => {
+        const { session, channelId, timestamp } = await fusedSession();
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+
+        const frame = createPointCloudFrame(await session.loadFrame(range.frames[0], 10, false));
+
+        // The read channel's point only, still placed in the frame the full read uses, so
+        // the fuller frame lands on top of this one rather than somewhere else.
+        expect([...frame.positions.copy()]).toEqual([1, 2, 3]);
+        expect(frame.coordinateFrame.id).toBe('CABIN');
+        expect(frame.sourcePointCount).toBe(1);
+    });
+
+    it('spends the whole budget on the anchor when it is the only channel read', async () => {
+        const { session, channelId, timestamp } = await fusedSession();
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+
+        // A budget of one point is a point per channel when fusing, and one point in total
+        // when not: either way the anchor keeps its point.
+        const frame = await session.loadFrame(range.frames[0], 1, false);
+
+        expect(frame.positions.length).toBe(3);
+    });
+
     it('refuses to align lidars a recording gives no transforms for', async () => {
         const { bytes, channelId, timestamp } = await mcapFixture({
             fused: true,
