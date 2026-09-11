@@ -176,7 +176,18 @@ matrix = evaluator.confusion_matrix(run_id=runs[0].id)
 print(matrix.row_labels, matrix.col_labels, matrix.counts)
 ```
 
-`confusion_matrix()` supports object-detection and classification runs. It does not support
-segmentation runs.
+Use `metrics()` to get aggregate metrics of a run. It returns per-class and micro-averaged
+precision, recall, and F1, plus accuracy for classification runs. The metrics are derived from the
+run's confusion matrix.
+
+```python
+metrics = evaluator.metrics(run_id=runs[0].id)
+print(metrics.precision, metrics.recall, metrics.f1, metrics.accuracy)
+for entry in metrics.per_class:
+    print(entry.label, entry.precision, entry.recall, entry.f1, entry.support)
+```
+
+`confusion_matrix()` and `metrics()` support object-detection and classification runs. They do not
+support segmentation runs.
 
 See [Evaluation API Reference](../api/evaluation.md) for the full API surface.
