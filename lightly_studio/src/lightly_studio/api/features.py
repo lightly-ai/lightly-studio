@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_ANALYTICS_ENABLED
+from lightly_studio.dataset.env import (
+    LIGHTLY_STUDIO_ANALYTICS_ENABLED,
+    LIGHTLY_STUDIO_MEDIA_DIRECT_URLS,
+)
 
 # The GUI reads this back to decide whether to start PostHog, so that
 # LIGHTLY_STUDIO_ANALYTICS_ENABLED switches off tracking on both sides.
 ANALYTICS_FEATURE = "analytics"
+MEDIA_DIRECT_URLS_FEATURE = "media-direct-urls"
 
 
 def _get_active_features() -> list[str]:
@@ -14,6 +18,8 @@ def _get_active_features() -> list[str]:
     features = []
     if LIGHTLY_STUDIO_ANALYTICS_ENABLED:
         features.append(ANALYTICS_FEATURE)
+    if LIGHTLY_STUDIO_MEDIA_DIRECT_URLS:
+        features.append(MEDIA_DIRECT_URLS_FEATURE)
     return features
 
 
