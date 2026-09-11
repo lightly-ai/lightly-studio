@@ -47,18 +47,18 @@ See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
 
 ### EmbeddingSpaceSpec
 
-::: lightly_studio_embed.types
+::: lightly_studio_serve.types
     options:
         members: [EmbeddingSpaceSpec]
 
 ### EmbeddingResult
 
-::: lightly_studio_embed.types
+::: lightly_studio_serve.types
     options:
         members: [EmbeddingResult]
 
 ### ImageCrop
 
-::: lightly_studio_embed.types
+::: lightly_studio_serve.types
     options:
         members: [ImageCrop]

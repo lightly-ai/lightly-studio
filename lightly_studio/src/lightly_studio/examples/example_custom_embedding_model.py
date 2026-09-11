@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from environs import Env
-from lightly_studio_embed.types import EmbeddingResult
+from lightly_studio_serve.types import EmbeddingResult
 from numpy.typing import NDArray
 from PIL import Image
 

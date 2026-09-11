@@ -49,7 +49,12 @@ from lightly_studio.models.group_component_definition import (
 )
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
@@ -120,6 +125,9 @@ def delete_dataset(
 
     # 4. Sample type tables.
     _delete_groups(session=session, dataset_id=dataset_id)
+    # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable) and
+    # recordings, deleted in step 5 (McapGroupSequenceTable.recording_id -> RecordingTable).
+    _delete_mcap_group_sequences(session=session, dataset_id=dataset_id)
     _delete_sequences(session=session, dataset_id=dataset_id)
     _delete_videos(session=session, dataset_id=dataset_id)
     _delete_images(session=session, dataset_id=dataset_id)
@@ -127,6 +135,7 @@ def delete_dataset(
 
     # 5. Samples and collection/dataset-scoped entities.
     _delete_samples(session=session, dataset_id=dataset_id)
+    _delete_recordings(session=session, dataset_id=dataset_id)
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
     # Must precede embedding_model and collections (FKs to both, deleted below and in step 6).
@@ -136,6 +145,8 @@ def delete_dataset(
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
     _delete_export_jobs(session=session, dataset_id=dataset_id)
     # Must precede collections (FK to collection, deleted in step 6).
+    # MCAP extension first: FK to group_component_definition.
+    _delete_mcap_group_component_definitions(session=session, dataset_id=dataset_id)
     _delete_group_component_definitions(session=session, dataset_id=dataset_id)
 
     # 6. Collections (single statement; self-FK satisfied at statement end).
@@ -263,6 +274,14 @@ def _delete_annotation_collection_coverage(session: Session, dataset_id: UUID) -
     )
 
 
+def _delete_recordings(session: Session, dataset_id: UUID) -> None:
+    """Delete recordings for the given dataset."""
+    session.exec(
+        delete(RecordingTable).where(col(RecordingTable.dataset_id) == dataset_id),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
 def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
     """Delete object tracks for the given dataset."""
     session.exec(
@@ -295,6 +314,16 @@ def _delete_groups(session: Session, dataset_id: UUID) -> None:
     """Delete group records for the dataset's samples."""
     session.exec(
         delete(GroupTable).where(col(GroupTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcap_group_sequences(session: Session, dataset_id: UUID) -> None:
+    """Delete MCAP group sequence rows for the dataset's sequences."""
+    session.exec(
+        delete(McapGroupSequenceTable).where(
+            col(McapGroupSequenceTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
@@ -364,6 +393,18 @@ def _delete_collection_embedding_models(session: Session, dataset_id: UUID) -> N
     session.exec(
         delete(CollectionEmbeddingModelTable).where(
             col(CollectionEmbeddingModelTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcap_group_component_definitions(session: Session, dataset_id: UUID) -> None:
+    """Delete MCAP group component definitions for the dataset's collections."""
+    session.exec(
+        delete(McapGroupComponentDefinitionTable).where(
+            col(McapGroupComponentDefinitionTable.collection_id).in_(
                 _collection_ids_subquery(dataset_id)
             )
         ),

@@ -14,8 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Reduce grid-view overscan prefetching for videos and frames from 20 additional rows to 2, lowering initial frontend load by avoiding unnecessary backend-rendered videos.
+- Increase max_concurrency of requests to the backend from 100 to 128 to reduce chance of seeing 503 errors in the frontend.
 - Improved metadata loading by reducing latency by up to 70% and increasing throughput by up to 4× under concurrent requests.
 - Speed up distribution plot tag comparisons by up to 4.9x by requesting and calculating only the metadata field being viewed.
+- Speed up Python SDK iteration and sampling setup with remote databases by avoiding an extra database query for each sample.
 - Improved categorical metadata loading performance, reducing database work and page-load latency for large datasets.
 - Improved metadata loading by reducing numeric database queries from 13 to 8 and making responses up to 25% faster.
 - Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.

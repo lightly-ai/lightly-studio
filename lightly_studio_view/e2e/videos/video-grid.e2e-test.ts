@@ -1,4 +1,4 @@
-import { test, expect, pressButton, isInViewport } from '../utils';
+import { test, expect, pressButton, isInViewport, scrollDownToGridItem } from '../utils';
 import { youtubeVisVideosDataset } from './fixtures/youtubeVisVideosDataset';
 
 test.describe('videos-page-flow', () => {
@@ -32,13 +32,10 @@ test.describe('videos-page-flow', () => {
         // Wait for the API response
         await responsePromise;
 
-        // Wait a bit for the grid to update
-        await page.waitForTimeout(100);
-
-        // Check that all videos are loaded
-        await expect(videosPage.getVideos()).toHaveCount(youtubeVisVideosDataset.totalSamples, {
-            timeout: 10000
-        });
+        // Verify the next page is rendered without requiring off-screen tiles to stay mounted.
+        await expect(
+            videosPage.getVideoByIndex(youtubeVisVideosDataset.defaultPageSize)
+        ).toBeAttached();
     });
 
     test('selection is cleared when switching from videos view and back', async ({
@@ -219,7 +216,7 @@ test('We can see clicked element when navigating back from details', async ({
         })
     ).toBe(false);
 
-    await videosPage.getVideoByIndex(30).scrollIntoViewIfNeeded();
+    await scrollDownToGridItem(viewport, videosPage.getVideoByIndex(30));
 
     expect(
         await isInViewport({

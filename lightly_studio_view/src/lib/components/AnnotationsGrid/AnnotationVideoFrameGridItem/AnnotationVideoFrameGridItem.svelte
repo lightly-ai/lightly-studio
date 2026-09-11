@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { AnnotationView, VideoFrameAnnotationView } from '$lib/api/lightly_studio_local';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import { getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
     import AnnotationItem from '../AnnotationItem/AnnotationItem.svelte';
@@ -42,3 +43,5 @@
 </script>
 
 <AnnotationItem {annotation} {containerHeight} {sample} {containerWidth} {showLabel} {selected} />
+<!-- No `hasBottomOverlay`: the annotation class label sits on the bounding box, not the tile's bottom edge. -->
+<SampleValueBadge orderValue={annotation.order_value} />
