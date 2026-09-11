@@ -50,10 +50,11 @@ export function addCuboidSelectionListeners({
         });
     }
 
+    const target = canvas.parentElement ?? canvas;
     window.addEventListener('keydown', onKeyDown);
-    canvas.addEventListener('click', onClick);
+    target.addEventListener('click', onClick);
     return () => {
         window.removeEventListener('keydown', onKeyDown);
-        canvas.removeEventListener('click', onClick);
+        target.removeEventListener('click', onClick);
     };
 }

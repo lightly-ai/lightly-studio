@@ -12,6 +12,7 @@
         CuboidHandle,
         WorkspaceTool
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { CuboidCreationConfig } from '../CuboidLayer/cuboidCreation';
 
     /** Composes the shared Threlte scene from the point cloud and annotation layers. */
     interface Props {
@@ -35,6 +36,8 @@
         hoveredAnnotationId?: string | null;
         /** Tool that determines whether cuboids can be selected. */
         activeTool?: WorkspaceTool;
+        /** Optional configuration for creating cuboids in the active frame. */
+        creation?: CuboidCreationConfig;
         /** Fires when the user selects or deselects a cuboid. */
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
@@ -61,18 +64,24 @@
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
+        creation,
         onselect,
         onhover,
         oncuboidupdate
     }: Props = $props();
 
     let orbitControlsRef = $state<ThreeOrbitControls | undefined>();
-
 </script>
 
 <div class="h-full w-full" data-testid="workspace-scene-viewport">
     <Canvas>
-        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} bind:controlsRef={orbitControlsRef} />
+        <PointCloudScene
+            {batch}
+            {colorMode}
+            {pointSize}
+            {intensityRange}
+            bind:controlsRef={orbitControlsRef}
+        />
         <CuboidLayer
             {cuboids}
             {annotationClasses}
@@ -81,6 +90,7 @@
             {hoveredAnnotationId}
             {activeTool}
             orbitControls={orbitControlsRef}
+            {creation}
             {onselect}
             {onhover}
             {oncuboidupdate}

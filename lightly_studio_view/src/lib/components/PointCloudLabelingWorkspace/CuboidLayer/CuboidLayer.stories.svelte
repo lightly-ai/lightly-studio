@@ -7,8 +7,10 @@
         createAnnotationFixture,
         createCuboidAnnotation
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import * as THREE from 'three';
     import { writable } from 'svelte/store';
     import CuboidLayer from './CuboidLayer.svelte';
+    import CuboidCreationStory from './CuboidCreationStory.svelte';
 
     const classes = [
         { id: 'vehicle', name: 'Vehicle', color: '#3b82f6' },
@@ -93,7 +95,6 @@
 
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/CuboidLayer',
-        component: CuboidLayer,
         tags: ['autodocs'],
         parameters: { layout: 'fullscreen' },
         args: {
@@ -107,8 +108,17 @@
 </script>
 
 <script lang="ts">
+    import { onMount } from 'svelte';
     /** Orbit controls ref for the resize story — wired to CuboidLayer for suppression during drag. */
     let resizeOrbitRef = $state<ThreeOrbitControls | undefined>();
+
+    onMount(() => {
+        function onWindowClick(e: MouseEvent) {
+            console.log('[story] window click', e.target);
+        }
+        window.addEventListener('click', onWindowClick);
+        return () => window.removeEventListener('click', onWindowClick);
+    });
 </script>
 
 {#snippet scene(args)}
@@ -128,7 +138,9 @@
 {#snippet translateScene()}
     {@const c = $translateState.cuboids[0].center}
     <div class="relative h-screen w-screen bg-black">
-        <div class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white">
+        <div
+            class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white"
+        >
             <p class="mb-1 font-semibold text-white/60">Centre (drag to update)</p>
             <p>X: {c[0].toFixed(2)} &nbsp; Y: {c[1].toFixed(2)} &nbsp; Z: {c[2].toFixed(2)}</p>
         </div>
@@ -160,9 +172,15 @@
 {#snippet rotateScene()}
     {@const [qx, qy, qz, qw] = $rotateState.cuboids[0].rotation}
     <div class="relative h-screen w-screen bg-black">
-        <div class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white">
+        <div
+            class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white"
+        >
             <p class="mb-1 font-semibold text-white/60">Rotation (drag rings to update)</p>
-            <p>X: {qx.toFixed(3)} &nbsp; Y: {qy.toFixed(3)} &nbsp; Z: {qz.toFixed(3)} &nbsp; W: {qw.toFixed(3)}</p>
+            <p>
+                X: {qx.toFixed(3)} &nbsp; Y: {qy.toFixed(3)} &nbsp; Z: {qz.toFixed(3)} &nbsp; W: {qw.toFixed(
+                    3
+                )}
+            </p>
         </div>
         <Canvas>
             <T.Color attach="background" args={['#10141c']} />
@@ -243,7 +261,9 @@
 {#snippet resizeScene()}
     {@const [sx, sy, sz] = $resizeState.cuboids[0].size}
     <div class="relative h-screen w-screen bg-black">
-        <div class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white">
+        <div
+            class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white"
+        >
             <p class="mb-1 font-semibold text-white/60">Size (drag faces to resize)</p>
             <p>X: {sx.toFixed(2)} &nbsp; Y: {sy.toFixed(2)} &nbsp; Z: {sz.toFixed(2)} m</p>
         </div>
@@ -296,3 +316,16 @@
     }}
     template={resizeScene}
 />
+
+<Story
+    name="Create cuboid (interactive)"
+    parameters={{
+        docs: {
+            description: {
+                story: 'Click anywhere on the ground plane to place a new Vehicle cuboid at that position. The HUD shows the count and last placed centre coordinates.'
+            }
+        }
+    }}
+>
+    <CuboidCreationStory />
+</Story>

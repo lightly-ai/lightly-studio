@@ -1,129 +1,72 @@
 <script lang="ts">
-    import { T, useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
     import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
-    import CuboidGizmo from './CuboidGizmo.svelte';
-    import CuboidResizeGizmo from './CuboidResizeGizmo.svelte';
-    import CuboidTooltip from './CuboidTooltip/CuboidTooltip.svelte';
-    import CuboidVisual from './CuboidVisual.svelte';
-    import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
+    import CuboidInteractionListeners from './CuboidInteractionListeners.svelte';
+    import CuboidLayerItem from './CuboidLayerItem.svelte';
+    import type { CuboidCreationConfig } from './cuboidCreation';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
-    import { addCuboidSelectionListeners } from './cuboidSelection';
 
     interactivity();
 
-    /** Renders cuboid annotations with selection, hover highlights, and manipulation handles. */
     interface Props {
-        /** Cuboids to render in the active point-cloud frame. */
         cuboids: readonly Domain.CuboidAnnotation[];
-        /** Annotation classes used to resolve each cuboid's display color. */
         annotationClasses: readonly Domain.AnnotationClass[];
-        /** Identity of the currently selected cuboid, or null. */
-        selectedAnnotationId?: string | null;
-        /** Identity of the currently hovered cuboid, or null. */
-        hoveredAnnotationId?: string | null;
-        /** Tool that determines whether cuboids can be selected. */
-        activeTool?: Domain.WorkspaceTool;
-        /** Bounds of the point cloud containing the cuboids. */
         pointCloudBounds: Domain.Bounds3;
-        /** OrbitControls reference suppressed during resize drags. */
+        selectedAnnotationId?: string | null;
+        hoveredAnnotationId?: string | null;
+        activeTool?: Domain.WorkspaceTool;
         orbitControls?: ThreeOrbitControls;
-        /** Fires when the user selects or deselects a cuboid. */
+        creation?: CuboidCreationConfig;
         onselect?: (annotationId: string | null) => void;
-        /** Fires when the pointer enters or leaves a cuboid. */
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
-        /** Fires when a drag ends with the updated cuboid geometry. */
         oncuboidupdate?: (cuboid: Domain.CuboidAnnotation) => void;
     }
 
     let {
         cuboids,
         annotationClasses,
+        pointCloudBounds,
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
         orbitControls,
+        creation,
         onselect,
         onhover,
         oncuboidupdate
     }: Props = $props();
 
-    const { renderer } = useThrelte();
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
     let cuboidClicked = false;
-    /** Tracks the in-progress drag preview annotation so the disabled gizmo follows the live position. */
-    let resizePreviewAnnotation = $state<Domain.CuboidAnnotation | null>(null);
 
     $effect(() => {
         const next = createCuboidRenderItems(cuboids);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
     });
-
-    $effect(() => {
-        return addCuboidSelectionListeners({
-            canvas: renderer.domElement,
-            activeTool,
-            onselect,
-            isCuboidClicked: () => cuboidClicked,
-            resetCuboidClicked: () => (cuboidClicked = false)
-        });
-    });
 </script>
 
-{#each renderCuboids as item (item.annotation.id)}
-    {@const base = resolveCuboidColor(annotationClasses, item.annotation.annotationClassId)}
-    {@const annotationClassName =
-        annotationClasses.find(({ id }) => id === item.annotation.annotationClassId)?.name ??
-        item.annotation.annotationClassId}
-    {@const isSelected = selectedAnnotationId === item.annotation.id}
-    {@const isHovered = hoveredAnnotationId === item.annotation.id}
-    {@const color = highlightCuboidColor(base, isSelected, isHovered)}
-    {#snippet visual()}
-        <CuboidVisual
-            {item}
-            baseColor={base}
-            edgeColor={color}
-            {activeTool}
-            {onselect}
-            {onhover}
-            onselected={() => (cuboidClicked = true)}
-        />
-        {#if isHovered}
-            <CuboidTooltip {annotationClassName} annotation={item.annotation} />
-        {/if}
-    {/snippet}
+<CuboidInteractionListeners
+    {activeTool}
+    {pointCloudBounds}
+    {creation}
+    {onselect}
+    isCuboidClicked={() => cuboidClicked}
+    resetCuboidClicked={() => (cuboidClicked = false)}
+/>
 
-    {#if isSelected && activeTool === 'resize'}
-        <!-- Direction arrows follow the live preview position. -->
-        <CuboidGizmo
-            annotation={resizePreviewAnnotation ?? item.annotation}
-            activeTool="translate"
-            enabled={false}
-        />
-        <!-- Live wireframe + face-plane interaction. -->
-        <CuboidResizeGizmo
-            annotation={item.annotation}
-            baseColor={base}
-            edgeColor={color}
-            {orbitControls}
-            {onhover}
-            {oncuboidupdate}
-            onliveupdate={(a) => (resizePreviewAnnotation = a)}
-        />
-        {#if isHovered}
-            <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
-                <CuboidTooltip {annotationClassName} annotation={item.annotation} />
-            </T.Group>
-        {/if}
-    {:else if isSelected}
-        <CuboidGizmo annotation={item.annotation} {activeTool} {oncuboidupdate}>
-            {@render visual()}
-        </CuboidGizmo>
-    {:else}
-        <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
-            {@render visual()}
-        </T.Group>
-    {/if}
+{#each renderCuboids as item (item.annotation.id)}
+    <CuboidLayerItem
+        {item}
+        {annotationClasses}
+        {selectedAnnotationId}
+        {hoveredAnnotationId}
+        {activeTool}
+        {orbitControls}
+        {onselect}
+        {onhover}
+        {oncuboidupdate}
+        onselected={() => (cuboidClicked = true)}
+    />
 {/each}
