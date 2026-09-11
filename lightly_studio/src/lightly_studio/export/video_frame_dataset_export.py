@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import cast
@@ -19,6 +20,7 @@ from lightly_studio.core.sample import Sample
 from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.export.dataset_export import DatasetExport
 from lightly_studio.type_definitions import PathLike
+from lightly_studio.utils import executor, parallelize
 
 # Counter-rotation matching the DISPLAYMATRIX side-data convention used at ingest.
 _PIL_ROTATION: dict[int, PILImage.Transpose] = {
@@ -70,8 +72,10 @@ class VideoFrameDatasetExport(DatasetExport):
         """Export video frames as image files to a local or S3 directory.
 
         Decodes each frame from its parent video and writes it as an image file:
-        ``{video_name}-{decode_index:0{zero_padding}}-{video_format}{extension}``.
-        Frames from the same video are decoded in a single pass.
+        ``{video_name}-{video_token}-{decode_index:0{zero_padding}}-{video_format}{extension}``,
+        where ``video_token`` is derived from the video path so two videos that share a name in
+        different directories do not overwrite each other. Frames from the same video are decoded
+        in a single pass.
 
         Args:
             output_dir: The output directory path (can be local or s3://bucket/prefix).
@@ -102,17 +106,27 @@ class VideoFrameDatasetExport(DatasetExport):
             video_path = frame_sample.parent_video.file_path_abs
             frames_by_video.setdefault(video_path, []).append(frame_sample)
 
-        exported_paths: list[str] = []
-        for video_path, frame_samples in frames_by_video.items():
-            exported_paths.extend(
-                _export_frames_from_video(
-                    video_path=video_path,
-                    frames=frame_samples,
-                    fs=fs,
-                    output_dir=output_dir_str,
-                    extension=extension_lower,
-                )
+        def export_one(item: tuple[str, list[VideoFrameSample]]) -> list[str]:
+            video_path, frame_samples = item
+            return _export_frames_from_video(
+                video_path=video_path,
+                frames=frame_samples,
+                fs=fs,
+                output_dir=output_dir_str,
+                extension=extension_lower,
             )
+
+        # Decode independent videos on a worker pool. thread_imap_lazy preserves order.
+        total_frames = sum(len(frame_samples) for frame_samples in frames_by_video.values())
+        exported_paths: list[str] = []
+        with tqdm(total=total_frames, desc="Exporting frames", unit=" frames") as pbar:
+            for video_paths in parallelize.thread_imap_lazy(
+                function=export_one,
+                iterable=frames_by_video.items(),
+                max_workers=executor.get_media_worker_count(),
+            ):
+                exported_paths.extend(video_paths)
+                pbar.update(len(video_paths))
         return exported_paths
 
 
@@ -161,9 +175,9 @@ def _export_frames_from_video(
     else:
         total_frame_count = max_frame_number
     zero_padding = len(str(total_frame_count))
-    # TODO(Horatiu 08/2026): Using the filename will overwrite files if two videos with the same
-    # name are in different directories. Add video sample id to the name.
     video_filename = Path(video_path).name
+    # A path-derived token keeps output names unique when two videos share a basename.
+    video_token = _video_path_token(video_path)
     pil_format = _EXTENSION_TO_PIL_FORMAT[extension]
     exported_paths: list[str] = []
 
@@ -177,30 +191,27 @@ def _export_frames_from_video(
 
         try:
             video_stream = video_container.streams.video[0]
-            with tqdm(total=len(frames_by_number), desc="Exporting frames", unit=" frames") as pbar:
-                for frame_count, frame in enumerate(video_container.decode(video_stream)):
-                    if frame_count > max_frame_number:
-                        break
-                    if frame_count not in frames_by_number:
-                        continue
+            for frame_count, frame in enumerate(video_container.decode(video_stream)):
+                if frame_count > max_frame_number:
+                    break
+                if frame_count not in frames_by_number:
+                    continue
 
-                    frame_sample = frames_by_number.pop(frame_count)
-                    pil_image = _frame_to_pil_image(
-                        frame=frame, rotation_deg=frame_sample.rotation_deg
-                    )
-                    filename = _video_frame_filename(
-                        video_filename=video_filename,
-                        decode_index=frame_count,
-                        zero_padding=zero_padding,
-                        file_extension=extension,
-                    )
-                    out_path = f"{output_dir}/{filename}"
-                    with fs.open(out_path, "wb") as f:
-                        pil_image.save(f, format=pil_format)
-                    exported_paths.append(out_path)
-                    pbar.update(1)
-                    if not frames_by_number:
-                        break
+                frame_sample = frames_by_number.pop(frame_count)
+                pil_image = _frame_to_pil_image(frame=frame, rotation_deg=frame_sample.rotation_deg)
+                filename = _video_frame_filename(
+                    video_filename=video_filename,
+                    video_token=video_token,
+                    decode_index=frame_count,
+                    zero_padding=zero_padding,
+                    file_extension=extension,
+                )
+                out_path = f"{output_dir}/{filename}"
+                with fs.open(out_path, "wb") as f:
+                    pil_image.save(f, format=pil_format)
+                exported_paths.append(out_path)
+                if not frames_by_number:
+                    break
         except (OSError, FFmpegError) as e:
             raise ValueError(f"Could not decode frames from {video_path}: {e}") from e
         finally:
@@ -228,16 +239,24 @@ def _frame_to_pil_image(frame: AVVideoFrame, rotation_deg: int) -> PILImage.Imag
         raise ValueError(f"Unsupported rotation_deg={rotation_deg}") from e
 
 
+def _video_path_token(video_path: str) -> str:
+    """Return a short stable token from the video path to keep same-named videos distinct."""
+    return hashlib.sha256(video_path.encode("utf-8")).hexdigest()[:12]
+
+
 def _video_frame_filename(
     video_filename: str,
+    video_token: str,
     decode_index: int,
     zero_padding: int,
     file_extension: str,
 ) -> str:
-    """Build ``{video_name}-{decode_index}-{video_format}{extension}``."""
+    """Build ``{video_name}-{video_token}-{decode_index}-{video_format}{extension}``."""
     video_path = Path(video_filename)
     video_name = video_path.with_suffix("")
     video_format = video_path.suffix[1:]
     if "-" in video_format:
         raise ValueError(f"Video format cannot contain '-' but found {video_format}")
-    return f"{video_name}-{decode_index:0{zero_padding}}-{video_format}{file_extension}"
+    return (
+        f"{video_name}-{video_token}-{decode_index:0{zero_padding}}-{video_format}{file_extension}"
+    )

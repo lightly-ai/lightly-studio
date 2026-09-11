@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved metadata loading by reducing numeric database queries from 13 to 8 and making responses up to 25% faster.
 - Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.
 - Change the video decoding backend for the GUI from OpenCV to PyAV, resulting in up to 6× faster decoding performance for parallel streams when loading the grid view and scrolling.
+- Speed up exporting video frames to image files by decoding videos in parallel.
 
 ### Deprecated
 
@@ -30,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved initial metadata loading performance by up to 30% for large datasets by removing duplicate histogram calculations.
 
 ### Fixed
+
+- Include a path-derived token in exported video-frame image file names so two videos with the same name in different folders no longer overwrite each other.
 
 ### Security
 
