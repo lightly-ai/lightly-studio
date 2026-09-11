@@ -32,6 +32,9 @@ class Package:
         needs_node: Whether building the distribution needs Node.js.
         forbidden_dependencies: Substrings that no name in the built wheel's resolved
             dependency tree may contain.
+        workspace_dependencies: Other members of this workspace that this package
+            depends on. uv resolves those from the workspace and drops the declared
+            specifier, so they are guarded before a release instead.
     """
 
     distribution: str
@@ -41,6 +44,7 @@ class Package:
     tag_prefix: str
     needs_node: bool
     forbidden_dependencies: tuple[str, ...] = ()
+    workspace_dependencies: tuple[str, ...] = ()
 
     @property
     def pyproject(self) -> str:
@@ -65,6 +69,7 @@ PACKAGES = (
         changelog="CHANGELOG.md",
         tag_prefix="",
         needs_node=True,
+        workspace_dependencies=("lightly-studio-serve",),
     ),
     Package(
         distribution="lightly-studio-serve",
@@ -128,6 +133,7 @@ def render_config(package: Package) -> str:
         "branch_prefix": package.branch_prefix,
         "needs_node": str(package.needs_node).lower(),
         "forbidden_dependencies": " ".join(package.forbidden_dependencies),
+        "workspace_dependencies": " ".join(package.workspace_dependencies),
     }
     return "".join(f"{key}={value}\n" for key, value in fields.items())
 
