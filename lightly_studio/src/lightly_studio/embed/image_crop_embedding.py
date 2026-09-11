@@ -18,6 +18,7 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcome,
     FileOutcomeReport,
 )
+from lightly_studio.embed import image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio.utils import executor, parallelize
 
@@ -149,6 +150,7 @@ def embed_image_crops_batched(
             progress_bar=progress_bar,
         )
 
+    image_embedding.release_gpu_cache(device=context.device)
     report.raise_if_all_failed()
     report.log_summary()
 
