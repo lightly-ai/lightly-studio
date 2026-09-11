@@ -58,6 +58,7 @@ from lightly_studio.models.group_component_definition import (
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
@@ -73,6 +74,7 @@ _MAP_COLLECTION = "deep_copy_map_collection"
 _MAP_SAMPLE = "deep_copy_map_sample"
 _MAP_TAG = "deep_copy_map_tag"
 _MAP_OBJECT_TRACK = "deep_copy_map_object_track"
+_MAP_RECORDING = "deep_copy_map_recording"
 _MAP_ANNOTATION_LABEL = "deep_copy_map_annotation_label"
 _MAP_EMBEDDING_MODEL = "deep_copy_map_embedding_model"
 _MAP_EVALUATION_RUN = "deep_copy_map_evaluation_run"
@@ -121,6 +123,7 @@ def deep_copy(
         now=now,
     )
     _copy_tags(session=session, now=now)
+    _copy_recordings(session=session, new_dataset_id=new_dataset_id)
     _copy_object_tracks(session=session, new_dataset_id=new_dataset_id)
     _copy_annotation_labels(session=session, new_dataset_id=new_dataset_id)
     _copy_embedding_models(session=session, new_dataset_id=new_dataset_id, now=now)
@@ -191,6 +194,13 @@ def _build_id_maps(session: Session, old_dataset_id: UUID) -> None:
         session=session,
         source_table="object_track",
         id_column="object_track_id",
+        where_sql="dataset_id = :old_dataset_id",
+        params=dataset_params,
+    )
+    _create_id_map(
+        session=session,
+        source_table="recording",
+        id_column="recording_id",
         where_sql="dataset_id = :old_dataset_id",
         params=dataset_params,
     )
@@ -420,6 +430,24 @@ def _copy_object_tracks(session: Session, new_dataset_id: UUID) -> None:
     _copy_table(
         session=session,
         target=ObjectTrackTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_recordings(session: Session, new_dataset_id: UUID) -> None:
+    """Copy recordings, remapping dataset_id. ``format`` and ``uri`` are copied verbatim."""
+    src = _table(RecordingTable).alias("src")
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"])
+    overrides = {
+        "recording_id": map_recording.c.new_id,
+        "dataset_id": literal(new_dataset_id),
+    }
+    _copy_table(
+        session=session,
+        target=RecordingTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,
