@@ -56,6 +56,7 @@ def test_render_config():
         "branch_prefix=release-\n"
         "needs_node=true\n"
         "forbidden_dependencies=\n"
+        "workspace_dependencies=lightly-studio-serve\n"
     )
 
 
@@ -70,6 +71,7 @@ def test_render_config__serve():
         "branch_prefix=release-lightly-studio-serve-\n"
         "needs_node=false\n"
         "forbidden_dependencies=torch cuda nvidia duckdb opencv lightly-studio\n"
+        "workspace_dependencies=\n"
     )
 
 

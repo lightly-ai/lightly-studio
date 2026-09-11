@@ -50,7 +50,7 @@ def check_labelformat_pin(pyproject_text: str) -> None:
     line's start (so a non-first entry in an inline array still is caught).
     """
     for line in pyproject_text.splitlines():
-        active = _strip_comment(line)
+        active = strip_comment(line)
         for match in re.finditer(r'(?P<quote>["\'])labelformat[^"\']*\1', active, re.IGNORECASE):
             if "git+" in match.group(0):
                 raise PrepareReleaseError(
@@ -61,7 +61,7 @@ def check_labelformat_pin(pyproject_text: str) -> None:
                 )
 
 
-def _strip_comment(line: str) -> str:
+def strip_comment(line: str) -> str:
     """Removes a trailing `#` comment, ignoring a `#` inside a quoted string.
 
     E.g. a `#egg=...` URL fragment inside a `"... @ git+https://...#egg=..."`

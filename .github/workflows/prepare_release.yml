@@ -72,6 +72,19 @@ jobs:
           python3 -m prepare_release check-labelformat-pin \
             --pyproject "${{ steps.package.outputs.pyproject }}"
 
+      # uv drops the specifier of a workspace dependency, so nothing else checks it.
+      - name: Check the workspace dependency range
+        if: steps.package.outputs.workspace_dependencies != ''
+        run: |
+          python3 -m prepare_release check-dependency-range \
+            --package "${{ inputs.package }}"
+
+      - name: Check the workspace dependency is published
+        if: steps.package.outputs.workspace_dependencies != ''
+        run: |
+          python3 -m prepare_release check-dependency-published \
+            --package "${{ inputs.package }}"
+
       - name: Resolve inputs
         id: resolved
         working-directory: ${{ steps.package.outputs.directory }}

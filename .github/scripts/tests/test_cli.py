@@ -205,3 +205,37 @@ def test_main__check_wheel_dependencies__no_wheel_exits_nonzero(
         == 1
     )
     assert "expected exactly one wheel" in capsys.readouterr().err
+
+
+def test_main__check_dependency_range(tmp_path: Path, capsys: pytest.CaptureFixture):
+    _write_workspace(tmp_path, requirement="lightly-studio-serve>=0.1.0,<0.2.0", version="0.1.1")
+    assert (
+        cli.main(["check-dependency-range", "--package", "lightly-studio", "--root", str(tmp_path)])
+        == 0
+    )
+    assert "admits the version in the tree" in capsys.readouterr().out
+
+
+def test_main__check_dependency_range__cap_excludes_the_tree(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+):
+    _write_workspace(tmp_path, requirement="lightly-studio-serve>=0.1.0,<0.2.0", version="0.2.0")
+    assert (
+        cli.main(["check-dependency-range", "--package", "lightly-studio", "--root", str(tmp_path)])
+        == 1
+    )
+    assert "excludes it" in capsys.readouterr().err
+
+
+def _write_workspace(root: Path, requirement: str, version: str) -> None:
+    studio = root / "lightly_studio"
+    serve = root / "lightly_studio_serve"
+    studio.mkdir()
+    serve.mkdir()
+    (studio / "pyproject.toml").write_text(
+        f'[project]\nname = "lightly-studio"\nversion = "1.1.0"\n'
+        f'dependencies = [\n    "{requirement}",\n]\n'
+    )
+    (serve / "pyproject.toml").write_text(
+        f'[project]\nname = "lightly-studio-serve"\nversion = "{version}"\n'
+    )
