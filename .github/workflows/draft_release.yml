@@ -33,6 +33,10 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Reads only: the write the workflow needs is the tag and the release, both
+    # of which happen in draft-release.
+    permissions:
+      contents: read
     outputs:
       packages: ${{ steps.detect.outputs.packages }}
     steps:
@@ -60,22 +64,40 @@ jobs:
             exit 0
           fi
 
-          # `|| return 1` rather than errexit: the caller suppresses it, and reading
-          # the version out of a 404 body left in the file would be worse than a miss.
+          # The version of $2 at commit $1. Exit 2 says the package does not exist
+          # there; every other failure is exit 1 and stops the run. Errexit cannot
+          # carry that: the caller suppresses it, and dropping a release because
+          # the API blipped is worse than failing loudly.
           version_at() {
-            gh api "repos/${GITHUB_REPOSITORY}/contents/$2?ref=$1" \
-              -H "Accept: application/vnd.github.raw" \
-              > "${RUNNER_TEMP}/detect.toml" 2>/dev/null || return 1
-            python3 -m prepare_release read-version --pyproject "${RUNNER_TEMP}/detect.toml"
+            if ! gh api "repos/${GITHUB_REPOSITORY}/contents/$2?ref=$1" \
+                   -H "Accept: application/vnd.github.raw" \
+                   > "${RUNNER_TEMP}/detect.toml" 2>"${RUNNER_TEMP}/detect-err"; then
+              if grep -q "(HTTP 404)" "${RUNNER_TEMP}/detect-err"; then
+                return 2
+              fi
+              echo "::error::Could not read $2 at $1:"
+              cat "${RUNNER_TEMP}/detect-err"
+              return 1
+            fi
+            python3 -m prepare_release read-version \
+              --pyproject "${RUNNER_TEMP}/detect.toml" || return 1
           }
 
           : > "${RUNNER_TEMP}/detected"
           while read -r distribution pyproject; do
+            before_status=0
+            after_status=0
+            before_version="$(version_at "${BEFORE}" "${pyproject}")" || before_status=$?
+            after_version="$(version_at "${AFTER}" "${pyproject}")" || after_status=$?
+            if [ "${before_status}" -eq 1 ] || [ "${after_status}" -eq 1 ]; then
+              exit 1
+            fi
             # A package that does not exist on both sides of the push is not being
             # released: adding one is not a release of it, and the first release
             # goes through Prepare Release like every other.
-            before_version="$(version_at "${BEFORE}" "${pyproject}")" || continue
-            after_version="$(version_at "${AFTER}" "${pyproject}")" || continue
+            if [ "${before_status}" -ne 0 ] || [ "${after_status}" -ne 0 ]; then
+              continue
+            fi
             if [ "${before_version}" != "${after_version}" ]; then
               echo "${distribution}" >> "${RUNNER_TEMP}/detected"
               echo "${distribution}: ${before_version} -> ${after_version}."
