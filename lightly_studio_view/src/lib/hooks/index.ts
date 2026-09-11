@@ -28,7 +28,10 @@ export { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/us
 export { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 export { useSeedAnnotationSourceFilter } from '$lib/hooks/useSeedAnnotationSourceFilter/useSeedAnnotationSourceFilter.svelte';
 export { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
-export { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
+export {
+    useEvaluationRuns,
+    useInvalidateEvaluationRunsQueries
+} from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 export { useEvaluationConfusionMatrix } from '$lib/hooks/useEvaluationConfusionMatrix/useEvaluationConfusionMatrix.svelte';
 export { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
 export {
@@ -57,6 +60,7 @@ export { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotatio
 export { useAnnotationEvaluationMetricsInfo } from '$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo.svelte';
 export { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotationOrderBy.svelte';
 export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
+export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications.svelte';
 export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey
