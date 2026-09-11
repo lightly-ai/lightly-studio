@@ -11,13 +11,13 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from lightly_studio_embed.embedder import (
+from lightly_studio_serve.embedder import (
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
 )
-from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from PIL import Image
 
 from lightly_studio.dataset import file_utils

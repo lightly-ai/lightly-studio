@@ -15,6 +15,12 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
+from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
@@ -28,8 +34,10 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
     metadata_resolver,
     object_track_resolver,
+    recording_resolver,
     sample_embedding_resolver,
     sample_resolver,
 )
@@ -72,6 +80,60 @@ def test_deep_copy__empty_collection(db_session: Session) -> None:
     assert copied.name == "copied"
     assert copied.sample_type == original.sample_type
     assert copied.parent_collection_id is None
+
+
+def test_deep_copy__with_recordings(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        uri="/data/original.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - one recording copied with a fresh id, remapped dataset_id, same uri/format
+    copied_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=copied.dataset_id
+    )
+    assert len(copied_recordings) == 1
+    copied_recording = copied_recordings[0]
+    assert copied_recording.recording_id != recording_id
+    assert copied_recording.dataset_id == copied.dataset_id
+    assert copied_recording.uri == "/data/original.mcap"
+    assert copied_recording.format == RecordingFormat.MCAP
+
+    # Assert - original recording untouched
+    original_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=original.dataset_id
+    )
+    assert len(original_recordings) == 1
+    assert original_recordings[0].recording_id == recording_id
+
+
+def test_deep_copy__without_recordings(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - classic dataset copies fine with zero recording rows
+    assert (
+        recording_resolver.get_all_by_dataset_id(session=db_session, dataset_id=copied.dataset_id)
+        == []
+    )
 
 
 def test_deep_copy__with_images(db_session: Session) -> None:
@@ -421,6 +483,75 @@ def test_deep_copy__with_group_component_definitions(db_session: Session) -> Non
     assert copied_component.group_component_definition is not None
     assert copied_component.group_component_definition.group_component_name == "front_camera"
     assert copied_component.group_component_definition.group_component_index == 0
+    assert db_session.get(McapGroupComponentDefinitionTable, copied_component.collection_id) is None
+
+
+def test_deep_copy__with_mcap_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(
+        session=db_session, collection_name="original", sample_type=SampleType.GROUP
+    )
+    original_components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=original.collection_id,
+        components=[
+            ("image", SampleType.MCAP),
+            ("point_cloud", SampleType.MCAP),
+        ],
+    )
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=original_components["image"].collection_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            frame_id="main",
+            channel_id=3,
+        )
+    )
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=original_components["point_cloud"].collection_id,
+            mcap_data_type=McapDataType.POINT_CLOUD,
+            channel_id=5,
+        )
+    )
+    db_session.commit()
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - remapped collection_id, types, frame_id and channel_id kept.
+    copied_components = collection_resolver.get_group_components(
+        session=db_session, parent_collection_id=copied.collection_id
+    )
+    assert len(copied_components) == 2
+    copied_image = copied_components["image"]
+    copied_point_cloud = copied_components["point_cloud"]
+    assert copied_image.collection_id != original_components["image"].collection_id
+    assert copied_point_cloud.collection_id != original_components["point_cloud"].collection_id
+
+    copied_image_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, copied_image.collection_id
+    )
+    copied_point_cloud_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, copied_point_cloud.collection_id
+    )
+    assert copied_image_mcap is not None
+    assert copied_image_mcap.mcap_data_type == McapDataType.VIDEO_FRAME
+    assert copied_image_mcap.frame_id == "main"
+    assert copied_image_mcap.channel_id == 3
+    assert copied_point_cloud_mcap is not None
+    assert copied_point_cloud_mcap.mcap_data_type == McapDataType.POINT_CLOUD
+    assert copied_point_cloud_mcap.frame_id is None
+    assert copied_point_cloud_mcap.channel_id == 5
+
+    original_image_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, original_components["image"].collection_id
+    )
+    assert original_image_mcap is not None
 
 
 def test_deep_copy__with_sequences(db_session: Session) -> None:
@@ -474,6 +605,55 @@ def test_deep_copy__with_sequences(db_session: Session) -> None:
     assert [link.seq_number for link in copied_links] == [0, 1]
     assert [link.timestamp_ns for link in copied_links] == [1785699091646722462, None]
     assert {link.sample_id for link in copied_links}.isdisjoint(sample_ids)
+
+
+def test_deep_copy__with_mcap_group_sequences(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    mcap_sample_id = mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=collection.collection_id,
+        recording_id=recording_id,
+    )
+    classic_sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id)],
+    )
+    db_session.add(SequenceTable(sample_id=classic_sample_ids[0]))
+    db_session.commit()
+    original_ids = {mcap_sample_id, classic_sample_ids[0]}
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_sequences = db_session.exec(
+        select(SequenceTable)
+        .join(SampleTable, col(SequenceTable.sample_id) == col(SampleTable.sample_id))
+        .where(col(SampleTable.collection_id) == copied.collection_id)
+    ).all()
+    assert len(copied_sequences) == 2
+    copied_ids = {sequence.sample_id for sequence in copied_sequences}
+    assert copied_ids.isdisjoint(original_ids)
+
+    copied_mcap_rows = db_session.exec(
+        select(McapGroupSequenceTable).where(col(McapGroupSequenceTable.sample_id).in_(copied_ids))
+    ).all()
+    assert len(copied_mcap_rows) == 1
+    assert copied_mcap_rows[0].recording_id != recording_id
+    copied_recording = recording_resolver.get_by_id(
+        session=db_session, recording_id=copied_mcap_rows[0].recording_id
+    )
+    assert copied_recording is not None
+    assert copied_recording.uri == "/bags/drive_001.mcap"
+    assert copied_mcap_rows[0].sample_id != mcap_sample_id
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:

@@ -42,6 +42,9 @@ class ConsoleFormatter(logging.Formatter):
 # Set logging level to ERROR for labelformat.
 logging.getLogger("labelformat").setLevel(logging.ERROR)
 
+# Suppress per-block cache messages while keeping storage warnings visible.
+logging.getLogger("fsspec").setLevel(logging.WARNING)
+
 # Configure the root logger with ConsoleFormatter
 root_logger = logging.getLogger()
 # Do not add a new logging handler if there's one registered already. This prevents duplicated
