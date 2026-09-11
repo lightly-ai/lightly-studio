@@ -66,6 +66,7 @@
     import {
         buildMetadataDistributionSource,
         selectCategoricalMetadataKeys,
+        selectNumericMetadataKeys,
         selectComparisonSampleTags
     } from './metadataDistributionSource';
     import type { CategoryCount } from '$lib/components/BarChart';
@@ -759,11 +760,29 @@
     // User-configurable bin count for the metadata histograms.
     let histogramBinCount = $state(20);
 
+    const numericMetadataKeys = $derived(selectNumericMetadataKeys($metadataInfo));
+    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
+    const activeMetadataField = $derived.by<
+        { name: string; type: 'numeric' | 'categorical' } | undefined
+    >(() => {
+        if (activeDistributionSourceId !== 'metadata' || activeDistributionGroupId === undefined) {
+            return undefined;
+        }
+        if (categoricalMetadataKeys.includes(activeDistributionGroupId)) {
+            return { name: activeDistributionGroupId, type: 'categorical' };
+        }
+        if (numericMetadataKeys.includes(activeDistributionGroupId)) {
+            return { name: activeDistributionGroupId, type: 'numeric' };
+        }
+        return undefined;
+    });
+
     const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
         collectionId: collectionId,
         filter: distributionBaseFilter,
         binCount: histogramBinCount,
-        enabled: distributionPanelVisible
+        fields: activeMetadataField?.type === 'numeric' ? [activeMetadataField.name] : undefined,
+        enabled: distributionPanelVisible && activeMetadataField?.type === 'numeric'
     }));
     // query.data is already Record<string, HistogramData> — the hook applies
     // selectDistributions internally via the TanStack Query `select` option.
@@ -790,22 +809,6 @@
         categoricalMetadataFilteredQuery.data
     );
 
-    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
-    const activeMetadataField = $derived.by<
-        { name: string; type: 'numeric' | 'categorical' } | undefined
-    >(() => {
-        if (activeDistributionSourceId !== 'metadata' || activeDistributionGroupId === undefined) {
-            return undefined;
-        }
-        if (categoricalMetadataKeys.includes(activeDistributionGroupId)) {
-            return { name: activeDistributionGroupId, type: 'categorical' };
-        }
-        if (Object.hasOwn(metadataDistributions, activeDistributionGroupId)) {
-            return { name: activeDistributionGroupId, type: 'numeric' };
-        }
-        return undefined;
-    });
-
     const selectedDistributionSampleTags = $derived(
         selectComparisonSampleTags(distributionSampleTagItems, distributionSampleTagIds)
     );
@@ -821,6 +824,7 @@
     const metadataDistributionSource = $derived(
         buildMetadataDistributionSource({
             histograms: metadataDistributions,
+            numericKeys: numericMetadataKeys,
             categoricalKeys: categoricalMetadataKeys,
             categorical: categoricalMetadataDistributions,
             filteredCategorical: categoricalMetadataFilteredDistributions,

@@ -9,7 +9,7 @@ import fsspec
 import numpy as np
 import pytest
 import torch
-from lightly_studio_embed.types import ImageCrop
+from lightly_studio_serve.types import ImageCrop
 from numpy.typing import NDArray
 from PIL import Image
 from pytest_mock import MockerFixture

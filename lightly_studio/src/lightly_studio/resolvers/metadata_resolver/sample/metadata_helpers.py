@@ -18,6 +18,7 @@ def get_merged_schema(session: Session, collection_id: UUID) -> dict[str, str]:
     """Merge the metadata schemas of all samples in a collection."""
     rows = session.exec(
         sqlmodel.select(SampleMetadataTable.metadata_schema)
+        .distinct()
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,

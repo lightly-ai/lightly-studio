@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from lightly_studio_embed.types import EmbeddingResult
+from lightly_studio_serve.types import EmbeddingResult
 from numpy.typing import NDArray
 from PIL import Image
 from torchvision import transforms  # type: ignore[import-untyped]

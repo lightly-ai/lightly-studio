@@ -282,7 +282,7 @@ plugins:
           paths:
             - ../src
             # The embedder interface and its value types live in the workspace member.
-            - ../../lightly_studio_embed/src
+            - ../../lightly_studio_serve/src
           options:
             docstring_style: google
             docstring_options:

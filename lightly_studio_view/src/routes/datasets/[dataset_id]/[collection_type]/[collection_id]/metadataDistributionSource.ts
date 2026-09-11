@@ -22,12 +22,17 @@ interface ComparisonTagItem {
 }
 
 /**
- * Metadata keys whose values are categorical. Numeric keys come from the
- * histogram response instead, so they are not listed here.
+ * Metadata keys whose values are categorical.
  */
 export const selectCategoricalMetadataKeys = (metadataInfo: MetadataInfo[] | undefined): string[] =>
     (metadataInfo ?? [])
         .filter((info) => info.type === 'string' || info.type === 'boolean')
+        .map((info) => info.name);
+
+/** Numeric keys remain selectable before their histograms have loaded. */
+export const selectNumericMetadataKeys = (metadataInfo: MetadataInfo[] | undefined): string[] =>
+    (metadataInfo ?? [])
+        .filter((info) => info.type === 'integer' || info.type === 'float')
         .map((info) => info.name);
 
 /** The selected comparison tags, in the order the select offers them. */
@@ -42,6 +47,8 @@ export const selectComparisonSampleTags = (
 interface MetadataDistributionSourceParams {
     /** Numeric distributions for the current view, keyed by metadata key. */
     histograms: Record<string, HistogramData>;
+    /** Numeric metadata keys remain selectable before their histogram loads. */
+    numericKeys: string[];
     /** Metadata keys that hold categorical values, in the order to show them. */
     categoricalKeys: string[];
     /** Categorical distributions for the current view, keyed by metadata key. */
@@ -79,7 +86,7 @@ interface MetadataDistributionSourceParams {
 export function buildMetadataDistributionSource(
     params: MetadataDistributionSourceParams
 ): DistributionSource | null {
-    const numericKeys = Object.keys(params.histograms);
+    const numericKeys = params.numericKeys;
     if (numericKeys.length === 0 && params.categoricalKeys.length === 0) return null;
 
     return {

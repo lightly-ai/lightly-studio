@@ -32,6 +32,7 @@ from lightly_studio.models.evaluation_sample_metric import (
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.recording import RecordingFormat, RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
@@ -40,6 +41,7 @@ from lightly_studio.resolvers import (
     dataset_resolver,
     evaluation_sample_metric_resolver,
     object_track_resolver,
+    recording_resolver,
     tag_resolver,
 )
 from tests.helpers_resolvers import (
@@ -123,6 +125,7 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
             AnnotationLabelTable, col(AnnotationLabelTable.dataset_id) == dataset_id
         ),
         "object_track": count(ObjectTrackTable, col(ObjectTrackTable.dataset_id) == dataset_id),
+        "recording": count(RecordingTable, col(RecordingTable.dataset_id) == dataset_id),
         "evaluation_run": count(
             EvaluationRunTable,
             col(EvaluationRunTable.gt_annotation_collection_id).in_(collection_ids),
@@ -188,6 +191,12 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
     (track_id,) = object_track_resolver.create_many(
         session=session,
         tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=root.dataset_id)],
+    )
+    recording_resolver.create(
+        session=session,
+        dataset_id=root.dataset_id,
+        uri=f"/data/{name}.mcap",
+        format_=RecordingFormat.MCAP,
     )
     create_annotation(
         session=session,
@@ -273,6 +282,7 @@ def test_deep_copy_then_delete_round_trip(db_session: Session) -> None:
         "collection_embedding_model",
         "annotation_label",
         "object_track",
+        "recording",
         "evaluation_run",
         "evaluation_sample_metric",
         "evaluation_annotation_metric",
