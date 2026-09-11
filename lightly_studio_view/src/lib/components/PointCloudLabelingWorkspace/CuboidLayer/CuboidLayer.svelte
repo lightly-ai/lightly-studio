@@ -5,6 +5,7 @@
     import CuboidInteractionListeners from './CuboidInteractionListeners.svelte';
     import CuboidLayerItem from './CuboidLayerItem.svelte';
     import type { CuboidCreationConfig } from './cuboidCreation';
+    import { addCuboidDuplicateListeners } from './cuboidDuplication';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
 
     interactivity();
@@ -22,6 +23,7 @@
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
         oncuboidupdate?: (cuboid: Domain.CuboidAnnotation) => void;
         oncuboiddelete?: (annotationId: string) => void;
+        oncuboidcreate?: (cuboid: Domain.CuboidAnnotation) => void;
     }
 
     let {
@@ -36,8 +38,11 @@
         onselect,
         onhover,
         oncuboidupdate,
-        oncuboiddelete
+        oncuboiddelete,
+        oncuboidcreate
     }: Props = $props();
+
+    const selectedAnnotation = $derived(cuboids.find((c) => c.id === selectedAnnotationId) ?? null);
 
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
     let cuboidClicked = false;
@@ -46,6 +51,15 @@
         const next = createCuboidRenderItems(cuboids);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
+    });
+
+    $effect(() => {
+        if (!oncuboidcreate) return;
+        return addCuboidDuplicateListeners({
+            selectedAnnotation,
+            oncreate: oncuboidcreate,
+            onselect
+        });
     });
 </script>
 
