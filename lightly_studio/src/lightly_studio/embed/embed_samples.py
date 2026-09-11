@@ -42,10 +42,9 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
         ValueError: If the collection has no default embedding model, or the model does
             not support images.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
-    if model_id is None:
+    if not collection_has_default_embedder(session=session, collection_id=collection_id):
         raise ValueError("No default embedding model registered for this collection.")
+    manager = EmbeddingManagerProvider.get_embedding_manager()
     return manager.compute_image_embedding(collection_id=collection_id, filepath=filepath)
 
 
@@ -65,10 +64,9 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
     Raises:
         ValueError: If the collection has no default embedding model.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
-    if model_id is None:
+    if not collection_has_default_embedder(session=session, collection_id=collection_id):
         raise ValueError("No default embedding model registered for this collection.")
+    manager = EmbeddingManagerProvider.get_embedding_manager()
     return manager.embed_text(collection_id=collection_id, text_query=TextEmbedQuery(text=text))
 
 
