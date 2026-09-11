@@ -4,8 +4,8 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.resolvers import (
-    collection_embedding_model_resolver,
     sample_embedding_resolver,
 )
 
@@ -23,7 +23,8 @@ def collection_has_embeddings(session: Session, collection_id: UUID) -> bool:
     Returns:
         True if embeddings exist for the collection, False otherwise.
     """
-    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = embedding_manager.load_or_get_default_model(
         session=session,
         collection_id=collection_id,
     )
