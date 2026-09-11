@@ -39,6 +39,7 @@ function session(metadata: Partial<RecordingSession['metadata']> = {}): Recordin
         readFrame: async () => {
             throw new Error('not used');
         },
+        cameraImage: () => undefined,
         dispose: () => undefined
     };
 }

@@ -226,7 +226,9 @@ export function useRecordingProbe(sampleId: () => string) {
             queryFn: ({ signal }: { signal: AbortSignal }) =>
                 current!.readFrame(
                     at!,
-                    preview ? { pointBudget: PREVIEW_POINT_BUDGET, fuseChannels: false } : {},
+                    preview
+                        ? { pointBudget: PREVIEW_POINT_BUDGET, fuseChannels: false, cameras: false }
+                        : {},
                     signal
                 ),
             gcTime: FRAME_GC_TIME_MS,
@@ -261,6 +263,10 @@ export function useRecordingProbe(sampleId: () => string) {
         },
         get frame() {
             return frameQuery.data ?? previewQuery.data;
+        },
+        /** The picture behind a camera frame's `resourceId`, for whoever draws the strip. */
+        cameraImage(resourceId: string) {
+            return session?.cameraImage(resourceId);
         },
         get isLoading() {
             // A drawn preview is still a frame in progress: the full one is what settles it.

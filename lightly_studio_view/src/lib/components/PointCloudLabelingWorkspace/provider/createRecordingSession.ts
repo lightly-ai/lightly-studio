@@ -1,10 +1,18 @@
 import { createPointCloudFrame, type PointCloudFrame } from '../domain';
+import { createCameraImageStore } from './cameraImageStore';
 import type { FrameLocator, McapSource } from './source';
 import { WorkerClient } from './workerClient';
 import type { WorkerCommand, WorkerResult } from './workerProtocol';
 
 const DEFAULT_POINT_BUDGET = 350_000;
 const DEFAULT_FRAME_LIMIT = 1000;
+/**
+ * Frames whose camera pictures are kept decoded.
+ *
+ * Enough that stepping back a frame or two still shows its cameras, few enough that a
+ * recording played end to end does not accumulate decoded pictures.
+ */
+const CAMERA_FRAME_CAPACITY = 4;
 
 const ignore = () => undefined;
 
@@ -67,6 +75,8 @@ export interface RecordingSession {
         locator: FrameLocator,
         options?: {
             pointBudget?: number;
+            /** False leaves the cameras unread, for a frame nothing will draw them from. */
+            cameras?: boolean;
             /**
              * False reads only the channel the locator names, leaving the other sensors out.
              * A cheap frame for a first paint: it costs one channel's bytes rather than
@@ -76,6 +86,13 @@ export interface RecordingSession {
         },
         signal?: AbortSignal
     ): Promise<PointCloudFrame>;
+    /**
+     * The decoded picture a camera frame's `resourceId` refers to.
+     *
+     * Undefined once the frame it belongs to has fallen out of the store, which reads the
+     * same as a camera that published nothing for that moment.
+     */
+    cameraImage(resourceId: string): ImageBitmap | undefined;
     dispose(): void;
 }
 
@@ -89,6 +106,7 @@ export interface RecordingSession {
 export async function createRecordingSession(options: SessionOptions): Promise<RecordingSession> {
     const source = structuredClone(options.source);
     const client = new WorkerClient(options.createWorker);
+    const cameraImages = createCameraImageStore(CAMERA_FRAME_CAPACITY);
     let queue: Promise<unknown> = Promise.resolve();
 
     async function request(
@@ -164,7 +182,8 @@ export async function createRecordingSession(options: SessionOptions): Promise<R
                             kind: 'frame',
                             locator: plain(locator),
                             pointBudget,
-                            fuseChannels: frameOptions?.fuseChannels ?? true
+                            fuseChannels: frameOptions?.fuseChannels ?? true,
+                            cameras: frameOptions?.cameras ?? true
                         },
                         'decode',
                         current
@@ -172,9 +191,17 @@ export async function createRecordingSession(options: SessionOptions): Promise<R
                     if (!result.frame) {
                         throw new Error('The worker returned no point-cloud frame.');
                     }
-                    return createPointCloudFrame(result.frame);
+                    const frame = createPointCloudFrame(result.frame);
+                    // Registered under the frame's own id, so the pictures live exactly as
+                    // long as the frame a viewer is looking at.
+                    cameraImages.add(frame.id, result.cameraImages ?? []);
+                    return frame;
                 }, signal),
-            dispose: () => client.dispose()
+            cameraImage: (resourceId) => cameraImages.get(resourceId),
+            dispose: () => {
+                cameraImages.clear();
+                client.dispose();
+            }
         };
     } catch (error) {
         client.dispose();

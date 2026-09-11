@@ -18,11 +18,14 @@ async function runCommand(command: WorkerCommand, result: WorkerResult): Promise
     }
     if (!session) throw new ProviderError('source', 'Open a recording before requesting frames.');
     if (command.kind === 'frame') {
-        result.frame = await session.loadFrame(
+        const { cameraImages, ...frame } = await session.loadFrame(
             command.locator,
             command.pointBudget,
-            command.fuseChannels ?? true
+            command.fuseChannels ?? true,
+            command.cameras ?? true
         );
+        result.frame = frame;
+        result.cameraImages = cameraImages;
         return;
     }
     result.range = await session.listFrames(
@@ -65,7 +68,10 @@ self.onmessage = async ({ data }: MessageEvent<WorkerRequest>) => {
         await runCommand(command, result);
         result.durationMs = performance.now() - started;
         result.bytesRead = bytesRead() - beforeBytes;
-        const transfer = result.frame ? [result.frame.positions.buffer as ArrayBuffer] : [];
+        const transfer: Transferable[] = [
+            ...(result.frame ? [result.frame.positions.buffer as ArrayBuffer] : []),
+            ...(result.cameraImages ?? []).map((image) => image.bitmap)
+        ];
         self.postMessage(result, { transfer });
     } catch (error) {
         result.error = toWorkerError(error);
