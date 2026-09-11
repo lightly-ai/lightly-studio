@@ -2,6 +2,7 @@
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { Canvas, T } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
+    import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import {
         createAnnotationFixture,
         createCuboidAnnotation
@@ -42,6 +43,22 @@
 
     // State for the interactive translate story. Shared across story mounts
     // (acceptable for single-story interactive testing in Storybook).
+    const resizeState = writable({
+        cuboids: [
+            createCuboidAnnotation({
+                ...createAnnotationFixture(),
+                id: 'resize-test',
+                annotationClassId: 'vehicle',
+                center: [0, 0, 1] as const,
+                size: [4.5, 1.8, 1.5] as const,
+                rotation: [0, 0, 0, 1] as const,
+                trackId: null,
+                keyframeId: null
+            })
+        ],
+        selectedId: 'resize-test' as string | null
+    });
+
     const rotateState = writable({
         cuboids: [
             createCuboidAnnotation({
@@ -87,6 +104,11 @@
             activeTool: 'select' as const
         }
     });
+</script>
+
+<script lang="ts">
+    /** Orbit controls ref for the resize story — wired to CuboidLayer for suppression during drag. */
+    let resizeOrbitRef = $state<ThreeOrbitControls | undefined>();
 </script>
 
 {#snippet scene(args)}
@@ -218,6 +240,39 @@
     template={translateScene}
 />
 
+{#snippet resizeScene()}
+    {@const [sx, sy, sz] = $resizeState.cuboids[0].size}
+    <div class="relative h-screen w-screen bg-black">
+        <div class="absolute left-4 top-4 z-10 rounded bg-black/70 px-3 py-2 font-mono text-xs text-white">
+            <p class="mb-1 font-semibold text-white/60">Size (drag faces to resize)</p>
+            <p>X: {sx.toFixed(2)} &nbsp; Y: {sy.toFixed(2)} &nbsp; Z: {sz.toFixed(2)} m</p>
+        </div>
+        <Canvas>
+            <T.Color attach="background" args={['#10141c']} />
+            <T.PerspectiveCamera position={[18, -22, 16]} makeDefault fov={50}>
+                <OrbitControls bind:ref={resizeOrbitRef} target={[0, 0, 0]} enableDamping />
+            </T.PerspectiveCamera>
+            <T.AmbientLight intensity={1.5} />
+            <T.GridHelper args={[24, 24, '#344054', '#202938']} rotation={[Math.PI / 2, 0, 0]} />
+            <CuboidLayer
+                cuboids={$resizeState.cuboids}
+                annotationClasses={classes}
+                pointCloudBounds={bounds}
+                selectedAnnotationId={$resizeState.selectedId}
+                hoveredAnnotationId={null}
+                activeTool="resize"
+                orbitControls={resizeOrbitRef}
+                onselect={(id) => resizeState.update((s) => ({ ...s, selectedId: id }))}
+                oncuboidupdate={(updated) =>
+                    resizeState.update((s) => ({
+                        ...s,
+                        cuboids: s.cuboids.map((c) => (c.id === updated.id ? updated : c))
+                    }))}
+            />
+        </Canvas>
+    </div>
+{/snippet}
+
 <Story
     name="Rotate (interactive)"
     parameters={{
@@ -228,4 +283,16 @@
         }
     }}
     template={rotateScene}
+/>
+
+<Story
+    name="Resize (interactive)"
+    parameters={{
+        docs: {
+            description: {
+                story: 'Hover a face to highlight it, then drag to resize along that axis. The opposite face stays fixed. The HUD shows the live size updating on drag end.'
+            }
+        }
+    }}
+    template={resizeScene}
 />
