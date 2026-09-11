@@ -1,5 +1,5 @@
 import numpy as np
-from lightly_studio_embed.types import ImageCrop
+from lightly_studio_serve.types import ImageCrop
 from PIL import Image
 
 from lightly_studio.embed.random_embedder import RandomEmbedder

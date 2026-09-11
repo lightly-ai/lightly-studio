@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildMetadataDistributionSource,
     selectCategoricalMetadataKeys,
+    selectNumericMetadataKeys,
     selectComparisonSampleTags
 } from './metadataDistributionSource';
 import type { SampleTagMetadataDistributions } from '$lib/hooks/useMetadataDistributionsBySampleTags';
@@ -28,6 +29,7 @@ const tagDistributions: SampleTagMetadataDistributions[] = [
 
 const params = {
     histograms: { width },
+    numericKeys: ['width'],
     categoricalKeys: ['city'],
     categorical: { city: [zurich] },
     selectedRanges: { width: { min: 0, max: 1 } },
@@ -36,18 +38,34 @@ const params = {
 };
 
 describe('buildMetadataDistributionSource', () => {
+    it('keeps unloaded numeric keys selectable when only one histogram is fetched', () => {
+        const source = buildMetadataDistributionSource({
+            ...params,
+            numericKeys: ['width', 'height'],
+            categoricalKeys: []
+        });
+        expect(source?.groups?.map(({ id }) => id)).toEqual(['width', 'height']);
+        expect(source?.groups?.[0].histogram).toEqual(width);
+        expect(source?.groups?.[1].histogram).toBeUndefined();
+    });
+
     it('returns null when the dataset has no metadata at all', () => {
         expect(
             buildMetadataDistributionSource({
                 ...params,
                 histograms: {},
+                numericKeys: [],
                 categoricalKeys: []
             })
         ).toBeNull();
     });
 
     it('keeps the source when only categorical keys exist', () => {
-        const source = buildMetadataDistributionSource({ ...params, histograms: {} });
+        const source = buildMetadataDistributionSource({
+            ...params,
+            histograms: {},
+            numericKeys: []
+        });
         expect(source?.groups?.map(({ id }) => id)).toEqual(['city']);
     });
 
@@ -122,6 +140,20 @@ describe('buildMetadataDistributionSource', () => {
         const source = buildMetadataDistributionSource({ ...params, categoricalKeys: ['country'] });
         expect(source?.groups?.[1].categorical?.buckets).toEqual([]);
         expect(source?.groups?.[1].categorical?.comparisonBuckets).toEqual([]);
+    });
+});
+
+describe('selectNumericMetadataKeys', () => {
+    it('selects numeric keys from metadata descriptors, including before data arrives', () => {
+        expect(selectNumericMetadataKeys(undefined)).toEqual([]);
+        expect(
+            selectNumericMetadataKeys([
+                { name: 'width', type: 'integer' },
+                { name: 'score', type: 'float' },
+                { name: 'city', type: 'string' },
+                { name: 'reviewed', type: 'boolean' }
+            ])
+        ).toEqual(['width', 'score']);
     });
 });
 

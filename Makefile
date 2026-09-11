@@ -1,24 +1,24 @@
 .PHONY: test
 test:
 	$(MAKE) -C lightly_studio test-ci
-	$(MAKE) -C lightly_studio_embed test
+	$(MAKE) -C lightly_studio_serve test
 	$(MAKE) -C lightly_studio_view test
 
 .PHONY: lint
 lint:
 	$(MAKE) -C lightly_studio lint
-	$(MAKE) -C lightly_studio_embed lint
+	$(MAKE) -C lightly_studio_serve lint
 	$(MAKE) -C lightly_studio_view lint
 
 .PHONY: format
 format:
 	$(MAKE) -C lightly_studio format
-	$(MAKE) -C lightly_studio_embed format
+	$(MAKE) -C lightly_studio_serve format
 	$(MAKE) -C lightly_studio_view format
 
 # The Python members are checked together, so that one command covers every Python package no
 # matter how many siblings there are.
-PYTHON_MEMBERS := lightly_studio lightly_studio_embed
+PYTHON_MEMBERS := lightly_studio lightly_studio_serve
 
 .PHONY: static-checks
 static-checks:
@@ -35,7 +35,7 @@ lint-fix:
 .PHONY: build
 build:
 	$(MAKE) -C lightly_studio build
-	$(MAKE) -C lightly_studio_embed build
+	$(MAKE) -C lightly_studio_serve build
 
 .PHONY: download-example-dataset
 download-example-dataset:

@@ -8,7 +8,7 @@ results are random.
 from __future__ import annotations
 
 import numpy as np
-from lightly_studio_embed.embedder import (
+from lightly_studio_serve.embedder import (
     ImageBytesEmbedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
@@ -16,7 +16,7 @@ from lightly_studio_embed.embedder import (
     TextEmbedder,
     VideoPathEmbedder,
 )
-from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from PIL.Image import Image
 
 

@@ -33,7 +33,7 @@ jobs:
       docs: ${{ steps.filter.outputs.docs || 'true' }}
       fast_track: ${{ steps.filter.outputs.fast_track || 'true' }}
       release_tooling: ${{ steps.filter.outputs.release_tooling || 'true' }}
-      lightly_studio_embed: ${{ steps.filter.outputs.lightly_studio_embed || 'true' }}
+      lightly_studio_serve: ${{ steps.filter.outputs.lightly_studio_serve || 'true' }}
     steps:
       - name: Checkout Code # Needed for merge_group event
         uses: actions/checkout@v7
@@ -77,11 +77,11 @@ jobs:
               - '.github/scripts/**'
               - '.github/workflows/unit_test.yml'
             # The embedding server package. Shares the lockfile, not the dependencies.
-            lightly_studio_embed:
+            lightly_studio_serve:
               - '.github/workflows/unit_test.yml'
               - 'Makefile'
               - 'lightly_studio/ruff.toml'
-              - 'lightly_studio_embed/**'
+              - 'lightly_studio_serve/**'
               - 'make/**'
               - 'pyproject.toml'
               - 'uv.lock'
@@ -385,10 +385,10 @@ jobs:
       - name: Tests
         run: make test
 
-  check-lightly-studio-embed:
-    name: Static Checks + Tests LightlyStudio Embed (${{ matrix.python }})
+  check-lightly-studio-serve:
+    name: Static Checks + Tests LightlyStudio Serve (${{ matrix.python }})
     needs: detect
-    if: needs.detect.outputs.lightly_studio_embed == 'true'
+    if: needs.detect.outputs.lightly_studio_serve == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -403,7 +403,7 @@ jobs:
       contents: read
     defaults:
       run:
-        working-directory: lightly_studio_embed
+        working-directory: lightly_studio_serve
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -449,7 +449,7 @@ jobs:
       - check-docs
       - check-fast-track
       - check-release-tooling
-      - check-lightly-studio-embed
+      - check-lightly-studio-serve
     if: always()
     steps:
       - name: Verify required jobs
@@ -462,7 +462,7 @@ jobs:
           DOCS: ${{ needs.check-docs.result }}
           FAST_TRACK: ${{ needs.check-fast-track.result }}
           RELEASE_TOOLING: ${{ needs.check-release-tooling.result }}
-          LIGHTLY_STUDIO_EMBED: ${{ needs.check-lightly-studio-embed.result }}
+          LIGHTLY_STUDIO_SERVE: ${{ needs.check-lightly-studio-serve.result }}
         run: |
           python3 - <<'PY'
           import os
@@ -482,7 +482,7 @@ jobs:
               "Build Docs": os.environ["DOCS"],
               "Static Checks + Tests Fast Track": os.environ["FAST_TRACK"],
               "Static Checks + Tests Release Tooling": os.environ["RELEASE_TOOLING"],
-              "Static Checks + Tests LightlyStudio Embed": os.environ["LIGHTLY_STUDIO_EMBED"],
+              "Static Checks + Tests LightlyStudio Serve": os.environ["LIGHTLY_STUDIO_SERVE"],
           }
           allowed = {"success", "skipped"}
 

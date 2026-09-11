@@ -13,6 +13,12 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
+from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.resolvers import (
@@ -24,7 +30,9 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     export_job_resolver,
+    mcap_group_sequence_resolver,
     metadata_resolver,
+    recording_resolver,
     sample_embedding_resolver,
     sample_resolver,
     tag_resolver,
@@ -66,6 +74,26 @@ def test_delete_dataset__empty_collection(db_session: Session) -> None:
 
     # Assert - collection deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+
+
+def test_delete_dataset__with_recordings(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        uri="/data/to_delete.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - recording deleted along with the dataset
+    assert recording_resolver.get_by_id(session=db_session, recording_id=recording_id) is None
 
 
 def test_delete_dataset__with_images_and_annotations(db_session: Session) -> None:
@@ -249,23 +277,77 @@ def test_delete_dataset__with_group_component_definitions(db_session: Session) -
     assert db_session.get(GroupComponentDefinitionTable, component_collection_id) is None
 
 
-def test_delete_dataset__with_sequences(db_session: Session) -> None:
+def test_delete_dataset__with_mcap_group_component_definitions(db_session: Session) -> None:
     # Arrange
-    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
-    sample_ids = sample_resolver.create_many(
-        session=db_session,
-        samples=[SampleCreate(collection_id=collection.collection_id) for _ in range(2)],
+    dataset = create_collection(
+        session=db_session, collection_name="to_delete", sample_type=SampleType.GROUP
     )
-    sequence = SequenceTable(sample_id=sample_ids[0])
-    db_session.add(sequence)
-    db_session.flush()
+    collection_id = dataset.collection_id
+    dataset_id = dataset.dataset_id
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=collection_id,
+        components=[
+            ("image", SampleType.MCAP),
+            ("point_cloud", SampleType.MCAP),
+        ],
+    )
+    image_id = components["image"].collection_id
+    point_cloud_id = components["point_cloud"].collection_id
     db_session.add(
-        SampleSequenceLinkTable(
-            sample_id=sample_ids[1], sequence_sample_id=sequence.sample_id, seq_number=0
+        McapGroupComponentDefinitionTable(
+            collection_id=image_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            channel_id=3,
+        )
+    )
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=point_cloud_id,
+            mcap_data_type=McapDataType.POINT_CLOUD,
+            channel_id=5,
         )
     )
     db_session.commit()
-    sequence_id = sequence.sample_id
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset_id,
+    )
+
+    # Assert
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert collection_resolver.get_by_id(session=db_session, collection_id=image_id) is None
+    assert db_session.get(GroupComponentDefinitionTable, image_id) is None
+    assert db_session.get(McapGroupComponentDefinitionTable, image_id) is None
+    assert db_session.get(McapGroupComponentDefinitionTable, point_cloud_id) is None
+
+
+def test_delete_dataset__with_sequences(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sequence_id = mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=collection.collection_id,
+        recording_id=recording_id,
+    )
+    linked_sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id)],
+    )
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=linked_sample_ids[0], sequence_sample_id=sequence_id, seq_number=0
+        )
+    )
+    db_session.commit()
     collection_id = collection.collection_id
 
     # Act
@@ -274,9 +356,10 @@ def test_delete_dataset__with_sequences(db_session: Session) -> None:
         dataset_id=collection.dataset_id,
     )
 
-    # Assert - collection, sequence, and its links are all deleted
+    # Assert - collection, sequence, MCAP specialisation, and links are all deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
     assert db_session.get(SequenceTable, sequence_id) is None
+    assert db_session.get(McapGroupSequenceTable, sequence_id) is None
     assert (
         db_session.exec(
             select(SampleSequenceLinkTable).where(

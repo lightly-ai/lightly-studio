@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -308,6 +310,117 @@ def test_postgres_collection_embedding_model__backfills_all_models(
         engine.dispose()
 
 
+def test_postgres_metadata__json_jsonb_migration(
+    postgres_url: str | None,
+) -> None:
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    collection_id = "00000000-0000-0000-0000-000000000002"
+    sample_id = "00000000-0000-0000-0000-000000000003"
+    # Cover nested values, arrays, a JSON null, and a dotted key.
+    data = {"nested": {"scores": [1, 2, 3]}, "flag": True, "missing": None, "dotted.key": "value"}
+    metadata_schema = {
+        "nested": "dict",
+        "flag": "boolean",
+        "missing": "null",
+        "dotted.key": "string",
+    }
+
+    try:
+        # Upgrade to the revision just before the JSONB conversion, where the columns are json.
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="c5d6e7f8a9b0"
+        )
+        assert _metadata_column_data_type(engine=engine, column_name="data") == "json"
+
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, dataset_id, created_at, updated_at
+                    ) VALUES (
+                        'collection', 'IMAGE', :collection_id, :dataset_id, NOW(), NOW()
+                    )
+                    """
+                ),
+                parameters={"collection_id": collection_id, "dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sample (collection_id, sample_id, created_at, updated_at)
+                    VALUES (:collection_id, :sample_id, NOW(), NOW())
+                    """
+                ),
+                parameters={"collection_id": collection_id, "sample_id": sample_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO metadata (
+                        custom_metadata_id, sample_id, created_at, updated_at,
+                        data, metadata_schema
+                    ) VALUES (
+                        gen_random_uuid(), :sample_id, NOW(), NOW(),
+                        CAST(:data AS json), CAST(:metadata_schema AS json)
+                    )
+                    """
+                ),
+                parameters={
+                    "sample_id": sample_id,
+                    "data": json.dumps(data),
+                    "metadata_schema": json.dumps(metadata_schema),
+                },
+            )
+
+        # Upgrade across the JSONB conversion.
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        assert _metadata_column_data_type(engine=engine, column_name="data") == "jsonb"
+        assert _metadata_column_data_type(engine=engine, column_name="metadata_schema") == "jsonb"
+        columns = db_migrations._get_inspector(engine=engine).get_columns(table_name="metadata")
+        for column in columns:
+            if column["name"] in ("data", "metadata_schema"):
+                assert column["nullable"] is False
+
+        # The stored values survive the conversion (psycopg parses jsonb back into Python objects).
+        with engine.connect() as connection:
+            stored_data, stored_schema = connection.execute(
+                statement=text("SELECT data, metadata_schema FROM metadata")
+            ).one()
+        assert stored_data == data
+        assert stored_schema == metadata_schema
+
+        config.attributes.pop("connection", None)
+        command.check(config)
+
+        # The downgrade restores json storage and keeps the values.
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.downgrade, revision="c5d6e7f8a9b0"
+        )
+        assert _metadata_column_data_type(engine=engine, column_name="data") == "json"
+        with engine.connect() as connection:
+            downgraded_data = connection.execute(
+                statement=text("SELECT data FROM metadata")
+            ).scalar_one()
+        assert downgraded_data == data
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
 def test_postgres_embedding_model_api_key__added_and_dropped(
     postgres_url: str | None,
 ) -> None:
@@ -393,3 +506,17 @@ def test_postgres_embedding_model_api_key__added_and_dropped(
     finally:
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()
+
+
+def _metadata_column_data_type(engine: Engine, column_name: str) -> str:
+    """Return the SQL ``data_type`` of a ``metadata`` column, e.g. ``json`` or ``jsonb``."""
+    with engine.connect() as connection:
+        data_type = connection.execute(
+            statement=text(
+                "SELECT data_type FROM information_schema.columns "
+                "WHERE table_name = 'metadata' AND column_name = :column_name"
+            ),
+            parameters={"column_name": column_name},
+        ).scalar_one()
+    assert isinstance(data_type, str)
+    return data_type

@@ -78,6 +78,8 @@
         selectedComparisonTagIds?: string[];
         /** Updates the independent comparison selection without changing the grid filter. */
         onComparisonTagIdsChange?: (ids: string[]) => void;
+        /** Called when the active distribution source or group changes. */
+        onGroupChange?: (sourceId: string, groupId?: string) => void;
     }
 
     const {
@@ -97,7 +99,8 @@
         onCategoricalRetry,
         comparisonTagItems = [],
         selectedComparisonTagIds = [],
-        onComparisonTagIdsChange
+        onComparisonTagIdsChange,
+        onGroupChange
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -115,7 +118,7 @@
     const sourceHasContent = (source: DistributionSource): boolean =>
         (source.data?.length ?? 0) > 0 ||
         source.histogram != null ||
-        (source.groups?.some(groupHasContent) ?? false);
+        (source.groups?.length ?? 0) > 0;
 
     // With nothing explicitly selected, land on the first source that actually
     // has something to show. Otherwise an empty leading source (e.g. "All types"
@@ -130,6 +133,10 @@
             activeSource.groups?.find(groupHasContent) ??
             activeSource.groups?.[0]
     );
+
+    $effect(() => {
+        onGroupChange?.(activeSource.id, activeGroup?.id);
+    });
     const activeSingleSeriesData = $derived<CategoryCount[]>(
         activeGroup?.data ?? activeSource.data ?? []
     );

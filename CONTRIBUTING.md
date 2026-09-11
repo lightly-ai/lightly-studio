@@ -47,7 +47,7 @@ make static-checks
 make test
 
 # Embedding server package
-cd ../lightly_studio_embed
+cd ../lightly_studio_serve
 make static-checks
 make test
 ```
@@ -58,8 +58,8 @@ The Python packages are members of one [uv workspace](https://docs.astral.sh/uv/
 whose root is the repository root:
 
 - `lightly_studio` - the application, published as `lightly-studio`.
-- `lightly_studio_embed` - the server a customer runs in front of their own embedding model,
-  published as `lightly-studio-embed`. Its dependencies stay limited to an HTTP server, so that it
+- `lightly_studio_serve` - the server a customer runs in front of their own embedding model,
+  published as `lightly-studio-serve`. Its dependencies stay limited to an HTTP server, so that it
   installs next to a customer's own CUDA and torch pins.
 
 They share one `uv.lock` and one `.venv`, both at the repository root, so that the two packages
@@ -255,7 +255,7 @@ npm run dev
 ### Exploring the Makefile
 
 `lightly_studio` has the backend, build, e2e and migration targets, `lightly_studio_view` the
-frontend ones and `lightly_studio_embed` those for the embedding server package. The one in the
+frontend ones and `lightly_studio_serve` those for the embedding server package. The one in the
 repository root delegates to all three. `make/python.mk` is never run directly: it holds the
 targets the Python members share, and each includes it rather than copying them.
 
