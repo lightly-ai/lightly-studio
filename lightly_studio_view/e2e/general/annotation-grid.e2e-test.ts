@@ -1,4 +1,4 @@
-import { test, expect, isInViewport } from '../utils';
+import { test, expect, isInViewport, scrollDownToGridItem } from '../utils';
 import { cocoDataset } from './fixtures';
 
 test.beforeEach(async ({ annotationsPage }) => {
@@ -104,7 +104,7 @@ test('We can see clicked element when navigating back from details', async ({
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
     ).toBeFalsy();
 
-    await annotationsPage.getAnnotationByIndex(20).scrollIntoViewIfNeeded();
+    await scrollDownToGridItem(viewport, annotationsPage.getAnnotationByIndex(20));
 
     expect(
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
