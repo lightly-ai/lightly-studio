@@ -6,6 +6,9 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,
+)
 from lightly_studio.resolvers import collection_resolver
 
 
