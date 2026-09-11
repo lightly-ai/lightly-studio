@@ -57,6 +57,7 @@ from lightly_studio.models.group_component_definition import (
 )
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
@@ -136,6 +137,7 @@ def deep_copy(
     _copy_video_frames(session=session)
     _copy_groups(session=session)
     _copy_sequences(session=session)
+    _copy_mcap_group_sequences(session=session)
     _copy_captions(session=session, now=now)
     _copy_annotations(session=session, now=now)
     _copy_annotation_details(session=session, detail_table=ObjectDetectionAnnotationTable)
@@ -620,6 +622,27 @@ def _copy_sequences(session: Session) -> None:
     _copy_table(
         session=session,
         target=SequenceTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_mcap_group_sequences(session: Session) -> None:
+    """Copy MCAP group sequences, remapping sample_id and recording_id."""
+    src = _table(McapGroupSequenceTable).alias("src")
+    map_sample = _map(_MAP_SAMPLE)
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"]).join(
+        map_recording, map_recording.c.old_id == src.c["recording_id"]
+    )
+    overrides = {
+        "sample_id": map_sample.c.new_id,
+        "recording_id": map_recording.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=McapGroupSequenceTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

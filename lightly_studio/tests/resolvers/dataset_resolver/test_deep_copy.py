@@ -15,6 +15,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
@@ -29,6 +30,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
     metadata_resolver,
     object_track_resolver,
     recording_resolver,
@@ -530,6 +532,55 @@ def test_deep_copy__with_sequences(db_session: Session) -> None:
     assert [link.seq_number for link in copied_links] == [0, 1]
     assert [link.timestamp_ns for link in copied_links] == [1785699091646722462, None]
     assert {link.sample_id for link in copied_links}.isdisjoint(sample_ids)
+
+
+def test_deep_copy__with_mcap_group_sequences(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    mcap_sample_id = mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=collection.collection_id,
+        recording_id=recording_id,
+    )
+    classic_sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id)],
+    )
+    db_session.add(SequenceTable(sample_id=classic_sample_ids[0]))
+    db_session.commit()
+    original_ids = {mcap_sample_id, classic_sample_ids[0]}
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_sequences = db_session.exec(
+        select(SequenceTable)
+        .join(SampleTable, col(SequenceTable.sample_id) == col(SampleTable.sample_id))
+        .where(col(SampleTable.collection_id) == copied.collection_id)
+    ).all()
+    assert len(copied_sequences) == 2
+    copied_ids = {sequence.sample_id for sequence in copied_sequences}
+    assert copied_ids.isdisjoint(original_ids)
+
+    copied_mcap_rows = db_session.exec(
+        select(McapGroupSequenceTable).where(col(McapGroupSequenceTable.sample_id).in_(copied_ids))
+    ).all()
+    assert len(copied_mcap_rows) == 1
+    assert copied_mcap_rows[0].recording_id != recording_id
+    copied_recording = recording_resolver.get_by_id(
+        session=db_session, recording_id=copied_mcap_rows[0].recording_id
+    )
+    assert copied_recording is not None
+    assert copied_recording.uri == "/bags/drive_001.mcap"
+    assert copied_mcap_rows[0].sample_id != mcap_sample_id
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
