@@ -149,6 +149,8 @@ def test_main__render_pr_body__writes_file(tmp_path: Path):
                 str(changelog_file),
                 "--version",
                 "1.1.0",
+                "--package",
+                "lightly-studio",
                 "--output",
                 str(output),
             ]
@@ -157,3 +159,49 @@ def test_main__render_pr_body__writes_file(tmp_path: Path):
     )
     body = output.read_text()
     assert "Added thing one" in body
+
+
+def test_main__package_config(capsys: pytest.CaptureFixture):
+    assert cli.main(["package-config", "--package", "lightly-studio"]) == 0
+    assert "pyproject=lightly_studio/pyproject.toml\n" in capsys.readouterr().out
+
+
+def test_main__package_config__by_tag(capsys: pytest.CaptureFixture):
+    assert cli.main(["package-config", "--tag", "lightly-studio-embed/v0.1.1"]) == 0
+    assert "distribution=lightly-studio-embed\n" in capsys.readouterr().out
+
+
+def test_main__package_config__unknown_package_exits_nonzero(capsys: pytest.CaptureFixture):
+    assert cli.main(["package-config", "--package", "lightly-train"]) == 1
+    assert "unknown package" in capsys.readouterr().err
+
+
+def test_main__package_config__requires_a_selector():
+    with pytest.raises(SystemExit):
+        cli.main(["package-config"])
+
+
+def test_main__list_packages(capsys: pytest.CaptureFixture):
+    assert cli.main(["list-packages"]) == 0
+    assert capsys.readouterr().out == (
+        "lightly-studio lightly_studio/pyproject.toml\n"
+        "lightly-studio-embed lightly_studio_embed/pyproject.toml\n"
+    )
+
+
+def test_main__check_wheel_dependencies__no_wheel_exits_nonzero(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+):
+    assert (
+        cli.main(
+            [
+                "check-wheel-dependencies",
+                "--package",
+                "lightly-studio-embed",
+                "--dist",
+                str(tmp_path),
+            ]
+        )
+        == 1
+    )
+    assert "expected exactly one wheel" in capsys.readouterr().err
