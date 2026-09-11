@@ -36,6 +36,8 @@
         frame?: PointCloudFrame;
         /** Frame stepping for the timeline. Absent leaves its controls disabled. */
         navigation?: FrameNavigation;
+        /** Resolves a camera picture the frame refers to by id, for the camera strip. */
+        resolveCameraImage?: (resourceId: string) => ImageBitmap | undefined;
         /**
          * Temporary: when given, reports what the MCAP provider read alongside the scene.
          * Remove together with `ProviderDiagnostics`.
@@ -51,6 +53,7 @@
         status = 'empty',
         frame,
         navigation,
+        resolveCameraImage,
         diagnostics,
         onExit,
         onRetry
@@ -123,7 +126,10 @@
                         </PaneResizer>
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
                         <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
-                            <CameraProjectionStrip />
+                            <CameraProjectionStrip
+                                cameras={frame?.cameras}
+                                resolveImage={resolveCameraImage}
+                            />
                         </Pane>
                         <PaneResizer
                             class="group relative flex h-2 cursor-row-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"

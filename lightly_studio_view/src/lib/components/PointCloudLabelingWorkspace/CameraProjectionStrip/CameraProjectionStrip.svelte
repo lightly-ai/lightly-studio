@@ -1,23 +1,27 @@
 <script lang="ts">
     import { Camera, SquareDashed } from '@lucide/svelte';
+    import type { CameraFrame } from '../domain';
+    import CameraTile from './CameraTile.svelte';
 
     /**
      * Horizontal strip of the camera images and orthographic frame projections that belong to the
      * active point-cloud frame. It sits directly under the 3D viewport so a selected cuboid can be
      * checked against every available view without leaving the scene.
      *
-     * Placeholder tiles: the real ones come from the frame's `cameras` plus the orthographic
-     * renderer views, and stay synchronized with the 3D selection.
+     * The camera tiles follow the frame: stepping, scrubbing and playback all hand over a new
+     * frame, and each tile draws the picture its camera was showing at that moment. The
+     * orthographic projections are still placeholders; they come with the renderer views.
      */
-    const views: { label: string; kind: 'camera' | 'projection' }[] = [
-        { label: 'Front camera', kind: 'camera' },
-        { label: 'Left camera', kind: 'camera' },
-        { label: 'Right camera', kind: 'camera' },
-        { label: 'Rear camera', kind: 'camera' },
-        { label: 'Top (BEV)', kind: 'projection' },
-        { label: 'Side', kind: 'projection' },
-        { label: 'Front', kind: 'projection' }
-    ];
+    interface Props {
+        /** Cameras of the frame on screen. Empty until a frame with imagery is decoded. */
+        cameras?: readonly CameraFrame[];
+        /** Resolves a camera's decoded picture, which the frame refers to by id. */
+        resolveImage?: (resourceId: string) => ImageBitmap | undefined;
+    }
+
+    let { cameras = [], resolveImage }: Props = $props();
+
+    const projections = ['Top (BEV)', 'Side', 'Front'];
 </script>
 
 <div
@@ -29,16 +33,29 @@
         <span>· synchronized with the 3D selection</span>
     </div>
     <div class="flex min-h-0 flex-1 gap-2 overflow-x-auto px-3 pb-2">
-        {#each views as view (view.label)}
+        {#if cameras.length === 0}
             <figure
                 class="flex h-full min-w-40 shrink-0 flex-col items-center justify-center gap-1 rounded-md border bg-muted/30 text-muted-foreground"
             >
-                {#if view.kind === 'camera'}
-                    <Camera class="size-5" aria-hidden="true" />
-                {:else}
-                    <SquareDashed class="size-5" aria-hidden="true" />
-                {/if}
-                <figcaption class="px-2 text-center text-xs">{view.label}</figcaption>
+                <Camera class="size-5" aria-hidden="true" />
+                <figcaption class="px-2 text-center text-xs">No camera for this frame</figcaption>
+            </figure>
+        {:else}
+            {#each cameras as camera (camera.id)}
+                <CameraTile
+                    {camera}
+                    image={camera.image?.kind === 'decoded'
+                        ? resolveImage?.(camera.image.resourceId)
+                        : undefined}
+                />
+            {/each}
+        {/if}
+        {#each projections as projection (projection)}
+            <figure
+                class="flex h-full min-w-40 shrink-0 flex-col items-center justify-center gap-1 rounded-md border bg-muted/30 text-muted-foreground"
+            >
+                <SquareDashed class="size-5" aria-hidden="true" />
+                <figcaption class="px-2 text-center text-xs">{projection}</figcaption>
             </figure>
         {/each}
     </div>

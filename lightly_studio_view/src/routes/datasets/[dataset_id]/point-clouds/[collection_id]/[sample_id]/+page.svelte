@@ -85,6 +85,7 @@
                 {sourcePath}
                 frame={probe.frame}
                 navigation={probe}
+                resolveCameraImage={probe.cameraImage}
                 diagnostics={probe}
                 onExit={handleExit}
             />
