@@ -57,6 +57,9 @@ from lightly_studio.models.group_component_definition import (
 )
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,
+)
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.recording import RecordingTable
@@ -155,6 +158,7 @@ def deep_copy(
     _copy_annotation_collection_coverage(session=session)
     _copy_default_embedding_spaces(session=session)
     _copy_group_component_definitions(session=session)
+    _copy_mcap_group_component_definitions(session=session)
 
     # Commit so the ON COMMIT DROP map tables are released and a subsequent deep_copy in
     # the same session can recreate them.
@@ -932,6 +936,25 @@ def _copy_group_component_definitions(session: Session) -> None:
     _copy_table(
         session=session,
         target=GroupComponentDefinitionTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_mcap_group_component_definitions(session: Session) -> None:
+    """Copy MCAP group component definitions, remapping collection_id.
+
+    ``mcap_data_type``, ``frame_id``, and ``channel_id`` are copied verbatim. Classic
+    IMAGE/VIDEO definitions have no row here, so they copy nothing.
+    """
+    src = _table(McapGroupComponentDefinitionTable).alias("src")
+    map_collection = _map(_MAP_COLLECTION)
+    from_clause = src.join(map_collection, map_collection.c.old_id == src.c["collection_id"])
+    overrides = {"collection_id": map_collection.c.new_id}
+    _copy_table(
+        session=session,
+        target=McapGroupComponentDefinitionTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,
