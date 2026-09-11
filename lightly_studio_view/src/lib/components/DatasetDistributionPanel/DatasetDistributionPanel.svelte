@@ -118,7 +118,7 @@
     const sourceHasContent = (source: DistributionSource): boolean =>
         (source.data?.length ?? 0) > 0 ||
         source.histogram != null ||
-        (source.groups?.some(groupHasContent) ?? false);
+        (source.groups?.length ?? 0) > 0;
 
     // With nothing explicitly selected, land on the first source that actually
     // has something to show. Otherwise an empty leading source (e.g. "All types"
