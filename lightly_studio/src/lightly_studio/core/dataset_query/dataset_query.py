@@ -6,7 +6,7 @@ from collections.abc import Iterator, Mapping
 from typing import Generic, cast
 from uuid import UUID
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy import orm
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
@@ -274,10 +274,12 @@ class DatasetQuery(Generic[T]):
         Returns:
             Iterator of Sample objects from the database.
         """
+        # Reuse the joined base sample so wrapper construction needs no per-sample query.
         if self.dataset.sample_type == SampleType.IMAGE:
             image_query: SelectOfScalar[ImageTable] = (
                 select(ImageTable)
                 .join(ImageTable.sample)
+                .options(orm.contains_eager(ImageTable.sample))
                 .where(SampleTable.collection_id == self.dataset.collection_id)
             )
             image_query = self._compose_query(image_query)
@@ -288,6 +290,7 @@ class DatasetQuery(Generic[T]):
             video_query: SelectOfScalar[VideoTable] = (
                 select(VideoTable)
                 .join(VideoTable.sample)
+                .options(orm.contains_eager(VideoTable.sample))
                 .where(SampleTable.collection_id == self.dataset.collection_id)
             )
             video_query = self._compose_query(video_query)
@@ -298,6 +301,7 @@ class DatasetQuery(Generic[T]):
             group_query: SelectOfScalar[GroupTable] = (
                 select(GroupTable)
                 .join(GroupTable.sample)
+                .options(orm.contains_eager(GroupTable.sample))
                 .where(SampleTable.collection_id == self.dataset.collection_id)
             )
             group_query = self._compose_query(group_query)
@@ -308,10 +312,11 @@ class DatasetQuery(Generic[T]):
             video_frame_query: SelectOfScalar[VideoFrameTable] = (
                 select(VideoFrameTable)
                 .join(VideoFrameTable.sample)
+                .options(orm.contains_eager(VideoFrameTable.sample))
                 .where(SampleTable.collection_id == self.dataset.collection_id)
                 # Eager-load the parent video so VideoFrameSample.parent_video does not
                 # trigger a query per frame (many-to-one, so no row multiplication).
-                .options(joinedload(VideoFrameTable.video))
+                .options(orm.joinedload(VideoFrameTable.video))
             )
             video_frame_query = self._compose_query(video_frame_query)
             for video_frame_table in self.session.exec(video_frame_query):

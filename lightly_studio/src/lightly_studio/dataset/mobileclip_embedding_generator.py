@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from numpy.typing import NDArray
 from PIL import Image
 

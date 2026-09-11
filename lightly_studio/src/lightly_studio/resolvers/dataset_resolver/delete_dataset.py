@@ -50,6 +50,7 @@ from lightly_studio.models.group_component_definition import (
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
@@ -127,6 +128,7 @@ def delete_dataset(
 
     # 5. Samples and collection/dataset-scoped entities.
     _delete_samples(session=session, dataset_id=dataset_id)
+    _delete_recordings(session=session, dataset_id=dataset_id)
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
     # Must precede embedding_model and collections (FKs to both, deleted below and in step 6).
@@ -259,6 +261,14 @@ def _delete_annotation_collection_coverage(session: Session, dataset_id: UUID) -
                 _collection_ids_subquery(dataset_id)
             )
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_recordings(session: Session, dataset_id: UUID) -> None:
+    """Delete recordings for the given dataset."""
+    session.exec(
+        delete(RecordingTable).where(col(RecordingTable.dataset_id) == dataset_id),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 

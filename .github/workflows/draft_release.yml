@@ -220,4 +220,4 @@ jobs:
             --draft \
             --title "${TAG}" \
             --notes-file "${RUNNER_TEMP}/release-notes.md"
-          echo "::notice::Draft release ${TAG} ready. Run Finish Release once the wheel is on PyPI."
+          echo "::notice::Draft release ${TAG} ready. Run Finish Release to publish the wheel to PyPI and make the release public."

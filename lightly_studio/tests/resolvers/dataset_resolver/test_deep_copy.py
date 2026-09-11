@@ -15,6 +15,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
@@ -30,6 +31,7 @@ from lightly_studio.resolvers import (
     image_resolver,
     metadata_resolver,
     object_track_resolver,
+    recording_resolver,
     sample_embedding_resolver,
     sample_resolver,
 )
@@ -72,6 +74,60 @@ def test_deep_copy__empty_collection(db_session: Session) -> None:
     assert copied.name == "copied"
     assert copied.sample_type == original.sample_type
     assert copied.parent_collection_id is None
+
+
+def test_deep_copy__with_recordings(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        uri="/data/original.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - one recording copied with a fresh id, remapped dataset_id, same uri/format
+    copied_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=copied.dataset_id
+    )
+    assert len(copied_recordings) == 1
+    copied_recording = copied_recordings[0]
+    assert copied_recording.recording_id != recording_id
+    assert copied_recording.dataset_id == copied.dataset_id
+    assert copied_recording.uri == "/data/original.mcap"
+    assert copied_recording.format == RecordingFormat.MCAP
+
+    # Assert - original recording untouched
+    original_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=original.dataset_id
+    )
+    assert len(original_recordings) == 1
+    assert original_recordings[0].recording_id == recording_id
+
+
+def test_deep_copy__without_recordings(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - classic dataset copies fine with zero recording rows
+    assert (
+        recording_resolver.get_all_by_dataset_id(session=db_session, dataset_id=copied.dataset_id)
+        == []
+    )
 
 
 def test_deep_copy__with_images(db_session: Session) -> None:

@@ -23,6 +23,65 @@ from tests.helpers_resolvers import (
 _EMBEDDING_DIMENSION = 3
 
 
+def test_store_embeddings__casts_and_batches_embeddings(
+    db_session: Session,
+    collection: CollectionTable,
+    mocker: MockerFixture,
+) -> None:
+    """Storage casts float64 values and inserts them in bounded batches."""
+    mocker.patch.object(embedding_storage, "EMBEDDING_INSERTION_BATCH_SIZE", 4)
+    create_many_spy = mocker.spy(sample_embedding_resolver, "create_many")
+    model_id = _create_model(session=db_session, collection=collection)
+    # 10 samples with batch size 4 -> 3 batches of sizes 4, 4, and 2.
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub() for _ in range(10)],
+    )
+    sample_ids = [image.sample_id for image in images]
+    embeddings = np.zeros((len(sample_ids), _EMBEDDING_DIMENSION), dtype=np.float64)
+
+    embedding_storage.store_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=sample_ids,
+        embeddings=embeddings,  # type: ignore[arg-type]
+        show_progress=False,
+    )
+
+    assert create_many_spy.call_count == 3
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == len(sample_ids)
+    assert all(embedding.embedding.dtype == np.float32 for embedding in stored_embeddings)
+
+
+def test_store_embeddings__casts_float64_embeddings(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Storage accepts and stores embeddings passed in as float64."""
+    model_id = _create_model(session=db_session, collection=collection)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    sample_ids = [image.sample_id]
+    embeddings = np.array([[0.1 * (i + 1) for i in range(_EMBEDDING_DIMENSION)]], dtype=np.float64)
+
+    embedding_storage.store_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=sample_ids,
+        embeddings=embeddings,  # type: ignore[arg-type]
+        show_progress=False,
+    )
+
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 1
+    assert len(stored_embeddings[0].embedding) == _EMBEDDING_DIMENSION
+
+
 def test_validate_and_coerce_embeddings(
     db_session: Session,
     collection: CollectionTable,
@@ -187,65 +246,6 @@ def test_store_embeddings__rejects_invalid_embeddings_before_write(
         select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
     ).all()
     assert len(stored_embeddings) == 0
-
-
-def test_store_embeddings__casts_and_batches_embeddings(
-    db_session: Session,
-    collection: CollectionTable,
-    mocker: MockerFixture,
-) -> None:
-    """Storage casts float64 values and inserts them in bounded batches."""
-    mocker.patch.object(embedding_storage, "EMBEDDING_INSERTION_BATCH_SIZE", 4)
-    create_many_spy = mocker.spy(sample_embedding_resolver, "create_many")
-    model_id = _create_model(session=db_session, collection=collection)
-    # 10 samples with batch size 4 -> 3 batches of sizes 4, 4, and 2.
-    images = create_images(
-        db_session=db_session,
-        collection_id=collection.collection_id,
-        images=[ImageStub() for _ in range(10)],
-    )
-    sample_ids = [image.sample_id for image in images]
-    embeddings = np.zeros((len(sample_ids), _EMBEDDING_DIMENSION), dtype=np.float64)
-
-    embedding_storage.store_embeddings(
-        session=db_session,
-        model_id=model_id,
-        sample_ids=sample_ids,
-        embeddings=embeddings,  # type: ignore[arg-type]
-        show_progress=False,
-    )
-
-    assert create_many_spy.call_count == 3
-    stored_embeddings = db_session.exec(
-        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
-    ).all()
-    assert len(stored_embeddings) == len(sample_ids)
-    assert all(embedding.embedding.dtype == np.float32 for embedding in stored_embeddings)
-
-
-def test_store_embeddings__casts_float64_embeddings(
-    db_session: Session,
-    collection: CollectionTable,
-) -> None:
-    """Storage accepts and stores embeddings passed in as float64."""
-    model_id = _create_model(session=db_session, collection=collection)
-    image = create_image(session=db_session, collection_id=collection.collection_id)
-    sample_ids = [image.sample_id]
-    embeddings = np.array([[0.1 * (i + 1) for i in range(_EMBEDDING_DIMENSION)]], dtype=np.float64)
-
-    embedding_storage.store_embeddings(
-        session=db_session,
-        model_id=model_id,
-        sample_ids=sample_ids,
-        embeddings=embeddings,  # type: ignore[arg-type]
-        show_progress=False,
-    )
-
-    stored_embeddings = db_session.exec(
-        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
-    ).all()
-    assert len(stored_embeddings) == 1
-    assert len(stored_embeddings[0].embedding) == _EMBEDDING_DIMENSION
 
 
 def _create_model(session: Session, collection: CollectionTable) -> UUID:

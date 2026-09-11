@@ -16,7 +16,7 @@ from collections.abc import Callable
 from typing import TypeVar
 from uuid import UUID
 
-from lightly_studio_embed.embedder import Capability, Embedder
+from lightly_studio_serve.embedder import Capability, Embedder
 from PIL.Image import Image
 from sqlmodel import Session
 
