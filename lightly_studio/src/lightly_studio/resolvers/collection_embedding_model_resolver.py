@@ -94,6 +94,24 @@ def get_default_by_collection_id(session: Session, collection_id: UUID) -> UUID 
     return None if default is None else default.embedding_model_id
 
 
+def get_default_model_by_collection_id(
+    session: Session, collection_id: UUID
+) -> EmbeddingModelTable | None:
+    """Return the collection's default embedding model, or None if it has none."""
+    return session.exec(
+        select(EmbeddingModelTable)
+        .join(
+            CollectionEmbeddingModelTable,
+            onclause=col(CollectionEmbeddingModelTable.embedding_model_id)
+            == col(EmbeddingModelTable.embedding_model_id),
+        )
+        .where(
+            CollectionEmbeddingModelTable.collection_id == collection_id,
+            col(CollectionEmbeddingModelTable.is_default).is_(True),
+        )
+    ).one_or_none()
+
+
 def has_default_by_collection_id(session: Session, collection_id: UUID) -> bool:
     """Return whether the collection has a default embedding model."""
     stmt = select(
