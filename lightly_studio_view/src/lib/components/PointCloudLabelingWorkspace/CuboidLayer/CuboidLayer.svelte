@@ -1,8 +1,11 @@
 <script lang="ts">
     import { T, useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
+    import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidGizmo from './CuboidGizmo.svelte';
+    import CuboidResizeGizmo from './CuboidResizeGizmo.svelte';
+    import CuboidTooltip from './CuboidTooltip/CuboidTooltip.svelte';
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
@@ -24,6 +27,8 @@
         activeTool?: Domain.WorkspaceTool;
         /** Bounds of the point cloud containing the cuboids. */
         pointCloudBounds: Domain.Bounds3;
+        /** OrbitControls reference suppressed during resize drags. */
+        orbitControls?: ThreeOrbitControls;
         /** Fires when the user selects or deselects a cuboid. */
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
@@ -38,6 +43,7 @@
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
+        orbitControls,
         onselect,
         onhover,
         oncuboidupdate
@@ -46,6 +52,8 @@
     const { renderer } = useThrelte();
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
     let cuboidClicked = false;
+    /** Tracks the in-progress drag preview annotation so the disabled gizmo follows the live position. */
+    let resizePreviewAnnotation = $state<Domain.CuboidAnnotation | null>(null);
 
     $effect(() => {
         const next = createCuboidRenderItems(cuboids);
@@ -69,6 +77,7 @@
     {@const isSelected = selectedAnnotationId === item.annotation.id}
     {@const isHovered = hoveredAnnotationId === item.annotation.id}
     {@const color = highlightCuboidColor(base, isSelected, isHovered)}
+    {@const annotationClassName = annotationClasses.find((c) => c.id === item.annotation.annotationClassId)?.name ?? ''}
     {#snippet visual()}
         <CuboidVisual
             {item}
@@ -81,7 +90,29 @@
         />
     {/snippet}
 
-    {#if isSelected}
+    {#if isSelected && activeTool === 'resize'}
+        <!-- Direction arrows follow the live preview position. -->
+        <CuboidGizmo
+            annotation={resizePreviewAnnotation ?? item.annotation}
+            activeTool="translate"
+            enabled={false}
+        />
+        <!-- Live wireframe + face-plane interaction. -->
+        <CuboidResizeGizmo
+            annotation={item.annotation}
+            baseColor={base}
+            edgeColor={color}
+            {orbitControls}
+            {onhover}
+            {oncuboidupdate}
+            onliveupdate={(a) => (resizePreviewAnnotation = a)}
+        />
+        {#if isHovered}
+            <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
+                <CuboidTooltip {annotationClassName} annotation={item.annotation} />
+            </T.Group>
+        {/if}
+    {:else if isSelected}
         <CuboidGizmo annotation={item.annotation} {activeTool} {oncuboidupdate}>
             {@render visual()}
         </CuboidGizmo>

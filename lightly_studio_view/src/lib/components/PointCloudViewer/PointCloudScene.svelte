@@ -18,14 +18,21 @@
         pointSize?: number;
         /** Min/max clamp for intensity-based coloring. */
         intensityRange?: [number, number];
+        /** Bindable reference to the OrbitControls instance. */
+        controlsRef?: ThreeOrbitControls;
     }
 
-    let { batch, colorMode = 'none', pointSize = 2, intensityRange }: Props = $props();
+    let {
+        batch,
+        colorMode = 'none',
+        pointSize = 2,
+        intensityRange,
+        controlsRef = $bindable()
+    }: Props = $props();
 
     const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
     const { invalidate } = useThrelte();
     let cameraRef: THREE.PerspectiveCamera | undefined = $state();
-    let controlsRef: ThreeOrbitControls | undefined = $state();
     const pointCloudBuffer = createPointCloudBuffer();
     let hasFitted = false;
 
