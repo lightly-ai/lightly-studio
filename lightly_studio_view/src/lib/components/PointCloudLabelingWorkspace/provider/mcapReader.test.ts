@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { decompress } from 'lz4js';
 import { canonicalCoordinateFrame, createPointCloudFrame } from '../domain';
-import { mcapFixture } from './mcapFixture';
+import { mcapFixture, RIGHT_LIDAR_MOUNT } from './mcapFixture';
 import { openMcap } from './mcapReader';
 
 // Spied rather than replaced: listing frames must not decompress a single chunk, while
@@ -32,13 +32,13 @@ function serve(bytes: Uint8Array) {
     );
 }
 
-function sourceFor(bytes: Uint8Array) {
+function sourceFor(bytes: Uint8Array, coordinateFrameId = 'lidar') {
     return {
         recordingId: 'r',
         version: 'v1',
         url: '/recording',
         sizeBytes: String(bytes.length),
-        coordinateFrame: canonicalCoordinateFrame('lidar'),
+        coordinateFrame: canonicalCoordinateFrame(coordinateFrameId),
         logClockId: 'log',
         publishClockId: 'publish'
     };
@@ -160,5 +160,114 @@ describe('openMcap', () => {
         await expect(
             session.listFrames(channelId, logTimeNs, logTimeNs, 1001)
         ).rejects.toMatchObject({ code: 'source' });
+    });
+});
+
+describe('openMcap with several lidar channels', () => {
+    async function fusedSession(coordinateFrameId = 'CABIN') {
+        const fixture = await mcapFixture({ fused: true });
+        serve(fixture.bytes);
+        const session = await openMcap(
+            sourceFor(fixture.bytes, coordinateFrameId),
+            new AbortController().signal
+        );
+        return { ...fixture, session };
+    }
+
+    it('fuses every lidar into the frame, placed by /tf_static', async () => {
+        const { session, channelId, timestamp } = await fusedSession();
+
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+        const frame = createPointCloudFrame(await session.loadFrame(range.frames[0], 10));
+
+        // The read channel's own point, then the other sensor's origin at its mount: the
+        // second sensor is what a single-channel read leaves as empty space.
+        expect([...frame.positions.copy()]).toEqual([
+            1,
+            2,
+            3,
+            RIGHT_LIDAR_MOUNT.x,
+            RIGHT_LIDAR_MOUNT.y,
+            RIGHT_LIDAR_MOUNT.z
+        ]);
+        expect(frame.sourcePointCount).toBe(2);
+    });
+
+    it('reports the frame everything was aligned into, not the sensor frame', async () => {
+        const { session, channelId, timestamp } = await fusedSession();
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+
+        const frame = await session.loadFrame(range.frames[0], 10);
+
+        expect(frame.coordinateFrame.id).toBe('CABIN');
+    });
+
+    it('keeps frame identity on the channel the frame was listed on', async () => {
+        const { session, channelId, rightChannelId, timestamp } = await fusedSession();
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+
+        const frame = await session.loadFrame(range.frames[0], 10);
+
+        expect(frame.source.streamId).toBe(String(channelId));
+        expect(frame.source.streamId).not.toBe(String(rightChannelId));
+    });
+
+    it('falls back to the read channel frame when the target is not in /tf_static', async () => {
+        const { session, channelId, timestamp } = await fusedSession('VEHICLE');
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+
+        const frame = createPointCloudFrame(await session.loadFrame(range.frames[0], 10));
+
+        // 'lidar' sits at the CABIN origin here, so the other sensor still resolves into it.
+        expect(frame.coordinateFrame.id).toBe('lidar');
+        expect(frame.positions.length).toBe(6);
+    });
+
+    it('splits the point budget across the channels it fuses', async () => {
+        const { session, channelId, timestamp } = await fusedSession();
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+
+        // One point per sweep survives a budget of one point per channel.
+        const frame = await session.loadFrame(range.frames[0], 2);
+
+        expect(frame.positions.length).toBe(6);
+    });
+
+    it('refuses to align lidars a recording gives no transforms for', async () => {
+        const { bytes, channelId, timestamp } = await mcapFixture({
+            fused: true,
+            omitTransforms: true
+        });
+        serve(bytes);
+        const session = await openMcap(sourceFor(bytes, 'CABIN'), new AbortController().signal);
+        const range = await session.listFrames(
+            channelId,
+            timestamp.toString(),
+            timestamp.toString()
+        );
+
+        await expect(session.loadFrame(range.frames[0], 10)).rejects.toMatchObject({
+            code: 'source'
+        });
     });
 });
