@@ -1,4 +1,4 @@
-import { test, expect, isInViewport } from '../utils';
+import { test, expect, isInViewport, scrollDownToGridItem } from '../utils';
 import { youtubeVisVideosDataset } from './fixtures/youtubeVisVideosDataset';
 
 test.describe('video-frames-page-flow', () => {
@@ -17,19 +17,22 @@ test.describe('video-frames-page-flow', () => {
             youtubeVisVideosDataset.defaultPageSize
         );
 
-        // Check scroll works
-        const gridContainer = page.getByTestId('video-frames-grid');
-        await gridContainer.evaluate((el) => {
+        const nextPage = page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/frame') &&
+                new URL(response.url()).searchParams.get('cursor') ===
+                    String(youtubeVisVideosDataset.defaultPageSize) &&
+                response.status() === 200
+        );
+        await page.getByTestId('video-frames-grid').evaluate((el) => {
             el.scrollTop = el.scrollHeight;
         });
-
-        // Check that more video frames are loaded
-        await expect(videoFramesPage.getVideoFrames()).toHaveCount(
-            youtubeVisVideosDataset.defaultPageSize * 2,
-            {
-                timeout: 10000
-            }
-        );
+        await nextPage;
+        // Loaded frames outside the overscan window are intentionally absent from the DOM.
+        await expect(
+            videoFramesPage.getVideoFrameByIndex(youtubeVisVideosDataset.defaultPageSize)
+        ).toBeAttached();
     });
 
     test('filter frames by label', async ({ page, videoFramesPage }) => {
@@ -38,24 +41,24 @@ test.describe('video-frames-page-flow', () => {
         );
         await videoFramesPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
 
-        // Scroll to load all frames with the label
-        const gridContainer = page.getByTestId('video-frames-grid');
-        await gridContainer.evaluate((el) => {
-            el.scrollTop = el.scrollHeight;
-        });
-        await expect(videoFramesPage.getVideoFrames()).toHaveCount(
-            youtubeVisVideosDataset.labels.airplane.frameCount
-        );
+        await expect(
+            page.getByText(
+                new RegExp(
+                    `^Showing ${youtubeVisVideosDataset.labels.airplane.frameCount} of [\\d,]+ video frames$`
+                )
+            )
+        ).toBeVisible();
+        await expect(videoFramesPage.getVideoFrames().first()).toBeVisible();
 
         await videoFramesPage.clickLabel(youtubeVisVideosDataset.labels.elephant.name);
-        // Scroll twice to load all frames with both labels
-        await gridContainer.evaluate((el) => {
-            el.scrollTop = el.scrollHeight;
-        });
-        await expect(videoFramesPage.getVideoFrames()).toHaveCount(
-            youtubeVisVideosDataset.labels.airplane.frameCount +
-                youtubeVisVideosDataset.labels.elephant.frameCount
-        );
+        await expect(
+            page.getByText(
+                new RegExp(
+                    `^Showing ${youtubeVisVideosDataset.labels.airplane.frameCount + youtubeVisVideosDataset.labels.elephant.frameCount} of [\\d,]+ video frames$`
+                )
+            )
+        ).toBeVisible();
+        await expect(videoFramesPage.getVideoFrames().first()).toBeVisible();
     });
 
     test('Tags can be created from the side panel for selected frames', async ({
@@ -92,7 +95,7 @@ test('We can see clicked element when navigating back from details', async ({
         await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(30), viewport })
     ).toBe(false);
 
-    await videoFramesPage.getVideoFrameByIndex(30).scrollIntoViewIfNeeded();
+    await scrollDownToGridItem(viewport, videoFramesPage.getVideoFrameByIndex(30));
 
     expect(await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(0), viewport })).toBe(
         false
