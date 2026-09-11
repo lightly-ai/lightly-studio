@@ -42,11 +42,13 @@
         autoFocus = false,
         disabled = false,
         isLoading = false,
-        onKeyboardConfirm
+        onKeyboardConfirm,
+        labelledBy
     }: {
         placeholder?: string;
         name?: string;
         label?: string;
+        labelledBy?: string;
         className?: string;
         contentClassName?: string;
         autoOpen?: boolean;
@@ -59,6 +61,9 @@
         isLoading?: boolean;
         onKeyboardConfirm?: (item: ListItem) => void;
     } = $props();
+
+    // Part of the trigger's accessible name, so it reads as "<field label> <selected value>".
+    const valueId = $props.id();
 
     let open = $state(untrack(() => autoOpen));
     let inputValue = $state('');
@@ -152,10 +157,12 @@
                         class: cn('w-[200px] min-w-0 max-w-full justify-between', className),
                         role: 'combobox',
                         'aria-expanded': open,
+                        ...(labelledBy ? { 'aria-labelledby': `${labelledBy} ${valueId}` } : {}),
                         'data-testid': 'select-list-trigger'
                     }}
                 >
                     <span
+                        id={valueId}
                         class="min-w-0 flex-1 truncate text-left"
                         title={selectedItem?.label || label}
                     >
