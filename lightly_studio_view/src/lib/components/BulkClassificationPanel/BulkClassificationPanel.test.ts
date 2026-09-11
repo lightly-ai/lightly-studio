@@ -61,6 +61,25 @@ describe('BulkClassificationPanel', () => {
         expect(screen.queryByRole('heading', { name: 'Add annotation class' })).toBeNull();
     });
 
+    it('applies once when the confirmation is clicked twice', async () => {
+        let resolveApply = () => {};
+        const onApply = vi.fn().mockReturnValue(
+            new Promise<void>((resolve) => {
+                resolveApply = resolve;
+            })
+        );
+        render(BulkClassificationPanel, { props: { ...defaultProps, onApply } });
+
+        await fireEvent.click(screen.getByRole('button', { name: /Add annotation class/ }));
+        const confirm = screen.getAllByRole('button', { name: /Add annotation class/ }).at(-1)!;
+        await fireEvent.click(confirm);
+        await fireEvent.click(confirm);
+
+        expect(onApply).toHaveBeenCalledOnce();
+
+        resolveApply();
+    });
+
     it('disables applying while in flight', () => {
         render(BulkClassificationPanel, { props: { ...defaultProps, isApplying: true } });
 
