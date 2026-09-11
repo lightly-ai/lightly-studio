@@ -51,6 +51,7 @@ function state(overrides: Record<string, unknown> = {}) {
         isLoading: false,
         previous: vi.fn(),
         next: vi.fn(),
+        seek: vi.fn(),
         ...overrides
     };
     return probe;
