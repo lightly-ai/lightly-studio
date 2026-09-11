@@ -18,7 +18,7 @@ resolution-markers = [
 [manifest]
 members = [
     "lightly-studio",
-    "lightly-studio-embed",
+    "lightly-studio-serve",
 ]
 constraints = [{ name = "antlr4-python3-runtime", specifier = "==4.9.3" }]
 
@@ -3171,7 +3171,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "labelformat" },
     { name = "lightly-mundig" },
-    { name = "lightly-studio-embed" },
+    { name = "lightly-studio-serve" },
     { name = "open-clip-torch" },
     { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "opencv-python-headless", version = "4.13.0.92", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -3267,7 +3267,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "labelformat", specifier = ">=0.1.17" },
     { name = "lightly-mundig", specifier = "==0.1.15" },
-    { name = "lightly-studio-embed", editable = "lightly_studio_embed" },
+    { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
     { name = "pandas", specifier = ">=2.2.3,<3.0" },
@@ -3319,9 +3319,9 @@ docs = [
 ]
 
 [[package]]
-name = "lightly-studio-embed"
+name = "lightly-studio-serve"
 version = "0.1.0"
-source = { editable = "lightly_studio_embed" }
+source = { editable = "lightly_studio_serve" }
 dependencies = [
     { name = "fastapi", version = "0.128.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fastapi", version = "0.135.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },

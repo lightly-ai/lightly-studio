@@ -63,12 +63,12 @@ dependencies = [
     "posthog>=6.9,<7.0",
     # Holds the embedder base classes and their value types. `tool.uv.sources` below
     # resolves it from the workspace for local development. The bound applies to an
-    # install from PyPI, so publish `lightly-studio-embed` before you release this package.
-    "lightly-studio-embed>=0.1.0",
+    # install from PyPI, so publish `lightly-studio-serve` before you release this package.
+    "lightly-studio-serve>=0.1.0",
 ]
 
 [tool.uv.sources]
-lightly-studio-embed = { workspace = true }
+lightly-studio-serve = { workspace = true }
 
 [project.scripts]
 lightly-studio = "lightly_studio.cli:main"

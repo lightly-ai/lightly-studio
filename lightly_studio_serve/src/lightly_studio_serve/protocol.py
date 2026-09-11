@@ -9,7 +9,7 @@ A server serves the capability ``{subject}_{transport}`` at
 segment. Text is already a payload.
 
 ``EmbeddingsResponse`` holds every rule that a response body shows.
-``lightly_studio_embed.validation`` adds only the rules that the body cannot show.
+``lightly_studio_serve.validation`` adds only the rules that the body cannot show.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from typing import Annotated, Any
 import numpy as np
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from lightly_studio_embed.embedder import Capability
+from lightly_studio_serve.embedder import Capability
 
 PROTOCOL_VERSION = "1.0"
 

@@ -6,7 +6,7 @@ import random
 from typing import Protocol, runtime_checkable
 
 import numpy as np
-from lightly_studio_embed.types import (
+from lightly_studio_serve.types import (
     EmbeddingResult,
     EmbeddingSpaceSpec,
     ImageCrop,

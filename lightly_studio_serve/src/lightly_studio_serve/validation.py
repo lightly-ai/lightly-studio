@@ -14,9 +14,9 @@ import numpy as np
 from numpy.typing import NDArray
 from pydantic import ValidationError
 
-from lightly_studio_embed.errors import EmbedderContractError
-from lightly_studio_embed.protocol import EmbeddingsResponse
-from lightly_studio_embed.types import EmbeddingResult
+from lightly_studio_serve.errors import EmbedderContractError
+from lightly_studio_serve.protocol import EmbeddingsResponse
+from lightly_studio_serve.types import EmbeddingResult
 
 # Float, signed integer and unsigned integer. A `bool` array is a mask, and an `object`
 # array holds anything.

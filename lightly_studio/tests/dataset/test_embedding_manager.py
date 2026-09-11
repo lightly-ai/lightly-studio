@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
-from lightly_studio_embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from numpy.typing import NDArray
 from PIL import Image
 from pytest_mock import MockerFixture
