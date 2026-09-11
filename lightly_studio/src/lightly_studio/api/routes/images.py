@@ -9,9 +9,10 @@ from collections.abc import Generator
 
 import fsspec
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from lightly_studio.api.routes import s3_media
 from lightly_studio.api.routes.api import status
 from lightly_studio.database import db_manager
 from lightly_studio.models import image
@@ -29,7 +30,8 @@ async def serve_image_by_sample_id(
     quality: GridViewThumbnailQualityType = GridViewThumbnailQualityType.RAW,
     max_width: int | None = Query(default=None, ge=1, le=4096),
     max_height: int | None = Query(default=None, ge=1, le=4096),
-) -> StreamingResponse:
+    mode: s3_media.MediaDeliveryMode | None = None,
+) -> Response:
     """Serve an image by sample ID.
 
     Args:
@@ -37,6 +39,7 @@ async def serve_image_by_sample_id(
         quality: Thumbnail quality mode. Use 'high' for compressed JPEG output.
         max_width: Maximum width in pixels for high quality mode.
         max_height: Maximum height in pixels for high quality mode.
+        mode: Explicit media-delivery override.
 
     Returns:
         StreamingResponse with the image data.
@@ -55,6 +58,15 @@ async def serve_image_by_sample_id(
                 detail=f"Sample not found: {sample_id}",
             )
         file_path = sample_record.file_path_abs
+
+    content_type = _get_content_type(file_path)
+    if quality == GridViewThumbnailQualityType.RAW and mode is None:
+        redirect = await s3_media.create_s3_media_redirect(
+            file_path=file_path,
+            content_type=content_type,
+        )
+        if redirect is not None:
+            return redirect
 
     try:
         content, content_type = await asyncio.get_running_loop().run_in_executor(

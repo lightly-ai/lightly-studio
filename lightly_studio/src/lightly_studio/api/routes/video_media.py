@@ -10,8 +10,9 @@ from typing import Any
 
 import fsspec
 from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
+from lightly_studio.api.routes import s3_media
 from lightly_studio.api.routes.api import status
 from lightly_studio.database import db_manager
 from lightly_studio.models import video
@@ -53,21 +54,34 @@ def _parse_range_header(range_header: str | None, file_size: int) -> RangeReques
 
     try:
         if not start_str:
-            suffix_length = int(end_str)
-            if suffix_length <= 0 or file_size == 0:
-                return RangeRequest(is_unsatisfiable=True)
-            return RangeRequest(start=max(file_size - suffix_length, 0), end=file_size - 1)
-
-        start = int(start_str)
-        if start < 0 or start >= file_size:
-            return RangeRequest(is_unsatisfiable=True)
-
-        end = file_size - 1 if not end_str else min(int(end_str), file_size - 1)
-        if end < start:
-            return RangeRequest(is_unsatisfiable=True)
-        return RangeRequest(start=start, end=end)
+            return _parse_suffix_range(end_str=end_str, file_size=file_size)
+        return _parse_explicit_range(
+            start_str=start_str,
+            end_str=end_str,
+            file_size=file_size,
+        )
     except ValueError:
         return RangeRequest(is_unsatisfiable=True)
+
+
+def _parse_suffix_range(end_str: str, file_size: int) -> RangeRequest:
+    """Parse a suffix byte range."""
+    suffix_length = int(end_str)
+    if suffix_length <= 0 or file_size == 0:
+        return RangeRequest(is_unsatisfiable=True)
+    return RangeRequest(start=max(file_size - suffix_length, 0), end=file_size - 1)
+
+
+def _parse_explicit_range(start_str: str, end_str: str, file_size: int) -> RangeRequest:
+    """Parse a closed or open-ended byte range."""
+    start = int(start_str)
+    if start < 0 or start >= file_size:
+        return RangeRequest(is_unsatisfiable=True)
+
+    end = file_size - 1 if not end_str else min(int(end_str), file_size - 1)
+    if end < start:
+        return RangeRequest(is_unsatisfiable=True)
+    return RangeRequest(start=start, end=end)
 
 
 def _get_filesystem_and_size(file_path: str) -> tuple[fsspec.AbstractFileSystem, str, int]:
@@ -140,7 +154,8 @@ async def serve_video_by_sample_id(
     sample_id: str,
     request: Request,
     range_header: str | None = Header(None, alias="range"),
-) -> StreamingResponse:
+    mode: s3_media.MediaDeliveryMode | None = None,
+) -> Response:
     """Serve a video by sample ID with HTTP Range request support.
 
     This endpoint supports HTTP Range requests, which are essential for
@@ -153,6 +168,7 @@ async def serve_video_by_sample_id(
         sample_id: The ID of the video sample.
         request: FastAPI request object.
         range_header: The HTTP Range header value.
+        mode: Explicit media-delivery override.
 
     Returns:
         StreamingResponse with the video data, supporting partial content.
@@ -170,6 +186,13 @@ async def serve_video_by_sample_id(
         file_path = sample_record.file_path_abs
 
     content_type = _get_content_type(file_path)
+    if mode is None:
+        redirect = await s3_media.create_s3_media_redirect(
+            file_path=file_path,
+            content_type=content_type,
+        )
+        if redirect is not None:
+            return redirect
 
     try:
         fs, fs_path, file_size = await asyncio.get_running_loop().run_in_executor(
