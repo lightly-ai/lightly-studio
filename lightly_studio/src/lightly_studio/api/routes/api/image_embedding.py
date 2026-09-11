@@ -14,6 +14,7 @@ from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi import Path as FastAPIPath
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_INTERNAL_SERVER_ERROR
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.embed import embed_samples
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ image_embedding_router = APIRouter()
     "/image_embedding/from_file/for_collection/{collection_id}", response_model=list[float]
 )
 def embed_image_from_file(
+    session: SessionDep,
     collection_id: Annotated[UUID, FastAPIPath(title="The ID of the collection.")],
     file: Annotated[UploadFile, File(description="The image file to embed.")],
     embedding_model_id: Annotated[
@@ -47,7 +49,7 @@ def embed_image_from_file(
 
         try:
             return embed_samples.embed_image_for_collection(
-                collection_id=collection_id, filepath=tmp_path
+                session=session, collection_id=collection_id, filepath=tmp_path
             )
         finally:
             if os.path.exists(tmp_path):
