@@ -13,8 +13,8 @@ from lightly_studio.resolvers import (
 def collection_has_embeddings(session: Session, collection_id: UUID) -> bool:
     """Check if there are any embeddings available for the given collection.
 
-    Resolves the collection's default embedding model from the database and reports whether
-    any embeddings are stored for it. Does not load the model.
+    Loads or resolves the collection's default embedding model and reports whether any
+    embeddings are stored for it.
 
     Args:
         session: Database session for resolver operations.
