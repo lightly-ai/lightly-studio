@@ -52,6 +52,7 @@ function state(overrides: Record<string, unknown> = {}) {
         previous: vi.fn(),
         next: vi.fn(),
         cameraImage: () => undefined,
+        seek: vi.fn(),
         ...overrides
     };
     return probe;

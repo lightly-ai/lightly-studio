@@ -9,7 +9,7 @@
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import ProviderDiagnostics from './ProviderDiagnostics/ProviderDiagnostics.svelte';
-    import type { FrameNavigation, WorkspaceCrumb } from './types';
+    import type { FrameNavigation, TimelineTrack, WorkspaceCrumb } from './types';
     import type { PointCloudFrame } from './domain';
     import type { RecordingProbe } from './ProviderDiagnostics/useRecordingProbe.svelte';
 
@@ -38,6 +38,15 @@
         navigation?: FrameNavigation;
         /** Resolves a camera picture the frame refers to by id, for the camera strip. */
         resolveCameraImage?: (resourceId: string) => ImageBitmap | undefined;
+        /** Object tracks and keyframes drawn in the timeline. Absent leaves lanes empty. */
+        tracks?: readonly TimelineTrack[];
+        /** Track whose timeline lane is highlighted, e.g. the scene's primary selection. */
+        selectedTrackId?: string;
+        onSelectTrack?: (trackId: string) => void;
+        onAddKeyframe?: (trackId: string, framePosition: number) => void;
+        onRemoveKeyframe?: (trackId: string, keyframeId: string) => void;
+        /** See `FrameTimeline`'s prop of the same name: gates step/scrub/play navigation. */
+        guardNavigation?: () => boolean | Promise<boolean>;
         /**
          * Temporary: when given, reports what the MCAP provider read alongside the scene.
          * Remove together with `ProviderDiagnostics`.
@@ -54,6 +63,12 @@
         frame,
         navigation,
         resolveCameraImage,
+        tracks,
+        selectedTrackId,
+        onSelectTrack,
+        onAddKeyframe,
+        onRemoveKeyframe,
+        guardNavigation,
         diagnostics,
         onExit,
         onRetry
@@ -143,7 +158,15 @@
                             </div>
                         </PaneResizer>
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline {navigation} />
+                            <FrameTimeline
+                                {navigation}
+                                {tracks}
+                                {selectedTrackId}
+                                {onSelectTrack}
+                                {onAddKeyframe}
+                                {onRemoveKeyframe}
+                                {guardNavigation}
+                            />
                         </Pane>
                     </PaneGroup>
                 </Pane>

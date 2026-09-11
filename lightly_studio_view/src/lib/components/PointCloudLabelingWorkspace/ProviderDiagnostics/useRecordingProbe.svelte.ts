@@ -279,6 +279,11 @@ export function useRecordingProbe(sampleId: () => string) {
             void ensureNext().then((moved) => {
                 if (moved) index += 1;
             });
+        },
+        // Only already-discovered frames are reachable this way; scrubbing past them would
+        // need the same async discovery `next()` does, which a direct jump can't express.
+        seek(position: number) {
+            if (position >= 0 && position < frames.length) index = position;
         }
     };
 }

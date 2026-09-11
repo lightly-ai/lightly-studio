@@ -1,34 +1,57 @@
 <script lang="ts">
-    import { ChevronLeft, ChevronRight, Play } from '@lucide/svelte';
+    import { ChevronLeft, ChevronRight, Pause, Play } from '@lucide/svelte';
     import { Button } from '$lib/components';
-    import type { FrameNavigation } from '../types';
+    import FrameTimelineRuler from './FrameTimelineRuler.svelte';
+    import TrackLane from './TrackLane.svelte';
+    import { useFramePlayback } from './useFramePlayback.svelte';
+    import type { FrameNavigation, TimelineTrack } from '../types';
 
     /**
      * Frame navigation, object tracks and keyframes for the active recording.
      *
-     * Stepping is wired when a `navigation` is given; the ruler and lanes are still
-     * placeholders, and playback stays disabled until it exists.
+     * Stepping, scrubbing (drag/click/arrow-key the ruler, when `navigation.seek` is given) and
+     * playback move `navigation`. Tracks are drawn from already-adapted `TimelineTrack`s (see
+     * `toTimelineTracks`), so this component never touches domain or transport types directly.
      */
     interface Props {
         navigation?: FrameNavigation;
+        tracks?: readonly TimelineTrack[];
+        /** Track whose lane is highlighted, e.g. the scene's primary selection. */
+        selectedTrackId?: string;
+        onSelectTrack?: (trackId: string) => void;
+        onAddKeyframe?: (trackId: string, framePosition: number) => void;
+        onRemoveKeyframe?: (trackId: string, keyframeId: string) => void;
+        /**
+         * Consulted before a user-initiated step, scrub, or the start of playback. Returning
+         * false (or resolving to false) cancels the move, e.g. to offer a save/discard prompt for
+         * unsaved edits. Absent means navigation is never blocked. Once playback has started,
+         * later automatic steps are not re-guarded.
+         */
+        guardNavigation?: () => boolean | Promise<boolean>;
     }
 
-    let { navigation }: Props = $props();
+    let {
+        navigation,
+        tracks = [],
+        selectedTrackId,
+        onSelectTrack,
+        onAddKeyframe,
+        onRemoveKeyframe,
+        guardNavigation
+    }: Props = $props();
 
-    const ticks = Array.from({ length: 24 }, (_, index) => index);
-    const lanes = ['Track 1', 'Track 2'];
-
-    // More frames are listed on demand, so the end is only reached when nothing is known
-    // ahead and the channel has nothing left either.
-    const isAtLastFrame = $derived(
-        !!navigation && !navigation.hasMore && navigation.position >= navigation.frameCount - 1
-    );
+    const playback = useFramePlayback(() => navigation);
 
     const label = $derived(
         navigation
             ? `Frame ${navigation.position + 1} / ${navigation.frameCount}${navigation.hasMore ? '+' : ''}`
             : 'Frame — / —'
     );
+
+    async function guarded(action: () => void) {
+        if (guardNavigation && !(await guardNavigation())) return;
+        action();
+    }
 </script>
 
 <div
@@ -42,24 +65,29 @@
             ariaLabel="Previous frame"
             buttonProps={{
                 disabled: !navigation || navigation.position === 0,
-                onclick: () => navigation?.previous(),
+                onclick: () => guarded(() => navigation?.previous()),
                 size: 'sm',
                 class: 'h-7 w-7 p-0'
             }}
         />
         <Button
             variant="ghost"
-            icon={Play}
-            ariaLabel="Play frames"
-            buttonProps={{ disabled: true, size: 'sm', class: 'h-7 w-7 p-0' }}
+            icon={playback.isPlaying ? Pause : Play}
+            ariaLabel={playback.isPlaying ? 'Pause playback' : 'Play frames'}
+            buttonProps={{
+                disabled: !navigation || (!playback.isPlaying && playback.isAtLastFrame),
+                onclick: () => playback.toggle(guardNavigation),
+                size: 'sm',
+                class: 'h-7 w-7 p-0'
+            }}
         />
         <Button
             variant="ghost"
             icon={ChevronRight}
             ariaLabel="Next frame"
             buttonProps={{
-                disabled: !navigation || isAtLastFrame,
-                onclick: () => navigation?.next(),
+                disabled: !navigation || playback.isAtLastFrame,
+                onclick: () => guarded(() => navigation?.next()),
                 size: 'sm',
                 class: 'h-7 w-7 p-0'
             }}
@@ -72,16 +100,30 @@
         {/if}
     </div>
     <div class="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-2 py-1.5">
-        <div class="flex h-4 shrink-0 items-end gap-px" aria-hidden="true">
-            {#each ticks as tick (tick)}
-                <span class="w-full bg-border {tick % 5 === 0 ? 'h-3' : 'h-1.5'}"></span>
+        <FrameTimelineRuler
+            frameCount={navigation?.frameCount ?? 0}
+            position={navigation?.position ?? 0}
+            disabled={!navigation?.seek}
+            onScrub={navigation?.seek
+                ? (position) => guarded(() => navigation?.seek?.(position))
+                : undefined}
+        />
+        {#if tracks.length === 0}
+            <p class="px-1 py-2 text-xs text-muted-foreground">
+                No object tracks for this frame range.
+            </p>
+        {:else}
+            {#each tracks as track (track.id)}
+                <TrackLane
+                    {track}
+                    frameCount={navigation?.frameCount ?? 0}
+                    activeFramePosition={navigation?.position}
+                    selected={track.id === selectedTrackId}
+                    onSelect={onSelectTrack}
+                    {onAddKeyframe}
+                    {onRemoveKeyframe}
+                />
             {/each}
-        </div>
-        {#each lanes as lane (lane)}
-            <div class="flex items-center gap-2">
-                <span class="w-14 shrink-0 truncate text-xs text-muted-foreground">{lane}</span>
-                <div class="h-4 flex-1 rounded bg-muted/50"></div>
-            </div>
-        {/each}
+        {/if}
     </div>
 </div>
