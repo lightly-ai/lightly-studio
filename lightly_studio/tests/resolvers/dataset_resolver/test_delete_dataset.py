@@ -13,6 +13,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
+from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.resolvers import (
@@ -25,6 +26,7 @@ from lightly_studio.resolvers import (
     evaluation_sample_metric_resolver,
     export_job_resolver,
     metadata_resolver,
+    recording_resolver,
     sample_embedding_resolver,
     sample_resolver,
     tag_resolver,
@@ -66,6 +68,26 @@ def test_delete_dataset__empty_collection(db_session: Session) -> None:
 
     # Assert - collection deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+
+
+def test_delete_dataset__with_recordings(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        uri="/data/to_delete.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - recording deleted along with the dataset
+    assert recording_resolver.get_by_id(session=db_session, recording_id=recording_id) is None
 
 
 def test_delete_dataset__with_images_and_annotations(db_session: Session) -> None:
