@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Reduce peak memory usage during image indexing by up to 45% by clearing unused GPU cache.
 - Reduce grid-view overscan prefetching for videos and frames from 20 additional rows to 2, lowering initial frontend load by avoiding unnecessary backend-rendered videos.
 - Increase max_concurrency of requests to the backend from 100 to 128 to reduce chance of seeing 503 errors in the frontend.
 - Improved metadata loading by reducing latency by up to 70% and increasing throughput by up to 4× under concurrent requests.

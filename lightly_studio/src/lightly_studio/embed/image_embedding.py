@@ -131,6 +131,16 @@ def embed_pil_images_batched(
     )
 
 
+def release_gpu_cache(device: torch.device) -> None:
+    """Release unused GPU memory while keeping model tensors loaded."""
+    if device.type == "cuda":
+        with torch.cuda.device(device):
+            torch.cuda.empty_cache()
+    elif device.type == "mps":
+        torch.mps.synchronize()
+        torch.mps.empty_cache()
+
+
 def _embed_items_batched(
     items: Sequence[_ItemT],
     preprocess_item: Callable[[_ItemT], torch.Tensor | None],
@@ -178,6 +188,7 @@ def _embed_items_batched(
         show_progress=show_progress,
         progress=progress,
     )
+    release_gpu_cache(device=context.device)
     return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
