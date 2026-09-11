@@ -11,9 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add the embedder base classes and the embedding types LightlyStudio uses to talk to your
-  model. The HTTP server is not implemented yet, so this release cannot serve a model.
-
 ### Changed
 
 ### Deprecated
@@ -23,3 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## \[0.1.0\] - 2026-09-11
+
+### Added
+
+- Add the embedder base classes and the embedding types LightlyStudio uses to talk to your
+  model. The HTTP server is not implemented yet, so this release cannot serve a model.
+

@@ -197,18 +197,27 @@ jobs:
             fi
           done < "${RUNNER_TEMP}/commits"
 
-          # Reaching the end of a history shorter than one page means the oldest
-          # commit that touched the file is the one that introduced this version,
-          # which is what the first release of a package looks like. A full page
-          # means the walk may just have been truncated, so that stays an error.
-          truncated=false
-          if [ "${reached_previous_version}" = false ] && \
-             [ "$(wc -l < "${RUNNER_TEMP}/commits")" -ge 100 ]; then
-            truncated=true
-          fi
-          if [ -z "${bump}" ] || [ "${truncated}" = true ]; then
-            echo "::error::Could not identify the commit that set version ${version}."
+          if [ -z "${bump}" ]; then
+            echo "::error::No commit touching ${PYPROJECT} carries version ${version}."
             exit 1
+          fi
+
+          if [ "${reached_previous_version}" = false ]; then
+            # A full page means the walk may simply have been truncated before it
+            # reached the previous version, which must not be read as there being
+            # none.
+            if [ "$(wc -l < "${RUNNER_TEMP}/commits")" -ge 100 ]; then
+              echo "::error::Could not identify the commit that set version ${version}:"
+              echo "::error::the walk hit the page limit without reaching an earlier version."
+              exit 1
+            fi
+            # Otherwise this version has been in the file since it first appeared,
+            # so no commit ever "set" it and there is nothing earlier to leave out -
+            # the whole history up to the tip is this first release. The tip is also
+            # the only commit where the rest of the release inputs are guaranteed to
+            # exist: the commit that introduced the package predates its changelog.
+            echo "::notice::No earlier version of ${PYPROJECT}; releasing ${version} from the tip."
+            bump="${tip}"
           fi
 
           {
