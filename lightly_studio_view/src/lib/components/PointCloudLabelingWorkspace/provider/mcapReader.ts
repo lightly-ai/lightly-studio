@@ -4,6 +4,8 @@ import { McapIndexedReader, type TypedMcapRecords } from '@mcap/core';
 import { decompress } from 'lz4js';
 import { ZSTDDecoder } from 'zstddec';
 import { canonicalCoordinateFrame, assertCompatibleCoordinates } from '../domain';
+import { cameraEncoding } from './cameraChannels';
+import { createCameraReader, type CameraChannel, type CameraMessage } from './cameraFrames';
 import { fuseClouds } from './fuseClouds';
 import { HttpRangeReadable } from './httpRangeReadable';
 import { decodePointCloud2 } from './pointCloud2';
@@ -29,6 +31,17 @@ const TF_STATIC_TOPIC = '/tf_static';
  * nearest sweep in the window" unambiguous.
  */
 const FUSION_WINDOW_NS = 50_000_000n;
+/** How far from a frame a still camera image may sit and still be the same moment. */
+const CAMERA_WINDOW_NS = 100_000_000n;
+/**
+ * How far back the keyframe of a video picture is looked for.
+ *
+ * Encoders on these rigs place one every couple of seconds; a window shorter than the gap
+ * between them leaves a picture undecodable, and a longer one reads bytes nothing needs.
+ */
+const VIDEO_LOOKBACK_NS = 4_000_000_000n;
+/** Pictures are handed over at the width the camera strip draws them at, not the sensor's. */
+const CAMERA_IMAGE_WIDTH = 480;
 /** MCAP record framing: one opcode byte plus a little-endian u64 content length. */
 const RECORD_HEADER_BYTES = 9;
 const MESSAGE_INDEX_OPCODE = 0x07;
@@ -77,10 +90,53 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
     const lidarChannels = Array.from(reader.channelsById.values()).filter((channel) =>
         isSupported(channel.messageEncoding, reader.schemasById.get(channel.schemaId))
     );
+    const cameraChannels: CameraChannel[] = Array.from(reader.channelsById.values())
+        .map((channel) => {
+            const encoding = cameraEncoding(
+                channel.messageEncoding,
+                reader.schemasById.get(channel.schemaId)
+            );
+            return encoding && { channelId: channel.id, topic: channel.topic, encoding };
+        })
+        .filter((channel) => channel !== null);
     /** Read at most once per recording: extrinsics are static, and every frame needs them. */
     let publishedTransforms: Promise<TransformGraph> | undefined;
 
-    async function loadFrame(locator: FrameLocator, pointBudget: number, fuseChannels = true) {
+    const cameras = createCameraReader({
+        recordingId: source.recordingId,
+        logClockId: source.logClockId,
+        publishClockId: source.publishClockId,
+        maxWidth: CAMERA_IMAGE_WIDTH,
+        stillWindowNs: CAMERA_WINDOW_NS,
+        videoLookbackNs: VIDEO_LOOKBACK_NS,
+        readWindow: async (channel, startNs, endNs) => {
+            const found: CameraMessage[] = [];
+            for await (const message of reader.readMessages({
+                topics: [channel.topic],
+                startTime: startNs,
+                endTime: endNs,
+                validateCrcs: false
+            })) {
+                signal.throwIfAborted();
+                if (message.channelId !== channel.channelId) continue;
+                found.push({
+                    logTimeNs: message.logTime,
+                    publishTimeNs: message.publishTime,
+                    value: decoderFor(reader.channelsById.get(channel.channelId)!).readMessage(
+                        message.data.slice()
+                    )
+                });
+            }
+            return found;
+        }
+    });
+
+    async function loadFrame(
+        locator: FrameLocator,
+        pointBudget: number,
+        fuseChannels = true,
+        withCameras = true
+    ) {
         validateLocator(locator);
         const channel = reader.channelsById.get(locator.channelId);
         const schema = channel && reader.schemasById.get(channel.schemaId);
@@ -100,7 +156,7 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
             signal.throwIfAborted();
             if (message.channelId !== locator.channelId || occurrence++ !== locator.occurrence)
                 continue;
-            return fuseFrame(channel, message, locator, pointBudget, fuseChannels);
+            return fuseFrame(channel, message, locator, pointBudget, fuseChannels, withCameras);
         }
         throw new ProviderError(
             'source',
@@ -126,7 +182,8 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
         message: TypedMcapRecords['Message'],
         locator: FrameLocator,
         pointBudget: number,
-        fuseChannels: boolean
+        fuseChannels: boolean,
+        withCameras: boolean
     ) {
         const channelCount = fuseChannels ? lidarChannels.length : 1;
         const budget = Math.max(1, Math.floor(pointBudget / channelCount));
@@ -136,9 +193,16 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
             : [];
         const { targetFrameId, transforms } = await alignment(anchor.frameId);
         const fused = fuseClouds([anchor, ...siblings], transforms);
+        // Read at the frame's own log time, so stepping and playing move the pictures with
+        // the cloud rather than leaving them on whatever moment was last asked for.
+        const shown =
+            withCameras && cameraChannels.length > 0
+                ? await cameras.read(cameraChannels, message.logTime)
+                : { cameras: [], images: [] };
         return {
             positions: fused.positions,
             sourcePointCount: fused.sourcePointCount,
+            cameraImages: shown.images,
             id: frameIdentity(source, locator),
             source: {
                 recordingId: source.recordingId,
@@ -151,7 +215,7 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
             },
             timestamp: { nanoseconds: message.logTime.toString(), clockId: source.logClockId },
             coordinateFrame: canonicalCoordinateFrame(targetFrameId),
-            cameras: []
+            cameras: shown.cameras
         };
     }
 
@@ -330,7 +394,14 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
         return channel;
     }
 
-    return { metadata, loadFrame, listFrames, readable };
+    return {
+        metadata,
+        loadFrame,
+        listFrames,
+        readable,
+        /** Releases the video decoders the camera reader keeps open. */
+        close: () => cameras.close()
+    };
 }
 
 /**
