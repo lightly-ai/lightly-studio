@@ -73,7 +73,7 @@ def test_embed_image_for_collection(
     )
 
     embedding = embed_samples.embed_image_for_collection(
-        collection_id=collection.collection_id, filepath="/path/to/image.jpg"
+        session=db_session, collection_id=collection.collection_id, filepath="/path/to/image.jpg"
     )
 
     assert len(embedding) == 5
@@ -81,15 +81,48 @@ def test_embed_image_for_collection(
     assert _stored_embeddings(session=db_session) == []
 
 
+def test_embed_image_for_collection__loads_default_from_db_when_cache_cold(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    collection = create_collection(session=db_session)
+    # A prior process registered the default in the database; its manager is discarded so
+    # the manager under test starts with a cold cache.
+    model_id = _register_default_random_model(
+        manager=EmbeddingManager(),
+        session=db_session,
+        collection_id=collection.collection_id,
+        dimension=5,
+    )
+    cold_manager = _cold_manager_with_env_generator(mocker=mocker, dimension=5)
+
+    embedding = embed_samples.embed_image_for_collection(
+        session=db_session, collection_id=collection.collection_id, filepath="/path/to/image.jpg"
+    )
+
+    assert len(embedding) == 5
+    # The default was rehydrated from the database.
+    assert (
+        cold_manager.load_or_get_default_model(
+            session=db_session, collection_id=collection.collection_id
+        )
+        == model_id
+    )
+
+
 @pytest.mark.usefixtures("patched_manager")
 def test_embed_image_for_collection__no_default_model(
     db_session: Session,
+    mocker: MockerFixture,
 ) -> None:
     """Without a default model the interactive image path raises a clear error."""
+    _disable_env_loader(mocker=mocker)
     collection = create_collection(session=db_session)
-    with pytest.raises(ValueError, match="No embedding_model_id provided and no default embedding"):
+    with pytest.raises(ValueError, match="No default embedding model registered"):
         embed_samples.embed_image_for_collection(
-            collection_id=collection.collection_id, filepath="/path/to/image.jpg"
+            session=db_session,
+            collection_id=collection.collection_id,
+            filepath="/path/to/image.jpg",
         )
 
 
@@ -107,21 +140,52 @@ def test_embed_text_for_collection(
     )
 
     embedding = embed_samples.embed_text_for_collection(
-        collection_id=collection.collection_id, text="a red car"
+        session=db_session, collection_id=collection.collection_id, text="a red car"
     )
 
     assert len(embedding) == 3
 
 
+def test_embed_text_for_collection__loads_default_from_db_when_cache_cold(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    collection = create_collection(session=db_session)
+    # A prior process registered the default in the database; its manager is discarded so
+    # the manager under test starts with a cold cache.
+    model_id = _register_default_random_model(
+        manager=EmbeddingManager(),
+        session=db_session,
+        collection_id=collection.collection_id,
+        dimension=3,
+    )
+    cold_manager = _cold_manager_with_env_generator(mocker=mocker, dimension=3)
+
+    embedding = embed_samples.embed_text_for_collection(
+        session=db_session, collection_id=collection.collection_id, text="a red car"
+    )
+
+    assert len(embedding) == 3
+    # The default was rehydrated from the database, not created anew.
+    assert (
+        cold_manager.load_or_get_default_model(
+            session=db_session, collection_id=collection.collection_id
+        )
+        == model_id
+    )
+
+
 @pytest.mark.usefixtures("patched_manager")
 def test_embed_text_for_collection__no_default_model(
     db_session: Session,
+    mocker: MockerFixture,
 ) -> None:
     """Without a default model the interactive text path raises a clear error."""
+    _disable_env_loader(mocker=mocker)
     collection = create_collection(session=db_session)
-    with pytest.raises(ValueError, match="No embedding_model_id provided and no default embedding"):
+    with pytest.raises(ValueError, match="No default embedding model registered"):
         embed_samples.embed_text_for_collection(
-            collection_id=collection.collection_id, text="a red car"
+            session=db_session, collection_id=collection.collection_id, text="a red car"
         )
 
 
@@ -456,6 +520,24 @@ def _register_default_random_model(
         collection_id=collection_id,
         set_as_default=True,
     ).embedding_model_id
+
+
+def _cold_manager_with_env_generator(mocker: MockerFixture, dimension: int) -> EmbeddingManager:
+    """Route embed_samples to a fresh manager that rebuilds its generator from the env.
+
+    Simulates a just-started process: an empty in-memory cache plus an environment
+    that can load the same generator.
+    """
+    cold_manager = EmbeddingManager()
+    mocker.patch.object(
+        EmbeddingManagerProvider, "get_embedding_manager", return_value=cold_manager
+    )
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(dimension=dimension),
+    )
+    return cold_manager
 
 
 def _disable_env_loader(mocker: MockerFixture) -> None:
