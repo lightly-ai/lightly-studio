@@ -6,7 +6,7 @@ on:
       tag:
         description: >-
           Tag of the draft release to publish, e.g. v1.2.3 or
-          lightly-studio-embed/v0.1.2. The tag decides which package is
+          lightly-studio-serve/v0.1.2. The tag decides which package is
           published, so there is nothing here that can disagree with it.
         type: string
         required: true

@@ -8,7 +8,7 @@ on:
           Package to release. The two release independently: their versions,
           branches and tags share no namespace.
         type: choice
-        options: [lightly-studio, lightly-studio-embed]
+        options: [lightly-studio, lightly-studio-serve]
         default: lightly-studio
       bump:
         description: >-

@@ -5,13 +5,13 @@ import pytest
 from prepare_release import packages, wheel
 from prepare_release.errors import PrepareReleaseError
 
-EMBED = packages.get("lightly-studio-embed")
+SERVE = packages.get("lightly-studio-serve")
 
 
 def test_find_wheel(tmp_path):
-    (tmp_path / "lightly_studio_embed-0.1.0-py3-none-any.whl").touch()
-    (tmp_path / "lightly_studio_embed-0.1.0.tar.gz").touch()
-    assert wheel.find_wheel(tmp_path).name == "lightly_studio_embed-0.1.0-py3-none-any.whl"
+    (tmp_path / "lightly_studio_serve-0.1.0-py3-none-any.whl").touch()
+    (tmp_path / "lightly_studio_serve-0.1.0.tar.gz").touch()
+    assert wheel.find_wheel(tmp_path).name == "lightly_studio_serve-0.1.0-py3-none-any.whl"
 
 
 def test_find_wheel__none(tmp_path):
@@ -43,25 +43,25 @@ def test_parse_installed_names__missing_name():
 
 def test_assert_no_forbidden_dependencies():
     wheel.assert_no_forbidden_dependencies(
-        installed=["fastapi", "numpy", "pillow", "pydantic", "uvicorn", "lightly-studio-embed"],
-        package=EMBED,
+        installed=["fastapi", "numpy", "pillow", "pydantic", "uvicorn", "lightly-studio-serve"],
+        package=SERVE,
     )
 
 
 def test_assert_no_forbidden_dependencies__transitive_torch():
     with pytest.raises(PrepareReleaseError, match="torchvision"):
-        wheel.assert_no_forbidden_dependencies(installed=["numpy", "torchvision"], package=EMBED)
+        wheel.assert_no_forbidden_dependencies(installed=["numpy", "torchvision"], package=SERVE)
 
 
 def test_assert_no_forbidden_dependencies__normalizes_before_matching():
     with pytest.raises(PrepareReleaseError, match="nvidia_cublas_cu12"):
-        wheel.assert_no_forbidden_dependencies(installed=["nvidia_cublas_cu12"], package=EMBED)
+        wheel.assert_no_forbidden_dependencies(installed=["nvidia_cublas_cu12"], package=SERVE)
 
 
 def test_assert_no_forbidden_dependencies__lists_every_offender():
     with pytest.raises(PrepareReleaseError, match="duckdb, lightly-studio, opencv-python"):
         wheel.assert_no_forbidden_dependencies(
-            installed=["opencv-python", "duckdb", "lightly-studio"], package=EMBED
+            installed=["opencv-python", "duckdb", "lightly-studio"], package=SERVE
         )
 
 
@@ -70,7 +70,7 @@ def test_normalize_name():
 
 
 def test_assert_no_forbidden_dependencies__normalizes_the_patterns_too():
-    package = replace(EMBED, forbidden_dependencies=("OpenCV_Python",))
+    package = replace(SERVE, forbidden_dependencies=("OpenCV_Python",))
     with pytest.raises(PrepareReleaseError, match="opencv-python-headless"):
         wheel.assert_no_forbidden_dependencies(
             installed=["opencv-python-headless"], package=package

@@ -1,6 +1,6 @@
 """The releasable packages of this repository, and where each one's release inputs live.
 
-`lightly-studio` and `lightly-studio-embed` release on their own cadences through the
+`lightly-studio` and `lightly-studio-serve` release on their own cadences through the
 same three workflows. Everything that differs between the two is here: which
 `pyproject.toml` carries the version, which `CHANGELOG.md` the notes come from, what
 prefixes the tag so the two version namespaces cannot collide, and what must never
@@ -67,11 +67,11 @@ PACKAGES = (
         needs_node=True,
     ),
     Package(
-        distribution="lightly-studio-embed",
-        display_name="LightlyStudio Embed",
-        directory="lightly_studio_embed",
-        changelog="lightly_studio_embed/CHANGELOG.md",
-        tag_prefix="lightly-studio-embed/",
+        distribution="lightly-studio-serve",
+        display_name="LightlyStudio Serve",
+        directory="lightly_studio_serve",
+        changelog="lightly_studio_serve/CHANGELOG.md",
+        tag_prefix="lightly-studio-serve/",
         needs_node=False,
         # The wheel is installed next to a customer's own CUDA and torch pins, so none of
         # the heavy things LightlyStudio itself needs may arrive with it - not even
@@ -104,8 +104,8 @@ def get(distribution: str) -> Package:
 def for_tag(tag: str) -> Package:
     """Returns the package a release tag belongs to.
 
-    The longest matching prefix wins, so `lightly-studio-embed/v0.1.1` resolves to the
-    embed package rather than to `lightly-studio`, whose prefix is empty.
+    The longest matching prefix wins, so `lightly-studio-serve/v0.1.1` resolves to the
+    serve package rather than to `lightly-studio`, whose prefix is empty.
 
     Raises:
         PrepareReleaseError: The tag matches no package's `<prefix>v<version>` shape.

@@ -167,8 +167,8 @@ def test_main__package_config(capsys: pytest.CaptureFixture):
 
 
 def test_main__package_config__by_tag(capsys: pytest.CaptureFixture):
-    assert cli.main(["package-config", "--tag", "lightly-studio-embed/v0.1.1"]) == 0
-    assert "distribution=lightly-studio-embed\n" in capsys.readouterr().out
+    assert cli.main(["package-config", "--tag", "lightly-studio-serve/v0.1.1"]) == 0
+    assert "distribution=lightly-studio-serve\n" in capsys.readouterr().out
 
 
 def test_main__package_config__unknown_package_exits_nonzero(capsys: pytest.CaptureFixture):
@@ -185,7 +185,7 @@ def test_main__list_packages(capsys: pytest.CaptureFixture):
     assert cli.main(["list-packages"]) == 0
     assert capsys.readouterr().out == (
         "lightly-studio lightly_studio/pyproject.toml\n"
-        "lightly-studio-embed lightly_studio_embed/pyproject.toml\n"
+        "lightly-studio-serve lightly_studio_serve/pyproject.toml\n"
     )
 
 
@@ -197,7 +197,7 @@ def test_main__check_wheel_dependencies__no_wheel_exits_nonzero(
             [
                 "check-wheel-dependencies",
                 "--package",
-                "lightly-studio-embed",
+                "lightly-studio-serve",
                 "--dist",
                 str(tmp_path),
             ]

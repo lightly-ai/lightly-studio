@@ -3,7 +3,7 @@ import pytest
 from prepare_release import packages
 from prepare_release.errors import PrepareReleaseError
 
-EMBED = packages.get("lightly-studio-embed")
+SERVE = packages.get("lightly-studio-serve")
 STUDIO = packages.get("lightly-studio")
 
 
@@ -15,7 +15,7 @@ class TestPackage:
         assert STUDIO.branch_prefix == "release-"
 
     def test_branch_prefix__prefixed_package_flattens_the_slash(self):
-        assert EMBED.branch_prefix == "release-lightly-studio-embed-"
+        assert SERVE.branch_prefix == "release-lightly-studio-serve-"
 
 
 def test_get():
@@ -32,7 +32,7 @@ def test_for_tag():
 
 
 def test_for_tag__longest_prefix_wins():
-    assert packages.for_tag("lightly-studio-embed/v0.1.2") is EMBED
+    assert packages.for_tag("lightly-studio-serve/v0.1.2") is SERVE
 
 
 def test_for_tag__unknown():
@@ -59,15 +59,15 @@ def test_render_config():
     )
 
 
-def test_render_config__embed():
-    assert packages.render_config(EMBED) == (
-        "distribution=lightly-studio-embed\n"
-        "display_name=LightlyStudio Embed\n"
-        "directory=lightly_studio_embed\n"
-        "pyproject=lightly_studio_embed/pyproject.toml\n"
-        "changelog=lightly_studio_embed/CHANGELOG.md\n"
-        "tag_prefix=lightly-studio-embed/\n"
-        "branch_prefix=release-lightly-studio-embed-\n"
+def test_render_config__serve():
+    assert packages.render_config(SERVE) == (
+        "distribution=lightly-studio-serve\n"
+        "display_name=LightlyStudio Serve\n"
+        "directory=lightly_studio_serve\n"
+        "pyproject=lightly_studio_serve/pyproject.toml\n"
+        "changelog=lightly_studio_serve/CHANGELOG.md\n"
+        "tag_prefix=lightly-studio-serve/\n"
+        "branch_prefix=release-lightly-studio-serve-\n"
         "needs_node=false\n"
         "forbidden_dependencies=torch cuda nvidia duckdb opencv lightly-studio\n"
     )

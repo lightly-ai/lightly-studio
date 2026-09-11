@@ -20,7 +20,7 @@ build: clean
 check-wheel-dependencies: build
 	@echo "Checking the wheel's resolved dependencies..."
 	PYTHONPATH=../.github/scripts python3 -m prepare_release check-wheel-dependencies \
-		--package lightly-studio-embed --dist dist
+		--package lightly-studio-serve --dist dist
 
 .PHONY: test
 test:

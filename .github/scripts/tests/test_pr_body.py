@@ -1,6 +1,6 @@
 from prepare_release import packages, pr_body
 
-EMBED = packages.get("lightly-studio-embed")
+SERVE = packages.get("lightly-studio-serve")
 STUDIO = packages.get("lightly-studio")
 SECTION = "### Added\n\n- Added thing one."
 
@@ -23,7 +23,7 @@ def test_render_pr_body__says_merging_publishes_nothing():
 
 
 def test_render_pr_body__names_the_package_it_prepares():
-    body = pr_body.render_pr_body(section_body=SECTION, version="0.1.1", package=EMBED)
-    assert "LightlyStudio Embed 0.1.1" in body
-    assert "`lightly_studio_embed/CHANGELOG.md`" in body
-    assert "`lightly_studio_embed/pyproject.toml`" in body
+    body = pr_body.render_pr_body(section_body=SECTION, version="0.1.1", package=SERVE)
+    assert "LightlyStudio Serve 0.1.1" in body
+    assert "`lightly_studio_serve/CHANGELOG.md`" in body
+    assert "`lightly_studio_serve/pyproject.toml`" in body

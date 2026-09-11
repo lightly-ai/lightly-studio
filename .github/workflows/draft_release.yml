@@ -8,7 +8,7 @@ on:
     branches: [main]
     paths:
       - "lightly_studio/pyproject.toml"
-      - "lightly_studio_embed/pyproject.toml"
+      - "lightly_studio_serve/pyproject.toml"
   # Retry hatch for a run that failed on something transient. It reaches the
   # same commit as the push would, so it is safe to run at any time.
   workflow_dispatch:
@@ -16,7 +16,7 @@ on:
       package:
         description: Package to draft a release for.
         type: choice
-        options: [lightly-studio, lightly-studio-embed]
+        options: [lightly-studio, lightly-studio-serve]
         default: lightly-studio
 
 permissions:
@@ -331,7 +331,7 @@ jobs:
           else
             # A first release has nothing of its own to diff against, and left to
             # itself generate-notes would reach for the newest release of any
-            # package - so a first `lightly-studio-embed` release would be handed
+            # package - so a first `lightly-studio-serve` release would be handed
             # LightlyStudio's commits. The changelog section stands alone instead.
             echo "::notice::No earlier ${TAG_PREFIX}v* release; the notes are the changelog section alone."
             : > "${RUNNER_TEMP}/generated-notes.md"

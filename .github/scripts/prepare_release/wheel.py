@@ -1,6 +1,6 @@
 """Check what a built wheel actually pulls in, before it can be published.
 
-`lightly-studio-embed` exists to be installed next to a customer's own CUDA and torch
+`lightly-studio-serve` exists to be installed next to a customer's own CUDA and torch
 pins, so the one thing that must stay true of it is that it stays light. A
 `pyproject.toml` review cannot establish that: the offending dependency arrives one
 level down. This installs the wheel into a throwaway environment and looks at what
@@ -70,7 +70,7 @@ def parse_installed_names(pip_list_json: str) -> list[str]:
 def assert_no_forbidden_dependencies(installed: Sequence[str], package: Package) -> None:
     """Fails if any installed name contains one of `package.forbidden_dependencies`.
 
-    The package itself is skipped: `lightly-studio-embed` carries the `lightly-studio`
+    The package itself is skipped: `lightly-studio-serve` carries the `lightly-studio`
     substring that it forbids of everything else.
 
     Raises:
