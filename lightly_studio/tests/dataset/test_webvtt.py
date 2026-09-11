@@ -89,8 +89,7 @@ def test_parse_webvtt__skips_non_cue_blocks(block: str) -> None:
 
 def test_parse_webvtt__drops_a_cue_with_no_text() -> None:
     text = (
-        "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n<v Cook>\n"
-        "\n00:00:01.000 --> 00:00:02.000\nHi.\n"
+        "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n<v Cook>\n\n00:00:01.000 --> 00:00:02.000\nHi.\n"
     )
 
     payload = webvtt.parse_webvtt(text=text, source="clip.vtt")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import httpx
 import pytest
@@ -14,7 +15,7 @@ from lightly_studio.dataset.narration_classification import (
 
 
 def test_openai_compatible_classifier() -> None:
-    requests: list[dict[str, object]] = []
+    requests: list[dict[str, Any]] = []
 
     def handle_request(request: httpx.Request) -> httpx.Response:
         request_body = json.loads(request.content)
@@ -66,7 +67,7 @@ def test_openai_compatible_classifier() -> None:
 
 
 def test_ollama_classifier_disables_thinking() -> None:
-    requests: list[dict[str, object]] = []
+    requests: list[dict[str, Any]] = []
 
     def handle_request(request: httpx.Request) -> httpx.Response:
         request_body = json.loads(request.content)

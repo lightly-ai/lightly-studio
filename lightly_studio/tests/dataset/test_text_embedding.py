@@ -17,6 +17,7 @@ from lightly_studio.dataset.embedding_generator import (
     RandomEmbeddingGenerator,
 )
 from lightly_studio.dataset.text_embedding import TextEmbeddingContext
+from lightly_studio.embed.types import EmbeddingSpaceSpec
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 _DIMENSION = 3
@@ -24,6 +25,9 @@ _DIMENSION = 3
 
 class _TextLengthGenerator(EmbeddingGenerator):
     """Generator without a batched text path, embedding a text by its length."""
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(space_key="text_length_model", dimension=_DIMENSION)
 
     def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         return EmbeddingModelCreate(

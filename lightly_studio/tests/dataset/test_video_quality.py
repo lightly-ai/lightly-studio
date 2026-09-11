@@ -7,6 +7,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.dataset import video_quality
@@ -16,14 +17,14 @@ from tests.helpers_resolvers import create_collection
 from tests.resolvers.video import helpers as video_helpers
 
 
-def _checkerboard(size: int = 128, cell: int = 8) -> np.ndarray:
+def _checkerboard(size: int = 128, cell: int = 8) -> NDArray[np.uint8]:
     """Sharp high-contrast grayscale pattern."""
     coords = np.arange(size) // cell
     grid = (coords[:, None] + coords[None, :]) % 2
     return (grid * 255).astype(np.uint8)
 
 
-def _blurred_checkerboard(size: int = 128, cell: int = 8, ksize: int = 31) -> np.ndarray:
+def _blurred_checkerboard(size: int = 128, cell: int = 8, ksize: int = 31) -> NDArray[np.uint8]:
     sharp = _checkerboard(size=size, cell=cell)
     return cv2.GaussianBlur(sharp, (ksize, ksize), 0)
 
@@ -74,7 +75,7 @@ def test_aggregate_frame_quality__empty_raises() -> None:
 
 
 def test_aggregate_frame_quality__blurry_and_dark() -> None:
-    frames = [_blurred_checkerboard() // 8 for _ in range(4)]
+    frames = [(_blurred_checkerboard() // 8).astype(np.uint8) for _ in range(4)]
     scores = video_quality.aggregate_frame_quality(frames)
     assert (
         scores.blur_score

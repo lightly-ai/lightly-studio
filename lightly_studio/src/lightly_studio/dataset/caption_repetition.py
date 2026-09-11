@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 
 import numpy as np
@@ -193,7 +194,8 @@ def _pairwise_cosine_similarities(
     norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
     norms = np.maximum(norms, np.finfo(np.float32).tiny)
     normalized = embeddings / norms
-    return normalized @ normalized.T
+    # Cast: mypy cannot infer the dtype through the matmul, which stays float32.
+    return cast(NDArray[np.float32], normalized @ normalized.T)
 
 
 def _max_pairwise_similarities(embeddings: NDArray[np.float32]) -> dict[int, float]:
@@ -275,14 +277,7 @@ def _clique_groups(
         assigned.add(match.index_a)
         assigned.add(match.index_b)
 
-        candidates = sorted(
-            {
-                index
-                for edge in edge_set
-                for index in edge
-                if index not in assigned
-            }
-        )
+        candidates = sorted({index for edge in edge_set for index in edge if index not in assigned})
         for candidate in candidates:
             if _is_connected_to_all(candidate=candidate, members=clique, edge_set=edge_set):
                 clique.append(candidate)
