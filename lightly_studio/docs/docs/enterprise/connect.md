@@ -17,7 +17,7 @@ admin account.
   server for best compatibility. You can check the server version in the GUI footer.
 
 For hardware guidance for the machine running the Python client, see
-[Hardware Requirements](hardware-requirements.md#python-client).
+[Hardware Requirements](hardware-requirements.md#python-client-requirements).
 
 ## Step 1: Get Your Connection Credentials
 
