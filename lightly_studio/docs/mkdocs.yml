@@ -188,6 +188,7 @@ nav:
     - Collaboration and Permissions: enterprise/collaboration.md
     - Connect from Python: enterprise/connect.md
     - Security and Architecture: enterprise/security.md
+    - Hardware Requirements: enterprise/hardware-requirements.md
     - On-Premise Deployment: enterprise/on-premise.md
     - Local Storage: enterprise/local_storage.md
     - Cloud Storage:
@@ -270,6 +271,7 @@ plugins:
           - enterprise/collaboration.md
           - enterprise/connect.md
           - enterprise/security.md
+          - enterprise/hardware-requirements.md
           - enterprise/on-premise.md
           - enterprise/local_storage.md
           - enterprise/cloud_storage/index.md
