@@ -7,10 +7,10 @@
         createAnnotationFixture,
         createCuboidAnnotation
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
-    import * as THREE from 'three';
     import { writable } from 'svelte/store';
     import CuboidLayer from './CuboidLayer.svelte';
     import CuboidCreationStory from './CuboidCreationStory.svelte';
+    import CuboidDuplicateStory from './CuboidDuplicateStory.svelte';
 
     const classes = [
         { id: 'vehicle', name: 'Vehicle', color: '#3b82f6' },
@@ -328,4 +328,17 @@
     }}
 >
     <CuboidCreationStory />
+</Story>
+
+<Story
+    name="Duplicate (interactive)"
+    parameters={{
+        docs: {
+            description: {
+                story: "Select a cuboid, then press Ctrl+D (or Cmd+D) to duplicate it. Each copy is offset along the original's local +x axis and auto-selected."
+            }
+        }
+    }}
+>
+    <CuboidDuplicateStory />
 </Story>
