@@ -77,11 +77,14 @@ def assert_no_forbidden_dependencies(installed: Sequence[str], package: Package)
         PrepareReleaseError: A forbidden name is installed.
     """
     own_name = normalize_name(package.distribution)
+    # Both sides are normalized: a pattern written `opencv_python` or `NVIDIA` would
+    # otherwise never match a normalized name, and this guard would fail open.
+    patterns = [normalize_name(pattern) for pattern in package.forbidden_dependencies]
     offenders = sorted(
         name
         for name in installed
         if normalize_name(name) != own_name
-        and any(pattern in normalize_name(name) for pattern in package.forbidden_dependencies)
+        and any(pattern in normalize_name(name) for pattern in patterns)
     )
     if offenders:
         raise PrepareReleaseError(

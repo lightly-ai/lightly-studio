@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from prepare_release import packages, wheel
@@ -65,3 +67,11 @@ def test_assert_no_forbidden_dependencies__lists_every_offender():
 
 def test_normalize_name():
     assert wheel.normalize_name("NVIDIA_cuBLAS.cu12") == "nvidia-cublas-cu12"
+
+
+def test_assert_no_forbidden_dependencies__normalizes_the_patterns_too():
+    package = replace(EMBED, forbidden_dependencies=("OpenCV_Python",))
+    with pytest.raises(PrepareReleaseError, match="opencv-python-headless"):
+        wheel.assert_no_forbidden_dependencies(
+            installed=["opencv-python-headless"], package=package
+        )

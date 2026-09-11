@@ -64,10 +64,21 @@ jobs:
             exit 0
           fi
 
-          # The version of $2 at commit $1. Exit 2 says the package does not exist
+          # Both sides of the push are resolved first, so that the 404 below can only
+          # mean "no such file at that commit". A 404 on an unresolvable ref reads
+          # the same, and would otherwise turn a broken run into a silent no-op.
+          for ref in "${BEFORE}" "${AFTER}"; do
+            if ! gh api "repos/${GITHUB_REPOSITORY}/commits/${ref}" --jq .sha > /dev/null; then
+              echo "::error::Cannot resolve ${ref}; use the workflow_dispatch hatch instead."
+              exit 1
+            fi
+          done
+
+          # The version of $2 at commit $1. Exit 2 says the file does not exist
           # there; every other failure is exit 1 and stops the run. Errexit cannot
           # carry that: the caller suppresses it, and dropping a release because
-          # the API blipped is worse than failing loudly.
+          # the API blipped is worse than failing loudly. Diagnostics go to stderr,
+          # because stdout of this function is the version the caller captures.
           version_at() {
             if ! gh api "repos/${GITHUB_REPOSITORY}/contents/$2?ref=$1" \
                    -H "Accept: application/vnd.github.raw" \
@@ -75,8 +86,8 @@ jobs:
               if grep -q "(HTTP 404)" "${RUNNER_TEMP}/detect-err"; then
                 return 2
               fi
-              echo "::error::Could not read $2 at $1:"
-              cat "${RUNNER_TEMP}/detect-err"
+              echo "::error::Could not read $2 at $1:" >&2
+              cat "${RUNNER_TEMP}/detect-err" >&2
               return 1
             fi
             python3 -m prepare_release read-version \
@@ -300,18 +311,31 @@ jobs:
           # commits. The window is pinned to this package's own last release
           # instead. `lightly-studio`'s empty prefix selects exactly the `v*`
           # tags, which are its own.
-          previous="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq \
-            "[.[] | select(.draft == false) | .tag_name
-              | select(startswith(\"${TAG_PREFIX}v\"))] | first // empty")"
-          notes_args=(-f tag_name="${TAG}" -f target_commitish="${SHA}")
+          # `--paginate` because releases come back newest-first across every package,
+          # so this package's own last release drops off page one once the other has
+          # released enough times. Written to a file rather than piped into `head`,
+          # which would SIGPIPE `gh` and trip `pipefail`. Prereleases are skipped, as
+          # GitHub's own default does.
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq \
+            ".[] | select(.draft == false and .prerelease == false) | .tag_name
+              | select(startswith(\"${TAG_PREFIX}v\"))" > "${RUNNER_TEMP}/releases"
+          previous="$(head -n 1 "${RUNNER_TEMP}/releases")"
+
           if [ -n "${previous}" ]; then
-            notes_args+=(-f previous_tag_name="${previous}")
             echo "Release notes cover ${previous}..${TAG}."
+            gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="${TAG}" \
+              -f target_commitish="${SHA}" \
+              -f previous_tag_name="${previous}" \
+              --jq .body > "${RUNNER_TEMP}/generated-notes.md"
           else
-            echo "No earlier ${TAG_PREFIX}v* release; letting GitHub pick the window."
+            # A first release has nothing of its own to diff against, and left to
+            # itself generate-notes would reach for the newest release of any
+            # package - so a first `lightly-studio-embed` release would be handed
+            # LightlyStudio's commits. The changelog section stands alone instead.
+            echo "::notice::No earlier ${TAG_PREFIX}v* release; the notes are the changelog section alone."
+            : > "${RUNNER_TEMP}/generated-notes.md"
           fi
-          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" "${notes_args[@]}" \
-            --jq .body > "${RUNNER_TEMP}/generated-notes.md"
           python3 -m prepare_release render-release-notes \
             --changelog "${RUNNER_TEMP}/CHANGELOG.md" \
             --version "${VERSION}" \
