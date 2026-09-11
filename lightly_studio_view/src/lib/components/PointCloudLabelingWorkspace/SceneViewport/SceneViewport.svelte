@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Canvas } from '@threlte/core';
+    import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import PointCloudScene from '../../PointCloudViewer/PointCloudScene.svelte';
     import type { ColorMode } from '../../PointCloudViewer/pointCloudUtils';
     import type { PointBatch } from '../../PointCloudViewer/pointCloudBuffer';
@@ -65,11 +66,13 @@
         oncuboidupdate
     }: Props = $props();
 
+    let orbitControlsRef = $state<ThreeOrbitControls | undefined>();
+
 </script>
 
 <div class="h-full w-full" data-testid="workspace-scene-viewport">
     <Canvas>
-        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
+        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} bind:controlsRef={orbitControlsRef} />
         <CuboidLayer
             {cuboids}
             {annotationClasses}
@@ -77,6 +80,7 @@
             {selectedAnnotationId}
             {hoveredAnnotationId}
             {activeTool}
+            orbitControls={orbitControlsRef}
             {onselect}
             {onhover}
             {oncuboidupdate}

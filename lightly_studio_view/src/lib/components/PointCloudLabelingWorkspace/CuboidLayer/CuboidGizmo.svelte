@@ -21,13 +21,15 @@
         annotation: CuboidAnnotation;
         /** Determines which gizmo mode is active: translate or rotate. */
         activeTool?: WorkspaceTool;
+        /** When false the gizmo renders as a non-interactive direction indicator only. */
+        enabled?: boolean;
         /** Fires when a translate or rotate drag ends with the updated annotation. */
         oncuboidupdate?: (cuboid: CuboidAnnotation) => void;
         /** Visual content rendered inside the controlled group (moves with the gizmo). */
         children?: Snippet;
     }
 
-    let { annotation, activeTool = 'translate', oncuboidupdate, children }: Props = $props();
+    let { annotation, activeTool = 'translate', enabled = true, oncuboidupdate, children }: Props = $props();
 
     let controlsRef = $state<ThreeTransformControls>();
 
@@ -88,6 +90,7 @@
     mode={activeTool === 'rotate' ? 'rotate' : 'translate'}
     space="world"
     autoPauseControls
+    {enabled}
     bind:controls={controlsRef}
 >
     {@render children?.()}
