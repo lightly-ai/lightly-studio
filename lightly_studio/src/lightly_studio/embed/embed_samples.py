@@ -25,10 +25,13 @@ from lightly_studio.dataset.embedding_manager import (
 logger = logging.getLogger(__name__)
 
 
-def embed_image_for_collection(collection_id: UUID, filepath: str) -> list[float]:
+def embed_image_for_collection(session: Session, collection_id: UUID, filepath: str) -> list[float]:
     """Embed a single image with the collection's default model, without storing it.
 
+    Loads the collection's default model from the database if it is not already held in memory.
+
     Args:
+        session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
         filepath: fsspec path or URL of the image to embed.
 
@@ -40,13 +43,19 @@ def embed_image_for_collection(collection_id: UUID, filepath: str) -> list[float
             not support images.
     """
     manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
+    if model_id is None:
+        raise ValueError("No default embedding model registered for this collection.")
     return manager.compute_image_embedding(collection_id=collection_id, filepath=filepath)
 
 
-def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
+def embed_text_for_collection(session: Session, collection_id: UUID, text: str) -> list[float]:
     """Embed a text query with the collection's default model, without storing it.
 
+    Loads the collection's default model from the database if it is not already held in memory.
+
     Args:
+        session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
         text: The text to embed.
 
@@ -57,6 +66,9 @@ def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
         ValueError: If the collection has no default embedding model.
     """
     manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
+    if model_id is None:
+        raise ValueError("No default embedding model registered for this collection.")
     return manager.embed_text(collection_id=collection_id, text_query=TextEmbedQuery(text=text))
 
 
