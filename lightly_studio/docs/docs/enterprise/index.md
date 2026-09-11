@@ -47,6 +47,7 @@ Not registered yet? [Start for free](https://www.lightly.ai/studio-signup) to ge
 ## Getting Started
 
 - [Connect from Python](connect.md)
+- [Hardware Requirements](hardware-requirements.md)
 - [Security and Architecture](security.md)
 - [On-Premise Deployment](on-premise.md)
 - [Local Storage](local_storage.md)
