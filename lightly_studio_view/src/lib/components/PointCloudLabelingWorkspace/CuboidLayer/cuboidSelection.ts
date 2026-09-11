@@ -14,6 +14,11 @@ interface CuboidSelectionListenerParams {
     resetCuboidClicked: () => void;
 }
 
+interface CuboidDeleteListenerParams {
+    selectedAnnotationId: string | null;
+    oncuboiddelete?: (annotationId: string) => void;
+}
+
 /**
  * Selects a cuboid when selection is the active workspace tool.
  *
@@ -56,5 +61,28 @@ export function addCuboidSelectionListeners({
     return () => {
         window.removeEventListener('keydown', onKeyDown);
         target.removeEventListener('click', onClick);
+    };
+}
+
+/**
+ * Attaches a keydown handler that fires `oncuboiddelete` when Delete or Backspace
+ * is pressed while a cuboid is selected.
+ *
+ * @param params - Currently selected annotation ID and delete callback.
+ * @returns A function that removes the registered event listener.
+ */
+export function addCuboidDeleteListeners({
+    selectedAnnotationId,
+    oncuboiddelete
+}: CuboidDeleteListenerParams): () => void {
+    function onKeyDown(event: KeyboardEvent): void {
+        if ((event.key === 'Delete' || event.key === 'Backspace') && selectedAnnotationId) {
+            oncuboiddelete?.(selectedAnnotationId);
+        }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+        window.removeEventListener('keydown', onKeyDown);
     };
 }

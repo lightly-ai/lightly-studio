@@ -21,6 +21,7 @@
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
         oncuboidupdate?: (cuboid: Domain.CuboidAnnotation) => void;
+        oncuboiddelete?: (annotationId: string) => void;
     }
 
     let {
@@ -34,7 +35,8 @@
         creation,
         onselect,
         onhover,
-        oncuboidupdate
+        oncuboidupdate,
+        oncuboiddelete
     }: Props = $props();
 
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
@@ -50,8 +52,10 @@
 <CuboidInteractionListeners
     {activeTool}
     {pointCloudBounds}
+    {selectedAnnotationId}
     {creation}
     {onselect}
+    {oncuboiddelete}
     isCuboidClicked={() => cuboidClicked}
     resetCuboidClicked={() => (cuboidClicked = false)}
 />
