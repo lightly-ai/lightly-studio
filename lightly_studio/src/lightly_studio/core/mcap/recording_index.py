@@ -71,7 +71,7 @@ def find_point_cloud_channels(reader: McapReader) -> list[PointCloudChannel]:
 
 
 def iter_point_cloud_frames(
-    reader: McapReader, *, topic: str, limit: int | None = None
+    reader: McapReader, *, topic: str, limit: int | None = None, duration_ns: int | None = None
 ) -> Iterator[CreateMcap]:
     """Yield a locator sample per point-cloud message on a topic, in log time order.
 
@@ -79,17 +79,32 @@ def iter_point_cloud_frames(
     reads. Publish time is the closest stamp available without decoding, so it stands in for
     the capture stamp that aligns channels.
 
+    Locating a frame reads no payload, but walking the messages still decompresses the chunks
+    they sit in, and a recording's chunks hold every topic rather than only this one. Both
+    bounds therefore stop the walk rather than filter its output: what is never reached is
+    never decompressed, which is the difference between indexing a slice of a long recording
+    and reading most of the file.
+
     Args:
         reader: A reader over an indexed recording.
         topic: The topic to walk.
         limit: Stop after this many messages. None walks the whole topic, which on a long
             recording means tens of thousands of samples.
+        duration_ns: Stop once a message sits further than this past the topic's first one.
+            Measured from that first message rather than from the recording's start, so a
+            sensor that begins late still yields its own opening seconds. None walks to the
+            end of the topic.
 
     Yields:
         A ``CreateMcap`` per message, ready to add to an MCAP collection.
     """
+    first_log_time_ns: int | None = None
     for index, (_schema, _channel, message) in enumerate(reader.iter_messages(topics=[topic])):
         if limit is not None and index >= limit:
+            return
+        if first_log_time_ns is None:
+            first_log_time_ns = message.log_time
+        if duration_ns is not None and message.log_time - first_log_time_ns > duration_ns:
             return
         yield CreateMcap(
             channel_id=message.channel_id,

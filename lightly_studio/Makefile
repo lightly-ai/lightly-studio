@@ -14,11 +14,16 @@ POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 # by the media endpoint, which is what the browser reads byte ranges from.
 MCAP_PATH ?= datasets/mcap/perception.mcap
 MCAP_MAX_FRAMES ?= 200
+# Seconds of the channel to index, from its first message: indexing walks the recording's
+# chunks, so this is what keeps starting up quick whatever the recording's length. 0 lifts
+# the window and leaves MCAP_MAX_FRAMES as the only bound.
+MCAP_MAX_SECONDS ?= 2
 MCAP_TOPIC ?=
 # The recording is both indexed and served from the same path, and the workspace route only
 # opens while the feature flag is on, so the two always travel together.
 MCAP_ENV := MCAP_PATH=$(MCAP_PATH) \
 	MCAP_MAX_FRAMES=$(MCAP_MAX_FRAMES) \
+	MCAP_MAX_SECONDS=$(MCAP_MAX_SECONDS) \
 	MCAP_TOPIC=$(MCAP_TOPIC) \
 	LIGHTLY_STUDIO_MCAP_RECORDING_PATH=$(MCAP_PATH) \
 	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=1

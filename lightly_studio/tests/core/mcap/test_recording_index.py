@@ -9,6 +9,8 @@ from mcap.writer import IndexType, Writer
 from lightly_studio.core.mcap import recording_index
 
 FIRST_LOG_TIME_NS = 1789000000000000001
+# A tenth of a second between messages, as a 10 Hz sensor publishes them.
+SPACING_NS = 100_000_000
 
 
 def _recording(*, indexed: bool = True) -> io.BytesIO:
@@ -46,9 +48,9 @@ def _recording(*, indexed: bool = True) -> io.BytesIO:
     for offset in range(3):
         writer.add_message(
             channel_id=lidar_channel,
-            log_time=FIRST_LOG_TIME_NS + offset,
+            log_time=FIRST_LOG_TIME_NS + offset * SPACING_NS,
             data=b"points",
-            publish_time=FIRST_LOG_TIME_NS + offset - 1,
+            publish_time=FIRST_LOG_TIME_NS + offset * SPACING_NS - 1,
         )
     writer.add_message(
         channel_id=imu_channel,
@@ -86,8 +88,8 @@ def test_iter_point_cloud_frames() -> None:
 
     assert [frame.log_time_ns for frame in frames] == [
         FIRST_LOG_TIME_NS,
-        FIRST_LOG_TIME_NS + 1,
-        FIRST_LOG_TIME_NS + 2,
+        FIRST_LOG_TIME_NS + SPACING_NS,
+        FIRST_LOG_TIME_NS + 2 * SPACING_NS,
     ]
     assert frames[0].capture_timestamp_ns == FIRST_LOG_TIME_NS - 1
     assert frames[0].keyframe_log_time_ns is None
@@ -98,10 +100,49 @@ def test_iter_point_cloud_frames__limit() -> None:
 
     frames = list(recording_index.iter_point_cloud_frames(reader, topic="/lidar", limit=2))
 
-    assert [frame.log_time_ns for frame in frames] == [FIRST_LOG_TIME_NS, FIRST_LOG_TIME_NS + 1]
+    assert [frame.log_time_ns for frame in frames] == [
+        FIRST_LOG_TIME_NS,
+        FIRST_LOG_TIME_NS + SPACING_NS,
+    ]
 
 
 def test_iter_point_cloud_frames__unknown_topic() -> None:
     reader = make_reader(_recording())
 
     assert list(recording_index.iter_point_cloud_frames(reader, topic="/absent")) == []
+
+
+def test_iter_point_cloud_frames__duration() -> None:
+    """The window is measured from the topic's first message, and includes its end."""
+    reader = make_reader(_recording())
+
+    frames = list(
+        recording_index.iter_point_cloud_frames(reader, topic="/lidar", duration_ns=SPACING_NS)
+    )
+
+    assert [frame.log_time_ns for frame in frames] == [
+        FIRST_LOG_TIME_NS,
+        FIRST_LOG_TIME_NS + SPACING_NS,
+    ]
+
+
+def test_iter_point_cloud_frames__duration_shorter_than_the_spacing() -> None:
+    """A window under one period still yields the frame the window opens on."""
+    reader = make_reader(_recording())
+
+    frames = list(recording_index.iter_point_cloud_frames(reader, topic="/lidar", duration_ns=1))
+
+    assert [frame.log_time_ns for frame in frames] == [FIRST_LOG_TIME_NS]
+
+
+def test_iter_point_cloud_frames__duration_and_limit() -> None:
+    """Whichever bound is reached first stops the walk."""
+    reader = make_reader(_recording())
+
+    frames = list(
+        recording_index.iter_point_cloud_frames(
+            reader, topic="/lidar", limit=1, duration_ns=10 * SPACING_NS
+        )
+    )
+
+    assert [frame.log_time_ns for frame in frames] == [FIRST_LOG_TIME_NS]

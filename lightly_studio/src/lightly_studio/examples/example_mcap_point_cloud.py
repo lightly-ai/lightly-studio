@@ -27,10 +27,14 @@ from lightly_studio.core.mcap import recording_index
 env = Env()
 env.read_env()
 recording_path = env.path("EXAMPLES_MCAP_PATH")
-# A full recording holds tens of thousands of frames. Index a slice by default so the
-# example finishes quickly; raise it to cover more of the timeline.
+# A full recording holds tens of thousands of frames, and walking to them decompresses the
+# chunks on the way. Index the channel's opening seconds by default so the example finishes
+# quickly whatever the recording's length; raise either bound to cover more of the timeline,
+# or set the window to 0 to be bounded by the frame count alone.
 max_frames = env.int("EXAMPLES_MCAP_MAX_FRAMES", 200)
+max_seconds = env.float("EXAMPLES_MCAP_MAX_SECONDS", 2.0)
 selected_topic = env.str("EXAMPLES_MCAP_TOPIC", default=None)
+duration_ns = int(max_seconds * 1_000_000_000) if max_seconds > 0 else None
 
 ls.db_manager.connect(cleanup_existing=True)
 
@@ -52,11 +56,12 @@ with recording_path.open("rb") as stream:
     dataset = ls.GroupDataset.create(components=[("lidar", ls.SampleType.MCAP)])
     indexed = 0
     for frame in recording_index.iter_point_cloud_frames(
-        reader, topic=selected.topic, limit=max_frames
+        reader, topic=selected.topic, limit=max_frames, duration_ns=duration_ns
     ):
         dataset.add_group_sample(components={"lidar": frame})
         indexed += 1
 
-print(f"\nIndexed {indexed} point-cloud frames from {selected.topic}.")
+window = f"the first {max_seconds:g} s of " if duration_ns is not None else ""
+print(f"\nIndexed {indexed} point-cloud frames from {window}{selected.topic}.")
 
 ls.start_gui()

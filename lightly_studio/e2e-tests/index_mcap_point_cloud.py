@@ -3,6 +3,9 @@
 Recordings are far too large to keep in the repository, so pass one in:
 
     make start-e2e-mcap-point-cloud MCAP_PATH=/absolute/path/to/perception.mcap
+
+Only the channel's first MCAP_MAX_SECONDS are indexed, so starting up does not depend on how
+long the recording is. Raise it, or set it to 0, to cover more of the timeline.
 """
 
 from environs import Env
@@ -15,7 +18,12 @@ env = Env()
 env.read_env()
 recording_path = env.path("MCAP_PATH")
 max_frames = env.int("MCAP_MAX_FRAMES", 200)
+# Seconds of the channel to index, from its first message. Indexing walks the recording's
+# chunks, so a short window is what keeps starting up quick on a recording of any length;
+# 0 lifts it and walks until MCAP_MAX_FRAMES instead.
+max_seconds = env.float("MCAP_MAX_SECONDS", 2.0)
 selected_topic = env.str("MCAP_TOPIC", default=None)
+duration_ns = int(max_seconds * 1_000_000_000) if max_seconds > 0 else None
 
 if not recording_path.is_file():
     raise ValueError(
@@ -42,13 +50,14 @@ with recording_path.open("rb") as stream:
     indexed = 0
     first_group = None
     for frame in recording_index.iter_point_cloud_frames(
-        reader, topic=selected.topic, limit=max_frames
+        reader, topic=selected.topic, limit=max_frames, duration_ns=duration_ns
     ):
         group = dataset.add_group_sample(components={"lidar": frame})
         first_group = first_group or group
         indexed += 1
 
-print(f"Indexed {indexed} frames from {selected.topic}.")
+window = f"the first {max_seconds:g} s of " if duration_ns is not None else ""
+print(f"Indexed {indexed} frames from {window}{selected.topic}.")
 
 if first_group is not None:
     lidar = first_group["lidar"]
