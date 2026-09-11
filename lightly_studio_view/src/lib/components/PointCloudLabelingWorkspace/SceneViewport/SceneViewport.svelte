@@ -46,6 +46,8 @@
         oncuboidupdate?: (cuboid: CuboidAnnotation) => void;
         /** Fires when the user presses Delete or Backspace with a cuboid selected. */
         oncuboiddelete?: (annotationId: string) => void;
+        /** Fires when the user duplicates the selected cuboid (Ctrl+D / Cmd+D). */
+        oncuboidcreate?: (cuboid: CuboidAnnotation) => void;
     }
 
     const EMPTY_BATCH: PointBatch = {
@@ -70,7 +72,8 @@
         onselect,
         onhover,
         oncuboidupdate,
-        oncuboiddelete
+        oncuboiddelete,
+        oncuboidcreate
     }: Props = $props();
 
     let orbitControlsRef = $state<ThreeOrbitControls | undefined>();
@@ -98,6 +101,7 @@
             {onhover}
             {oncuboidupdate}
             {oncuboiddelete}
+            {oncuboidcreate}
         />
     </Canvas>
 </div>
