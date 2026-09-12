@@ -1,17 +1,15 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
 
-    // Bindable so `bind:brightness` and `bind:contrast` work on the ImageAdjustments stub.
-    let {
-        brightness = $bindable(0),
-        contrast = $bindable(0),
-        children
-    }: {
+    interface Props {
         brightness?: number;
         contrast?: number;
         children?: Snippet;
         [key: string]: unknown;
-    } = $props();
+    }
+
+    // ImageAdjustments binds these props.
+    let { brightness = $bindable(0), contrast = $bindable(0), children }: Props = $props();
 </script>
 
 {@render children?.()}

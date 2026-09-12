@@ -1,35 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { isOverlayTarget } from './isOverlayTarget';
 
-const createOverlayChild = (attribute: string, value: string): HTMLElement => {
-    const overlay = document.createElement('div');
-    overlay.setAttribute(attribute, value);
-
-    const input = document.createElement('input');
-    overlay.appendChild(input);
-
-    return input;
-};
-
 describe('isOverlayTarget', () => {
-    it.each([
-        ['role', 'dialog'],
-        ['role', 'menu'],
-        ['role', 'listbox'],
-        ['data-popover-content', '']
-    ])('returns true for an element inside %s="%s"', (attribute, value) => {
-        expect(isOverlayTarget(createOverlayChild(attribute, value))).toBe(true);
-    });
-
-    it('returns true for the overlay element itself', () => {
-        const overlay = document.createElement('div');
-        overlay.setAttribute('role', 'dialog');
-
-        expect(isOverlayTarget(overlay)).toBe(true);
-    });
-
-    it('returns false for an element outside any overlay and for null', () => {
-        expect(isOverlayTarget(document.createElement('input'))).toBe(false);
+    it.each(['role="dialog"', 'role="menu"', 'role="listbox"', 'data-popover-content'])(
+        'recognizes an overlay and its descendants: %s',
+        (attribute) => {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `<div ${attribute}><button></button></div>`;
+            expect(isOverlayTarget(wrapper.firstElementChild)).toBe(true);
+            expect(isOverlayTarget(wrapper.querySelector('button'))).toBe(true);
+            expect(isOverlayTarget(wrapper)).toBe(false);
+        }
+    );
+    it('ignores non-element targets', () => {
         expect(isOverlayTarget(null)).toBe(false);
+        expect(isOverlayTarget(window)).toBe(false);
     });
 });

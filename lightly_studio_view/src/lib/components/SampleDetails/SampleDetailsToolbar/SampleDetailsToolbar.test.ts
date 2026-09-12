@@ -247,6 +247,21 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
+    it.each(['<input />', '<div role="dialog"><button>Run</button></div>'])(
+        'ignores shortcuts and space tracking inside %s',
+        async (html) => {
+            const { container } = render(SampleDetailsToolbar);
+            const wrapper = container.appendChild(document.createElement('div'));
+            wrapper.innerHTML = html;
+            const target = wrapper.querySelector('input, button')!;
+            await fireEvent.keyDown(target, { key: 'd', code: 'KeyD' });
+            expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+            await fireEvent.keyDown(target, { key: ' ', code: 'Space' });
+            await fireEvent.keyDown(window, { key: 'd', code: 'KeyD' });
+            expect(mockSampleDetailsToolbarContext.status).toBe('drag');
+        }
+    );
+
     it('does not trigger toolbar shortcuts while space is held', async () => {
         render(SampleDetailsToolbar);
 
