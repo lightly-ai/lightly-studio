@@ -161,4 +161,25 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
         await fireEvent.keyUp(window, { key: ' ', code: 'Space' });
         expect(mockToolbarContext.status).toBe('bounding-box');
     });
+
+    it.each([
+        ['a text input', false],
+        ['a dialog', true]
+    ])(
+        'keeps the active annotation tool when space is typed in %s during editing',
+        async (_name, insideDialog) => {
+            isEditingMode.set(true);
+            render(SampleDetailsPanel, { props: defaultProps });
+            const input = appendInput(insideDialog);
+            mockToolbarContext.status = 'bounding-box';
+            mockAnnotationLabelContext.annotationType = 'BOUNDING_BOX';
+
+            await fireEvent.keyDown(input, { key: ' ', code: 'Space' });
+            await fireEvent.keyUp(input, { key: ' ', code: 'Space' });
+
+            // The keyup must not restore a status that no keydown ever saved.
+            expect(mockToolbarContext.status).toBe('bounding-box');
+            expect(mockAnnotationLabelContext.annotationType).toBe('BOUNDING_BOX');
+        }
+    );
 });
