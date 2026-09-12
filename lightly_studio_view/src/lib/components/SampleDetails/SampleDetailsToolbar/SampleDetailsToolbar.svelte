@@ -4,7 +4,7 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { isTextInputTarget } from '$lib/utils';
+    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
@@ -17,12 +17,17 @@
     let isSpacePressed = false;
 
     const onKeyDown = (e: KeyboardEvent) => {
+        // Typing in a field or in an overlay must not trigger the shortcuts behind it.
+        if (isTextInputTarget(e.target) || isOverlayTarget(e.target)) {
+            return;
+        }
+
         if (e.code === 'Space') {
             isSpacePressed = true;
             return;
         }
 
-        if (isSpacePressed || isTextInputTarget(e.target)) {
+        if (isSpacePressed) {
             return;
         }
 

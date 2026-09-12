@@ -10,6 +10,7 @@ export * from './echartsTheme';
 export * from './shadcn';
 export * from './isInputElement';
 export * from './isTextInputTarget';
+export * from './isOverlayTarget';
 export * from './shouldShowBoundingBoxForAnnotation';
 export * from './navigation';
 export { isImageView } from './isImageView/isImageView';
