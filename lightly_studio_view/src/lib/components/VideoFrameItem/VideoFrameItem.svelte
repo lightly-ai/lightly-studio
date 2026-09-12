@@ -45,7 +45,11 @@
     role="img"
     style={`width: var(${videoFrame.video.width}); height: var(${videoFrame.video.height});`}
 >
-    <img src={frameUrl} alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`} />
+    <img
+        src={frameUrl}
+        alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`}
+        draggable="false"
+    />
     <VideoFrameAnnotationItem
         width={size}
         height={size}
