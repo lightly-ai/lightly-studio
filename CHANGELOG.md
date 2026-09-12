@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Grid thumbnails no longer start a native image drag when the pointer moves slightly during a click, so quick selection clicks are not lost.
+
 ### Security
 
 ## \[1.1.0\] - 2026-09-07
