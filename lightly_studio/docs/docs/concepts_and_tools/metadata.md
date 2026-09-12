@@ -129,6 +129,59 @@ how to do this given a python dictionary (e.g. loaded from JSON) or a CSV file.
     dataset.update_metadata(sample_metadata)
     ```
 
+### Compute image quality metadata
+
+[ImageDataset.compute_image_quality_metadata](../api/dataset.md#lightly_studio.ImageDataset.compute_image_quality_metadata)
+decodes every image once and stores a set of pixel statistics as float metadata. Once stored,
+the values show up in the distribution panel, the metadata filters, and the
+`metadata_weighting` sampling strategy like any other numeric metadata.
+
+```python
+import lightly_studio as ls
+
+dataset = ls.ImageDataset.load()
+dataset.compute_image_quality_metadata()
+```
+
+All metrics are computed on the 8-bit RGB image after the EXIF orientation is applied and any
+alpha channel is discarded. `L` is Pillow's `convert("L")` luminance (ITU-R BT.601,
+`0.299 R + 0.587 G + 0.114 B`, rounded to an integer in `[0, 255]`).
+
+| Key | Definition | Range |
+|---|---|---|
+| `brightness` | Mean of `L` | `[0, 255]` |
+| `contrast` | Standard deviation of `L` | `[0, 127.5]` |
+| `sharpness` | Variance of the 4-neighbour Laplacian of `L` over the interior pixels | `[0, ∞)` |
+| `entropy` | Shannon entropy of the 256-bin histogram of `L`, in bits | `[0, 8]` |
+| `red_mean`, `green_mean`, `blue_mean` | Mean of each channel | `[0, 255]` |
+| `aspect_ratio` | `width / height` after EXIF orientation | `(0, ∞)` |
+| `image_quality_version` | Integer version of the metric definitions the values were computed with | |
+
+The metrics describe the pixels, they do not decide whether an image is good or bad. Sharpness
+in particular depends on the image size and content: a downscaled image or a flat scene scores
+low without being blurry. Compare values between the images of one dataset instead of applying
+one threshold everywhere. For example, to review the 100 least sharp images of a dataset, tag
+them by `sharpness`:
+
+```python
+import lightly_studio as ls
+
+dataset = ls.ImageDataset.load()
+dataset.compute_image_quality_metadata()
+
+dataset.query().sampling().metadata_weighting(
+    n_samples_to_select=100,
+    sampling_result_tag_name="least_sharp",
+    metadata_key="sharpness",
+    strength=-1,
+)
+```
+
+An image that is missing or cannot be decoded gets no values and is listed in the log summary,
+so it never looks like a dark or blurry image. Re-running the method skips images that already
+carry values of the current `image_quality_version` and recomputes the rest; pass
+`overwrite=True` to recompute every image.
+
 ### Add metadata calculated from images
 
 You can also iterate the dataset, open each image with PIL, compute derived statistics, and write
