@@ -151,7 +151,8 @@
     };
 
     const handleKeyUpEvent = (event: KeyboardEvent) => {
-        if (event.key === ' ') {
+        // Restore only if a keydown started pan mode.
+        if (event.key === ' ' && isPanModeEnabled) {
             isPanModeEnabled = false;
             sampleDetailsToolbarContext.status = previousToolbarStatus;
             annotationLabelContext.annotationType = previousAnnotationType;
