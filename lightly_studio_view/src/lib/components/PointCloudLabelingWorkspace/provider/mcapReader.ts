@@ -146,7 +146,7 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
                 'Select a ROS 2 CDR sensor_msgs/msg/PointCloud2 channel.'
             );
         }
-        let occurrence = 0;
+        let matchingMessage: TypedMcapRecords['Message'] | undefined;
         for await (const message of reader.readMessages({
             topics: [channel.topic],
             startTime: BigInt(locator.logTimeNs),
@@ -154,10 +154,24 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
             validateCrcs: true
         })) {
             signal.throwIfAborted();
-            if (message.channelId !== locator.channelId || occurrence++ !== locator.occurrence)
-                continue;
-            return fuseFrame(channel, message, locator, pointBudget, fuseChannels, withCameras);
+            if (message.channelId !== locator.channelId) continue;
+            if (matchingMessage !== undefined) {
+                throw new ProviderError(
+                    'source',
+                    `Timestamp ${locator.logTimeNs} is not unique on channel ${locator.channelId}.`
+                );
+            }
+            matchingMessage = message;
         }
+        if (matchingMessage !== undefined)
+            return fuseFrame(
+                channel,
+                matchingMessage,
+                locator,
+                pointBudget,
+                fuseChannels,
+                withCameras
+            );
         throw new ProviderError(
             'source',
             'The requested point-cloud frame is missing from the recording.'
@@ -320,15 +334,19 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
         const end = BigInt(endTimeNs);
         const frames: FrameLocator[] = [];
         let lastTime = '';
-        let occurrence = 0;
         for (const chunk of chunksCovering(channelId, start, end)) {
             signal.throwIfAborted();
             for (const logTime of await readMessageTimes(chunk, channelId)) {
                 if (logTime < start || logTime > end) continue;
+                if (logTime.toString() === lastTime) {
+                    throw new ProviderError(
+                        'source',
+                        `Timestamp ${lastTime} is not unique on channel ${channelId}.`
+                    );
+                }
                 if (frames.length === limit) return { frames, truncated: true };
                 const logTimeNs = logTime.toString();
-                occurrence = logTimeNs === lastTime ? occurrence + 1 : 0;
-                frames.push({ channelId, logTimeNs, occurrence });
+                frames.push({ channelId, logTimeNs, occurrence: 0 });
                 lastTime = logTimeNs;
             }
         }

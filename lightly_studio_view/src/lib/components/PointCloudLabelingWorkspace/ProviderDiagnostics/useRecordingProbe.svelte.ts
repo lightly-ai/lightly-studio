@@ -1,6 +1,7 @@
 import { untrack } from 'svelte';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { getMcapRecordingURLById } from '$lib/utils/getMcapRecordingURLById/getMcapRecordingURLById';
+import type { PointCloudFrame } from '../domain';
 import {
     createRecordingSession,
     ProviderError,
@@ -58,7 +59,11 @@ export type RecordingProbe = ReturnType<typeof useRecordingProbe>;
  * @param sampleId - The MCAP sample to read. An empty id opens nothing, which is how a
  * caller waits for a feature flag or a route parameter.
  */
-export function useRecordingProbe(sampleId: () => string) {
+export function useRecordingProbe(
+    sampleId: () => string,
+    recordingUrl: () => string | undefined = () => undefined,
+    initialLocator: () => FrameLocator | undefined = () => undefined
+) {
     const client = useQueryClient();
 
     let session = $state<RecordingSession | undefined>(undefined);
@@ -79,6 +84,8 @@ export function useRecordingProbe(sampleId: () => string) {
     let exhausted = $state(false);
     /** Cleared by the first full frame: the cheap read is for the opening wait only. */
     let awaitingFirstFrame = $state(true);
+    /** The viewport keeps this frame visible while the next one is decoded. */
+    let visibleFrame = $state<PointCloudFrame | undefined>(undefined);
 
     const log = (message: string, detail?: unknown) =>
         console.info(`[mcap-provider] ${message}`, detail ?? '');
@@ -92,7 +99,7 @@ export function useRecordingProbe(sampleId: () => string) {
     $effect(() => {
         const id = sampleId();
         if (!id) return;
-        const url = getMcapRecordingURLById(id);
+        const url = recordingUrl() ?? getMcapRecordingURLById(id);
         let cancelled = false;
         // Outside the effect's reactive reads: reading `telemetry` back inside the callback
         // would make the effect depend on what it writes, and loop.
@@ -104,6 +111,7 @@ export function useRecordingProbe(sampleId: () => string) {
         discovered = [];
         exhausted = false;
         awaitingFirstFrame = true;
+        visibleFrame = undefined;
         failure = undefined;
         failureDetail = undefined;
         telemetry = [];
@@ -139,9 +147,20 @@ export function useRecordingProbe(sampleId: () => string) {
     });
 
     const firstQuery = createQuery(() => ({
-        queryKey: ['mcap-frames', session?.source.recordingId, session?.source.version],
-        queryFn: ({ signal }: { signal: AbortSignal }) =>
-            listFrom(session!, session!.metadata.firstLogTimeNs!, INITIAL_FRAMES, signal),
+        queryKey: [
+            'mcap-frames',
+            session?.source.recordingId,
+            session?.source.version,
+            initialLocator()?.channelId,
+            initialLocator()?.logTimeNs,
+            initialLocator()?.occurrence
+        ],
+        queryFn: ({ signal }: { signal: AbortSignal }) => {
+            const seed = initialLocator();
+            return seed
+                ? Promise.resolve([seed])
+                : listFrom(session!, session!.metadata.firstLogTimeNs!, INITIAL_FRAMES, signal);
+        },
         enabled: session !== undefined,
         staleTime: Infinity
     }));
@@ -166,7 +185,15 @@ export function useRecordingProbe(sampleId: () => string) {
     }));
 
     $effect(() => {
-        if (frameQuery.data) awaitingFirstFrame = false;
+        if (frameQuery.data) {
+            visibleFrame = frameQuery.data;
+            awaitingFirstFrame = false;
+        } else if (previewQuery.data && !visibleFrame) {
+            // A preview is useful only while opening the recording. Once a frame is visible,
+            // keep it on screen until the next full frame is ready instead of flashing a
+            // lower-quality replacement during playback.
+            visibleFrame = previewQuery.data;
+        }
     });
 
     /**
@@ -262,7 +289,7 @@ export function useRecordingProbe(sampleId: () => string) {
             return index;
         },
         get frame() {
-            return frameQuery.data ?? previewQuery.data;
+            return visibleFrame;
         },
         /** The picture behind a camera frame's `resourceId`, for whoever draws the strip. */
         cameraImage(resourceId: string) {

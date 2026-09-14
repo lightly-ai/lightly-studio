@@ -12,13 +12,17 @@ POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 # Point-cloud labeling workspace (LIG-10657). Recordings are far too large to keep in the
 # repository, so pass one in: the same path is both indexed into locator samples and served
 # by the media endpoint, which is what the browser reads byte ranges from.
-MCAP_PATH ?= datasets/mcap/perception.mcap
+MCAP_PATH ?= $(or $(LIGHTLY_STUDIO_MCAP_RECORDING_PATH),datasets/mcap/perception.mcap)
 MCAP_MAX_FRAMES ?= 200
 # Seconds of the channel to index, from its first message: indexing walks the recording's
 # chunks, so this is what keeps starting up quick whatever the recording's length. 0 lifts
 # the window and leaves MCAP_MAX_FRAMES as the only bound.
 MCAP_MAX_SECONDS ?= 2
 MCAP_TOPIC ?=
+LOCALSTACK_CONTAINER_NAME := lightly-studio-localstack
+LOCALSTACK_PORT ?= 4566
+MCAP_S3_BUCKET ?= lightly-studio
+MCAP_S3_KEY ?= recordings/perception.mcap
 # The recording is both indexed and served from the same path, and the workspace route only
 # opens while the feature flag is on, so the two always travel together.
 MCAP_ENV := MCAP_PATH=$(MCAP_PATH) \
@@ -27,6 +31,9 @@ MCAP_ENV := MCAP_PATH=$(MCAP_PATH) \
 	MCAP_TOPIC=$(MCAP_TOPIC) \
 	LIGHTLY_STUDIO_MCAP_RECORDING_PATH=$(MCAP_PATH) \
 	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=1
+
+LOCALSTACK_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
+	AWS_ENDPOINT_URL=http://localhost:$(LOCALSTACK_PORT)
 
 # Installs the uv version that `required-version` in pyproject.toml pins, so a local
 # `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
@@ -142,6 +149,26 @@ start-e2e-video-groups: build
 start-e2e-mcap-point-cloud: build
 	@echo "Starting server for e2e point-cloud tests from $(MCAP_PATH)..."
 	$(MCAP_ENV) uv run e2e-tests/index_mcap_point_cloud.py
+
+.PHONY: start-localstack
+start-localstack:
+	@docker rm -f $(LOCALSTACK_CONTAINER_NAME) >/dev/null 2>&1 || true
+	@docker run -d --name $(LOCALSTACK_CONTAINER_NAME) -p $(LOCALSTACK_PORT):4566 localstack/localstack:4.7
+	@echo "Waiting for LocalStack..."
+	@until curl -sf http://localhost:$(LOCALSTACK_PORT)/_localstack/health >/dev/null; do sleep 1; done
+	@$(LOCALSTACK_ENV) AWS_ACCESS_KEY_ID=test aws s3 mb s3://$(MCAP_S3_BUCKET) --endpoint-url http://localhost:$(LOCALSTACK_PORT) 2>/dev/null || true
+
+.PHONY: start-e2e-mcap-point-cloud-localstack
+start-e2e-mcap-point-cloud-localstack: start-localstack build
+	@echo "Starting the point-cloud workspace with an MCAP recording in LocalStack S3..."
+	@$(LOCALSTACK_ENV) aws s3 cp $(MCAP_PATH) s3://$(MCAP_S3_BUCKET)/$(MCAP_S3_KEY) --endpoint-url http://localhost:$(LOCALSTACK_PORT)
+	$(LOCALSTACK_ENV) MCAP_S3_BUCKET=$(MCAP_S3_BUCKET) MCAP_S3_KEY=$(MCAP_S3_KEY) \
+	MCAP_URI=s3://$(MCAP_S3_BUCKET)/$(MCAP_S3_KEY) $(MCAP_ENV) \
+	uv run e2e-tests/index_mcap_point_cloud.py
+
+.PHONY: stop-localstack
+stop-localstack:
+	-docker rm -f $(LOCALSTACK_CONTAINER_NAME)
 
 # The same recording, rebuilding only the frontend bundle the server serves: the fast loop
 # while working on the workspace itself, since `build` reinstalls node modules and rebuilds

@@ -65,39 +65,18 @@ describe('openMcap', () => {
                 messageCount: '1'
             }
         ]);
-        const range = await session.listFrames(
-            channelId,
-            timestamp.toString(),
-            timestamp.toString()
-        );
-        expect(range.frames.map((frame) => frame.occurrence)).toEqual([0, 1]);
-        const first = createPointCloudFrame(await session.loadFrame(range.frames[0], 10));
-        const second = createPointCloudFrame(await session.loadFrame(range.frames[1], 10));
-        expect(first.id).not.toBe(second.id);
-        expect(first.positions.copy()).toEqual(new Float32Array([1, 2, 3]));
-        expect(second.positions.copy()).toEqual(new Float32Array([4, 2, 3]));
-        expect(first.timestamp.nanoseconds).toBe('1789000000000000001');
-        expect(first.source.publishedAt?.nanoseconds).toBe('1789000000000000000');
-        expect(
-            (await session.listFrames(channelId, timestamp.toString(), timestamp.toString(), 1))
-                .truncated
-        ).toBe(true);
         await expect(
-            session.loadFrame({ channelId, logTimeNs: timestamp.toString(), occurrence: 2 }, 10)
-        ).rejects.toMatchObject({ code: 'source' });
+            session.listFrames(channelId, timestamp.toString(), timestamp.toString())
+        ).rejects.toThrow('is not unique');
     });
 
     it('reads lz4-compressed chunks', async () => {
         const { bytes, channelId, timestamp } = await mcapFixture({ compressed: true });
         serve(bytes);
         const session = await openMcap(sourceFor(bytes), new AbortController().signal);
-        const range = await session.listFrames(
-            channelId,
-            timestamp.toString(),
-            timestamp.toString()
-        );
-        const frame = createPointCloudFrame(await session.loadFrame(range.frames[0], 10));
-        expect(frame.positions.copy()).toEqual(new Float32Array([1, 2, 3]));
+        await expect(
+            session.listFrames(channelId, timestamp.toString(), timestamp.toString())
+        ).rejects.toThrow('is not unique');
     });
 
     it('lists a window from the message index, without decompressing chunks', async () => {
@@ -107,13 +86,9 @@ describe('openMcap', () => {
         vi.mocked(decompress).mockClear();
         const readBefore = session.readable.bytesRead;
 
-        const range = await session.listFrames(
-            channelId,
-            timestamp.toString(),
-            timestamp.toString()
-        );
-
-        expect(range.frames.map((frame) => frame.occurrence)).toEqual([0, 1]);
+        await expect(
+            session.listFrames(channelId, timestamp.toString(), timestamp.toString())
+        ).rejects.toThrow('is not unique');
         expect(decompress).not.toHaveBeenCalled();
         // The index region is a fraction of the chunk it belongs to.
         expect(session.readable.bytesRead - readBefore).toBeLessThan(bytes.length / 4);

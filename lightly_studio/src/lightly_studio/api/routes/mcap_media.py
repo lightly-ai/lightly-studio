@@ -10,10 +10,35 @@ from lightly_studio.api.routes import byte_range
 from lightly_studio.core.mcap import recording_source
 from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError
+from lightly_studio.resolvers import recording_resolver
 
 app_router = APIRouter(prefix="/mcap/media")
 
 _MEDIA_TYPE = "application/octet-stream"
+
+
+@app_router.get("/recordings/{recording_id}")
+def serve_mcap_recording_by_recording_id(
+    recording_id: UUID,
+    request: Request,
+    range_header: str | None = Header(None, alias="range"),
+    if_match: str | None = Header(None, alias="if-match"),
+) -> Response:
+    """Serve a dataset recording from its local or S3 URI."""
+    with db_manager.session() as session:
+        recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
+    if recording is None:
+        raise NotFoundError(f"Recording not found: {recording_id}")
+    try:
+        return byte_range.serve_file(
+            file_path=recording.uri,
+            request=request,
+            range_header=range_header,
+            media_type=_MEDIA_TYPE,
+            if_match=if_match,
+        )
+    except FileNotFoundError as error:
+        raise NotFoundError(f"Recording not found: {recording.uri}") from error
 
 
 @app_router.get("/{sample_id}")

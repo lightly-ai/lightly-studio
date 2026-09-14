@@ -7,6 +7,12 @@
     import WorkspaceStatusPanel from '$lib/components/PointCloudLabelingWorkspace/WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from '$lib/components/PointCloudLabelingWorkspace/types';
     import { useRecordingProbe } from '$lib/components/PointCloudLabelingWorkspace/ProviderDiagnostics/useRecordingProbe.svelte';
+    import { createQuery } from '@tanstack/svelte-query';
+    import {
+        getDatasetRecordingsOptions,
+        getGroupComponentsByGroupIdOptions
+    } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import type { FrameLocator } from '$lib/components/PointCloudLabelingWorkspace/provider';
 
     // The backend only reports this once LIGHTLY_STUDIO_POINT_CLOUD_ENABLED is set, so
     // this one string keeps the route (and the entry point in GroupsComponentsMenu) in sync with
@@ -60,7 +66,27 @@
     // Reading the recording is owned here, not by the workspace: the scene and the
     // diagnostics panel then share one session, and transport knowledge stays out of the
     // component. An empty sample id opens nothing, so nothing is read until the flag is on.
-    const probe = useRecordingProbe(() => (isEnabled ? sampleId : ''));
+    const recordings = createQuery(() => ({
+        ...getDatasetRecordingsOptions({ path: { dataset_id: datasetId } }),
+        enabled: isEnabled
+    }));
+    const groupComponents = createQuery(() => ({
+        ...getGroupComponentsByGroupIdOptions({ path: { group_id: groupId ?? '' } }),
+        enabled: isEnabled && groupId !== undefined
+    }));
+    const recording = $derived(recordings.data?.[0]);
+    const frameLocator = $derived.by<FrameLocator | undefined>(() => {
+        const details = groupComponents.data?.find(
+            (component) => component.details?.type === 'mcap'
+        )?.details;
+        if (!details || details.type !== 'mcap') return undefined;
+        return { channelId: details.channel_id, logTimeNs: details.log_time_ns, occurrence: 0 };
+    });
+    const probe = useRecordingProbe(
+        () => (isEnabled ? sampleId : ''),
+        () => recording?.media_url,
+        () => frameLocator
+    );
 
     let workspaceModule = $state(loadWorkspace());
     const retryLoadWorkspace = () => {
