@@ -49,6 +49,15 @@ export function useStrategyOptions(getCollectionId: () => string) {
     const annotationSourceOptions = $derived(
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
+    const croppableAnnotationSourceOptions = $derived(
+        (annotationCollectionsQuery.data ?? [])
+            .filter((c) =>
+                (c.annotation_types ?? []).some(
+                    (t) => t === 'object_detection' || t === 'segmentation_mask'
+                )
+            )
+            .map((c) => ({ id: c.collection_id, name: c.name }))
+    );
 
     return {
         get metadataFieldNames() {
@@ -74,6 +83,9 @@ export function useStrategyOptions(getCollectionId: () => string) {
         },
         get annotationSourceOptions() {
             return annotationSourceOptions;
+        },
+        get croppableAnnotationSourceOptions() {
+            return croppableAnnotationSourceOptions;
         }
     };
 }

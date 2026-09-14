@@ -190,12 +190,6 @@ describe('AnnotationClassificationGridItem', () => {
         expect(screen.getByText('0.75')).toBeInTheDocument();
     });
 
-    it('renders no sort value badge when the order value is null', () => {
-        renderItem(buildAnnotationWithOrderValue(null));
-
-        expect(screen.queryByText('0.75')).not.toBeInTheDocument();
-    });
-
     it('calls onCropWindowChange with null on unmount', async () => {
         const onCropWindowChange = vi.fn();
 

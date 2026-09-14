@@ -1,4 +1,4 @@
-import type { AnnotatedSamples, ClassifierExportType } from '$lib/services/types';
+import type { AnnotatedSamples } from '$lib/services/types';
 import { page } from '$app/state';
 import { get, writable, type Readable } from 'svelte/store';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -22,7 +22,7 @@ interface UseClassifierUtilsReturn {
     classifiersSelected: Readable<Set<string>>;
 
     // Independent API functions
-    saveClassifier: (classifierId: string, exportType: ClassifierExportType) => Promise<void>;
+    saveClassifier: (classifierId: string) => Promise<void>;
     loadClassifier: (event: Event, collectionId: string) => Promise<void>;
     updateAnnotations: (classifierId: string, annotations: AnnotatedSamples) => Promise<void>;
     trainClassifier: (classifierId: string) => Promise<void>;
@@ -40,11 +40,11 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
 
-    const saveClassifier = async (classifierId: string, exportType: ClassifierExportType) => {
+    const saveClassifier = async (classifierId: string) => {
         try {
             error.set(null);
             const response = await saveClassifierToFile({
-                path: { classifier_id: classifierId, export_type: exportType },
+                path: { classifier_id: classifierId },
                 parseAs: 'blob'
             });
 

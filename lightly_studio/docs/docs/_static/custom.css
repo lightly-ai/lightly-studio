@@ -458,6 +458,135 @@ body {
   padding: 0.05rem 0.25rem;
 }
 
+/* -- Section tabs ----------------------------------------------------------
+
+   Docs / Tutorials / Enterprise, inline in the header row. Each scopes the
+   sidebar to the `nav:` sections it claims; the markup comes from
+   `overrides/partials/section_tabs.html` and the mapping from `extra.tabs` in
+   mkdocs.yml. Still one row of chrome: this is not Material's `navigation.tabs`
+   strip, which is a second row under the header.
+
+   Two copies, and exactly one is displayed at any width. Below 76.25em the
+   sidebar these tabs scope is a slide-in drawer, so the strip has to be in the
+   drawer as well — a header-only strip would leave a phone reader stuck in
+   whichever section they arrived in. `display: none` rather than a transparent
+   or zero-size copy, so the hidden one is out of the accessibility tree and the
+   tab order too.
+
+   The active tab is marked twice over. The ink text carries it and the accent
+   rule underneath repeats it, because the header is translucent: with a
+   near-black code panel scrolled under it the accent falls below 3:1 against
+   what is effectively behind it. That is fine for a decoration and not enough
+   to be the only signal. Weight stays 500 on all three — bolding the active one
+   would change its width and shift the whole strip sideways on every
+   navigation.
+   ------------------------------------------------------------------------- */
+
+.ls-tabs__list {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ls-tabs__link {
+  /* Transparent until active, so both states are the same height and the row
+     does not jump as the reader moves between tabs. */
+  border-bottom: 2px solid transparent;
+  color: var(--ls-body);
+  font-size: 0.675rem;
+  font-weight: 500;
+  padding-bottom: 0.15rem;
+  text-decoration: none;
+  transition: border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.ls-tabs__link:hover {
+  color: var(--ls-ink);
+}
+
+.ls-tabs__link--active,
+.ls-tabs__link--active:hover {
+  border-bottom-color: var(--ls-accent);
+  color: var(--ls-ink);
+}
+
+/* The accent ring at a 0.2rem offset is Material's own focus treatment for
+   `.md-tabs__link` and `.md-header__button`, written with the real pseudo-class
+   rather than its polyfill class. An outline and not just a color change: a
+   color on its own is not a focus indicator. */
+.ls-tabs__link:focus-visible {
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-ink);
+  outline: 2px solid var(--ls-accent);
+  outline-offset: 0.2rem;
+}
+
+/* Three equal segments across the drawer, and a neutral pill for the active one
+   — the accent rule belongs to the header row, where the strip is the only
+   horizontal thing; in the drawer it would sit a few pixels from the sidebar's
+   own active pill and read as a second, competing marker. */
+.ls-tabs--drawer .ls-tabs__list {
+  gap: 0.25rem;
+  padding: 0.4rem 0.5rem 0.7rem;
+}
+
+.ls-tabs--drawer .ls-tabs__item {
+  flex: 1 1 0;
+}
+
+.ls-tabs--drawer .ls-tabs__link {
+  border-bottom: 0;
+  border-radius: var(--ls-radius-sm);
+  display: block;
+  font-size: 0.66rem;
+  padding: 0.3rem 0.35rem;
+  text-align: center;
+}
+
+.ls-tabs--drawer .ls-tabs__link--active,
+.ls-tabs--drawer .ls-tabs__link--active:hover {
+  background-color: var(--ls-surface-mut);
+  color: var(--ls-ink);
+}
+
+/* The drawer's scrollwrap clips at its edge, so the ring goes inside the pill
+   rather than around it. */
+.ls-tabs--drawer .ls-tabs__link:focus-visible {
+  outline-offset: -2px;
+}
+
+.ls-tabs--header {
+  display: none;
+}
+
+/* The drawer breakpoint. Above it the sidebar is a column and the strip belongs
+   in the header; below it the sidebar is the drawer and so is the strip. */
+@media screen and (min-width: 76.25em) {
+  .ls-tabs--header {
+    align-items: center;
+    display: flex;
+    /* The strip is what takes the slack once it exists, so the search field
+       stays pinned to the right edge. */
+    margin-inline-end: auto;
+    height: var(--ls-header-height);
+  }
+
+  .ls-tabs--drawer {
+    display: none;
+  }
+
+  /* The chip hands the slack over to the strip and settles for a plain gap —
+     wide enough that "v1.0.5" reads as belonging to the wordmark behind it
+     rather than to "Docs" in front of it. */
+  .ls-version {
+    margin-inline-end: 1.4rem;
+  }
+}
+
 /* -- Search ---------------------------------------------------------------- */
 
 .md-search__form {
@@ -476,6 +605,14 @@ body {
 
 .md-search__input {
   color: var(--ls-ink);
+  font-size: 0.65rem;
+}
+
+/* `search.suggest` renders the type-ahead completion into a sibling element that
+   Material sizes to match the input. The input above is shrunk to 0.65rem, so the
+   suggestion has to follow or the grey ghost word lands offset behind the typed
+   text and reads as duplicated. */
+.md-search__suggest {
   font-size: 0.65rem;
 }
 
@@ -729,7 +866,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   cursor: default;
   font-family: var(--ls-font-mono);
   font-size: var(--ls-label-size);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: var(--ls-label-tracking);
   margin: 0;
   padding: 0 0.4rem 0.5rem;
@@ -737,18 +874,18 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 }
 
 /* Level 2 ("Core Concepts", "Python API"): a run of pages inside a section that
-   is long enough to want a heading of its own. It reads as one of the items
-   around it, a half-step heavier, with its children indented under it and a
-   chevron to collapse them — not as a third label register. The section caption
+   is long enough to want a heading of its own. It reads as a plain item like the
+   ones around it — same size and color — with its children indented under it and a
+   chevron to collapse them, not as a third label register. The section caption
    above is what does the grouping; this only says where a run starts. */
 .md-sidebar--primary
   .md-nav[data-md-level="1"]
   > .md-nav__list
   > .md-nav__item--nested
   > :is(.md-nav__link, .md-nav__container) {
-  color: var(--ls-ink);
+  color: var(--ls-body);
   font-size: 0.65rem;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* A section caption is a label, not a destination; nothing to hover. */
@@ -938,116 +1075,645 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   padding-left: 1.5rem;
 }
 
+/* -- Page actions ----------------------------------------------------------
+
+   Edit / report / ask, from `overrides/partials/page_actions.html`. The edit
+   link is the one Material would otherwise draw as a bare pencil icon floating
+   over the first paragraph.
+
+   Two copies, and exactly one is displayed at any width: a column under the
+   contents list where that list is a sidebar, a row under the article where it
+   has collapsed into a drawer. Page-level links do not belong inside a heading
+   list the reader has to open.
+   ------------------------------------------------------------------------- */
+
+.ls-actions {
+  border-top: 1px solid var(--ls-line-hair);
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.ls-actions--aside {
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding: 0.8rem 0 0 0.5rem;
+}
+
+.ls-actions--page {
+  gap: 0.4rem 1.2rem;
+  margin: 2.4rem 0 0;
+  padding: 0.8rem 0 0;
+}
+
+/* The article copy sits inside `.md-typeset`, whose `.md-typeset a` outranks a
+   bare `.ls-actions__link`. Scoping each link rule to the block wins it back. */
+.ls-actions .ls-actions__link {
+  color: var(--ls-body);
+  font-size: 0.625rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+/* The article copy is read at body distance, not sidebar distance. */
+.ls-actions--page .ls-actions__link {
+  font-size: 0.7rem;
+}
+
+.ls-actions .ls-actions__link:hover,
+.ls-actions .ls-actions__link:focus-visible {
+  color: var(--ls-accent);
+}
+
+/* An outline, not just the color shift above: a colour change on its own is not
+   a focus indicator (same treatment as `.ls-tabs__link`). */
+.ls-actions .ls-actions__link:focus-visible {
+  border-radius: var(--ls-radius-sm);
+  outline: 2px solid var(--ls-accent);
+  outline-offset: 2px;
+}
+
+/* The pencil the actions list replaces. */
+.md-content__button.md-icon[rel="edit"] {
+  display: none;
+}
+
+@media screen and (max-width: 59.984375em) {
+  .ls-actions--aside {
+    display: none;
+  }
+}
+
+@media screen and (min-width: 60em) {
+  .ls-actions--page {
+    display: none;
+  }
+}
 
 /* ==========================================================================
-   Legacy rules carried from the previous theme, removed as each region is
-   restyled. Last in the file so anything not yet themed keeps its old look.
+   7. Article
    ========================================================================== */
 
-/* Card styling with rounded corners */
-.md-typeset .grid.cards > ol > li,
-.md-typeset .grid.cards > ul > li {
-    border-radius: 8px; /* Slightly rounded corners */
-    transition: all 0.2s ease-in-out; /* Smooth hover effect */
-    background-color: #fafafa; /* Light background for cards */
+.md-typeset {
+  color: var(--ls-body);
+  font-size: 0.75rem;
+  line-height: 1.65;
 }
 
-/* Increase spacing between cards */
-.md-typeset .grid.cards {
-    gap: 1.25rem !important; /* More horizontal and vertical spacing */
+.md-typeset :is(h1, h2, h3, h4) {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
 }
 
-/* Small card grid: up to 3 columns, responsive */
-.md-typeset .grid.cards.small {
-    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)) !important;
-    gap: 0.75rem !important;
+/* Space Grotesk is drawn wide and open, so it takes more negative tracking
+   than a text face at the same size before it stops reading as a display line —
+   heavily at 38px, barely at 16px. */
+.md-typeset h1 {
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+  margin-bottom: 0.7rem;
 }
 
-.md-typeset .grid.cards.small > ol > li,
-.md-typeset .grid.cards.small > ul > li {
-    padding: 0.5rem !important;
-    font-size: 0.75rem;
+.md-typeset h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  margin-top: 2.2rem;
 }
 
-.md-typeset .grid.cards.small > ul > li > strong {
-    font-size: 0.7rem;
+.md-typeset h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-/* Wide card grid: up to 2 columns; a lone card keeps a reserved empty column
-   instead of stretching to fill the full row width */
-.md-typeset .grid.cards.wide {
-    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)) !important;
+.md-typeset h4 {
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
-/* Optional: subtle hover effect for cards */
-.md-typeset .grid.cards > ol > li:hover,
-.md-typeset .grid.cards > ul > li:hover {
-    transform: translateY(-2px); /* Slight lift on hover */
-    box-shadow: 0 4px 12px rgba(9, 28, 30, 0.15); /* Subtle shadow */
+/* The opening paragraph is the page's summary, so it is set a size up and
+   closed by a rule — the mock's 17px standfirst over 15px body. Selected as
+   `> p:first-of-type` rather than by a class, because it holds on every page
+   without an author marking it up. Its border runs the full article column, as
+   does the paragraph itself. */
+.md-typeset > p:first-of-type {
+  border-bottom: 1px solid var(--ls-line-hair);
+  color: var(--ls-body);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 1.3rem;
+  padding-bottom: 1.1rem;
 }
 
-/* Button styling with rounded corners */
-.md-button {
-    border-radius: 8px !important; /* Rounded corners for buttons */
-    transition: all 0.2s ease-in-out !important; /* Smooth transitions */
-    padding: 0.25rem 0.8rem !important; /* Slimmer buttons */
-    line-height: 1.4 !important; /* Decrease line height for thinner appearance */
-    border-width: 0.0625rem !important; /* Thinner border */
+/* An `h2` straight after the standfirst would put its own top margin under
+   that rule and open a 3rem gap. */
+.md-typeset > p:first-of-type + :is(h2, h3) {
+  margin-top: 0;
 }
 
-/* Enhanced button hover effects */
-.md-button:hover {
-    transform: translateY(-1px) !important; /* Slight lift on hover */
-    box-shadow: 0 2px 8px rgba(9, 28, 30, 0.2) !important; /* Subtle shadow */
-    background-color: #091c1e !important; /* Use header dark color on hover */
-    border-color: #091c1e !important; /* Match border color */
+/* Running prose has no reading measure of its own: paragraphs, lists and
+   blockquotes fill the article column (`.md-content__inner`, 44rem), which is the
+   readable line length here — so figures, card grids and code samples need no
+   width exception either. */
+
+.md-typeset a {
+  color: var(--ls-accent);
+  text-decoration: none;
 }
 
-/* Custom menu bar color */
-:root {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
-    --lightly-nav-active-color: #0a6f99;
+.md-typeset a:hover,
+.md-typeset a:focus {
+  color: var(--ls-accent-hover);
+  text-decoration: underline;
 }
 
-/* Override Material theme primary colors */
-[data-md-color-scheme="default"] {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
+.md-typeset a code {
+  color: inherit;
 }
 
-[data-md-color-scheme="slate"] {
-    --md-primary-fg-color: #091c1e;
-    --md-primary-fg-color--light: #0f2c30;
-    --md-primary-fg-color--dark: #051315;
-    --md-accent-fg-color: #13a6e6;
-    --md-accent-fg-color--transparent: #13a6e61a;
+.md-typeset hr {
+  border-bottom-color: var(--ls-line-hair);
 }
 
-/* Hide Material for MkDocs footer */
-.md-footer-meta {
-    display: none !important;
+.md-typeset :is(img, video, iframe) {
+  border-radius: var(--ls-radius-lg);
 }
 
-/* Bold the active top-level menu item in the header navigation tabs */
-.md-tabs__item--active .md-tabs__link {
-  font-weight: 700;
+/* A screenshot is framed, as in the mock: a hairline box on the subtle surface,
+   so a light UI shot has an edge instead of bleeding into the page.
+
+   Only images that stand alone in their own paragraph. An inline badge or an
+   emoji is also an `img` and does not want a border round it. */
+.md-typeset p:has(> img:only-child) > img,
+.md-typeset figure > img {
+  background-color: var(--ls-surface-sub);
+  border: 1px solid var(--ls-line);
+  display: block;
 }
 
+/* Material centres a figure's caption and sets it in the body color; here it is
+   the same mono caps as every other label. */
+.md-typeset figure > figcaption {
+  color: var(--ls-muted);
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.07em;
+  margin-top: 0.6rem;
+  max-width: none;
+  text-transform: uppercase;
+}
 
-/* ===== Multi-row tab overrides ===== */
+/* -- Breadcrumbs ----------------------------------------------------------- */
+
+.md-path {
+  color: var(--ls-muted);
+  font-size: 0.625rem;
+  margin-bottom: 0.9rem;
+}
+
+/* The trail is a sibling of `.md-content__inner`, not a child, so it needs the
+   same bound and the same centring or it drifts out of line with the `h1`
+   under it. Material's own margin here is a flat 1.2rem. */
+.md-content > .md-path {
+  margin-inline: auto;
+  max-width: 44rem;
+}
+
+.md-path__item a {
+  color: var(--ls-muted);
+}
+
+.md-path__item a:hover {
+  color: var(--ls-accent);
+}
+
+/* The last crumb is where the reader is. It carries no link (see
+   `overrides/partials/path.html`) and reads a step darker than the trail. */
+.md-path__item--current {
+  color: var(--ls-body);
+}
+
+/* A slash, as in the mock and as in the URL the trail describes. Material's own
+   separator is a chevron drawn as a masked SVG, so unsetting the mask is not
+   enough — the box it reserves has to go too, or the slash lands next to a
+   0.8rem gap. (0,3,1) to clear its (0,2,1). */
+.md-path .md-path__item:not(:first-child)::before {
+  background-color: transparent;
+  color: var(--ls-line-strong);
+  content: "/";
+  height: auto;
+  mask-image: none;
+  width: auto;
+  -webkit-mask-image: none;
+}
+
+/* -- Code ------------------------------------------------------------------ */
+
+/* A bordered chip rather than a tinted run of text. The tint alone is 1.03:1
+   against the article at these greys — visible on white, gone the moment the
+   code sits inside a callout or a table cell, which is most of where it sits. */
+.md-typeset code {
+  border: 1px solid var(--ls-line);
+  border-radius: 4px;
+  color: var(--ls-ink-soft);
+  font-size: 0.82em;
+  padding: 0.05em 0.35em;
+}
+
+/* A heading is display type; a bordered chip inside one reads as a button. */
+.md-typeset :is(h1, h2, h3, h4) code {
+  background-color: transparent;
+  border: 0;
+  font-size: 0.9em;
+  padding: 0;
+}
+
+/* Fenced blocks are the same near-black panel in both schemes, with the
+   generous padding of the landing page's terminal block. */
+.md-typeset pre > code,
+.md-typeset .highlight :is(pre, code),
+.md-typeset .highlighttable {
+  background-color: var(--ls-code-surface);
+  border: 0;
+  color: var(--ls-code-ink);
+}
+
+/* ~1.6 leading. The mock sets its two-line snippets at 1.9, which is fine for
+   two lines and breaks a thirty-line one into stripes. */
+.md-typeset pre > code {
+  border-radius: var(--ls-radius);
+  font-size: 0.65rem;
+  line-height: 1.6;
+  padding: 0.9rem 1rem;
+}
+
+/* Every fenced block is a framed card: a header strip naming it, the code
+   under a hairline, the copy control in the strip rather than on top of the
+   first line. Bun, Next.js, Tailwind and Stripe all land here. */
+.md-typeset .highlight {
+  background-color: var(--ls-code-surface);
+  border: 1px solid var(--ls-code-edge);
+  border-radius: var(--ls-radius);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Material puts `nav.md-code__nav` inside the `pre`. Taking the `pre` out of
+   the positioning flow hands the anchor to `.highlight`, so the control lands
+   in the header strip. */
+.md-typeset .highlight > pre {
+  margin: 0;
+  position: static;
+}
+
+/* Filled by `labelCodeBlocks` in custom.js: the fence `title=` when there is
+   one, the language otherwise. Until the attribute lands the strip does not
+   exist, so first paint shows a plain panel rather than an empty bar — and a
+   page where the script never runs degrades to the same. */
+.md-typeset .highlight:not([data-code-label])::before {
+  display: none;
+}
+
+/* Fenced blocks only. inlinehilite marks its inline `#!lang` snippets
+   `code.highlight` too, and an inline snippet takes no header strip. */
+.md-typeset div.highlight::before {
+  background-color: var(--ls-code-head);
+  border-bottom: 1px solid var(--ls-code-edge);
+  color: var(--ls-code-head-ink);
+  content: attr(data-code-label);
+  display: block;
+  font-family: var(--ls-font-mono);
+  font-size: 0.53rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  line-height: 1;
+  padding: 0.45rem 0.75rem;
+  text-transform: uppercase;
+}
+
+/* The filename is read by the header strip above, not rendered on its own. */
+.md-typeset .highlight span.filename {
+  display: none;
+}
+
+.md-typeset .highlight > pre > code {
+  border-radius: 0;
+  padding: 0.85rem 1rem;
+}
+
+.md-typeset .highlight [data-linenos]::before {
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--ls-faint);
+}
+
+/* Copy control. Material 9.7 renders this as `nav.md-code__nav` wrapping
+   `button.md-code__button` — not the older `.md-clipboard`. Its icon inherits
+   `--md-code-fg-color`, which is the light-scheme ink and so disappears
+   against the near-black panel.
+
+   It sits in the header strip and stays flat until the block is hovered. */
+.md-typeset .md-code__nav {
+  background-color: transparent;
+  border-radius: var(--ls-radius-sm);
+  inset-block-start: 0.26rem;
+  inset-inline-end: 0.4rem;
+  padding: 0.1rem;
+  transition: background-color 0.15s;
+}
+
+.md-typeset .highlight:hover .md-code__nav,
+.md-typeset .md-code__nav:hover {
+  background-color: rgba(222, 222, 222, 0.14);
+}
+
+.md-typeset .md-code__button {
+  color: var(--ls-code-label);
+  transition: color 0.15s;
+}
+
+.md-typeset .md-code__button::after {
+  background-color: currentcolor;
+}
+
+.md-typeset .md-code__button:hover {
+  color: var(--ls-code-ink);
+}
+
+/* -- Callouts -------------------------------------------------------------
+
+   An icon in a fixed gutter, the title next to it on its own row, the body at
+   full width underneath. Every docs site that reads well down a long page
+   converges on some version of this — Material's own default, Docusaurus,
+   Starlight, GitHub alerts, Stripe — and they converge on it for one reason:
+   the body's left edge lands in the same place on every callout, whatever the
+   title says.
+
+   The previous version put the title in a `max-content` grid column and the
+   body in the second. That made the body start wherever the title happened to
+   end: eight callouts on `concepts_and_tools/sampling.md` started at eight
+   different x positions, 181px apart end to end. It also charged a
+   sentence-length title — `search_and_filter.md` has one — a quarter of the
+   box, forever, and pushed any fenced block inside a callout into the same
+   narrowed column.
+
+   `.admonition` and `details` share every rule below. `!!! tip` and `??? tip`
+   are the same object; only the chevron and the disclosure behaviour differ.
+   ------------------------------------------------------------------------- */
+
+.md-typeset :is(.admonition, details) {
+  /* Overridden per type further down. An unrecognised type keeps these. */
+  --ls-adm-color: var(--ls-muted);
+  --ls-adm-icon: var(--md-admonition-icon--note);
+  --ls-adm-line: color-mix(in srgb, var(--ls-adm-color) var(--ls-adm-edge), var(--ls-adm-base));
+
+  background-color: color-mix(in srgb, var(--ls-adm-color) var(--ls-adm-tint), var(--ls-adm-base));
+  border: 1px solid var(--ls-adm-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  display: flow-root;
+  font-size: 0.68rem;
+  margin: 1.1rem 0;
+  padding: 0.65rem 0.75rem;
+}
+
+/* Material gives each of its twelve types a stock border color and a tinted
+   focus ring, both at a higher specificity than the shorthand above
+   (`.md-typeset .admonition.note` is (0,3,0), `…:focus-within` is (0,4,0)).
+   Left alone they win, and every typed callout draws Material's blue, orange
+   or red instead of the theme's. Restating both against the same twelve, later
+   in the file, takes them back. */
+.md-typeset
+  :is(.admonition, details):is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote) {
+  border-color: var(--ls-adm-line);
+}
+
+.md-typeset
+  :is(.admonition, details):is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote):focus-within {
+  box-shadow: none;
+}
+
+/* Material drops the bottom padding on a closed `details`, because in its own
+   design the summary is a full-bleed bar that reaches the box edge. Here the
+   summary is ordinary padded content, so the padding has to come back. */
+.md-typeset details:not([open]) {
+  padding-bottom: 0.65rem;
+}
+
+/* The title row. Both selectors are needed: python-markdown emits a
+   `p.admonition-title` for `!!!` and a `summary` for `???`.
+
+   Wrapping the two halves in `:is()` puts this at (0,3,0), which is what
+   Material's own `[dir=ltr] .md-typeset .admonition-title` and its per-type
+   `.md-typeset .note > .admonition-title` sit at — ties, and this file loads
+   after the theme. */
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary) {
+  background-color: transparent;
+  border: 0;
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.5;
+  margin: 0 0 0.35rem;
+  padding: 0 0 0 1.3rem;
+  position: relative;
+}
+
+/* The icon is the gutter: 0.8rem at the box's inner left edge, so title text
+   starts 1.3rem in and body text starts at 0 — both fixed. It is also the only
+   thing carrying the type color, which leaves the title itself at full ink
+   contrast against the tint rather than at whatever the type hue manages. */
+.md-typeset :is(.admonition, details) > :is(.admonition-title, summary)::before {
+  background-color: var(--ls-adm-color);
+  content: "";
+  display: block;
+  height: 0.8rem;
+  left: 0;
+  mask-image: var(--ls-adm-icon);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  position: absolute;
+  top: 0.15rem;
+  width: 0.8rem;
+  -webkit-mask-image: var(--ls-adm-icon);
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
+/* Body blocks run the full inner width, so a fenced block or a table inside a
+   callout is as wide as the callout instead of indented under a label. */
+.md-typeset :is(.admonition, details) > :not(.admonition-title, summary) {
+  margin: 0 0 0.6rem;
+}
+
+/* Material's rule here is `html .md-typeset .admonition > :last-child`, so
+   matching its (0,3,1) needs the `html` back. */
+html .md-typeset :is(.admonition, details) > :last-child {
+  margin-bottom: 0;
+}
+
+/* A callout is already inset from the article. Leaving the reading measure set
+   at the top of this section in force would clip it a second time and leave a
+   band of dead surface down the right of every box. */
+.md-typeset :is(.admonition, details) :is(p, ul, ol, blockquote) {
+  max-width: none;
+}
+
+/* -- Disclosure ------------------------------------------------------------ */
+
+.md-typeset details > summary {
+  cursor: pointer;
+  padding-right: 1.5rem;
+}
+
+/* Material's chevron, moved onto the same baseline as the type icon opposite
+   it and dropped to the faint grey — it is a control, not part of the title. */
+.md-typeset details > summary::after {
+  color: var(--ls-faint);
+  height: 0.8rem;
+  inset-inline-end: 0;
+  top: 0.15rem;
+  width: 0.8rem;
+}
+
+/* -- Callout types ---------------------------------------------------------
+
+   Twelve authorable types, four visual registers. Every style guide that
+   covers notices lands on three to five — Google's, Microsoft's, Kubernetes',
+   GitLab's — and Google gives the reason that applies here: use too many and
+   "they begin to lose their visual distinctiveness". The finer distinction
+   lives in the icon, which is per type, so `tip` and `example` share a color
+   but never a glyph.
+
+   Qualifying each with `:is(.admonition, details)` puts these at (0,3,0), above
+   the block that sets the defaults, and keeps them from firing on some
+   unrelated element that happens to be called `.summary` or `.example`.
+   ------------------------------------------------------------------------- */
+
+/* Neutral: an aside. `note` is the most-used type in these docs and the one
+   carrying the least urgency, so it is the quiet one. */
+.md-typeset :is(.admonition, details):is(.note, .abstract, .summary, .tldr, .todo, .quote, .cite) {
+  --ls-adm-color: var(--ls-muted);
+}
+
+/* Accent: something the reader can act on. */
+.md-typeset
+  :is(.admonition, details):is(.info, .tip, .hint, .important, .example, .question, .help, .faq, .success, .check, .done) {
+  --ls-adm-color: var(--ls-accent);
+}
+
+/* The two registers that mean consequences take the louder tint and edge. A
+   page should not present "you can lose data" at the volume of "by the way". */
+.md-typeset :is(.admonition, details):is(.warning, .caution, .attention) {
+  --ls-adm-color: var(--ls-warn);
+  --ls-adm-edge: var(--ls-adm-edge-loud);
+  --ls-adm-tint: var(--ls-adm-tint-loud);
+}
+
+.md-typeset :is(.admonition, details):is(.danger, .error, .failure, .fail, .missing, .bug) {
+  --ls-adm-color: var(--ls-danger);
+  --ls-adm-edge: var(--ls-adm-edge-loud);
+  --ls-adm-tint: var(--ls-adm-tint-loud);
+}
+
+/* Glyphs. Material defines one data-URI SVG per canonical type on `:root` and
+   assigns them itself, but only for the canonical twelve — `hint`, `caution`,
+   `error` and the rest of pymdownx's aliases fall through to the note pencil.
+   Routing every type through `--ls-adm-icon` picks the aliases up and keeps the
+   whole mapping in one table. */
+.md-typeset :is(.admonition, details):is(.abstract, .summary, .tldr) {
+  --ls-adm-icon: var(--md-admonition-icon--abstract);
+}
+
+.md-typeset :is(.admonition, details):is(.quote, .cite) {
+  --ls-adm-icon: var(--md-admonition-icon--quote);
+}
+
+.md-typeset :is(.admonition, details).info {
+  --ls-adm-icon: var(--md-admonition-icon--info);
+}
+
+.md-typeset :is(.admonition, details):is(.tip, .hint, .important) {
+  --ls-adm-icon: var(--md-admonition-icon--tip);
+}
+
+.md-typeset :is(.admonition, details):is(.success, .check, .done) {
+  --ls-adm-icon: var(--md-admonition-icon--success);
+}
+
+.md-typeset :is(.admonition, details):is(.question, .help, .faq) {
+  --ls-adm-icon: var(--md-admonition-icon--question);
+}
+
+.md-typeset :is(.admonition, details).example {
+  --ls-adm-icon: var(--md-admonition-icon--example);
+}
+
+.md-typeset :is(.admonition, details):is(.warning, .caution, .attention) {
+  --ls-adm-icon: var(--md-admonition-icon--warning);
+}
+
+.md-typeset :is(.admonition, details):is(.failure, .fail, .missing) {
+  --ls-adm-icon: var(--md-admonition-icon--failure);
+}
+
+.md-typeset :is(.admonition, details):is(.danger, .error) {
+  --ls-adm-icon: var(--md-admonition-icon--danger);
+}
+
+.md-typeset :is(.admonition, details).bug {
+  --ls-adm-icon: var(--md-admonition-icon--bug);
+}
+
+/* -- Tables ---------------------------------------------------------------- */
+
+.md-typeset table:not([class]) {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius-lg);
+  box-shadow: none;
+  font-size: 0.65rem;
+}
+
+/* The header row is the table's own caption, so it takes the same mono caps as
+   every other label in the theme.
+
+   Only the header. The mock also sets the first *body* column in mono, which
+   works for the reference tables it mocks up and not for the ones these docs
+   actually have — `concepts_and_tools/sampling.md` opens its first column with
+   "Pick a diverse subset that covers the whole dataset". Mono is for a column
+   of identifiers, and nothing declares which columns those are. */
+.md-typeset table:not([class]) th {
+  background-color: var(--ls-surface-sub);
+  color: var(--ls-muted);
+  font-family: var(--ls-font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 0.8rem;
+  text-transform: uppercase;
+}
+
+.md-typeset table:not([class]) td {
+  border-top: 1px solid var(--ls-line-hair);
+  padding: 0.55rem 0.8rem;
+  vertical-align: top;
+}
+
+/* -- Content tabs ---------------------------------------------------------- */
 
 /* Enable wrapping; remove theme's inset box-shadow and scroll behavior */
 .md-typeset .tabbed-labels {
+  box-shadow: none;
   flex-wrap: wrap;
   overflow: visible;
-  box-shadow: none;
 }
 
 /* Hide the theme's sliding indicator and scroll arrows */
@@ -1058,22 +1724,29 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
 /* Labels: stretch to fill rows, draw separator line */
 .md-typeset .tabbed-set > .tabbed-labels > label {
+  border-bottom: 1px solid var(--ls-line);
+  color: var(--ls-muted);
   flex-grow: 1;
-  text-align: center;
-  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  font-size: 0.7rem;
+  font-weight: 500;
   position: relative;
+  text-align: center;
   white-space: nowrap;
+}
+
+.md-typeset .tabbed-set > .tabbed-labels > label:hover {
+  color: var(--ls-ink);
 }
 
 /* Active tab: accent-colored underline */
 .md-typeset .tabbed-set > .tabbed-labels > label::after {
-  content: "";
-  position: absolute;
+  background: var(--ls-accent);
   bottom: 0;
-  left: 0;
-  right: 0;
+  content: "";
   height: 2px;
-  background: var(--md-accent-fg-color);
+  left: 0;
+  position: absolute;
+  right: 0;
   transform: scaleX(0);
   transition: transform 0.25s ease;
 }
@@ -1092,10 +1765,307 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
   transform: scaleX(1);
 }
 
-/* Indentation. doc strings */
+/* The checked label's own color is left to Material, whose rule for it is
+   `--md-default-fg-color` — mapped to `--ls-ink` in section 2 — at a
+   specificity the muted default above cannot reach. It also runs to twenty
+   tabs rather than the ten this file can practically list. */
+
+/* -- Cards and buttons ----------------------------------------------------- */
+
+.md-typeset .grid.cards > :is(ol, ul) > li {
+  background-color: var(--ls-surface-sub);
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  font-size: 0.68rem;
+  transition: border-color 0.15s;
+}
+
+/* A card leads with its subject in bold; the mock sets that line in the display
+   face, at the size of an `h4`. */
+.md-typeset .grid.cards > :is(ol, ul) > li > p:first-child > strong:only-child,
+.md-typeset .grid.cards > :is(ol, ul) > li > p:first-child > :is(a, em) > strong {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-size: 1.05em;
+  letter-spacing: -0.01em;
+}
+
+.md-typeset .grid.cards > :is(ol, ul) > li:hover {
+  border-color: var(--ls-ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.md-typeset .grid.cards {
+  gap: 1rem !important;
+}
+
+/* Small card grid: up to 3 columns, responsive */
+.md-typeset .grid.cards.small {
+  gap: 0.75rem !important;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)) !important;
+}
+
+.md-typeset .grid.cards.small > :is(ol, ul) > li {
+  font-size: 0.7rem;
+  padding: 0.5rem !important;
+}
+
+/* No separate title rule for the small grid. A card's lead-in is
+   `li > p > strong`, never `li > strong` — python-markdown wraps a loose list
+   item's content in a paragraph — so the rule that used to sit here matched
+   nothing. The generic rule above does match, and its 1.05em of the 0.7rem set
+   just above lands within a third of a pixel of what that rule asked for. */
+
+/* Wide card grid: up to 2 columns; a lone card keeps a reserved empty column
+   instead of stretching to fill the full row width */
+.md-typeset .grid.cards.wide {
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)) !important;
+}
+
+.md-typeset .md-button {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  color: var(--ls-ink);
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 0.4rem 0.9rem;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.md-typeset .md-button:hover {
+  background-color: var(--ls-surface-mut);
+  border-color: var(--ls-ink);
+  color: var(--ls-ink);
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--ls-ink);
+  border-color: var(--ls-ink);
+  color: var(--ls-surface);
+}
+
+.md-typeset .md-button--primary:hover {
+  background-color: var(--ls-accent);
+  border-color: var(--ls-accent);
+  color: var(--ls-on-accent);
+}
+
+/* ==========================================================================
+   8. Footer
+
+   Two bands. Material's `.md-footer` carries the prev/next pager; `.ls-footer`
+   below it carries the brand, the link columns and the legal line, and comes
+   from `overrides/partials/site_footer.html`.
+   ========================================================================== */
+
+.md-footer {
+  background-color: var(--ls-surface);
+  border-top: 1px solid var(--ls-line-hair);
+}
+
+.md-footer__inner {
+  gap: 0.6rem;
+  margin: 1.6rem auto;
+  opacity: 1;
+  padding: 0 1.3rem;
+}
+
+.md-footer__link {
+  border: 1px solid var(--ls-line);
+  border-radius: var(--ls-radius);
+  flex: none;
+  margin: 0;
+  opacity: 1;
+  padding: 0.7rem 0.9rem;
+  transition: border-color 0.15s;
+  width: calc(50% - 0.3rem);
+}
+
+.md-footer__link:hover {
+  border-color: var(--ls-ink);
+  opacity: 1;
+}
+
+.md-footer__direction {
+  color: var(--ls-muted);
+  font-size: 0.575rem;
+  opacity: 1;
+}
+
+.md-footer__title {
+  font-size: 0.725rem;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+.md-footer__title .md-ellipsis {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* The prev/next cards carry the direction already. */
+.md-footer__button {
+  display: none;
+}
+
+/* The copyright it would print is rendered by `.ls-footer__legal` instead, next
+   to the version, and the "Made with Material for MkDocs" line goes with it. */
+.md-footer-meta {
+  display: none !important;
+}
+
+/* -- Site footer ----------------------------------------------------------- */
+
+.ls-footer {
+  background-color: var(--ls-surface-mut);
+  border-top: 1px solid var(--ls-line);
+}
+
+.ls-footer__inner {
+  padding: 1.4rem 1.3rem 1.2rem;
+}
+
+/* The brand block and the columns share one row and wrap together, so a narrow
+   viewport stacks them in reading order rather than reflowing into a grid. */
+.ls-footer__top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.6rem 2rem;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+
+.ls-footer__brand {
+  max-width: 14rem;
+}
+
+.ls-footer__lockup {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+}
+
+/* Same size as the header mark, so the two lockups read as one wordmark. */
+.ls-footer__mark {
+  height: 1.1rem;
+  width: auto;
+}
+
+.ls-footer__wordmark {
+  color: var(--ls-ink);
+  font-family: var(--ls-font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ls-footer__tagline {
+  color: var(--ls-muted);
+  font-size: 0.62rem;
+  line-height: 1.55;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.ls-footer__column {
+  min-width: 6.5rem;
+}
+
+/* Same reason as the search placeholder: the footer band is the muted surface,
+   where the faint grey drops under 4.5:1. */
+.ls-footer__heading {
+  color: var(--ls-muted);
+  font-family: var(--ls-font-mono);
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.55rem;
+  text-transform: uppercase;
+}
+
+.ls-footer__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ls-footer__link {
+  color: var(--ls-body);
+  font-size: 0.62rem;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.ls-footer__link:hover,
+.ls-footer__link:focus-visible {
+  color: var(--ls-accent);
+}
+
+/* An outline, not just the color shift above: a colour change on its own is not
+   a focus indicator (same treatment as `.ls-tabs__link`). */
+.ls-footer__link:focus-visible {
+  border-radius: var(--ls-radius-sm);
+  outline: 2px solid var(--ls-accent);
+  outline-offset: 2px;
+}
+
+.ls-footer__legal {
+  align-items: center;
+  border-top: 1px solid var(--ls-line-hair);
+  color: var(--ls-faint);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.6rem;
+  gap: 0.4rem 1rem;
+  justify-content: space-between;
+  padding-top: 0.8rem;
+}
+
+.ls-footer__version {
+  font-family: var(--ls-font-mono);
+}
+
+/* ==========================================================================
+   9. Python API reference (mkdocstrings)
+   ========================================================================== */
+
+/* Indentation, doc strings */
 div.doc-contents:not(.first) {
-  padding-left: 50px;
-  border-left: .15rem solid var(--md-typeset-table-color);
+  border-left: 1px solid var(--ls-line);
+  padding-left: 1.2rem;
+}
+
+/* Signatures are code blocks too, but they are not snippets: each one sits
+   directly under a heading that already names it, so the "python" header strip
+   is 82 repetitions of something the reader can see. Drop the strip, tighten
+   the padding to a one-line block, and hold the copy control until hover so it
+   does not sit on the signature. */
+.md-typeset .highlight.doc-signature::before {
+  display: none;
+}
+
+.md-typeset .highlight.doc-signature > pre > code {
+  padding: 0.7rem 1.05rem;
+}
+
+.md-typeset .highlight.doc-signature .md-code__nav {
+  inset-block-start: 0.3rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.md-typeset .highlight.doc-signature:hover .md-code__nav,
+.md-typeset .highlight.doc-signature:focus-within .md-code__nav {
+  opacity: 1;
 }
 
 /* Hide mkdocstrings module badges */
@@ -1105,46 +2075,16 @@ code.doc-symbol-module {
 
 /* Smaller docstring section labels (Parameters, Returns, etc.) */
 .doc-contents .doc-section-title {
-  font-size: 0.75rem;
-  font-weight: 500;
+  color: var(--ls-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
-  color: inherit;
 }
 
 /* Make headings use python case instead of allcaps */
 .doc-contents .doc-heading {
   text-transform: none;
-}
-
-/* Make links visually distinguishable with a blue tint - only in main content */
-.md-content .md-typeset > p a,
-.md-content .md-typeset > ul a,
-.md-content .md-typeset > ol a,
-.md-content .md-typeset > blockquote a,
-.md-content .md-typeset details a,
-.md-content .md-typeset .admonition a {
-  color: #13a6e6;
-}
-
-.md-content .md-typeset a code {
-  color: inherit;
-}
-
-.md-content .md-typeset > p a:hover,
-.md-content .md-typeset > ul a:hover,
-.md-content .md-typeset > ol a:hover,
-.md-content .md-typeset > blockquote a:hover,
-.md-content .md-typeset details a:hover,
-.md-content .md-typeset .admonition a:hover {
-  color: #0d8abf;
-}
-
-/* Rounded corners for images and videos in the main docs content */
-.md-content .md-typeset img,
-.md-content .md-typeset video,
-.md-content .md-typeset iframe {
-  border-radius: 8px;
 }
 
 /* Inline status badges rendered inside a docstring (see the API reference).
@@ -1157,56 +2097,62 @@ code.doc-symbol-module {
 /* inline-flex + align-items: center centers the icon and the label inside the
    pill. */
 .md-typeset .doc-badge {
-  display: inline-flex;
   align-items: center;
-  gap: 0.28em;
-  padding: 0.2rem 0.45rem;
   border-radius: 999px;
+  display: inline-flex;
+  font-family: var(--ls-font-mono);
   font-size: 0.5rem;
-  font-weight: 700;
+  font-weight: 600;
+  gap: 0.28em;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
   line-height: 1;
+  padding: 0.2rem 0.45rem;
+  text-transform: uppercase;
 }
 
 /* Pin the badge to the left of its member heading so it sits before the
    class/method name. The badge is anchored to its own `.doc-object` wrapper
    (see below), so class and method badges each align to their own heading. */
 .md-typeset .doc-badge--beta {
+  background-color: var(--ls-accent);
+  color: var(--ls-on-accent);
+  left: 0;
   position: absolute;
   top: 0.35rem;
-  left: 0;
-  color: #fff;
-  background-color: var(--md-accent-fg-color);
 }
 
 .md-typeset .doc-badge--beta::before {
-  content: "";
-  width: 0.9em;
-  height: 0.9em;
   background-color: currentcolor;
-  -webkit-mask-image: var(--doc-badge-icon--beta);
+  content: "";
+  height: 0.9em;
   mask-image: var(--doc-badge-icon--beta);
-  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
   mask-size: contain;
+  width: 0.9em;
+  -webkit-mask-image: var(--doc-badge-icon--beta);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
 }
 
 /* Each member has its own `.doc-object` positioning context, so the absolutely
    positioned badge aligns to that member's heading rather than the page. The
-   heading is indented to make room; the signature and body stay full width. */
+   heading is indented to make room; the signature and body stay full width.
+
+   Only the members that carry a badge. Twelve docstrings across the package do,
+   and indenting every heading in the reference by 68px on their account left
+   several hundred of them hanging off the article's left margin — and the ones
+   nested two levels deep hanging off it twice. */
 .md-typeset .doc-object {
   position: relative;
 }
 
-.md-typeset .doc-heading {
+.md-typeset .doc-object:has(> .doc-contents > p > .doc-badge--beta) > .doc-heading {
   padding-left: 3.4rem;
 }
 
 /* The badge is now out of flow, so collapse the otherwise-empty paragraph it
    used to occupy and avoid a blank line between the summary and the body. */
 .md-typeset .doc-contents > p:has(> .doc-badge--beta:only-child) {
-  margin: 0;
   line-height: 0;
+  margin: 0;
 }

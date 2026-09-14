@@ -1,0 +1,49 @@
+{#-
+  A copy of Material 9.7.5's `partials/nav.html` with two changes, both marked
+  below: the top-level loop skips the sections the active tab does not claim,
+  and the drawer copy of the tab strip goes above the list. No template block
+  isolates that loop, so scoping the sidebar means owning this file;
+  `partials/nav-item.html`, which does the actual rendering, stays upstream.
+  Re-diff against upstream when bumping mkdocs-material.
+-#}
+{% import "partials/nav-item.html" as item with context %}
+{% import "partials/section_tabs.html" as section_tabs with context %}
+{% set class = "md-nav md-nav--primary" %}
+{% if "navigation.tabs" in features %}
+  {% set class = class ~ " md-nav--lifted" %}
+{% endif %}
+{% if "toc.integrate" in features %}
+  {% set class = class ~ " md-nav--integrated" %}
+{% endif %}
+<nav class="{{ class }}" aria-label="{{ lang.t('nav') }}" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="{{ config.extra.homepage | d(nav.homepage.url, true) | url }}" title="{{ config.site_name | e }}" class="md-nav__button md-logo" aria-label="{{ config.site_name }}" data-md-component="logo">
+      {% include "partials/logo.html" %}
+    </a>
+    {{ config.site_name }}
+  </label>
+  {% if config.repo_url %}
+    <div class="md-nav__source">
+      {% include "partials/source.html" %}
+    </div>
+  {% endif %}
+  {#- ADDED: the drawer copy of the section tabs. Between the title and the list
+      so the list keeps scrolling underneath it, and inside
+      `[data-md-component=container]`, which instant navigation replaces — so
+      this copy is the one that stays correct, and `custom.js` syncs the header
+      copy from it. -#}
+  {{ section_tabs.strip("drawer") }}
+  {#- CHANGED: `ls_nav_sections` holds the top-level sections the active tab
+      claims (see `mkdocs_hooks.py`); it is unset on 404.html, where the whole
+      nav shows. The loop still runs over every section so that `__nav_N` names
+      the same one whichever tab is open. -#}
+  {% set visible_sections = ls_nav_sections if ls_nav_sections is defined else none %}
+  <ul class="md-nav__list" data-md-scrollfix>
+    {% for nav_item in nav.items %}
+      {% set path = "__nav_" ~ loop.index %}
+      {% if visible_sections is none or nav_item.title in visible_sections %}
+        {{ item.render(nav_item, path, 1) }}
+      {% endif %}
+    {% endfor %}
+  </ul>
+</nav>

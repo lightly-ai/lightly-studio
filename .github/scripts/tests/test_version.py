@@ -52,3 +52,24 @@ def test_check_labelformat_pin__git_sha_raises(replacement):
     text = SAMPLE_PYPROJECT.replace('"labelformat>=0.1.17"', replacement)
     with pytest.raises(PrepareReleaseError, match="git sha"):
         version.check_labelformat_pin(text)
+
+
+def test_read_project_version():
+    assert version.read_project_version(SAMPLE_PYPROJECT) == "1.0.5"
+
+
+def test_read_project_version__release_candidate():
+    assert version.read_project_version('[project]\nversion = "1.0.0rc1"\n') == "1.0.0rc1"
+
+
+# A `version` in a later table must not be mistaken for the project's own.
+def test_read_project_version__ignores_other_tables():
+    pyproject = '[project]\nname = "lightly-studio"\n\n[tool.uv]\nversion = "9.9.9"\n'
+
+    with pytest.raises(PrepareReleaseError):
+        version.read_project_version(pyproject)
+
+
+def test_read_project_version__missing_project_table_is_refused():
+    with pytest.raises(PrepareReleaseError):
+        version.read_project_version('[tool.uv]\nversion = "1.0.0"\n')

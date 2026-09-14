@@ -9,7 +9,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.database import db_array
 from lightly_studio.models.collection import CollectionTable, ComponentCollectionView
 from lightly_studio.models.group import GroupComponentView
-from lightly_studio.resolvers import group_resolver, image_resolver, video_resolver
+from lightly_studio.resolvers import group_resolver, image_resolver, mcap_resolver, video_resolver
 
 
 def get_group_component_details_by_group_id(
@@ -28,11 +28,14 @@ def get_group_component_details_by_group_id(
     sample_ids = [sample.sample_id for sample in samples]
     images = image_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
     videos = video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+    mcaps = mcap_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
 
     # Fetch all unique collection IDs
-    collection_ids = {image.sample.collection_id for image in images} | {
-        video.sample.collection_id for video in videos
-    }
+    collection_ids = (
+        {image.sample.collection_id for image in images}
+        | {video.sample.collection_id for video in videos}
+        | {mcap.sample.collection_id for mcap in mcaps}
+    )
 
     # Fetch all collections at once
     collections = session.exec(
@@ -67,6 +70,14 @@ def get_group_component_details_by_group_id(
         if collection_view:
             sample_id_to_component[video.sample_id] = GroupComponentView.from_video_table(
                 video=video, collection=collection_view
+            )
+
+    # Process mcap samples
+    for mcap in mcaps:
+        collection_view = collection_id_to_view.get(mcap.sample.collection_id)
+        if collection_view:
+            sample_id_to_component[mcap.sample_id] = GroupComponentView.from_mcap_table(
+                mcap=mcap, collection=collection_view
             )
 
     # Return list in the same order as input sample_ids

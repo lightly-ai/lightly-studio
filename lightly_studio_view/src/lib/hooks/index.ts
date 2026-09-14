@@ -22,7 +22,6 @@ export { useFileDrop } from '$lib/hooks/useFileDrop/useFileDrop';
 export { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
 export { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
 export { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
-export { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
 export { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 export { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
 export { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';

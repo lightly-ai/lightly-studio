@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { readable } from 'svelte/store';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
+    AnnotationEvaluationMetricSortExpr,
     EvaluationRunAnnotationMetricsInfoView,
     EvaluationRunView
 } from '$lib/api/lightly_studio_local/types.gen';
@@ -67,14 +68,12 @@ const STALE_RUN = {
     stale_since: new Date('2026-01-01')
 } as EvaluationRunView;
 
-const FRESH_RUN = { ...STALE_RUN, stale_since: null } as EvaluationRunView;
-
-const IOU_SORT = {
+const IOU_SORT: AnnotationEvaluationMetricSortExpr = {
     source: 'annotation_evaluation_metric',
     evaluation_run_id: 'run-1',
     metric_name: 'iou',
     direction: 'asc'
-} as const;
+};
 
 const defaultProps = { collectionId: COLLECTION_ID, datasetId: DATASET_ID };
 
@@ -187,9 +186,9 @@ describe('AnnotationOrderBy', () => {
         expect(screen.getByLabelText(/this sort order is out of date/i)).toBeInTheDocument();
     });
 
-    it('shows no warning when the run the grid sorts by is up to date', () => {
-        mocks.runsProxy.data = [FRESH_RUN];
+    it('shows no warning when the run the grid sorts by is gone', () => {
         useAnnotationSortBy().setSortBy(COLLECTION_ID, IOU_SORT);
+        mocks.runsProxy.data = [];
         render(AnnotationOrderBy, { props: defaultProps });
 
         expect(screen.queryByTestId('annotation-sort-stale-icon')).not.toBeInTheDocument();

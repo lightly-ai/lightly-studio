@@ -766,6 +766,104 @@ def test_create_combination_sampling__video_filter_success(
     )
 
 
+def test_create_combination_sampling__subpart_diversity_success(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Subpart diversity sampling creates a tag with the expected number of samples."""
+    parent_collection = helpers_resolvers.create_collection(
+        session=db_session, collection_name="parent_collection"
+    )
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=parent_collection.collection_id,
+        label_name="object",
+    )
+    parent_images = helpers_resolvers.create_images(
+        db_session=db_session,
+        collection_id=parent_collection.collection_id,
+        images=[
+            helpers_resolvers.ImageStub(path="parent_0.jpg"),
+            helpers_resolvers.ImageStub(path="parent_1.jpg"),
+            helpers_resolvers.ImageStub(path="parent_2.jpg"),
+        ],
+    )
+    annotations = helpers_resolvers.create_annotations(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=parent_images[0].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=parent_images[1].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=parent_images[2].sample_id,
+                annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+    )
+    annotation_collection_id = annotations[0].annotation_collection_id
+    crop_embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_name="crop_embedding_model",
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[0].sample_id,
+        embedding_model_id=crop_embedding_model.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[1].sample_id,
+        embedding_model_id=crop_embedding_model.embedding_model_id,
+        embedding=[0.0, 1.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=annotations[2].sample_id,
+        embedding_model_id=crop_embedding_model.embedding_model_id,
+        embedding=[0.5, 0.5],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{parent_collection.collection_id}/sampling",
+        json={
+            "n_samples_to_select": 2,
+            "sampling_result_tag_name": "subpart_diversity_sampling",
+            "strategies": [
+                {
+                    "strategy_name": "subpart_diversity",
+                    "annotation_source_id": str(annotation_collection_id),
+                    "embedding_model_name": "crop_embedding_model",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 204
+    assert response.text == ""
+
+    created_tag = tag_resolver.get_by_name(
+        session=db_session,
+        tag_name="subpart_diversity_sampling",
+        collection_id=parent_collection.collection_id,
+    )
+    assert created_tag is not None
+
+    tag_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id]))
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=parent_collection.collection_id,
+        filters=tag_filter,
+    )
+    assert len(result.samples) == 2
+
+
 def test_create_combination_sampling__image_collection_rejects_video_filter(
     test_client: TestClient, db_session: Session
 ) -> None:

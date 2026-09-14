@@ -6,6 +6,7 @@
   file inside it anyway, so the file is what gets owned. Re-diff it against
   upstream when bumping mkdocs-material.
 -#}
+{% import "partials/section_tabs.html" as section_tabs with context %}
 {% set class = "md-header" %}
 {% if "navigation.tabs.sticky" in features %}
   {% set class = class ~ " md-header--shadow md-header--lifted" %}
@@ -46,6 +47,10 @@
     {% if config.extra.package_version %}
       <span class="ls-version">v{{ config.extra.package_version }}</span>
     {% endif %}
+    {#- ADDED: the header copy of the section tabs. It goes after the title
+        rather than inside it, because the second `.md-header__topic` above is
+        what instant navigation swaps and `custom.js` reads the first one. -#}
+    {{ section_tabs.strip("header") }}
     {% if config.theme.palette %}
       {% if not config.theme.palette is mapping %}
         {% include "partials/palette.html" %}

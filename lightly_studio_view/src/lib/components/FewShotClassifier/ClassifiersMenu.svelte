@@ -1,11 +1,9 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { writable, derived, get } from 'svelte/store';
-    import type { ClassifierExportType } from '$lib/services/types';
+    import { derived } from 'svelte/store';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { Button } from '$lib/components';
     import { Checkbox, Alert } from '$lib/components';
-    import { Select } from '$lib/components/Select';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -17,8 +15,6 @@
     import { readAnnotationLabelsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { Network as NetworkIcon, Pencil, Download, Upload, Play, Info } from '@lucide/svelte';
     import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
-
-    const exportOptions: ClassifierExportType[] = ['sklearn', 'lightly'];
 
     // Subscribe to page params
     const collectionId = page.params.collection_id!;
@@ -54,10 +50,8 @@
     const selectedSampleIds = getSelectedSampleIds(collectionId);
 
     // Store-based state
-    const exportType = writable<ClassifierExportType>('sklearn');
-    const showExportDialog = writable(false);
-    const selectedClassifierId = writable<string | null>(null);
     let shouldRestoreMenu = $state(false);
+    let classifierFileInput = $state<HTMLInputElement | null>(null);
 
     // Derived stores
     const isApplyButtonEnabled = derived(
@@ -69,22 +63,6 @@
     const sortedClassifiers = derived(classifiers, ($classifiers) => {
         return [...$classifiers].sort((a, b) => a.classifier_name.localeCompare(b.classifier_name));
     });
-
-    // Handlers
-    function handleDownload(classifierId: string) {
-        selectedClassifierId.set(classifierId);
-        showExportDialog.set(true);
-    }
-
-    function handleExportWithType() {
-        const id = get(selectedClassifierId);
-        const type = get(exportType);
-        if (id) {
-            saveClassifier(id, type);
-            showExportDialog.set(false);
-            selectedClassifierId.set(null);
-        }
-    }
 
     // Function to refresh LabelsMenu by invalidating annotation labels and counts queries
     function refreshLabelsMenu() {
@@ -227,18 +205,23 @@
 
                             <!-- Load Classifier -->
                             <div class="space-y-3">
-                                <div class="relative">
-                                    <input
-                                        title="Load Classifier"
-                                        type="file"
-                                        accept=".pkl"
-                                        class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                                        onchange={handleLoadClassifier}
-                                    />
-                                    <Button icon={Upload} buttonProps={{ class: 'w-full' }}>
-                                        Load Classifier (.pkl)
-                                    </Button>
-                                </div>
+                                <input
+                                    title="Load Classifier"
+                                    type="file"
+                                    accept=".pkl"
+                                    class="hidden"
+                                    bind:this={classifierFileInput}
+                                    onchange={handleLoadClassifier}
+                                />
+                                <Button
+                                    icon={Upload}
+                                    buttonProps={{
+                                        class: 'w-full',
+                                        onclick: () => classifierFileInput?.click()
+                                    }}
+                                >
+                                    Load Classifier (.pkl)
+                                </Button>
                             </div>
                         </div>
                     </TabsContent>
@@ -302,7 +285,7 @@
                                                     size: 'sm',
                                                     title: 'Download classifier',
                                                     onclick: () =>
-                                                        handleDownload(classifier.classifier_id)
+                                                        saveClassifier(classifier.classifier_id)
                                                 }}
                                             />
                                         </div>
@@ -377,35 +360,6 @@
                         <Alert title="Error occurred">{$error}</Alert>
                     </div>
                 {/if}
-            </div>
-        </Dialog.Content>
-    </Dialog.Portal>
-</Dialog.Root>
-
-<Dialog.Root bind:open={$showExportDialog}>
-    <Dialog.Portal>
-        <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-w-[420px]">
-            <Dialog.Header>
-                <Dialog.Title>Export Classifier</Dialog.Title>
-            </Dialog.Header>
-            <div class="grid gap-4 py-4">
-                <div class="space-y-2">
-                    <label for="exportType" class="text-sm font-medium"
-                        >Select the export type for the classifier.</label
-                    >
-                    <Select
-                        items={exportOptions.map((v) => ({ value: v, label: v }))}
-                        value={$exportType}
-                        placeholder="Select export type"
-                        class="w-full"
-                        onValueChange={(v) => exportType.set(v as typeof $exportType)}
-                    />
-                </div>
-
-                <Button buttonProps={{ onclick: () => handleExportWithType(), class: 'flex-1' }}>
-                    Export
-                </Button>
             </div>
         </Dialog.Content>
     </Dialog.Portal>

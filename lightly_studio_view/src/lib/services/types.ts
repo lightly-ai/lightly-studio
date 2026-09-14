@@ -10,7 +10,6 @@ import type {
     AnnotationLabelTable,
     EmbeddingClassifier,
     UpdateAnnotationsRequest,
-    SaveClassifierToFileData,
     MetadataInfoView
 } from '$lib/api/lightly_studio_local/types.gen';
 import type { Readable } from 'svelte/store';
@@ -35,7 +34,6 @@ export type LoadResult<T> = {
 export type ClassifierInfo = EmbeddingClassifier;
 export type AnnotatedSamples = UpdateAnnotationsRequest;
 export type RefineMode = 'temp' | 'existing';
-export type ClassifierExportType = SaveClassifierToFileData['path']['export_type'];
 
 type AnnotationObjectDetection = Annotation & {
     object_detection_details: ObjectDetectionAnnotationView;

@@ -35,7 +35,13 @@ export interface HistogramOptionOptions {
      * edges, the x-axis domain and the tooltip's interval labels.
      */
     series?: HistogramSeries[];
-    /** Whether bin heights show raw counts or their share of the histogram total. */
+    /**
+     * Whether bin heights show raw counts or their share of a total. Without
+     * comparison series that total is the histogram's own; with them, each series
+     * is normalized by *its own* total, so tags holding very different numbers of
+     * samples stay comparable by shape (the same rule `BarChart` applies to
+     * grouped category series).
+     */
     valueMode?: 'number' | 'percentage';
 }
 
@@ -210,7 +216,7 @@ function buildTooltip(
                 const values = comparisonSeries
                     .map((series, index) => {
                         const count = series.data.counts[dataIndex] ?? 0;
-                        const total = series.data.counts.reduce((sum, value) => sum + value, 0);
+                        const total = seriesTotal(series);
                         const percent = total > 0 ? ` (${formatPercent(count / total)})` : '';
                         return `${markers.get(index) ?? ''}${escape(series.label)}: <b>${formatInteger(count)}</b>${percent}`;
                     })
@@ -284,18 +290,27 @@ function buildYAxis(
 }
 
 /**
+ * Total count of a comparison series - the denominator for its percentage bars.
+ * Shared by the bar heights and the tooltip so the two cannot drift apart.
+ */
+function seriesTotal(series: HistogramSeries): number {
+    return series.data.counts.reduce((sum, count) => sum + count, 0);
+}
+
+/**
  * The custom bar series: one pixel-snapped rect per bin (see
  * `renderHistogramBin`), each colored by whether it falls in the range.
  */
 function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[] {
     const comparisonSeries = options.comparisonSeries ?? [];
-    const totalCount = options.bins.reduce((sum, bin) => sum + bin.count, 0);
-    const toChartValue = (count: number): number =>
-        options.valueMode === 'percentage' && totalCount > 0 ? (count / totalCount) * 100 : count;
+    const binsTotal = options.bins.reduce((sum, bin) => sum + bin.count, 0);
+    const toChartValue = (count: number, total: number): number =>
+        options.valueMode === 'percentage' && total > 0 ? (count / total) * 100 : count;
     if (comparisonSeries.length > 0) {
         const colors = assignSeriesColors(comparisonSeries.map(({ id }) => id));
         return comparisonSeries.map((series, seriesIndex) => {
             const seriesColor = colors.get(series.id);
+            const total = seriesTotal(series);
             return {
                 type: 'custom',
                 name: series.label,
@@ -313,7 +328,7 @@ function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[]
                     const dimmed =
                         options.range && bin && !isBinInRange(bin.start, bin.end, options.range);
                     return {
-                        value: [index + 0.5, toChartValue(count)],
+                        value: [index + 0.5, toChartValue(count, total)],
                         itemStyle: { color: dimmed ? BAR_COLOR_DIMMED : seriesColor }
                     };
                 })
@@ -331,7 +346,7 @@ function buildSeries(options: HistogramSeriesOptions): Record<string, unknown>[]
                 // actually over. A left-edge point would snap to the next bin once
                 // the cursor passed a bar's midpoint. `renderHistogramBin` steps
                 // back half a band to recover the left edge for drawing.
-                value: [index + 0.5, toChartValue(bin.count)],
+                value: [index + 0.5, toChartValue(bin.count, binsTotal)],
                 itemStyle: {
                     color:
                         !options.range || isBinInRange(bin.start, bin.end, options.range)

@@ -3,17 +3,20 @@ from __future__ import annotations
 import uuid
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
+from httpx import Response
 from sqlmodel import Session, col, select
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTagLinkTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
-from lightly_studio.resolvers import collection_resolver, sample_embedding_resolver
+from lightly_studio.resolvers import collection_resolver, sample_embedding_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
@@ -323,3 +326,82 @@ def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
         select(SampleTagLinkTable.sample_id).where(col(SampleTagLinkTable.tag_id) == tag_id)
     ).all()
     return {sample_id for sample_id in linked if sample_id is not None}
+
+
+# `None` exercises the whole-collection scope, the image filter the grid-filter query. Both
+# select all 10 samples, so the expected partition is identical.
+@pytest.mark.parametrize("grid_filter", [None, {"filter_type": "image"}])
+def test_split_dataset__creates_complete_tag_partition(
+    db_session: Session, test_client: TestClient, grid_filter: dict[str, str] | None
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path=f"s{index}.png") for index in range(10)],
+    )
+
+    response = _post_split(
+        test_client,
+        collection_id,
+        splits=(("train", 7), ("val", 2), ("test", 1)),
+        grid_filter=grid_filter,
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    assert response.json() == [
+        {"tag_name": "train", "sample_count": 7},
+        {"tag_name": "val", "sample_count": 2},
+        {"tag_name": "test", "sample_count": 1},
+    ]
+    tagged_sample_ids = [
+        _tagged_sample_ids(session=db_session, tag_id=tag.tag_id)
+        for tag in tag_resolver.get_all_by_collection_id(
+            session=db_session, collection_id=collection_id
+        )
+    ]
+    # A union covering every sample plus sizes summing to the total proves the tags
+    # partition the collection without overlapping.
+    assert set().union(*tagged_sample_ids) == {image.sample_id for image in images}
+    assert sum(len(sample_ids) for sample_ids in tagged_sample_ids) == len(images)
+
+
+@pytest.mark.parametrize(
+    ("sample_type", "grid_filter"),
+    [
+        # Video frames cannot be split, and a video filter does not apply to an image
+        # collection; both must be rejected instead of silently matching nothing.
+        (SampleType.VIDEO_FRAME, None),
+        (SampleType.IMAGE, {"filter_type": "video"}),
+    ],
+)
+def test_split_dataset__rejects_unsupported_collection_or_filter(
+    db_session: Session,
+    test_client: TestClient,
+    sample_type: SampleType,
+    grid_filter: dict[str, str] | None,
+) -> None:
+    collection_id = create_collection(session=db_session, sample_type=sample_type).collection_id
+
+    response = _post_split(test_client, collection_id, grid_filter=grid_filter)
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+    assert not tag_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
+
+
+def _post_split(
+    test_client: TestClient,
+    collection_id: UUID,
+    *,
+    splits: tuple[tuple[str, int], ...] = (("train", 1), ("test", 1)),
+    grid_filter: dict[str, str] | None = None,
+) -> Response:
+    body: dict[str, object] = {
+        "splits": [{"tag_name": name, "relative_size": size} for name, size in splits],
+        "seed": 4,
+    }
+    if grid_filter is not None:
+        body["filter"] = grid_filter
+    return test_client.post(f"/api/collections/{collection_id}/tags/split", json=body)

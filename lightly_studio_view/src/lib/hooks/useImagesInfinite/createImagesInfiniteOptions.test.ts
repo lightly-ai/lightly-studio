@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createImagesInfiniteOptions } from './createImagesInfiniteOptions';
+import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { ImageSortFieldExpr } from '$lib/api/lightly_studio_local';
 
 type Options = ReturnType<typeof createImagesInfiniteOptions>;
@@ -72,6 +73,43 @@ describe('createImagesInfiniteOptions', () => {
                 sort_by: null
             });
             expect(options.queryKey).toContain(null);
+        });
+
+        // Regression: /metadata/info resolving seeds every numeric field's value
+        // to its full range. That leaves the request unchanged, so the grid must
+        // not refetch.
+        it('stays stable when metadata_values expands from empty to full range', () => {
+            vi.mocked(createMetadataFilters).mockReturnValue([]);
+
+            const empty = createImagesInfiniteOptions({
+                collection_id: 'col-1',
+                mode: 'normal',
+                metadata_values: {}
+            });
+            const fullRange = createImagesInfiniteOptions({
+                collection_id: 'col-1',
+                mode: 'normal',
+                metadata_values: { camera_height: { min: 0.36, max: 3.76 } }
+            });
+
+            expect(fullRange.queryKey).toEqual(empty.queryKey);
+        });
+
+        it('changes when metadata filters are actually applied', () => {
+            vi.mocked(createMetadataFilters)
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([{ key: 'camera_height', value: 1, op: '>=' }]);
+
+            const unfiltered = createImagesInfiniteOptions({
+                collection_id: 'col-1',
+                mode: 'normal'
+            });
+            const filtered = createImagesInfiniteOptions({
+                collection_id: 'col-1',
+                mode: 'normal'
+            });
+
+            expect(filtered.queryKey).not.toEqual(unfiltered.queryKey);
         });
 
         it('produces different keys for different sort_by values', () => {

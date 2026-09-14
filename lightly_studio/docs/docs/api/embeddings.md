@@ -45,14 +45,20 @@ See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
 
 ## Supporting types
 
+### EmbeddingSpaceSpec
+
+::: lightly_studio_serve.types
+    options:
+        members: [EmbeddingSpaceSpec]
+
 ### EmbeddingResult
 
-::: lightly_studio.dataset.embedding_result
+::: lightly_studio_serve.types
     options:
         members: [EmbeddingResult]
 
 ### ImageCrop
 
-::: lightly_studio.dataset.embedding_generator
+::: lightly_studio_serve.types
     options:
         members: [ImageCrop]

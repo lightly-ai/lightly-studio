@@ -3,9 +3,8 @@ import { SampleType } from '$lib/api/lightly_studio_local';
 import { routeHelpers } from '$lib/routes';
 import type { PageLoad } from './$types';
 
-const sampleTypeRoutes: Record<
-    SampleType,
-    (datasetId: string, collectionType: string, collectionId: string) => string
+const sampleTypeRoutes: Partial<
+    Record<SampleType, (datasetId: string, collectionType: string, collectionId: string) => string>
 > = {
     [SampleType.VIDEO]: routeHelpers.toVideos,
     [SampleType.VIDEO_FRAME]: routeHelpers.toFrames,

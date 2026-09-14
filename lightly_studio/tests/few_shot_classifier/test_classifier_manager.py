@@ -116,13 +116,11 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_id",
-            return_value=EmbeddingModelTable(
-                name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
-            ),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             classifier_manager_module,
-            "_get_embedding_model_by_hash",
+            "_get_embedding_model_by_name",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -183,13 +181,11 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_id",
-            return_value=EmbeddingModelTable(
-                name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
-            ),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             classifier_manager_module,
-            "_get_embedding_model_by_hash",
+            "_get_embedding_model_by_name",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -336,13 +332,13 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             classifier_manager_module,
-            "_get_embedding_model_by_hash",
+            "_get_embedding_model_by_name",
             return_value=None,
         )
         with pytest.raises(
             ValueError,
-            match=r"No matching embedding model found for the classifier's hash:"
-            f"'{classifier.few_shot_classifier.embedding_model_hash}'",
+            match=r"No matching embedding model found for the classifier's name: "
+            f"'{classifier.few_shot_classifier.embedding_model_name}'",
         ):
             classifier_manager.load_classifier_from_file(
                 session=db_session,
@@ -545,7 +541,7 @@ class TestClassifierManager:
 
         mocker.patch.object(
             classifier_manager_module,
-            "_get_embedding_model_by_hash",
+            "_get_embedding_model_by_name",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -628,7 +624,7 @@ class TestClassifierManager:
 
         mocker.patch.object(
             classifier_manager_module,
-            "_get_embedding_model_by_hash",
+            "_get_embedding_model_by_name",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -728,13 +724,11 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_id",
-            return_value=EmbeddingModelTable(
-                name="test", embedding_dimension=3, embedding_model_hash="mock_hash"
-            ),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             classifier_manager_module,
-            "_get_embedding_model_by_hash",
+            "_get_embedding_model_by_name",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -966,9 +960,9 @@ class TestClassifierManager:
             )
 
 
-def test_get_embedding_model_by_hash__resolves_within_dataset(db_session: Session) -> None:
+def test_get_embedding_model_by_name__resolves_within_dataset(db_session: Session) -> None:
     # A child collection shares its parent's dataset, so a model registered under the parent
-    # resolves by hash when the lookup starts from the child collection.
+    # resolves by name when the lookup starts from the child collection.
     parent = create_collection(session=db_session, collection_name="parent")
     child = create_collection(
         session=db_session, collection_name="child", parent_collection_id=parent.collection_id
@@ -978,11 +972,10 @@ def test_get_embedding_model_by_hash__resolves_within_dataset(db_session: Sessio
         session=db_session,
         collection_id=parent.collection_id,
         embedding_model_name="model",
-        embedding_model_hash="some_hash",
     )
 
-    result = classifier_manager_module._get_embedding_model_by_hash(
-        session=db_session, embedding_model_hash="some_hash", collection_id=child.collection_id
+    result = classifier_manager_module._get_embedding_model_by_name(
+        session=db_session, embedding_model_name="model", collection_id=child.collection_id
     )
     assert result is not None
     assert result.embedding_model_id == model.embedding_model_id

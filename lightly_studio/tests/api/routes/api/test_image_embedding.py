@@ -1,3 +1,6 @@
+from uuid import uuid4
+
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -73,3 +76,16 @@ def test_embed_image_from_file_error(
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
     assert "Embedding failed" in response.json()["detail"]
+
+
+def test_embed_image_from_file__model_override_not_supported(test_client: TestClient) -> None:
+    # A per-request embedding model override is not supported: passing an
+    # embedding_model_id must raise instead of silently using the collection default.
+    files = {"file": ("test_image.jpg", b"fake image content", "image/jpeg")}
+
+    with pytest.raises(NotImplementedError, match="model override is not supported"):
+        test_client.post(
+            f"/api/image_embedding/from_file/for_collection/{uuid4()!s}",
+            params={"embedding_model_id": str(uuid4())},
+            files=files,
+        )

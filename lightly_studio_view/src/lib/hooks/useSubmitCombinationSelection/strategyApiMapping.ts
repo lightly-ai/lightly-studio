@@ -67,6 +67,15 @@ export function toApiStrategy(instance: StrategyInstance): SamplingRequest['stra
         };
     }
 
+    if (instance.type === 'subpart_diversity') {
+        return {
+            strategy_name: 'subpart_diversity',
+            embedding_model_name: null,
+            annotation_source_id: instance.params.annotation_source_id || null,
+            strength: instance.params.strength
+        };
+    }
+
     return {
         strategy_name: 'balance',
         target_distribution: toApiTargetDistribution(instance.params),

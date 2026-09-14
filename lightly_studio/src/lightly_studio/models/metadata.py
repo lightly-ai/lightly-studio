@@ -7,6 +7,8 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.types import JSON
 from sqlmodel import Field, Relationship, SQLModel
@@ -41,6 +43,10 @@ NUMERIC_TYPE_NAMES = ("integer", "float")
 
 # Schema type names whose values are discrete and aggregated by exact value.
 CATEGORICAL_TYPE_NAMES = ("string", "boolean")
+
+# JSONB is the same JSON stored pre-parsed as binary, so metadata queries skip
+# reparsing on every access.
+_PG_JSONB_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 
 def get_type_name(value: Any) -> str:
@@ -103,13 +109,13 @@ class MetadataBase(SQLModel):
     # Dictionary storing the actual metadata values as JSON.
     data: dict[str, Any] = Field(
         default_factory=dict,
-        sa_type=JSON,
+        sa_column=Column(_PG_JSONB_TYPE, nullable=False),
         description="Custom metadata stored as JSON",
     )
     # Dictionary storing the metadata schema.
     metadata_schema: dict[str, str] = Field(
         default_factory=dict,
-        sa_type=JSON,
+        sa_column=Column(_PG_JSONB_TYPE, nullable=False),
         description="Schema information for metadata keys",
     )
 
@@ -222,9 +228,16 @@ class MetadataValueCountView(BaseModel):
 
 
 class MetadataValueCountsView(BaseModel):
-    """Top values and aggregate counts for a categorical metadata field."""
+    """Value counts for a categorical metadata field.
 
-    value_counts: list[MetadataValueCountView] = Field(description="Top concrete values")
+    The top concrete values come first, optionally followed by an ``__other__``
+    row for the less frequent concrete values and a ``__missing__`` row for the
+    samples with an absent or null value.
+    """
+
+    value_counts: list[MetadataValueCountView] = Field(
+        description="Top concrete values, then the __other__ and __missing__ aggregates"
+    )
 
 
 class MetadataInfoView(BaseModel):

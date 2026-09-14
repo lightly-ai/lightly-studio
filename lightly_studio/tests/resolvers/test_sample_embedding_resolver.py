@@ -257,14 +257,12 @@ def test_get_embedding_count(db_session: Session) -> None:
         session=db_session,
         collection_id=col1_id,
         embedding_model_name="model_1",
-        embedding_model_hash="hash_1",
     )
     embedding_model_1_id = embedding_model_1.embedding_model_id
     embedding_model_2 = create_embedding_model(
         session=db_session,
         collection_id=col1_id,
         embedding_model_name="model_2",
-        embedding_model_hash="hash_2",
     )
     embedding_model_2_id = embedding_model_2.embedding_model_id
 

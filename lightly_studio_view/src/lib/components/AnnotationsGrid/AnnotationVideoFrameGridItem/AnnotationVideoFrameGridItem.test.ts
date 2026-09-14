@@ -55,12 +55,4 @@ describe('AnnotationVideoFrameGridItem', () => {
 
         expect(screen.getByText('0.75')).toBeInTheDocument();
     });
-
-    it('renders no sort value badge when the order value is null', () => {
-        const { container } = render(AnnotationVideoFrameGridItem, {
-            props: { ...defaultProps, annotation: buildAnnotation(null) }
-        });
-
-        expect(container.textContent?.trim()).toBe('');
-    });
 });

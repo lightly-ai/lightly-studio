@@ -80,13 +80,11 @@ def test_set_default__replaces_existing(db_session: Session) -> None:
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="model_1",
-        embedding_model_hash="hash_1",
     )
     model_2 = create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="model_2",
-        embedding_model_hash="hash_2",
     )
     for model in (model_1, model_2):
         collection_embedding_model_resolver.get_or_add_collection_model(
@@ -183,13 +181,11 @@ def test_get_all_by_collection_id__returns_all_linked(db_session: Session) -> No
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="model_1",
-        embedding_model_hash="hash_1",
     )
     model_2 = create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="model_2",
-        embedding_model_hash="hash_2",
     )
     for model in (model_1, model_2):
         collection_embedding_model_resolver.get_or_add_collection_model(
@@ -229,13 +225,11 @@ def test_get_model_id_by_name__none_returns_default_not_oldest(db_session: Sessi
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="oldest_model",
-        embedding_model_hash="hash_1",
     )
     default_model = create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="default_model",
-        embedding_model_hash="hash_2",
         set_as_default=True,
     )
 
@@ -278,13 +272,11 @@ def test_get_model_id_by_name__existing_name(db_session: Session) -> None:
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="embedding_model_1",
-        embedding_model_hash="hash_1",
     )
     model_2 = create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="embedding_model_2",
-        embedding_model_hash="hash_2",
     )
 
     result_1 = collection_embedding_model_resolver.get_model_id_by_name(

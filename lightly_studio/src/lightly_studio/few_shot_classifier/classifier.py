@@ -6,11 +6,9 @@ import io
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from lightly_studio.database.db_vector import Embedding
-
-ExportType = Literal["sklearn", "lightly"]
 
 
 @dataclass
@@ -64,7 +62,6 @@ class FewShotClassifier(Protocol):
         self,
         export_path: Path | None,
         buffer: io.BytesIO | None,
-        export_type: ExportType,
     ) -> None:
         """Exports the classifier to a specified file.
 
@@ -76,7 +73,5 @@ class FewShotClassifier(Protocol):
             be saved.
             buffer: An optional in-memory buffer to write the exported
             classifier to.
-            export_type: The type of export format to use. This can be either
-            "sklearn_instance" or "raw".
         """
         ...

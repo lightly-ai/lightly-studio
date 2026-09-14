@@ -13,6 +13,8 @@
         selectedSource?: string;
         /** Placeholder text shown in the trigger when nothing is selected. */
         placeholder?: string;
+        /** Allow clearing the current selection by clicking the selected item again. */
+        allowDeselect?: boolean;
         /** Optional notification when the selection changes (the value also flows out via `bind:selectedSource`). */
         onSelect?: (sourceId: string) => void;
         /** `id` forwarded to the trigger element so a `<label for>` can reference it. */
@@ -23,6 +25,7 @@
         sourceOptions,
         selectedSource = $bindable(),
         placeholder = 'Select a source...',
+        allowDeselect = false,
         onSelect,
         id
     }: Props = $props();
@@ -40,6 +43,7 @@
     {items}
     value={selectedSource}
     {placeholder}
+    {allowDeselect}
     class="w-full"
     testId="annotation-source-trigger"
     selectProps={id ? { id } : undefined}

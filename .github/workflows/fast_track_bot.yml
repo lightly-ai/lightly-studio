@@ -44,7 +44,7 @@ jobs:
       # No ref: checkout the trusted default branch, never the PR head. Checkout
       # must precede artifact download because it cleans the working tree.
       - name: Checkout Trusted Bot Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 

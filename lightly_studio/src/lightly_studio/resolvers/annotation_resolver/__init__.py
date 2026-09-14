@@ -1,5 +1,9 @@
 """Resolvers for database operations."""
 
+from lightly_studio.resolvers.annotation_resolver.bulk_create_classifications import (
+    BulkCreateClassificationsResult,
+    bulk_create_classifications,
+)
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
     delete_annotation,
@@ -22,6 +26,9 @@ from lightly_studio.resolvers.annotation_resolver.get_all_by_object_track_id imp
 )
 from lightly_studio.resolvers.annotation_resolver.get_all_by_parent_sample_ids import (
     get_all_by_parent_sample_ids,
+)
+from lightly_studio.resolvers.annotation_resolver.get_all_by_parent_sample_ids_and_annotation_collection_id import (  # noqa: E501
+    get_all_by_parent_sample_ids_and_annotation_collection_id,
 )
 from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
     AnnotationOrdering,
@@ -61,7 +68,9 @@ from lightly_studio.resolvers.annotation_resolver.update_temporal_span import (
 __all__ = [
     "AnnotationCrop",
     "AnnotationOrdering",
+    "BulkCreateClassificationsResult",
     "build_sample_ids_query",
+    "bulk_create_classifications",
     "create_many",
     "delete_annotation",
     "delete_annotations",
@@ -71,6 +80,7 @@ __all__ = [
     "get_all_by_collection_name",
     "get_all_by_object_track_id",
     "get_all_by_parent_sample_ids",
+    "get_all_by_parent_sample_ids_and_annotation_collection_id",
     "get_all_with_payload",
     "get_annotation_crops_for_ids",
     "get_by_id",

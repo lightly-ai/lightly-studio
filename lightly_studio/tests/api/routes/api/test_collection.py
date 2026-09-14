@@ -242,7 +242,7 @@ def test_has_embeddings(
 ) -> None:
     col_id = create_collection(session=db_session).collection_id
     embedding_model_id = create_embedding_model(
-        session=db_session, collection_id=col_id
+        session=db_session, collection_id=col_id, set_as_default=True
     ).embedding_model_id
     mock_get_model = mocker.patch.object(
         EmbeddingManager, "load_or_get_default_model", return_value=embedding_model_id

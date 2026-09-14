@@ -1,9 +1,4 @@
-import type {
-    ClassifierInfo,
-    AnnotatedSamples,
-    RefineMode,
-    ClassifierExportType
-} from '$lib/services/types';
+import type { ClassifierInfo, AnnotatedSamples, RefineMode } from '$lib/services/types';
 import { page } from '$app/state';
 import { get, readonly, type Readable, writable } from 'svelte/store';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -43,7 +38,7 @@ interface UseClassifiersReturn {
     createClassifier: (request: CreateClassifierRequest) => Promise<CreateClassifierResponse>;
     classifierSelectionToggle: (classifierId: string) => void;
     apply: () => Promise<void>;
-    saveClassifier: (classifierId: string, exportType: ClassifierExportType) => Promise<void>;
+    saveClassifier: (classifierId: string) => Promise<void>;
     trainClassifier: (classifierId: string) => Promise<void>;
     updateAnnotations: (classifierId: string, annotations: AnnotatedSamples) => Promise<void>;
     commitTempClassifier: (classifierId: string, collectionId: string) => Promise<void>;
@@ -455,13 +450,10 @@ export function useClassifiers(): UseClassifiersReturn {
         }
     };
 
-    const saveClassifier = async (
-        classifierId: string,
-        exportType: ClassifierExportType
-    ): Promise<void> => {
+    const saveClassifier = async (classifierId: string): Promise<void> => {
         try {
             error.set(null);
-            await utils.saveClassifier(classifierId, exportType);
+            await utils.saveClassifier(classifierId);
         } catch (err) {
             error.set(err as Error);
             throw err;

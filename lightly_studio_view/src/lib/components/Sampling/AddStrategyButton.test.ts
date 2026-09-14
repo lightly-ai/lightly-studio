@@ -162,4 +162,30 @@ describe('AddStrategyButton', () => {
 
         expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     });
+
+    it('shows the subpart diversity option in the menu', async () => {
+        render(AddStrategyButton, {
+            props: { onAdd: vi.fn() }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toBeInTheDocument();
+    });
+
+    it('disables the subpart diversity option when a reason is provided', async () => {
+        render(AddStrategyButton, {
+            props: {
+                subpartDiversityDisabledReason:
+                    'Only one subpart diversity strategy can be added per selection.',
+                onAdd: vi.fn()
+            }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
 });

@@ -22,24 +22,48 @@ def create(session: Session, embedding_model: EmbeddingModelCreate) -> Embedding
 
 
 def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> EmbeddingModelTable:
-    """Retrieve an existing EmbeddingModel by hash or create a new one if it does not exist."""
-    db_model = get_by_model_hash(
+    """Retrieve an existing EmbeddingModel by name or create a new one if it does not exist."""
+    db_model = get_by_name(
         session=session,
         dataset_id=embedding_model.dataset_id,
-        embedding_model_hash=embedding_model.embedding_model_hash,
+        name=embedding_model.name,
     )
     if db_model is None:
         return create(session=session, embedding_model=embedding_model)
 
     # Validate that the existing model matches the provided data.
-    if (
-        db_model.name != embedding_model.name
-        or db_model.embedding_dimension != embedding_model.embedding_dimension
-    ):
+    if db_model.embedding_dimension != embedding_model.embedding_dimension:
         raise ValueError(
-            "An embedding model with the same hash but different parameters already exists."
+            "An embedding model with the same name but different parameters already exists."
         )
     return db_model
+
+
+def set_api_key(
+    session: Session, embedding_model_id: UUID, api_key: str | None
+) -> EmbeddingModelTable:
+    """Set the API key of an embedding model, replacing any key already stored.
+
+    Args:
+        session: The database session.
+        embedding_model_id: The embedding model to update.
+        api_key: The bearer token for the remote embedding backend, or None to clear it.
+
+    Returns:
+        The updated embedding model.
+
+    Raises:
+        ValueError: If no embedding model with the given ID exists.
+    """
+    db_embedding_model = get_by_id(session=session, embedding_model_id=embedding_model_id)
+    if db_embedding_model is None:
+        raise ValueError(f"Embedding model with id {embedding_model_id} not found.")
+
+    db_embedding_model.api_key = api_key
+    session.add(db_embedding_model)
+    session.commit()
+    session.refresh(db_embedding_model)
+    return db_embedding_model
 
 
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
@@ -51,22 +75,20 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
     ).one_or_none()
 
 
-def get_by_model_hash(
-    session: Session, dataset_id: UUID, embedding_model_hash: str
-) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash within a dataset.
+def get_by_name(session: Session, dataset_id: UUID, name: str) -> EmbeddingModelTable | None:
+    """Retrieve a single embedding model by name within a dataset.
 
     Args:
         session: The database session.
         dataset_id: The dataset in which to search for the embedding model.
-        embedding_model_hash: The hash identifying the embedding model.
+        name: The name identifying the embedding model.
 
     Returns:
         The matching embedding model, or None if no matching model exists.
     """
     query = (
         select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.embedding_model_hash == embedding_model_hash)
+        .where(EmbeddingModelTable.name == name)
         .where(EmbeddingModelTable.dataset_id == dataset_id)
     )
     return session.exec(query).one_or_none()
