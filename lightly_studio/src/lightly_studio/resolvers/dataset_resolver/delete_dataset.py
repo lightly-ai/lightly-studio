@@ -57,6 +57,7 @@ from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
@@ -125,6 +126,9 @@ def delete_dataset(
 
     # 4. Sample type tables.
     _delete_groups(session=session, dataset_id=dataset_id)
+    # Must precede recordings and mcap_group_component_definitions, both deleted in step 5
+    # (sensor_calibration FKs to recording_id and to mcap_group_component_definition.collection_id).
+    _delete_sensor_calibrations(session=session, dataset_id=dataset_id)
     # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable) and
     # recordings, deleted in step 5 (McapGroupSequenceTable.recording_id -> RecordingTable).
     _delete_mcap_group_sequences(session=session, dataset_id=dataset_id)
@@ -170,6 +174,11 @@ def _sample_ids_subquery(dataset_id: UUID) -> SelectOfScalar[UUID]:
     return select(SampleTable.sample_id).where(
         col(SampleTable.collection_id).in_(_collection_ids_subquery(dataset_id))
     )
+
+
+def _recording_ids_subquery(dataset_id: UUID) -> SelectOfScalar[UUID]:
+    """Subquery selecting all recording IDs belonging to the dataset."""
+    return select(RecordingTable.recording_id).where(col(RecordingTable.dataset_id) == dataset_id)
 
 
 def _delete_sample_tag_links(session: Session, dataset_id: UUID) -> None:
@@ -314,6 +323,16 @@ def _delete_groups(session: Session, dataset_id: UUID) -> None:
     """Delete group records for the dataset's samples."""
     session.exec(
         delete(GroupTable).where(col(GroupTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_sensor_calibrations(session: Session, dataset_id: UUID) -> None:
+    """Delete sensor calibration rows for the dataset's recordings."""
+    session.exec(
+        delete(SensorCalibrationTable).where(
+            col(SensorCalibrationTable.recording_id).in_(_recording_ids_subquery(dataset_id))
+        ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
