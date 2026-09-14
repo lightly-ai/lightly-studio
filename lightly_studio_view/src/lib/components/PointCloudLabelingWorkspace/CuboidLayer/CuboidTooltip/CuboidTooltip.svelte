@@ -34,7 +34,7 @@
                 <dd>{tooltip.dimensions}</dd>
             </div>
             <div class="space-y-0.5">
-                <dt class="font-medium text-muted-foreground">Rotation</dt>
+                <dt class="font-medium text-muted-foreground">Rotation (rx / ry / rz)</dt>
                 <dd>{tooltip.rotation}</dd>
             </div>
             <div class="space-y-0.5">

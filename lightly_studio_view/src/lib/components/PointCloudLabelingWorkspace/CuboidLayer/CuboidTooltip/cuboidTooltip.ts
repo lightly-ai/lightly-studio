@@ -1,3 +1,4 @@
+import { Euler, Quaternion } from 'three';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 interface CreateCuboidTooltipParams {
@@ -27,13 +28,14 @@ export function createCuboidTooltip({
     const [x, y, z] = annotation.center;
     const [width, height, depth] = annotation.size;
     const [qx, qy, qz, qw] = annotation.rotation;
-    const yawRadians = Math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+    const euler = new Euler().setFromQuaternion(new Quaternion(qx, qy, qz, qw), 'XYZ');
+    const toDeg = (rad: number) => ((rad * 180) / Math.PI).toFixed(1);
 
     return {
         annotationClassName,
         location: `X: ${x.toFixed(2)}  Y: ${y.toFixed(2)}  Z: ${z.toFixed(2)}`,
         dimensions: `${width.toFixed(2)} × ${height.toFixed(2)} × ${depth.toFixed(2)} m`,
-        rotation: `${((yawRadians * 180) / Math.PI).toFixed(1)}°`,
+        rotation: `rx: ${toDeg(euler.x)}°  ry: ${toDeg(euler.y)}°  rz: ${toDeg(euler.z)}°`,
         annotationSourceId: annotation.annotationSourceId,
         trackId: annotation.trackId
     };
