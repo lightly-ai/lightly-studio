@@ -11,9 +11,9 @@ _K_LENGTH = 9
 class SensorCalibrationBase(SQLModel):
     """Shared fields for a single camera's calibration on a recording."""
 
-    width: int
+    width: int = Field(gt=0)
     """Image width in pixels."""
-    height: int
+    height: int = Field(gt=0)
     """Image height in pixels."""
 
 
