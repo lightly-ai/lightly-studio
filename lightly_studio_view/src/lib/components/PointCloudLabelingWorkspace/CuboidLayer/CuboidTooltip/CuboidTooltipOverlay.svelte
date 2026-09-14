@@ -56,17 +56,21 @@
     const tooltipX = $derived.by(() => {
         const containerW = overlayEl?.offsetWidth ?? 0;
         const tooltipW = tooltipEl?.offsetWidth ?? 260;
-        return cursorX + TOOLTIP_OFFSET_PX + tooltipW > containerW
-            ? cursorX - TOOLTIP_OFFSET_PX - tooltipW
-            : cursorX + TOOLTIP_OFFSET_PX;
+        const x =
+            cursorX + TOOLTIP_OFFSET_PX + tooltipW > containerW
+                ? cursorX - TOOLTIP_OFFSET_PX - tooltipW
+                : cursorX + TOOLTIP_OFFSET_PX;
+        return Math.max(0, Math.min(x, containerW - tooltipW));
     });
 
     const tooltipY = $derived.by(() => {
         const containerH = overlayEl?.offsetHeight ?? 0;
         const tooltipH = tooltipEl?.offsetHeight ?? 200;
-        return cursorY + TOOLTIP_OFFSET_PX + tooltipH > containerH
-            ? cursorY - TOOLTIP_OFFSET_PX - tooltipH
-            : cursorY + TOOLTIP_OFFSET_PX;
+        const y =
+            cursorY + TOOLTIP_OFFSET_PX + tooltipH > containerH
+                ? cursorY - TOOLTIP_OFFSET_PX - tooltipH
+                : cursorY + TOOLTIP_OFFSET_PX;
+        return Math.max(0, Math.min(y, containerH - tooltipH));
     });
 </script>
 
