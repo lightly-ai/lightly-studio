@@ -44,6 +44,14 @@ export interface CameraReaderOptions {
     readonly stillWindowNs: bigint;
     /** How far back a video picture's keyframe is looked for. */
     readonly videoLookbackNs: bigint;
+    /** Builds the virtual URL for an exact CompressedImage message. */
+    readonly cameraFrameUrl?: (channelId: number, timestampNs: bigint) => string;
+}
+
+interface CameraPicture {
+    readonly message: CameraMessage;
+    readonly bitmap?: ImageBitmap;
+    readonly uri?: string;
 }
 
 /**
@@ -71,11 +79,23 @@ export function createCameraReader(options: CameraReaderOptions) {
         const found = results.filter((result) => result !== null);
         return {
             cameras: found.map((result) => result.camera),
-            images: found.map((result) => result.image)
+            images: found.flatMap((result) => (result.image ? [result.image] : []))
         };
     }
 
     async function readChannel(channel: CameraChannel, atLogTimeNs: bigint) {
+        if (channel.encoding === 'compressed-image' && options.cameraFrameUrl) {
+            const message = {
+                logTimeNs: atLogTimeNs,
+                publishTimeNs: atLogTimeNs,
+                value: undefined
+            } satisfies CameraMessage;
+            const uri = options.cameraFrameUrl(channel.channelId, atLogTimeNs);
+            return {
+                camera: toCameraFrame(channel, message, undefined, `${channel.channelId}:${atLogTimeNs}`, uri),
+                image: undefined
+            };
+        }
         const picture =
             channel.encoding === 'compressed-video'
                 ? await readVideo(channel, atLogTimeNs)
@@ -83,12 +103,15 @@ export function createCameraReader(options: CameraReaderOptions) {
         if (!picture) return null;
         const resourceId = `${channel.channelId}:${picture.message.logTimeNs}`;
         return {
-            camera: toCameraFrame(channel, picture.message, picture.bitmap, resourceId),
-            image: { resourceId, bitmap: picture.bitmap }
+            camera: toCameraFrame(channel, picture.message, picture.bitmap, resourceId, picture.uri),
+            image: picture.bitmap ? { resourceId, bitmap: picture.bitmap } : undefined
         };
     }
 
-    async function readVideo(channel: CameraChannel, atLogTimeNs: bigint) {
+    async function readVideo(
+        channel: CameraChannel,
+        atLogTimeNs: bigint
+    ): Promise<CameraPicture | null> {
         const messages = await options.readWindow(
             channel,
             atLogTimeNs > options.videoLookbackNs ? atLogTimeNs - options.videoLookbackNs : 0n,
@@ -115,7 +138,10 @@ export function createCameraReader(options: CameraReaderOptions) {
         return { bitmap, message };
     }
 
-    async function readStill(channel: CameraChannel, atLogTimeNs: bigint) {
+    async function readStill(
+        channel: CameraChannel,
+        atLogTimeNs: bigint
+    ): Promise<CameraPicture | null> {
         const messages = await options.readWindow(
             channel,
             atLogTimeNs > options.stillWindowNs ? atLogTimeNs - options.stillWindowNs : 0n,
@@ -123,6 +149,12 @@ export function createCameraReader(options: CameraReaderOptions) {
         );
         const message = nearest(messages, atLogTimeNs);
         if (!message) return null;
+        if (channel.encoding === 'compressed-image' && options.cameraFrameUrl) {
+            return {
+                message,
+                uri: options.cameraFrameUrl(channel.channelId, message.logTimeNs)
+            };
+        }
         const bitmap =
             channel.encoding === 'raw-image'
                 ? await decodeRawImage(message.value as RawImageMessage, options.maxWidth)
@@ -136,8 +168,9 @@ export function createCameraReader(options: CameraReaderOptions) {
     function toCameraFrame(
         channel: CameraChannel,
         message: CameraMessage,
-        bitmap: ImageBitmap,
-        resourceId: string
+        bitmap: ImageBitmap | undefined,
+        resourceId: string,
+        uri?: string
     ): CameraFrame {
         return {
             id: channel.topic,
@@ -156,9 +189,9 @@ export function createCameraReader(options: CameraReaderOptions) {
             },
             // The delivered picture's size, which is the strip's width rather than the
             // sensor's: projecting a cuboid into one has to scale its intrinsics to match.
-            width: bitmap.width,
-            height: bitmap.height,
-            image: { kind: 'decoded', resourceId },
+            width: bitmap?.width ?? 0,
+            height: bitmap?.height ?? 0,
+            image: uri ? { kind: 'uri', uri } : { kind: 'decoded', resourceId },
             // Calibration comes from the recording's camera_info, which nothing reads yet.
             calibration: null
         };

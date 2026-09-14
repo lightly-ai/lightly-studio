@@ -80,7 +80,10 @@ describe('openMcap', () => {
     });
 
     it('lists a window from the message index, without decompressing chunks', async () => {
-        const { bytes, channelId, timestamp } = await mcapFixture({ compressed: true });
+        const { bytes, rightChannelId, channelId, timestamp } = await mcapFixture({
+            compressed: true,
+            fused: true
+        });
         serve(bytes);
         const session = await openMcap(sourceFor(bytes), new AbortController().signal);
         vi.mocked(decompress).mockClear();
@@ -93,6 +96,11 @@ describe('openMcap', () => {
         // The index region is a fraction of the chunk it belongs to.
         expect(session.readable.bytesRead - readBefore).toBeLessThan(bytes.length / 4);
 
+        const range = await session.listFrames(
+            rightChannelId!,
+            timestamp.toString(),
+            timestamp.toString()
+        );
         await session.loadFrame(range.frames[0], 10);
         expect(decompress).toHaveBeenCalled();
     });

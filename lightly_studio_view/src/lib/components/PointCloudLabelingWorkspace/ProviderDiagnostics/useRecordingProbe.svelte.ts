@@ -62,7 +62,8 @@ export type RecordingProbe = ReturnType<typeof useRecordingProbe>;
 export function useRecordingProbe(
     sampleId: () => string,
     recordingUrl: () => string | undefined = () => undefined,
-    initialLocator: () => FrameLocator | undefined = () => undefined
+    initialLocator: () => FrameLocator | undefined = () => undefined,
+    recordingId: () => string | undefined = () => undefined
 ) {
     const client = useQueryClient();
 
@@ -117,7 +118,7 @@ export function useRecordingProbe(
         telemetry = [];
         log('opening recording', url);
 
-        void open(id, url, {
+        void open(recordingId() ?? id, url, {
             onPhase: (next) => {
                 if (cancelled) return;
                 phase = next;

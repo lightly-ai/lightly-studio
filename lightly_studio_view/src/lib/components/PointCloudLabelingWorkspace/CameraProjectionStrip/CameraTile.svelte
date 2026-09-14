@@ -12,7 +12,7 @@
     interface Props {
         camera: CameraFrame;
         /** Absent when the camera published nothing for this moment, or its picture expired. */
-        image?: ImageBitmap;
+        image?: ImageBitmap | string;
     }
 
     let { camera, image }: Props = $props();
@@ -22,7 +22,7 @@
     $effect(() => {
         const target = canvas;
         const picture = image;
-        if (!target || !picture) return;
+        if (!target || !picture || typeof picture === 'string') return;
         target.width = picture.width;
         target.height = picture.height;
         target.getContext('2d')?.drawImage(picture, 0, 0);
@@ -33,7 +33,9 @@
     class="flex h-full min-w-40 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-md border bg-muted/30 text-muted-foreground"
     data-testid="workspace-camera-tile"
 >
-    {#if image}
+    {#if typeof image === 'string'}
+        <img src={image} class="min-h-0 flex-1 object-contain" alt={camera.id} />
+    {:else if image}
         <canvas bind:this={canvas} class="min-h-0 flex-1 object-contain" aria-label={camera.id}
         ></canvas>
     {:else}

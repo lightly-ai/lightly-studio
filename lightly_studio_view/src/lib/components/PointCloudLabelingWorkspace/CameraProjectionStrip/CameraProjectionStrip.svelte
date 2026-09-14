@@ -44,9 +44,11 @@
             {#each cameras as camera (camera.id)}
                 <CameraTile
                     {camera}
-                    image={camera.image?.kind === 'decoded'
-                        ? resolveImage?.(camera.image.resourceId)
-                        : undefined}
+                    image={camera.image?.kind === 'uri'
+                        ? camera.image.uri
+                        : camera.image?.kind === 'decoded'
+                          ? resolveImage?.(camera.image.resourceId)
+                          : undefined}
                 />
             {/each}
         {/if}

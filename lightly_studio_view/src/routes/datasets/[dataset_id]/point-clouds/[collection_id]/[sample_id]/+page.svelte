@@ -79,13 +79,14 @@
         const details = groupComponents.data?.find(
             (component) => component.details?.type === 'mcap'
         )?.details;
-        if (!details || details.type !== 'mcap') return undefined;
+        if (!details || details.type !== 'mcap' || !('channel_id' in details)) return undefined;
         return { channelId: details.channel_id, logTimeNs: details.log_time_ns, occurrence: 0 };
     });
     const probe = useRecordingProbe(
         () => (isEnabled ? sampleId : ''),
         () => recording?.media_url,
-        () => frameLocator
+        () => frameLocator,
+        () => recording?.recording_id
     );
 
     let workspaceModule = $state(loadWorkspace());

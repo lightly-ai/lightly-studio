@@ -109,6 +109,8 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
         maxWidth: CAMERA_IMAGE_WIDTH,
         stillWindowNs: CAMERA_WINDOW_NS,
         videoLookbackNs: VIDEO_LOOKBACK_NS,
+        cameraFrameUrl: (channelId, timestampNs) =>
+            `/mcap/camera-frames/recordings/${source.recordingId}?channel_id=${channelId}&timestamp_ns=${timestampNs}`,
         readWindow: async (channel, startNs, endNs) => {
             const found: CameraMessage[] = [];
             for await (const message of reader.readMessages({
