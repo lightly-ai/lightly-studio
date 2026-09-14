@@ -145,6 +145,48 @@ def test_get_default_by_collection_id__returns_id(db_session: Session) -> None:
     )
 
 
+def test_get_default_model_by_collection_id__none_when_unset(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    create_embedding_model(session=db_session, collection_id=collection.collection_id)
+
+    assert (
+        collection_embedding_model_resolver.get_default_model_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        is None
+    )
+
+
+def test_get_default_model_by_collection_id__returns_model(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, set_as_default=True
+    )
+
+    result = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    assert result is not None
+    assert result.embedding_model_id == model.embedding_model_id
+
+
+def test_get_default_model_by_collection_id__scoped_to_the_collection(db_session: Session) -> None:
+    """Another collection's default model is not returned."""
+    collection = create_collection(session=db_session)
+    other_collection = create_collection(session=db_session)
+    create_embedding_model(
+        session=db_session, collection_id=other_collection.collection_id, set_as_default=True
+    )
+
+    assert (
+        collection_embedding_model_resolver.get_default_model_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        is None
+    )
+
+
 def test_has_default_by_collection_id__false_when_unset(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 
