@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 from uuid import UUID
 
+import numpy as np
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
@@ -125,10 +126,10 @@ def get_all_by_collection_id(
 ) -> list[SampleEmbeddingRow]:
     """Get all sample embeddings for samples in a specific collection.
 
-    On PostgreSQL the embeddings are read with a binary psycopg cursor (decoded via
-    ``np.frombuffer``); DuckDB returns them as arrays natively and uses the regular query
-    path. Output is ordered by sample creation time, with ``sample_id`` as a tiebreaker
-    for a deterministic order. Callers do not need to distinguish between backends.
+    On PostgreSQL the embeddings are read with a binary psycopg cursor; DuckDB returns
+    them as arrays natively and uses the regular query path. Output is ordered by sample
+    creation time, with ``sample_id`` as a tiebreaker for a deterministic order. Callers do
+    not need to distinguish between backends.
 
     Args:
         session: The database session.
@@ -230,9 +231,9 @@ def _read_embedding_rows_binary(
 ) -> list[SampleEmbeddingRow]:
     """Run a ``(sample_id, embedding)`` SELECT on a binary psycopg cursor (PostgreSQL).
 
-    Reading the vectors in pgvector's binary format (via ``np.frombuffer``) is far faster
-    than parsing them from text for each row. ``params`` is a tuple for ``%s`` placeholders
-    or a dict for ``%(name)s``.
+    Reading the vectors in pgvector's binary wire format is far faster than parsing them
+    from text for each row. ``params`` is a tuple for ``%s`` placeholders or a dict for
+    ``%(name)s``.
     """
     # Push any pending writes in this session to the database first so the cursor below —
     # which bypasses SQLAlchemy's result handling — sees them (it shares the session's
@@ -242,6 +243,17 @@ def _read_embedding_rows_binary(
     with connection.cursor(binary=True) as cursor:
         cursor.execute(sql, params)
         return [
-            SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
+            SampleEmbeddingRow(sample_id=sample_id, embedding=_to_embedding(embedding))
             for sample_id, embedding in cursor
         ]
+
+
+def _to_embedding(value: Any) -> Embedding:
+    """Coerce a value from pgvector's psycopg loader to a 1-D float32 array.
+
+    The loader returns a ``Vector`` since pgvector 0.5.0 and a numpy array before that.
+    ``to_numpy`` detects it without importing pgvector, which is PostgreSQL-only.
+    """
+    if hasattr(value, "to_numpy"):
+        value = value.to_numpy()
+    return np.asarray(value, dtype=np.float32)
