@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from uuid import uuid4
+import uuid
 
 import pytest
 from lightly_studio_serve.embedder import Embedder
@@ -108,6 +108,6 @@ def test_resolve_default_embedder__missing_collection_raises(db_session: Session
     with pytest.raises(ValueError, match=r"could not be found"):
         default_embedder.resolve_default_embedder(
             session=db_session,
-            collection_id=uuid4(),
+            collection_id=uuid.uuid4(),
             select_embedder=selector,
         )
