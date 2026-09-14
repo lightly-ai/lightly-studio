@@ -6,7 +6,11 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.resolvers import collection_resolver, mcap_group_component_definition_resolver
 from tests.helpers_resolvers import create_collection
 
 
@@ -43,3 +47,29 @@ def test_delete__with_group_component_definition(db_session: Session) -> None:
         is None
     )
     assert db_session.get(GroupComponentDefinitionTable, component_collection_id) is None
+
+
+def test_delete__with_mcap_group_component_definition(db_session: Session) -> None:
+    root = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=root.collection_id,
+        components=[("image", SampleType.MCAP)],
+    )
+    component_collection_id = components["image"].collection_id  # Capture before delete
+    mcap_group_component_definition_resolver.create(
+        session=db_session,
+        collection_id=component_collection_id,
+        mcap_data_type=McapDataType.VIDEO_FRAME,
+        channel_id=3,
+    )
+
+    result = collection_resolver.delete(session=db_session, collection_id=component_collection_id)
+
+    assert result is True
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=component_collection_id)
+        is None
+    )
+    assert db_session.get(GroupComponentDefinitionTable, component_collection_id) is None
+    assert db_session.get(McapGroupComponentDefinitionTable, component_collection_id) is None

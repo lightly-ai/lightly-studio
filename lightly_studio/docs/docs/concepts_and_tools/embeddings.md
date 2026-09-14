@@ -144,7 +144,7 @@ from numpy.typing import NDArray
 from PIL import Image
 
 import lightly_studio as ls
-from lightly_studio.embed.types import EmbeddingResult
+from lightly_studio import EmbeddingResult
 
 EMBEDDING_DIMENSION = 512
 
@@ -202,7 +202,7 @@ from numpy.typing import NDArray
 from PIL import Image
 
 import lightly_studio as ls
-from lightly_studio.embed.types import EmbeddingResult
+from lightly_studio import EmbeddingResult
 
 EMBEDDING_DIMENSION = 512
 

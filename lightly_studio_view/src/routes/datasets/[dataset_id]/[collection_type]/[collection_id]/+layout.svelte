@@ -66,6 +66,7 @@
     import {
         buildMetadataDistributionSource,
         selectCategoricalMetadataKeys,
+        selectNumericMetadataKeys,
         selectComparisonSampleTags
     } from './metadataDistributionSource';
     import type { CategoryCount } from '$lib/components/BarChart';
@@ -575,6 +576,17 @@
         enabled: distributionPanelVisible
     }));
 
+    let activeDistributionSourceId = $state<string | undefined>(undefined);
+    let activeDistributionGroupId = $state<string | undefined>(undefined);
+    let distributionSelectionCollectionId = $state<string | undefined>(undefined);
+    $effect(() => {
+        if (!distributionPanelVisible || distributionSelectionCollectionId !== collectionId) {
+            distributionSelectionCollectionId = collectionId;
+            activeDistributionSourceId = undefined;
+            activeDistributionGroupId = undefined;
+        }
+    });
+
     const distributionClassificationQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
         annotationType: AnnotationType.CLASSIFICATION,
@@ -613,7 +625,13 @@
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
         annotationType,
-        enabled: distributionPanelVisible
+        enabled:
+            distributionPanelVisible &&
+            activeDistributionSourceId === 'classes' &&
+            distributionSampleTagIds.length > 0 &&
+            (annotationType === undefined
+                ? activeDistributionGroupId === undefined || activeDistributionGroupId === 'all'
+                : activeDistributionGroupId === annotationType)
     });
     const distributionAllTagQuery = useImageAnnotationCountsBySampleTags(() =>
         groupedCountsParams()
@@ -626,6 +644,21 @@
     );
     const distributionSegmentationTagQuery = useImageAnnotationCountsBySampleTags(() =>
         groupedCountsParams(AnnotationType.SEGMENTATION_MASK)
+    );
+
+    const classComparisonQueries: Record<
+        string,
+        ReturnType<typeof useImageAnnotationCountsBySampleTags>
+    > = {
+        all: distributionAllTagQuery,
+        [AnnotationType.CLASSIFICATION]: distributionClassificationTagQuery,
+        [AnnotationType.OBJECT_DETECTION]: distributionObjectDetectionTagQuery,
+        [AnnotationType.SEGMENTATION_MASK]: distributionSegmentationTagQuery
+    };
+    const activeClassComparisonQuery = $derived(
+        activeDistributionSourceId === 'classes'
+            ? classComparisonQueries[activeDistributionGroupId ?? 'all']
+            : undefined
     );
 
     // The panel's sources are the distribution *types* (class labels,
@@ -652,7 +685,9 @@
             id: 'classes',
             label: 'Annotation classes',
             groupLabel: 'Annotation type',
-            valueNoun
+            valueNoun,
+            comparisonLoading: activeClassComparisonQuery?.isFetching,
+            comparisonError: activeClassComparisonQuery?.error?.message
         };
 
         // Use the distribution-specific "all" query so the "All types" group
@@ -725,11 +760,29 @@
     // User-configurable bin count for the metadata histograms.
     let histogramBinCount = $state(20);
 
+    const numericMetadataKeys = $derived(selectNumericMetadataKeys($metadataInfo));
+    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
+    const activeMetadataField = $derived.by<
+        { name: string; type: 'numeric' | 'categorical' } | undefined
+    >(() => {
+        if (activeDistributionSourceId !== 'metadata' || activeDistributionGroupId === undefined) {
+            return undefined;
+        }
+        if (categoricalMetadataKeys.includes(activeDistributionGroupId)) {
+            return { name: activeDistributionGroupId, type: 'categorical' };
+        }
+        if (numericMetadataKeys.includes(activeDistributionGroupId)) {
+            return { name: activeDistributionGroupId, type: 'numeric' };
+        }
+        return undefined;
+    });
+
     const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
         collectionId: collectionId,
         filter: distributionBaseFilter,
         binCount: histogramBinCount,
-        enabled: distributionPanelVisible
+        fields: activeMetadataField?.type === 'numeric' ? [activeMetadataField.name] : undefined,
+        enabled: distributionPanelVisible && activeMetadataField?.type === 'numeric'
     }));
     // query.data is already Record<string, HistogramData> — the hook applies
     // selectDistributions internally via the TanStack Query `select` option.
@@ -764,14 +817,14 @@
         sampleTags: selectedDistributionSampleTags,
         filter: distributionBaseFilter,
         binCount: histogramBinCount,
-        enabled: distributionPanelVisible && distributionSampleTagIds.length > 0
+        field: activeMetadataField,
+        enabled: distributionPanelVisible
     }));
     const metadataTagDistributions = $derived(metadataTagDistributionsQuery.data ?? []);
-
-    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
     const metadataDistributionSource = $derived(
         buildMetadataDistributionSource({
             histograms: metadataDistributions,
+            numericKeys: numericMetadataKeys,
             categoricalKeys: categoricalMetadataKeys,
             categorical: categoricalMetadataDistributions,
             filteredCategorical: categoricalMetadataFilteredDistributions,
@@ -1051,6 +1104,10 @@
                                             selectedComparisonTagIds={distributionSampleTagIds}
                                             onComparisonTagIdsChange={(ids) =>
                                                 (distributionSampleTagIds = ids)}
+                                            onGroupChange={(sourceId, groupId) => {
+                                                activeDistributionSourceId = sourceId;
+                                                activeDistributionGroupId = groupId;
+                                            }}
                                         />
                                     {/key}
                                 {/await}

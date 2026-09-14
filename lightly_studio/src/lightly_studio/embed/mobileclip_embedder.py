@@ -11,19 +11,19 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from PIL import Image
-
-from lightly_studio.dataset import file_utils
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.embed import image_crop_embedding, image_embedding
-from lightly_studio.embed.embedder import (
+from lightly_studio_serve.embedder import (
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
 )
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from PIL import Image
+
+from lightly_studio.dataset import file_utils
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
+from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.vendor import mobileclip
 
 MODEL_NAME = "mobileclip_s0"
@@ -121,14 +121,11 @@ class MobileCLIPEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        # TODO(Iunir, 09/2026): Let embed_pil_images_batched return an EmbeddingResult so
-        # the kept indices come from it instead of being assumed complete here.
-        embeddings = image_embedding.embed_pil_images_batched(
+        return image_embedding.embed_pil_images_batched(
             images=images,
             context=self._embedding_context(),
             show_progress=True,
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         """Embed texts with MobileCLIP.

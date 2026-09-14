@@ -28,6 +28,7 @@
         type ToolbarStatus
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
+    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
         sampleId,
@@ -103,6 +104,9 @@
     let previousToolbarStatus: ToolbarStatus;
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
+        // Typing in a field or in an overlay must not trigger the shortcuts behind it.
+        if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
+
         switch (event.key) {
             // Check for escape key
             case get(settingsStore).key_go_back:
@@ -147,7 +151,8 @@
     };
 
     const handleKeyUpEvent = (event: KeyboardEvent) => {
-        if (event.key === ' ') {
+        // Restore only if a keydown started pan mode.
+        if (event.key === ' ' && isPanModeEnabled) {
             isPanModeEnabled = false;
             sampleDetailsToolbarContext.status = previousToolbarStatus;
             annotationLabelContext.annotationType = previousAnnotationType;

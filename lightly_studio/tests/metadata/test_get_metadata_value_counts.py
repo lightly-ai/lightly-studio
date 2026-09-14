@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID, uuid4
 
+import pytest
+import sqlalchemy
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -276,6 +279,46 @@ def test_get_metadata_value_counts__literal_top_level_keys(db_session: Session) 
 
     assert counts["site.name"].value_counts[0].value == "Zurich"
     assert counts["owner's site"].value_counts[0].value == "primary"
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected_calls"), [(None, 3), (["city", "city", "unknown"], 2), ([], 1)]
+)
+def test_get_metadata_value_counts__one_query_per_field(
+    db_session: Session, mocker: MockerFixture, fields: list[str] | None, expected_calls: int
+) -> None:
+    collection = create_collection(session=db_session)
+    _create_sample(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        metadata={"city": "Zurich", "active": True},
+    )
+    collection_id = collection.collection_id
+    listener = mocker.Mock()
+    engine = db_session.get_bind()
+    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+    try:
+        categorical_value_counts.get_metadata_value_counts(
+            session=db_session, collection_id=collection_id, fields=fields
+        )
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+    assert listener.call_count == expected_calls
+
+
+def test_get_metadata_value_counts__all_missing(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    _create_explicit_null_sample(db_session=db_session, collection_id=collection.collection_id)
+    _create_sample(
+        db_session=db_session, collection_id=collection.collection_id, metadata={"other": "x"}
+    )
+    create_image(session=db_session, collection_id=collection.collection_id)
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session, collection_id=collection.collection_id, fields=["city"]
+    )
+    assert [(entry.value, entry.count) for entry in counts["city"].value_counts] == [
+        ("__missing__", 3)
+    ]
 
 
 def _create_sample(

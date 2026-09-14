@@ -4,58 +4,191 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Tag of the draft release to publish, e.g. v1.2.3.
+        description: >-
+          Tag of the draft release to publish, e.g. v1.2.3 or
+          lightly-studio-serve/v0.1.2. The tag decides which package is
+          published, so there is nothing here that can disagree with it.
         type: string
         required: true
+      target:
+        description: >-
+          Index to publish to. "testpypi" rehearses the whole path - it builds
+          and uploads, and leaves the GitHub release alone.
+        type: choice
+        options: [pypi, testpypi]
+        default: pypi
 
-permissions:
-  contents: write
+permissions: {}
+
+# Queued rather than cancelled: cancelling a run mid-upload is worse than
+# making a second dispatch for the same tag wait.
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  # The frontend build needs more heap than the default, same as the test workflows.
+  NODE_OPTIONS: --max-old-space-size=4096
 
 jobs:
-  finish-release:
+  # Its own job ahead of the build, so a tag that was never drafted or is
+  # already released costs neither the build nor a reviewer's approval. It
+  # cannot live in `build`: GitHub shows draft releases only to identities with
+  # push access. No checkout, so it runs no repository code.
+  precheck:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    permissions:
+      contents: write
     steps:
-      - name: Require the version on PyPI
-        env:
-          TAG: ${{ inputs.tag }}
-        # The release is drafted so that a failed PyPI publish stays
-        # recoverable; publishing it before the wheel is installable is the
-        # state that drafting exists to avoid.
-        run: |
-          set -euo pipefail
-          version="${TAG#v}"
-          status="$(curl -sS -o "${RUNNER_TEMP}/pypi.json" -w '%{http_code}' \
-            "https://pypi.org/pypi/lightly-studio/${version}/json")"
-          if [ "${status}" != "200" ]; then
-            echo "::error::lightly-studio ${version} is not on PyPI (HTTP ${status}). Publish the wheel first."
-            exit 1
-          fi
-          # A version record outlives its files: a half-finished upload or a yank still answers 200.
-          if ! python3 -c 'import json, sys; sys.exit(0 if any(f["packagetype"] == "bdist_wheel" and not f["yanked"] for f in json.load(open(sys.argv[1]))["urls"]) else 1)' \
-            "${RUNNER_TEMP}/pypi.json"; then
-            echo "::error::lightly-studio ${version} has no installable wheel on PyPI."
-            exit 1
-          fi
-
-      - name: Publish the draft release
+      # Also the idempotency guard: once the release is live, the next dispatch
+      # stops here instead of appending "Released by" twice.
+      - name: Require a draft release
+        if: inputs.target == 'pypi'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
           REPO: ${{ github.repository }}
-          ACTOR: ${{ github.actor }}
-        # A release's author is whichever identity's token created it, so a
-        # workflow-created release always reads as github-actions[bot]. This
-        # workflow is dispatch-triggered, so the actor is the person who
-        # decided to release; the notes name them instead. Appending it here
-        # rather than when drafting keeps it out of a draft nobody published,
-        # and the draft check above keeps a re-run from adding it twice.
+          TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
           if [ "$(gh release view "${TAG}" --repo "${REPO}" --json isDraft --jq .isDraft)" != "true" ]; then
             echo "::error::${TAG} is not a draft release."
             exit 1
           fi
+
+  # Runs the tagged commit's own code, so it must not be able to mint a PyPI
+  # credential: no `id-token: write`, and all it hands onwards is the artifact.
+  build:
+    needs: precheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ inputs.tag }}
+      PYTHONPATH: ${{ github.workspace }}/.github/scripts
+    steps:
+      # `refs/tags/` because actions/checkout resolves an unqualified ref as a
+      # branch first, and a branch sharing the tag's name would be built in the
+      # tag's place - undetectably, since both carry the same version.
+      - name: Checkout the release commit
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+
+      # `v1.2.3` is lightly-studio; every other package tags as `<distribution>/v1.2.3`.
+      - name: Resolve the package
+        id: package
+        run: |
+          python3 -m prepare_release package-config --tag "${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Assert the tag matches the version it points at
+        env:
+          PYPROJECT: ${{ steps.package.outputs.pyproject }}
+          TAG_PREFIX: ${{ steps.package.outputs.tag_prefix }}
+        run: |
+          set -euo pipefail
+          version="$(python3 -m prepare_release read-version --pyproject "${PYPROJECT}")"
+          if [ "${TAG_PREFIX}v${version}" != "${TAG}" ]; then
+            echo "::error::${TAG} points at a commit whose version is ${version}."
+            exit 1
+          fi
+
+      - name: Set Up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # No enable-cache, unlike the test workflows: a cache written by another
+      # workflow would be an input to what gets published.
+      - name: Set Up Uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+
+      # Only the wheel that bundles the built frontend needs Node.
+      - name: Set Up Node.js
+        if: steps.package.outputs.needs_node == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: lightly_studio_view/.nvmrc
+
+      # `--locked` rather than the Makefile's plain `uv sync`, which re-resolves
+      # a lock that is stale against the tagged pyproject.toml. `make build`
+      # then runs export-schema under that environment, so a stale lock would
+      # change the schema inside the published wheel with no signal.
+      - name: Install Dependencies
+        working-directory: ${{ steps.package.outputs.directory }}
+        run: uv sync --locked --all-groups --all-extras
+
+      - name: Build the Distributions
+        working-directory: ${{ steps.package.outputs.directory }}
+        run: make build
+
+      # Before the upload, so a wheel that fails it never reaches the publish job.
+      - name: Check the Wheel's Dependencies
+        if: steps.package.outputs.forbidden_dependencies != ''
+        working-directory: ${{ steps.package.outputs.directory }}
+        run: |
+          python3 -m prepare_release check-wheel-dependencies \
+            --package "${{ steps.package.outputs.distribution }}" \
+            --dist dist
+
+      # A week, to outlast the pypi environment's approval gate: an artifact
+      # expiring mid-approval would fail the release after it was granted.
+      - name: Upload the Distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: ${{ steps.package.outputs.directory }}/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # What PyPI's trusted publisher checks the OIDC claim against, so only this
+    # job of this file can publish. `pypi` carries the approval gate and is
+    # restricted to main; `testpypi` has neither, so a rehearsal is unattended.
+    environment: ${{ inputs.target }}
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Download the Distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      # Not `uv publish`, which uploads PEP 740 attestations but does not create
+      # them. Given no password, so a misconfigured publisher fails here rather
+      # than falling back to looking for a token. `skip-existing` lets a run
+      # that uploaded but failed to un-draft be re-dispatched.
+      - name: Publish to the Index
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          repository-url: >-
+            ${{ inputs.target == 'pypi' && 'https://upload.pypi.org/legacy/'
+            || 'https://test.pypi.org/legacy/' }}
+          skip-existing: true
+
+      # A release's author is whichever identity's token created it, so a
+      # workflow-created release always reads as github-actions[bot]. This
+      # workflow is dispatch-triggered, so the notes name the person who decided
+      # to release instead.
+      - name: Publish the draft release
+        if: inputs.target == 'pypi'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
           gh release view "${TAG}" --repo "${REPO}" --json body --jq .body \
             > "${RUNNER_TEMP}/release-notes.md"
           printf '\nReleased by @%s\n' "${ACTOR}" >> "${RUNNER_TEMP}/release-notes.md"

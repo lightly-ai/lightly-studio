@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import GroupsGridTestWrapper from './GroupsGridTestWrapper.test.svelte';
@@ -111,7 +111,11 @@ describe('GroupsGrid', () => {
         global.IntersectionObserver =
             MockIntersectionObserver as unknown as typeof IntersectionObserver;
         Element.prototype.scrollTo = vi.fn();
+        // The grid waits for a nonzero viewport height, which jsdom cannot measure.
+        vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(1000);
     });
+
+    afterEach(() => vi.restoreAllMocks());
 
     it('renders loading state', () => {
         const { container, getByText } = render(GroupsGridTestWrapper, {

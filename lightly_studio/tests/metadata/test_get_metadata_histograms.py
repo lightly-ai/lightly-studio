@@ -68,6 +68,14 @@ def test_get_metadata_histograms__unfiltered_matches_totals(db_session: Session)
     assert score.bin_edges[-1] == pytest.approx(9.0)
     assert sum(score.counts) == 10
 
+    selected = get_metadata_info.get_metadata_histograms(
+        session=db_session,
+        collection_id=collection.collection_id,
+        fields=["score", "location", "score"],
+    )
+    assert set(selected) == {"score"}
+    assert selected["score"] == score
+
 
 def test_get_metadata_histograms__filter_reduces_counts_keeps_edges(
     db_session: Session,

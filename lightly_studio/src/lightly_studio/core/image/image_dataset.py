@@ -763,7 +763,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         return ImageDatasetEvaluate(
             session=self.session,
             collection_id=self.collection_id,
-            sample_ids=[sample.sample_id for sample in query],
+            # A generator, so the dataset scan runs only when a write method reads sample_ids.
+            sample_ids=(sample.sample_id for sample in query),
         )
 
 
