@@ -193,6 +193,34 @@ Step-by-step guides covering complete workflows — from raw, unlabeled data to 
 - [Plugins](https://docs.lightly.ai/studio/concepts_and_tools/plugins/) — auto-label with SAM and other models
 - [Export](https://docs.lightly.ai/studio/concepts_and_tools/export/) — write a query back out as COCO or YOLO
 
+## 🗄️ Local S3 development
+
+LocalStack emulates AWS S3 locally so you can test MCAP recordings without a real cloud bucket.
+
+```bash
+# Start LocalStack (creates the default S3 bucket)
+make start-localstack
+
+# Upload MCAP files and list what's available
+make setup-localstack LOCALSTACK_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make list-localstack-mcaps
+
+# Stop and remove the container
+make stop-localstack
+```
+
+Point LightlyStudio at the local bucket by setting these environment variables before starting the server:
+
+```bash
+AWS_ACCESS_KEY_ID=test \
+AWS_SECRET_ACCESS_KEY=test \
+AWS_DEFAULT_REGION=us-east-1 \
+AWS_ENDPOINT_URL=http://localhost:4566 \
+  lightly-studio ...
+```
+
 ## 🐍 Python Interface
 
 Everything in LightlyStudio is scriptable: index datasets, query and edit samples, sample

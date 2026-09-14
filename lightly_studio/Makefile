@@ -9,6 +9,18 @@ POSTGRES_SHM_SIZE ?= 2g
 POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 
+# LocalStack development storage for MCAP recordings.
+LOCALSTACK_CONTAINER_NAME := lightly-studio-localstack
+LOCALSTACK_PORT ?= 4566
+LOCALSTACK_STARTUP_TIMEOUT_SECONDS ?= 60
+LOCALSTACK_S3_BUCKET ?= lightly-studio
+LOCALSTACK_S3_PREFIX ?= recordings
+# Space-separated local files, e.g.:
+#   make setup-localstack LOCALSTACK_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+LOCALSTACK_MCAP_FILES ?= datasets/mcap/perception.mcap
+LOCALSTACK_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
+	AWS_ENDPOINT_URL=http://localhost:$(LOCALSTACK_PORT)
+
 # Installs the uv version that `required-version` in pyproject.toml pins, so a local
 # `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
 UV_VERSION := 0.12.6
@@ -154,6 +166,41 @@ stop-postgres:
 	-docker stop $(POSTGRES_CONTAINER_NAME)
 	-docker rm $(POSTGRES_CONTAINER_NAME)
 	@echo "PostgreSQL container removed"
+
+.PHONY: start-localstack
+start-localstack:
+	@docker rm -f $(LOCALSTACK_CONTAINER_NAME) >/dev/null 2>&1 || true
+	@docker run -d --name $(LOCALSTACK_CONTAINER_NAME) -p $(LOCALSTACK_PORT):4566 localstack/localstack:4.7
+	@echo "Waiting for LocalStack..."
+	@deadline=$$(($$(date +%s) + $(LOCALSTACK_STARTUP_TIMEOUT_SECONDS))); \
+	until curl -sf http://localhost:$(LOCALSTACK_PORT)/_localstack/health >/dev/null; do \
+		if [ $$(date +%s) -ge $$deadline ]; then \
+			echo "LocalStack did not become ready within $(LOCALSTACK_STARTUP_TIMEOUT_SECONDS) seconds"; \
+			docker logs $(LOCALSTACK_CONTAINER_NAME); \
+			exit 1; \
+		fi; \
+		sleep 1; \
+	done
+	@$(LOCALSTACK_ENV) aws s3 mb s3://$(LOCALSTACK_S3_BUCKET) 2>/dev/null || true
+	@echo "LocalStack is ready at http://localhost:$(LOCALSTACK_PORT)"
+
+.PHONY: setup-localstack
+setup-localstack: start-localstack
+	@for file in $(LOCALSTACK_MCAP_FILES); do \
+		key="$(LOCALSTACK_S3_PREFIX)/$$(basename "$$file")"; \
+		echo "Uploading $$file to s3://$(LOCALSTACK_S3_BUCKET)/$$key..."; \
+		$(LOCALSTACK_ENV) aws s3 cp "$$file" "s3://$(LOCALSTACK_S3_BUCKET)/$$key"; \
+	done
+	@echo "Available MCAP recordings:"
+	@$(LOCALSTACK_ENV) aws s3 ls s3://$(LOCALSTACK_S3_BUCKET)/$(LOCALSTACK_S3_PREFIX)/
+
+.PHONY: list-localstack-mcaps
+list-localstack-mcaps: start-localstack
+	@$(LOCALSTACK_ENV) aws s3 ls s3://$(LOCALSTACK_S3_BUCKET)/$(LOCALSTACK_S3_PREFIX)/
+
+.PHONY: stop-localstack
+stop-localstack:
+	-docker rm -f $(LOCALSTACK_CONTAINER_NAME)
 
 .PHONY: start-e2e-postgres
 start-e2e-postgres: build
