@@ -104,10 +104,10 @@ def _chunked_multipart() -> Iterator[bytes]:
 def _unreadable_body() -> Iterator[bytes]:
     """A body that raises the moment anything reads it.
 
-    Starlette answers 400 when a body fails to parse, so a request that comes back 401 is
-    one whose body was never touched.
+    Starlette answers 400 when a body fails to parse, so a request that comes back with
+    any other status is one whose body the server never touched.
     """
-    raise AssertionError("The request body was read before the bearer token was checked.")
+    raise AssertionError("The request body was read before the guards ran.")
     yield b""  # Unreachable, and only here to make this a generator.
 
 
@@ -127,7 +127,7 @@ def test_create_app__describe() -> None:
         "dimension": DIMENSION,
         "ready": True,
         "capabilities": ["text"],
-        "limits": {"max_batch_size": 1024, "max_request_bytes": 33554432},
+        "limits": {"max_batch_size": 1000, "max_request_bytes": 33554432},
     }
 
 
@@ -278,6 +278,39 @@ def test_create_app__correct_bearer_token() -> None:
     assert response.status_code == 200
 
 
+def test_create_app__lower_case_bearer_scheme() -> None:
+    """RFC 7235 makes the scheme case-insensitive, so this client is a correct one."""
+    client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
+
+    response = client.get("/v1/describe", headers={"Authorization": "bearer secret"})
+
+    assert response.status_code == 200
+
+
+def test_create_app__several_spaces_before_the_token() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
+
+    response = client.get("/v1/describe", headers={"Authorization": "Bearer   secret"})
+
+    assert response.status_code == 200
+
+
+def test_create_app__another_authorization_scheme() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
+
+    response = client.get("/v1/describe", headers={"Authorization": "Basic secret"})
+
+    assert response.status_code == 401
+
+
+def test_create_app__bearer_scheme_without_a_token() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
+
+    response = client.get("/v1/describe", headers={"Authorization": "Bearer"})
+
+    assert response.status_code == 401
+
+
 def test_create_app__no_api_key_leaves_the_server_open() -> None:
     client = TestClient(create_app(embedder=FakeTextEmbedder()))
 
@@ -302,6 +335,28 @@ def test_create_app__embed_bytes_while_not_ready() -> None:
     assert response.status_code == 503
     assert response.headers["Retry-After"] == "5"
     assert response.json()["detail"] == "The model is still loading."
+
+
+def test_create_app__not_ready_request_body_is_never_read() -> None:
+    """Readiness is middleware, not a dependency: reading this body would answer 400."""
+    client = TestClient(create_app(embedder=FakeBytesEmbedder(ready=False)))
+
+    response = client.post(
+        "/v1/embed/images/bytes",
+        content=_unreadable_body(),
+        headers={"Content-Type": f"multipart/form-data; boundary={_BOUNDARY}"},
+    )
+
+    assert response.status_code == 503
+
+
+def test_create_app__token_is_checked_before_readiness() -> None:
+    """A client without a token must not learn whether the model is loaded."""
+    client = TestClient(create_app(embedder=FakeBytesEmbedder(ready=False), api_key="secret"))
+
+    response = client.post("/v1/embed/images/bytes", files=[("files", ("a.jpg", b"\xff\xd8a"))])
+
+    assert response.status_code == 401
 
 
 def test_create_app__model_raises_not_implemented_error() -> None:
@@ -380,6 +435,45 @@ def test_create_app__unauthenticated_request_body_is_never_read() -> None:
     assert response.status_code == 401
 
 
+def test_create_app__documentation_needs_no_token() -> None:
+    """A browser sends no bearer token, so a gate here makes the documentation unusable."""
+    client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
+
+    assert client.get("/openapi.json").status_code == 200
+    assert client.get("/docs").status_code == 200
+
+
+def test_create_app__documentation_names_the_bearer_scheme() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
+
+    schema = client.get("/openapi.json").json()
+
+    assert schema["components"]["securitySchemes"]["HTTPBearer"]["scheme"] == "bearer"
+
+
+def test_create_app__documentation_omits_the_scheme_without_an_api_key() -> None:
+    client = TestClient(create_app(embedder=FakeTextEmbedder()))
+
+    schema = client.get("/openapi.json").json()
+
+    assert "securitySchemes" not in schema.get("components", {})
+
+
+def test_create_app__batch_at_max_batch_size() -> None:
+    """The advertised limit must be one that the multipart parser accepts."""
+    embedder = FakeBytesEmbedder()
+    client = TestClient(create_app(embedder=embedder))
+    item_count = ServerLimits().max_batch_size
+
+    response = client.post(
+        "/v1/embed/images/bytes",
+        files=[("files", (f"{index}.jpg", b"\xff\xd8")) for index in range(item_count)],
+    )
+
+    assert response.status_code == 200
+    assert len(embedder.received) == item_count
+
+
 def test_create_app__malformed_request() -> None:
     client = TestClient(create_app(embedder=FakeTextEmbedder()))
 
@@ -405,6 +499,17 @@ def test_serve__warns_on_a_public_bind_without_a_key(monkeypatch: pytest.MonkeyP
 
     with pytest.warns(UserWarning, match="without an api_key"):
         server.serve(FakeTextEmbedder(), host="0.0.0.0")
+
+
+def test_serve__warns_on_a_public_bind_about_the_key_and_the_certificate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(uvicorn, "run", _do_not_run)
+
+    with pytest.warns(UserWarning, match="without an api_key") as warnings_raised:
+        server.serve(FakeTextEmbedder(), host="0.0.0.0")
+
+    assert "clear text" in str(warnings_raised[0].message)
 
 
 def test_serve__warns_on_a_public_bind_without_tls(monkeypatch: pytest.MonkeyPatch) -> None:

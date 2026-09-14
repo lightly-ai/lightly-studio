@@ -17,10 +17,12 @@ from pathlib import Path
 from typing import Annotated, Any, Callable
 
 import uvicorn
-from fastapi import APIRouter, FastAPI, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Request, UploadFile, status
+from fastapi import params as fastapi_params
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
+from fastapi.security import HTTPBearer
 
 from lightly_studio_serve import protocol, validation
 from lightly_studio_serve.embedder import (
@@ -87,7 +89,7 @@ def serve(  # noqa: PLR0913
             ``Authorization: Bearer <api_key>``. ``None`` leaves the server open.
             That is safe only on a loopback address or inside a network that you
             trust.
-        limits: The limits to report and to apply. The default is 1024 items and
+        limits: The limits to report and to apply. The default is 1000 items and
             32 MiB for each request.
         ssl_certfile: The PEM certificate chain for HTTPS. Give this file for any
             address that is not loopback. You can also end TLS at a proxy in front of
@@ -129,7 +131,7 @@ def create_app(
             must accept calls from more than one thread.
         api_key: The token that a client must send as
             ``Authorization: Bearer <api_key>``.
-        limits: The limits to report and to apply. The default is 1024 items and
+        limits: The limits to report and to apply. The default is 1000 items and
             32 MiB for each request.
 
     Returns:
@@ -148,7 +150,7 @@ def create_app(
     app.add_exception_handler(EmbedderContractError, _handle_contract_error)
     app.add_exception_handler(RequestValidationError, _handle_invalid_request)
     app.add_exception_handler(Exception, _handle_embedder_error)
-    router = APIRouter()
+    router = APIRouter(dependencies=_security_scheme(api_key=api_key))
     _mount_describe(router=router, embedder=embedder, limits=resolved_limits)
     embed_paths = _mount_embed_routes(router=router, embedder=embedder, limits=resolved_limits)
     if not embed_paths:
@@ -160,25 +162,51 @@ def create_app(
     # Innermost first, so the server checks the token before it looks at a body at all.
     app.add_middleware(RequestSizeLimit, max_request_bytes=resolved_limits.max_request_bytes)
     app.add_middleware(Readiness, embedder=embedder, paths=embed_paths)
-    app.add_middleware(BearerAuth, api_key=api_key)
+    app.add_middleware(BearerAuth, api_key=api_key, open_paths=_documentation_paths(app=app))
     app.include_router(router)
     return app
 
 
 def _public_bind_warning(host: str, api_key: str | None, has_tls: bool) -> str | None:
-    """Name the risk of an address that other hosts can reach, or ``None`` if there is none."""
+    """Name every risk of an address that other hosts can reach, or ``None`` if there is none.
+
+    A server that has neither a token nor a certificate has two risks. It must hear about
+    both now, not one of them on the next run.
+    """
+    risks = []
     if api_key is None:
-        return (
+        risks.append(
             f"Serving on {host} without an api_key. Every host that can reach the port can "
             "use the model. Give api_key, or bind a loopback address."
         )
     if not has_tls:
-        return (
-            f"Serving on {host} over plain HTTP. The bearer token goes over the network in "
-            "clear text. Give ssl_certfile, or end TLS at a proxy in front of the server, or "
-            "bind a loopback address."
+        risks.append(
+            f"Serving on {host} over plain HTTP. The requests, and the bearer token if you "
+            "set one, go over the network in clear text. Give ssl_certfile, or end TLS at a "
+            "proxy in front of the server, or bind a loopback address."
         )
-    return None
+    return " ".join(risks) if risks else None
+
+
+def _documentation_paths(app: FastAPI) -> frozenset[str]:
+    """The paths of the interactive documentation, whichever of them the app mounts.
+
+    The middleware runs before the router, so a token would gate these paths too. A
+    browser puts no header on them, and they hold only the protocol, which is public.
+    """
+    paths = {app.openapi_url, app.docs_url, app.redoc_url, app.swagger_ui_oauth2_redirect_url}
+    return frozenset(path for path in paths if path is not None)
+
+
+def _security_scheme(api_key: str | None) -> list[fastapi_params.Depends]:
+    """Describe the bearer token in the schema, so the documentation can send one.
+
+    ``BearerAuth`` already rejects a request without the token. This dependency only
+    writes the scheme into the schema, so ``auto_error`` stays off.
+    """
+    if api_key is None:
+        return []
+    return [Depends(HTTPBearer(auto_error=False))]
 
 
 def _mount_describe(router: APIRouter, embedder: Embedder, limits: ServerLimits) -> None:

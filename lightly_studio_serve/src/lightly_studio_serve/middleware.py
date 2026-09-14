@@ -20,6 +20,9 @@ from lightly_studio_serve.embedder import Embedder
 # Seconds that a client waits before it sends the request to a loading model again.
 _RETRY_AFTER_SECONDS = "5"
 
+# RFC 7235 makes the scheme case-insensitive, so the check lowers the one it reads.
+_BEARER_SCHEME = b"bearer"
+
 
 class BearerAuth:
     """Rejects a request with a missing or wrong bearer token.
@@ -29,17 +32,27 @@ class BearerAuth:
     and the server then answers 500. The protocol needs 401.
     """
 
-    def __init__(self, app: ASGIApp, api_key: str | None) -> None:
-        """Guard ``app``. If ``api_key`` is ``None``, let every request through."""
+    def __init__(self, app: ASGIApp, api_key: str | None, open_paths: Collection[str] = ()) -> None:
+        """Guard ``app``. If ``api_key`` is ``None``, let every request through.
+
+        Args:
+            app: The application to guard.
+            api_key: The token that a client must send, or ``None`` to guard nothing.
+            open_paths: The paths that need no token. The interactive documentation
+                goes here: a browser puts no header on it, and it holds only the
+                protocol, which is public.
+        """
         self.app = app
-        self.expected = None if api_key is None else f"Bearer {api_key}".encode()
+        self.expected = None if api_key is None else api_key.encode()
+        self.open_paths = frozenset(open_paths)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Answer 401 for a wrong token. Otherwise pass the request on."""
-        if self.expected is None or scope["type"] != "http":
+        expected = self.expected
+        if expected is None or scope["type"] != "http" or scope["path"] in self.open_paths:
             await self.app(scope, receive, send)
             return
-        if not secrets.compare_digest(_authorization_header(scope=scope), self.expected):
+        if not _has_valid_token(scope=scope, expected=expected):
             await _unauthorized()(scope, receive, send)
             return
         await self.app(scope, receive, send)
@@ -108,6 +121,27 @@ class Readiness:
             await self.app(scope, receive, send)
             return
         await _unavailable()(scope, receive, send)
+
+
+def _has_valid_token(scope: Scope, expected: bytes) -> bool:
+    """Whether the request carries ``expected`` as its bearer token."""
+    token = _bearer_token(scope=scope)
+    if not token:
+        return False
+    return secrets.compare_digest(token, expected)
+
+
+def _bearer_token(scope: Scope) -> bytes:
+    """Read the token out of the ``Authorization`` header, or ``b""`` if there is none.
+
+    RFC 7235 writes the credentials as a scheme, then space, then the token. The scheme
+    is case-insensitive and more than one space is legal, so a client that follows the
+    standard must not meet a 401.
+    """
+    scheme, _, token = _authorization_header(scope=scope).partition(b" ")
+    if scheme.lower() != _BEARER_SCHEME:
+        return b""
+    return token.strip()
 
 
 def _authorization_header(scope: Scope) -> bytes:
