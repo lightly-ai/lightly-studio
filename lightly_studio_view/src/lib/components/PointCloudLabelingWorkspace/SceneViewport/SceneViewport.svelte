@@ -2,6 +2,7 @@
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
+    import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
     import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
     import type {
@@ -67,6 +68,7 @@
 
     let cursorX = $state(0);
     let cursorY = $state(0);
+    let orbitControlsRef = $state<ThreeOrbitControls | undefined>();
 
     function handleMouseMove(event: MouseEvent) {
         const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -82,7 +84,7 @@
     onmousemove={handleMouseMove}
 >
     <Canvas>
-        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
+        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} bind:controlsRef={orbitControlsRef} />
         <CuboidLayer
             {cuboids}
             {annotationClasses}
@@ -90,6 +92,7 @@
             {selectedAnnotationId}
             {hoveredAnnotationId}
             {activeTool}
+            orbitControls={orbitControlsRef}
             {onselect}
             {onhover}
             {oncuboidupdate}
