@@ -15,7 +15,7 @@ segment. Text is already a payload.
 from __future__ import annotations
 
 import math
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
 import numpy as np
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -78,16 +78,14 @@ class DescribeResponse(BaseModel):
     any string, so a client can name the version that it met.
     """
 
-    # `Optional` and not `str | None`, because pydantic evaluates this annotation at
-    # runtime and Python 3.9, which this package supports, has no PEP 604 union.
-    space_key: Optional[str] = None  # noqa: UP045
+    space_key: str | None = None
     """The identifier of the embedding space that the server produces.
 
     ``None`` while ``ready`` is ``False``. A model that loads in the background reads its
     space from the checkpoint, so it knows the key only once it is loaded.
     """
 
-    dimension: Optional[int] = Field(default=None, gt=0)  # noqa: UP045
+    dimension: int | None = Field(default=None, gt=0)
     """The length of every embedding vector that the server returns.
 
     ``None`` while ``ready`` is ``False``, for the same reason as ``space_key``.
