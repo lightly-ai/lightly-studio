@@ -21,8 +21,9 @@ PATH_SEPARATOR = "/"
 # Glob pattern characters
 GLOB_CHARS = ["*", "?", "[", "]"]
 
-# Cloud storage protocols
-CLOUD_PROTOCOLS = ("s3", "gs", "gcs", "abfs", "abfss", "az")
+# Remote protocols whose listings come back without a scheme, so discovery has to
+# re-attach one before the path leaves this module.
+CLOUD_PROTOCOLS = ("s3", "gs", "gcs", "abfs", "abfss", "az", "hf")
 FILESYSTEM_PROTOCOL_ALIASES = {"abfss": "abfs"}
 
 # Image file extensions
