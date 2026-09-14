@@ -58,7 +58,7 @@ class _Mount:
     limits: ServerLimits
 
 
-def create_app(*, embedder: Embedder, limits: ServerLimits | None = None) -> FastAPI:
+def create_app(embedder: Embedder, limits: ServerLimits | None = None) -> FastAPI:
     """Build the application that serves an embedder.
 
     Use this function to mount the protocol in an application of your own. You can
@@ -99,7 +99,7 @@ def create_app(*, embedder: Embedder, limits: ServerLimits | None = None) -> Fas
     return app
 
 
-def _guard_readiness(*, app: FastAPI, embedder: Embedder, paths: frozenset[str]) -> None:
+def _guard_readiness(app: FastAPI, embedder: Embedder, paths: frozenset[str]) -> None:
     """Answer 503 on an embed path while the model loads, before the body is read.
 
     A dependency of a route runs after FastAPI has parsed the body, so a multipart upload
@@ -120,7 +120,7 @@ def _guard_readiness(*, app: FastAPI, embedder: Embedder, paths: frozenset[str])
         return await call_next(request)
 
 
-def _mount_describe(*, router: APIRouter, embedder: Embedder, limits: ServerLimits) -> None:
+def _mount_describe(router: APIRouter, embedder: Embedder, limits: ServerLimits) -> None:
     @router.get(protocol.DESCRIBE_PATH)
     def describe() -> DescribeResponse:
         # A model that loads in the background cannot name its space yet. This endpoint is
@@ -137,7 +137,7 @@ def _mount_describe(*, router: APIRouter, embedder: Embedder, limits: ServerLimi
 
 
 def _mount_embed_routes(
-    *, router: APIRouter, embedder: Embedder, limits: ServerLimits
+    router: APIRouter, embedder: Embedder, limits: ServerLimits
 ) -> frozenset[str]:
     """Mount one endpoint per served capability, and name the paths that it mounted."""
     mount = _Mount(router=router, embedder=embedder, limits=limits)
@@ -162,7 +162,7 @@ def _mount_embed_routes(
     return frozenset(paths)
 
 
-def _mount_texts(*, mount: _Mount, embed: Callable[[list[str]], EmbeddingResult]) -> None:
+def _mount_texts(mount: _Mount, embed: Callable[[list[str]], EmbeddingResult]) -> None:
     @mount.router.post(protocol.EMBED_TEXTS_PATH)
     def embed_texts(request: EmbedTextsRequest) -> EmbeddingsResponse:
         _check_batch_size(item_count=len(request.texts), limits=mount.limits)
@@ -170,9 +170,7 @@ def _mount_texts(*, mount: _Mount, embed: Callable[[list[str]], EmbeddingResult]
         return _respond(result=result, mount=mount, item_count=len(request.texts))
 
 
-def _mount_bytes(
-    *, mount: _Mount, path: str, embed: Callable[[list[bytes]], EmbeddingResult]
-) -> None:
+def _mount_bytes(mount: _Mount, path: str, embed: Callable[[list[bytes]], EmbeddingResult]) -> None:
     """Mount one of the two bytes endpoints. Only the path is different."""
 
     # A synchronous handler runs the forward pass in a worker thread, not on the loop.
@@ -186,19 +184,19 @@ def _mount_bytes(
         return _respond(result=result, mount=mount, item_count=len(items))
 
 
-def _read_part(*, file: UploadFile) -> bytes:
+def _read_part(file: UploadFile) -> bytes:
     """Read one multipart part and release the copy that starlette wrote for it."""
     data = file.file.read()
     file.file.close()
     return data
 
 
-def _capabilities(*, embedder: Embedder) -> list[Capability]:
+def _capabilities(embedder: Embedder) -> list[Capability]:
     """List the capabilities that the server serves. These are the mounted endpoints."""
     return [capability for base, capability in _SERVED_CAPABILITIES if isinstance(embedder, base)]
 
 
-def _respond(*, result: EmbeddingResult, mount: _Mount, item_count: int) -> EmbeddingsResponse:
+def _respond(result: EmbeddingResult, mount: _Mount, item_count: int) -> EmbeddingsResponse:
     spec = mount.embedder.embedding_space_spec()
     return validation.build_embeddings_response(
         result=result,
@@ -208,7 +206,7 @@ def _respond(*, result: EmbeddingResult, mount: _Mount, item_count: int) -> Embe
     )
 
 
-def _check_batch_size(*, item_count: int, limits: ServerLimits) -> None:
+def _check_batch_size(item_count: int, limits: ServerLimits) -> None:
     if item_count > limits.max_batch_size:
         raise HTTPException(
             status_code=protocol.STATUS_PAYLOAD_TOO_LARGE,
@@ -256,7 +254,7 @@ def _handle_invalid_request(_request: Request, exc: Exception) -> Response:
     )
 
 
-def _without_request_content(*, error: Any) -> dict[str, Any]:
+def _without_request_content(error: Any) -> dict[str, Any]:
     """Keep the field and the rule of one error, and drop what repeats the request.
 
     ``input`` holds the value that failed the rule, and ``ctx`` can hold it again. On a

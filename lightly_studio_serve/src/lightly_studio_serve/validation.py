@@ -96,7 +96,7 @@ def _to_response(result: EmbeddingResult, space_key: str, dimension: int) -> Emb
         ) from error
 
 
-def _name_broken_rules(*, error: ValidationError) -> str:
+def _name_broken_rules(error: ValidationError) -> str:
     """Name the field and the rule of every error in one line.
 
     The message of a pydantic error repeats the value that failed, which here is the

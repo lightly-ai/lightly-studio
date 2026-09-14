@@ -29,12 +29,9 @@ dependencies = [
     # Types `ImagePILEmbedder`. The floor is the version that `lightly-studio` resolves.
     "pillow>=11.0.0",
     "pydantic>=2.0",
-    # Starlette parses the multipart bodies of the bytes endpoints with this package. The
-    # floor is the first release that fixes CVE-2026-53540. Earlier releases have several
-    # parser denial-of-service problems (CVE-2026-40347, CVE-2026-42561 and
-    # CVE-2026-53537 to CVE-2026-53539). Python 3.9 cannot reach that floor, because 0.0.20
-    # is the last release that supports Python 3.9. A host on Python 3.9 therefore keeps
-    # those problems in its multipart parser.
+    # Starlette parses the multipart bodies with this package. The floor holds the fixes
+    # for the parser denial-of-service advisories, the last of them CVE-2026-53540. A host
+    # on Python 3.9 keeps those problems, because 0.0.20 is the last release it can reach.
     # TODO(Iunir, 09/2026): Remove the Python 3.9 pin when `lightly-studio` removes
     # Python 3.9.
     "python-multipart>=0.0.31; python_version >= '3.10'",

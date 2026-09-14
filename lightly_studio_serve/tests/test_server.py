@@ -21,7 +21,7 @@ DIMENSION = 2
 class FakeTextEmbedder(TextEmbedder):
     """Returns one fixed row per text, or a canned result when one is given."""
 
-    def __init__(self, *, result: EmbeddingResult | None = None, ready: bool = True) -> None:
+    def __init__(self, result: EmbeddingResult | None = None, ready: bool = True) -> None:
         self.result = result
         self.is_ready = ready
         self.received: list[str] = []
@@ -41,7 +41,7 @@ class FakeTextEmbedder(TextEmbedder):
 class FakeBytesEmbedder(ImageBytesEmbedder, VideoBytesEmbedder):
     """Embeds images and videos, recording the bytes it was handed."""
 
-    def __init__(self, *, ready: bool = True) -> None:
+    def __init__(self, ready: bool = True) -> None:
         self.is_ready = ready
         self.received: list[bytes] = []
 
@@ -88,7 +88,7 @@ class PathOnlyEmbedder(ImagePathEmbedder):
         return _rows(count=len(paths))
 
 
-def _rows(*, count: int) -> EmbeddingResult:
+def _rows(count: int) -> EmbeddingResult:
     embeddings = np.array([[0.5, -0.5]] * count, dtype=np.float32).reshape(count, DIMENSION)
     return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(count)))
 
