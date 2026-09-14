@@ -1,8 +1,7 @@
 <script lang="ts">
     import { Canvas } from '@threlte/core';
-    import PointCloudScene from '../../PointCloudViewer/PointCloudScene.svelte';
-    import type { ColorMode } from '../../PointCloudViewer/pointCloudUtils';
-    import type { PointBatch } from '../../PointCloudViewer/pointCloudBuffer';
+    import { PointCloudScene } from '$lib/components/PointCloudViewer';
+    import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '../CuboidLayer/CuboidLayer.svelte';
     import type { AnnotationClass, Bounds3, CuboidAnnotation } from '../domain';
 
