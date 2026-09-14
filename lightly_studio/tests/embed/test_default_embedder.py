@@ -35,9 +35,10 @@ def test_resolve_default_embedder__uses_existing_default(db_session: Session) ->
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="existing_space",
+        embedding_dimension=3,
         set_as_default=True,
     )
-    embedder = RandomEmbedder()
+    embedder = RandomEmbedder(dimension=3)
     selector = _RecordingSelector(embedder=embedder)
 
     result = default_embedder.resolve_default_embedder(
@@ -83,6 +84,31 @@ def test_resolve_default_embedder__registers_bootstrap_when_no_default(db_sessio
         )
         == model_id
     )
+
+
+def test_resolve_default_embedder__none_when_dimension_mismatch(
+    db_session: Session, caplog: pytest.LogCaptureFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="random_model",
+        embedding_dimension=8,
+        set_as_default=True,
+    )
+    # The embedder shares the space but produces a different dimension.
+    selector = _RecordingSelector(embedder=RandomEmbedder(dimension=3))
+
+    with caplog.at_level(logging.WARNING):
+        result = default_embedder.resolve_default_embedder(
+            session=db_session,
+            collection_id=collection.collection_id,
+            select_embedder=selector,
+        )
+
+    assert result is None
+    assert "does not match" in caplog.text
 
 
 def test_resolve_default_embedder__none_when_no_embedder(

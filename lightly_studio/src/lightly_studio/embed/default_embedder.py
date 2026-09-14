@@ -61,6 +61,16 @@ def resolve_default_embedder(
         return None
 
     if default_model is not None:
+        spec = embedder.embedding_space_spec()
+        if spec.dimension != default_model.embedding_dimension:
+            logger.warning(
+                "Embedder dimension %d does not match the collection's default model "
+                "dimension %d for space '%s'. Skipping embedding generation.",
+                spec.dimension,
+                default_model.embedding_dimension,
+                default_model.name,
+            )
+            return None
         return embedder, default_model.embedding_model_id
     model_id = _register_default_model(
         session=session, collection_id=collection_id, embedder=embedder
