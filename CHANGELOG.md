@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix sampling, typicality, similarity, few-shot classification and the 2D embedding view crashing on PostgreSQL. New installs on Python 3.10 or later got pgvector 0.5.0, which reads embeddings in a format LightlyStudio does not support yet, so pgvector is now pinned below 0.5.0.
 - Fixed keyboard input in a plugin dialog triggering the keyboard shortcuts behind it.
 
 ### Security
