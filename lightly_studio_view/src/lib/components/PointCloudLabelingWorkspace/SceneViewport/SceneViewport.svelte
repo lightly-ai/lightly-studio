@@ -2,7 +2,8 @@
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
-    import CuboidLayer from '../CuboidLayer/CuboidLayer.svelte';
+    import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
+    import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
     import type {
         AnnotationClass,
         Bounds3,
@@ -60,9 +61,23 @@
         onselect,
         onhover
     }: Props = $props();
+
+    let cursorX = $state(0);
+    let cursorY = $state(0);
+
+    function handleMouseMove(event: MouseEvent) {
+        const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
+        cursorX = event.clientX - rect.left;
+        cursorY = event.clientY - rect.top;
+    }
 </script>
 
-<div class="h-full w-full" data-testid="workspace-scene-viewport">
+<div
+    class="relative h-full w-full"
+    role="application"
+    data-testid="workspace-scene-viewport"
+    onmousemove={handleMouseMove}
+>
     <Canvas>
         <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
         <CuboidLayer
@@ -76,4 +91,5 @@
             {onhover}
         />
     </Canvas>
+    <CuboidTooltipOverlay {cursorX} {cursorY} {hoveredAnnotationId} {cuboids} {annotationClasses} />
 </div>
