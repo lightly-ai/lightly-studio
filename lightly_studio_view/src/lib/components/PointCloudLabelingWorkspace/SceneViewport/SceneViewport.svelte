@@ -44,6 +44,10 @@
         onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
         /** Fires when a drag ends with the updated cuboid geometry. */
         oncuboidupdate?: (cuboid: CuboidAnnotation) => void;
+        /** Fires when the user presses Delete or Backspace with a cuboid selected. */
+        oncuboiddelete?: (annotationId: string) => void;
+        /** Fires when the user duplicates the selected cuboid (Ctrl+D / Cmd+D). */
+        oncuboidcreate?: (cuboid: CuboidAnnotation) => void;
     }
 
     const EMPTY_BATCH: PointBatch = {
@@ -67,7 +71,9 @@
         creation,
         onselect,
         onhover,
-        oncuboidupdate
+        oncuboidupdate,
+        oncuboiddelete,
+        oncuboidcreate
     }: Props = $props();
 
     let cursorX = $state(0);
@@ -107,6 +113,8 @@
             {onselect}
             {onhover}
             {oncuboidupdate}
+            {oncuboiddelete}
+            {oncuboidcreate}
         />
     </Canvas>
     <CuboidTooltipOverlay {cursorX} {cursorY} {hoveredAnnotationId} {cuboids} {annotationClasses} />
