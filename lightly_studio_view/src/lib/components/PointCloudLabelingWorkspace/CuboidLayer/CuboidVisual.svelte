@@ -27,6 +27,13 @@
 
     let { item, baseColor, edgeColor, activeTool, onselect, onhover, onselected }: Props = $props();
 
+    function stopAnd(fn: () => void) {
+        return (event: { stopPropagation(): void }) => {
+            event.stopPropagation();
+            fn();
+        };
+    }
+
     function onClick(): void {
         const selected = selectCuboid({
             annotationId: item.annotation.id,
@@ -45,18 +52,9 @@
 />
 <T.Mesh
     visible={false}
-    onclick={(event) => {
-        event.stopPropagation();
-        onClick();
-    }}
-    onpointerenter={(event) => {
-        event.stopPropagation();
-        onhover?.(item.annotation.id, null);
-    }}
-    onpointerleave={(event) => {
-        event.stopPropagation();
-        onhover?.(null, null);
-    }}
+    onclick={stopAnd(onClick)}
+    onpointerenter={stopAnd(() => onhover?.(item.annotation.id, null))}
+    onpointerleave={stopAnd(() => onhover?.(null, null))}
 >
     <T.BoxGeometry args={[...item.annotation.size]} />
     <T.MeshBasicMaterial />
