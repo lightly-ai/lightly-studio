@@ -4,7 +4,6 @@ import logging
 import uuid
 
 import pytest
-from lightly_studio_serve.embedder import Embedder
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -23,7 +22,9 @@ def test_resolve_default_embedder__uses_existing_default(
 ) -> None:
     collection = create_collection(session=db_session)
     embedder = RandomEmbedder(dimension=3)
-    _use_registry(mocker=mocker, embedder=embedder)
+    registry = EmbedderRegistry()
+    registry.register(embedder=embedder)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     # The default model's name matches the registered embedder's space, so it is selected.
     model = create_embedding_model(
         session=db_session,
@@ -52,7 +53,9 @@ def test_resolve_default_embedder__registers_bootstrap_when_no_default(
 ) -> None:
     collection = create_collection(session=db_session)
     embedder = RandomEmbedder(dimension=3)
-    _use_registry(mocker=mocker, embedder=embedder)
+    registry = EmbedderRegistry()
+    registry.register(embedder=embedder)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
     result = default_embedder.resolve_default_embedder(
         session=db_session,
@@ -81,7 +84,9 @@ def test_resolve_default_embedder__default_dimension_mismatch_raises(
 ) -> None:
     collection = create_collection(session=db_session)
     # The embedder shares the space but produces a different dimension.
-    _use_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
@@ -102,7 +107,9 @@ def test_resolve_default_embedder__bootstrap_dimension_mismatch_raises(
     db_session: Session, mocker: MockerFixture
 ) -> None:
     collection = create_collection(session=db_session)
-    _use_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     # The dataset already has the bootstrap space registered with a different dimension, but the
     # collection has no default: a wrongly registered embedder.
     create_embedding_model(
@@ -126,7 +133,8 @@ def test_resolve_default_embedder__none_when_no_embedder(
 ) -> None:
     collection = create_collection(session=db_session)
     # The registry has no embedder for the requested capability.
-    _use_registry(mocker=mocker)
+    registry = EmbedderRegistry()
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
     with caplog.at_level(logging.WARNING):
         result = default_embedder.resolve_default_embedder(
@@ -142,7 +150,9 @@ def test_resolve_default_embedder__none_when_no_embedder(
 def test_resolve_default_embedder__missing_collection_raises(
     db_session: Session, mocker: MockerFixture
 ) -> None:
-    _use_registry(mocker=mocker, embedder=RandomEmbedder())
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
     with pytest.raises(ValueError, match=r"could not be found"):
         default_embedder.resolve_default_embedder(
@@ -150,11 +160,3 @@ def test_resolve_default_embedder__missing_collection_raises(
             collection_id=uuid.uuid4(),
             select_embedder=EmbedderRegistry.get_image_path_embedder,
         )
-
-
-def _use_registry(mocker: MockerFixture, embedder: Embedder | None = None) -> None:
-    """Patch the process-wide registry with an isolated one, optionally holding an embedder."""
-    registry = EmbedderRegistry()
-    if embedder is not None:
-        registry.register(embedder=embedder)
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
