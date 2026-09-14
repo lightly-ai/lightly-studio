@@ -38,14 +38,13 @@ _RETRY_AFTER_SECONDS = "5"
 
 _MultipartFiles = Annotated[list[UploadFile], File(alias=protocol.FILES_FIELD_NAME)]
 
-# The capability classes that version 1 serves, each with the capability that it names.
 _SERVED_CAPABILITIES = (
     (TextEmbedder, Capability.TEXT),
     (ImageBytesEmbedder, Capability.IMAGE_BYTES),
     (VideoBytesEmbedder, Capability.VIDEO_BYTES),
 )
 
-# The keys of a pydantic error that repeat the request. A 400 names the rule, not the body.
+# The keys of a pydantic error that repeat the request body.
 _ECHOED_REQUEST_KEYS = frozenset({"input", "ctx"})
 
 
@@ -66,9 +65,8 @@ def create_app(embedder: Embedder, limits: ServerLimits | None = None) -> FastAP
 
     Args:
         embedder: The model to serve. Its capability classes set which endpoints
-            exist. A text-only embedder has no image route and no video route. The
-            server runs a request in a worker thread, so the embedder must accept
-            calls from more than one thread at a time.
+            exist. A text-only embedder has no image route and no video route. It
+            must accept calls from more than one thread.
         limits: The limits to report and to apply. The default is 1024 items and
             32 MiB for each request.
 
@@ -78,7 +76,6 @@ def create_app(embedder: Embedder, limits: ServerLimits | None = None) -> FastAP
 
     Raises:
         ValueError: If the embedder implements no capability that version 1 serves.
-            Such a server would answer 404 on every embed path.
     """
     resolved_limits = limits if limits is not None else ServerLimits()
     app = FastAPI(title="LightlyStudio embedding server")
@@ -102,9 +99,9 @@ def create_app(embedder: Embedder, limits: ServerLimits | None = None) -> FastAP
 def _guard_readiness(app: FastAPI, embedder: Embedder, paths: frozenset[str]) -> None:
     """Answer 503 on an embed path while the model loads, before the body is read.
 
-    A dependency of a route runs after FastAPI has parsed the body, so a multipart upload
-    to a loading model would first be spooled to disk. Middleware runs before the parser.
-    ``/v1/describe`` is not among the paths. A client polls it to learn when to retry.
+    A dependency of a route runs after FastAPI has parsed the body, so an upload to a
+    loading model would first be spooled to disk. ``/v1/describe`` stays outside the guard,
+    because a client polls it to learn when to retry.
     """
 
     @app.middleware("http")
@@ -123,8 +120,7 @@ def _guard_readiness(app: FastAPI, embedder: Embedder, paths: frozenset[str]) ->
 def _mount_describe(router: APIRouter, embedder: Embedder, limits: ServerLimits) -> None:
     @router.get(protocol.DESCRIBE_PATH)
     def describe() -> DescribeResponse:
-        # A model that loads in the background cannot name its space yet. This endpoint is
-        # the one that a client polls until it can, so it must answer either way.
+        # A model that loads in the background cannot name its space yet.
         spec = embedder.embedding_space_spec() if embedder.ready else None
         return DescribeResponse(
             protocol_version=protocol.PROTOCOL_VERSION,
@@ -176,8 +172,7 @@ def _mount_bytes(mount: _Mount, path: str, embed: Callable[[list[bytes]], Embedd
     # A synchronous handler runs the forward pass in a worker thread, not on the loop.
     @mount.router.post(path)
     def embed_bytes(files: _MultipartFiles) -> EmbeddingsResponse:
-        # The parser reads the whole body before the handler runs, so a batch over the
-        # ceiling is answered 413 after the upload arrived, not before it.
+        # The parser reads the whole body first, so the 413 arrives after the upload.
         _check_batch_size(item_count=len(files), limits=mount.limits)
         items = [_read_part(file=file) for file in files]
         result = embed(items)
@@ -225,14 +220,10 @@ def _handle_contract_error(_request: Request, exc: Exception) -> Response:
 def _handle_embedder_error(_request: Request, exc: Exception) -> Response:
     """Answer 500 in the shape that every other error of this server has.
 
-    Only an ``EmbedderContractError`` has its own handler. Anything else that a model
-    raises, such as a torch operation that a backend lacks, would otherwise reach the
-    default handler of starlette, which answers plain text. A client reads ``detail`` on
-    a 500, so both cases send it.
-
-    The message names the class alone. The text of an exception from a model can hold the
-    input that it failed on. Starlette raises the exception again after this response, so
-    the traceback still reaches the log of the server.
+    Anything a model raises other than an ``EmbedderContractError`` would reach the
+    default handler of starlette, which answers plain text. The message names the class
+    alone, because the text of an exception can hold the input that it failed on.
+    Starlette raises the exception again, so the traceback still reaches the log.
     """
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -257,8 +248,7 @@ def _handle_invalid_request(_request: Request, exc: Exception) -> Response:
 def _without_request_content(error: Any) -> dict[str, Any]:
     """Keep the field and the rule of one error, and drop what repeats the request.
 
-    ``input`` holds the value that failed the rule, and ``ctx`` can hold it again. On a
-    bytes endpoint that value is the content of a part. The client sent it, so the
-    response does not send it back.
+    ``input`` holds the value that failed, and ``ctx`` can hold it again. On a bytes
+    endpoint that value is the content of a part.
     """
     return {key: value for key, value in error.items() if key not in _ECHOED_REQUEST_KEYS}

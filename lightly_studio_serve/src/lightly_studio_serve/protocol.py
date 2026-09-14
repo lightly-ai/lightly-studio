@@ -35,8 +35,7 @@ EMBED_IMAGES_BYTES_PATH = f"{BASE_PATH}/embed/images/bytes"
 EMBED_VIDEOS_BYTES_PATH = f"{BASE_PATH}/embed/videos/bytes"
 
 # The multipart field that the bytes endpoints read. One part per item, in input order.
-# Every part carries a `filename` in its `Content-Disposition` header. A multipart parser
-# reads a part without a `filename` as a text field, and the server then answers 400.
+# Every part carries a `filename`. A parser reads a part without one as a text field.
 FILES_FIELD_NAME = "files"
 
 # A number, because starlette renamed its constant for this status.
@@ -118,11 +117,7 @@ class DescribeResponse(BaseModel):
 
     @model_validator(mode="after")
     def _check_spec_against_readiness(self) -> DescribeResponse:  # noqa: N804
-        """Check that a loaded model names its embedding space.
-
-        A client reads ``space_key`` and ``dimension`` to find the vectors that it can
-        compare. Only a model that is still loading may leave them open.
-        """
+        """Check that a loaded model names its embedding space."""
         if self.ready and (self.space_key is None or self.dimension is None):
             raise ValueError(
                 "A server that reports ready must name its space_key and its dimension."

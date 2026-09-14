@@ -99,9 +99,8 @@ def _to_response(result: EmbeddingResult, space_key: str, dimension: int) -> Emb
 def _name_broken_rules(error: ValidationError) -> str:
     """Name the field and the rule of every error in one line.
 
-    The message of a pydantic error repeats the value that failed, which here is the
-    result of the embedder. The server sends this text to LightlyStudio, and that result
-    must not go with it, so the line holds the location and the rule alone.
+    The message of a pydantic error repeats the value that failed, here the result of the
+    embedder. That result must not reach LightlyStudio.
     """
     rules = []
     for detail in error.errors():
