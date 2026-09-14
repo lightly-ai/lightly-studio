@@ -79,7 +79,7 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
     resolved = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
-        select_embedder=EmbedderRegistry.get_image_path_embedder,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
     )
     if resolved is None:
         return
