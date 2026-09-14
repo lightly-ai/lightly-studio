@@ -120,12 +120,11 @@ def _guard_readiness(app: FastAPI, embedder: Embedder, paths: frozenset[str]) ->
 def _mount_describe(router: APIRouter, embedder: Embedder, limits: ServerLimits) -> None:
     @router.get(protocol.DESCRIBE_PATH)
     def describe() -> DescribeResponse:
-        # A model that loads in the background cannot name its space yet.
-        spec = embedder.embedding_space_spec() if embedder.ready else None
+        spec = embedder.embedding_space_spec()
         return DescribeResponse(
             protocol_version=protocol.PROTOCOL_VERSION,
-            space_key=spec.space_key if spec is not None else None,
-            dimension=spec.dimension if spec is not None else None,
+            space_key=spec.space_key,
+            dimension=spec.dimension,
             ready=embedder.ready,
             capabilities=_capabilities(embedder=embedder),
             limits=limits,

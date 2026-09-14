@@ -68,16 +68,6 @@ class BrokenTextEmbedder(FakeTextEmbedder):
         raise NotImplementedError("could not run 'aten::foo' on the 'MPS' backend")
 
 
-class LoadingEmbedder(FakeTextEmbedder):
-    """A model that reads its embedding space from a checkpoint it has not read yet."""
-
-    def __init__(self) -> None:
-        super().__init__(ready=False)
-
-    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        raise RuntimeError("The checkpoint is not read yet.")
-
-
 class PathOnlyEmbedder(ImagePathEmbedder):
     """A model that only reads paths. Version 1 carries no path over the wire."""
 
@@ -126,15 +116,15 @@ def test_create_app__describe_not_ready() -> None:
 
 
 def test_create_app__describe_while_the_model_loads() -> None:
-    """The endpoint that a client polls must answer before the space is known."""
-    client = TestClient(create_app(embedder=LoadingEmbedder()))
+    """A client polls this endpoint, so it names the space while the weights load."""
+    client = TestClient(create_app(embedder=FakeTextEmbedder(ready=False)))
 
     response = client.get("/v1/describe")
 
     assert response.status_code == 200
     assert response.json()["ready"] is False
-    assert response.json()["space_key"] is None
-    assert response.json()["dimension"] is None
+    assert response.json()["space_key"] == SPACE_KEY
+    assert response.json()["dimension"] == DIMENSION
 
 
 def test_create_app__embedder_without_a_served_capability() -> None:

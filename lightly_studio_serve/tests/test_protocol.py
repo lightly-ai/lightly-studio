@@ -47,20 +47,6 @@ def test_describe_response__rejects_a_dimension_of_zero() -> None:
         )
 
 
-def test_describe_response__no_space_while_the_model_loads() -> None:
-    """A model that loads in the background reads its space from the checkpoint."""
-    response = DescribeResponse(ready=False, capabilities=[Capability.TEXT], limits=ServerLimits())
-
-    assert response.space_key is None
-    assert response.dimension is None
-
-
-def test_describe_response__rejects_a_ready_server_without_a_space() -> None:
-    """A client compares vectors by these two fields. A loaded model knows both."""
-    with pytest.raises(ValidationError, match="must name its space_key"):
-        DescribeResponse(ready=True, capabilities=[Capability.TEXT], limits=ServerLimits())
-
-
 def test_describe_response__keeps_a_numpy_integer_dimension() -> None:
     """An embedder reads its dimension from a model. A model returns an ``np.int64``."""
     response = DescribeResponse(

@@ -77,18 +77,11 @@ class DescribeResponse(BaseModel):
     any string, so a client can name the version that it met.
     """
 
-    space_key: str | None = None
-    """The identifier of the embedding space that the server produces.
+    space_key: str
+    """The identifier of the embedding space that the server produces."""
 
-    ``None`` while ``ready`` is ``False``. A model that loads in the background reads its
-    space from the checkpoint, so it knows the key only once it is loaded.
-    """
-
-    dimension: int | None = Field(default=None, gt=0)
-    """The length of every embedding vector that the server returns.
-
-    ``None`` while ``ready`` is ``False``, for the same reason as ``space_key``.
-    """
+    dimension: int = Field(gt=0)
+    """The length of every embedding vector that the server returns."""
 
     # TODO(Iunir, 09/2026): A ServerStatus enum may replace this flag. A model that
     # failed to load is not the same as a model that is still loading.
@@ -114,15 +107,6 @@ class DescribeResponse(BaseModel):
                 f"{unservable} cannot be served over HTTP; only {sorted(WIRE_CAPABILITIES)} can."
             )
         return value
-
-    @model_validator(mode="after")
-    def _check_spec_against_readiness(self) -> DescribeResponse:  # noqa: N804
-        """Check that a loaded model names its embedding space."""
-        if self.ready and (self.space_key is None or self.dimension is None):
-            raise ValueError(
-                "A server that reports ready must name its space_key and its dimension."
-            )
-        return self
 
 
 class EmbedTextsRequest(BaseModel):

@@ -68,6 +68,11 @@ class Embedder(ABC):
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space this embedder produces.
 
+        The method must answer as soon as the object exists, also while ``ready`` is
+        ``False``. ``/v1/describe`` reports the space to a client that waits for the
+        model. The identity of a space comes from the architecture, so a model knows it
+        before the weights arrive.
+
         Returns:
             Metadata identifying the embedding space, stored so the same space
             can be recognized across LightlyStudio runs.
@@ -78,8 +83,9 @@ class Embedder(ABC):
         """Whether the model is loaded and can answer requests.
 
         The default suits a model that loads when the object exists. Override the
-        property when the model loads in the background. While the value is ``False``,
-        ``/v1/describe`` reports ``ready: false``. The embed endpoints then answer 503.
+        property when the weights load in the background. While the value is ``False``,
+        ``/v1/describe`` reports ``ready: false`` and the embed endpoints answer 503.
+        The property covers the weights only. ``embedding_space_spec`` answers either way.
         """
         return True
 
