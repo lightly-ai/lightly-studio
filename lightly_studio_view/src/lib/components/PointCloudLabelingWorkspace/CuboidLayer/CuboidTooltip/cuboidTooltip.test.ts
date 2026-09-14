@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain';
+import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 import { createCuboidTooltip } from './cuboidTooltip';
 
 describe('createCuboidTooltip', () => {

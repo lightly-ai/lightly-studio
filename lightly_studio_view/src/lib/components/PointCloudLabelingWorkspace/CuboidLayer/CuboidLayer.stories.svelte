@@ -2,10 +2,8 @@
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { Canvas, T } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
-    import {
-        createAnnotationFixture,
-        createCuboidAnnotation
-    } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
+    import { createCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidLayer from './CuboidLayer.svelte';
 
     const classes = [
