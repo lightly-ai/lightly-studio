@@ -3271,7 +3271,7 @@ requires-dist = [
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
     { name = "pandas", specifier = ">=2.2.3,<3.0" },
-    { name = "pgvector", specifier = ">=0.4.0" },
+    { name = "pgvector", specifier = ">=0.4.0,<0.5.0" },
     { name = "posthog", specifier = ">=6.9,<7.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.4" },
     { name = "pyarrow", specifier = ">=17.0.0" },
