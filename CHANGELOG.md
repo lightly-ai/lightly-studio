@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix `hf://` directory ingest reporting every file as missing.
+
 ### Security
 
 ## \[1.1.1\] - 2026-09-14

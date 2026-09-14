@@ -290,3 +290,24 @@ def test_iter_files_from_path__supports_azure_blob_protocols(
 
     assert result == [f"{filesystem_protocol}://container/images/image.jpg"]
     get_filesystem.assert_called_once_with(filesystem_protocol)
+
+
+def test_iter_files_from_path__supports_hugging_face_protocol(mocker: MockerFixture) -> None:
+    # HfFileSystem lists without a scheme and its find() succeeds, so a protocol missing
+    # from CLOUD_PROTOCOLS yields the bare path, which downstream reads as a relative
+    # local one and probes against the working directory.
+    directory = "datasets/org/repo/images"
+    image = f"{directory}/image.jpg"
+
+    filesystem = mocker.MagicMock()
+    filesystem.protocol = "hf"
+    filesystem.exists.return_value = True
+    filesystem.isdir.side_effect = lambda p: p.rstrip("/").endswith("images")
+    filesystem.isfile.side_effect = lambda p: p.endswith(".jpg")
+    filesystem.find.return_value = [image]
+    filesystem.walk.return_value = [(directory, [], ["image.jpg"])]
+    mocker.patch.object(fsspec, "filesystem", return_value=filesystem)
+
+    result = list(fsspec_lister.iter_files_from_path(f"hf://{directory}"))
+
+    assert result == [f"hf://{image}"]
