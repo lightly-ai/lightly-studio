@@ -194,6 +194,55 @@ def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
     assert len(embeddings) == 0
 
 
+def test_get_by_sample_ids__returns_float32_arrays(db_session: Session) -> None:
+    """Both read paths must return numpy arrays, whatever pgvector's loader returns.
+
+    Run the suite with ``--postgres`` to cover the raw binary cursor.
+    """
+    collection_id = create_collection(session=db_session).collection_id
+    samples = [
+        create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/path/{i}.png"
+        )
+        for i in range(3)
+    ]
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id
+    ).embedding_model_id
+    sample_embedding_resolver.create_many(
+        session=db_session,
+        sample_embeddings=[
+            SampleEmbeddingCreate(
+                sample_id=sample.sample_id,
+                embedding_model_id=embedding_model_id,
+                embedding=np.array([float(i), float(i + 1), float(i + 2)], dtype=np.float32),
+            )
+            for i, sample in enumerate(samples)
+        ],
+    )
+
+    by_sample_ids = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session,
+        sample_ids=[sample.sample_id for sample in samples],
+        embedding_model_id=embedding_model_id,
+    )
+    by_collection_id = sample_embedding_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+
+    assert len(by_sample_ids) == 3
+    assert len(by_collection_id) == 3
+    for row in [*by_sample_ids, *by_collection_id]:
+        assert isinstance(row.embedding, np.ndarray)
+        assert row.embedding.dtype == np.float32
+        assert row.embedding.ndim == 1
+
+    # Sampling stacks the embeddings into one array.
+    assert np.array([row.embedding for row in by_sample_ids], dtype=np.float32).shape == (3, 3)
+
+
 def test_get_all_by_collection_id_with_filter(db_session: Session) -> None:
     # Create a collection with 3 samples and their embeddings.
     collection_id = create_collection(session=db_session).collection_id
