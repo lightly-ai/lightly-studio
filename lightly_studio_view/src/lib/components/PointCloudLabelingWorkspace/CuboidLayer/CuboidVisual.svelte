@@ -45,9 +45,18 @@
 />
 <T.Mesh
     visible={false}
-    onclick={(event) => { event.stopPropagation(); onClick(); }}
-    onpointerenter={(event) => { event.stopPropagation(); onhover?.(item.annotation.id, null); }}
-    onpointerleave={(event) => { event.stopPropagation(); onhover?.(null, null); }}
+    onclick={(event) => {
+        event.stopPropagation();
+        onClick();
+    }}
+    onpointerenter={(event) => {
+        event.stopPropagation();
+        onhover?.(item.annotation.id, null);
+    }}
+    onpointerleave={(event) => {
+        event.stopPropagation();
+        onhover?.(null, null);
+    }}
 >
     <T.BoxGeometry args={[...item.annotation.size]} />
     <T.MeshBasicMaterial />

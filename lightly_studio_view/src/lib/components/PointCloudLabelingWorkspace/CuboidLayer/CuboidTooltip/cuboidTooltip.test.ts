@@ -18,10 +18,24 @@ describe('createCuboidTooltip', () => {
             annotationClassName: 'Vehicle',
             location: 'X: 10.00  Y: -2.00  Z: 1.23',
             dimensions: '4.50 × 1.80 × 1.50 m',
-            rotation: '45.0°',
+            rotation: 'rx: 0.0°  ry: 0.0°  rz: 45.0°',
             annotationSourceId: 'ground-truth',
             trackId: 'track-0'
         });
+    });
+
+    it('includes roll and pitch when the quaternion has non-zero roll', () => {
+        // 90° rotation around the x-axis: quaternion [sin(45°), 0, 0, cos(45°)]
+        const sqrt2over2 = Math.SQRT2 / 2;
+        const tooltip = createCuboidTooltip({
+            annotation: {
+                ...createAnnotationFixture(),
+                rotation: [sqrt2over2, 0, 0, sqrt2over2]
+            },
+            annotationClassName: 'Vehicle'
+        });
+
+        expect(tooltip.rotation).toBe('rx: 90.0°  ry: 0.0°  rz: 0.0°');
     });
 
     it('omits the track ID for an untracked annotation', () => {
