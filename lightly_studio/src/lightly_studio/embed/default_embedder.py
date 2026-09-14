@@ -34,8 +34,8 @@ def resolve_default_embedder(
     Follows the pattern every ``embed_*`` function shares. ``select_embedder`` picks the
     capability the caller needs (image, text, ...) from the registry:
 
-    - The collection has a default model: its embedding space selects the embedder.
-    - The collection has no default yet: the registry's bootstrap embedder is used and
+    - The collection has a default model in the DB: its embedding space selects the embedder.
+    - The collection has no default in the DB yet: the registry's bootstrap embedder is used and
       registered as the collection's default.
 
     Logs a warning and returns None when the registry has no matching embedder, so the
