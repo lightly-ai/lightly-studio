@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix sampling, typicality, similarity, few-shot classification and the 2D embedding view crashing on PostgreSQL. New installs on Python 3.10 or later get pgvector 0.5.0, which returns embeddings in a wrong format.
+
 ### Security
 
 ## \[1.1.0\] - 2026-09-07

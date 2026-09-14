@@ -179,9 +179,10 @@ def get_pgvector_connection(session: Session) -> Any:
     """Return the session's psycopg connection with pgvector registered.
 
     Registers pgvector once per connection (cached in ``connection.info``) so ``vector``
-    columns are decoded from their binary wire format via ``np.frombuffer`` instead of
-    parsed from text. PostgreSQL-only; the returned object is the raw DBAPI connection,
-    intended for reads that bypass SQLAlchemy's result handling.
+    columns are decoded from their binary wire format instead of parsed from text.
+    PostgreSQL-only; the returned object is the raw DBAPI connection, intended for reads
+    that bypass SQLAlchemy's result handling. The decoded type depends on the pgvector
+    version, so callers must normalize it.
     """
     connection = session.connection().connection
     driver_connection = connection.driver_connection
