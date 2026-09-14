@@ -20,6 +20,7 @@ import tempfile
 from pathlib import Path
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlmodel import Session, col, delete, select
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -328,10 +329,13 @@ def _delete_groups(session: Session, dataset_id: UUID) -> None:
 
 
 def _delete_sensor_calibrations(session: Session, dataset_id: UUID) -> None:
-    """Delete sensor calibration rows for the dataset's recordings."""
+    """Delete sensor calibration rows tied to the dataset via recording or collection."""
     session.exec(
         delete(SensorCalibrationTable).where(
-            col(SensorCalibrationTable.recording_id).in_(_recording_ids_subquery(dataset_id))
+            or_(
+                col(SensorCalibrationTable.recording_id).in_(_recording_ids_subquery(dataset_id)),
+                col(SensorCalibrationTable.collection_id).in_(_collection_ids_subquery(dataset_id)),
+            )
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
