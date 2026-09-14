@@ -43,7 +43,8 @@ def resolve_default_embedder(
 
     Args:
         session: Database session for resolver operations.
-        collection_id: The collection whose default embedding model is used.
+        collection_id: The collection whose default embedding model is used. Expected to
+            exist; only validated when a bootstrap model is registered.
         select_embedder: Given the registry and a space key (None for the registry default),
             returns the embedder for the needed capability, or None if none matches.
 
