@@ -101,6 +101,8 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
         embeddings=result.embeddings,
     )
 
+    _register_legacy_default_model(session=session, collection_id=collection_id, model_id=model_id)
+
 
 def embed_annotation_collection(session: Session, annotation_collection_id: UUID) -> None:
     """Embed the crops of an annotation collection and store the result.
@@ -204,3 +206,31 @@ def collection_has_default_embedder(session: Session, collection_id: UUID) -> bo
     manager = EmbeddingManagerProvider.get_embedding_manager()
     model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
     return model_id is not None
+
+
+# TODO(Michal, 09/2026): Remove once text and image search read embedders from the
+# EmbedderRegistry instead of the EmbeddingManager. The query functions
+# (embed_text_for_collection, embed_image_for_collection) still resolve their generator
+# from the manager's in-memory maps, which the registry path does not populate.
+def _register_legacy_default_model(session: Session, collection_id: UUID, model_id: UUID) -> None:
+    """Sync the collection's default model into the legacy EmbeddingManager.
+
+    Loads the manager's own generator for the collection and warns if it resolves to a
+    different model than the registry stored, which means search would use a stale model.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The collection whose default model is synced.
+        model_id: The model id the registry stored embeddings under.
+    """
+    manager = EmbeddingManagerProvider.get_embedding_manager()
+    legacy_model_id = manager.load_or_get_default_model(
+        session=session, collection_id=collection_id
+    )
+    if legacy_model_id != model_id:
+        logger.warning(
+            "The legacy EmbeddingManager resolved a different default model (%s) than the "
+            "registry stored (%s). Search can use a stale model.",
+            legacy_model_id,
+            model_id,
+        )

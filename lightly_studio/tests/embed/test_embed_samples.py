@@ -163,11 +163,19 @@ def test_embed_image_samples(
     assert count == len(sample_ids)
 
 
-@pytest.mark.usefixtures("patched_registry")
+@pytest.mark.usefixtures("patched_registry", "patched_manager")
 def test_embed_image_samples__no_default_registers_registry_default(
     db_session: Session,
+    mocker: MockerFixture,
 ) -> None:
     """With no default model, the registry's image embedder is used and set as default."""
+    # The manager's generator shares the registry embedder's space, so the legacy bridge
+    # syncs the same default instead of registering a different one.
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
     collection = create_collection(session=db_session)
     samples = create_images(
         db_session=db_session,
@@ -218,6 +226,40 @@ def test_embed_image_samples__no_registered_embedder_skips(
 
     assert "No embedding model loaded" in caplog.text
     assert _stored_embeddings(session=db_session) == []
+
+
+@pytest.mark.usefixtures("patched_registry", "patched_manager")
+def test_embed_image_samples__syncs_legacy_embedding_manager(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """After the registry path stores embeddings, the manager can serve a text query.
+
+    The registry path does not populate the manager's in-memory maps, so the legacy
+    bridge re-registers the default. This mirrors the e2e flow of indexing then searching.
+    """
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
+    )
+    sample_ids = [sample.sample_id for sample in samples]
+
+    embed_samples.embed_image_samples(
+        session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
+    )
+
+    # The manager now serves search without a separate default registration.
+    embedding = embed_samples.embed_text_for_collection(
+        collection_id=collection.collection_id, text="a red car"
+    )
+    assert len(embedding) == 3
 
 
 def test_embed_annotation_collection(
