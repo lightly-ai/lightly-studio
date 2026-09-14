@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed keyboard input in a plugin dialog triggering the keyboard shortcuts behind it.
+
 ### Security
 
 ## \[1.1.0\] - 2026-09-07
