@@ -37,7 +37,7 @@ def test_resolve_default_embedder__uses_existing_default(
     result = default_embedder.resolve_default_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        select_embedder=EmbedderRegistry.get_image_path_embedder,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
     )
 
     assert result == (embedder, model.embedding_model_id)
@@ -60,7 +60,7 @@ def test_resolve_default_embedder__registers_bootstrap_when_no_default(
     result = default_embedder.resolve_default_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        select_embedder=EmbedderRegistry.get_image_path_embedder,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
     )
 
     assert result is not None
@@ -99,7 +99,7 @@ def test_resolve_default_embedder__default_dimension_mismatch_raises(
         default_embedder.resolve_default_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            select_embedder=EmbedderRegistry.get_image_path_embedder,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
         )
 
 
@@ -124,7 +124,7 @@ def test_resolve_default_embedder__bootstrap_dimension_mismatch_raises(
         default_embedder.resolve_default_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            select_embedder=EmbedderRegistry.get_image_path_embedder,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
         )
 
 
@@ -140,7 +140,7 @@ def test_resolve_default_embedder__none_when_no_embedder(
         result = default_embedder.resolve_default_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            select_embedder=EmbedderRegistry.get_text_embedder,
+            get_embedder_fn=EmbedderRegistry.get_text_embedder,
         )
 
     assert result is None
@@ -158,5 +158,5 @@ def test_resolve_default_embedder__missing_collection_raises(
         default_embedder.resolve_default_embedder(
             session=db_session,
             collection_id=uuid.uuid4(),
-            select_embedder=EmbedderRegistry.get_image_path_embedder,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
         )

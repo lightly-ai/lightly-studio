@@ -27,11 +27,11 @@ _EmbedderT = TypeVar("_EmbedderT", bound=Embedder)
 def resolve_default_embedder(
     session: Session,
     collection_id: UUID,
-    select_embedder: Callable[[EmbedderRegistry, str | None], _EmbedderT | None],
+    get_embedder_fn: Callable[[EmbedderRegistry, str | None], _EmbedderT | None],
 ) -> tuple[_EmbedderT, UUID] | None:
     """Resolve the embedder and model id an embed function should use, or None to skip.
 
-    Follows the pattern every ``embed_*`` function shares. ``select_embedder`` picks the
+    Follows the pattern every ``embed_*`` function shares. ``get_embedder_fn`` picks the
     capability the caller needs (image, text, ...) from the registry:
 
     - The collection has a default model in the DB: its embedding space selects the embedder.
@@ -45,7 +45,7 @@ def resolve_default_embedder(
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used. Expected to
             exist; only validated when a bootstrap model is registered.
-        select_embedder: Given the registry and a space key (None for the registry default),
+        get_embedder_fn: Given the registry and a space key (None for the registry default),
             returns the embedder for the needed capability, or None if none matches.
 
     Returns:
@@ -60,7 +60,7 @@ def resolve_default_embedder(
     )
     space_key = None if default_model is None else default_model.name
 
-    embedder = select_embedder(embedder_registry.get_registry(), space_key)
+    embedder = get_embedder_fn(embedder_registry.get_registry(), space_key)
     if embedder is None:
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return None
