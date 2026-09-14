@@ -16,6 +16,8 @@ from lightly_studio.api.middleware import RequestTimingMiddleware
 from lightly_studio.api.routes import (
     healthz,
     images,
+    mcap_camera_frames,
+    mcap_frames,
     mcap_media,
     video_frames_media,
     video_media,
@@ -39,8 +41,8 @@ from lightly_studio.api.routes.api import (
     image,
     image_embedding,
     metadata,
-    recording,
     operator,
+    recording,
     sample,
     sampling,
     settings,
@@ -171,6 +173,8 @@ app.include_router(images.app_router, prefix="/images")
 app.include_router(video_frames_media.frames_router)
 app.include_router(video_media.app_router)
 app.include_router(mcap_media.app_router)
+app.include_router(mcap_frames.app_router)
+app.include_router(mcap_camera_frames.app_router)
 
 # health status check
 app.include_router(healthz.health_router)
