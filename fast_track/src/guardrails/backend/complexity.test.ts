@@ -82,6 +82,31 @@ describe('backendComplexityGuardrail', () => {
         );
     });
 
+    it('lints each member from its own directory, so its ruff config applies', async () => {
+        const cwds: string[] = [];
+        vi.mocked(execFile).mockImplementation((_cmd, _args, opts, cb) => {
+            cwds.push(String((opts as { cwd: string }).cwd));
+            (cb as unknown as PromisifyCb)(null, { stdout: '[]' });
+            return undefined as unknown as ChildProcess;
+        });
+        const result = await backendComplexityGuardrail.run(
+            makeCtx([
+                backendFile,
+                {
+                    path: 'lightly_studio_serve/src/lightly_studio_serve/server.py',
+                    status: 'modified',
+                    additions: 5,
+                    deletions: 0
+                }
+            ])
+        );
+        expect(result.status).toBe('pass');
+        expect(cwds).toEqual([
+            resolve(REPO_ROOT, 'lightly_studio/'),
+            resolve(REPO_ROOT, 'lightly_studio_serve/')
+        ]);
+    });
+
     it('passes for a deleted backend file (does not exist on disk)', async () => {
         vi.mocked(existsSync).mockImplementation((p) => !String(p).includes('model.py'));
         const result = await backendComplexityGuardrail.run(makeCtx());
