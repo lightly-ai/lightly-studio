@@ -57,6 +57,11 @@ class Embedder(ABC):
 
     Subclasses add one abstract method per input they support. A concrete model
     implements the subclasses for the capabilities it provides.
+
+    An embedder must accept calls from more than one thread at the same time.
+    ``lightly_studio_serve.server`` runs a request in a worker thread, so two batches can
+    reach the same object at once. Hold a lock in the methods when the model cannot, as a
+    torch module that shares buffers between its forward passes cannot.
     """
 
     __slots__ = ()

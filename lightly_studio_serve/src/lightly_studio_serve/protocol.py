@@ -15,7 +15,7 @@ segment. Text is already a payload.
 from __future__ import annotations
 
 import math
-from typing import Annotated, Any
+from typing import Annotated, Any, Optional
 
 import numpy as np
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -35,6 +35,8 @@ EMBED_IMAGES_BYTES_PATH = f"{BASE_PATH}/embed/images/bytes"
 EMBED_VIDEOS_BYTES_PATH = f"{BASE_PATH}/embed/videos/bytes"
 
 # The multipart field that the bytes endpoints read. One part per item, in input order.
+# Every part carries a `filename` in its `Content-Disposition` header. A multipart parser
+# reads a part without a `filename` as a text field, and the server then answers 400.
 FILES_FIELD_NAME = "files"
 
 # A number, because starlette renamed its constant for this status.
@@ -76,11 +78,20 @@ class DescribeResponse(BaseModel):
     any string, so a client can name the version that it met.
     """
 
-    space_key: str
-    """The identifier of the embedding space that the server produces."""
+    # `Optional` and not `str | None`, because pydantic evaluates this annotation at
+    # runtime and Python 3.9, which this package supports, has no PEP 604 union.
+    space_key: Optional[str] = None  # noqa: UP045
+    """The identifier of the embedding space that the server produces.
 
-    dimension: int = Field(gt=0)
-    """The length of every embedding vector that the server returns."""
+    ``None`` while ``ready`` is ``False``. A model that loads in the background reads its
+    space from the checkpoint, so it knows the key only once it is loaded.
+    """
+
+    dimension: Optional[int] = Field(default=None, gt=0)  # noqa: UP045
+    """The length of every embedding vector that the server returns.
+
+    ``None`` while ``ready`` is ``False``, for the same reason as ``space_key``.
+    """
 
     # TODO(Iunir, 09/2026): A ServerStatus enum may replace this flag. A model that
     # failed to load is not the same as a model that is still loading.
@@ -106,6 +117,19 @@ class DescribeResponse(BaseModel):
                 f"{unservable} cannot be served over HTTP; only {sorted(WIRE_CAPABILITIES)} can."
             )
         return value
+
+    @model_validator(mode="after")
+    def _check_spec_against_readiness(self) -> DescribeResponse:  # noqa: N804
+        """Check that a loaded model names its embedding space.
+
+        A client reads ``space_key`` and ``dimension`` to find the vectors that it can
+        compare. Only a model that is still loading may leave them open.
+        """
+        if self.ready and (self.space_key is None or self.dimension is None):
+            raise ValueError(
+                "A server that reports ready must name its space_key and its dimension."
+            )
+        return self
 
 
 class EmbedTextsRequest(BaseModel):
