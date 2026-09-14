@@ -136,3 +136,15 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=HTTP_STATUS_BAD_REQUEST,
             content={"error": str(_exc) or "Invalid query expression."},
         )
+
+    @app.exception_handler(Exception)
+    async def _unhandled_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
+        """Handle all unhandled exceptions."""
+        _log_error_details(
+            exc=_exc,
+            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+        )
+        return JSONResponse(
+            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+            content={"error": "Internal server error."},
+        )
