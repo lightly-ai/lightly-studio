@@ -19,16 +19,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from prepare_release import (
-    changelog,
-    dependency,
-    lock,
-    packages,
-    pr_body,
-    release_notes,
-    version,
-    wheel,
-)
+from prepare_release import changelog, lock, packages, pr_body, release_notes, version, wheel
 from prepare_release.errors import PrepareReleaseError
 
 PACKAGE_CONFIG = "package-config"
@@ -41,7 +32,6 @@ READ_VERSION = "read-version"
 RENDER_RELEASE_NOTES = "render-release-notes"
 CHECK_WHEEL_DEPENDENCIES = "check-wheel-dependencies"
 CHECK_DEPENDENCY_RANGE = "check-dependency-range"
-CHECK_DEPENDENCY_PUBLISHED = "check-dependency-published"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -116,13 +106,6 @@ def main(argv: list[str] | None = None) -> int:
     dependency_range.add_argument("--package", required=True)
     dependency_range.add_argument("--root", type=Path, default=Path())
 
-    dependency_published = subparsers.add_parser(
-        CHECK_DEPENDENCY_PUBLISHED,
-        help="fail if a workspace dependency's floor names a version not on PyPI",
-    )
-    dependency_published.add_argument("--package", required=True)
-    dependency_published.add_argument("--root", type=Path, default=Path())
-
     args = parser.parse_args(argv)
 
     try:
@@ -144,7 +127,6 @@ def _dispatch(args: argparse.Namespace) -> int:
         RENDER_RELEASE_NOTES: _cmd_render_release_notes,
         CHECK_WHEEL_DEPENDENCIES: _cmd_check_wheel_dependencies,
         CHECK_DEPENDENCY_RANGE: _cmd_check_dependency_range,
-        CHECK_DEPENDENCY_PUBLISHED: _cmd_check_dependency_published,
     }
     handlers[args.command](args)
     return 0
@@ -212,6 +194,10 @@ def _cmd_check_wheel_dependencies(args: argparse.Namespace) -> None:
 
 
 def _cmd_check_dependency_range(args: argparse.Namespace) -> None:
+    # Imported here, not at the top: this is the only subcommand that needs
+    # `packaging`, and the rest must stay runnable on a bare `python3`.
+    from prepare_release import dependency  # noqa: PLC0415
+
     package = packages.get(args.package)
     pyproject_text = (args.root / package.pyproject).read_text()
     for name in package.workspace_dependencies:
@@ -224,18 +210,6 @@ def _cmd_check_dependency_range(args: argparse.Namespace) -> None:
             ),
         )
         print(f"{package.distribution}'s requirement on {name} admits the version in the tree.")
-
-
-def _cmd_check_dependency_published(args: argparse.Namespace) -> None:
-    package = packages.get(args.package)
-    pyproject_text = (args.root / package.pyproject).read_text()
-    for name in package.workspace_dependencies:
-        dependency.assert_floor_published(
-            pyproject_text=pyproject_text,
-            dependency=name,
-            published_versions=dependency.read_published_versions(name),
-        )
-        print(f"{package.distribution}'s floor on {name} is published.")
 
 
 if __name__ == "__main__":

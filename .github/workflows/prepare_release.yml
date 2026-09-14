@@ -73,16 +73,12 @@ jobs:
             --pyproject "${{ steps.package.outputs.pyproject }}"
 
       # uv drops the specifier of a workspace dependency, so nothing else checks it.
+      # This is the one subcommand that needs `packaging`, hence `uv run --with`.
       - name: Check the workspace dependency range
         if: steps.package.outputs.workspace_dependencies != ''
         run: |
-          python3 -m prepare_release check-dependency-range \
-            --package "${{ inputs.package }}"
-
-      - name: Check the workspace dependency is published
-        if: steps.package.outputs.workspace_dependencies != ''
-        run: |
-          python3 -m prepare_release check-dependency-published \
+          uv run --no-project --with packaging \
+            python3 -m prepare_release check-dependency-range \
             --package "${{ inputs.package }}"
 
       - name: Resolve inputs

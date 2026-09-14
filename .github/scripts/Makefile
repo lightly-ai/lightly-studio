@@ -16,7 +16,7 @@ lint:
 
 .PHONY: type-check
 type-check:
-	$(UV) --with mypy mypy prepare_release
+	$(UV) --with mypy --with packaging mypy prepare_release
 
 .PHONY: format
 format:
@@ -24,4 +24,4 @@ format:
 
 .PHONY: test
 test:
-	$(UV) --with pytest pytest -q
+	$(UV) --with pytest --with packaging pytest -q

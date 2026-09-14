@@ -48,8 +48,7 @@ def _guards(package: Package) -> str:
     Keep in sync with prepare_release.yml.
     """
     workspace = "".join(
-        f"\n- the requirement on `{name}` admits the version in the tree, and its floor is "
-        "published on PyPI,"
+        f"\n- the requirement on `{name}` admits the version in the tree,"
         for name in package.workspace_dependencies
     )
     return f"""\
