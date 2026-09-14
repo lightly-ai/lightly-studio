@@ -49,6 +49,7 @@ def test_init(mocker: MockerFixture) -> None:
         host=POSTHOG_HOST,
         max_retries=posthog_tracker.MAX_RETRIES,
         timeout=posthog_tracker.REQUEST_TIMEOUT_SECONDS,
+        enable_exception_autocapture=True,
     )
 
 

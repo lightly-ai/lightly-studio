@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
 
+from lightly_studio.analytics import tracking
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
@@ -29,6 +30,7 @@ def _log_error_details(
     """Log detailed error information with request context."""
     # Log the error with different levels based on status code
     logger.error(f"Server Error {status_code}: {exc}")
+    tracking.track_exception(exc)
 
 
 def register_exception_handlers(app: FastAPI) -> None:

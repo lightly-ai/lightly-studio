@@ -17,6 +17,10 @@ class Tracker(Protocol):
         """Report a single event."""
         ...
 
+    def track_exception(self, exc: BaseException) -> None:
+        """Report an exception with its stack trace."""
+        ...
+
     def shutdown(self) -> None:
         """Deliver anything still pending and release resources."""
         ...
