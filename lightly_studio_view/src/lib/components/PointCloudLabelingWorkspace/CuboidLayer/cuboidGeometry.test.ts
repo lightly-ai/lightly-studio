@@ -3,17 +3,18 @@ import { computeCuboidVertices, createCuboidWireframeGeometry } from './cuboidGe
 
 describe('cuboidGeometry', () => {
     it('computes world-space vertices from centre, size, and rotation', () => {
-        const vertices = computeCuboidVertices([10, -2, 1], [4, 2, 2], [0, 0, 0, 1]);
+        // 180° around z: x → -x, y → -y, z → z.
+        const vertices = computeCuboidVertices([10, -2, 1], [4, 2, 2], [0, 0, 1, 0]);
 
         expect(vertices.map((vertex) => vertex.toArray())).toEqual([
-            [8, -3, 0],
-            [12, -3, 0],
-            [8, -1, 0],
             [12, -1, 0],
-            [8, -3, 2],
-            [12, -3, 2],
+            [8, -1, 0],
+            [12, -3, 0],
+            [8, -3, 0],
+            [12, -1, 2],
             [8, -1, 2],
-            [12, -1, 2]
+            [12, -3, 2],
+            [8, -3, 2]
         ]);
     });
 
