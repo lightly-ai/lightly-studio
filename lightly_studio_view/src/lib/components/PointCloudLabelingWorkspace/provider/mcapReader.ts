@@ -1,15 +1,34 @@
 import { MessageReader } from '@foxglove/rosmsg2-serialization';
 import { parse } from '@foxglove/rosmsg';
-import { McapIndexedReader } from '@mcap/core';
+import { McapIndexedReader, type TypedMcapRecords } from '@mcap/core';
 import { decompress } from 'lz4js';
 import { ZSTDDecoder } from 'zstddec';
 import { canonicalCoordinateFrame, assertCompatibleCoordinates } from '../domain';
+import { fuseClouds } from './fuseClouds';
 import { HttpRangeReadable } from './httpRangeReadable';
 import { decodePointCloud2 } from './pointCloud2';
 import { ProviderError } from './providerError';
 import { frameIdentity, type FrameLocator, type McapSource } from './source';
+import {
+    buildTransformGraph,
+    resolveTransforms,
+    type TransformGraph,
+    type TransformMessage
+} from './transformTree';
+
+type Channel = TypedMcapRecords['Channel'];
 
 const maxChunkBytes = 64 * 1024 * 1024;
+/** Where ROS 2 publishes the sensor extrinsics that place each lidar on the vehicle. */
+const TF_STATIC_TOPIC = '/tf_static';
+/**
+ * How far from the anchor sweep another channel's sweep may sit and still be the same moment.
+ *
+ * Lidars on one vehicle are not triggered together, so their sweeps land milliseconds apart.
+ * 50 ms is under one period at the 10 Hz these sensors run at, which is what makes "the
+ * nearest sweep in the window" unambiguous.
+ */
+const FUSION_WINDOW_NS = 50_000_000n;
 /** MCAP record framing: one opcode byte plus a little-endian u64 content length. */
 const RECORD_HEADER_BYTES = 9;
 const MESSAGE_INDEX_OPCODE = 0x07;
@@ -54,7 +73,12 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
         firstLogTimeNs: reader.statistics?.messageStartTime.toString() ?? null,
         lastLogTimeNs: reader.statistics?.messageEndTime.toString() ?? null
     };
-    const decoders = new Map<number, MessageReader<Parameters<typeof decodePointCloud2>[0]>>();
+    const decoders = new Map<number, MessageReader>();
+    const lidarChannels = Array.from(reader.channelsById.values()).filter((channel) =>
+        isSupported(channel.messageEncoding, reader.schemasById.get(channel.schemaId))
+    );
+    /** Read at most once per recording: extrinsics are static, and every frame needs them. */
+    let publishedTransforms: Promise<TransformGraph> | undefined;
 
     async function loadFrame(locator: FrameLocator, pointBudget: number) {
         validateLocator(locator);
@@ -76,33 +100,140 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
             signal.throwIfAborted();
             if (message.channelId !== locator.channelId || occurrence++ !== locator.occurrence)
                 continue;
-            let decoder = decoders.get(channel.id);
-            if (!decoder) {
-                decoder = messageReader(schema);
-                decoders.set(channel.id, decoder);
-            }
-            const decoded = decodePointCloud2(decoder.readMessage(message.data), pointBudget);
-            return {
-                ...decoded,
-                id: frameIdentity(source, locator),
-                source: {
-                    recordingId: source.recordingId,
-                    streamId: String(channel.id),
-                    messageId: JSON.stringify([locator.logTimeNs, locator.occurrence]),
-                    publishedAt: {
-                        nanoseconds: message.publishTime.toString(),
-                        clockId: source.publishClockId
-                    }
-                },
-                timestamp: { nanoseconds: message.logTime.toString(), clockId: source.logClockId },
-                coordinateFrame: source.coordinateFrame,
-                cameras: []
-            };
+            return fuseFrame(channel, message, locator, pointBudget);
         }
         throw new ProviderError(
             'source',
             'The requested point-cloud frame is missing from the recording.'
         );
+    }
+
+    /**
+     * Builds one frame from every lidar channel, aligned into a single coordinate frame.
+     *
+     * A vehicle's sensors cover the scene between them, so reading only the channel a frame
+     * is listed on leaves everything the other sensors saw empty. The anchor message still
+     * decides the frame's identity, timestamp and stream, which keeps listing, navigation
+     * and annotation identity unchanged by what is fused into it.
+     */
+    async function fuseFrame(
+        channel: Channel,
+        message: TypedMcapRecords['Message'],
+        locator: FrameLocator,
+        pointBudget: number
+    ) {
+        const budget = Math.max(1, Math.floor(pointBudget / lidarChannels.length));
+        const anchor = decodeCloud(channel, message.data, budget);
+        const siblings = await readSiblings(channel.id, message.logTime, budget);
+        const { targetFrameId, transforms } = await alignment(anchor.frameId);
+        const fused = fuseClouds([anchor, ...siblings], transforms);
+        return {
+            positions: fused.positions,
+            sourcePointCount: fused.sourcePointCount,
+            id: frameIdentity(source, locator),
+            source: {
+                recordingId: source.recordingId,
+                streamId: String(channel.id),
+                messageId: JSON.stringify([locator.logTimeNs, locator.occurrence]),
+                publishedAt: {
+                    nanoseconds: message.publishTime.toString(),
+                    clockId: source.publishClockId
+                }
+            },
+            timestamp: { nanoseconds: message.logTime.toString(), clockId: source.logClockId },
+            coordinateFrame: canonicalCoordinateFrame(targetFrameId),
+            cameras: []
+        };
+    }
+
+    /** The sweep nearest the anchor's log time on each of the other lidar channels. */
+    async function readSiblings(anchorChannelId: number, anchorTime: bigint, budget: number) {
+        const others = lidarChannels.filter((channel) => channel.id !== anchorChannelId);
+        if (others.length === 0) return [];
+        const nearest = new Map<number, { delta: bigint; data: Uint8Array }>();
+        for await (const message of reader.readMessages({
+            topics: others.map((channel) => channel.topic),
+            startTime: anchorTime > FUSION_WINDOW_NS ? anchorTime - FUSION_WINDOW_NS : 0n,
+            endTime: anchorTime + FUSION_WINDOW_NS,
+            validateCrcs: true
+        })) {
+            signal.throwIfAborted();
+            if (!others.some((channel) => channel.id === message.channelId)) continue;
+            const delta = absoluteDelta(message.logTime, anchorTime);
+            const best = nearest.get(message.channelId);
+            if (best && best.delta <= delta) continue;
+            // Copied: the iterator hands out views over a chunk it is free to reuse.
+            nearest.set(message.channelId, { delta, data: message.data.slice() });
+        }
+        // Decoded after the window closes, so a channel costs one decode however many of its
+        // sweeps the window happened to hold.
+        return Array.from(nearest, ([channelId, { data }]) =>
+            decodeCloud(reader.channelsById.get(channelId)!, data, budget)
+        );
+    }
+
+    /**
+     * Resolves where each sensor frame sits, and which frame the fused points end up in.
+     *
+     * One lidar needs no transform at all, so a single-channel recording never reads
+     * `/tf_static`. With several, the frame the caller asked for is the target when
+     * `/tf_static` knows it, and the anchor's own frame otherwise -- a recording whose
+     * vehicle frame is named differently still renders in a frame that is real, with
+     * whatever other sensors resolve into it.
+     */
+    async function alignment(anchorFrameId: string) {
+        const frameId = anchorFrameId || source.coordinateFrame.id;
+        if (lidarChannels.length < 2) {
+            return { targetFrameId: frameId, transforms: resolveTransforms(new Map(), frameId) };
+        }
+        const graph = await (publishedTransforms ??= readTransformGraph());
+        const targetFrameId = graph.has(source.coordinateFrame.id)
+            ? source.coordinateFrame.id
+            : frameId;
+        return { targetFrameId, transforms: resolveTransforms(graph, targetFrameId) };
+    }
+
+    async function readTransformGraph(): Promise<TransformGraph> {
+        const channel = Array.from(reader.channelsById.values()).find(
+            (candidate) => candidate.topic === TF_STATIC_TOPIC
+        );
+        if (!channel) {
+            throw new ProviderError(
+                'source',
+                `This recording has ${lidarChannels.length} lidar channels but no ${TF_STATIC_TOPIC} saying where they sit, so they cannot be aligned into one scene.`
+            );
+        }
+        const messages: TransformMessage[] = [];
+        for await (const message of reader.readMessages({
+            topics: [channel.topic],
+            validateCrcs: true
+        })) {
+            signal.throwIfAborted();
+            messages.push(decoderFor(channel).readMessage<TransformMessage>(message.data));
+        }
+        return buildTransformGraph(messages);
+    }
+
+    function decodeCloud(channel: Channel, data: Uint8Array, budget: number) {
+        return decodePointCloud2(
+            decoderFor(channel).readMessage<Parameters<typeof decodePointCloud2>[0]>(data),
+            budget
+        );
+    }
+
+    function decoderFor(channel: Channel): MessageReader {
+        const existing = decoders.get(channel.id);
+        if (existing) return existing;
+        const schema = reader.schemasById.get(channel.schemaId);
+        if (!schema || schema.encoding !== 'ros2msg') {
+            throw new ProviderError(
+                'schema',
+                `The channel '${channel.topic}' does not carry a ros2msg schema to decode.`
+            );
+        }
+        const created = messageReader(schema);
+        decoders.set(channel.id, created);
+        return created;
     }
 
     async function listFrames(
@@ -200,11 +331,9 @@ export async function openMcap(source: McapSource, signal: AbortSignal) {
  * missing a referenced message type, most often -- which is a problem with the recording's
  * schema rather than with its payload, so it is reported as one.
  */
-function messageReader(schema: { name: string; data: Uint8Array }) {
+function messageReader(schema: { name: string; data: Uint8Array }): MessageReader {
     try {
-        return new MessageReader<Parameters<typeof decodePointCloud2>[0]>(
-            parse(new TextDecoder().decode(schema.data), { ros2: true })
-        );
+        return new MessageReader(parse(new TextDecoder().decode(schema.data), { ros2: true }));
     } catch (error) {
         throw new ProviderError(
             'schema',
@@ -246,6 +375,10 @@ function collectTimes(view: DataView, contentStart: number, times: bigint[]): vo
     for (let at = recordsStart; at + INDEX_ENTRY_BYTES <= recordsEnd; at += INDEX_ENTRY_BYTES) {
         times.push(view.getBigUint64(at, true));
     }
+}
+
+function absoluteDelta(left: bigint, right: bigint): bigint {
+    return left > right ? left - right : right - left;
 }
 
 function isSupported(encoding: string, schema: { name: string; encoding: string } | undefined) {

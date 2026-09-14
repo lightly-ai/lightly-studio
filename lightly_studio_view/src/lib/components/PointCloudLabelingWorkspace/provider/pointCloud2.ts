@@ -8,6 +8,8 @@ interface PointField {
 }
 
 interface PointCloud2Message {
+    /** Sensor frame the points are expressed in; absent in recordings without a header. */
+    header?: { frame_id?: string };
     height: number;
     width: number;
     fields: PointField[];
@@ -29,7 +31,12 @@ const scalarTypes: Record<number, { bytes: number; read: ReadScalar }> = {
     8: { bytes: 8, read: (v, o, le) => v.getFloat64(o, le) }
 };
 
-/** Decode ROS PointCloud2 in its declared sensor frame; no implicit axes conversion. */
+/**
+ * Decode ROS PointCloud2 in its declared sensor frame; no implicit axes conversion.
+ *
+ * The declared frame is returned rather than applied: placing the sweep is the reader's
+ * job, since only it can read `/tf_static` to learn where that frame sits.
+ */
 export function decodePointCloud2(message: PointCloud2Message, pointBudget = 350_000) {
     validateLayout(message, pointBudget);
     const readers = ['x', 'y', 'z'].map((name) => fieldReader(message, name));
@@ -51,7 +58,11 @@ export function decodePointCloud2(message: PointCloud2Message, pointBudget = 350
         positions.set(point, length);
         length += 3;
     }
-    return { positions: positions.slice(0, length), sourcePointCount };
+    return {
+        positions: positions.slice(0, length),
+        sourcePointCount,
+        frameId: message.header?.frame_id ?? ''
+    };
 }
 
 function validateShape(message: PointCloud2Message): void {
