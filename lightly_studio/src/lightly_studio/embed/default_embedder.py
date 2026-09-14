@@ -49,6 +49,10 @@ def resolve_default_embedder(
 
     Returns:
         The embedder and the model id to store embeddings under, or None to skip.
+
+    Raises:
+        ValueError: If the embedder's dimension does not match the space's stored dimension
+            (a wrongly registered embedder), or if the collection does not exist.
     """
     default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection_id
@@ -63,14 +67,11 @@ def resolve_default_embedder(
     if default_model is not None:
         spec = embedder.embedding_space_spec()
         if spec.dimension != default_model.embedding_dimension:
-            logger.warning(
-                "Embedder dimension %d does not match the collection's default model "
-                "dimension %d for space '%s'. Skipping embedding generation.",
-                spec.dimension,
-                default_model.embedding_dimension,
-                default_model.name,
+            raise ValueError(
+                f"Embedder dimension {spec.dimension} does not match the collection's default "
+                f"model dimension {default_model.embedding_dimension} for space "
+                f"'{default_model.name}'. A wrongly registered embedder is likely."
             )
-            return None
         return embedder, default_model.embedding_model_id
     model_id = _register_default_model(
         session=session, collection_id=collection_id, embedder=embedder
@@ -85,7 +86,8 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
     dataset, links it to the collection, and marks it the default.
 
     Raises:
-        ValueError: If the collection does not exist.
+        ValueError: If the collection does not exist, or if the dataset already has a model
+            for the embedder's space with a different dimension (a wrongly registered embedder).
     """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
