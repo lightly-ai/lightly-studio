@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
@@ -226,6 +226,37 @@ def test_embed_image_samples__no_default_registers_registry_default(
     assert count == len(sample_ids)
 
 
+def test_embed_image_samples__missing_id_bootstraps_no_default(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A missing image ID raises before a default model is bootstrapped."""
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg")],
+    )
+    sample_ids = [samples[0].sample_id, uuid4()]
+
+    with pytest.raises(ValueError, match="Could not fetch all image paths"):
+        embed_samples.embed_image_samples(
+            session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
+        )
+
+    # No default model is left behind and nothing is stored.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert model_id is None
+    assert _stored_embeddings(session=db_session) == []
+
+
 def test_embed_image_samples__no_registered_embedder_skips(
     db_session: Session,
     patched_manager: EmbeddingManager,
@@ -420,6 +451,37 @@ def test_embed_video_samples__no_default_registers_registry_default(
         embedding_model_id=model_id,
     )
     assert count == len(video_ids)
+
+
+def test_embed_video_samples__missing_id_bootstraps_no_default(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A missing video ID raises before a default model is bootstrapped."""
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        videos=[VideoStub(path="/videos/video_0.mp4")],
+    )
+    sample_ids = [video_ids[0], uuid4()]
+
+    with pytest.raises(ValueError, match="Could not fetch all video paths"):
+        embed_samples.embed_video_samples(
+            session=db_session, collection_id=video_collection.collection_id, sample_ids=sample_ids
+        )
+
+    # No default model is left behind and nothing is stored.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=video_collection.collection_id
+    )
+    assert model_id is None
+    assert _stored_embeddings(session=db_session) == []
 
 
 def test_embed_video_samples__no_registered_embedder_skips(

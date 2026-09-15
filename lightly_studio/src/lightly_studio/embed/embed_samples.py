@@ -77,6 +77,19 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
         collection_id: The collection whose default embedding model is used.
         sample_ids: Image sample IDs to embed.
     """
+    if not sample_ids:
+        return
+
+    # Resolve and validate paths before selecting a default embedder, which mutates the
+    # collection's default model. A failed lookup must not leave a default model behind.
+    sample_id_to_filepath = {
+        sample.sample_id: sample.file_path_abs
+        for sample in image_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+    }
+    if len(sample_id_to_filepath) != len(sample_ids):
+        raise ValueError("Could not fetch all image paths for the provided IDs.")
+    filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
+
     resolved = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
@@ -85,12 +98,6 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
     if resolved is None:
         return
     embedder, model_id = resolved
-
-    sample_id_to_filepath = {
-        sample.sample_id: sample.file_path_abs
-        for sample in image_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
-    }
-    filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
 
     result = embedder.embed_images(paths=filepaths)
     kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
@@ -143,6 +150,17 @@ def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[
         collection_id: The collection whose default embedding model is used.
         sample_ids: Video sample IDs to embed.
     """
+    if not sample_ids:
+        return
+
+    # Resolve and validate paths before selecting a default embedder, which mutates the
+    # collection's default model. A failed lookup must not leave a default model behind.
+    # The resolver returns videos in the input order. A length mismatch means an id has no video.
+    videos = video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+    if len(videos) != len(sample_ids):
+        raise ValueError("Could not fetch all video paths for the provided IDs.")
+    filepaths = [video.file_path_abs for video in videos]
+
     resolved = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
@@ -151,12 +169,6 @@ def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[
     if resolved is None:
         return
     embedder, model_id = resolved
-
-    # The resolver returns videos in the input order. A length mismatch means an id has no video.
-    videos = video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
-    if len(videos) != len(sample_ids):
-        raise ValueError("Could not fetch all video paths for the provided IDs.")
-    filepaths = [video.file_path_abs for video in videos]
 
     result = embedder.embed_videos(paths=filepaths)
     kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
