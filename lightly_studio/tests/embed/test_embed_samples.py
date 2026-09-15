@@ -7,6 +7,8 @@ from uuid import UUID
 
 import numpy as np
 import pytest
+from lightly_studio_serve.embedder import VideoPathEmbedder
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from numpy.typing import NDArray
 from PIL import Image
 from pytest_mock import MockerFixture
@@ -51,6 +53,29 @@ class _FirstPixelEmbeddingGenerator(RandomEmbeddingGenerator):
     ) -> NDArray[np.float32]:
         _ = show_progress
         return np.array([image.getpixel((0, 0)) for image in images], dtype=np.float32)
+
+
+class _IndexVideoEmbedder(VideoPathEmbedder):
+    """Embeds each video path as its position and drops the last path.
+
+    Distinct per-input vectors and a dropped input verify the registry embedder ran and
+    that embeddings are stored against the matching sample IDs. Shares the random model's
+    space so it resolves as the collection's default.
+    """
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 2."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=2)
+
+    def embed_videos(self, paths: list[str]) -> EmbeddingResult:
+        """Embed all paths but the last as [index, index]."""
+        kept_indices = list(range(len(paths) - 1))
+        embeddings = np.array(
+            [[float(index), float(index)] for index in kept_indices], dtype=np.float32
+        )
+        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
 @pytest.fixture
@@ -319,32 +344,43 @@ def test_embed_annotation_collection__no_default_model_skips(
     assert _stored_embeddings(session=db_session) == []
 
 
-@pytest.mark.usefixtures("patched_registry")
 def test_embed_video_samples(
     db_session: Session,
     patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
 ) -> None:
-    """Video samples are stored under the collection's default model, embedded by the registry."""
+    """The registry embedder's vectors are stored against the matching video sample IDs."""
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video_ids = create_videos(
         session=db_session,
         collection_id=video_collection.collection_id,
-        videos=[VideoStub(path="/videos/video_0.mp4"), VideoStub(path="/videos/video_1.mp4")],
+        videos=[
+            VideoStub(path="/videos/video_0.mp4"),
+            VideoStub(path="/videos/video_1.mp4"),
+            VideoStub(path="/videos/video_2.mp4"),
+        ],
     )
     model_id = _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=video_collection.collection_id
+        manager=patched_manager,
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        dimension=2,
     )
+    registry = EmbedderRegistry()
+    registry.register(embedder=_IndexVideoEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
     embed_samples.embed_video_samples(
         session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
     )
 
-    count = sample_embedding_resolver.get_embedding_count(
-        session=db_session,
-        collection_id=video_collection.collection_id,
-        embedding_model_id=model_id,
+    # The embedder drops the last video, so only the first two are stored, each with the
+    # vector encoding its position.
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=video_ids, embedding_model_id=model_id
     )
-    assert count == len(video_ids)
+    stored = {row.sample_id: list(row.embedding) for row in rows}
+    assert stored == {video_ids[0]: [0.0, 0.0], video_ids[1]: [1.0, 1.0]}
 
 
 @pytest.mark.usefixtures("patched_registry", "patched_manager")

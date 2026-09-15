@@ -152,11 +152,11 @@ def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[
         return
     embedder, model_id = resolved
 
-    sample_id_to_filepath = {
-        video.sample_id: video.file_path_abs
-        for video in video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
-    }
-    filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
+    # The resolver returns videos in the input order. A length mismatch means an id has no video.
+    videos = video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+    if len(videos) != len(sample_ids):
+        raise ValueError("Could not fetch all video paths for the provided IDs.")
+    filepaths = [video.file_path_abs for video in videos]
 
     result = embedder.embed_videos(paths=filepaths)
     kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
