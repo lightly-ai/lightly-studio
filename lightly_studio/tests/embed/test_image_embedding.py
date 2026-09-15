@@ -187,8 +187,8 @@ def test_embed_image_files_batched__propagates_preprocess_error(tmp_path: Path) 
         )
 
 
-def test_embed_pil_images_batched__empty_input_returns_empty_array() -> None:
-    embeddings = image_embedding.embed_pil_images_batched(
+def test_embed_pil_images_batched__empty_input_returns_empty_result() -> None:
+    result = image_embedding.embed_pil_images_batched(
         images=[],
         context=EmbeddingContext(
             embedding_dimension=4,
@@ -200,14 +200,15 @@ def test_embed_pil_images_batched__empty_input_returns_empty_array() -> None:
         show_progress=False,
     )
 
-    assert embeddings.shape == (0, 4)
+    assert result.embeddings.shape == (0, 4)
+    assert result.kept_indices == []
 
 
 def test_embed_pil_images_batched__preserves_input_order() -> None:
     widths = [5, 6, 7]
     images = [Image.new("RGB", (width, 10), color=(255, 0, 0)) for width in widths]
 
-    embeddings = image_embedding.embed_pil_images_batched(
+    result = image_embedding.embed_pil_images_batched(
         images=images,
         context=EmbeddingContext(
             embedding_dimension=1,
@@ -219,8 +220,9 @@ def test_embed_pil_images_batched__preserves_input_order() -> None:
         show_progress=False,
     )
 
-    assert embeddings.shape == (3, 1)
-    assert embeddings[:, 0].tolist() == [float(width) for width in widths]
+    assert result.embeddings.shape == (3, 1)
+    assert result.embeddings[:, 0].tolist() == [float(width) for width in widths]
+    assert result.kept_indices == [0, 1, 2]
 
 
 def _write_images(tmp_path: Path, widths: list[int]) -> list[str]:

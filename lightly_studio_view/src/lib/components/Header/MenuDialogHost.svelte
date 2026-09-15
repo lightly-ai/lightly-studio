@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { onDestroy } from 'svelte';
+    import { useDatasetSplitDialog } from '$lib/components/DatasetSplit/useDatasetSplitDialog';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
@@ -26,10 +28,18 @@
     );
 
     const { isDialogOpen: isClassifiersDialogOpen } = useClassifiersMenu();
+    const { datasetSplitCollectionId, closeDatasetSplitDialog } = useDatasetSplitDialog();
     const { isSamplingDialogOpen } = useSamplingDialog();
     const { isExportDialogOpen } = useExportDialog();
     const { isOperatorsDialogOpen } = useOperatorsDialog();
     const { isSettingsDialogOpen } = useSettingsDialog();
+
+    $effect(() => {
+        if (!hasSelection || $datasetSplitCollectionId !== collection.collection_id) {
+            closeDatasetSplitDialog();
+        }
+    });
+    onDestroy(closeDatasetSplitDialog);
 
     let hasClassifierFlowLoaded = $state(false);
     let hasOperatorsMenuLoaded = $state(false);
@@ -68,5 +78,15 @@
 {#if $isSettingsDialogOpen}
     {#await import('$lib/components/Settings/SettingsDialog.svelte') then { default: SettingsDialog }}
         <SettingsDialog />
+    {/await}
+{/if}
+
+{#if hasSelection && $datasetSplitCollectionId === collection.collection_id && (collection.sample_type === 'image' || collection.sample_type === 'video')}
+    {#await import('$lib/components/DatasetSplit/ConnectedDatasetSplitDialog/ConnectedDatasetSplitDialog.svelte') then { default: ConnectedDatasetSplitDialog }}
+        <ConnectedDatasetSplitDialog
+            collectionId={collection.collection_id}
+            sampleType={collection.sample_type}
+            onClose={closeDatasetSplitDialog}
+        />
     {/await}
 {/if}

@@ -79,17 +79,18 @@ def mock_fsspec_s3fs(moto_server: ThreadedMotoServer) -> Generator[None, None, N
     # Store original functions
     original_get_filesystem = fsspec_lister._get_filesystem
     original_fsspec_open = fsspec.open
+    s3_filesystem = s3fs.S3FileSystem(
+        client_kwargs={"endpoint_url": endpoint},
+        key="testing",
+        secret="testing",
+        token="testing",
+        skip_instance_cache=True,
+    )
 
     def mock_get_filesystem(path: str) -> Any:
         """Get filesystem that points to moto server."""
         if path.startswith("s3://"):
-            # Configure s3fs to use moto server
-            return s3fs.S3FileSystem(
-                client_kwargs={"endpoint_url": endpoint},
-                key="testing",
-                secret="testing",
-                token="testing",
-            )
+            return s3_filesystem
         return original_get_filesystem(path)
 
     def mock_fsspec_open(path: str, mode: str = "rb", **kwargs: Any) -> Any:
@@ -289,3 +290,21 @@ def test_iter_files_from_path__supports_azure_blob_protocols(
 
     assert result == [f"{filesystem_protocol}://container/images/image.jpg"]
     get_filesystem.assert_called_once_with(filesystem_protocol)
+
+
+def test_iter_files_from_path__supports_hugging_face_protocol(mocker: MockerFixture) -> None:
+    # HfFileSystem lists paths without a scheme. Discovery adds the hf:// prefix, or
+    # downstream code reads the path as a local one. The find() stub returns bare paths
+    # to match that behaviour.
+    filesystem = mocker.MagicMock()
+    filesystem.protocol = "hf"
+    filesystem.exists.return_value = True
+    filesystem.isdir.side_effect = lambda path: not path.endswith(".jpg")
+    filesystem.isfile.side_effect = lambda path: path.endswith(".jpg")
+    filesystem.find.return_value = ["datasets/org/repo/images/image.jpg"]
+    filesystem.walk.return_value = [("datasets/org/repo/images", [], ["image.jpg"])]
+    mocker.patch.object(fsspec, "filesystem", return_value=filesystem)
+
+    result = list(fsspec_lister.iter_files_from_path("hf://datasets/org/repo/images"))
+
+    assert result == ["hf://datasets/org/repo/images/image.jpg"]

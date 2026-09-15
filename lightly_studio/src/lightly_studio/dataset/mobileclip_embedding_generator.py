@@ -6,13 +6,13 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.vendor import mobileclip
 
 from . import file_utils
@@ -131,7 +131,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             images=images,
             context=self._embedding_context(),
             show_progress=show_progress,
-        )
+        ).embeddings
 
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched image embedding."""

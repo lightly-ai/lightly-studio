@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import logging
-from uuid import UUID
+import re
+from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
+from lightly_studio_serve.embedder import VideoPathEmbedder
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from numpy.typing import NDArray
 from PIL import Image
 from pytest_mock import MockerFixture
@@ -18,7 +21,9 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
 )
-from lightly_studio.embed import embed_samples
+from lightly_studio.embed import embed_samples, embedder_registry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
@@ -51,12 +56,45 @@ class _FirstPixelEmbeddingGenerator(RandomEmbeddingGenerator):
         return np.array([image.getpixel((0, 0)) for image in images], dtype=np.float32)
 
 
+class _PathIndexVideoEmbedder(VideoPathEmbedder):
+    """Embeds each video path as the number in its file name and drops the last path.
+
+    Deriving the vector from the path content, not the input position, makes the test fail
+    if ``embed_video_samples`` resolves the paths in the wrong order. A dropped input
+    verifies that only kept embeddings are stored. Shares the random model's space so it
+    resolves as the collection's default.
+    """
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 2."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=2)
+
+    def embed_videos(self, paths: list[str]) -> EmbeddingResult:
+        """Embed all paths but the last as [number, number], parsed from the file name."""
+        kept_indices = list(range(len(paths) - 1))
+        embeddings = np.array(
+            [[_path_number(path=paths[index])] * 2 for index in kept_indices], dtype=np.float32
+        )
+        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+
+
 @pytest.fixture
 def patched_manager(mocker: MockerFixture) -> EmbeddingManager:
     """Route embed_samples to a fresh manager so tests never touch the shared singleton."""
     manager = EmbeddingManager()
     mocker.patch.object(EmbeddingManagerProvider, "get_embedding_manager", return_value=manager)
     return manager
+
+
+@pytest.fixture
+def patched_registry(mocker: MockerFixture) -> EmbedderRegistry:
+    """Route embed_samples to a fresh registry so tests never touch the shared singleton."""
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    return registry
 
 
 def test_embed_image_for_collection(
@@ -125,11 +163,12 @@ def test_embed_text_for_collection__no_default_model(
         )
 
 
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_image_samples(
     db_session: Session,
     patched_manager: EmbeddingManager,
 ) -> None:
-    """Image samples are embedded and stored under the collection's default model."""
+    """Image samples are stored under the collection's default model, embedded by the registry."""
     collection = create_collection(session=db_session)
     samples = create_images(
         db_session=db_session,
@@ -151,20 +190,91 @@ def test_embed_image_samples(
     assert count == len(sample_ids)
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_embed_image_samples__no_default_model_skips(
+@pytest.mark.usefixtures("patched_registry", "patched_manager")
+def test_embed_image_samples__no_default_registers_registry_default(
     db_session: Session,
     mocker: MockerFixture,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """With no default model, embedding is skipped, a warning logged, nothing stored."""
+    """With no default model, the registry's image embedder is used and set as default."""
+    # The manager's generator shares the registry embedder's space, so the legacy bridge
+    # syncs the same default instead of registering a different one.
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
     collection = create_collection(session=db_session)
     samples = create_images(
         db_session=db_session,
         collection_id=collection.collection_id,
         images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
     )
-    _disable_env_loader(mocker=mocker)
+    sample_ids = [sample.sample_id for sample in samples]
+
+    embed_samples.embed_image_samples(
+        session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
+    )
+
+    # The registry embedder's space is registered as the collection's default.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert model_id is not None
+    count = sample_embedding_resolver.get_embedding_count(
+        session=db_session, collection_id=collection.collection_id, embedding_model_id=model_id
+    )
+    assert count == len(sample_ids)
+
+
+def test_embed_image_samples__missing_id_bootstraps_no_default(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A missing image ID raises before a default model is bootstrapped."""
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg")],
+    )
+    sample_ids = [samples[0].sample_id, uuid4()]
+
+    with pytest.raises(ValueError, match="Could not fetch all image paths"):
+        embed_samples.embed_image_samples(
+            session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
+        )
+
+    # No default model is left behind and nothing is stored.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert model_id is None
+    assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_image_samples__no_registered_embedder_skips(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """With a default model but no embedder for its space, embedding is skipped."""
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
+    )
+    _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=collection.collection_id
+    )
+    # An empty registry cannot supply an embedder for the default model's space.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
     sample_ids = [sample.sample_id for sample in samples]
 
     with caplog.at_level(level=logging.WARNING):
@@ -174,6 +284,56 @@ def test_embed_image_samples__no_default_model_skips(
 
     assert "No embedding model loaded" in caplog.text
     assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_image_samples__empty_ids_warns_and_skips(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An empty sample_ids list logs a warning and stores nothing."""
+    collection = create_collection(session=db_session)
+
+    with caplog.at_level(level=logging.WARNING):
+        embed_samples.embed_image_samples(
+            session=db_session, collection_id=collection.collection_id, sample_ids=[]
+        )
+
+    assert "No image samples to embed" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
+@pytest.mark.usefixtures("patched_registry", "patched_manager")
+def test_embed_image_samples__syncs_legacy_embedding_manager(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """After the registry path stores embeddings, the manager can serve a text query.
+
+    The registry path does not populate the manager's in-memory maps, so the legacy
+    bridge re-registers the default. This mirrors the e2e flow of indexing then searching.
+    """
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
+    )
+    sample_ids = [sample.sample_id for sample in samples]
+
+    embed_samples.embed_image_samples(
+        session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
+    )
+
+    # The manager now serves search without a separate default registration.
+    embedding = embed_samples.embed_text_for_collection(
+        collection_id=collection.collection_id, text="a red car"
+    )
+    assert len(embedding) == 3
 
 
 def test_embed_annotation_collection(
@@ -236,22 +396,71 @@ def test_embed_annotation_collection__no_default_model_skips(
 def test_embed_video_samples(
     db_session: Session,
     patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
 ) -> None:
-    """Video samples are embedded and stored under the collection's default model."""
+    """The registry embedder's vectors are stored against the matching video sample IDs."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        videos=[
+            VideoStub(path="/videos/video_0.mp4"),
+            VideoStub(path="/videos/video_1.mp4"),
+            VideoStub(path="/videos/video_2.mp4"),
+        ],
+    )
+    model_id = _register_default_random_model(
+        manager=patched_manager,
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        dimension=2,
+    )
+    registry = EmbedderRegistry()
+    registry.register(embedder=_PathIndexVideoEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    embed_samples.embed_video_samples(
+        session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
+    )
+
+    # The embedder drops the last video, so only the first two are stored, each with the
+    # vector encoding the number parsed from its resolved path.
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=video_ids, embedding_model_id=model_id
+    )
+    stored = {row.sample_id: list(row.embedding) for row in rows}
+    assert stored == {video_ids[0]: [0.0, 0.0], video_ids[1]: [1.0, 1.0]}
+
+
+@pytest.mark.usefixtures("patched_registry", "patched_manager")
+def test_embed_video_samples__no_default_registers_registry_default(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """With no default model, the registry's video embedder is used and set as default."""
+    # The manager's generator shares the registry embedder's space, so the legacy bridge
+    # syncs the same default instead of registering a different one.
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video_ids = create_videos(
         session=db_session,
         collection_id=video_collection.collection_id,
         videos=[VideoStub(path="/videos/video_0.mp4"), VideoStub(path="/videos/video_1.mp4")],
     )
-    model_id = _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=video_collection.collection_id
-    )
 
     embed_samples.embed_video_samples(
         session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
     )
 
+    # The registry embedder's space is registered as the collection's default.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=video_collection.collection_id
+    )
+    assert model_id is not None
     count = sample_embedding_resolver.get_embedding_count(
         session=db_session,
         collection_id=video_collection.collection_id,
@@ -260,20 +469,55 @@ def test_embed_video_samples(
     assert count == len(video_ids)
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_embed_video_samples__no_default_model_skips(
+def test_embed_video_samples__missing_id_bootstraps_no_default(
     db_session: Session,
     mocker: MockerFixture,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """With no default model, video embedding is skipped and nothing stored."""
+    """A missing video ID raises before a default model is bootstrapped."""
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video_ids = create_videos(
         session=db_session,
         collection_id=video_collection.collection_id,
         videos=[VideoStub(path="/videos/video_0.mp4")],
     )
-    _disable_env_loader(mocker=mocker)
+    sample_ids = [video_ids[0], uuid4()]
+
+    with pytest.raises(ValueError, match="Could not fetch all video paths"):
+        embed_samples.embed_video_samples(
+            session=db_session, collection_id=video_collection.collection_id, sample_ids=sample_ids
+        )
+
+    # No default model is left behind and nothing is stored.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=video_collection.collection_id
+    )
+    assert model_id is None
+    assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_video_samples__no_registered_embedder_skips(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """With a default model but no embedder for its space, video embedding is skipped."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        videos=[VideoStub(path="/videos/video_0.mp4")],
+    )
+    _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=video_collection.collection_id
+    )
+    # An empty registry cannot supply an embedder for the default model's space.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
     with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_video_samples(
@@ -281,6 +525,22 @@ def test_embed_video_samples__no_default_model_skips(
         )
 
     assert "No embedding model loaded" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_video_samples__empty_ids_warns_and_skips(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An empty sample_ids list logs a warning and stores nothing."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    with caplog.at_level(level=logging.WARNING):
+        embed_samples.embed_video_samples(
+            session=db_session, collection_id=video_collection.collection_id, sample_ids=[]
+        )
+
+    assert "No video samples to embed" in caplog.text
     assert _stored_embeddings(session=db_session) == []
 
 
@@ -466,3 +726,10 @@ def _disable_env_loader(mocker: MockerFixture) -> None:
 def _stored_embeddings(session: Session) -> list[SampleEmbeddingTable]:
     """Return every stored sample embedding, for asserting the skip path stores nothing."""
     return list(session.exec(select(SampleEmbeddingTable)).all())
+
+
+def _path_number(path: str) -> float:
+    """Return the number in a ``/videos/video_<n>.mp4`` path."""
+    match = re.search(r"(\d+)", path)
+    assert match is not None
+    return float(match.group(1))

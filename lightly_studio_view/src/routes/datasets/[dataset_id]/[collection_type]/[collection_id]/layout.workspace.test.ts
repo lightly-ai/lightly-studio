@@ -7,6 +7,10 @@ import '@testing-library/jest-dom';
 
 import { APP_ROUTES } from '$lib/routes';
 import type { PanelType } from '$lib/hooks/useGlobalStorage';
+import {
+    useImageAnnotationCountsBySampleTags,
+    useMetadataDistributionsBySampleTags
+} from '$lib/hooks';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
@@ -81,6 +85,9 @@ vi.mock(
 vi.mock('$lib/components/ConfusionCellFilterItem', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
+vi.mock('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte', async () => ({
+    default: (await import('./DistributionPanelStub.test.svelte')).default
+}));
 
 vi.mock('$lib/hooks/useGlobalStorage');
 vi.mock('$lib/hooks/useHideAnnotations', () => ({
@@ -111,6 +118,11 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters.js', () => ({
     useMetadataFilters: vi.fn(() => ({
         metadataValues: writable({}),
         metadataBounds: writable({}),
+        metadataInfo: writable([
+            { name: 'city', type: 'string' },
+            { name: 'score', type: 'float' }
+        ]),
+        categoricalMetadataValues: writable({}),
         updateMetadataValues: vi.fn()
     })),
     createMetadataFilters: vi.fn(() => undefined)
@@ -143,7 +155,9 @@ vi.mock('$lib/hooks', () => ({
     })),
     useImageAnnotationCounts: vi.fn(() => ({ data: undefined })),
     useImageAnnotationCountsQueryKey: ['imageAnnotationCounts'],
-    useNumericMetadataDistribution: vi.fn(() => ({ data: undefined })),
+    useNumericMetadataDistribution: vi.fn(() => ({
+        data: { score: { binEdges: [0, 1], counts: [1] } }
+    })),
     useCategoricalMetadataDistribution: vi.fn(() => ({
         data: undefined,
         isFetching: false,
@@ -153,9 +167,16 @@ vi.mock('$lib/hooks', () => ({
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
-    useImageAnnotationCountsBySampleTags: vi.fn(() => ({ data: undefined })),
+    useImageAnnotationCountsBySampleTags: vi.fn(() => ({
+        data: undefined,
+        isFetching: false,
+        error: null
+    })),
     useMetadataDistributionsBySampleTags: vi.fn(() => ({ data: undefined })),
-    useTags: vi.fn(() => ({ tags: writable([]), tagsSelected: writable(new Set()) }))
+    useTags: vi.fn(() => ({
+        tags: writable([{ tag_id: 'tag-a', name: 'Reviewed' }]),
+        tagsSelected: writable(new Set())
+    }))
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({
     useSelectAll: vi.fn(() => ({ handleSelectAll: vi.fn() }))
@@ -217,6 +238,50 @@ beforeEach(() => {
     } as Partial<ReturnType<typeof useHasEmbeddingsModule.useHasEmbeddings>> as ReturnType<
         typeof useHasEmbeddingsModule.useHasEmbeddings
     >);
+});
+
+describe('distribution comparison query selection', () => {
+    it('enables only the active class or metadata comparison', async () => {
+        const select = async (testId: string) => {
+            await screen.getByTestId(testId).click();
+            // Flush the panel selection before reading reactive query parameters.
+            await tick();
+        };
+        setPageRoute(APP_ROUTES.images);
+        mockActivePanel.set('distribution');
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        await screen.findByTestId('distribution-select-tag');
+        await select('distribution-select-tag');
+
+        await select('distribution-select-classes-all');
+        expect(screen.getByText('Annotation classes')).toBeInTheDocument();
+        expect(
+            vi
+                .mocked(useImageAnnotationCountsBySampleTags)
+                .mock.calls.map(([params]) => params().enabled)
+        ).toEqual([true, false, false, false]);
+
+        for (const [field, type] of [
+            ['city', 'categorical'],
+            ['score', 'numeric']
+        ] as const) {
+            await select(`distribution-select-metadata-${field}`);
+            expect(
+                vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()
+            ).toMatchObject({
+                field: { name: field, type },
+                enabled: true
+            });
+        }
+
+        await select('distribution-select-metadata-undefined');
+        expect(vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()).toMatchObject({
+            field: undefined
+        });
+    });
 });
 
 const defaultProps = {

@@ -231,9 +231,10 @@ def sampling_via_database(
 
     First resolves the sampling config to concrete database values.
     Then calls Mundig to run the sampling with pure values.
-    Finally creates a tag for the selected set. Passing the preselected tag as
-    ``config.sampling_result_tag_name`` grows that tag in place instead, so the
-    selection accumulates over repeated runs.
+    Finally creates a tag for the selected set. For regular sampling, the preselected
+    samples are included in that set. Passing the preselected tag as
+    ``config.sampling_result_tag_name`` grows that tag in place instead, so the selection
+    accumulates over repeated runs.
 
     When ``config.selected_sequence_length`` is set, sampling runs over mean-pooled
     sequence proxies and the tag contains every frame of each selected sequence.
@@ -272,6 +273,13 @@ def sampling_via_database(
     )
     if n_samples_to_select == 0:
         logger.warning("No samples available for sampling.")
+        if preselected_sample_ids:
+            sampling_helpers.create_result_tag(
+                session=session,
+                collection_id=config.collection_id,
+                tag_name=config.sampling_result_tag_name,
+                selected_sample_ids=preselected_sample_ids,
+            )
         return
 
     # Get root dataset id for balancing strategies
@@ -298,9 +306,7 @@ def sampling_via_database(
         n_samples=len(preselected_indices) + n_samples_to_select,
         preselected_indices=preselected_indices,
     )
-    selected_sample_ids = [
-        input_sample_ids[index] for index in selected_indices[len(preselected_indices) :]
-    ]
+    selected_sample_ids = [input_sample_ids[index] for index in selected_indices]
     sampling_helpers.create_result_tag(
         session=session,
         collection_id=config.collection_id,
@@ -568,8 +574,14 @@ def _add_strategy_to_mundig(
     elif isinstance(strat, MetadataWeightingStrategy):
         weights: list[float] = []
         metadata_key = strat.metadata_key
+        values_by_sample_id, _ = metadata_resolver.get_metadata_values_for_key(
+            session=session,
+            collection_id=context.collection_id,
+            key=metadata_key,
+            sample_ids=context.input_sample_ids,
+        )
         for sample_id in context.input_sample_ids:
-            weight = metadata_resolver.get_value_for_sample(session, sample_id, key=metadata_key)
+            weight = values_by_sample_id.get(sample_id)
             if not isinstance(weight, (float, int)):
                 raise ValueError(
                     f"Metadata {metadata_key} is not a number, only numbers can be used as weights"

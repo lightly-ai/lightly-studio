@@ -8,6 +8,14 @@ import fsspec
 import numpy as np
 import torch
 from av import FFmpegError, container
+from lightly_studio_serve.embedder import (
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    ImagePILEmbedder,
+    TextEmbedder,
+    VideoPathEmbedder,
+)
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from PIL import Image
 from tqdm import tqdm
 
@@ -18,14 +26,6 @@ from lightly_studio.core.file_outcome_report import (
     MissingInputFileError,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.embed.embedder import (
-    ImageCropPathEmbedder,
-    ImagePathEmbedder,
-    ImagePILEmbedder,
-    TextEmbedder,
-    VideoPathEmbedder,
-)
-from lightly_studio.embed.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from lightly_studio.utils import batching
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
@@ -140,12 +140,11 @@ class PerceptionEncoderEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        embeddings = image_embedding.embed_pil_images_batched(
+        return image_embedding.embed_pil_images_batched(
             images=images,
             context=self._embedding_context(),
             show_progress=True,
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
 
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched image embedding."""

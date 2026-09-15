@@ -64,3 +64,10 @@ def test_sanitize_generated_notes__leaves_non_bullet_lines_alone():
     notes = "## What's Changed\n**Full Changelog**: https://x/compare/v1.0.4...v1.0.5"
 
     assert release_notes.sanitize_generated_notes(notes) == notes
+
+
+def test_render_release_notes__no_generated_half():
+    body = release_notes.render_release_notes(
+        changelog_section="### Added\n\n- Added thing one.", generated_notes=""
+    )
+    assert body == "## Changelog\n\n### Added\n\n- Added thing one.\n"

@@ -9,6 +9,29 @@ POSTGRES_SHM_SIZE ?= 2g
 POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 POSTGRES_STARTUP_TIMEOUT_SECONDS ?= 60
 
+# Floci (AWS S3 emulator) development storage for MCAP recordings.
+FLOCI_CONTAINER_NAME := lightly-studio-floci
+FLOCI_PORT ?= 4566
+FLOCI_STARTUP_TIMEOUT_SECONDS ?= 60
+FLOCI_S3_BUCKET ?= lightly-studio
+FLOCI_S3_PREFIX ?= recordings
+# Space-separated local files, e.g.:
+#   make setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+FLOCI_MCAP_FILES ?= datasets/mcap/perception.mcap
+FLOCI_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
+	AWS_ENDPOINT_URL=http://localhost:$(FLOCI_PORT)
+
+# Floci GCP (GCS emulator) development storage for MCAP recordings.
+FLOCI_GCP_CONTAINER_NAME := lightly-studio-floci-gcp
+FLOCI_GCP_PORT ?= 4588
+FLOCI_GCP_STARTUP_TIMEOUT_SECONDS ?= 60
+FLOCI_GCP_BUCKET ?= lightly-studio
+FLOCI_GCP_PREFIX ?= recordings
+# Space-separated local files, e.g.:
+#   make setup-floci-gcp FLOCI_GCP_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+FLOCI_GCP_MCAP_FILES ?= datasets/mcap/perception.mcap
+FLOCI_GCP_ENV := STORAGE_EMULATOR_HOST=http://localhost:$(FLOCI_GCP_PORT)
+
 # Installs the uv version that `required-version` in pyproject.toml pins, so a local
 # `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
 UV_VERSION := 0.12.6
@@ -155,6 +178,77 @@ stop-postgres:
 	-docker rm $(POSTGRES_CONTAINER_NAME)
 	@echo "PostgreSQL container removed"
 
+.PHONY: start-floci
+start-floci:
+	@docker rm -f $(FLOCI_CONTAINER_NAME) >/dev/null 2>&1 || true
+	@docker run -d --name $(FLOCI_CONTAINER_NAME) -p $(FLOCI_PORT):4566 \
+		-v /var/run/docker.sock:/var/run/docker.sock -u root floci/floci:latest
+	@echo "Waiting for Floci..."
+	@deadline=$$(($$(date +%s) + $(FLOCI_STARTUP_TIMEOUT_SECONDS))); \
+	until curl -sf http://localhost:$(FLOCI_PORT)/_floci/health >/dev/null; do \
+		if [ $$(date +%s) -ge $$deadline ]; then \
+			echo "Floci did not become ready within $(FLOCI_STARTUP_TIMEOUT_SECONDS) seconds"; \
+			docker logs $(FLOCI_CONTAINER_NAME); \
+			exit 1; \
+		fi; \
+		sleep 1; \
+	done
+	@$(FLOCI_ENV) aws s3 mb s3://$(FLOCI_S3_BUCKET) 2>/dev/null || true
+	@echo "Floci is ready at http://localhost:$(FLOCI_PORT)"
+
+.PHONY: setup-floci
+setup-floci: start-floci
+	@for file in $(FLOCI_MCAP_FILES); do \
+		key="$(FLOCI_S3_PREFIX)/$$(basename "$$file")"; \
+		echo "Uploading $$file to s3://$(FLOCI_S3_BUCKET)/$$key..."; \
+		$(FLOCI_ENV) aws s3 cp "$$file" "s3://$(FLOCI_S3_BUCKET)/$$key"; \
+	done
+	@echo "Available MCAP recordings:"
+	@$(FLOCI_ENV) aws s3 ls s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
+
+.PHONY: list-floci-mcaps
+list-floci-mcaps: start-floci
+	@$(FLOCI_ENV) aws s3 ls s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
+
+.PHONY: stop-floci
+stop-floci:
+	-docker rm -f $(FLOCI_CONTAINER_NAME)
+
+.PHONY: start-floci-gcp
+start-floci-gcp:
+	@docker rm -f $(FLOCI_GCP_CONTAINER_NAME) >/dev/null 2>&1 || true
+	@docker run -d --name $(FLOCI_GCP_CONTAINER_NAME) -p $(FLOCI_GCP_PORT):4588 floci/floci-gcp:latest
+	@echo "Waiting for Floci GCP..."
+	@deadline=$$(($$(date +%s) + $(FLOCI_GCP_STARTUP_TIMEOUT_SECONDS))); \
+	until curl -sf http://localhost:$(FLOCI_GCP_PORT)/_floci/health >/dev/null; do \
+		if [ $$(date +%s) -ge $$deadline ]; then \
+			echo "Floci GCP did not become ready within $(FLOCI_GCP_STARTUP_TIMEOUT_SECONDS) seconds"; \
+			docker logs $(FLOCI_GCP_CONTAINER_NAME); \
+			exit 1; \
+		fi; \
+		sleep 1; \
+	done
+	@$(FLOCI_GCP_ENV) gsutil mb gs://$(FLOCI_GCP_BUCKET) 2>/dev/null || true
+	@echo "Floci GCP is ready at http://localhost:$(FLOCI_GCP_PORT)"
+
+.PHONY: setup-floci-gcp
+setup-floci-gcp: start-floci-gcp
+	@for file in $(FLOCI_GCP_MCAP_FILES); do \
+		key="$(FLOCI_GCP_PREFIX)/$$(basename "$$file")"; \
+		echo "Uploading $$file to gs://$(FLOCI_GCP_BUCKET)/$$key..."; \
+		$(FLOCI_GCP_ENV) gsutil cp "$$file" "gs://$(FLOCI_GCP_BUCKET)/$$key"; \
+	done
+	@echo "Available MCAP recordings:"
+	@$(FLOCI_GCP_ENV) gsutil ls gs://$(FLOCI_GCP_BUCKET)/$(FLOCI_GCP_PREFIX)/
+
+.PHONY: list-floci-gcp-mcaps
+list-floci-gcp-mcaps: start-floci-gcp
+	@$(FLOCI_GCP_ENV) gsutil ls gs://$(FLOCI_GCP_BUCKET)/$(FLOCI_GCP_PREFIX)/
+
+.PHONY: stop-floci-gcp
+stop-floci-gcp:
+	-docker rm -f $(FLOCI_GCP_CONTAINER_NAME)
+
 .PHONY: start-e2e-postgres
 start-e2e-postgres: build
 	@echo "Starting server for e2e tests with PostgreSQL..."
@@ -281,39 +375,6 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini check
 endif
 
-.PHONY: check-uv-lock
-check-uv-lock:
-	@echo "Ensuring uv.lock is up to date..."
-	uv lock --check
-
-.PHONY: lint
-lint:
-	@echo "Linting project with ruff..."
-	uv run ruff check
-
-.PHONY: type-check
-type-check:
-	@echo "Checking types with mypy..."
-	uv run mypy .
-
-.PHONY: format-check
-format-check:
-	@echo "Checking format with ruff..."
-	uv run ruff format --check
-
-.PHONY: static-checks
-static-checks: check-uv-lock lint type-check format-check
-
-.PHONY: format
-format:
-	@echo "Formatting project with ruff..."
-	uv run ruff format
-	uv run ruff check --fix
-
-.PHONY: lint-fix
-lint-fix:
-	uv run ruff check --fix
-
 .PHONY: clean
 clean:
 ifeq ($(OS),Windows_NT)
@@ -331,3 +392,5 @@ else
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -exec rm -rf {} +
 endif
+
+include ../make/python.mk

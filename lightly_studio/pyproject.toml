@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio"
-version = "1.1.0"
+version = "1.1.1"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
 requires-python = ">=3.9,<3.15"
@@ -24,7 +24,7 @@ dependencies = [
     # Pandas 3.0 requires Python 3.11 and higher, we have to stay at 2.2 or 2.3.
     "pandas>=2.2.3,<3.0",
     "psycopg[binary]>=3.2.4",
-    "pgvector>=0.4.0",
+    "pgvector>=0.4.0,<0.5.0",
     "fastapi>=0.115.5",
     "fsspec>=2023.1.0",
     "sqlalchemy-utils>=0.41.0",
@@ -48,7 +48,7 @@ dependencies = [
     # Mundig releases are published to PyPI: https://pypi.org/project/lightly-mundig/
     # To update, bump the pin below and relock:
     # uv lock --upgrade-package lightly-mundig==$version
-    "lightly-mundig==0.1.15",
+    "lightly-mundig==0.1.16b2",
     "pyarrow>=17.0.0",
     "av>=10.0.0",
     "requests>=2.32.3",
@@ -61,7 +61,11 @@ dependencies = [
     # Pinned below 7.0, which dropped Python 3.9. 6.9 covers every Python this package supports,
     # so one major runs everywhere rather than two that have to stay behaviourally identical.
     "posthog>=6.9,<7.0",
+    "lightly-studio-serve>=0.1.0,<0.2.0",
 ]
+
+[tool.uv.sources]
+lightly-studio-serve = { workspace = true }
 
 [project.scripts]
 lightly-studio = "lightly_studio.cli:main"

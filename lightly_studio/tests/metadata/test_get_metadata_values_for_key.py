@@ -51,6 +51,34 @@ def test_get_metadata_values_for_key__returns_values_for_requested_key(
     }
 
 
+def test_get_metadata_values_for_key__filters_by_sample_ids(
+    db_session: Session,
+) -> None:
+    """When sample_ids is given, only those samples' values are returned."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    samples = [
+        create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        for i in range(3)
+    ]
+    for i, sample in enumerate(samples):
+        sample["speed"] = float(i)
+
+    result, metadata_type = metadata_resolver.get_metadata_values_for_key(
+        session=db_session,
+        collection_id=collection_id,
+        key="speed",
+        sample_ids=[samples[0].sample_id, samples[2].sample_id],
+    )
+
+    assert metadata_type == "float"
+    assert result == {samples[0].sample_id: 0.0, samples[2].sample_id: 2.0}
+
+
 def test_get_metadata_values_for_key__missing_key(
     db_session: Session,
 ) -> None:

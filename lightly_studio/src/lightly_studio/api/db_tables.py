@@ -34,14 +34,33 @@ from lightly_studio.models.image import (
 from lightly_studio.models.mcap import (
     McapTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.mcap_group_sequence import (
+    McapGroupSequenceTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.metadata import (
     SampleMetadataTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.recording import (
+    RecordingTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.sensor_calibration import (
+    SensorCalibrationTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.sequence import (
+    SampleSequenceLinkTable,  # noqa: F401, required for SQLModel to work properly
+    SequenceTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.settings import (
     SettingTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.static_transform import (
+    StaticTransformTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.tag import (
     TagTable,  # noqa: F401, required for SQLModel to work properly

@@ -49,9 +49,7 @@ def get_metadata_info(
         List of metadata info objects with name, type, and optionally min/max values
         for numerical metadata types.
     """
-    return metadata_info_resolver.get_all_metadata_keys_and_schema(
-        session=session, collection_id=collection_id
-    )
+    return metadata_info_resolver.get_metadata_info(session=session, collection_id=collection_id)
 
 
 class MetadataHistogramsRequest(BaseModel):
@@ -61,6 +59,9 @@ class MetadataHistogramsRequest(BaseModel):
     bin_count: int = Field(
         _DEFAULT_BIN_COUNT, ge=1, le=200, description="Number of equal-width bins per histogram"
     )
+    fields: list[str] | None = Field(
+        None, description="Numeric fields to histogram; all numeric fields are computed when absent"
+    )
 
 
 @metadata_router.post("/metadata/histograms", response_model=dict[str, HistogramView])
@@ -69,7 +70,7 @@ def get_metadata_histograms(
     collection_id: Annotated[UUID, Path(title="collection Id")],
     request: MetadataHistogramsRequest | None = None,
 ) -> dict[str, HistogramView]:
-    """Compute value-distribution histograms for all numeric metadata keys.
+    """Compute value-distribution histograms for selected numeric metadata keys.
 
     Bin edges always span the full (unfiltered) value range of each key so the
     chart axis stays stable; the counts reflect the given filters. Each key's
@@ -79,7 +80,7 @@ def get_metadata_histograms(
     Args:
         session: The database session.
         collection_id: The ID of the collection.
-        request: Optional request body carrying the active sample filters.
+        request: Optional request body carrying the active sample filters and bin count.
 
     Returns:
         Mapping of metadata key to its histogram.
@@ -89,6 +90,7 @@ def get_metadata_histograms(
         collection_id=collection_id,
         filters=request.filters if request else None,
         bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
+        fields=request.fields if request else None,
     )
 
 

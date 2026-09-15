@@ -225,9 +225,9 @@ class TestSampling:
         }
 
         assert len(batches["first_batch"]) == 2
-        assert len(batches["second_batch"]) == 2
-        assert set(batches["first_batch"]).isdisjoint(batches["second_batch"])
-        assert set(batches["first_batch"] + batches["second_batch"]) == set(batches["single_batch"])
+        assert len(batches["second_batch"]) == 4
+        assert set(batches["first_batch"]) < set(batches["second_batch"])
+        assert set(batches["second_batch"]) == set(batches["single_batch"])
 
     def test_annotation_balancing(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
@@ -347,6 +347,21 @@ class TestSampling:
         spy_mundig_add_weighting.assert_called_once_with(
             self=mocker.ANY, weights=[16.0, 50.0, 35.0], strength=1.0
         )
+
+    def test_metadata_weighting__non_numeric_raises(self, db_session: Session) -> None:
+        collection_id = helpers_sampling.fill_db_with_samples_and_metadata(
+            session=db_session, metadata=["fast", "slow", "medium"], metadata_key="speed"
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, db_session)
+
+        with pytest.raises(ValueError, match="is not a number"):
+            query.sampling().metadata_weighting(
+                n_samples_to_select=2,
+                metadata_key="speed",
+                sampling_result_tag_name="weight_sampling",
+            )
 
     def test_metadata_weighting__video_frames(
         self,

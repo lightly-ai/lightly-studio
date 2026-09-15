@@ -68,6 +68,14 @@ function buildAnnotation(
     };
 }
 
+function buildAnnotationWithOrderValue(orderValue: number | null): AnnotationWithPayloadView {
+    const annotationWithPayload = buildAnnotation();
+    return {
+        ...annotationWithPayload,
+        annotation: { ...annotationWithPayload.annotation, order_value: orderValue }
+    };
+}
+
 const defaultProps = {
     containerWidth: 200,
     containerHeight: 150,
@@ -174,6 +182,12 @@ describe('AnnotationClassificationGridItem', () => {
         expect(cropWindow.windowHeight).toBe(768);
         expect(cropWindow.sampleWidth).toBe(1024);
         expect(cropWindow.sampleHeight).toBe(768);
+    });
+
+    it('shows the sort value badge when the annotation has an order value', () => {
+        renderItem(buildAnnotationWithOrderValue(0.75));
+
+        expect(screen.getByText('0.75')).toBeInTheDocument();
     });
 
     it('calls onCropWindowChange with null on unmount', async () => {

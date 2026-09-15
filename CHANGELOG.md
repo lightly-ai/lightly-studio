@@ -10,8 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
-
-- Change the video decoding backend for the GUI from OpenCV to PyAV, resulting in up to 6× faster decoding performance for parallel streams when loading the grid view and scrolling.
+- Preselected samples are now part of the sampling result.
 
 ### Deprecated
 
@@ -19,7 +18,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix `hf://` directory ingest reporting every file as missing.
+
 ### Security
+
+## \[1.1.1\] - 2026-09-14
+
+### Added
+
+- Add a Split dataset menu action to divide images or videos into tagged splits using the current filters.
+- Add a Glossary page to the docs.
+
+### Changed
+
+- Reduce grid-view overscan prefetching for videos and frames from 20 additional rows to 2, lowering initial frontend load by avoiding unnecessary backend-rendered videos.
+- Increase max_concurrency of requests to the backend from 100 to 128 to reduce chance of seeing 503 errors in the frontend.
+- Improved metadata loading by reducing latency by up to 70% and increasing throughput by up to 4× under concurrent requests.
+- Speed up distribution plot tag comparisons by up to 4.9x by requesting and calculating only the metadata field being viewed.
+- Speed up Python SDK iteration and sampling setup with remote databases by avoiding an extra database query for each sample.
+- Improved categorical metadata loading performance, reducing database work and page-load latency for large datasets.
+- Improved metadata loading by reducing numeric database queries from 13 to 8 and making responses up to 25% faster.
+- Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.
+- Change the video decoding backend for the GUI from OpenCV to PyAV, resulting in up to 6× faster decoding performance for parallel streams when loading the grid view and scrolling.
+
+### Removed
+
+- Improved initial metadata loading performance by up to 30% for large datasets by removing duplicate histogram calculations.
+
+### Fixed
+
+- Fix sampling, typicality, similarity, few-shot classification and the 2D embedding view crashing on PostgreSQL. New installs on Python 3.10 or later got pgvector 0.5.0, which reads embeddings in a format LightlyStudio does not support yet, so pgvector is now pinned below 0.5.0.
+- Fixed keyboard input in a plugin dialog triggering the keyboard shortcuts behind it.
 
 ## \[1.1.0\] - 2026-09-07
 

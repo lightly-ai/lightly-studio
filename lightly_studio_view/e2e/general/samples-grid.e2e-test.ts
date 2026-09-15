@@ -1,4 +1,4 @@
-import { expect, test, pressButton, isInViewport } from '../utils';
+import { expect, test, pressButton, isInViewport, scrollDownToGridItem } from '../utils';
 import { cocoDataset } from './fixtures';
 
 test('Shift+click adds the full range in image grid', async ({ samplesPage }) => {
@@ -317,7 +317,7 @@ test('We can see clicked element when navigating back from details', async ({
     expect(await isInViewport({ element: samplesPage.getSampleByIndex(0), viewport })).toBe(true);
     expect(await isInViewport({ element: samplesPage.getSampleByIndex(30), viewport })).toBe(false);
 
-    await samplesPage.getSampleByIndex(30).scrollIntoViewIfNeeded();
+    await scrollDownToGridItem(viewport, samplesPage.getSampleByIndex(30));
 
     expect(await isInViewport({ element: samplesPage.getSampleByIndex(0), viewport })).toBe(false);
     expect(await isInViewport({ element: samplesPage.getSampleByIndex(30), viewport })).toBe(true);
