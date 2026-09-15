@@ -24,6 +24,7 @@ from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -722,6 +723,58 @@ def test_deep_copy__with_sensor_calibrations(db_session: Session) -> None:
     )
     assert copied_gcd is not None
     assert copied_gcd.frame_id == "main"
+
+
+def test_deep_copy__with_static_transforms(db_session: Session) -> None:
+    root = create_collection(session=db_session, collection_name="tf_root")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=root.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    db_session.add(
+        StaticTransformTable(
+            recording_id=recording_id,
+            parent="livox_front_left",
+            child="main",
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            tx=0.1,
+            ty=0.2,
+            tz=0.3,
+        )
+    )
+    db_session.commit()
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=root.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=copied.dataset_id
+    )
+    assert len(copied_recordings) == 1
+    copied_recording_id = copied_recordings[0].recording_id
+    assert copied_recording_id != recording_id
+
+    copied_transforms = db_session.exec(
+        select(StaticTransformTable).where(
+            col(StaticTransformTable.recording_id) == copied_recording_id
+        )
+    ).all()
+    assert len(copied_transforms) == 1
+    assert copied_transforms[0].parent == "livox_front_left"
+    assert copied_transforms[0].child == "main"
+    assert (
+        copied_transforms[0].tx,
+        copied_transforms[0].ty,
+        copied_transforms[0].tz,
+    ) == pytest.approx((0.1, 0.2, 0.3))
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
