@@ -123,17 +123,12 @@ class ClassifierManager:
         Returns:
             The created classifier name and ID.
         """
-        embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        embedding_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
             session=session,
             collection_id=collection_id,
         )
-        if embedding_model_id is None:
-            raise ValueError("No embedding model found for the given collection ID.")
-        embedding_model = embedding_model_resolver.get_by_id(
-            session=session, embedding_model_id=embedding_model_id
-        )
         if embedding_model is None:
-            raise ValueError("Default embedding space references a missing model.")
+            raise ValueError("No embedding model found for the given collection ID.")
         classifier = RandomForest(
             name=name,
             classes=class_list,
