@@ -17,6 +17,10 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 SPACE_KEY = "acme/model@v1"
 DIMENSION = 2
 
+# What a model puts in an error. A real one, such as the `NotImplementedError` of torch
+# for an op its backend lacks, can name the input that the model failed on.
+MODEL_ERROR_MESSAGE = "The model names the input that it failed on."
+
 
 class FakeTextEmbedder(TextEmbedder):
     """Returns one fixed row per text, or a canned result when one is given."""
@@ -65,7 +69,7 @@ class BrokenTextEmbedder(FakeTextEmbedder):
     """A model that fails, the way torch does for an op its backend lacks."""
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
-        raise NotImplementedError("could not run 'aten::foo' on the 'MPS' backend")
+        raise NotImplementedError(MODEL_ERROR_MESSAGE)
 
 
 class PathOnlyEmbedder(ImagePathEmbedder):
@@ -233,7 +237,7 @@ def test_create_app__model_raises_not_implemented_error() -> None:
     assert response.json()["detail"] == (
         "The embedder raised NotImplementedError. See the server log."
     )
-    assert "MPS" not in response.text
+    assert MODEL_ERROR_MESSAGE not in response.text
 
 
 def test_create_app__embedder_returns_wrong_dimension() -> None:
