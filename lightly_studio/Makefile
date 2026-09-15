@@ -183,7 +183,7 @@ stop-postgres:
 start-floci:
 	@docker rm -f $(FLOCI_CONTAINER_NAME) >/dev/null 2>&1 || true
 	@docker run -d --name $(FLOCI_CONTAINER_NAME) -p $(FLOCI_PORT):4566 \
-		-v /var/run/docker.sock:/var/run/docker.sock -u root $(FLOCI_IMAGE)
+		-v /var/run/docker.sock:/var/run/docker.sock -u root floci/floci:latest
 	@echo "Waiting for Floci..."
 	@deadline=$$(($$(date +%s) + $(FLOCI_STARTUP_TIMEOUT_SECONDS))); \
 	until curl -sf http://localhost:$(FLOCI_PORT)/_floci/health >/dev/null; do \
