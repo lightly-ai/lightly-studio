@@ -21,6 +21,7 @@ export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSampl
 export { useFileDrop } from '$lib/hooks/useFileDrop/useFileDrop';
 export { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
 export { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+export { useRecoverableVideo } from '$lib/hooks/useRecoverableVideo/useRecoverableVideo.svelte';
 export { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
 export { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 export { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';

@@ -284,7 +284,8 @@
                             dragData={{
                                 url: getGridImageURL({
                                     sampleId: samples[index].sample_id,
-                                    quality: 'raw'
+                                    quality: 'raw',
+                                    mode: 'proxy'
                                 }),
                                 fileName: samples[index].file_name
                             }}

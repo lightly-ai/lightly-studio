@@ -5,6 +5,7 @@ from __future__ import annotations
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_ANALYTICS_ENABLED,
     LIGHTLY_STUDIO_POINT_CLOUD_ENABLED,
+    LIGHTLY_STUDIO_MEDIA_DIRECT_URLS,
 )
 
 # The GUI reads this back to decide whether to start PostHog, so that
@@ -13,6 +14,7 @@ ANALYTICS_FEATURE = "analytics"
 # The GUI reads this back to decide whether MCAP samples can open the point-cloud labeling
 # workspace (LIG-10659). Leaving it off never affects the existing sample detail view.
 POINT_CLOUD_RENDERING_FEATURE = "point_cloud_rendering"
+MEDIA_DIRECT_URLS_FEATURE = "media-direct-urls"
 
 
 def _get_active_features() -> list[str]:
@@ -22,6 +24,8 @@ def _get_active_features() -> list[str]:
         features.append(ANALYTICS_FEATURE)
     if LIGHTLY_STUDIO_POINT_CLOUD_ENABLED:
         features.append(POINT_CLOUD_RENDERING_FEATURE)
+    if LIGHTLY_STUDIO_MEDIA_DIRECT_URLS:
+        features.append(MEDIA_DIRECT_URLS_FEATURE)
     return features
 
 

@@ -22,6 +22,8 @@
     "test:e2e": "playwright test --project=general",
     "test:e2e-evaluations": "playwright test --project=evaluations",
     "test:e2e-videos": "playwright test --project=videos",
+    "benchmark:media:images": "playwright test --config=playwright.media-benchmark.config.ts --project=media-benchmark-images",
+    "benchmark:media:videos": "playwright test --config=playwright.media-benchmark.config.ts --project=media-benchmark-videos",
     "test:e2e-debug": "playwright test --ui",
     "test:e2e-debug-videos": "playwright test --ui --project=videos",
     "prebuild-storybook": "npm run generate-language",

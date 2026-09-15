@@ -1,8 +1,13 @@
 <script lang="ts">
-    import { PUBLIC_SAMPLES_URL } from '$env/static/public';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { ImageSample } from '$lib/services/types';
-    import { cn, getGridImageURL, getGridThumbnailRequestSize } from '$lib/utils';
+    import {
+        cn,
+        getGridImageURL,
+        getGridThumbnailRequestSize,
+        isMediaDirectUrlsEnabled,
+        withProxyMediaMode
+    } from '$lib/utils';
     import { onMount } from 'svelte';
     import type { SampleImageObjectFit } from './types';
     import type { GridThumbnailQuality } from '$lib/utils/getGridThumbnailURL/getGridThumbnailURL';
@@ -62,12 +67,32 @@
             });
         }
 
-        return `${PUBLIC_SAMPLES_URL}/sample/${sample.sample_id}${collectionVersion ? `?v=${collectionVersion}` : ''}`;
+        return getGridImageURL({
+            sampleId: sample.sample_id,
+            quality: 'raw',
+            cacheBuster: collectionVersion
+        });
     });
+
+    let displayedUrl = $state('');
+    let fallbackAttempted = false;
+
+    $effect(() => {
+        displayedUrl = thumbnailUrl;
+        fallbackAttempted = false;
+    });
+
+    async function handleImageError() {
+        const failedUrl = displayedUrl;
+        if (fallbackAttempted || !(await isMediaDirectUrlsEnabled())) return;
+        if (displayedUrl !== failedUrl) return;
+        fallbackAttempted = true;
+        displayedUrl = withProxyMediaMode(failedUrl);
+    }
 </script>
 
 <img
-    src={thumbnailUrl}
+    src={displayedUrl}
     alt={sample.file_path_abs}
     class={cn('sample-image rounded-lg bg-black', className)}
     style="--object-fit: {objectFit}"
@@ -75,6 +100,7 @@
     {height}
     draggable="false"
     loading="lazy"
+    onerror={handleImageError}
 />
 
 <style>

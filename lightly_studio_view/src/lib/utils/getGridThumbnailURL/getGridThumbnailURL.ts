@@ -1,4 +1,5 @@
 import { PUBLIC_SAMPLES_URL, PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
+import { withProxyMediaMode } from '../mediaRecovery';
 
 export type GridThumbnailQuality = 'raw' | 'high';
 
@@ -8,6 +9,7 @@ type GridThumbnailURLParams = {
     renderedWidth?: number;
     renderedHeight?: number;
     cacheBuster?: string;
+    mode?: 'proxy';
 };
 
 export function getGridThumbnailRequestSize(renderedSize: number, devicePixelRatio = 1): number {
@@ -22,7 +24,8 @@ function buildGridThumbnailURL({
     quality,
     renderedWidth,
     renderedHeight,
-    cacheBuster
+    cacheBuster,
+    mode
 }: GridThumbnailURLParams): string {
     const params = new URLSearchParams();
 
@@ -41,7 +44,8 @@ function buildGridThumbnailURL({
     }
 
     const queryString = params.toString();
-    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+    const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+    return mode === 'proxy' ? withProxyMediaMode(url) : url;
 }
 
 export function getGridImageURL({
@@ -49,20 +53,23 @@ export function getGridImageURL({
     quality,
     renderedWidth,
     renderedHeight,
-    cacheBuster
+    cacheBuster,
+    mode
 }: {
     sampleId: string;
     quality: GridThumbnailQuality;
     renderedWidth?: number;
     renderedHeight?: number;
     cacheBuster?: string;
+    mode?: 'proxy';
 }): string {
     return buildGridThumbnailURL({
         baseUrl: `${PUBLIC_SAMPLES_URL}/sample/${sampleId}`,
         quality,
         renderedWidth,
         renderedHeight,
-        cacheBuster
+        cacheBuster,
+        mode
     });
 }
 

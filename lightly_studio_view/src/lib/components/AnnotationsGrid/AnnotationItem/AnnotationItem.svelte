@@ -6,7 +6,7 @@
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationClassVisibility } from '$lib/hooks';
-    import { getColorByLabel, hexToRgba } from '$lib/utils';
+    import { getColorByLabel, hexToRgba, resolveImageMediaSource } from '$lib/utils';
     import type { CropWindow } from './renderCropObjectUrl';
 
     type Props = {
@@ -110,6 +110,18 @@
     // already-shrunken array (crash on filter changes). The id is constant per instance —
     // the {#key} wrapper in the grid remounts this component when it changes.
     const annotationId = untrack(() => annotation.sample_id);
+    let backgroundUrl = $state('');
+    const backgroundImage = $derived(backgroundUrl ? `url("${backgroundUrl}")` : 'none');
+
+    $effect(() => {
+        const sourceUrl = sample.url;
+        const controller = new AbortController();
+        backgroundUrl = '';
+        void resolveImageMediaSource(sourceUrl, controller.signal).then((resolvedUrl) => {
+            if (!controller.signal.aborted) backgroundUrl = resolvedUrl ?? '';
+        });
+        return () => controller.abort();
+    });
 
     // Report the crop geometry (not a rendered image) upward. The grid turns it into a
     // preview blob only when a drag actually starts, so no canvas work happens per tile.
@@ -135,7 +147,7 @@
         style={`
         width: ${containerWidth}px;
         height: ${containerHeight}px;
-        background-image: url("${sample.url}");
+        background-image: ${backgroundImage};
         background-position: ${xOffset}px ${yOffset}px;
         background-size: ${sample.width * scale}px ${sample.height * scale}px;
         background-repeat: no-repeat;

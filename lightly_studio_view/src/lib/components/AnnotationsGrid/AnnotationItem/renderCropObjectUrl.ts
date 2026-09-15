@@ -1,3 +1,5 @@
+import { withProxyMediaMode } from '$lib/utils';
+
 /** Geometry of the padded-bbox crop window, in original-image pixel coordinates. */
 export type CropWindow = {
     sourceUrl: string;
@@ -52,6 +54,6 @@ export function renderCropObjectUrl(win: CropWindow, token: CancelToken): Promis
             }, 'image/png');
         };
         imageElement.onerror = () => resolve(null);
-        imageElement.src = win.sourceUrl;
+        imageElement.src = withProxyMediaMode(win.sourceUrl);
     });
 }

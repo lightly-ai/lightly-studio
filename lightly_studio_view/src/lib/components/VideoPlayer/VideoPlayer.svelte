@@ -20,7 +20,7 @@
      */
     import type { HTMLVideoAttributes } from 'svelte/elements';
     import { cn } from '$lib/utils/shadcn.js';
-    import { MEDIA_ERROR_MESSAGES } from './errors';
+    import { useRecoverableVideo } from '$lib/hooks';
     import VideoControls from '../VideoControls/VideoControls.svelte';
     import VideoEventTimeline from '../VideoEventTimeline/VideoEventTimeline.svelte';
     import { useVideoPlayback } from './useVideoPlayback.svelte';
@@ -81,6 +81,9 @@
 
         /** Called when the user deletes an event. */
         onEventDelete?: (event: VideoEvent) => void;
+
+        /** No-progress interval before one automatic proxy recovery attempt. */
+        recoveryWatchdogMs?: number;
     }
 
     let {
@@ -94,7 +97,8 @@
         editableEvents = false,
         onEventResize,
         onEventAdd,
-        onEventDelete
+        onEventDelete,
+        recoveryWatchdogMs
     }: VideoPlayerProps = $props();
 
     const defaultVideoProps: HTMLVideoAttributes = {
@@ -122,9 +126,13 @@
     });
     const videoClass = $derived(videoProps.class);
 
-    let sourceLoadError = $state<string | null>(null);
     let isHovered = $state(false);
     let regionEl: HTMLDivElement | null = $state(null);
+    const recovery = useRecoverableVideo({
+        getVideoEl: () => videoEl,
+        getSourceUrl: () => src,
+        getWatchdogMs: () => recoveryWatchdogMs
+    });
 
     // Mirror playback state and expose intent callbacks for the control bar.
     const playback = useVideoPlayback({
@@ -139,13 +147,6 @@
     // and the event bar, so both share the same coordinate system.
     const effectiveDurationS = $derived(durationS ?? playback.durationS);
     const showEvents = $derived(events.length > 0);
-
-    function handleVideoError() {
-        const errorCode = videoEl?.error?.code;
-        sourceLoadError = errorCode
-            ? MEDIA_ERROR_MESSAGES[errorCode]
-            : 'Failed to load video source.';
-    }
 
     function handleMouseMove(event: MouseEvent) {
         if (!videoEl) return;
@@ -184,25 +185,23 @@
                 videoClass,
                 isHovered && hoverClass
             )}
-            {src}
+            src={recovery.sourceUrl}
             {...mergedVideoProps}
             onerror={(e) => {
-                handleVideoError();
                 videoProps.onerror?.(e);
             }}
             onloadeddata={(e) => {
-                sourceLoadError = null;
                 videoProps.onloadeddata?.(e);
             }}
             onclick={playback.togglePlay}
         ></video>
-        {#if sourceLoadError}
+        {#if recovery.terminalError}
             <div
                 role="status"
                 aria-live="polite"
                 class="absolute inset-0 z-[10] flex items-center justify-center bg-black/70 p-2 text-center text-xs font-medium text-white"
             >
-                {sourceLoadError}
+                {recovery.terminalError}
             </div>
         {/if}
     </div>
