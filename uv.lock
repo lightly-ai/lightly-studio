@@ -3136,13 +3136,13 @@ wheels = [
 
 [[package]]
 name = "lightly-mundig"
-version = "0.1.15"
+version = "0.1.16b2"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/11/d3/702cef37adc1d3fde431e8161457356b192141bd0f2ee8f4e662dd74399f/lightly_mundig-0.1.15-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:c804faa7425b75b2f26f3dd20beeb3d937f0db9364d9faa9c2489de8786c9b07", size = 542273, upload-time = "2026-08-25T14:02:18.021Z" },
-    { url = "https://files.pythonhosted.org/packages/d2/0f/236f6dee22f39615ba1b45727f8b3a01e5f7a294ae0a4f4dd82cfad90c10/lightly_mundig-0.1.15-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:791848274520a32de8c7aa8b3f316894ff61db3844b2f8c0f710d1306df698da", size = 524128, upload-time = "2026-08-25T14:03:35.962Z" },
-    { url = "https://files.pythonhosted.org/packages/4e/cf/14d3cf43ae659a82651ed7ab8ef1681d05ff053e80de455febce3c31f726/lightly_mundig-0.1.15-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:30cde5be69ebf23461357dc375b44a21b254e1d3ae13450891825ccf16a537e1", size = 3968872, upload-time = "2026-08-25T14:09:05.838Z" },
-    { url = "https://files.pythonhosted.org/packages/44/80/e86ab8cd239ed501673a0dab0550449cf68bd50765a6f2037a4416fd3b0d/lightly_mundig-0.1.15-cp39-abi3-win_amd64.whl", hash = "sha256:8eeae3e4bfa135b7ec32d127d1a10803df5e1d7946b4830f9efd4f952c06952e", size = 5987911, upload-time = "2026-08-25T14:13:20.274Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/ca/d5f1e49d84379885c9e7a82eccd99e8348e3ff232473cf932e822e827201/lightly_mundig-0.1.16b2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:a43f9e5ffcde1307309649d0f4719e62650fb28d6c8461a033a0ca04afc6d1c3", size = 545630, upload-time = "2026-09-15T08:29:00.559Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/04/5ea4a8ee2cfc84635fd1022d109f3fae95259afc69ad27e6787699105b0f/lightly_mundig-0.1.16b2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:8118bbe3c504a352ccc380cc150985e123c50f7b63afdef0ee9d5b87af05ea16", size = 528541, upload-time = "2026-09-15T08:30:06.299Z" },
+    { url = "https://files.pythonhosted.org/packages/df/cc/3d838eeb5675250a70aa7aec8ba01f467b41714879732a931c641209a512/lightly_mundig-0.1.16b2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bc8b4c153b54ac630ed749caa7ec874980903a6cfb56b9d652f925c36de5f6de", size = 3972872, upload-time = "2026-09-15T08:30:53.938Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/4a/d8fdf8415324fec61a5fcc7a819ff782805930fbb28163a18a0b6a51ebfc/lightly_mundig-0.1.16b2-cp39-abi3-win_amd64.whl", hash = "sha256:7d19d6a81acbcbf75788bba681565e0114cb39656c6f024549fc05f1560d1d2c", size = 5993602, upload-time = "2026-09-15T08:18:39.136Z" },
 ]
 
 [[package]]
@@ -3266,7 +3266,7 @@ requires-dist = [
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "labelformat", specifier = ">=0.1.17" },
-    { name = "lightly-mundig", specifier = "==0.1.15" },
+    { name = "lightly-mundig", specifier = "==0.1.16b2" },
     { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
