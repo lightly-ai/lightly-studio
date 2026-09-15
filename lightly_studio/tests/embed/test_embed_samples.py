@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from uuid import UUID
 
 import numpy as np
@@ -55,12 +56,13 @@ class _FirstPixelEmbeddingGenerator(RandomEmbeddingGenerator):
         return np.array([image.getpixel((0, 0)) for image in images], dtype=np.float32)
 
 
-class _IndexVideoEmbedder(VideoPathEmbedder):
-    """Embeds each video path as its position and drops the last path.
+class _PathIndexVideoEmbedder(VideoPathEmbedder):
+    """Embeds each video path as the number in its file name and drops the last path.
 
-    Distinct per-input vectors and a dropped input verify the registry embedder ran and
-    that embeddings are stored against the matching sample IDs. Shares the random model's
-    space so it resolves as the collection's default.
+    Deriving the vector from the path content, not the input position, makes the test fail
+    if ``embed_video_samples`` resolves the paths in the wrong order. A dropped input
+    verifies that only kept embeddings are stored. Shares the random model's space so it
+    resolves as the collection's default.
     """
 
     __slots__ = ()
@@ -70,10 +72,10 @@ class _IndexVideoEmbedder(VideoPathEmbedder):
         return EmbeddingSpaceSpec(space_key="random_model", dimension=2)
 
     def embed_videos(self, paths: list[str]) -> EmbeddingResult:
-        """Embed all paths but the last as [index, index]."""
+        """Embed all paths but the last as [number, number], parsed from the file name."""
         kept_indices = list(range(len(paths) - 1))
         embeddings = np.array(
-            [[float(index), float(index)] for index in kept_indices], dtype=np.float32
+            [[_path_number(paths[index])] * 2 for index in kept_indices], dtype=np.float32
         )
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
@@ -367,7 +369,7 @@ def test_embed_video_samples(
         dimension=2,
     )
     registry = EmbedderRegistry()
-    registry.register(embedder=_IndexVideoEmbedder())
+    registry.register(embedder=_PathIndexVideoEmbedder())
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
     embed_samples.embed_video_samples(
@@ -375,7 +377,7 @@ def test_embed_video_samples(
     )
 
     # The embedder drops the last video, so only the first two are stored, each with the
-    # vector encoding its position.
+    # vector encoding the number parsed from its resolved path.
     rows = sample_embedding_resolver.get_by_sample_ids(
         session=db_session, sample_ids=video_ids, embedding_model_id=model_id
     )
@@ -630,3 +632,10 @@ def _disable_env_loader(mocker: MockerFixture) -> None:
 def _stored_embeddings(session: Session) -> list[SampleEmbeddingTable]:
     """Return every stored sample embedding, for asserting the skip path stores nothing."""
     return list(session.exec(select(SampleEmbeddingTable)).all())
+
+
+def _path_number(path: str) -> float:
+    """Return the number in a ``/videos/video_<n>.mp4`` path."""
+    match = re.search(r"(\d+)", path)
+    assert match is not None
+    return float(match.group(1))
