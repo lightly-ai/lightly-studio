@@ -99,6 +99,21 @@ def test_track(mocker: MockerFixture) -> None:
     )
 
 
+def test_track_exception(mocker: MockerFixture) -> None:
+    mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
+    mocker.patch.object(posthog_tracker, "_common_properties", return_value={"os": "Linux"})
+    client = mocker.patch.object(posthog_tracker, "Posthog").return_value
+    exc = ValueError("something went wrong")
+
+    PostHogTracker(project_api_key="phc_test", host=POSTHOG_HOST).track_exception(exc=exc)
+
+    client.capture_exception.assert_called_once_with(
+        exception=exc,
+        distinct_id=str(INSTALL_ID),
+        properties={"os": "Linux"},
+    )
+
+
 def test_shutdown(mocker: MockerFixture) -> None:
     mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
     client = mocker.patch.object(posthog_tracker, "Posthog").return_value

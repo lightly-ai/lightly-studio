@@ -15,10 +15,14 @@ class FakeTracker:
 
     def __init__(self) -> None:
         self.events: list[tuple[str, Mapping[str, object]]] = []
+        self.exceptions: list[BaseException] = []
         self.shutdown_calls = 0
 
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         self.events.append((event, properties))
+
+    def track_exception(self, exc: BaseException) -> None:
+        self.exceptions.append(exc)
 
     def shutdown(self) -> None:
         self.shutdown_calls += 1
@@ -30,6 +34,9 @@ class BrokenTracker:
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         raise RuntimeError(f"unreachable, dropped '{event}' with {properties}")
 
+    def track_exception(self, exc: BaseException) -> None:
+        raise RuntimeError("unreachable, could not report exception")
+
     def shutdown(self) -> None:
         raise RuntimeError("unreachable, could not flush")
 
@@ -40,6 +47,12 @@ def reset_tracker() -> Generator[None, None, None]:
     tracking._tracker = None
     yield
     tracking._tracker = None
+
+
+class TestNoOpTracker:
+    def test_track_exception(self) -> None:
+        """Must silently discard the exception."""
+        tracking.NoOpTracker().track_exception(exc=ValueError("boom"))
 
 
 def test_track(mocker: MockerFixture) -> None:
@@ -96,6 +109,23 @@ def test_track__when_the_backend_raises(mocker: MockerFixture) -> None:
     mocker.patch.object(tracking, "_create_tracker", return_value=BrokenTracker())
 
     tracking.track(event=tracking.APP_LAUNCHED, properties={})
+
+
+def test_track_exception(mocker: MockerFixture) -> None:
+    fake = FakeTracker()
+    mocker.patch.object(tracking, "_create_tracker", return_value=fake)
+    exc = ValueError("oops")
+
+    tracking.track_exception(exc=exc)
+
+    assert fake.exceptions == [exc]
+
+
+def test_track_exception__when_the_backend_raises(mocker: MockerFixture) -> None:
+    """A broken analytics backend must never surface to the caller."""
+    mocker.patch.object(tracking, "_create_tracker", return_value=BrokenTracker())
+
+    tracking.track_exception(exc=ValueError("oops"))
 
 
 def test_shutdown(mocker: MockerFixture) -> None:

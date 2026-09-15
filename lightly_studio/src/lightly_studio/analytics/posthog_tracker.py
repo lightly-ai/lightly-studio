@@ -72,7 +72,7 @@ class PostHogTracker(Tracker):
             exc: The exception to report.
         """
         self._client.capture_exception(
-            exc,
+            exception=exc,
             distinct_id=self._distinct_id,
             properties=self._common_properties,
         )
