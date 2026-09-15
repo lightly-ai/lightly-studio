@@ -16,8 +16,7 @@ def get_by_name(
     kind: TagKind = "sample",
 ) -> TagTable | None:
     """Retrieve a single tag by name and kind."""
-    query = select(TagTable).where(TagTable.name == tag_name)
+    query = select(TagTable).where(TagTable.name == tag_name).where(col(TagTable.kind) == kind)
     if collection_id:
         query = query.where(TagTable.collection_id == collection_id)
-    query = query.where(col(TagTable.kind) == kind)
     return session.exec(query).one_or_none()

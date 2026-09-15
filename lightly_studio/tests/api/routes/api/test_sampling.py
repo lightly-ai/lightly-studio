@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -153,7 +154,7 @@ def test_create_combination_sampling__preselected_samples_outside_filter(
 
     assert response.status_code == 400
     assert (
-        response.json()["detail"]
+        response.json()["error"]
         == "All samples in the preselected tag must match the current filters."
     )
 
@@ -192,7 +193,10 @@ def test_create_combination_sampling__insufficient_non_preselected_samples(
     )
 
     assert response.status_code == 400
-    assert "has only 1 sample not in the preselected tag" in response.json()["detail"]
+    assert (
+        "only 1 samples are available after excluding preselected samples"
+        in response.json()["error"]
+    )
 
 
 def test_create_combination_sampling__preselected_tag_from_another_collection(
@@ -226,7 +230,65 @@ def test_create_combination_sampling__preselected_tag_from_another_collection(
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid preselected sample tag."
+    assert response.json()["error"] == "Invalid preselected sample tag."
+
+
+def test_create_combination_sampling__unknown_preselected_tag(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=3, embedding_model_names=["test_embedding_model"]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json={
+            "n_samples_to_select": 1,
+            "sampling_result_tag_name": "new_batch",
+            "preselected_tag_id": str(uuid4()),
+            "strategies": [
+                {
+                    "strategy_name": "diversity",
+                    "embedding_model_name": "test_embedding_model",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "Invalid preselected sample tag."
+
+
+def test_create_combination_sampling__annotation_preselected_tag(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=3, embedding_model_names=["test_embedding_model"]
+    )
+    annotation_tag = helpers_resolvers.create_tag(
+        session=db_session,
+        collection_id=collection_id,
+        tag_name="annotations",
+        kind="annotation",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json={
+            "n_samples_to_select": 1,
+            "sampling_result_tag_name": "new_batch",
+            "preselected_tag_id": str(annotation_tag.tag_id),
+            "strategies": [
+                {
+                    "strategy_name": "diversity",
+                    "embedding_model_name": "test_embedding_model",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "Invalid preselected sample tag."
 
 
 def test_create_sampling__passes_request_to_sampling(
@@ -355,8 +417,8 @@ def test_create_combination_sampling__insufficient_samples(
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
     assert response.status_code == 400
-    assert "cannot select 5" in response.json()["detail"]
-    assert "has only 2 samples" in response.json()["detail"]
+    assert "Cannot select 5 samples" in response.json()["error"]
+    assert "only 2 samples are available" in response.json()["error"]
 
 
 def test_create_combination_sampling__duplicate_tag_name(
