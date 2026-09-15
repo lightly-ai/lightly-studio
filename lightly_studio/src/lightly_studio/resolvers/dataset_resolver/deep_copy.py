@@ -65,6 +65,7 @@ from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
@@ -159,6 +160,7 @@ def deep_copy(
     _copy_default_embedding_spaces(session=session)
     _copy_group_component_definitions(session=session)
     _copy_mcap_group_component_definitions(session=session)
+    _copy_sensor_calibrations(session=session)
 
     # Commit so the ON COMMIT DROP map tables are released and a subsequent deep_copy in
     # the same session can recreate them.
@@ -955,6 +957,28 @@ def _copy_mcap_group_component_definitions(session: Session) -> None:
     _copy_table(
         session=session,
         target=McapGroupComponentDefinitionTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_sensor_calibrations(session: Session) -> None:
+    """Copy sensor calibrations, remapping recording_id and collection_id."""
+    src = _table(SensorCalibrationTable).alias("src")
+    map_recording = _map(_MAP_RECORDING)
+    map_collection = _map(_MAP_COLLECTION)
+    from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"]).join(
+        map_collection, map_collection.c.old_id == src.c["collection_id"]
+    )
+    overrides = {
+        "sensor_calibration_id": func.gen_random_uuid(),
+        "recording_id": map_recording.c.new_id,
+        "collection_id": map_collection.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=SensorCalibrationTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

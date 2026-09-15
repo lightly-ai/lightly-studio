@@ -9,8 +9,10 @@ import type { AnnotationsInfiniteParams, AnnotationsInfiniteQueryKey } from './t
 
 const DEFAULT_PAGE_LIMIT = 100;
 
+export const ANNOTATIONS_INFINITE_QUERY_KEY_ROOT = 'readAnnotationsWithPayloadInfinite';
+
 export const getAnnotationsInfiniteQueryKeyPrefix = (collectionId: string) =>
-    ['readAnnotationsWithPayloadInfinite', collectionId] as const;
+    [ANNOTATIONS_INFINITE_QUERY_KEY_ROOT, collectionId] as const;
 
 export const createAnnotationsInfiniteOptions = (params: AnnotationsInfiniteParams) => {
     const queryKey: AnnotationsInfiniteQueryKey = [

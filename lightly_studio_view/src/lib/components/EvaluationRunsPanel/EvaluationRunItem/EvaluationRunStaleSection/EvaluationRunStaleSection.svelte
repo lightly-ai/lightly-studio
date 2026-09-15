@@ -16,7 +16,7 @@
 
 <section data-testid="evaluation-run-stale-section">
     <p class="mb-2 text-sm text-muted-foreground">
-        Annotations in the source collections were modified after this evaluation was run.
+        Annotations in the evaluated annotation sources were modified after this evaluation was run.
         Recomputing will update results using the current input and annotations, which may differ
         from the original run.
     </p>
