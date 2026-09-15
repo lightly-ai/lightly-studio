@@ -142,9 +142,9 @@ hooks:
 # sections of an older nav (`concepts_and_tools/`, `dataset_setup/`), which
 # outlived those sections; `plugins.md` was still served from a "concepts and
 # tools" URL while the sidebar filed it under Ecosystem. Moving the pages
-# changed 17 published URLs, so `_REDIRECTS` in `mkdocs_hooks.py` maps every old
-# path to its new one and writes a stub at each. Keep a page's folder and its
-# section in step, and add a redirect whenever that means moving a file.
+# changed 17 published URLs, so `redirects.redirect_maps` below maps every old
+# path to its new one and generates a redirect page at each. Keep a page's
+# folder and section in step, and add a redirect whenever moving a file.
 #
 # Workflows stays flat on disk. The five stage captions below are a nav
 # grouping, not a folder level: a page that moves between stages should not
@@ -230,6 +230,26 @@ extra_javascript:
 
 plugins:
   - search
+  # Browser redirects preserve legacy bookmarks; HTTP 301 rules belong on the host.
+  - redirects:
+      redirect_maps:
+        dataset_setup/notebooks.md: get_started/notebooks.md
+        dataset_setup/reuse_datasets.md: get_started/reuse_datasets.md
+        dataset_setup/image_dataset.md: workflows/image_dataset.md
+        dataset_setup/video_dataset.md: workflows/video_dataset.md
+        dataset_setup/cloud_storage.md: ecosystem/cloud_storage.md
+        concepts_and_tools/search_and_filter.md: workflows/search_and_filter.md
+        concepts_and_tools/lightly_query_language.md: workflows/lightly_query_language.md
+        concepts_and_tools/dataset_distributions.md: workflows/dataset_distributions.md
+        concepts_and_tools/sampling.md: workflows/sampling.md
+        concepts_and_tools/annotations.md: workflows/annotations.md
+        concepts_and_tools/captions.md: workflows/captions.md
+        concepts_and_tools/evaluation.md: workflows/evaluation.md
+        concepts_and_tools/export.md: workflows/export.md
+        concepts_and_tools/tags.md: core_concepts/tags.md
+        concepts_and_tools/metadata.md: core_concepts/metadata.md
+        concepts_and_tools/embeddings.md: core_concepts/embeddings.md
+        concepts_and_tools/plugins.md: ecosystem/plugins.md
   # Generates llms.txt and per-page .md files for AI agent discoverability.
   # Keep sections in sync with nav when adding or removing pages.
   - llmstxt:
