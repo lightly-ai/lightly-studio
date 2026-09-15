@@ -137,35 +137,46 @@ hooks:
 # "Setup Options", "Concepts", "Tools", "More"), which cost a whole visual
 # register to say things the section caption above it already said.
 #
-# No page moved on disk, so no URL changed and nothing needs a redirect.
+# Each folder under `docs/` is named for the section that holds it, so a URL
+# says where the page sits in this tree. The folders used to be named for the
+# sections of an older nav (`concepts_and_tools/`, `dataset_setup/`), which
+# outlived those sections; `plugins.md` was still served from a "concepts and
+# tools" URL while the sidebar filed it under Ecosystem. Moving the pages
+# changed 17 published URLs, so `_REDIRECTS` in `mkdocs_hooks.py` maps every old
+# path to its new one and writes a stub at each. Keep a page's folder and its
+# section in step, and add a redirect whenever that means moving a file.
+#
+# Workflows stays flat on disk. The five stage captions below are a nav
+# grouping, not a folder level: a page that moves between stages should not
+# also change its URL.
 nav:
   - Get Started:
     - Welcome: index.md
-    - Run LightlyStudio from a Notebook: dataset_setup/notebooks.md
-    - Reuse Datasets: dataset_setup/reuse_datasets.md
+    - Run LightlyStudio from a Notebook: get_started/notebooks.md
+    - Reuse Datasets: get_started/reuse_datasets.md
   - Workflows:
     - Data Ingest:
-      - Image Dataset: dataset_setup/image_dataset.md
-      - Video Dataset: dataset_setup/video_dataset.md
+      - Image Dataset: workflows/image_dataset.md
+      - Video Dataset: workflows/video_dataset.md
     - Curate:
-      - Search and Filter: concepts_and_tools/search_and_filter.md
-      - Lightly Query Language: concepts_and_tools/lightly_query_language.md
-      - Dataset Distributions: concepts_and_tools/dataset_distributions.md
-      - Sampling: concepts_and_tools/sampling.md
+      - Search and Filter: workflows/search_and_filter.md
+      - Lightly Query Language: workflows/lightly_query_language.md
+      - Dataset Distributions: workflows/dataset_distributions.md
+      - Sampling: workflows/sampling.md
     - Annotate:
-      - Annotations: concepts_and_tools/annotations.md
-      - Captions: concepts_and_tools/captions.md
+      - Annotations: workflows/annotations.md
+      - Captions: workflows/captions.md
     - Evaluate:
-      - Model Evaluation: concepts_and_tools/evaluation.md
+      - Model Evaluation: workflows/evaluation.md
     - Export and Train:
-      - Export: concepts_and_tools/export.md
+      - Export: workflows/export.md
   - Core Concepts:
-    - Tags: concepts_and_tools/tags.md
-    - Metadata: concepts_and_tools/metadata.md
-    - Embeddings: concepts_and_tools/embeddings.md
+    - Tags: core_concepts/tags.md
+    - Metadata: core_concepts/metadata.md
+    - Embeddings: core_concepts/embeddings.md
   - Ecosystem:
-    - Plugins: concepts_and_tools/plugins.md
-    - Cloud Storage: dataset_setup/cloud_storage.md
+    - Plugins: ecosystem/plugins.md
+    - Cloud Storage: ecosystem/cloud_storage.md
   - Resources:
     - Glossary: glossary.md
     - Python API:
@@ -230,26 +241,26 @@ plugins:
       sections:
         Get Started:
           - index.md
-          - dataset_setup/notebooks.md
-          - dataset_setup/reuse_datasets.md
+          - get_started/notebooks.md
+          - get_started/reuse_datasets.md
         Workflows:
-          - dataset_setup/image_dataset.md
-          - dataset_setup/video_dataset.md
-          - concepts_and_tools/search_and_filter.md
-          - concepts_and_tools/lightly_query_language.md
-          - concepts_and_tools/dataset_distributions.md
-          - concepts_and_tools/sampling.md
-          - concepts_and_tools/annotations.md
-          - concepts_and_tools/captions.md
-          - concepts_and_tools/evaluation.md
-          - concepts_and_tools/export.md
+          - workflows/image_dataset.md
+          - workflows/video_dataset.md
+          - workflows/search_and_filter.md
+          - workflows/lightly_query_language.md
+          - workflows/dataset_distributions.md
+          - workflows/sampling.md
+          - workflows/annotations.md
+          - workflows/captions.md
+          - workflows/evaluation.md
+          - workflows/export.md
         Core Concepts:
-          - concepts_and_tools/tags.md
-          - concepts_and_tools/metadata.md
-          - concepts_and_tools/embeddings.md
+          - core_concepts/tags.md
+          - core_concepts/metadata.md
+          - core_concepts/embeddings.md
         Ecosystem:
-          - concepts_and_tools/plugins.md
-          - dataset_setup/cloud_storage.md
+          - ecosystem/plugins.md
+          - ecosystem/cloud_storage.md
         Resources:
           - glossary.md
           - api/dataset.md
@@ -369,7 +380,7 @@ extra:
           - label: Get Started
             href: .
           - label: Workflows
-            href: dataset_setup/image_dataset/
+            href: workflows/image_dataset/
           - label: Tutorials
             href: tutorials/
           - label: Python API reference

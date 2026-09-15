@@ -7,18 +7,69 @@ it is not part of the `lightly_studio` package and nothing else imports it.
 from __future__ import annotations
 
 import contextlib
+import os
+import posixpath
 from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from importlib import metadata
+from pathlib import Path
 from typing import Any, NamedTuple
 
 from mkdocs import plugins
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.structure import StructureItem
-from mkdocs.structure.files import Files
+from mkdocs.structure.files import File, Files
 from mkdocs.structure.nav import Navigation, Section
 from mkdocs.structure.pages import Page
 
 log = plugins.get_plugin_logger(__name__)
+
+# Pages whose URL changed, mapped from the path that used to hold them to the
+# page that replaced them. `on_post_build` writes a stub at each old URL, so a
+# bookmark or an inbound link still lands on the page it was made for. The
+# folder realignment described above `nav:` in mkdocs.yml moved all 17.
+#
+# A stub redirects from the browser, which answers 200 rather than the 301 that
+# the host serving docs.lightly.ai should send. It is what keeps an old link
+# working until those host rules are in place, and the fallback for readers
+# after that. Drop an entry only once its old URL is no longer worth serving.
+_REDIRECTS: Mapping[str, str] = {
+    "dataset_setup/notebooks.md": "get_started/notebooks.md",
+    "dataset_setup/reuse_datasets.md": "get_started/reuse_datasets.md",
+    "dataset_setup/image_dataset.md": "workflows/image_dataset.md",
+    "dataset_setup/video_dataset.md": "workflows/video_dataset.md",
+    "dataset_setup/cloud_storage.md": "ecosystem/cloud_storage.md",
+    "concepts_and_tools/search_and_filter.md": "workflows/search_and_filter.md",
+    "concepts_and_tools/lightly_query_language.md": "workflows/lightly_query_language.md",
+    "concepts_and_tools/dataset_distributions.md": "workflows/dataset_distributions.md",
+    "concepts_and_tools/sampling.md": "workflows/sampling.md",
+    "concepts_and_tools/annotations.md": "workflows/annotations.md",
+    "concepts_and_tools/captions.md": "workflows/captions.md",
+    "concepts_and_tools/evaluation.md": "workflows/evaluation.md",
+    "concepts_and_tools/export.md": "workflows/export.md",
+    "concepts_and_tools/tags.md": "core_concepts/tags.md",
+    "concepts_and_tools/metadata.md": "core_concepts/metadata.md",
+    "concepts_and_tools/embeddings.md": "core_concepts/embeddings.md",
+    "concepts_and_tools/plugins.md": "ecosystem/plugins.md",
+}
+
+# The stub written at each old URL. The script carries over an anchor the reader
+# arrived with, which the `meta refresh` alone cannot; the refresh is the
+# fallback with JavaScript off. `rel=canonical` points search engines at the new
+# URL, and the body is what a reader sees if both redirects fail.
+_REDIRECT_TEMPLATE = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Redirecting</title>
+<link rel="canonical" href="{url}">
+<meta http-equiv="refresh" content="0; url={url}">
+<script>var a=window.location.hash.substr(1);location.replace("{url}"+(a?"#"+a:""))</script>
+</head>
+<body>
+<p>This page moved. Continue to <a href="{url}">its new location</a>.</p>
+</body>
+</html>
+"""
 
 
 class Tab(NamedTuple):
@@ -54,6 +105,25 @@ def on_config(config: MkDocsConfig) -> MkDocsConfig:
     with contextlib.suppress(metadata.PackageNotFoundError):
         config.extra["package_version"] = metadata.version("lightly-studio")
     return config
+
+
+def on_files(files: Files, *, config: MkDocsConfig) -> Files:
+    """Records where each page landed, and checks the redirect map against it.
+
+    `on_post_build` needs a page's built URL to point a stub at it, and by then
+    the file list is gone, so it is stashed on the config here.
+
+    Args:
+        files: The files collected for this build.
+        config: The site configuration, written to.
+
+    Returns:
+        The same files, unmodified.
+    """
+    page_urls = {page.src_uri: page.url for page in files.documentation_pages()}
+    config.extra["ls_page_urls"] = page_urls
+    _warn_on_redirect_drift(page_urls=page_urls)
+    return files
 
 
 def on_nav(
@@ -134,6 +204,38 @@ def on_page_context(
     context["ls_active_tab"] = active
     context["ls_nav_sections"] = tab_sections[active] if active is not None else None
     return context
+
+
+def on_post_build(*, config: MkDocsConfig) -> None:
+    """Writes a redirecting stub at every URL that `_REDIRECTS` retires.
+
+    Runs after the site is written, so a stub lands beside the built pages and
+    ships with them. A target the build did not produce is skipped here and
+    warned about in `on_files`, which fails the build under `--strict` rather
+    than publishing a stub that points nowhere.
+
+    Args:
+        config: The site configuration, read for the site directory, the URL
+            style, and the page URLs `on_files` stashed.
+    """
+    page_urls: Mapping[str, str] = config.extra.get("ls_page_urls") or {}
+    use_directory_urls: bool = config.use_directory_urls
+    site_dir = Path(config.site_dir)
+
+    written = 0
+    for old_src, new_src in _REDIRECTS.items():
+        new_url = page_urls.get(new_src)
+        if new_url is None:
+            continue
+        old_dest = _dest_path(src_path=old_src, use_directory_urls=use_directory_urls)
+        target = _relative_url(
+            from_dest=old_dest, to_url=new_url, use_directory_urls=use_directory_urls
+        )
+        stub = site_dir / old_dest
+        stub.parent.mkdir(parents=True, exist_ok=True)
+        stub.write_text(_REDIRECT_TEMPLATE.format(url=target), encoding="utf-8")
+        written += 1
+    log.info(f"Wrote {written} redirect stubs for pages that moved.")
 
 
 def _validated_tab_specs(
@@ -346,3 +448,70 @@ def _warn_on_llmstxt_drift(*, nav: Navigation, config: MkDocsConfig) -> None:
             f"{only_nav}. Only in `llmstxt.sections`: {only_llms}. Update "
             "`sections` in mkdocs.yml to match."
         )
+
+
+def _warn_on_redirect_drift(page_urls: Mapping[str, str]) -> None:
+    """Warns when `_REDIRECTS` disagrees with the pages this build produced.
+
+    Each warning fails the build under `mkdocs build --strict`, which is what
+    stops a stale entry from shipping. Two ways it can go wrong: a target that
+    no longer exists, which would publish a stub pointing nowhere, and a source
+    a page has since reclaimed, where the stub would overwrite that built page
+    and hide it behind a redirect.
+
+    Args:
+        page_urls: The built URL of every page, keyed by source path.
+    """
+    missing = sorted({new for new in _REDIRECTS.values() if new not in page_urls})
+    if missing:
+        log.warning(
+            f"`_REDIRECTS` in mkdocs_hooks.py points at pages that do not exist: "
+            f"{missing}. Repoint each entry at the page that replaced it, or drop "
+            f"it if the old URL is no longer worth serving."
+        )
+
+    shadowed = sorted(old for old in _REDIRECTS if old in page_urls)
+    if shadowed:
+        log.warning(
+            f"`_REDIRECTS` in mkdocs_hooks.py redirects away from paths that hold "
+            f"a page again: {shadowed}. Its stub would overwrite that page. Drop "
+            f"the entry, or move the new page elsewhere."
+        )
+
+
+def _dest_path(src_path: str, use_directory_urls: bool) -> str:
+    """Returns the path a source page builds to, relative to the site directory.
+
+    Args:
+        src_path: A page path relative to `docs_dir`, such as `a/b.md`.
+        use_directory_urls: The site's URL style, which decides whether the page
+            builds to `a/b/index.html` or to `a/b.html`.
+
+    Returns:
+        The built path, with forward slashes on every platform.
+    """
+    # MkDocs owns this mapping, so a `File` computes it rather than this hook
+    # restating the rule. The source and destination directories are irrelevant
+    # to `dest_path` and are left empty.
+    dest_path: str = File(src_path, "", "", use_directory_urls).dest_path
+    return dest_path.replace(os.sep, "/")
+
+
+def _relative_url(from_dest: str, to_url: str, use_directory_urls: bool) -> str:
+    """Returns the link from a built page to a site URL.
+
+    The stubs link relatively so that they hold wherever the site is mounted,
+    which matters here because this one is served under `/studio` rather than at
+    a domain root.
+
+    Args:
+        from_dest: The built path of the page holding the link.
+        to_url: The target's URL, relative to the site root.
+        use_directory_urls: The site's URL style. Directory URLs end in a slash,
+            which `posixpath.relpath` drops and this restores.
+
+    Returns:
+        The target as a URL relative to `from_dest`.
+    """
+    relative = posixpath.relpath(to_url, start=posixpath.dirname(from_dest))
+    return f"{relative}/" if use_directory_urls else relative

@@ -70,6 +70,6 @@ The available distributions depend on what your dataset contains:
 | Categorical metadata | String or boolean sample metadata |
 
 If a distribution is not available, add the corresponding
-[annotations](annotations.md) or [metadata](metadata.md) to the dataset. See
+[annotations](annotations.md) or [metadata](../core_concepts/metadata.md) to the dataset. See
 [Search and Filter](search_and_filter.md) for the other ways to narrow down the samples shown in
 the dataset view.
