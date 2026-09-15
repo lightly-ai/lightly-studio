@@ -232,7 +232,7 @@ def sampling_via_database(
     First resolves the sampling config to concrete database values.
     Then calls Mundig to run the sampling with pure values.
     Finally creates a tag for the selected set. For regular sampling, the preselected
-    samples form the prefix of that set. Passing the preselected tag as
+    samples are included in that set. Passing the preselected tag as
     ``config.sampling_result_tag_name`` grows that tag in place instead, so the selection
     accumulates over repeated runs.
 
