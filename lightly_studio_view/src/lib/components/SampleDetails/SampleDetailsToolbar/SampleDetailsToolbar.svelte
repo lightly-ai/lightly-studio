@@ -9,6 +9,7 @@
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
+    import WandToolbarButton from '../WandToolbarButton/WandToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
 
     const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
@@ -107,6 +108,11 @@
         if (sampleDetailsToolbarContext.status === 'drag') {
             setAnnotationType(null);
         }
+        if (sampleDetailsToolbarContext.status === 'wand') {
+            setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+            setIsDrawing(false);
+            setIsErasing(false);
+        }
     });
 
     const activateBoundingBox = () => {
@@ -138,6 +144,7 @@
     };
 
     const onClickBrush = () => activateBrush();
+    const activateWand = () => setStatus('wand');
 </script>
 
 <div class="pointer-events-none absolute left-1 top-1 z-20">
@@ -192,5 +199,11 @@
                 />
             </SampleDetailsToolbarTooltip>
         {/if}
+        <SampleDetailsToolbarTooltip label="Smart select" action="select">
+            <WandToolbarButton
+                onclick={activateWand}
+                isActive={sampleDetailsToolbarContext.status === 'wand'}
+            />
+        </SampleDetailsToolbarTooltip>
     </div>
 </div>

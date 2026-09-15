@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { untrack } from 'svelte';
+    import { untrack, type Snippet } from 'svelte';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { type MenuItemType } from '../types';
     import type { HTMLAttributes } from 'svelte/elements';
@@ -16,6 +16,7 @@
         showColorMarker?: boolean;
         /** When `true`, color swatches open a color picker on click. */
         enableColorPicker?: boolean;
+        rowAction?: Snippet<[MenuItemType]>;
     }
 
     let {
@@ -25,7 +26,8 @@
         onChangeSelectedItems,
         containerProps,
         showColorMarker,
-        enableColorPicker
+        enableColorPicker,
+        rowAction
     }: SideMenuProps = $props();
 
     let internalSelectedItemsIds = $state(untrack(() => initialSelectedItemsIds ?? []));
@@ -45,12 +47,17 @@
 
 <div {...containerProps} class={cn('w-full space-y-2 overflow-hidden', containerProps?.class)}>
     {#each items as { id, name } (id)}
-        <MenuItem
-            {name}
-            {showColorMarker}
-            {enableColorPicker}
-            checked={selected.includes(id)}
-            onCheckedChange={() => handleCheckedChange(id)}
-        />
+        <div class="flex min-w-0 items-center gap-1">
+            <div class="min-w-0 flex-1">
+                <MenuItem
+                    {name}
+                    {showColorMarker}
+                    {enableColorPicker}
+                    checked={selected.includes(id)}
+                    onCheckedChange={() => handleCheckedChange(id)}
+                />
+            </div>
+            {@render rowAction?.({ id, name })}
+        </div>
     {/each}
 </div>

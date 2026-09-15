@@ -8,6 +8,10 @@
     import { resolveEffectiveColorBySource } from '$lib/utils';
     import { get } from 'svelte/store';
     import { handleAnnotationSourceFilterChange } from './handleAnnotationSourceFilterChange';
+    import { Trash2 } from '@lucide/svelte';
+    import { Button } from '$lib/components/ui/button';
+    import DeleteSourceDialog from './DeleteSourceDialog.svelte';
+    import ConfidenceFilter from './ConfidenceFilter.svelte';
 
     interface Props {
         collectionId: string;
@@ -25,10 +29,8 @@
     const { enforceColoringByClassStore } = useSettings();
     const { trackEvent } = usePostHog();
 
-    // Checkboxes are only worth showing when there is a choice to make. The selection itself is
-    // filled by useSeedAnnotationSourceFilter in the collection layout, which runs for every
-    // collection including those with a single source.
-    const isEnabled = $derived(items.length > 1);
+    const isEnabled = $derived(items.length > 0);
+    let sourceToDelete = $state<{ id: string; name: string } | null>(null);
 
     const handleChangeSelectedItems = (newIds: string[]) => {
         handleAnnotationSourceFilterChange({
@@ -53,6 +55,24 @@
             {items}
             selectedItemsIds={$selectedCollectionIds}
             onChangeSelectedItems={handleChangeSelectedItems}
-        />
+        >
+            {#snippet rowAction(item)}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    class="size-7 shrink-0"
+                    title={`Delete ${item.name}`}
+                    aria-label={`Delete annotation source ${item.name}`}
+                    onclick={() => (sourceToDelete = item)}
+                >
+                    <Trash2 class="size-3.5" />
+                </Button>
+            {/snippet}
+        </SideMenu>
     </Segment>
+    <ConfidenceFilter />
+{/if}
+
+{#if sourceToDelete}
+    <DeleteSourceDialog source={sourceToDelete} onClose={() => (sourceToDelete = null)} />
 {/if}

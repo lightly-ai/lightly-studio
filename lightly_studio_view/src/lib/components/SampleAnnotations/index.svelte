@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationConfidence } from '$lib/hooks/useAnnotationConfidence';
     import { useAnnotationClassVisibility } from '$lib/hooks';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
@@ -33,6 +34,7 @@
     } = $props();
 
     const { isHidden } = useHideAnnotations();
+    const { isConfidenceVisible } = useAnnotationConfidence();
     const { hiddenClassNamesStore } = useAnnotationClassVisibility();
     const { showBoundingBoxesForSegmentationStore, enforceColoringByClassStore } = useSettings();
     const { isSourceVisible, multipleSourcesVisible, collectionIdToName } =
@@ -82,6 +84,7 @@
         });
 
         return sample.annotations
+            .filter((annotation) => $isConfidenceVisible(annotation.confidence))
             .filter((annotation) => sourceIsVisible(annotation.annotation_collection_id))
             .filter((annotation) => annotation.annotation_type !== 'classification')
             .filter(

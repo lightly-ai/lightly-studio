@@ -83,6 +83,10 @@ const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
     'lightlyStudio_last_annotation_brush_size',
     {}
 );
+const lastSmartSelectOutputType = useSessionStorage<'mask' | 'box'>(
+    'lightlyStudio_smart_select_output_type',
+    'mask'
+);
 
 // Store tags grouped by collection_id
 const tags = writable<Record<string, Tag[]>>({});
@@ -445,6 +449,10 @@ export const useGlobalStorage = () => {
                 value[collectionId] = size;
                 return value;
             });
+        },
+        lastSmartSelectOutputType,
+        setLastSmartSelectOutputType: (outputType: 'mask' | 'box') => {
+            lastSmartSelectOutputType.set(outputType);
         },
         // Reversible actions
         ...reversibleActionsHook

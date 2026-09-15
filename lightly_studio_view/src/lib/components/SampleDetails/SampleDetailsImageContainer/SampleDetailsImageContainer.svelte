@@ -20,6 +20,8 @@
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
     import { AnnotationSourcePill } from '$lib/components';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
+    import SmartSelectOverlay from '../SmartSelectOverlay/SmartSelectOverlay.svelte';
+    import SmartSelectPopUp from '../SmartSelectPopUp/SmartSelectPopUp.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
@@ -61,7 +63,12 @@
         annotationType
     }: SampleDetailsImageContainerProps = $props();
 
-    const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
+    const { isEditingMode, imageBrightness, imageContrast, lastSmartSelectOutputType } =
+        useGlobalStorage();
+    let smartSelectOutputType = $state<'mask' | 'box'>('mask');
+    $effect(() => {
+        smartSelectOutputType = $lastSmartSelectOutputType;
+    });
     const { isHidden } = useHideAnnotations();
     const { enforceColoringByClassStore } = useSettings();
 
@@ -229,6 +236,12 @@
         {#if shouldShowBrushToolPopup}
             <BrushToolPopUp />
         {/if}
+        {#if sampleDetailsToolbarContext.status === 'wand'}
+            <SmartSelectPopUp
+                outputType={smartSelectOutputType}
+                onOutputTypeChange={(value) => (smartSelectOutputType = value)}
+            />
+        {/if}
     {/snippet}
     {#snippet zoomPanelRightContent()}
         {#if $isPending}
@@ -336,6 +349,16 @@
                     {drawerStrokeColor}
                     {refetch}
                     onCreateBoundingBoxPendingChange={handlePendingChange}
+                />
+            {:else if sampleDetailsToolbarContext.status === 'wand'}
+                <SmartSelectOverlay
+                    {collectionId}
+                    {sampleId}
+                    {sample}
+                    {refetch}
+                    annotationLabel={annotationLabelContext.annotationLabel}
+                    annotationSource={annotationLabelContext.annotationSource}
+                    outputType={smartSelectOutputType}
                 />
             {/if}
         {/if}

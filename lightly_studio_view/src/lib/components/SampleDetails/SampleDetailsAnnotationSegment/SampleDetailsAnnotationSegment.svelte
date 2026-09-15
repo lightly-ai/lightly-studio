@@ -2,6 +2,7 @@
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useAnnotationConfidence } from '$lib/hooks/useAnnotationConfidence';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import {
@@ -43,6 +44,15 @@
     }: SampleDetailsAnnotationSegmentProps = $props();
 
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { isConfidenceVisible } = useAnnotationConfidence();
+    const effectiveHiddenIds = $derived(
+        new Set([
+            ...annotationsIdsToHide,
+            ...annotations
+                .filter((annotation) => !$isConfidenceVisible(annotation.confidence))
+                .map((annotation) => annotation.sample_id)
+        ])
+    );
 
     const {
         context: annotationLabelContext,
@@ -91,7 +101,7 @@
     // coloring by source, label legends in the rows otherwise.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2,
+            multipleSourcesVisible: countVisibleSources(annotationsSort, effectiveHiddenIds) >= 2,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
@@ -188,7 +198,7 @@
         isSelected={annotationLabelContext.annotationId === annotation.sample_id}
         onClick={() => toggleAnnotationSelection(annotation.sample_id)}
         onDeleteAnnotation={() => handleDeleteAnnotation(annotation.sample_id)}
-        isHidden={annotationsIdsToHide.has(annotation.sample_id)}
+        isHidden={effectiveHiddenIds.has(annotation.sample_id)}
         isLocked={annotationLabelContext.lockedAnnotationIds?.has(annotation.sample_id) ?? false}
         onToggleShowAnnotation={(e) => {
             e.stopPropagation();
@@ -235,7 +245,7 @@
                         annotationLabelContext.lastCreatedAnnotationId
                     )}
                     showColorMarker={colorBySource}
-                    allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
+                    allHidden={areAllAnnotationsHidden(group.annotations, effectiveHiddenIds)}
                     onToggleVisibility={(e) => {
                         e.stopPropagation();
                         onToggleSourceVisibility(group.annotations);

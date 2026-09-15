@@ -22,6 +22,7 @@ from lightly_studio.api.routes import (
 )
 from lightly_studio.api.routes.api import (
     analytics,
+    annotate,
     annotation,
     annotation_label,
     caption,
@@ -143,6 +144,7 @@ api_router.include_router(image.image_router)
 api_router.include_router(sample.sample_router)
 api_router.include_router(annotation_label.annotations_label_router)
 api_router.include_router(annotation.annotations_router)
+api_router.include_router(annotate.annotate_router)
 api_router.include_router(caption.captions_router)
 api_router.include_router(text_embedding.text_embedding_router)
 api_router.include_router(image_embedding.image_embedding_router)

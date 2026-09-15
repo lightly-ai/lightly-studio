@@ -5,6 +5,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationConfidence } from '$lib/hooks/useAnnotationConfidence';
     import { useAnnotationClassVisibility } from '$lib/hooks';
     import { getColorByLabel, hexToRgba } from '$lib/utils';
     import type { CropWindow } from './renderCropObjectUrl';
@@ -38,6 +39,8 @@
     const padding = 20;
 
     const { isHidden } = useHideAnnotations();
+    const { isConfidenceVisible } = useAnnotationConfidence();
+    const isBelowConfidence = $derived(!$isConfidenceVisible(annotation.confidence));
     const { customLabelColorsStore } = useCustomLabelColors();
     const { isClassHidden } = useAnnotationClassVisibility();
 
@@ -142,7 +145,7 @@
     `}
     >
         {#if isRLESegmentation}
-            <div class:invisible={$isHidden || $isAnnotationClassHidden}>
+            <div class:invisible={$isHidden || $isAnnotationClassHidden || isBelowConfidence}>
                 <AnnotationCanvas
                     sampleId={annotation.sample_id}
                     sourceWidth={sample.width}
@@ -166,7 +169,7 @@
         {/if}
         <div
             class="annotation-box"
-            class:invisible={$isHidden || $isAnnotationClassHidden}
+            class:invisible={$isHidden || $isAnnotationClassHidden || isBelowConfidence}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
             top: ${(containerHeight - annotationHeight * scale) / 2}px;
