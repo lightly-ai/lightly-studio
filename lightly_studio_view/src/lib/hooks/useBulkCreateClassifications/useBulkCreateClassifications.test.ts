@@ -77,6 +77,12 @@ describe('formatBulkCreateToast', () => {
                 5
             )
         ).toBe('No images changed; all 5 already had this annotation class.');
+        expect(
+            formatBulkCreateToast(
+                { created_annotation_ids: [], created_count: 0, skipped_count: 0 },
+                5
+            )
+        ).toBe('No images changed; the selection no longer matches any images.');
     });
 });
 
