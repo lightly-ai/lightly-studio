@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -37,16 +37,11 @@ def test_create_combination_sampling__diversity_success(
         session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
-    request_data = {
-        "n_samples_to_select": 3,
-        "sampling_result_tag_name": "test_combination_sampling",
-        "strategies": [
-            {
-                "strategy_name": "diversity",
-                "embedding_model_name": "test_embedding_model",
-            }
-        ],
-    }
+    request_data = _sampling_request_data(
+        n_samples_to_select=3,
+        sampling_result_tag_name="test_combination_sampling",
+        preselected_tag_id=None,
+    )
 
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
@@ -94,17 +89,11 @@ def test_create_combination_sampling__preselected_tag(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
-        json={
-            "n_samples_to_select": 3,
-            "sampling_result_tag_name": "growing_batch",
-            "preselected_tag_id": str(preselected_tag.tag_id),
-            "strategies": [
-                {
-                    "strategy_name": "diversity",
-                    "embedding_model_name": "test_embedding_model",
-                }
-            ],
-        },
+        json=_sampling_request_data(
+            n_samples_to_select=3,
+            sampling_result_tag_name="growing_batch",
+            preselected_tag_id=preselected_tag.tag_id,
+        ),
     )
 
     assert response.status_code == 204
@@ -136,15 +125,11 @@ def test_create_combination_sampling__preselected_samples_outside_filter(
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
         json={
-            "n_samples_to_select": 1,
-            "sampling_result_tag_name": "new_batch",
-            "preselected_tag_id": str(preselected_tag.tag_id),
-            "strategies": [
-                {
-                    "strategy_name": "diversity",
-                    "embedding_model_name": "test_embedding_model",
-                }
-            ],
+            **_sampling_request_data(
+                n_samples_to_select=1,
+                sampling_result_tag_name="new_batch",
+                preselected_tag_id=preselected_tag.tag_id,
+            ),
             "filter": {
                 "filter_type": "image",
                 "sample_filter": {"sample_ids": [str(sample_id) for sample_id in sample_ids[2:]]},
@@ -179,17 +164,11 @@ def test_create_combination_sampling__insufficient_non_preselected_samples(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
-        json={
-            "n_samples_to_select": 2,
-            "sampling_result_tag_name": "new_batch",
-            "preselected_tag_id": str(preselected_tag.tag_id),
-            "strategies": [
-                {
-                    "strategy_name": "diversity",
-                    "embedding_model_name": "test_embedding_model",
-                }
-            ],
-        },
+        json=_sampling_request_data(
+            n_samples_to_select=2,
+            sampling_result_tag_name="new_batch",
+            preselected_tag_id=preselected_tag.tag_id,
+        ),
     )
 
     assert response.status_code == 400
@@ -216,17 +195,11 @@ def test_create_combination_sampling__preselected_tag_from_another_collection(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
-        json={
-            "n_samples_to_select": 1,
-            "sampling_result_tag_name": "new_batch",
-            "preselected_tag_id": str(preselected_tag.tag_id),
-            "strategies": [
-                {
-                    "strategy_name": "diversity",
-                    "embedding_model_name": "test_embedding_model",
-                }
-            ],
-        },
+        json=_sampling_request_data(
+            n_samples_to_select=1,
+            sampling_result_tag_name="new_batch",
+            preselected_tag_id=preselected_tag.tag_id,
+        ),
     )
 
     assert response.status_code == 400
@@ -242,17 +215,11 @@ def test_create_combination_sampling__unknown_preselected_tag(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
-        json={
-            "n_samples_to_select": 1,
-            "sampling_result_tag_name": "new_batch",
-            "preselected_tag_id": str(uuid4()),
-            "strategies": [
-                {
-                    "strategy_name": "diversity",
-                    "embedding_model_name": "test_embedding_model",
-                }
-            ],
-        },
+        json=_sampling_request_data(
+            n_samples_to_select=1,
+            sampling_result_tag_name="new_batch",
+            preselected_tag_id=uuid4(),
+        ),
     )
 
     assert response.status_code == 400
@@ -274,17 +241,11 @@ def test_create_combination_sampling__annotation_preselected_tag(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
-        json={
-            "n_samples_to_select": 1,
-            "sampling_result_tag_name": "new_batch",
-            "preselected_tag_id": str(annotation_tag.tag_id),
-            "strategies": [
-                {
-                    "strategy_name": "diversity",
-                    "embedding_model_name": "test_embedding_model",
-                }
-            ],
-        },
+        json=_sampling_request_data(
+            n_samples_to_select=1,
+            sampling_result_tag_name="new_batch",
+            preselected_tag_id=annotation_tag.tag_id,
+        ),
     )
 
     assert response.status_code == 400
@@ -1136,3 +1097,24 @@ def test_create_combination_sampling__video_collection_rejects_image_filter(
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid filter type for video collection."
+
+
+def _sampling_request_data(
+    n_samples_to_select: int,
+    sampling_result_tag_name: str,
+    preselected_tag_id: UUID | None,
+) -> dict[str, object]:
+    """Create a diversity sampling request with the test embedding model."""
+    request_data: dict[str, object] = {
+        "n_samples_to_select": n_samples_to_select,
+        "sampling_result_tag_name": sampling_result_tag_name,
+        "strategies": [
+            {
+                "strategy_name": "diversity",
+                "embedding_model_name": "test_embedding_model",
+            }
+        ],
+    }
+    if preselected_tag_id is not None:
+        request_data["preselected_tag_id"] = str(preselected_tag_id)
+    return request_data
