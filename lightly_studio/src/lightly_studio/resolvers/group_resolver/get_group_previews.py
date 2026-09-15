@@ -21,7 +21,7 @@ def get_group_previews(
     group_collection_id: UUID,
     group_sample_ids: list[UUID],
 ) -> dict[UUID, ImageView | None] | dict[UUID, VideoView | None]:
-    """Get the first sample (image or video) for each group.
+    """Get the first image or video preview for each group.
 
     Args:
         session: Database session for executing queries.
@@ -30,7 +30,8 @@ def get_group_previews(
 
     Returns:
         Dictionary mapping group sample_id to ImageView or VideoView of the first
-        sample in that group. Images are preferred over videos when both exist.
+        sample in that group. Images are preferred over videos when both exist. MCAP
+        components have no preview, so every group maps to None.
     """
     component_collections = collection_resolver.get_group_components(
         session=session,
@@ -47,6 +48,11 @@ def get_group_previews(
         key=lambda c: c.group_component_definition.group_component_index,  # type: ignore[union-attr]
     )
     first_component_type = first_component.sample_type
+
+    if first_component_type == SampleType.MCAP:
+        # MCAP samples locate frames inside a recording. The frame is decoded in the
+        # browser, so there is no image or video preview to return here.
+        return dict.fromkeys(group_sample_ids)
 
     # For every group, get the sample in the first component.
     # The result is a list of tuples (sample_id, group_sample_id).
