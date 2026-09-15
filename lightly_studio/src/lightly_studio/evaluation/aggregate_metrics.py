@@ -10,7 +10,7 @@ from lightly_studio.models.evaluation_metrics import ClassMetrics, EvaluationMet
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 
 
-def compute_from_confusion_matrix(
+def compute_aggregate_metrics_from_confusion_matrix(
     matrix: ConfusionMatrix,
     task_type: EvaluationTaskType,
 ) -> EvaluationMetrics:

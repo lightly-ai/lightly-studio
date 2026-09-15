@@ -177,8 +177,7 @@ print(matrix.row_labels, matrix.col_labels, matrix.counts)
 ```
 
 Use `metrics()` to get aggregate metrics of a run. It returns per-class and micro-averaged
-precision, recall, and F1, plus accuracy for classification runs. The metrics are derived from the
-run's confusion matrix.
+precision, recall, and F1, plus accuracy for classification runs.
 
 ```python
 metrics = evaluator.metrics(run_id=runs[0].id)

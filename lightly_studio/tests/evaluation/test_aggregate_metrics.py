@@ -14,11 +14,7 @@ from lightly_studio.models.evaluation_metrics import ClassMetrics, EvaluationMet
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 
 
-def _by_label(metrics: EvaluationMetrics) -> dict[str, ClassMetrics]:
-    return {entry.label: entry for entry in metrics.per_class}
-
-
-def test_classification_metrics() -> None:
+def test_compute_from_confusion_matrix__classification_metrics() -> None:
     matrix = ConfusionMatrix(
         row_labels=["cat", "dog", NO_GROUND_TRUTH_ROW_LABEL],
         col_labels=["cat", "dog", NO_PREDICTION_COL_LABEL],
@@ -29,7 +25,7 @@ def test_classification_metrics() -> None:
         ],
     )
 
-    result = aggregate_metrics.compute_from_confusion_matrix(
+    result = aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
         matrix=matrix, task_type=EvaluationTaskType.CLASSIFICATION
     )
 
@@ -48,7 +44,7 @@ def test_classification_metrics() -> None:
     assert result.accuracy == pytest.approx(0.875)  # 7 correct / 8 samples
 
 
-def test_detection_metrics_with_fp_and_fn_buckets() -> None:
+def test_compute_from_confusion_matrix__detection_metrics_with_fp_and_fn_buckets() -> None:
     matrix = ConfusionMatrix(
         row_labels=["cat", NO_GROUND_TRUTH_ROW_LABEL],
         col_labels=["cat", NO_PREDICTION_COL_LABEL],
@@ -58,7 +54,7 @@ def test_detection_metrics_with_fp_and_fn_buckets() -> None:
         ],
     )
 
-    result = aggregate_metrics.compute_from_confusion_matrix(
+    result = aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
         matrix=matrix, task_type=EvaluationTaskType.OBJECT_DETECTION
     )
 
@@ -72,7 +68,7 @@ def test_detection_metrics_with_fp_and_fn_buckets() -> None:
     assert result.accuracy is None
 
 
-def test_zero_division_is_guarded() -> None:
+def test_compute_from_confusion_matrix__zero_division_is_guarded() -> None:
     # "dog" is only ever predicted (never a ground truth): recall has a zero denominator.
     matrix = ConfusionMatrix(
         row_labels=["cat", "dog", NO_GROUND_TRUTH_ROW_LABEL],
@@ -84,7 +80,7 @@ def test_zero_division_is_guarded() -> None:
         ],
     )
 
-    result = aggregate_metrics.compute_from_confusion_matrix(
+    result = aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
         matrix=matrix, task_type=EvaluationTaskType.OBJECT_DETECTION
     )
 
@@ -95,10 +91,10 @@ def test_zero_division_is_guarded() -> None:
     assert per_class["dog"].support == 0
 
 
-def test_empty_matrix() -> None:
+def test_compute_from_confusion_matrix__empty_matrix() -> None:
     matrix = ConfusionMatrix(row_labels=[], col_labels=[], counts=[])
 
-    result = aggregate_metrics.compute_from_confusion_matrix(
+    result = aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
         matrix=matrix, task_type=EvaluationTaskType.CLASSIFICATION
     )
 
@@ -107,3 +103,7 @@ def test_empty_matrix() -> None:
     assert result.recall == pytest.approx(0.0)
     assert result.f1 == pytest.approx(0.0)
     assert result.accuracy == pytest.approx(0.0)
+
+
+def _by_label(metrics: EvaluationMetrics) -> dict[str, ClassMetrics]:
+    return {entry.label: entry for entry in metrics.per_class}
