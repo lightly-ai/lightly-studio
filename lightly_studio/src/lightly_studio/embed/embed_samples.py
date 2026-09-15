@@ -78,6 +78,7 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
         sample_ids: Image sample IDs to embed.
     """
     if not sample_ids:
+        logger.warning("No image samples to embed. Skipping embedding generation.")
         return
 
     # Resolve and validate paths before selecting a default embedder, which mutates the
@@ -151,6 +152,7 @@ def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[
         sample_ids: Video sample IDs to embed.
     """
     if not sample_ids:
+        logger.warning("No video samples to embed. Skipping embedding generation.")
         return
 
     # Resolve and validate paths before selecting a default embedder, which mutates the

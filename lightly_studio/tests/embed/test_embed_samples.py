@@ -286,6 +286,22 @@ def test_embed_image_samples__no_registered_embedder_skips(
     assert _stored_embeddings(session=db_session) == []
 
 
+def test_embed_image_samples__empty_ids_warns_and_skips(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An empty sample_ids list logs a warning and stores nothing."""
+    collection = create_collection(session=db_session)
+
+    with caplog.at_level(level=logging.WARNING):
+        embed_samples.embed_image_samples(
+            session=db_session, collection_id=collection.collection_id, sample_ids=[]
+        )
+
+    assert "No image samples to embed" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
 @pytest.mark.usefixtures("patched_registry", "patched_manager")
 def test_embed_image_samples__syncs_legacy_embedding_manager(
     db_session: Session,
@@ -509,6 +525,22 @@ def test_embed_video_samples__no_registered_embedder_skips(
         )
 
     assert "No embedding model loaded" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_video_samples__empty_ids_warns_and_skips(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An empty sample_ids list logs a warning and stores nothing."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    with caplog.at_level(level=logging.WARNING):
+        embed_samples.embed_video_samples(
+            session=db_session, collection_id=video_collection.collection_id, sample_ids=[]
+        )
+
+    assert "No video samples to embed" in caplog.text
     assert _stored_embeddings(session=db_session) == []
 
 
