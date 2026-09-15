@@ -15,6 +15,7 @@ FLOCI_PORT ?= 4566
 FLOCI_STARTUP_TIMEOUT_SECONDS ?= 60
 FLOCI_S3_BUCKET ?= lightly-studio
 FLOCI_S3_PREFIX ?= recordings
+FLOCI_IMAGE := floci/floci@sha256:d867156f16bf863379cf695ca0afc6a0bc2b6c7394b2a492e57d7d90603d6ed8
 # Space-separated local files, e.g.:
 #   make setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
 FLOCI_MCAP_FILES ?= datasets/mcap/perception.mcap
@@ -182,7 +183,7 @@ stop-postgres:
 start-floci:
 	@docker rm -f $(FLOCI_CONTAINER_NAME) >/dev/null 2>&1 || true
 	@docker run -d --name $(FLOCI_CONTAINER_NAME) -p $(FLOCI_PORT):4566 \
-		-v /var/run/docker.sock:/var/run/docker.sock -u root floci/floci:latest
+		-v /var/run/docker.sock:/var/run/docker.sock -u root $(FLOCI_IMAGE)
 	@echo "Waiting for Floci..."
 	@deadline=$$(($$(date +%s) + $(FLOCI_STARTUP_TIMEOUT_SECONDS))); \
 	until curl -sf http://localhost:$(FLOCI_PORT)/_floci/health >/dev/null; do \

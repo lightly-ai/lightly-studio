@@ -200,6 +200,8 @@ Step-by-step guides covering complete workflows — from raw, unlabeled data to 
 ### AWS S3 (Floci)
 
 ```bash
+cd lightly_studio
+
 # Start Floci (creates the default S3 bucket)
 make start-floci
 

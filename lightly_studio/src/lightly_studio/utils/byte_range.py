@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
+import asyncio
 from collections.abc import AsyncGenerator, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -21,7 +21,7 @@ class FileInfo:
     """Size and ETag for a local or remote file."""
 
     size_bytes: int
-    etag: str
+    etag: str | None
 
 
 def file_info(file_path: str) -> FileInfo:
@@ -29,11 +29,10 @@ def file_info(file_path: str) -> FileInfo:
     fs, fs_path = fsspec.core.url_to_fs(file_path)
     info = fs.info(fs_path)
     size_bytes = int(info["size"])
-    return FileInfo(size_bytes=size_bytes, etag=_revision(info=info, file_size=size_bytes))
+    return FileInfo(size_bytes=size_bytes, etag=_revision(info=info))
 
 
 def serve_file(
-    *,
     file_path: str,
     request: Request,
     range_header: str | None,
@@ -44,19 +43,30 @@ def serve_file(
     fs, fs_path = fsspec.core.url_to_fs(file_path)
     info = fs.info(fs_path)
     file_size = int(info["size"])
-    revision = _revision(info=info, file_size=file_size)
-    if if_match is not None and if_match.strip('"') != revision:
+    revision = _revision(info=info)
+    if (
+        revision is not None
+        and if_match is not None
+        and not _if_match_satisfied(if_match=if_match, revision=revision)
+    ):
         return Response(status_code=status.HTTP_STATUS_PRECONDITION_FAILED)
 
-    headers = {
+    headers: dict[str, str] = {
         "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=3600",
-        "ETag": f'"{revision}"',
     }
+    if revision is not None:
+        headers["ETag"] = f'"{revision}"'
     byte_range = parse_range_header(range_header=range_header, file_size=file_size)
+    if range_header is not None and range_header.startswith("bytes=") and byte_range is None:
+        return Response(
+            status_code=status.HTTP_STATUS_RANGE_NOT_SATISFIABLE,
+            headers={**headers, "Content-Range": f"bytes */{file_size}"},
+        )
+    handle = fs.open(fs_path, "rb")
     if byte_range is None:
         return StreamingResponse(
-            _stream(fs=fs, fs_path=fs_path, start=0, size=file_size, request=request),
+            _stream(handle=handle, start=0, size=file_size, request=request),
             media_type=media_type,
             headers={**headers, "Content-Length": str(file_size)},
         )
@@ -64,7 +74,7 @@ def serve_file(
     start, end = byte_range
     size = end - start + 1
     return StreamingResponse(
-        _stream(fs=fs, fs_path=fs_path, start=start, size=size, request=request),
+        _stream(handle=handle, start=start, size=size, request=request),
         status_code=status.HTTP_STATUS_PARTIAL_CONTENT,
         media_type=media_type,
         headers={
@@ -75,52 +85,67 @@ def serve_file(
     )
 
 
-def parse_range_header(*, range_header: str | None, file_size: int) -> tuple[int, int] | None:
+def parse_range_header(range_header: str | None, file_size: int) -> tuple[int, int] | None:
     """Parse a single inclusive byte range, returning ``None`` when invalid."""
     if not range_header or not range_header.startswith("bytes="):
         return None
-    range_spec = range_header[len("bytes=") :]
+    range_spec = range_header[len("bytes=") :].strip()
     if "-" not in range_spec:
         return None
     start_str, end_str = range_spec.split("-", 1)
+    return _parse_range_spec(start_str=start_str, end_str=end_str, file_size=file_size)
+
+
+def _parse_range_spec(start_str: str, end_str: str, file_size: int) -> tuple[int, int] | None:
+    """Parse the two components of a single byte range."""
     try:
-        start = int(start_str) if start_str else 0
+        if not start_str:
+            suffix_size = int(end_str)
+            if suffix_size <= 0 or file_size == 0:
+                return None
+            return max(file_size - suffix_size, 0), file_size - 1
+        start = int(start_str)
         end = int(end_str) if end_str else file_size - 1
     except ValueError:
         return None
-    if start < 0 or end >= file_size or start > end:
+    if start < 0 or start >= file_size or end < start:
         return None
-    return start, end
+    return start, min(end, file_size - 1)
 
 
 async def _stream(
-    *,
-    fs: fsspec.AbstractFileSystem,
-    fs_path: str,
+    handle: Any,
     start: int,
     size: int,
     request: Request,
 ) -> AsyncGenerator[bytes, None]:
     remaining = size
-    with fs.open(fs_path, "rb") as handle:
-        handle.seek(start)
+    try:
+        await asyncio.to_thread(handle.seek, start)
         while remaining > 0:
-            chunk = handle.read(min(_CHUNK_SIZE, remaining))
+            if await request.is_disconnected():
+                return
+            chunk = await asyncio.to_thread(handle.read, min(_CHUNK_SIZE, remaining))
             if not chunk:
                 return
             yield chunk
             remaining -= len(chunk)
-            if remaining > 0 and await request.is_disconnected():
-                return
+    finally:
+        await asyncio.to_thread(handle.close)
 
 
-def _revision(*, info: Mapping[str, Any], file_size: int) -> str:
+def _revision(*, info: Mapping[str, Any]) -> str | None:
     """Return a stable opaque revision token for a local or remote file."""
-    etag = info.get("ETag") or info.get("etag")
-    if isinstance(etag, str) and etag:
-        return etag.strip('"')
-    for key in ("mtime", "LastModified", "last_modified"):
-        modified = info.get(key)
-        if modified is not None:
-            return hashlib.sha256(f"{file_size}-{modified}".encode()).hexdigest()[:32]
-    return str(file_size)
+    for key in ("ETag", "etag", "VersionId", "version_id", "generation", "Generation"):
+        revision = info.get(key)
+        if isinstance(revision, str) and revision:
+            return revision.strip('"')
+    return None
+
+
+def _if_match_satisfied(*, if_match: str, revision: str) -> bool:
+    """Return whether If-Match contains the current strong entity tag."""
+    tags = [tag.strip() for tag in if_match.split(",")]
+    if "*" in tags:
+        return True
+    return any(tag == f'"{revision}"' for tag in tags)
