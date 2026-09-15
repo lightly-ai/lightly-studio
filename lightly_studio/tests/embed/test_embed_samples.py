@@ -460,20 +460,21 @@ def test_embed_annotation_collection__stores_only_kept_crops(
     # One annotation per image at a distinct box x, on ordered paths so the resolver returns
     # the crops in a known order (it sorts by image path).
     box_xs = [100, 200, 300]
-    annotation_sample_ids = [
-        create_annotation(
+    annotation_sample_ids = []
+    for index, box_x in enumerate(box_xs):
+        image = create_image(
             session=db_session,
             collection_id=collection.collection_id,
-            sample_id=create_image(
-                session=db_session,
-                collection_id=collection.collection_id,
-                file_path_abs=f"/path/to/sample_{index}.png",
-            ).sample_id,
+            file_path_abs=f"/path/to/sample_{index}.png",
+        )
+        annotation = create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
             annotation_label_id=label.annotation_label_id,
             annotation_data={"x": box_x, "y": 0, "width": 20, "height": 20},
-        ).sample_id
-        for index, box_x in enumerate(box_xs)
-    ]
+        )
+        annotation_sample_ids.append(annotation.sample_id)
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=db_session,
         collection_id=collection.collection_id,
