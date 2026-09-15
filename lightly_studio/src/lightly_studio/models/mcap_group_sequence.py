@@ -5,11 +5,11 @@ sequence without it stays valid (classic / non-MCAP sequences). Identity is the 
 sequence's ``sample_id``.
 """
 
-from __future__ import annotations
-
+from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+import pydantic
+from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
 
 from lightly_studio.models.mcap_group_component_definition import (
@@ -53,3 +53,20 @@ class McapGroupSequenceInfoView(BaseModel):
             recording=RecordingDetails.from_recording_table(recording),
             components=components,
         )
+
+
+class McapSequenceView(BaseModel):
+    """View model for a single MCAP sequence in a list response."""
+
+    sample_id: UUID
+    sample_count: int
+
+
+class McapSequenceViewsWithCount(BaseModel):
+    """Result of listing MCAP sequences for a collection."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    samples: list[McapSequenceView] = pydantic.Field(default=..., alias="data")
+    total_count: int
+    next_cursor: Optional[int] = pydantic.Field(default=None, alias="nextCursor")
