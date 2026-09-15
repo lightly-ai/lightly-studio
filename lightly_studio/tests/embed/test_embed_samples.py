@@ -8,9 +8,8 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
-from lightly_studio_serve.embedder import VideoPathEmbedder
+from lightly_studio_serve.embedder import ImagePILEmbedder, VideoPathEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
-from numpy.typing import NDArray
 from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
@@ -46,14 +45,28 @@ from tests.resolvers.video.helpers import (
 )
 
 
-class _FirstPixelEmbeddingGenerator(RandomEmbeddingGenerator):
-    """Embeds each PIL image as its top-left pixel's RGB, so frame order is verifiable."""
+class _FirstPixelPILEmbedder(ImagePILEmbedder):
+    """Embeds each PIL image as its top-left pixel's RGB and drops the last image.
 
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]:
-        _ = show_progress
-        return np.array([image.getpixel((0, 0)) for image in images], dtype=np.float32)
+    Deriving the vector from the pixel content, not the input position, makes the test fail
+    if ``embed_frame_samples`` matches frames to the wrong sample IDs. A dropped input
+    verifies that only kept embeddings are stored. Shares the random model's space so it
+    resolves as the collection's default.
+    """
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
+        """Embed all images but the last as their top-left RGB pixel."""
+        kept_indices = list(range(len(images) - 1))
+        embeddings = np.array(
+            [images[index].getpixel(xy=(0, 0)) for index in kept_indices], dtype=np.float32
+        )
+        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
 class _PathIndexVideoEmbedder(VideoPathEmbedder):
@@ -547,8 +560,9 @@ def test_embed_video_samples__empty_ids_warns_and_skips(
 def test_embed_frame_samples(
     db_session: Session,
     patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
 ) -> None:
-    """Video frames are embedded and stored for the given frame sample IDs."""
+    """The registry embedder's vectors are stored against the matching frame sample IDs."""
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     frames = create_video_with_frames(
         session=db_session,
@@ -560,7 +574,13 @@ def test_embed_frame_samples(
         session=db_session,
         collection_id=frames.video_frames_collection_id,
     )
-    pil_frames = [Image.new("RGB", (2, 2)) for _ in frames.frame_sample_ids]
+    # One distinct color per frame, so the stored vector identifies its source frame.
+    colors = [(10, 20, 30), (40, 50, 60), (70, 80, 90)]
+    assert len(frames.frame_sample_ids) == len(colors)
+    pil_frames = [Image.new(mode="RGB", size=(2, 2), color=color) for color in colors]
+    registry = EmbedderRegistry()
+    registry.register(embedder=_FirstPixelPILEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
     embed_samples.embed_frame_samples(
         session=db_session,
@@ -569,6 +589,51 @@ def test_embed_frame_samples(
         pil_frames=pil_frames,
     )
 
+    # The embedder drops the last frame, so only the first two are stored, each with the
+    # vector encoding its top-left pixel.
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=frames.frame_sample_ids, embedding_model_id=model_id
+    )
+    stored = {row.sample_id: list(row.embedding) for row in rows}
+    assert stored == {
+        frames.frame_sample_ids[0]: list(colors[0]),
+        frames.frame_sample_ids[1]: list(colors[1]),
+    }
+
+
+@pytest.mark.usefixtures("patched_registry", "patched_manager")
+def test_embed_frame_samples__no_default_registers_registry_default(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """With no default model, the registry's PIL embedder is used and set as default."""
+    # The manager's generator shares the registry embedder's space, so the legacy bridge
+    # syncs the same default instead of registering a different one.
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    frames = create_video_with_frames(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        video=VideoStub(duration_s=1.0, fps=3.0),
+    )
+    pil_frames = [Image.new(mode="RGB", size=(2, 2)) for _ in frames.frame_sample_ids]
+
+    embed_samples.embed_frame_samples(
+        session=db_session,
+        collection_id=frames.video_frames_collection_id,
+        sample_ids=frames.frame_sample_ids,
+        pil_frames=pil_frames,
+    )
+
+    # The registry embedder's space is registered as the collection's default.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=frames.video_frames_collection_id
+    )
+    assert model_id is not None
     count = sample_embedding_resolver.get_embedding_count(
         session=db_session,
         collection_id=frames.video_frames_collection_id,
@@ -577,59 +642,27 @@ def test_embed_frame_samples(
     assert count == len(frames.frame_sample_ids)
 
 
-def test_embed_frame_samples__matches_frames_to_sample_ids_in_order(
+def test_embed_frame_samples__no_registered_embedder_skips(
     db_session: Session,
     patched_manager: EmbeddingManager,
-) -> None:
-    """Each frame's embedding is stored against the sample ID at the same position."""
-    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    frames = create_video_with_frames(
-        session=db_session,
-        collection_id=video_collection.collection_id,
-        video=VideoStub(duration_s=1.0, fps=3.0),
-    )
-    # One distinct color per frame, so the stored vector identifies its source frame.
-    colors = [(10, 20, 30), (40, 50, 60), (70, 80, 90)]
-    assert len(frames.frame_sample_ids) == len(colors)
-    pil_frames = [Image.new("RGB", (2, 2), color=color) for color in colors]
-
-    model_id = patched_manager.register_embedding_model(
-        session=db_session,
-        embedding_generator=_FirstPixelEmbeddingGenerator(),
-        collection_id=frames.video_frames_collection_id,
-        set_as_default=True,
-    ).embedding_model_id
-
-    embed_samples.embed_frame_samples(
-        session=db_session,
-        collection_id=frames.video_frames_collection_id,
-        sample_ids=frames.frame_sample_ids,
-        pil_frames=pil_frames,
-    )
-
-    rows = sample_embedding_resolver.get_by_sample_ids(
-        session=db_session, sample_ids=frames.frame_sample_ids, embedding_model_id=model_id
-    )
-    assert len(rows) == len(colors)
-    for row, color in zip(rows, colors):
-        assert list(row.embedding) == pytest.approx(list(color))
-
-
-@pytest.mark.usefixtures("patched_manager")
-def test_embed_frame_samples__no_default_model_skips(
-    db_session: Session,
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """With no default model, frame embedding is skipped and nothing stored."""
+    """With a default model but no embedder for its space, frame embedding is skipped."""
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     frames = create_video_with_frames(
         session=db_session,
         collection_id=video_collection.collection_id,
         video=VideoStub(duration_s=1.0, fps=3.0),
     )
-    pil_frames = [Image.new("RGB", (2, 2)) for _ in frames.frame_sample_ids]
-    _disable_env_loader(mocker=mocker)
+    _register_default_random_model(
+        manager=patched_manager,
+        session=db_session,
+        collection_id=frames.video_frames_collection_id,
+    )
+    pil_frames = [Image.new(mode="RGB", size=(2, 2)) for _ in frames.frame_sample_ids]
+    # An empty registry cannot supply an embedder for the default model's space.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
     with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_frame_samples(
@@ -640,6 +673,54 @@ def test_embed_frame_samples__no_default_model_skips(
         )
 
     assert "No embedding model loaded" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_frame_samples__empty_ids_warns_and_skips(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An empty sample_ids list logs a warning and stores nothing."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    frames = create_video_with_frames(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        video=VideoStub(duration_s=1.0, fps=3.0),
+    )
+
+    with caplog.at_level(level=logging.WARNING):
+        embed_samples.embed_frame_samples(
+            session=db_session,
+            collection_id=frames.video_frames_collection_id,
+            sample_ids=[],
+            pil_frames=[],
+        )
+
+    assert "No frame samples to embed" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_frame_samples__count_mismatch_raises(
+    db_session: Session,
+) -> None:
+    """A mismatch between sample IDs and frames raises before any embedding."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    frames = create_video_with_frames(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        video=VideoStub(duration_s=1.0, fps=3.0),
+    )
+    # One fewer frame than sample IDs.
+    pil_frames = [Image.new(mode="RGB", size=(2, 2)) for _ in frames.frame_sample_ids[:-1]]
+
+    with pytest.raises(ValueError, match="does not match number of frames"):
+        embed_samples.embed_frame_samples(
+            session=db_session,
+            collection_id=frames.video_frames_collection_id,
+            sample_ids=frames.frame_sample_ids,
+            pil_frames=pil_frames,
+        )
+
     assert _stored_embeddings(session=db_session) == []
 
 
