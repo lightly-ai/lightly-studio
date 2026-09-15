@@ -349,25 +349,13 @@ def test_embed_image_samples__syncs_legacy_embedding_manager(
     assert len(embedding) == 3
 
 
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_annotation_collection(
     db_session: Session,
     patched_manager: EmbeddingManager,
 ) -> None:
-    """Annotation crops are embedded and stored under the collection's default model."""
-    collection = create_collection(session=db_session)
-    image = create_image(session=db_session, collection_id=collection.collection_id)
-    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
-    create_annotation(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.ANNOTATION,
-    )
+    """Annotation crops are stored under the collection's default model, via the registry."""
+    annotation_collection_id = _create_annotation_collection(session=db_session)
     model_id = _register_default_random_model(
         manager=patched_manager, session=db_session, collection_id=annotation_collection_id
     )
@@ -382,20 +370,49 @@ def test_embed_annotation_collection(
     assert count == 1
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_embed_annotation_collection__no_default_model_skips(
+@pytest.mark.usefixtures("patched_registry", "patched_manager")
+def test_embed_annotation_collection__no_default_registers_registry_default(
     db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """With no default model, the registry's crop embedder is used and set as default."""
+    # The manager's generator shares the registry embedder's space, so the legacy bridge
+    # syncs the same default instead of registering a different one.
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    annotation_collection_id = _create_annotation_collection(session=db_session)
+
+    embed_samples.embed_annotation_collection(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+
+    # The registry embedder's space is registered as the collection's default.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    assert model_id is not None
+    count = sample_embedding_resolver.get_embedding_count(
+        session=db_session, collection_id=annotation_collection_id, embedding_model_id=model_id
+    )
+    assert count == 1
+
+
+def test_embed_annotation_collection__no_registered_embedder_skips(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """With no default model, annotation embedding is skipped and nothing stored."""
-    collection = create_collection(session=db_session)
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.ANNOTATION,
+    """With a default model but no embedder for its space, annotation embedding is skipped."""
+    annotation_collection_id = _create_annotation_collection(session=db_session)
+    _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=annotation_collection_id
     )
-    _disable_env_loader(mocker=mocker)
+    # An empty registry cannot supply an embedder for the default model's space.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
     with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_annotation_collection(
@@ -773,6 +790,24 @@ def _register_default_random_model(
         collection_id=collection_id,
         set_as_default=True,
     ).embedding_model_id
+
+
+def _create_annotation_collection(session: Session) -> UUID:
+    """Create a collection with one annotated image and return its annotation child collection."""
+    collection = create_collection(session=session)
+    image = create_image(session=session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=session, root_collection_id=collection.collection_id)
+    create_annotation(
+        session=session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    return collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
 
 
 def _disable_env_loader(mocker: MockerFixture) -> None:
