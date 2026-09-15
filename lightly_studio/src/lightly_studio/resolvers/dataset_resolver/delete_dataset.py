@@ -60,6 +60,7 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -128,8 +129,10 @@ def delete_dataset(
     # 4. Sample type tables.
     _delete_groups(session=session, dataset_id=dataset_id)
     # Must precede recordings and mcap_group_component_definitions, both deleted in step 5
-    # (sensor_calibration FKs to recording_id and to mcap_group_component_definition.collection_id).
+    # (sensor_calibration FKs to recording_id and to mcap_group_component_definition.collection_id;
+    # static_transform FKs to recording_id only).
     _delete_sensor_calibrations(session=session, dataset_id=dataset_id)
+    _delete_static_transforms(session=session, dataset_id=dataset_id)
     # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable) and
     # recordings, deleted in step 5 (McapGroupSequenceTable.recording_id -> RecordingTable).
     _delete_mcap_group_sequences(session=session, dataset_id=dataset_id)
@@ -336,6 +339,16 @@ def _delete_sensor_calibrations(session: Session, dataset_id: UUID) -> None:
                 col(SensorCalibrationTable.recording_id).in_(_recording_ids_subquery(dataset_id)),
                 col(SensorCalibrationTable.collection_id).in_(_collection_ids_subquery(dataset_id)),
             )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_static_transforms(session: Session, dataset_id: UUID) -> None:
+    """Delete static transform rows for the dataset's recordings."""
+    session.exec(
+        delete(StaticTransformTable).where(
+            col(StaticTransformTable.recording_id).in_(_recording_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
