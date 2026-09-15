@@ -226,11 +226,14 @@ def embed_frame_samples(
     result = embedder.embed_images_pil(images=pil_frames)
     kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
 
+    # Frames are embedded one video-batch at a time during ingest, so the progress bar
+    # is disabled to keep noninteractive output clean.
     embedding_storage.store_embeddings(
         session=session,
         model_id=model_id,
         sample_ids=kept_sample_ids,
         embeddings=result.embeddings,
+        show_progress=False,
     )
 
     _register_legacy_default_model(session=session, collection_id=collection_id, model_id=model_id)
