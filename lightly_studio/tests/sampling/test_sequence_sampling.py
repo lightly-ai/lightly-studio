@@ -200,6 +200,35 @@ def test_sampling_via_database_sequences__warns_when_too_few_frames(
     assert tags == []
 
 
+def test_sampling_via_database_sequences__only_preselected_frames_available(
+    db_session: Session,
+) -> None:
+    """Preselected frames still produce a result tag when no sequence can be added."""
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=5,
+    )
+
+    sampling_via_database_sequences(
+        session=db_session,
+        config=SamplingConfig(
+            collection_id=frame_collection_id,
+            n_samples_to_select=5,
+            sampling_result_tag_name="only_preselected",
+            strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+            selected_sequence_length=5,
+        ),
+        input_sample_ids=frame_sample_ids,
+        preselected_sample_ids=frame_sample_ids,
+    )
+
+    assert _tagged_frame_numbers(
+        session=db_session,
+        collection_id=frame_collection_id,
+        tag_name="only_preselected",
+    ) == [0, 1, 2, 3, 4]
+
+
 def test_sampling_via_database_sequences__warns_about_dropped_frames(
     db_session: Session,
     caplog: pytest.LogCaptureFixture,
@@ -237,7 +266,7 @@ def test_sampling_via_database_sequences__warns_about_dropped_frames(
 def test_sampling_via_database_sequences__preselection(
     db_session: Session,
 ) -> None:
-    """A preselected sequence informs the selection and stays out of the tag.
+    """A preselected sequence informs the selection and is included in the tag.
 
     Sequence proxies sit at ``[2, 2]``, ``[7, 7]`` and ``[12, 12]``. With the
     first sequence preselected, diversity must pick the far end rather than the
@@ -267,7 +296,7 @@ def test_sampling_via_database_sequences__preselection(
         session=db_session,
         collection_id=frame_collection_id,
         tag_name="preselected_sequence",
-    ) == [10, 11, 12, 13, 14]
+    ) == [0, 1, 2, 3, 4, 10, 11, 12, 13, 14]
 
 
 def test_sampling_via_database_sequences__preselection_not_sequence_aligned(
@@ -276,9 +305,9 @@ def test_sampling_via_database_sequences__preselection_not_sequence_aligned(
 ) -> None:
     """Preselected frames are held out of the candidates, which shifts the boundaries.
 
-    The preselected frames 0-2 do not fill a sequence of their own and are dropped.
-    The remaining candidates 3-9 are chunked on their own, so the sequence starts at
-    frame 3 rather than at a boundary of the full frame range.
+    The preselected frames 0-2 do not fill a sequence of their own, so they do not
+    affect the strategy. The remaining candidates 3-9 are chunked on their own, so the
+    sequence starts at frame 3 rather than at a boundary of the full frame range.
     """
     frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
         session=db_session,
@@ -307,14 +336,14 @@ def test_sampling_via_database_sequences__preselection_not_sequence_aligned(
         session=db_session,
         collection_id=frame_collection_id,
         tag_name="unaligned_preselection",
-    ) == [3, 4, 5, 6, 7]
+    ) == [0, 1, 2, 3, 4, 5, 6, 7]
 
 
 def test_sampling_via_database_sequences__preselection_incomplete_sequence(
     db_session: Session,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A preselection that fills no sequence is dropped, not rejected."""
+    """A preselection that fills no sequence is still included in the result."""
     frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
         session=db_session,
         n_frames=11,
@@ -342,7 +371,7 @@ def test_sampling_via_database_sequences__preselection_incomplete_sequence(
         session=db_session,
         collection_id=frame_collection_id,
         tag_name="dropped_preselection",
-    ) in ([0, 1, 2, 3, 4], [5, 6, 7, 8, 9])
+    ) in ([0, 1, 2, 3, 4, 10], [5, 6, 7, 8, 9, 10])
 
 
 def test_sampling_via_database_sequences__preselection_outside_input(
@@ -378,7 +407,7 @@ def test_sampling_via_database_sequences__preselection_outside_input(
         session=db_session,
         collection_id=frame_collection_id,
         tag_name="outside_preselection",
-    ) == [0, 1, 2, 3, 4]
+    ) == [0, 1, 2, 3, 4, 10, 11, 12, 13, 14]
 
 
 def test_sampling_via_database__sequence_preselection_matches_single_sampling(
@@ -425,8 +454,8 @@ def test_sampling_via_database__sequence_preselection_matches_single_sampling(
     )
 
     assert len(first_batch) == 5
-    assert set(first_batch).isdisjoint(second_batch)
-    assert set(first_batch + second_batch) == set(single_batch)
+    assert set(first_batch) < set(second_batch)
+    assert set(second_batch) == set(single_batch)
 
 
 def test_sampling_via_database__sequence_result_tag_name_equals_preselected_tag_name(
