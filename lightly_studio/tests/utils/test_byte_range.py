@@ -5,46 +5,41 @@ from __future__ import annotations
 import asyncio
 from typing import Any, cast
 
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi.responses import StreamingResponse
 from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api import status
 from lightly_studio.utils.byte_range import FileInfo, file_info, parse_range_header, serve_file
 
+_PATH = "/path/file.mcap"
+
 # --- file_info ---
 
 
 def test_file_info__uses_etag(mocker: MockerFixture) -> None:
-    fs = _make_fs_mock(mocker=mocker, size=1024, etag='"abc123"')
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    result = file_info("/path/file.mcap")
-    assert result == FileInfo(path="/path/file.mcap", size_bytes=1024, etag="abc123")
+    _patch_fs(mocker=mocker, size=1024, etag='"abc123"')
+    assert file_info(_PATH) == FileInfo(path=_PATH, size_bytes=1024, etag="abc123")
 
 
 def test_file_info__omits_unreliable_validator(mocker: MockerFixture) -> None:
-    fs = _make_fs_mock(mocker=mocker, size=256)
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    result = file_info("/path/file.mcap")
-    assert result == FileInfo(path="/path/file.mcap", size_bytes=256, etag=None)
+    _patch_fs(mocker=mocker, size=256)
+    assert file_info(_PATH) == FileInfo(path=_PATH, size_bytes=256, etag=None)
 
 
 # --- parse_range_header ---
 
 
 def test_parse_range_header__full_range() -> None:
-    result = parse_range_header(range_header="bytes=0-99", file_size=200)
-    assert result == (0, 99)
+    assert parse_range_header(range_header="bytes=0-99", file_size=200) == (0, 99)
 
 
 def test_parse_range_header__open_end() -> None:
-    result = parse_range_header(range_header="bytes=50-", file_size=200)
-    assert result == (50, 199)
+    assert parse_range_header(range_header="bytes=50-", file_size=200) == (50, 199)
 
 
 def test_parse_range_header__open_start() -> None:
-    result = parse_range_header(range_header="bytes=-100", file_size=200)
-    assert result == (100, 199)
+    assert parse_range_header(range_header="bytes=-100", file_size=200) == (100, 199)
 
 
 def test_parse_range_header__none() -> None:
@@ -68,8 +63,7 @@ def test_parse_range_header__start_beyond_end() -> None:
 
 
 def test_parse_range_header__end_at_file_boundary() -> None:
-    result = parse_range_header(range_header="bytes=0-199", file_size=200)
-    assert result == (0, 199)
+    assert parse_range_header(range_header="bytes=0-199", file_size=200) == (0, 199)
 
 
 def test_parse_range_header__end_beyond_file() -> None:
@@ -88,209 +82,167 @@ def test_parse_range_header__non_numeric() -> None:
     assert parse_range_header(range_header="bytes=abc-def", file_size=200) is None
 
 
-def test_serve_file__full_response(mocker: MockerFixture) -> None:
-    fs = _make_fs_mock(mocker=mocker, size=3, etag='"abc"')
-    handle = mocker.MagicMock()
-    handle.read.side_effect = [b"abc", b""]
-    fs.open.return_value = handle
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=3, etag="abc")
+# --- serve_file ---
 
-    response = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header=None,
-        media_type="application/octet-stream",
-    )
+
+def test_serve_file__full_response(mocker: MockerFixture) -> None:
+    _patch_fs(mocker=mocker, size=3, etag='"abc"', read_chunks=[b"abc", b""])
+    info = FileInfo(path=_PATH, size_bytes=3, etag="abc")
+
+    response = _serve(mocker=mocker, info=info, range_header=None)
 
     assert response.status_code == status.HTTP_STATUS_OK
     assert response.headers["content-length"] == "3"
     assert response.headers["etag"] == '"abc"'
     assert response.headers["accept-ranges"] == "bytes"
-    assert asyncio.run(_read_response(cast(StreamingResponse, response))) == b"abc"
+    assert _read(response) == b"abc"
 
 
-def test_serve_file__partial_response_and_stream(mocker: MockerFixture) -> None:
-    fs = _make_fs_mock(mocker=mocker, size=5, etag='"abc"')
-    handle = mocker.MagicMock()
-    handle.read.side_effect = [b"bc", b""]
-    fs.open.return_value = handle
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag="abc")
+def test_serve_file__partial_response(mocker: MockerFixture) -> None:
+    _patch_fs(mocker=mocker, size=5, etag='"abc"', read_chunks=[b"bc", b""])
+    info = FileInfo(path=_PATH, size_bytes=5, etag="abc")
 
-    response = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header="bytes=1-2",
-        media_type="text/plain",
-    )
+    response = _serve(mocker=mocker, info=info, range_header="bytes=1-2")
 
     assert response.status_code == status.HTTP_STATUS_PARTIAL_CONTENT
     assert response.headers["content-range"] == "bytes 1-2/5"
     assert response.headers["content-length"] == "2"
-    assert asyncio.run(_read_response(cast(StreamingResponse, response))) == b"bc"
+    assert _read(response) == b"bc"
 
 
-def test_serve_file__precondition_and_unsatisfiable_range(mocker: MockerFixture) -> None:
-    fs = _make_fs_mock(mocker=mocker, size=5, etag='"abc"')
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag="abc")
+def test_serve_file__unsatisfiable_range(mocker: MockerFixture) -> None:
+    _patch_fs(mocker=mocker, size=5, etag='"abc"')
+    info = FileInfo(path=_PATH, size_bytes=5, etag="abc")
 
-    precondition = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header=None,
-        media_type="text/plain",
-        if_match='"old"',
-    )
-    unsatisfiable = serve_file(
-        info=info, request=_request(mocker), range_header="bytes=5-", media_type="text/plain"
-    )
+    response = _serve(mocker=mocker, info=info, range_header="bytes=5-")
 
-    assert precondition.status_code == status.HTTP_STATUS_PRECONDITION_FAILED
-    assert unsatisfiable.status_code == status.HTTP_STATUS_RANGE_NOT_SATISFIABLE
-    assert unsatisfiable.headers["content-range"] == "bytes */5"
+    assert response.status_code == status.HTTP_STATUS_RANGE_NOT_SATISFIABLE
+    assert response.headers["content-range"] == "bytes */5"
 
 
-def test_serve_file__if_match_wildcard_and_list(mocker: MockerFixture) -> None:
-    fs = _make_fs_mock(mocker=mocker, size=5, etag='"abc"')
-    handle = mocker.MagicMock()
-    fs.open.return_value = handle
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag="abc")
+def test_serve_file__multi_range_falls_back_to_full_response(mocker: MockerFixture) -> None:
+    """Multi-range requests fall back to full 200 rather than 416."""
+    _patch_fs(mocker=mocker, size=5, etag='"abc"', read_chunks=[b"hello", b""])
+    info = FileInfo(path=_PATH, size_bytes=5, etag="abc")
 
-    wildcard = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header=None,
-        media_type="text/plain",
-        if_match="*",
-    )
-    tag_list = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header=None,
-        media_type="text/plain",
-        if_match='"old", "abc"',
-    )
+    response = _serve(mocker=mocker, info=info, range_header="bytes=0-1,3-4")
 
-    assert wildcard.status_code == status.HTTP_STATUS_OK
-    assert tag_list.status_code == status.HTTP_STATUS_OK
+    assert response.status_code == status.HTTP_STATUS_OK
 
 
-def test_serve_file__if_match_explicit_tag_412_when_no_revision(mocker: MockerFixture) -> None:
-    """Explicit If-Match tags must 412 even when the file has no ETag."""
-    fs = _make_fs_mock(mocker=mocker, size=5)
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag=None)
+def test_serve_file__if_match_matching_tag(mocker: MockerFixture) -> None:
+    _patch_fs(mocker=mocker, size=5, etag='"abc"')
+    info = FileInfo(path=_PATH, size_bytes=5, etag="abc")
 
-    response = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header=None,
-        media_type="text/plain",
-        if_match='"some-tag"',
-    )
+    assert _serve(mocker=mocker, info=info, if_match='"abc"').status_code == status.HTTP_STATUS_OK
+
+
+def test_serve_file__if_match_tag_list(mocker: MockerFixture) -> None:
+    _patch_fs(mocker=mocker, size=5, etag='"abc"')
+    info = FileInfo(path=_PATH, size_bytes=5, etag="abc")
+
+    response = _serve(mocker=mocker, info=info, if_match='"old", "abc"')
+
+    assert response.status_code == status.HTTP_STATUS_OK
+
+
+def test_serve_file__if_match_wildcard(mocker: MockerFixture) -> None:
+    _patch_fs(mocker=mocker, size=5, etag='"abc"')
+    info = FileInfo(path=_PATH, size_bytes=5, etag="abc")
+
+    assert _serve(mocker=mocker, info=info, if_match="*").status_code == status.HTTP_STATUS_OK
+
+
+def test_serve_file__if_match_mismatch(mocker: MockerFixture) -> None:
+    _patch_fs(mocker=mocker, size=5, etag='"abc"')
+    info = FileInfo(path=_PATH, size_bytes=5, etag="abc")
+
+    response = _serve(mocker=mocker, info=info, if_match='"old"')
 
     assert response.status_code == status.HTTP_STATUS_PRECONDITION_FAILED
 
 
-def test_serve_file__if_match_wildcard_passes_when_no_revision(mocker: MockerFixture) -> None:
-    """Wildcard If-Match must pass through even when the file has no ETag."""
-    fs = _make_fs_mock(mocker=mocker, size=5)
-    handle = mocker.MagicMock()
-    fs.open.return_value = handle
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag=None)
+def test_serve_file__if_match_explicit_tag_no_revision(mocker: MockerFixture) -> None:
+    """Explicit If-Match tags must 412 even when the file has no ETag."""
+    _patch_fs(mocker=mocker, size=5)
+    info = FileInfo(path=_PATH, size_bytes=5, etag=None)
 
-    response = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header=None,
-        media_type="text/plain",
-        if_match="*",
-    )
+    response = _serve(mocker=mocker, info=info, if_match='"some-tag"')
 
-    assert response.status_code == status.HTTP_STATUS_OK
+    assert response.status_code == status.HTTP_STATUS_PRECONDITION_FAILED
 
 
-def test_serve_file__multi_range_falls_back_to_full_response(mocker: MockerFixture) -> None:
-    """Multi-range requests must fall back to a full 200, not 416."""
-    fs = _make_fs_mock(mocker=mocker, size=5, etag='"abc"')
-    handle = mocker.MagicMock()
-    handle.read.side_effect = [b"hello", b""]
-    fs.open.return_value = handle
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag="abc")
+def test_serve_file__if_match_wildcard_no_revision(mocker: MockerFixture) -> None:
+    """Wildcard If-Match passes through even when the file has no ETag."""
+    _patch_fs(mocker=mocker, size=5)
+    info = FileInfo(path=_PATH, size_bytes=5, etag=None)
 
-    response = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header="bytes=0-1,3-4",
-        media_type="text/plain",
-    )
-
-    assert response.status_code == status.HTTP_STATUS_OK
+    assert _serve(mocker=mocker, info=info, if_match="*").status_code == status.HTTP_STATUS_OK
 
 
 def test_serve_file__if_match_etag_with_comma(mocker: MockerFixture) -> None:
-    """ETags containing commas must be parsed correctly in If-Match."""
-    fs = _make_fs_mock(mocker=mocker, size=5, etag='"a,b"')
-    handle = mocker.MagicMock()
-    fs.open.return_value = handle
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag="a,b")
+    """ETags containing commas are parsed correctly in If-Match."""
+    _patch_fs(mocker=mocker, size=5, etag='"a,b"')
+    info = FileInfo(path=_PATH, size_bytes=5, etag="a,b")
 
-    response = serve_file(
-        info=info,
-        request=_request(mocker),
-        range_header=None,
-        media_type="text/plain",
-        if_match='"a,b"',
-    )
-
-    assert response.status_code == status.HTTP_STATUS_OK
+    assert _serve(mocker=mocker, info=info, if_match='"a,b"').status_code == status.HTTP_STATUS_OK
 
 
 def test_serve_file__disconnection_stops_stream(mocker: MockerFixture) -> None:
-    """Stream must stop without error when the client disconnects."""
-    fs = _make_fs_mock(mocker=mocker, size=10, etag='"abc"')
-    handle = mocker.MagicMock()
-    handle.read.return_value = b"x" * 10
-    fs.open.return_value = handle
-    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
-    info = FileInfo(path="/path/file.mcap", size_bytes=10, etag="abc")
+    """Stream stops without error when the client disconnects."""
+    _patch_fs(mocker=mocker, size=10, etag='"abc"', read_chunks=[b"x" * 10])
+    info = FileInfo(path=_PATH, size_bytes=10, etag="abc")
     request = mocker.MagicMock(spec=Request)
     request.is_disconnected = mocker.AsyncMock(return_value=True)
 
     response = serve_file(
-        info=info,
-        request=cast(Request, request),
-        range_header=None,
-        media_type="text/plain",
+        info=info, request=cast(Request, request), range_header=None, media_type="text/plain"
     )
 
-    data = asyncio.run(_read_response(cast(StreamingResponse, response)))
-    assert data == b""
+    assert _read(response) == b""
 
 
-def _make_fs_mock(mocker: MockerFixture, size: int, etag: str | None = None) -> Any:
+def _patch_fs(
+    mocker: MockerFixture,
+    size: int,
+    etag: str | None = None,
+    read_chunks: list[bytes] | None = None,
+) -> Any:
     fs = mocker.MagicMock()
-    info: dict[str, object] = {"size": size}
+    raw_info: dict[str, object] = {"size": size}
     if etag is not None:
-        info["ETag"] = etag
-    fs.info.return_value = info
+        raw_info["ETag"] = etag
+    fs.info.return_value = raw_info
+    if read_chunks is not None:
+        handle = mocker.MagicMock()
+        handle.read.side_effect = read_chunks
+        fs.open.return_value = handle
+    mocker.patch("fsspec.core.url_to_fs", return_value=(fs, _PATH))
     return fs
 
 
-def _request(mocker: MockerFixture) -> Request:
+def _serve(
+    mocker: MockerFixture,
+    info: FileInfo,
+    range_header: str | None = None,
+    if_match: str | None = None,
+) -> Response:
     request = mocker.MagicMock(spec=Request)
     request.is_disconnected = mocker.AsyncMock(return_value=False)
-    return cast(Request, request)
+    return serve_file(
+        info=info,
+        request=cast(Request, request),
+        range_header=range_header,
+        media_type="text/plain",
+        if_match=if_match,
+    )
 
 
-async def _read_response(response: StreamingResponse) -> bytes:
-    chunks: list[bytes] = []
-    async for chunk in response.body_iterator:
-        chunks.append(cast(bytes, chunk))
-    return b"".join(chunks)
+def _read(response: Response) -> bytes:
+    async def _collect() -> bytes:
+        chunks: list[bytes] = []
+        async for chunk in cast(StreamingResponse, response).body_iterator:
+            chunks.append(cast(bytes, chunk))
+        return b"".join(chunks)
+
+    return asyncio.run(_collect())
