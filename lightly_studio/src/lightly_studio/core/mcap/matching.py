@@ -35,6 +35,30 @@ def closest(max_diff_ns: int | None = None) -> MatchFunction:
     return match
 
 
+def match_all(
+    queries_ns: Sequence[int],
+    candidates_ns: Sequence[int],
+    match: MatchFunction | None = None,
+) -> list[int | None]:
+    """Matches every query timestamp against the same candidates.
+
+    Use this to pair timestamps that are already in memory, for example the locators of
+    two topics read in one pass, instead of reading a topic again.
+
+    Args:
+        queries_ns: The query timestamps in nanoseconds.
+        candidates_ns: The candidate timestamps in nanoseconds, sorted ascending.
+        match: Decides which candidate matches a query timestamp. Defaults to the
+            candidate closest in time.
+
+    Returns:
+        One entry per query timestamp, in the same order, holding the index of the
+        matching candidate or `None` for a miss.
+    """
+    match_function = closest() if match is None else match
+    return [match_function(query_ns, candidates_ns) for query_ns in queries_ns]
+
+
 def _closest_index(
     query_ns: int, candidates_ns: Sequence[int], max_diff_ns: int | None
 ) -> int | None:
