@@ -35,6 +35,7 @@ EMBED_IMAGES_BYTES_PATH = f"{BASE_PATH}/embed/images/bytes"
 EMBED_VIDEOS_BYTES_PATH = f"{BASE_PATH}/embed/videos/bytes"
 
 # The multipart field that the bytes endpoints read. One part per item, in input order.
+# Every part carries a `filename`. A parser reads a part without one as a text field.
 FILES_FIELD_NAME = "files"
 
 # A number, because starlette renamed its constant for this status.

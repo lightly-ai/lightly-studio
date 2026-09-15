@@ -32,8 +32,9 @@ def sampling_via_database_sequences(
         config: Sampling configuration. ``selected_sequence_length`` must be set.
         input_sample_ids: Candidate frame sample IDs.
         preselected_sample_ids: Frame sample IDs that should inform the sampling as
-            already selected. They need not be candidates and are never tagged; they
-            are chunked into sequences of their own that seed the selection.
+            already selected. They need not be candidates and are included in the
+            result tag; they are chunked into sequences of their own that seed the
+            selection.
     """
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
@@ -66,6 +67,13 @@ def sampling_via_database_sequences(
             "No sequences available for sampling. No video has at least "
             f"{sequence_length} candidate frame(s) outside the preselection."
         )
+        if preselected_sample_ids:
+            sampling_helpers.create_result_tag(
+                session=session,
+                collection_id=config.collection_id,
+                tag_name=config.sampling_result_tag_name,
+                selected_sample_ids=list(preselected_sample_ids),
+            )
         return
 
     # Flattened in sequence order: `get_embeddings_by_sample_ids` returns embeddings in
@@ -91,7 +99,6 @@ def sampling_via_database_sequences(
             .mean(axis=1)
         )
         mundig.add_diversity(embeddings=sequence_proxies, strength=strat.strength)
-    # Mundig returns the preselected sequences as the prefix of the selection.
     selected_sequence_indices = mundig.run(
         n_samples=len(preselected_indices) + n_sequences_to_select,
         preselected_indices=preselected_indices,
@@ -100,9 +107,10 @@ def sampling_via_database_sequences(
         session=session,
         collection_id=config.collection_id,
         tag_name=config.sampling_result_tag_name,
-        selected_sample_ids=[
+        selected_sample_ids=list(preselected_sample_ids)
+        + [
             sample_id
-            for index in selected_sequence_indices[len(preselected_indices) :]
+            for index in selected_sequence_indices[len(preselected_sequences) :]
             for sample_id in sequences[index]
         ],
     )
