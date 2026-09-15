@@ -1,33 +1,50 @@
-"""Reads frame locators out of a local or remote MCAP file."""
+"""Reads frame locators and calibration out of a local or remote MCAP file."""
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from types import TracebackType
 from typing import Any, overload
 
 import fsspec
+import numpy as np
 from mcap import reader as mcap_reader
 from mcap.records import Channel, Message, Schema
 from mcap.summary import Summary
+from numpy.typing import NDArray
 
-from lightly_studio.core.mcap import decoding, matching, topic_kind, video_keyframe
+from lightly_studio.core.mcap import (
+    camera_info,
+    decoding,
+    matching,
+    topic_kind,
+    transforms,
+    video_keyframe,
+)
 from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.matching import MatchFunction
 from lightly_studio.core.mcap.topic_kind import TopicKind
-from lightly_studio.core.mcap.type_definitions import FrameLocator, TopicInfo
+from lightly_studio.core.mcap.transforms import TransformTree
+from lightly_studio.core.mcap.type_definitions import (
+    CameraIntrinsics,
+    FrameLocator,
+    StaticTransform,
+    TopicInfo,
+)
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
 
+STATIC_TRANSFORM_TOPIC = "/tf_static"
+
 
 class McapFileReader:
-    """Reads frame locators out of an indexed MCAP file.
+    """Reads frame locators and calibration out of an indexed MCAP file.
 
     The reader returns where data is, not the data itself: it never returns decoded
     video frames or point clouds. Message payloads are only read internally, to detect
-    video keyframes.
+    video keyframes and to read calibration.
 
     The file is opened through fsspec, so it can live in local storage or in remote
     object storage. Reading an indexed file only fetches the summary and the chunks a
@@ -79,6 +96,7 @@ class McapFileReader:
         self._topics: list[TopicInfo] | None = None
         self._topics_by_name: dict[str, TopicInfo] | None = None
         self._locators_by_topic: dict[str, list[FrameLocator]] = {}
+        self._transform_tree_by_topic: dict[str, TransformTree] = {}
         self._decoder_by_channel_id: dict[int, Callable[[bytes], Any] | None] = {}
 
     def close(self) -> None:
@@ -192,6 +210,55 @@ class McapFileReader:
         )
         return [None if index is None else locators[index] for index in indices]
 
+    def get_intrinsic(self, topic: str) -> CameraIntrinsics:
+        """Returns the camera intrinsics recorded on a camera info topic.
+
+        Intrinsics are static, so the first message on the topic is used.
+
+        Args:
+            topic: The camera info topic, e.g. `/cam/front/camera_info`.
+
+        Returns:
+            The intrinsics of the camera.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+            McapAccessError: If the topic has no message, or if its messages do not
+                hold camera intrinsics.
+        """
+        for _, decoded_message in self._iter_decoded_messages(topic):
+            return camera_info.from_decoded_message(decoded_message)
+        raise McapAccessError(f"Topic '{topic}' has no message to read camera intrinsics from.")
+
+    def get_static_transform(
+        self,
+        parent_frame_id: str,
+        child_frame_id: str,
+        topic: str = STATIC_TRANSFORM_TOPIC,
+    ) -> NDArray[np.float64]:
+        """Returns the static transform between two coordinate frames.
+
+        Args:
+            parent_frame_id: The frame to map points to, e.g. the camera frame.
+            child_frame_id: The frame to map points from, e.g. the lidar frame.
+            topic: The topic the static transforms are published on.
+
+        Returns:
+            The 4x4 homogeneous transform that maps points from the child frame to the
+            parent frame.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+            TransformNotFoundError: If no chain of transforms connects the two frames.
+        """
+        if topic not in self._transform_tree_by_topic:
+            self._transform_tree_by_topic[topic] = TransformTree(
+                self._read_static_transforms(topic)
+            )
+        return self._transform_tree_by_topic[topic].lookup(
+            target_frame_id=parent_frame_id, source_frame_id=child_frame_id
+        )
+
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.
 
@@ -248,6 +315,29 @@ class McapFileReader:
             )
         self._decoder_by_channel_id[channel.id] = decoder
         return decoder
+
+    def _iter_decoded_messages(self, topic: str) -> Iterator[tuple[int, Any]]:
+        """Yields the log time and the payload of every decoded message on a topic.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+        """
+        self._require_topic_info(topic)
+        for _, _, message, decoded_message in self._reader.iter_decoded_messages(topics=[topic]):
+            yield message.log_time, decoded_message
+
+    def _read_static_transforms(self, topic: str) -> list[StaticTransform]:
+        """Reads all transforms published on a topic.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+        """
+        static_transforms: list[StaticTransform] = []
+        for log_time_ns, decoded_message in self._iter_decoded_messages(topic):
+            static_transforms.extend(
+                transforms.from_decoded_message(decoded_message, log_time_ns=log_time_ns)
+            )
+        return static_transforms
 
     def _require_topic_info(self, topic: str) -> TopicInfo:
         """Returns the info of a topic.

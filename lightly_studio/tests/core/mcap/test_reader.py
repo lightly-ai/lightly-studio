@@ -6,6 +6,7 @@ from typing import Any
 
 import boto3
 import fsspec
+import numpy as np
 import pytest
 from mcap.exceptions import InvalidMagic
 from moto.server import ThreadedMotoServer
@@ -174,6 +175,50 @@ class TestMcapFileReader:
 
         assert reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC, sync_timestamps=[]) == []
 
+    def test_get_intrinsic(self, reader: McapFileReader) -> None:
+        intrinsics = reader.get_intrinsic(topic=helpers.CAMERA_INFO_TOPIC)
+
+        assert intrinsics.width == helpers.IMAGE_WIDTH
+        assert intrinsics.height == helpers.IMAGE_HEIGHT
+        assert intrinsics.camera_matrix == helpers.CAMERA_MATRIX
+        assert intrinsics.frame_id == helpers.CAMERA_FRAME_ID
+        assert intrinsics.distortion_model == "plumb_bob"
+
+    def test_get_intrinsic__unknown_topic(self, reader: McapFileReader) -> None:
+        with pytest.raises(TopicNotFoundError):
+            reader.get_intrinsic(topic="/unknown")
+
+    def test_get_intrinsic__not_camera_info(self, reader: McapFileReader) -> None:
+        with pytest.raises(McapAccessError, match="has no field 'k', 'K'"):
+            reader.get_intrinsic(topic=helpers.CAMERA_VIDEO_TOPIC)
+
+    def test_get_static_transform(self, reader: McapFileReader) -> None:
+        matrix = reader.get_static_transform(
+            parent_frame_id=helpers.CAMERA_FRAME_ID, child_frame_id=helpers.LIDAR_FRAME_ID
+        )
+
+        # The lidar sits 1 m to the left of the camera, which the camera sees 1 m ahead
+        # and 1 m to its right because it is turned by 90 degrees.
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 0.0, 1.0])
+
+    def test_get_static_transform__repeated(self, reader: McapFileReader) -> None:
+        first = reader.get_static_transform(
+            parent_frame_id=helpers.CAMERA_FRAME_ID, child_frame_id=helpers.BASE_FRAME_ID
+        )
+        second = reader.get_static_transform(
+            parent_frame_id=helpers.CAMERA_FRAME_ID, child_frame_id=helpers.BASE_FRAME_ID
+        )
+
+        assert np.allclose(first, second)
+
+    def test_get_static_transform__unknown_topic(self, reader: McapFileReader) -> None:
+        with pytest.raises(TopicNotFoundError):
+            reader.get_static_transform(
+                parent_frame_id=helpers.CAMERA_FRAME_ID,
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                topic="/unknown",
+            )
+
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
         mcap_file_reader.close()
@@ -221,6 +266,7 @@ def test_mcap_file_reader__s3_uri(s3_mcap_uri: str, s3_storage_options: dict[str
     with McapFileReader(s3_mcap_uri, storage_options=s3_storage_options) as reader:
         reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
         locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+        intrinsics = reader.get_intrinsic(topic=helpers.CAMERA_INFO_TOPIC)
 
     # The payloads are read over S3 too, so the keyframes are detected as locally.
     assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
@@ -230,6 +276,8 @@ def test_mcap_file_reader__s3_uri(s3_mcap_uri: str, s3_storage_options: dict[str
         helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[1],
         helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[1],
     ]
+    assert intrinsics.width == helpers.IMAGE_WIDTH
+    assert intrinsics.camera_matrix == helpers.CAMERA_MATRIX
 
 
 def test_mcap_file_reader__s3_uri_cached(
