@@ -64,7 +64,7 @@ class _FirstPixelPILEmbedder(ImagePILEmbedder):
         """Embed all images but the last as their top-left RGB pixel."""
         kept_indices = list(range(len(images) - 1))
         embeddings = np.array(
-            [images[index].getpixel((0, 0)) for index in kept_indices], dtype=np.float32
+            [images[index].getpixel(xy=(0, 0)) for index in kept_indices], dtype=np.float32
         )
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
@@ -577,7 +577,7 @@ def test_embed_frame_samples(
     # One distinct color per frame, so the stored vector identifies its source frame.
     colors = [(10, 20, 30), (40, 50, 60), (70, 80, 90)]
     assert len(frames.frame_sample_ids) == len(colors)
-    pil_frames = [Image.new("RGB", (2, 2), color=color) for color in colors]
+    pil_frames = [Image.new(mode="RGB", size=(2, 2), color=color) for color in colors]
     registry = EmbedderRegistry()
     registry.register(embedder=_FirstPixelPILEmbedder())
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
@@ -620,7 +620,7 @@ def test_embed_frame_samples__no_default_registers_registry_default(
         collection_id=video_collection.collection_id,
         video=VideoStub(duration_s=1.0, fps=3.0),
     )
-    pil_frames = [Image.new("RGB", (2, 2)) for _ in frames.frame_sample_ids]
+    pil_frames = [Image.new(mode="RGB", size=(2, 2)) for _ in frames.frame_sample_ids]
 
     embed_samples.embed_frame_samples(
         session=db_session,
@@ -660,7 +660,7 @@ def test_embed_frame_samples__no_registered_embedder_skips(
         session=db_session,
         collection_id=frames.video_frames_collection_id,
     )
-    pil_frames = [Image.new("RGB", (2, 2)) for _ in frames.frame_sample_ids]
+    pil_frames = [Image.new(mode="RGB", size=(2, 2)) for _ in frames.frame_sample_ids]
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
