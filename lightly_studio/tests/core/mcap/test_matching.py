@@ -37,3 +37,24 @@ def test_closest__outside_max_diff() -> None:
     assert match(250, CANDIDATES_NS) is None
     assert match(1_000, CANDIDATES_NS) is None
     assert match(0, CANDIDATES_NS) is None
+
+
+def test_match_all() -> None:
+    assert matching.match_all(queries_ns=[100, 179, 500], candidates_ns=CANDIDATES_NS) == [0, 1, 2]
+
+
+def test_match_all__with_match_function() -> None:
+    indices = matching.match_all(
+        queries_ns=[210, 250],
+        candidates_ns=CANDIDATES_NS,
+        match=matching.closest(max_diff_ns=20),
+    )
+    assert indices == [1, None]
+
+
+def test_match_all__no_queries() -> None:
+    assert matching.match_all(queries_ns=[], candidates_ns=CANDIDATES_NS) == []
+
+
+def test_match_all__no_candidates() -> None:
+    assert matching.match_all(queries_ns=[100, 200], candidates_ns=[]) == [None, None]
