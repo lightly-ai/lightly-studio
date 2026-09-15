@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
+from lightly_studio_serve.embedder import ImageCropPathEmbedder
 from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
@@ -155,25 +156,13 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
         for sample_id_chunk in batching.batched(
             items=annotation_sample_ids, batch_size=_ANNOTATION_EMBED_BATCH_SIZE
         ):
-            annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
-                session=session, annotation_sample_ids=sample_id_chunk
-            )
-            if not annotation_crops:
-                continue
-
-            result = embedder.embed_image_crops(
-                crops=[crop.image_crop for crop in annotation_crops]
-            )
-            crop_sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
-            kept_sample_ids = [crop_sample_ids[index] for index in result.kept_indices]
-
-            embedding_storage.store_embeddings(
+            embedded_count = _embed_annotation_chunk(
                 session=session,
+                embedder=embedder,
                 model_id=model_id,
-                sample_ids=kept_sample_ids,
-                embeddings=result.embeddings,
+                annotation_sample_ids=sample_id_chunk,
             )
-            progress.update(len(annotation_crops))
+            progress.update(embedded_count)
 
     _register_legacy_default_model(
         session=session, collection_id=annotation_collection_id, model_id=model_id
@@ -302,6 +291,44 @@ def collection_has_default_embedder(session: Session, collection_id: UUID) -> bo
     manager = EmbeddingManagerProvider.get_embedding_manager()
     model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
     return model_id is not None
+
+
+def _embed_annotation_chunk(
+    session: Session,
+    embedder: ImageCropPathEmbedder,
+    model_id: UUID,
+    annotation_sample_ids: list[UUID],
+) -> int:
+    """Resolve, embed and store one chunk of annotation crops.
+
+    Crops the embedder drops (see ``kept_indices``) are left out, so the stored sample
+    ids stay aligned with the returned embeddings.
+
+    Args:
+        session: Database session for resolver operations.
+        embedder: The crop embedder resolved for the collection.
+        model_id: The model id the embeddings are stored under.
+        annotation_sample_ids: The annotation ids in this chunk.
+
+    Returns:
+        The number of crops resolved from the chunk, for progress reporting.
+    """
+    annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
+        session=session, annotation_sample_ids=annotation_sample_ids
+    )
+    if not annotation_crops:
+        return 0
+
+    result = embedder.embed_image_crops(crops=[crop.image_crop for crop in annotation_crops])
+    crop_sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
+    kept_sample_ids = [crop_sample_ids[index] for index in result.kept_indices]
+    embedding_storage.store_embeddings(
+        session=session,
+        model_id=model_id,
+        sample_ids=kept_sample_ids,
+        embeddings=result.embeddings,
+    )
+    return len(annotation_crops)
 
 
 # TODO(Michal, 09/2026): Remove once text and image search read embedders from the
