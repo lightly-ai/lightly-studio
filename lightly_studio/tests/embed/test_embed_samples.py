@@ -676,6 +676,30 @@ def test_embed_frame_samples__no_registered_embedder_skips(
     assert _stored_embeddings(session=db_session) == []
 
 
+def test_embed_frame_samples__empty_ids_warns_and_skips(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An empty sample_ids list logs a warning and stores nothing."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    frames = create_video_with_frames(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        video=VideoStub(duration_s=1.0, fps=3.0),
+    )
+
+    with caplog.at_level(level=logging.WARNING):
+        embed_samples.embed_frame_samples(
+            session=db_session,
+            collection_id=frames.video_frames_collection_id,
+            sample_ids=[],
+            pil_frames=[],
+        )
+
+    assert "No frame samples to embed" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
 @pytest.mark.usefixtures("patched_manager")
 def test_collection_has_default_embedder__loads_and_reports_true(
     db_session: Session,
