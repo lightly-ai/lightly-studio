@@ -576,7 +576,7 @@ def patch_collection(
 
     # Create a test-specific EmbedderRegistry with the random embedder registered.
     test_registry = EmbedderRegistry()
-    test_registry.register(RandomEmbedder())
+    test_registry.register(embedder=RandomEmbedder())
     mocker.patch.object(
         embedder_registry,
         "get_registry",
