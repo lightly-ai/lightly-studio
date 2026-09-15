@@ -8,9 +8,11 @@ import '@testing-library/jest-dom';
 import { APP_ROUTES } from '$lib/routes';
 import type { PanelType } from '$lib/hooks/useGlobalStorage';
 import {
+    useImageAnnotationCounts,
     useImageAnnotationCountsBySampleTags,
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
+import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
@@ -281,6 +283,24 @@ describe('distribution comparison query selection', () => {
         expect(vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()).toMatchObject({
             field: undefined
         });
+    });
+});
+
+describe('annotation label pruning', () => {
+    it('waits for the counts refetch before pruning selected labels', async () => {
+        vi.mocked(useImageAnnotationCounts).mockReturnValue({
+            data: [{ label_name: 'cat', total_count: 2, current_count: 1 }],
+            isFetching: true
+        } as unknown as ReturnType<typeof useImageAnnotationCounts>);
+        setPageRoute(APP_ROUTES.images);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        const { setAnnotationCounts, pruneInvalidSelections } =
+            vi.mocked(useAnnotationsFilter).mock.results[0].value;
+        expect(setAnnotationCounts).toHaveBeenCalled();
+        expect(pruneInvalidSelections).not.toHaveBeenCalled();
     });
 });
 
