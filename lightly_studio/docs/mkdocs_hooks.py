@@ -7,7 +7,6 @@ it is not part of the `lightly_studio` package and nothing else imports it.
 from __future__ import annotations
 
 import contextlib
-import os
 import posixpath
 from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from importlib import metadata
@@ -210,9 +209,11 @@ def on_post_build(*, config: MkDocsConfig) -> None:
     """Writes a redirecting stub at every URL that `_REDIRECTS` retires.
 
     Runs after the site is written, so a stub lands beside the built pages and
-    ships with them. A target the build did not produce is skipped here and
-    warned about in `on_files`, which fails the build under `--strict` rather
-    than publishing a stub that points nowhere.
+    ships with them. Two entries are skipped: one whose target the build did not
+    produce, whose stub would point nowhere, and one whose source holds a page
+    again, whose stub would overwrite that page. `on_files` warns about both,
+    which fails the build under `--strict`, but that abort lands after the site
+    is written, so the skip here is what keeps the built site correct.
 
     Args:
         config: The site configuration, read for the site directory, the URL
@@ -225,7 +226,9 @@ def on_post_build(*, config: MkDocsConfig) -> None:
     written = 0
     for old_src, new_src in _REDIRECTS.items():
         new_url = page_urls.get(new_src)
-        if new_url is None:
+        # A stub that points nowhere, and one that would overwrite the page its
+        # own source now holds.
+        if new_url is None or old_src in page_urls:
             continue
         old_dest = _dest_path(src_path=old_src, use_directory_urls=use_directory_urls)
         target = _relative_url(
@@ -454,10 +457,12 @@ def _warn_on_redirect_drift(page_urls: Mapping[str, str]) -> None:
     """Warns when `_REDIRECTS` disagrees with the pages this build produced.
 
     Each warning fails the build under `mkdocs build --strict`, which is what
-    stops a stale entry from shipping. Two ways it can go wrong: a target that
-    no longer exists, which would publish a stub pointing nowhere, and a source
-    a page has since reclaimed, where the stub would overwrite that built page
-    and hide it behind a redirect.
+    reports the drift. It is not what protects the built site: the abort lands
+    after the site is written, and `mkdocs serve` does not use `--strict` at
+    all, so `on_post_build` skips both cases as well. Two ways it can go wrong:
+    a target that no longer exists, which would publish a stub pointing
+    nowhere, and a source a page has since reclaimed, where the stub would
+    overwrite that built page and hide it behind a redirect.
 
     Args:
         page_urls: The built URL of every page, keyed by source path.
@@ -492,9 +497,11 @@ def _dest_path(src_path: str, use_directory_urls: bool) -> str:
     """
     # MkDocs owns this mapping, so a `File` computes it rather than this hook
     # restating the rule. The source and destination directories are irrelevant
-    # to `dest_path` and are left empty.
-    dest_path: str = File(src_path, "", "", use_directory_urls).dest_path
-    return dest_path.replace(os.sep, "/")
+    # to `dest_uri` and are left empty. `dest_uri` is forward-slashed on every
+    # platform, unlike the discouraged `dest_path`, which uses backslashes on
+    # Windows. The annotation is there for the reason given in `_landing_url`.
+    dest_uri: str = File(src_path, "", "", use_directory_urls).dest_uri
+    return dest_uri
 
 
 def _relative_url(from_dest: str, to_url: str, use_directory_urls: bool) -> str:
