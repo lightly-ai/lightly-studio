@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from lightly_studio_serve.embedder import Capability
 from lightly_studio_serve.protocol import (
     MAX_ABS_EMBEDDING_VALUE,
+    MAX_BATCH_SIZE_CEILING,
     MULTIPART_MAX_FILES,
     WIRE_CAPABILITIES,
     DescribeResponse,
@@ -19,12 +20,14 @@ SPACE_KEY = "acme/model@v1"
 
 def test_server_limits__default_batch_reaches_the_bytes_endpoints() -> None:
     """A default over the parser limit would advertise a batch that never arrives."""
-    assert ServerLimits().max_batch_size <= MULTIPART_MAX_FILES
+    assert ServerLimits().max_batch_size <= MAX_BATCH_SIZE_CEILING
 
 
-def test_server_limits__rejects_a_batch_over_the_parser_limit() -> None:
-    with pytest.raises(ValidationError):
-        ServerLimits(max_batch_size=MULTIPART_MAX_FILES + 1)
+def test_server_limits__keeps_the_batch_of_another_server() -> None:
+    """A client reads this model from a server whose parser it does not know."""
+    limits = ServerLimits(max_batch_size=MULTIPART_MAX_FILES * 2)
+
+    assert limits.max_batch_size == MULTIPART_MAX_FILES * 2
 
 
 def test_server_limits__rejects_a_batch_size_of_zero() -> None:

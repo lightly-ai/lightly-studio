@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterator
 
 import numpy as np
@@ -14,7 +15,7 @@ from lightly_studio_serve.embedder import (
     TextEmbedder,
     VideoBytesEmbedder,
 )
-from lightly_studio_serve.protocol import ServerLimits
+from lightly_studio_serve.protocol import MULTIPART_MAX_FILES, ServerLimits
 from lightly_studio_serve.server import create_app
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
@@ -127,7 +128,7 @@ def test_create_app__describe() -> None:
         "dimension": DIMENSION,
         "ready": True,
         "capabilities": ["text"],
-        "limits": {"max_batch_size": 1000, "max_request_bytes": 33554432},
+        "limits": {"max_batch_size": 999, "max_request_bytes": 33554432},
     }
 
 
@@ -407,6 +408,32 @@ def test_create_app__blank_api_key() -> None:
         create_app(embedder=FakeTextEmbedder(), api_key=" ")
 
 
+def test_create_app__api_key_with_whitespace() -> None:
+    """A client cannot send that whitespace, so a server that kept it would reject every token."""
+    with pytest.warns(UserWarning, match="api_key has whitespace"):
+        app = create_app(embedder=FakeTextEmbedder(), api_key=" secret ")
+    client = TestClient(app)
+
+    response = client.get("/v1/describe", headers={"Authorization": "Bearer secret"})
+
+    assert response.status_code == 200
+
+
+def test_create_app__api_key_without_whitespace_gives_no_warning() -> None:
+    with warnings.catch_warnings(record=True) as raised:
+        warnings.simplefilter("always")
+        create_app(embedder=FakeTextEmbedder(), api_key="secret")
+
+    assert not [entry for entry in raised if "api_key has whitespace" in str(entry.message)]
+
+
+def test_create_app__max_batch_size_over_the_parser_limit() -> None:
+    limits = ServerLimits(max_batch_size=MULTIPART_MAX_FILES)
+
+    with pytest.raises(ValueError, match="max_batch_size is 1000"):
+        create_app(embedder=FakeBytesEmbedder(), limits=limits)
+
+
 def test_create_app__chunked_body_over_max_request_bytes() -> None:
     app = create_app(embedder=FakeBytesEmbedder(), limits=ServerLimits(max_request_bytes=8))
     client = TestClient(app)
@@ -472,6 +499,20 @@ def test_create_app__batch_at_max_batch_size() -> None:
 
     assert response.status_code == 200
     assert len(embedder.received) == item_count
+
+
+def test_create_app__batch_one_over_max_batch_size_reaches_the_route() -> None:
+    """The parser must not answer 400 before the route answers the 413 of the protocol."""
+    client = TestClient(create_app(embedder=FakeBytesEmbedder()))
+    item_count = ServerLimits().max_batch_size + 1
+
+    response = client.post(
+        "/v1/embed/images/bytes",
+        files=[("files", (f"{index}.jpg", b"\xff\xd8")) for index in range(item_count)],
+    )
+
+    assert response.status_code == 413
+    assert "max_batch_size" in response.json()["detail"]
 
 
 def test_create_app__malformed_request() -> None:

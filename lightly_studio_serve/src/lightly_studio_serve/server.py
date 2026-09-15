@@ -88,8 +88,9 @@ def serve(  # noqa: PLR0913
         api_key: The token that a client must send as
             ``Authorization: Bearer <api_key>``. ``None`` leaves the server open.
             That is safe only on a loopback address or inside a network that you
-            trust.
-        limits: The limits to report and to apply. The default is 1000 items and
+            trust. The server trims the whitespace around the token, because a
+            client cannot send it, and it gives a warning when it does.
+        limits: The limits to report and to apply. The default is 999 items and
             32 MiB for each request.
         ssl_certfile: The PEM certificate chain for HTTPS. Give this file for any
             address that is not loopback. You can also end TLS at a proxy in front of
@@ -100,8 +101,9 @@ def serve(  # noqa: PLR0913
 
     Raises:
         ValueError: If ``api_key`` is an empty or blank string, if you give
-            ``ssl_keyfile`` without ``ssl_certfile``, or if the embedder implements
-            no capability that version 1 serves.
+            ``ssl_keyfile`` without ``ssl_certfile``, if ``limits`` names a
+            ``max_batch_size`` that the multipart parser cannot deliver, or if the
+            embedder implements no capability that version 1 serves.
     """
     if ssl_keyfile is not None and ssl_certfile is None:
         raise ValueError("ssl_keyfile was given without ssl_certfile, so TLS cannot start.")
@@ -130,8 +132,10 @@ def create_app(
             exist. A text-only embedder has no image route and no video route. It
             must accept calls from more than one thread.
         api_key: The token that a client must send as
-            ``Authorization: Bearer <api_key>``.
-        limits: The limits to report and to apply. The default is 1000 items and
+            ``Authorization: Bearer <api_key>``. The server trims the whitespace
+            around the token, because a client cannot send it, and it gives a
+            warning when it does.
+        limits: The limits to report and to apply. The default is 999 items and
             32 MiB for each request.
 
     Returns:
@@ -140,12 +144,14 @@ def create_app(
 
     Raises:
         ValueError: If ``api_key`` is an empty or blank string, because such a server
-            looks authenticated but accepts an empty token, or if the embedder
-            implements no capability that version 1 serves.
+            looks authenticated but accepts an empty token, if ``limits`` names a
+            ``max_batch_size`` that the multipart parser cannot deliver, or if the
+            embedder implements no capability that version 1 serves.
     """
-    if api_key is not None and not api_key.strip():
-        raise ValueError("api_key is blank. Pass a token, or None to serve unauthenticated.")
+    if api_key is not None:
+        api_key = _trimmed_api_key(api_key=api_key)
     resolved_limits = limits if limits is not None else ServerLimits()
+    _check_max_batch_size(limits=resolved_limits)
     app = FastAPI(title="LightlyStudio embedding server")
     app.add_exception_handler(EmbedderContractError, _handle_contract_error)
     app.add_exception_handler(RequestValidationError, _handle_invalid_request)
@@ -165,6 +171,39 @@ def create_app(
     app.add_middleware(BearerAuth, api_key=api_key, open_paths=_documentation_paths(app=app))
     app.include_router(router)
     return app
+
+
+def _trimmed_api_key(api_key: str) -> str:
+    """Return ``api_key`` without the whitespace around it, and warn that it went.
+
+    ``BearerAuth`` strips the token that it reads, because RFC 7235 permits whitespace
+    around the credentials of a request. A key that keeps its own whitespace therefore
+    matches no token at all, and the server answers 401 to every client.
+    """
+    trimmed = api_key.strip()
+    if not trimmed:
+        raise ValueError("api_key is blank. Pass a token, or None to serve unauthenticated.")
+    if trimmed != api_key:
+        warnings.warn(
+            "api_key has whitespace at its start or at its end. The server applies the "
+            "trimmed token, because a client cannot send that whitespace.",
+            stacklevel=3,
+        )
+    return trimmed
+
+
+def _check_max_batch_size(limits: ServerLimits) -> None:
+    """Reject a batch limit that the bytes endpoints cannot receive.
+
+    The model carries no ceiling, because a client reads it from a server that can use
+    another parser. This server uses the one of starlette.
+    """
+    if limits.max_batch_size > protocol.MAX_BATCH_SIZE_CEILING:
+        raise ValueError(
+            f"max_batch_size is {limits.max_batch_size}. The multipart parser of the bytes "
+            f"endpoints accepts {protocol.MULTIPART_MAX_FILES} parts, so this server "
+            f"advertises at most {protocol.MAX_BATCH_SIZE_CEILING}."
+        )
 
 
 def _public_bind_warning(host: str, api_key: str | None, has_tls: bool) -> str | None:

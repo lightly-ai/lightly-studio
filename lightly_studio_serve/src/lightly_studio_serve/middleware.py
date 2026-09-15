@@ -8,6 +8,7 @@ the server holds, and after a multipart upload to a loading model is spooled to 
 from __future__ import annotations
 
 import secrets
+from abc import ABC, abstractmethod
 from collections.abc import Collection
 
 from fastapi import HTTPException, status
@@ -24,7 +25,29 @@ _RETRY_AFTER_SECONDS = "5"
 _BEARER_SCHEME = b"bearer"
 
 
-class BearerAuth:
+class _HttpMiddleware(ABC):
+    """Passes a scope that is not HTTP straight through.
+
+    A lifespan scope and a websocket scope carry no path and no headers. Every check
+    below reads one of the two, so ``handle`` sees an HTTP scope only.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        """Guard ``app``."""
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        await self.handle(scope=scope, receive=receive, send=send)
+
+    @abstractmethod
+    async def handle(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Check one HTTP request, then answer it or pass it on."""
+
+
+class BearerAuth(_HttpMiddleware):
     """Rejects a request with a missing or wrong bearer token.
 
     The class compares the raw bytes that the client sent. It does not decode the header
@@ -38,18 +61,20 @@ class BearerAuth:
         Args:
             app: The application to guard.
             api_key: The token that a client must send, or ``None`` to guard nothing.
+                It carries no whitespace at its start or at its end, because a client
+                cannot send that: the reader below strips the token that it reads.
             open_paths: The paths that need no token. The interactive documentation
                 goes here: a browser puts no header on it, and it holds only the
                 protocol, which is public.
         """
-        self.app = app
+        super().__init__(app=app)
         self.expected = None if api_key is None else api_key.encode()
         self.open_paths = frozenset(open_paths)
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+    async def handle(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Answer 401 for a wrong token. Otherwise pass the request on."""
         expected = self.expected
-        if expected is None or scope["type"] != "http" or scope["path"] in self.open_paths:
+        if expected is None or scope["path"] in self.open_paths:
             await self.app(scope, receive, send)
             return
         if not _has_valid_token(scope=scope, expected=expected):
@@ -58,7 +83,7 @@ class BearerAuth:
         await self.app(scope, receive, send)
 
 
-class RequestSizeLimit:
+class RequestSizeLimit(_HttpMiddleware):
     """Rejects a body that is larger than the limit that the server reports.
 
     The middleware reads ``Content-Length`` first. It rejects a request that declares a
@@ -69,14 +94,11 @@ class RequestSizeLimit:
 
     def __init__(self, app: ASGIApp, max_request_bytes: int) -> None:
         """Guard ``app``. Reject a body over ``max_request_bytes``."""
-        self.app = app
+        super().__init__(app=app)
         self.max_request_bytes = max_request_bytes
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+    async def handle(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Check the declared length, then pass the request on and count the body."""
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
         declared = _content_length(scope=scope)
         if declared is not None and declared > self.max_request_bytes:
             await _too_large(max_request_bytes=self.max_request_bytes)(scope, receive, send)
@@ -103,7 +125,7 @@ class RequestSizeLimit:
         return receive_counted
 
 
-class Readiness:
+class Readiness(_HttpMiddleware):
     """Rejects a request to an embed path while the model is still loading.
 
     ``/v1/describe`` is not among the paths. A client polls it to learn when to retry.
@@ -111,13 +133,13 @@ class Readiness:
 
     def __init__(self, app: ASGIApp, embedder: Embedder, paths: Collection[str]) -> None:
         """Guard ``paths`` while ``embedder`` reports that it is not ready."""
-        self.app = app
+        super().__init__(app=app)
         self.embedder = embedder
         self.paths = frozenset(paths)
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+    async def handle(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Answer 503 while the model loads. Otherwise pass the request on."""
-        if scope["type"] != "http" or scope["path"] not in self.paths or self.embedder.ready:
+        if scope["path"] not in self.paths or self.embedder.ready:
             await self.app(scope, receive, send)
             return
         await _unavailable()(scope, receive, send)
@@ -138,28 +160,29 @@ def _bearer_token(scope: Scope) -> bytes:
     is case-insensitive and more than one space is legal, so a client that follows the
     standard must not meet a 401.
     """
-    scheme, _, token = _authorization_header(scope=scope).partition(b" ")
+    header = _header(scope=scope, name=b"authorization") or b""
+    scheme, _, token = header.partition(b" ")
     if scheme.lower() != _BEARER_SCHEME:
         return b""
     return token.strip()
 
 
-def _authorization_header(scope: Scope) -> bytes:
-    """Read the raw ``Authorization`` header. ASGI gives the names in lower case."""
-    for name, value in scope["headers"]:
-        if name == b"authorization":
-            return bytes(value)
-    return b""
-
-
 def _content_length(scope: Scope) -> int | None:
     """Read the declared body length, or ``None`` if the header is absent or invalid."""
-    for name, value in scope["headers"]:
-        if name == b"content-length":
-            try:
-                return int(value)
-            except ValueError:
-                return None
+    value = _header(scope=scope, name=b"content-length")
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def _header(scope: Scope, name: bytes) -> bytes | None:
+    """Read one raw header, or ``None`` if the request has none. ASGI lowers the names."""
+    for header_name, value in scope["headers"]:
+        if header_name == name:
+            return bytes(value)
     return None
 
 
