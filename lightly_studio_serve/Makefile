@@ -27,4 +27,13 @@ test:
 	@echo "Running tests..."
 	uv run pytest
 
+# Full-suite line coverage for the Fast Track coverage guardrail, which reads coverage.json
+# rather than running tests itself.
+.PHONY: test-coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	uv run pytest --cov=src/lightly_studio_serve \
+	  --cov-report=json:coverage.json \
+	  --cov-report=term-missing:skip-covered
+
 include ../make/python.mk
