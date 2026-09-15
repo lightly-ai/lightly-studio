@@ -15,24 +15,18 @@ export const useImageAnnotationCountsQueryKey = countImageAnnotationsByCollectio
 });
 
 export function buildImageAnnotationCountsQueryKey({
-    collectionId,
-    filter,
-    annotationType,
-    countMode,
-    queryKeyOverride
-}: {
-    collectionId: string;
-    filter?: ImageFilter;
-    annotationType?: AnnotationType;
-    countMode?: AnnotationCountMode;
+    queryKeyOverride,
+    ...params
+}: Parameters<typeof buildImageAnnotationCountsRequest>[0] & {
     // unknown[] intentionally: callers may extend the base key with extra
-    // segments (e.g. [...baseKey, 'distribution']). The cast bridges this to
-    // the specific tuple type createQuery expects.
+    // segments (e.g. [...baseKey, 'distribution']).
     queryKeyOverride?: unknown[];
 }): ReturnType<typeof countImageAnnotationsByCollectionQueryKey> {
+    // The request is appended to every key, so the cast bridges the longer
+    // array to the tuple type createQuery expects.
     return [
         ...(queryKeyOverride ?? useImageAnnotationCountsQueryKey),
-        buildImageAnnotationCountsRequest({ collectionId, filter, annotationType, countMode })
+        buildImageAnnotationCountsRequest(params)
     ] as unknown as ReturnType<typeof countImageAnnotationsByCollectionQueryKey>;
 }
 
@@ -70,9 +64,9 @@ export const useImageAnnotationCounts = (
         /** Controls whether objects or samples are counted. */
         countMode?: AnnotationCountMode;
         /**
-         * Override the cache key. Pass a key that is a suffix-extension of
+         * Prefix for the cache key. The request is appended to it. Extend
          * `useImageAnnotationCountsQueryKey` so that mutation invalidations still
-         * reach this query while avoiding cache collisions with other callers.
+         * reach this query.
          */
         queryKey?: unknown[];
         /** Set to false to prevent the query from fetching. Default: true. */
@@ -80,30 +74,11 @@ export const useImageAnnotationCounts = (
     }
 ) => {
     return createQuery(() => {
-        const {
-            collectionId,
-            filter,
-            annotationType,
-            countMode,
-            queryKey: queryKeyOverride,
-            enabled
-        } = getParams();
+        const { queryKey: queryKeyOverride, enabled, ...params } = getParams();
 
-        const requestOptions = buildImageAnnotationCountsRequest({
-            collectionId,
-            filter,
-            annotationType,
-            countMode
-        });
-
+        const requestOptions = buildImageAnnotationCountsRequest(params);
         const options = countImageAnnotationsByCollectionOptions(requestOptions);
-        const queryKey = buildImageAnnotationCountsQueryKey({
-            collectionId,
-            filter,
-            annotationType,
-            countMode,
-            queryKeyOverride
-        });
+        const queryKey = buildImageAnnotationCountsQueryKey({ ...params, queryKeyOverride });
 
         return {
             ...options,
@@ -116,8 +91,9 @@ export const useImageAnnotationCounts = (
                 });
                 return data;
             },
-            // Keep showing previous data while the new key's request is in-flight
-            // so the panel doesn't flash empty during a count_mode transition.
+            // The key changes with the collection, filter and count mode. Keep showing
+            // the previous data while the new key's request is in flight so the counts
+            // don't flash empty.
             placeholderData: (
                 previousData: Array<{ [key: string]: string | number }> | undefined
             ) => previousData,

@@ -56,18 +56,29 @@ describe('buildImageAnnotationCountsQueryKey', () => {
         ]);
     });
 
-    it('produces different keys for different tag filters', () => {
-        expect(buildImageAnnotationCountsQueryKey(params)).not.toEqual(
+    it('produces a different key when any request input changes', () => {
+        const key = buildImageAnnotationCountsQueryKey(params);
+
+        expect(key).not.toEqual(
             buildImageAnnotationCountsQueryKey({
                 ...params,
                 filter: { sample_filter: { tag_ids: ['tag-b'] } }
             })
         );
-    });
-
-    it('produces different keys for different collections', () => {
-        expect(buildImageAnnotationCountsQueryKey(params)).not.toEqual(
+        expect(key).not.toEqual(
             buildImageAnnotationCountsQueryKey({ ...params, collectionId: 'col-2' })
+        );
+        expect(key).not.toEqual(
+            buildImageAnnotationCountsQueryKey({
+                ...params,
+                annotationType: AnnotationType.CLASSIFICATION
+            })
+        );
+        expect(key).not.toEqual(
+            buildImageAnnotationCountsQueryKey({
+                ...params,
+                countMode: AnnotationCountMode.OBJECTS
+            })
         );
     });
 });
