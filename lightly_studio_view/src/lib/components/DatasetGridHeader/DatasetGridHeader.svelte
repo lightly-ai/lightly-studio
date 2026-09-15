@@ -70,7 +70,7 @@
         {:else if isVideos}
             <VideoOrderBy {collectionId} />
         {:else if isAnnotations}
-            <AnnotationOrderBy {collectionId} />
+            <AnnotationOrderBy {collectionId} datasetId={collectionDatasetId} />
         {/if}
     {/snippet}
     {#if hasMediaWithEmbeddings}
