@@ -412,6 +412,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     video_file.close()
 
 
+@pytest.mark.usefixtures("patch_collection")
 def test__create_video_frame_samples__embed_frames(
     db_session: Session,
     tmp_path: Path,
