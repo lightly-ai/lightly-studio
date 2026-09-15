@@ -91,14 +91,14 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
         raise ValueError("Could not fetch all image paths for the provided IDs.")
     filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
 
-    resolved = default_embedder.resolve_default_embedder(
+    default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
     )
-    if resolved is None:
+    if default_embedder_and_model_id is None:
         return
-    embedder, model_id = resolved
+    embedder, model_id = default_embedder_and_model_id
 
     result = embedder.embed_images(paths=filepaths)
     kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
@@ -163,14 +163,14 @@ def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[
         raise ValueError("Could not fetch all video paths for the provided IDs.")
     filepaths = [video.file_path_abs for video in videos]
 
-    resolved = default_embedder.resolve_default_embedder(
+    default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
         get_embedder_fn=EmbedderRegistry.get_video_path_embedder,
     )
-    if resolved is None:
+    if default_embedder_and_model_id is None:
         return
-    embedder, model_id = resolved
+    embedder, model_id = default_embedder_and_model_id
 
     result = embedder.embed_videos(paths=filepaths)
     kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
