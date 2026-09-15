@@ -31,6 +31,7 @@ RENDER_PR_BODY = "render-pr-body"
 READ_VERSION = "read-version"
 RENDER_RELEASE_NOTES = "render-release-notes"
 CHECK_WHEEL_DEPENDENCIES = "check-wheel-dependencies"
+CHECK_DEPENDENCY_RANGE = "check-dependency-range"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -98,6 +99,13 @@ def main(argv: list[str] | None = None) -> int:
     wheel_deps.add_argument("--package", required=True)
     wheel_deps.add_argument("--dist", type=Path, required=True, help="directory holding the wheel")
 
+    dependency_range = subparsers.add_parser(
+        CHECK_DEPENDENCY_RANGE,
+        help="fail if a workspace dependency's declared range excludes the version in the tree",
+    )
+    dependency_range.add_argument("--package", required=True)
+    dependency_range.add_argument("--root", type=Path, default=Path())
+
     args = parser.parse_args(argv)
 
     try:
@@ -118,6 +126,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         READ_VERSION: _cmd_read_version,
         RENDER_RELEASE_NOTES: _cmd_render_release_notes,
         CHECK_WHEEL_DEPENDENCIES: _cmd_check_wheel_dependencies,
+        CHECK_DEPENDENCY_RANGE: _cmd_check_dependency_range,
     }
     handlers[args.command](args)
     return 0
@@ -182,6 +191,25 @@ def _cmd_render_release_notes(args: argparse.Namespace) -> None:
 
 def _cmd_check_wheel_dependencies(args: argparse.Namespace) -> None:
     wheel.check_wheel_dependencies(dist_dir=args.dist, package=packages.get(args.package))
+
+
+def _cmd_check_dependency_range(args: argparse.Namespace) -> None:
+    # Imported here, not at the top: this is the only subcommand that needs
+    # `packaging`, and the rest must stay runnable on a bare `python3`.
+    from prepare_release import dependency  # noqa: PLC0415
+
+    package = packages.get(args.package)
+    pyproject_text = (args.root / package.pyproject).read_text()
+    for name in package.workspace_dependencies:
+        member = packages.get(name)
+        dependency.assert_admits_version(
+            pyproject_text=pyproject_text,
+            dependency=name,
+            dependency_version=version.read_project_version(
+                (args.root / member.pyproject).read_text()
+            ),
+        )
+        print(f"{package.distribution}'s requirement on {name} admits the version in the tree.")
 
 
 if __name__ == "__main__":
