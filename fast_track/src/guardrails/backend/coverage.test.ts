@@ -42,6 +42,21 @@ function setServeReport(files: Record<string, CoverageFileData>): void {
     setReport('BACKEND_SERVE_COVERAGE_JSON', '/tmp/lightly_studio_serve/coverage.json', files);
 }
 
+const STUDIO_SERVICE = 'lightly_studio/src/lightly_studio/service.py';
+const SERVE_SERVER = 'lightly_studio_serve/src/lightly_studio_serve/server.py';
+
+function setCoveredStudioReport(): void {
+    setStudioReport({
+        'src/lightly_studio/service.py': { executed_lines: [12, 13, 14], missing_lines: [] }
+    });
+}
+
+function setUncoveredServeReport(): void {
+    setServeReport({
+        'src/lightly_studio_serve/server.py': { executed_lines: [], missing_lines: [12, 13, 14] }
+    });
+}
+
 beforeEach(() => {
     vi.resetAllMocks();
     reports.clear();
@@ -211,9 +226,7 @@ describe('backendCoverageGuardrail', () => {
     });
 
     it('fails when BACKEND_TESTS_PASSED is false', async () => {
-        setStudioReport({
-            'src/lightly_studio/service.py': { executed_lines: [12, 13, 14], missing_lines: [] }
-        });
+        setCoveredStudioReport();
         process.env.BACKEND_TESTS_PASSED = 'false';
         const result = await backendCoverageGuardrail.run(
             makeCtx([
@@ -231,9 +244,7 @@ describe('backendCoverageGuardrail', () => {
     });
 
     it('passes when all added lines are covered', async () => {
-        setStudioReport({
-            'src/lightly_studio/service.py': { executed_lines: [12, 13, 14], missing_lines: [] }
-        });
+        setCoveredStudioReport();
         const result = await backendCoverageGuardrail.run(
             makeCtx([
                 {
@@ -288,51 +299,26 @@ describe('backendCoverageGuardrail', () => {
     });
 
     it('judges a sibling member against its own report', async () => {
-        setServeReport({
-            'src/lightly_studio_serve/server.py': {
-                executed_lines: [],
-                missing_lines: [12, 13, 14]
-            }
-        });
-        const result = await backendCoverageGuardrail.run(
-            makeCtx([changed('lightly_studio_serve/src/lightly_studio_serve/server.py')])
-        );
+        setUncoveredServeReport();
+        const result = await backendCoverageGuardrail.run(makeCtx([changed(SERVE_SERVER)]));
         expect(result.status).toBe('fail');
-        expect(result.summary).toContain(
-            '[FAIL] lightly_studio_serve/src/lightly_studio_serve/server.py'
-        );
+        expect(result.summary).toContain(`[FAIL] ${SERVE_SERVER}`);
     });
 
     it('reports every member a pull request touches in one summary', async () => {
-        setStudioReport({
-            'src/lightly_studio/service.py': { executed_lines: [12, 13, 14], missing_lines: [] }
-        });
-        setServeReport({
-            'src/lightly_studio_serve/server.py': {
-                executed_lines: [],
-                missing_lines: [12, 13, 14]
-            }
-        });
+        setCoveredStudioReport();
+        setUncoveredServeReport();
         const result = await backendCoverageGuardrail.run(
-            makeCtx([
-                changed('lightly_studio/src/lightly_studio/service.py'),
-                changed('lightly_studio_serve/src/lightly_studio_serve/server.py')
-            ])
+            makeCtx([changed(STUDIO_SERVICE), changed(SERVE_SERVER)])
         );
         expect(result.status).toBe('fail');
-        expect(result.summary).toContain('[PASS] lightly_studio/src/lightly_studio/service.py');
-        expect(result.summary).toContain(
-            '[FAIL] lightly_studio_serve/src/lightly_studio_serve/server.py'
-        );
+        expect(result.summary).toContain(`[PASS] ${STUDIO_SERVICE}`);
+        expect(result.summary).toContain(`[FAIL] ${SERVE_SERVER}`);
     });
 
     it('ignores a member the pull request does not touch', async () => {
-        setStudioReport({
-            'src/lightly_studio/service.py': { executed_lines: [12, 13, 14], missing_lines: [] }
-        });
-        const result = await backendCoverageGuardrail.run(
-            makeCtx([changed('lightly_studio/src/lightly_studio/service.py')])
-        );
+        setCoveredStudioReport();
+        const result = await backendCoverageGuardrail.run(makeCtx([changed(STUDIO_SERVICE)]));
         expect(result.status).toBe('pass');
         expect(result.summary).not.toContain('BACKEND_SERVE_COVERAGE_JSON');
     });

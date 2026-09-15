@@ -20,12 +20,12 @@ vi.mock('node:fs', async (importOriginal) => {
 const { execFile } = await import('node:child_process');
 const { existsSync } = await import('node:fs');
 
-const backendFile: ChangedFile = {
-    path: 'lightly_studio/src/model.py',
-    status: 'modified',
-    additions: 5,
-    deletions: 0
-};
+function changed(path: string): ChangedFile {
+    return { path, status: 'modified', additions: 5, deletions: 0 };
+}
+
+const backendFile = changed('lightly_studio/src/model.py');
+const serveFile = changed('lightly_studio_serve/src/lightly_studio_serve/server.py');
 
 function makeCtx(files: ChangedFile[] = [backendFile]): GuardrailContext {
     return { changedFiles: async () => files };
@@ -89,17 +89,7 @@ describe('backendComplexityGuardrail', () => {
             (cb as unknown as PromisifyCb)(null, { stdout: '[]' });
             return undefined as unknown as ChildProcess;
         });
-        const result = await backendComplexityGuardrail.run(
-            makeCtx([
-                backendFile,
-                {
-                    path: 'lightly_studio_serve/src/lightly_studio_serve/server.py',
-                    status: 'modified',
-                    additions: 5,
-                    deletions: 0
-                }
-            ])
-        );
+        const result = await backendComplexityGuardrail.run(makeCtx([backendFile, serveFile]));
         expect(result.status).toBe('pass');
         expect(cwds).toEqual([
             resolve(REPO_ROOT, 'lightly_studio/'),
