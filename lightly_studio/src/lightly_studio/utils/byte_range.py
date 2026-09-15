@@ -64,9 +64,9 @@ def serve_file(
     file_size = info.size_bytes
     revision = info.etag
     if (
-        revision is not None
-        and if_match is not None
-        and not _if_match_satisfied(if_match=if_match, revision=revision)
+        if_match is not None
+        and if_match.strip() != "*"
+        and (revision is None or not _if_match_satisfied(if_match=if_match, revision=revision))
     ):
         return Response(status_code=status.HTTP_STATUS_PRECONDITION_FAILED)
 
@@ -77,7 +77,7 @@ def serve_file(
     if revision is not None:
         headers["ETag"] = f'"{revision}"'
     byte_range = parse_range_header(range_header=range_header, file_size=file_size)
-    if range_header is not None and range_header.startswith("bytes=") and byte_range is None:
+    if byte_range is None and _is_unsatisfiable(range_header=range_header, file_size=file_size):
         return Response(
             status_code=status.HTTP_STATUS_RANGE_NOT_SATISFIABLE,
             headers={**headers, "Content-Range": f"bytes */{file_size}"},
@@ -162,9 +162,51 @@ def _revision(*, info: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _is_unsatisfiable(*, range_header: str | None, file_size: int) -> bool:
+    """Return whether range_header is a single byte range beyond the file end."""
+    if not range_header or not range_header.startswith("bytes="):
+        return False
+    spec = range_header[len("bytes=") :].strip()
+    # Multi-range (contains comma outside quotes) — not our concern, fall through.
+    if "," in spec:
+        return False
+    if "-" not in spec:
+        return False
+    start_str, end_str = spec.split("-", 1)
+    try:
+        if not start_str:
+            return False
+        start = int(start_str)
+        end = int(end_str) if end_str else file_size - 1
+    except ValueError:
+        return False
+    return start >= file_size or end < start
+
+
 def _if_match_satisfied(*, if_match: str, revision: str) -> bool:
-    """Return whether If-Match contains the current strong entity tag."""
-    tags = [tag.strip() for tag in if_match.split(",")]
-    if "*" in tags:
-        return True
+    """Return whether If-Match contains the current strong entity tag.
+
+    Parses commas that appear outside quoted strings so that ETags containing
+    commas (e.g. ``"a,b"``) are matched correctly.
+    """
+    tags = _split_etag_list(if_match)
     return any(tag == f'"{revision}"' for tag in tags)
+
+
+def _split_etag_list(value: str) -> list[str]:
+    """Split a comma-separated ETag list, ignoring commas inside quoted strings."""
+    tags: list[str] = []
+    current: list[str] = []
+    in_quotes = False
+    for char in value:
+        if char == '"':
+            in_quotes = not in_quotes
+            current.append(char)
+        elif char == "," and not in_quotes:
+            tags.append("".join(current).strip())
+            current = []
+        else:
+            current.append(char)
+    if current:
+        tags.append("".join(current).strip())
+    return tags

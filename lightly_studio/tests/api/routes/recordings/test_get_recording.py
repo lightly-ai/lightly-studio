@@ -14,6 +14,7 @@ from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import recording_resolver
 from tests.helpers_resolvers import create_collection
 
+_PATCH_FILE_INFO = "lightly_studio.api.routes.recordings.get_recording.byte_range.file_info"
 _PATCH_SERVE_FILE = "lightly_studio.api.routes.recordings.get_recording.byte_range.serve_file"
 
 
@@ -26,7 +27,7 @@ def test_get_recording(media_test_client: TestClient, db_session: Session) -> No
         format_=RecordingFormat.MCAP,
     )
 
-    with patch(_PATCH_SERVE_FILE) as mock_serve:
+    with patch(_PATCH_FILE_INFO), patch(_PATCH_SERVE_FILE) as mock_serve:
         mock_serve.return_value = Response(content=b"bytes", status_code=HTTP_STATUS_OK)
         response = media_test_client.get(f"/recordings/{recording_id}")
 
@@ -48,10 +49,7 @@ def test_get_recording__file_not_found(media_test_client: TestClient, db_session
         format_=RecordingFormat.MCAP,
     )
 
-    with patch(
-        _PATCH_SERVE_FILE,
-        side_effect=FileNotFoundError("missing"),
-    ):
+    with patch(_PATCH_FILE_INFO, side_effect=FileNotFoundError("missing")):
         response = media_test_client.get(f"/recordings/{recording_id}")
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
