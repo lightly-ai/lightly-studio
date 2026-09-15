@@ -11,6 +11,7 @@ readiness of the model and the request size limit. That middleware runs before t
 
 from __future__ import annotations
 
+import ipaddress
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,7 +19,6 @@ from typing import Annotated, Any, Callable
 
 import uvicorn
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Request, UploadFile, status
-from fastapi import params as fastapi_params
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
@@ -41,9 +41,6 @@ from lightly_studio_serve.protocol import (
     ServerLimits,
 )
 from lightly_studio_serve.types import EmbeddingResult
-
-# A port on one of these addresses is not reachable from other hosts.
-_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 _MultipartFiles = Annotated[list[UploadFile], File(alias=protocol.FILES_FIELD_NAME)]
 
@@ -107,12 +104,10 @@ def serve(  # noqa: PLR0913
     """
     if ssl_keyfile is not None and ssl_certfile is None:
         raise ValueError("ssl_keyfile was given without ssl_certfile, so TLS cannot start.")
-    if host not in _LOOPBACK_HOSTS:
-        exposure = _public_bind_warning(
-            host=host, api_key=api_key, has_tls=ssl_certfile is not None
+    if not _is_loopback(host=host):
+        _warn_public_bind(
+            host=host, has_api_key=api_key is not None, has_tls=ssl_certfile is not None
         )
-        if exposure is not None:
-            warnings.warn(exposure, stacklevel=2)
     app = create_app(embedder=embedder, api_key=api_key, limits=limits)
     uvicorn.run(app, host=host, port=port, ssl_certfile=ssl_certfile, ssl_keyfile=ssl_keyfile)
 
@@ -156,7 +151,10 @@ def create_app(
     app.add_exception_handler(EmbedderContractError, _handle_contract_error)
     app.add_exception_handler(RequestValidationError, _handle_invalid_request)
     app.add_exception_handler(Exception, _handle_embedder_error)
-    router = APIRouter(dependencies=_security_scheme(api_key=api_key))
+    # The dependency enforces nothing, `BearerAuth` does. It writes the scheme into the
+    # schema, so that the interactive documentation can send a token.
+    security = [] if api_key is None else [Depends(HTTPBearer(auto_error=False))]
+    router = APIRouter(dependencies=security)
     _mount_describe(router=router, embedder=embedder, limits=resolved_limits)
     embed_paths = _mount_embed_routes(router=router, embedder=embedder, limits=resolved_limits)
     if not embed_paths:
@@ -168,7 +166,8 @@ def create_app(
     # Innermost first, so the server checks the token before it looks at a body at all.
     app.add_middleware(RequestSizeLimit, max_request_bytes=resolved_limits.max_request_bytes)
     app.add_middleware(Readiness, embedder=embedder, paths=embed_paths)
-    app.add_middleware(BearerAuth, api_key=api_key, open_paths=_documentation_paths(app=app))
+    if api_key is not None:
+        app.add_middleware(BearerAuth, api_key=api_key, open_paths=_documentation_paths(app=app))
     app.include_router(router)
     return app
 
@@ -206,14 +205,29 @@ def _check_max_batch_size(limits: ServerLimits) -> None:
         )
 
 
-def _public_bind_warning(host: str, api_key: str | None, has_tls: bool) -> str | None:
-    """Name every risk of an address that other hosts can reach, or ``None`` if there is none.
+def _is_loopback(host: str) -> bool:
+    """Whether a port on ``host`` is out of reach for other hosts.
+
+    A name other than ``localhost`` is not an address, so the answer is no. A name that
+    resolves to loopback then gives a warning that it does not need, which is the safe
+    side of the two.
+    """
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _warn_public_bind(host: str, has_api_key: bool, has_tls: bool) -> None:
+    """Name every risk of an address that other hosts can reach.
 
     A server that has neither a token nor a certificate has two risks. It must hear about
     both now, not one of them on the next run.
     """
     risks = []
-    if api_key is None:
+    if not has_api_key:
         risks.append(
             f"Serving on {host} without an api_key. Every host that can reach the port can "
             "use the model. Give api_key, or bind a loopback address."
@@ -224,7 +238,8 @@ def _public_bind_warning(host: str, api_key: str | None, has_tls: bool) -> str |
             "set one, go over the network in clear text. Give ssl_certfile, or end TLS at a "
             "proxy in front of the server, or bind a loopback address."
         )
-    return " ".join(risks) if risks else None
+    if risks:
+        warnings.warn(" ".join(risks), stacklevel=3)
 
 
 def _documentation_paths(app: FastAPI) -> frozenset[str]:
@@ -235,17 +250,6 @@ def _documentation_paths(app: FastAPI) -> frozenset[str]:
     """
     paths = {app.openapi_url, app.docs_url, app.redoc_url, app.swagger_ui_oauth2_redirect_url}
     return frozenset(path for path in paths if path is not None)
-
-
-def _security_scheme(api_key: str | None) -> list[fastapi_params.Depends]:
-    """Describe the bearer token in the schema, so the documentation can send one.
-
-    ``BearerAuth`` already rejects a request without the token. This dependency only
-    writes the scheme into the schema, so ``auto_error`` stays off.
-    """
-    if api_key is None:
-        return []
-    return [Depends(HTTPBearer(auto_error=False))]
 
 
 def _mount_describe(router: APIRouter, embedder: Embedder, limits: ServerLimits) -> None:

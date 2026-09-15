@@ -116,6 +116,12 @@ def _do_not_run(*_args: object, **_kwargs: object) -> None:
     """Stand in for ``uvicorn.run``, so ``serve`` returns instead of binding a port."""
 
 
+@pytest.fixture
+def no_uvicorn(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stop ``serve`` from binding a port."""
+    monkeypatch.setattr(uvicorn, "run", _do_not_run)
+
+
 def test_create_app__describe() -> None:
     client = TestClient(create_app(embedder=FakeTextEmbedder()))
 
@@ -535,27 +541,16 @@ def test_create_app__malformed_request_does_not_echo_the_request() -> None:
     assert all("input" not in error for error in response.json()["detail"])
 
 
-def test_serve__warns_on_a_public_bind_without_a_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(uvicorn, "run", _do_not_run)
-
-    with pytest.warns(UserWarning, match="without an api_key"):
-        server.serve(FakeTextEmbedder(), host="0.0.0.0")
-
-
-def test_serve__warns_on_a_public_bind_about_the_key_and_the_certificate(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(uvicorn, "run", _do_not_run)
-
+@pytest.mark.usefixtures("no_uvicorn")
+def test_serve__warns_on_a_public_bind_about_the_key_and_the_certificate() -> None:
     with pytest.warns(UserWarning, match="without an api_key") as warnings_raised:
         server.serve(FakeTextEmbedder(), host="0.0.0.0")
 
     assert "clear text" in str(warnings_raised[0].message)
 
 
-def test_serve__warns_on_a_public_bind_without_tls(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(uvicorn, "run", _do_not_run)
-
+@pytest.mark.usefixtures("no_uvicorn")
+def test_serve__warns_on_a_public_bind_without_tls() -> None:
     with pytest.warns(UserWarning, match="clear text"):
         server.serve(FakeTextEmbedder(), host="0.0.0.0", api_key="secret")
 
@@ -580,11 +575,8 @@ def test_serve__forwards_the_tls_files(monkeypatch: pytest.MonkeyPatch) -> None:
     assert captured["ssl_keyfile"] == "key.pem"
 
 
-def test_serve__silent_on_a_public_bind_with_tls(
-    monkeypatch: pytest.MonkeyPatch, recwarn: pytest.WarningsRecorder
-) -> None:
-    monkeypatch.setattr(uvicorn, "run", _do_not_run)
-
+@pytest.mark.usefixtures("no_uvicorn")
+def test_serve__silent_on_a_public_bind_with_tls(recwarn: pytest.WarningsRecorder) -> None:
     server.serve(FakeTextEmbedder(), host="0.0.0.0", api_key="secret", ssl_certfile="cert.pem")
 
     assert len(recwarn) == 0
@@ -595,11 +587,9 @@ def test_serve__keyfile_without_certfile() -> None:
         server.serve(FakeTextEmbedder(), ssl_keyfile="key.pem")
 
 
-def test_serve__silent_on_a_loopback_bind(
-    monkeypatch: pytest.MonkeyPatch, recwarn: pytest.WarningsRecorder
-) -> None:
-    monkeypatch.setattr(uvicorn, "run", _do_not_run)
-
-    server.serve(FakeTextEmbedder())
+@pytest.mark.usefixtures("no_uvicorn")
+@pytest.mark.parametrize("host", ["127.0.0.1", "127.0.0.2", "::1", "localhost"])
+def test_serve__silent_on_a_loopback_bind(host: str, recwarn: pytest.WarningsRecorder) -> None:
+    server.serve(FakeTextEmbedder(), host=host)
 
     assert len(recwarn) == 0

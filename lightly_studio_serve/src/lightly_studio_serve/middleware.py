@@ -13,16 +13,29 @@ from collections.abc import Collection
 
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
+from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from lightly_studio_serve import protocol
 from lightly_studio_serve.embedder import Embedder
 
-# Seconds that a client waits before it sends the request to a loading model again.
-_RETRY_AFTER_SECONDS = "5"
-
 # RFC 7235 makes the scheme case-insensitive, so the check lowers the one it reads.
-_BEARER_SCHEME = b"bearer"
+_BEARER_SCHEME = "bearer"
+
+# One instance for each answer. A response sends the status, the headers and the body that
+# it holds, so a guard does not build one for every request that it rejects.
+_UNAUTHORIZED = JSONResponse(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    content={"detail": "Missing or invalid bearer token."},
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+_UNAVAILABLE = JSONResponse(
+    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+    content={"detail": "The model is still loading."},
+    # Seconds that a client waits before it sends the request again.
+    headers={"Retry-After": "5"},
+)
 
 
 class _HttpMiddleware(ABC):
@@ -50,36 +63,34 @@ class _HttpMiddleware(ABC):
 class BearerAuth(_HttpMiddleware):
     """Rejects a request with a missing or wrong bearer token.
 
-    The class compares the raw bytes that the client sent. It does not decode the header
-    first. One byte that is not ASCII raises an error inside ``secrets.compare_digest``,
-    and the server then answers 500. The protocol needs 401.
+    The class compares the raw bytes that the client sent. One byte that is not ASCII
+    raises an error inside ``secrets.compare_digest``, and the server then answers 500.
+    The protocol needs 401.
     """
 
-    def __init__(self, app: ASGIApp, api_key: str | None, open_paths: Collection[str] = ()) -> None:
-        """Guard ``app``. If ``api_key`` is ``None``, let every request through.
+    def __init__(self, app: ASGIApp, api_key: str, open_paths: Collection[str]) -> None:
+        """Guard ``app``.
 
         Args:
             app: The application to guard.
-            api_key: The token that a client must send, or ``None`` to guard nothing.
-                It carries no whitespace at its start or at its end, because a client
-                cannot send that: the reader below strips the token that it reads.
+            api_key: The token that a client must send. It carries no whitespace at its
+                start or at its end, because a client cannot send that: the reader below
+                strips the token that it reads.
             open_paths: The paths that need no token. The interactive documentation
                 goes here: a browser puts no header on it, and it holds only the
                 protocol, which is public.
         """
         super().__init__(app=app)
-        self.expected = None if api_key is None else api_key.encode()
+        self.expected = api_key.encode()
         self.open_paths = frozenset(open_paths)
 
     async def handle(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Answer 401 for a wrong token. Otherwise pass the request on."""
-        expected = self.expected
-        if expected is None or scope["path"] in self.open_paths:
-            await self.app(scope, receive, send)
-            return
-        if not _has_valid_token(scope=scope, expected=expected):
-            await _unauthorized()(scope, receive, send)
-            return
+        if scope["path"] not in self.open_paths:
+            token = _bearer_token(scope=scope)
+            if not token or not secrets.compare_digest(token, self.expected):
+                await _UNAUTHORIZED(scope, receive, send)
+                return
         await self.app(scope, receive, send)
 
 
@@ -142,15 +153,7 @@ class Readiness(_HttpMiddleware):
         if scope["path"] not in self.paths or self.embedder.ready:
             await self.app(scope, receive, send)
             return
-        await _unavailable()(scope, receive, send)
-
-
-def _has_valid_token(scope: Scope, expected: bytes) -> bool:
-    """Whether the request carries ``expected`` as its bearer token."""
-    token = _bearer_token(scope=scope)
-    if not token:
-        return False
-    return secrets.compare_digest(token, expected)
+        await _UNAVAILABLE(scope, receive, send)
 
 
 def _bearer_token(scope: Scope) -> bytes:
@@ -158,32 +161,26 @@ def _bearer_token(scope: Scope) -> bytes:
 
     RFC 7235 writes the credentials as a scheme, then space, then the token. The scheme
     is case-insensitive and more than one space is legal, so a client that follows the
-    standard must not meet a 401.
+    standard must not meet a 401. Starlette reads a header as latin-1, and the token goes
+    back to the bytes that the client sent: ``secrets.compare_digest`` raises on a string
+    that is not ASCII, and the server would answer 500 where the protocol needs 401.
     """
-    header = _header(scope=scope, name=b"authorization") or b""
-    scheme, _, token = header.partition(b" ")
+    header = Headers(scope=scope).get("authorization", "")
+    scheme, _, token = header.partition(" ")
     if scheme.lower() != _BEARER_SCHEME:
         return b""
-    return token.strip()
+    return token.strip().encode("latin-1")
 
 
 def _content_length(scope: Scope) -> int | None:
     """Read the declared body length, or ``None`` if the header is absent or invalid."""
-    value = _header(scope=scope, name=b"content-length")
+    value = Headers(scope=scope).get("content-length")
     if value is None:
         return None
     try:
         return int(value)
     except ValueError:
         return None
-
-
-def _header(scope: Scope, name: bytes) -> bytes | None:
-    """Read one raw header, or ``None`` if the request has none. ASGI lowers the names."""
-    for header_name, value in scope["headers"]:
-        if header_name == name:
-            return bytes(value)
-    return None
 
 
 def _too_large_detail(max_request_bytes: int) -> str:
@@ -194,20 +191,4 @@ def _too_large(max_request_bytes: int) -> JSONResponse:
     return JSONResponse(
         status_code=protocol.STATUS_PAYLOAD_TOO_LARGE,
         content={"detail": _too_large_detail(max_request_bytes=max_request_bytes)},
-    )
-
-
-def _unavailable() -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={"detail": "The model is still loading."},
-        headers={"Retry-After": _RETRY_AFTER_SECONDS},
-    )
-
-
-def _unauthorized() -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"detail": "Missing or invalid bearer token."},
-        headers={"WWW-Authenticate": "Bearer"},
     )
