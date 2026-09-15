@@ -33,7 +33,7 @@ def _log_error_details(
     tracking.track_exception(exc)
 
 
-def register_exception_handlers(app: FastAPI) -> None:
+def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     """Register exception handlers for the FastAPI app."""
 
     @app.exception_handler(IntegrityError)

@@ -34,7 +34,7 @@ class BrokenTracker:
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         raise RuntimeError(f"unreachable, dropped '{event}' with {properties}")
 
-    def track_exception(self, exc: BaseException) -> None:
+    def track_exception(self, exc: BaseException) -> None:  # noqa: ARG002
         raise RuntimeError("unreachable, could not report exception")
 
     def shutdown(self) -> None:
