@@ -5,7 +5,8 @@ sequence without it stays valid (classic / non-MCAP sequences). Identity is the 
 sequence's ``sample_id``.
 """
 
-from typing import Optional
+from __future__ import annotations
+
 from uuid import UUID
 
 import pydantic
@@ -69,4 +70,4 @@ class McapSequenceViewsWithCount(BaseModel):
 
     samples: list[McapSequenceView] = pydantic.Field(default=..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = pydantic.Field(default=None, alias="nextCursor")
+    next_cursor: int | None = pydantic.Field(default=None, alias="nextCursor")
