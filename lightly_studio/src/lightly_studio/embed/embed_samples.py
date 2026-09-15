@@ -215,22 +215,23 @@ def collection_has_default_embedder(session: Session, collection_id: UUID) -> bo
 def _register_legacy_default_model(session: Session, collection_id: UUID, model_id: UUID) -> None:
     """Sync the collection's default model into the legacy EmbeddingManager.
 
-    Loads the manager's own generator for the collection and warns if it resolves to a
+    Loads the manager's own generator for the collection and raises if it resolves to a
     different model than the registry stored, which means search would use a stale model.
 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default model is synced.
         model_id: The model id the registry stored embeddings under.
+
+    Raises:
+        ValueError: If the manager's default model differs from the registry's.
     """
     manager = EmbeddingManagerProvider.get_embedding_manager()
     legacy_model_id = manager.load_or_get_default_model(
         session=session, collection_id=collection_id
     )
     if legacy_model_id != model_id:
-        logger.warning(
-            "The legacy EmbeddingManager resolved a different default model (%s) than the "
-            "registry stored (%s). Search can use a stale model.",
-            legacy_model_id,
-            model_id,
+        raise ValueError(
+            f"The legacy EmbeddingManager resolved a different default model "
+            f"({legacy_model_id}) than the registry stored ({model_id})."
         )
