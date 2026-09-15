@@ -6,6 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.exceptions import ResponseValidationError
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
 
 from lightly_studio.api.routes.api.exceptions import register_exception_handlers
@@ -126,3 +127,24 @@ def test_register_exception_handlers__value_error_handler(
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
     assert response.json() == {"error": msg}
+
+
+def test_register_exception_handlers__unhandled_exception_handler(
+    app_with_exception_handlers: FastAPI, mocker: MockerFixture
+) -> None:
+    """Test the catch-all exception handler."""
+    path = "/test-unhandled-exception"
+    mock_track = mocker.patch("lightly_studio.analytics.tracking.track_exception")
+    # raise_server_exceptions=False so TestClient returns the 500 response instead of
+    # re-raising the RuntimeError that ServerErrorMiddleware passes through.
+    client = TestClient(app_with_exception_handlers, raise_server_exceptions=False)
+
+    @app_with_exception_handlers.get(path)
+    async def test_unhandled_exception() -> None:
+        raise RuntimeError("Something unexpected.")
+
+    response = client.get(path)
+
+    assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
+    assert response.json() == {"error": "Internal server error."}
+    mock_track.assert_called_once()

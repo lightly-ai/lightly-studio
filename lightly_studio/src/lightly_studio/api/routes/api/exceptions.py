@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
 
+from lightly_studio.analytics import tracking
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
@@ -29,6 +30,7 @@ def _log_error_details(
     """Log detailed error information with request context."""
     # Log the error with different levels based on status code
     logger.error(f"Server Error {status_code}: {exc}")
+    tracking.track_exception(exc)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -133,4 +135,16 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=HTTP_STATUS_BAD_REQUEST,
             content={"error": str(_exc) or "Invalid query expression."},
+        )
+
+    @app.exception_handler(Exception)
+    async def _unhandled_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
+        """Handle all unhandled exceptions."""
+        _log_error_details(
+            exc=_exc,
+            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+        )
+        return JSONResponse(
+            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+            content={"error": "Internal server error."},
         )

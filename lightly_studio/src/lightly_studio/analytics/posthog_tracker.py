@@ -50,6 +50,7 @@ class PostHogTracker(Tracker):
             host=host,
             max_retries=MAX_RETRIES,
             timeout=REQUEST_TIMEOUT_SECONDS,
+            enable_exception_autocapture=True,
         )
         _silence_delivery_logging()
         self._distinct_id = str(install_id.get_install_id())
@@ -79,6 +80,18 @@ class PostHogTracker(Tracker):
             event=event,
             distinct_id=self._distinct_id,
             properties={**self._common_properties, **properties},
+        )
+
+    def track_exception(self, exc: BaseException) -> None:
+        """Queue an exception for delivery with its full stack trace.
+
+        Args:
+            exc: The exception to report.
+        """
+        self._client.capture_exception(
+            exc,
+            distinct_id=self._distinct_id,
+            properties=self._common_properties,
         )
 
     def shutdown(self) -> None:
