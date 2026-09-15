@@ -204,15 +204,15 @@ def embed_frame_samples(
         sample_ids: Frame sample IDs the embeddings are stored for.
         pil_frames: The frames to embed, in the same order as ``sample_ids``.
     """
-    if not sample_ids:
-        logger.warning("No frame samples to embed. Skipping embedding generation.")
-        return
-
     if len(sample_ids) != len(pil_frames):
         raise ValueError(
             f"Number of sample IDs ({len(sample_ids)}) does not match number of frames "
             f"({len(pil_frames)})."
         )
+
+    if not sample_ids:
+        logger.warning("No frame samples to embed. Skipping embedding generation.")
+        return
 
     default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
