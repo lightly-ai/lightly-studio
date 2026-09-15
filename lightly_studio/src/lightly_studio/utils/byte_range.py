@@ -18,32 +18,51 @@ _CHUNK_SIZE = 1024 * 1024
 
 @dataclass(frozen=True)
 class FileInfo:
-    """Size and ETag for a local or remote file."""
+    """Size and ETag for a local or remote file.
 
+    Attributes:
+        path: The local or remote URI, passed to fsspec for opening.
+        size_bytes: Total file size in bytes.
+        etag: Opaque revision token from the storage backend, or ``None``
+            when the backend does not provide one.
+    """
+
+    path: str
     size_bytes: int
     etag: str | None
 
 
 def file_info(file_path: str) -> FileInfo:
-    """Return size and ETag for a local or remote file."""
+    """Return path, size, and ETag for a local or remote file."""
     fs, fs_path = fsspec.core.url_to_fs(file_path)
     info = fs.info(fs_path)
-    size_bytes = int(info["size"])
-    return FileInfo(size_bytes=size_bytes, etag=_revision(info=info))
+    return FileInfo(
+        path=file_path,
+        size_bytes=int(info["size"]),
+        etag=_revision(info=info),
+    )
 
 
 def serve_file(
-    file_path: str,
+    info: FileInfo,
     request: Request,
     range_header: str | None,
     media_type: str,
     if_match: str | None = None,
 ) -> Response:
-    """Serve a file whole or as the requested byte range."""
-    fs, fs_path = fsspec.core.url_to_fs(file_path)
-    info = fs.info(fs_path)
-    file_size = int(info["size"])
-    revision = _revision(info=info)
+    """Serve a file whole or as the requested byte range.
+
+    Args:
+        info: Metadata from :func:`file_info`. Callers fetch it once and pass
+            it here so this function never issues a second stat.
+        request: FastAPI request, used for disconnection detection.
+        range_header: Value of the HTTP ``Range`` header.
+        media_type: MIME type for the response.
+        if_match: Value of the HTTP ``If-Match`` header.
+    """
+    fs, fs_path = fsspec.core.url_to_fs(info.path)
+    file_size = info.size_bytes
+    revision = info.etag
     if (
         revision is not None
         and if_match is not None

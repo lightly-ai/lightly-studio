@@ -27,8 +27,9 @@ def get_recording(
     if recording is None:
         raise NotFoundError(f"Recording not found: {recording_id}")
     try:
+        info = byte_range.file_info(file_path=recording.uri)
         return byte_range.serve_file(
-            file_path=recording.uri,
+            info=info,
             request=request,
             range_header=range_header,
             media_type="application/octet-stream",

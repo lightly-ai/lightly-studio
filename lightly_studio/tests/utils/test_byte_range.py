@@ -19,14 +19,14 @@ def test_file_info__uses_etag(mocker: MockerFixture) -> None:
     fs = _make_fs_mock(mocker=mocker, size=1024, etag='"abc123"')
     mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
     result = file_info("/path/file.mcap")
-    assert result == FileInfo(size_bytes=1024, etag="abc123")
+    assert result == FileInfo(path="/path/file.mcap", size_bytes=1024, etag="abc123")
 
 
 def test_file_info__omits_unreliable_validator(mocker: MockerFixture) -> None:
     fs = _make_fs_mock(mocker=mocker, size=256)
     mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
     result = file_info("/path/file.mcap")
-    assert result == FileInfo(size_bytes=256, etag=None)
+    assert result == FileInfo(path="/path/file.mcap", size_bytes=256, etag=None)
 
 
 # --- parse_range_header ---
@@ -94,8 +94,14 @@ def test_serve_file__full_response(mocker: MockerFixture) -> None:
     handle.read.side_effect = [b"abc", b""]
     fs.open.return_value = handle
     mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
+    info = FileInfo(path="/path/file.mcap", size_bytes=3, etag="abc")
 
-    response = serve_file("/path/file.mcap", _request(mocker), None, "application/octet-stream")
+    response = serve_file(
+        info=info,
+        request=_request(mocker),
+        range_header=None,
+        media_type="application/octet-stream",
+    )
 
     assert response.status_code == status.HTTP_STATUS_OK
     assert response.headers["content-length"] == "3"
@@ -110,8 +116,14 @@ def test_serve_file__partial_response_and_stream(mocker: MockerFixture) -> None:
     handle.read.side_effect = [b"bc", b""]
     fs.open.return_value = handle
     mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
+    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag="abc")
 
-    response = serve_file("/path/file.mcap", _request(mocker), "bytes=1-2", "text/plain")
+    response = serve_file(
+        info=info,
+        request=_request(mocker),
+        range_header="bytes=1-2",
+        media_type="text/plain",
+    )
 
     assert response.status_code == status.HTTP_STATUS_PARTIAL_CONTENT
     assert response.headers["content-range"] == "bytes 1-2/5"
@@ -122,9 +134,18 @@ def test_serve_file__partial_response_and_stream(mocker: MockerFixture) -> None:
 def test_serve_file__precondition_and_unsatisfiable_range(mocker: MockerFixture) -> None:
     fs = _make_fs_mock(mocker=mocker, size=5, etag='"abc"')
     mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
+    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag="abc")
 
-    precondition = serve_file("/path/file.mcap", _request(mocker), None, "text/plain", '"old"')
-    unsatisfiable = serve_file("/path/file.mcap", _request(mocker), "bytes=5-", "text/plain")
+    precondition = serve_file(
+        info=info,
+        request=_request(mocker),
+        range_header=None,
+        media_type="text/plain",
+        if_match='"old"',
+    )
+    unsatisfiable = serve_file(
+        info=info, request=_request(mocker), range_header="bytes=5-", media_type="text/plain"
+    )
 
     assert precondition.status_code == status.HTTP_STATUS_PRECONDITION_FAILED
     assert unsatisfiable.status_code == status.HTTP_STATUS_RANGE_NOT_SATISFIABLE
@@ -136,9 +157,22 @@ def test_serve_file__if_match_wildcard_and_list(mocker: MockerFixture) -> None:
     handle = mocker.MagicMock()
     fs.open.return_value = handle
     mocker.patch("fsspec.core.url_to_fs", return_value=(fs, "/path/file.mcap"))
+    info = FileInfo(path="/path/file.mcap", size_bytes=5, etag="abc")
 
-    wildcard = serve_file("/path/file.mcap", _request(mocker), None, "text/plain", "*")
-    tag_list = serve_file("/path/file.mcap", _request(mocker), None, "text/plain", '"old", "abc"')
+    wildcard = serve_file(
+        info=info,
+        request=_request(mocker),
+        range_header=None,
+        media_type="text/plain",
+        if_match="*",
+    )
+    tag_list = serve_file(
+        info=info,
+        request=_request(mocker),
+        range_header=None,
+        media_type="text/plain",
+        if_match='"old", "abc"',
+    )
 
     assert wildcard.status_code == status.HTTP_STATUS_OK
     assert tag_list.status_code == status.HTTP_STATUS_OK
