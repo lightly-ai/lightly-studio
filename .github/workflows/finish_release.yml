@@ -72,7 +72,7 @@ jobs:
       # branch first, and a branch sharing the tag's name would be built in the
       # tag's place - undetectably, since both carry the same version.
       - name: Checkout the release commit
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ inputs.tag }}
           persist-credentials: false
@@ -96,21 +96,21 @@ jobs:
           fi
 
       - name: Set Up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 
       # No enable-cache, unlike the test workflows: a cache written by another
       # workflow would be an input to what gets published.
       - name: Set Up Uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.12.6"
 
       # Only the wheel that bundles the built frontend needs Node.
       - name: Set Up Node.js
         if: steps.package.outputs.needs_node == 'true'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: lightly_studio_view/.nvmrc
 
@@ -138,7 +138,7 @@ jobs:
       # A week, to outlast the pypi environment's approval gate: an artifact
       # expiring mid-approval would fail the release after it was granted.
       - name: Upload the Distributions
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dist
           path: ${{ steps.package.outputs.directory }}/dist
@@ -160,7 +160,7 @@ jobs:
       TAG: ${{ inputs.tag }}
     steps:
       - name: Download the Distributions
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: dist
           path: dist
@@ -170,7 +170,7 @@ jobs:
       # than falling back to looking for a token. `skip-existing` lets a run
       # that uploaded but failed to un-draft be re-dispatched.
       - name: Publish to the Index
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           repository-url: >-
             ${{ inputs.target == 'pypi' && 'https://upload.pypi.org/legacy/'

@@ -34,7 +34,7 @@ jobs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
 
@@ -72,7 +72,7 @@ jobs:
 
       - name: Cache build
         id: cache-build
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           lookup-only: true
           path: &cache-build-path |
@@ -82,7 +82,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: &cache-playwright-browsers-path ~/.cache/ms-playwright
           key: &cache-playwright-browsers-key >-
@@ -93,7 +93,7 @@ jobs:
 
       - name: Cache example dataset
         id: cache-example-dataset
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           # No need to download a cached version in cache preparation step
           lookup-only: true
@@ -105,13 +105,13 @@ jobs:
       ### Setup steps for the workflow ###
       - name: Set Up Python
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.9"
 
       - name: Set Up Uv
         if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.12.6"
           python-version: "3.9"
@@ -119,7 +119,7 @@ jobs:
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
@@ -281,13 +281,13 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
 
       - name: Check e2e success cache
         id: cache-success
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           lookup-only: true
           path: ${{ matrix.success_marker }}
@@ -298,7 +298,7 @@ jobs:
       - name: Cache build
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-build
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           fail-on-cache-miss: true
           path: *cache-build-path
@@ -307,7 +307,7 @@ jobs:
       - name: Cache Playwright browsers
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-playwright-browsers
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           fail-on-cache-miss: true
           path: *cache-playwright-browsers-path
@@ -316,7 +316,7 @@ jobs:
       - name: Cache example dataset
         if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-example-dataset
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           fail-on-cache-miss: true
           path: *cache-example-dataset-path
@@ -326,13 +326,13 @@ jobs:
 
       - name: Set Up Python
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.9"
 
       - name: Set Up Uv
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.12.6"
           python-version: "3.9"
@@ -341,7 +341,7 @@ jobs:
 
       - name: Set Up Node.js
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
@@ -446,7 +446,7 @@ jobs:
 
       - name: Upload performance metrics
         if: steps.cache-success.outputs.cache-hit != 'true' && (matrix.playwright_project == 'general' || matrix.playwright_project == 'videos')
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: performance-metrics-${{ matrix.name }}
           path: lightly_studio_view/performance-metrics.json
@@ -459,7 +459,7 @@ jobs:
 
       - name: Save e2e success marker
         if: steps.cache-success.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ matrix.success_marker }}
           key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
@@ -486,7 +486,7 @@ jobs:
           fi
 
       - name: Upload backend server log after failure
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure() && steps.cache-success.outputs.cache-hit != 'true'
         with:
           name: Backend Server Log (${{ matrix.name }})
@@ -495,7 +495,7 @@ jobs:
           retention-days: 5
 
       - name: Upload Playwright report after failure
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure() && steps.cache-success.outputs.cache-hit != 'true'
         with:
           name: ${{ matrix.artifact_name }}

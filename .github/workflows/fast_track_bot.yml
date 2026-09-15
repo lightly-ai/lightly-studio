@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Mint App Token
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         # Only the permissions the bot uses: read the verdict artifact, write
         # the review and status comment.
         with:
@@ -44,12 +44,12 @@ jobs:
       # No ref: checkout the trusted default branch, never the PR head. Checkout
       # must precede artifact download because it cleans the working tree.
       - name: Checkout Trusted Bot Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set Up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: fast_track/.nvmrc
           cache: npm
@@ -62,7 +62,7 @@ jobs:
       - name: Download Verdict
         # Tolerate a missing verdict so the bot still runs and revokes, fail closed.
         continue-on-error: true
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: fast-track-verdict
           run-id: ${{ github.event.workflow_run.id }}
