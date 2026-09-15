@@ -15,7 +15,6 @@ FLOCI_PORT ?= 4566
 FLOCI_STARTUP_TIMEOUT_SECONDS ?= 60
 FLOCI_S3_BUCKET ?= lightly-studio
 FLOCI_S3_PREFIX ?= recordings
-FLOCI_IMAGE := floci/floci@sha256:d867156f16bf863379cf695ca0afc6a0bc2b6c7394b2a492e57d7d90603d6ed8
 # Space-separated local files, e.g.:
 #   make setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
 FLOCI_MCAP_FILES ?= datasets/mcap/perception.mcap
