@@ -6,7 +6,8 @@ by hand. Each function resolves the collection's default embedding model itself.
 
 The functions currently delegate to the ``EmbeddingManager`` singleton. The internals
 are being swapped for the capability-typed ``EmbedderRegistry``; ``embed_image_samples``
-already uses it. The function signatures are the stable surface callers migrate to now.
+and ``embed_video_samples`` already use it. The function signatures are the stable surface
+callers migrate to now.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from lightly_studio.dataset.embedding_manager import (
 )
 from lightly_studio.embed import default_embedder, embedding_storage
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import image_resolver, video_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -132,25 +133,42 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
 def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
     """Embed video samples with the collection's default model and store the result.
 
-    Does nothing (and logs a warning) if the collection has no usable default model.
+    When the collection has a default embedding model, its space selects the embedder.
+    Otherwise the registry's default video embedder is used and registered as the
+    collection's default. Does nothing (and logs a warning) if no video embedder is
+    available.
 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
         sample_ids: Video sample IDs to embed.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
-        return
-
-    manager.embed_videos(
+    resolved = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
-        sample_ids=sample_ids,
-        embedding_model_id=model_id,
+        get_embedder_fn=EmbedderRegistry.get_video_path_embedder,
     )
+    if resolved is None:
+        return
+    embedder, model_id = resolved
+
+    sample_id_to_filepath = {
+        video.sample_id: video.file_path_abs
+        for video in video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+    }
+    filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
+
+    result = embedder.embed_videos(paths=filepaths)
+    kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
+
+    embedding_storage.store_embeddings(
+        session=session,
+        model_id=model_id,
+        sample_ids=kept_sample_ids,
+        embeddings=result.embeddings,
+    )
+
+    _register_legacy_default_model(session=session, collection_id=collection_id, model_id=model_id)
 
 
 def embed_frame_samples(

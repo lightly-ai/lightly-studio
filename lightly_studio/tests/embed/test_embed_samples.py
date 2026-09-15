@@ -319,11 +319,12 @@ def test_embed_annotation_collection__no_default_model_skips(
     assert _stored_embeddings(session=db_session) == []
 
 
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_video_samples(
     db_session: Session,
     patched_manager: EmbeddingManager,
 ) -> None:
-    """Video samples are embedded and stored under the collection's default model."""
+    """Video samples are stored under the collection's default model, embedded by the registry."""
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video_ids = create_videos(
         session=db_session,
@@ -346,20 +347,61 @@ def test_embed_video_samples(
     assert count == len(video_ids)
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_embed_video_samples__no_default_model_skips(
+@pytest.mark.usefixtures("patched_registry", "patched_manager")
+def test_embed_video_samples__no_default_registers_registry_default(
     db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """With no default model, the registry's video embedder is used and set as default."""
+    # The manager's generator shares the registry embedder's space, so the legacy bridge
+    # syncs the same default instead of registering a different one.
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        videos=[VideoStub(path="/videos/video_0.mp4"), VideoStub(path="/videos/video_1.mp4")],
+    )
+
+    embed_samples.embed_video_samples(
+        session=db_session, collection_id=video_collection.collection_id, sample_ids=video_ids
+    )
+
+    # The registry embedder's space is registered as the collection's default.
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=video_collection.collection_id
+    )
+    assert model_id is not None
+    count = sample_embedding_resolver.get_embedding_count(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        embedding_model_id=model_id,
+    )
+    assert count == len(video_ids)
+
+
+def test_embed_video_samples__no_registered_embedder_skips(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """With no default model, video embedding is skipped and nothing stored."""
+    """With a default model but no embedder for its space, video embedding is skipped."""
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video_ids = create_videos(
         session=db_session,
         collection_id=video_collection.collection_id,
         videos=[VideoStub(path="/videos/video_0.mp4")],
     )
-    _disable_env_loader(mocker=mocker)
+    _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=video_collection.collection_id
+    )
+    # An empty registry cannot supply an embedder for the default model's space.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
     with caplog.at_level(level=logging.WARNING):
         embed_samples.embed_video_samples(
