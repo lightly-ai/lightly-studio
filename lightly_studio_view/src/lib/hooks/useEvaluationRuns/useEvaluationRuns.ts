@@ -1,12 +1,13 @@
 import { getEvaluationRunsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 
-export const useEvaluationRuns = (getParams: () => { datasetId: string }) => {
-    return createQuery(() =>
-        getEvaluationRunsOptions({
+export const useEvaluationRuns = (getParams: () => { datasetId: string; enabled?: boolean }) => {
+    return createQuery(() => ({
+        ...getEvaluationRunsOptions({
             path: { dataset_id: getParams().datasetId }
-        })
-    );
+        }),
+        enabled: getParams().enabled ?? true
+    }));
 };
 
 /** Invalidates all cached evaluation-run lists regardless of dataset.

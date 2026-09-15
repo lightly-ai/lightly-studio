@@ -31,10 +31,13 @@
         })
     );
 
-    const runsQuery = useEvaluationRuns(() => ({ datasetId: collectionDatasetId }));
     // Only the run the prev/next sequence is ordered by matters: any other stale run leaves it
     // intact.
     const activeRunId = $derived(adjacentSortBy?.evaluation_run_id ?? null);
+    const runsQuery = useEvaluationRuns(() => ({
+        datasetId: collectionDatasetId,
+        enabled: activeRunId !== null
+    }));
     const isActiveRunStale = $derived(
         (runsQuery.data ?? []).some((run) => run.id === activeRunId && run.stale_since !== null)
     );

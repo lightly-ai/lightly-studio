@@ -12,7 +12,7 @@ const defaultProps = { collectionDatasetId: DATASET_ID };
 
 const mocks = vi.hoisted(() => ({
     runsProxy: { data: [] as unknown[] },
-    runsParams: [] as { datasetId: string }[],
+    runsParams: [] as { datasetId: string; enabled?: boolean }[],
     adjacentProxy: {
         data: { previous_sample_id: 'annotation-0', next_sample_id: 'annotation-2' } as
             | { previous_sample_id: string | null; next_sample_id: string | null }
@@ -46,7 +46,7 @@ vi.mock('$lib/hooks/useAdjacentAnnotations/useAdjacentAnnotations', () => ({
 }));
 
 vi.mock('$lib/hooks/useEvaluationRuns/useEvaluationRuns', () => ({
-    useEvaluationRuns: (getParams: () => { datasetId: string }) => {
+    useEvaluationRuns: (getParams: () => { datasetId: string; enabled?: boolean }) => {
         mocks.runsParams.push(getParams());
         return mocks.runsProxy;
     },
@@ -101,10 +101,19 @@ describe('AnnotationDetailsNavigation', () => {
     });
 
     it('looks up the runs of the dataset, not of the root collection in the URL', () => {
+        mocks.adjacentSortBy = IOU_SORT;
         render(AnnotationDetailsNavigation, { props: defaultProps });
 
-        expect(mocks.runsParams).toContainEqual({ datasetId: DATASET_ID });
-        expect(mocks.runsParams).not.toContainEqual({ datasetId: ROUTE_DATASET_ID });
+        expect(mocks.runsParams).toContainEqual(expect.objectContaining({ datasetId: DATASET_ID }));
+        expect(mocks.runsParams).not.toContainEqual(
+            expect.objectContaining({ datasetId: ROUTE_DATASET_ID })
+        );
+    });
+
+    it('does not fetch the runs while the adjacent query carries no sort', () => {
+        render(AnnotationDetailsNavigation, { props: defaultProps });
+
+        expect(mocks.runsParams.every((params) => params.enabled === false)).toBe(true);
     });
 
     // A similarity search also drops the sort, so it reaches the component the same way.
