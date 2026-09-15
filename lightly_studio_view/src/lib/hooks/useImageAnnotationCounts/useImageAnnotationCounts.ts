@@ -15,10 +15,14 @@ export const useImageAnnotationCountsQueryKey = countImageAnnotationsByCollectio
 });
 
 export function buildImageAnnotationCountsQueryKey({
+    collectionId,
+    filter,
     annotationType,
     countMode,
     queryKeyOverride
 }: {
+    collectionId: string;
+    filter?: ImageFilter;
     annotationType?: AnnotationType;
     countMode?: AnnotationCountMode;
     // unknown[] intentionally: callers may extend the base key with extra
@@ -26,23 +30,10 @@ export function buildImageAnnotationCountsQueryKey({
     // the specific tuple type createQuery expects.
     queryKeyOverride?: unknown[];
 }): ReturnType<typeof countImageAnnotationsByCollectionQueryKey> {
-    if (queryKeyOverride) {
-        return [
-            ...queryKeyOverride,
-            ...(annotationType ? [annotationType] : []),
-            ...(countMode ? [countMode] : [])
-        ] as ReturnType<typeof countImageAnnotationsByCollectionQueryKey>;
-    }
-    if (annotationType || countMode) {
-        return countImageAnnotationsByCollectionQueryKey({
-            path: { collection_id: '__static_value__' },
-            body: {
-                ...(annotationType ? { annotation_type: annotationType } : {}),
-                ...(countMode ? { count_mode: countMode } : {})
-            }
-        });
-    }
-    return useImageAnnotationCountsQueryKey;
+    return [
+        ...(queryKeyOverride ?? useImageAnnotationCountsQueryKey),
+        buildImageAnnotationCountsRequest({ collectionId, filter, annotationType, countMode })
+    ] as unknown as ReturnType<typeof countImageAnnotationsByCollectionQueryKey>;
 }
 
 export function buildImageAnnotationCountsRequest({
@@ -107,6 +98,8 @@ export const useImageAnnotationCounts = (
 
         const options = countImageAnnotationsByCollectionOptions(requestOptions);
         const queryKey = buildImageAnnotationCountsQueryKey({
+            collectionId,
+            filter,
             annotationType,
             countMode,
             queryKeyOverride
