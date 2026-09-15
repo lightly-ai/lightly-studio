@@ -32,7 +32,6 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
     collection_resolver,
-    embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
 )
@@ -57,12 +56,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         # Create input data with two classes.
@@ -85,10 +79,9 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
+            "get_default_model_by_collection_id",
             return_value=None,
         )
-        get_by_id = mocker.patch.object(embedding_model_resolver, "get_by_id")
 
         with pytest.raises(
             ValueError, match=r"No embedding model found for the given collection ID\."
@@ -99,7 +92,6 @@ class TestClassifierManager:
                 class_list=["class1", "class2"],
                 collection_id=uuid4(),
             )
-        get_by_id.assert_not_called()
 
     def test_commit_temp_classifier(
         self,
@@ -110,12 +102,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -175,12 +162,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -228,12 +210,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -366,12 +343,7 @@ class TestClassifierManager:
         # Setup: Create a classifier first
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -429,12 +401,7 @@ class TestClassifierManager:
         # Setup: Create a classifier with initial samples
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -546,12 +513,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -629,12 +591,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
@@ -718,12 +675,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             collection_embedding_model_resolver,
-            "get_default_by_collection_id",
-            return_value=uuid4(),
-        )
-        mocker.patch.object(
-            embedding_model_resolver,
-            "get_by_id",
+            "get_default_model_by_collection_id",
             return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
