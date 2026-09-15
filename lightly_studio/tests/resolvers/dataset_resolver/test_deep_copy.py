@@ -22,6 +22,7 @@ from lightly_studio.models.mcap_group_component_definition import (
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
@@ -654,6 +655,73 @@ def test_deep_copy__with_mcap_group_sequences(db_session: Session) -> None:
     assert copied_recording is not None
     assert copied_recording.uri == "/bags/drive_001.mcap"
     assert copied_mcap_rows[0].sample_id != mcap_sample_id
+
+
+def test_deep_copy__with_sensor_calibrations(db_session: Session) -> None:
+    root = create_collection(session=db_session, collection_name="calib_root")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=root.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    group = create_collection(
+        session=db_session, parent_collection_id=root.collection_id, sample_type=SampleType.GROUP
+    )
+    slot_children = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group.collection_id,
+        components=[("front_camera", SampleType.MCAP)],
+    )
+    front_slot_id = slot_children["front_camera"].collection_id
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=front_slot_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            frame_id="main",
+            channel_id=3,
+        )
+    )
+    k = [500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0]
+    db_session.add(
+        SensorCalibrationTable(
+            recording_id=recording_id,
+            collection_id=front_slot_id,
+            width=1920,
+            height=1080,
+            k=k,
+        )
+    )
+    db_session.commit()
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=root.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=copied.dataset_id
+    )
+    assert len(copied_recordings) == 1
+    copied_recording_id = copied_recordings[0].recording_id
+    assert copied_recording_id != recording_id
+
+    copied_calibrations = db_session.exec(
+        select(SensorCalibrationTable).where(
+            col(SensorCalibrationTable.recording_id) == copied_recording_id
+        )
+    ).all()
+    assert len(copied_calibrations) == 1
+    assert copied_calibrations[0].width == 1920
+    assert copied_calibrations[0].height == 1080
+    assert copied_calibrations[0].k == k
+    assert copied_calibrations[0].collection_id != front_slot_id
+    copied_gcd = db_session.get(
+        McapGroupComponentDefinitionTable, copied_calibrations[0].collection_id
+    )
+    assert copied_gcd is not None
+    assert copied_gcd.frame_id == "main"
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:

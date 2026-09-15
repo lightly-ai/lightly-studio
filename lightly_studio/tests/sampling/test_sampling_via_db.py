@@ -19,6 +19,7 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.sampling import sampling_helpers
 from lightly_studio.sampling.mundig import Mundig
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
@@ -500,6 +501,7 @@ def test_sampling_via_database__tag_name_already_exists(
 
 def test_sampling_via_database__preselection_matches_single_sampling(
     db_session: Session,
+    mocker: MockerFixture,
 ) -> None:
     collection_id = fill_db_with_samples_and_embeddings(
         db_session, n_samples=10, embedding_model_names=["embedding_model_1"]
@@ -524,6 +526,10 @@ def test_sampling_via_database__preselection_matches_single_sampling(
     first_batch = _sample_ids_by_tag(
         session=db_session, collection_id=collection_id, tag_id=first_tag.tag_id
     )
+    preselected_sample_ids = tag_resolver.get_sample_ids_by_tag_id(
+        session=db_session, tag_id=first_tag.tag_id
+    )
+    spy_create_result_tag = mocker.spy(sampling_helpers, "create_result_tag")
 
     sampling_via_database(
         session=db_session,
@@ -536,6 +542,9 @@ def test_sampling_via_database__preselection_matches_single_sampling(
         ),
         input_sample_ids=sample_ids,
     )
+    result_sample_ids = spy_create_result_tag.call_args.kwargs["selected_sample_ids"]
+    assert result_sample_ids[: len(preselected_sample_ids)] == preselected_sample_ids
+
     second_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="second_batch", collection_id=collection_id
     )
@@ -562,8 +571,44 @@ def test_sampling_via_database__preselection_matches_single_sampling(
         session=db_session, collection_id=collection_id, tag_id=single_tag.tag_id
     )
 
-    assert set(first_batch).isdisjoint(second_batch)
-    assert set(first_batch + second_batch) == set(single_batch)
+    assert set(first_batch) < set(second_batch)
+    assert set(second_batch) == set(single_batch)
+
+
+def test_sampling_via_database__only_preselected_samples_available(
+    db_session: Session,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=2, embedding_model_names=["embedding_model_1"]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    preselected_tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="preselected"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=preselected_tag.tag_id, sample_ids=sample_ids
+    )
+
+    sampling_via_database(
+        session=db_session,
+        config=SamplingConfig(
+            collection_id=collection_id,
+            n_samples_to_select=1,
+            sampling_result_tag_name="result",
+            preselected_tag_name="preselected",
+            strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        ),
+        input_sample_ids=sample_ids,
+    )
+
+    result_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="result", collection_id=collection_id
+    )
+    assert result_tag is not None
+    result_sample_ids = tag_resolver.get_sample_ids_by_tag_id(
+        session=db_session, tag_id=result_tag.tag_id
+    )
+    assert set(result_sample_ids) == set(sample_ids)
 
 
 def test_sampling_via_database__result_tag_name_equals_preselected_tag_name(

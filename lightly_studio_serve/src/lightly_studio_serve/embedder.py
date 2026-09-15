@@ -4,6 +4,9 @@ Defines the ``Embedder`` base class and one abstract subclass per input a model
 can embed: images and crops by path, videos, PIL images, text, and images by
 bytes. A concrete model implements only the capabilities it supports, and
 callers pick an embedder by the capability they need.
+
+An embedder subclasses only the interfaces that it implements. The class list is the
+advertisement. An embedder cannot advertise a capability and then not serve it.
 """
 
 from __future__ import annotations
@@ -54,6 +57,9 @@ class Embedder(ABC):
 
     Subclasses add one abstract method per input they support. A concrete model
     implements the subclasses for the capabilities it provides.
+
+    An embedder must accept calls from more than one thread, because the server runs a
+    request in a worker thread. Hold a lock in the methods when the model cannot.
     """
 
     __slots__ = ()
@@ -62,10 +68,26 @@ class Embedder(ABC):
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space this embedder produces.
 
+        The method must answer as soon as the object exists, also while ``ready`` is
+        ``False``. ``/v1/describe`` reports the space to a client that waits for the
+        model. The identity of a space comes from the architecture, so a model knows it
+        before the weights arrive.
+
         Returns:
             Metadata identifying the embedding space, stored so the same space
             can be recognized across LightlyStudio runs.
         """
+
+    @property
+    def ready(self) -> bool:
+        """Whether the model is loaded and can answer requests.
+
+        The default suits a model that loads when the object exists. Override the
+        property when the weights load in the background. While the value is ``False``,
+        ``/v1/describe`` reports ``ready: false`` and the embed endpoints answer 503.
+        The property covers the weights only. ``embedding_space_spec`` answers either way.
+        """
+        return True
 
 
 class ImagePathEmbedder(Embedder):
@@ -183,6 +205,8 @@ class ImageBytesEmbedder(Embedder):
     def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
         """Embed a batch of images given as encoded bytes.
 
+        Read the format from the header of the data. Do not trust the caller.
+
         Args:
             images: Encoded image bytes (JPEG, PNG or WebP).
 
@@ -191,3 +215,23 @@ class ImageBytesEmbedder(Embedder):
         """
         # TODO(Michal, 09/2026): Currently unused. The interactive path creates a temp
         # file and uses ImagePathEmbedder.
+
+
+class VideoBytesEmbedder(Embedder):
+    """Embeds videos passed as raw bytes.
+
+    <span class="doc-badge doc-badge--beta">Beta</span>
+    """
+
+    __slots__ = ()
+
+    @abstractmethod
+    def embed_video_bytes(self, videos: list[bytes]) -> EmbeddingResult:
+        """Embed a batch of videos given as encoded bytes.
+
+        Args:
+            videos: Encoded video bytes.
+
+        Returns:
+            The embeddings and the indices of the inputs they cover.
+        """

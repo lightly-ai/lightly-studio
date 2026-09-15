@@ -20,6 +20,7 @@ from lightly_studio.models.mcap_group_component_definition import (
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -368,6 +369,117 @@ def test_delete_dataset__with_sequences(db_session: Session) -> None:
         ).all()
         == []
     )
+
+
+def test_delete_dataset__with_sensor_calibrations(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    group = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    slot_children = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group.collection_id,
+        components=[("front_camera", SampleType.MCAP)],
+    )
+    front_slot_id = slot_children["front_camera"].collection_id
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=front_slot_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            channel_id=3,
+        )
+    )
+    db_session.add(
+        SensorCalibrationTable(
+            recording_id=recording_id,
+            collection_id=front_slot_id,
+            width=1920,
+            height=1080,
+            k=[500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0],
+        )
+    )
+    db_session.commit()
+    calibration_id = db_session.exec(
+        select(SensorCalibrationTable.sensor_calibration_id).where(
+            col(SensorCalibrationTable.recording_id) == recording_id
+        )
+    ).one()
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+    )
+
+    # Assert - calibration row deleted; the GCD row (from a different dataset) is untouched.
+    assert db_session.get(SensorCalibrationTable, calibration_id) is None
+    remaining_group = collection_resolver.get_by_id(
+        session=db_session, collection_id=group.collection_id
+    )
+    assert remaining_group is not None
+
+
+def test_delete_dataset__with_sensor_calibrations__deletes_when_component_dataset_deleted(
+    db_session: Session,
+) -> None:
+    # Recording on one dataset, GCD slot on another; calibration links across them.
+    recording_root = create_collection(session=db_session)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=recording_root.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    group = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    slot_children = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group.collection_id,
+        components=[("front_camera", SampleType.MCAP)],
+    )
+    front_slot_id = slot_children["front_camera"].collection_id
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=front_slot_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            channel_id=3,
+        )
+    )
+    db_session.add(
+        SensorCalibrationTable(
+            recording_id=recording_id,
+            collection_id=front_slot_id,
+            width=1920,
+            height=1080,
+            k=[500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0],
+        )
+    )
+    db_session.commit()
+    calibration_id = db_session.exec(
+        select(SensorCalibrationTable.sensor_calibration_id).where(
+            col(SensorCalibrationTable.recording_id) == recording_id
+        )
+    ).one()
+
+    # Act - delete the component-definition dataset; recording dataset remains.
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=group.dataset_id,
+    )
+
+    # Assert - calibration removed so GCD delete does not FK-fail; recording stays.
+    assert db_session.get(SensorCalibrationTable, calibration_id) is None
+    assert (
+        collection_resolver.get_by_id(
+            session=db_session, collection_id=recording_root.collection_id
+        )
+        is not None
+    )
+    assert recording_resolver.get_by_id(session=db_session, recording_id=recording_id) is not None
 
 
 def test_delete_dataset__with_tags(db_session: Session) -> None:

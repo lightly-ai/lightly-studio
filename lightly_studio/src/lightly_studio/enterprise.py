@@ -14,6 +14,7 @@ import logging
 import requests
 from pydantic import BaseModel, ValidationError
 
+from lightly_studio.analytics import tracking
 from lightly_studio.cloud_credentials import apply_cloud_credentials
 from lightly_studio.database import db_manager
 from lightly_studio.dataset.env import (
@@ -33,6 +34,7 @@ class _EnterpriseConnectResponse(BaseModel):
     """
 
     engine_url: str
+    user_email: str | None = None
     cloud_credentials: dict[str, str] | None = None
 
 
@@ -99,6 +101,13 @@ def connect(
         logger.exception("Failed to connect to LightlyStudio enterprise instance.")
         raise
 
+    auth_method = "token" if token else "api_key"
+    if config.user_email:
+        tracking.identify(email=config.user_email)
+    _track_connection(
+        config=config, auth_method=auth_method, event=tracking.ENTERPRISE_CONNECTION_ATTEMPTED
+    )
+
     if config.cloud_credentials:
         apply_cloud_credentials(credentials=config.cloud_credentials)
         logger.info("Applied cloud credentials from LightlyStudio enterprise configuration.")
@@ -107,7 +116,34 @@ def connect(
 
     db_manager.connect(db_url=config.engine_url)
 
+    _track_connection(
+        config=config, auth_method=auth_method, event=tracking.ENTERPRISE_CONNECTION_ESTABLISHED
+    )
+
     logger.info(f"Successfully connected to LightlyStudio enterprise instance at {api_url}.")
+
+
+def _track_connection(
+    config: _EnterpriseConnectResponse,
+    auth_method: str,
+    event: str,
+) -> None:
+    """Track a connection event if a user email is available.
+
+    Args:
+        config: Parsed response from the enterprise connect endpoint.
+        auth_method: Authentication method used, either ``"token"`` or ``"api_key"``.
+        event: Tracking event name.
+    """
+    if not config.user_email:
+        return
+    tracking.track(
+        event=event,
+        properties={
+            "auth_method": auth_method,
+            "has_cloud_credentials": bool(config.cloud_credentials),
+        },
+    )
 
 
 def _fetch_connect_config(
