@@ -700,6 +700,30 @@ def test_embed_frame_samples__empty_ids_warns_and_skips(
     assert _stored_embeddings(session=db_session) == []
 
 
+def test_embed_frame_samples__count_mismatch_raises(
+    db_session: Session,
+) -> None:
+    """A mismatch between sample IDs and frames raises before any embedding."""
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    frames = create_video_with_frames(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        video=VideoStub(duration_s=1.0, fps=3.0),
+    )
+    # One fewer frame than sample IDs.
+    pil_frames = [Image.new(mode="RGB", size=(2, 2)) for _ in frames.frame_sample_ids[:-1]]
+
+    with pytest.raises(ValueError, match="does not match number of frames"):
+        embed_samples.embed_frame_samples(
+            session=db_session,
+            collection_id=frames.video_frames_collection_id,
+            sample_ids=frames.frame_sample_ids,
+            pil_frames=pil_frames,
+        )
+
+    assert _stored_embeddings(session=db_session) == []
+
+
 @pytest.mark.usefixtures("patched_manager")
 def test_collection_has_default_embedder__loads_and_reports_true(
     db_session: Session,
