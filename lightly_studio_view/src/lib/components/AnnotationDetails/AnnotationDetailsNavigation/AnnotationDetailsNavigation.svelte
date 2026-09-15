@@ -4,7 +4,7 @@
     import { routeHelpers } from '$lib/routes';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { useAdjacentAnnotations } from '$lib/hooks/useAdjacentAnnotations/useAdjacentAnnotations';
-    import { useAnnotationSortBy, useEvaluationRuns } from '$lib/hooks';
+    import { useEvaluationRuns } from '$lib/hooks';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { TriangleAlert } from '@lucide/svelte';
 
@@ -24,18 +24,17 @@
     const collectionType = $derived(page.params.collection_type!);
     const annotationId = $derived(page.params.annotationId!);
 
-    const { query: sampleAdjacentQuery } = $derived(
+    const { query: sampleAdjacentQuery, sortBy: adjacentSortBy } = $derived(
         useAdjacentAnnotations({
             sampleId: annotationId,
             collectionId
         })
     );
 
-    const { sortByFor } = useAnnotationSortBy();
     const runsQuery = useEvaluationRuns(() => ({ datasetId: collectionDatasetId }));
     // Only the run the prev/next sequence is ordered by matters: any other stale run leaves it
     // intact.
-    const activeRunId = $derived($sortByFor(collectionId)?.evaluation_run_id ?? null);
+    const activeRunId = $derived(adjacentSortBy?.evaluation_run_id ?? null);
     const isActiveRunStale = $derived(
         (runsQuery.data ?? []).some((run) => run.id === activeRunId && run.stale_since !== null)
     );

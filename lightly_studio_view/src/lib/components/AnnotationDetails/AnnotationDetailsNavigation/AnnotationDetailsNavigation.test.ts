@@ -1,10 +1,9 @@
 import { render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AnnotationEvaluationMetricSortExpr } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
-import { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotationSortBy';
 import AnnotationDetailsNavigation from './AnnotationDetailsNavigation.svelte';
 
-const COLLECTION_ID = 'source-1';
 const DATASET_ID = 'dataset-1';
 // The dataset segment of the URL is the root collection ID, which the runs endpoint cannot resolve.
 const ROUTE_DATASET_ID = 'root-collection-1';
@@ -18,7 +17,9 @@ const mocks = vi.hoisted(() => ({
         data: { previous_sample_id: 'annotation-0', next_sample_id: 'annotation-2' } as
             | { previous_sample_id: string | null; next_sample_id: string | null }
             | undefined
-    }
+    },
+    // The order the adjacent query applied. A similarity search leaves it undefined.
+    adjacentSortBy: undefined as AnnotationEvaluationMetricSortExpr | undefined
 }));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
@@ -38,7 +39,10 @@ vi.mock('$app/state', () => ({
 // Mocked at the source modules rather than at the `$lib/hooks` barrel, so both the component and
 // the hook it uses see the mocks when importing through the barrel.
 vi.mock('$lib/hooks/useAdjacentAnnotations/useAdjacentAnnotations', () => ({
-    useAdjacentAnnotations: () => ({ query: mocks.adjacentProxy })
+    useAdjacentAnnotations: () => ({
+        query: mocks.adjacentProxy,
+        sortBy: mocks.adjacentSortBy
+    })
 }));
 
 vi.mock('$lib/hooks/useEvaluationRuns/useEvaluationRuns', () => ({
@@ -57,23 +61,22 @@ const STALE_RUN = {
 
 const FRESH_RUN = { ...STALE_RUN, stale_since: null } as EvaluationRunView;
 
-const IOU_SORT = {
-    source: 'annotation_evaluation_metric',
+const IOU_SORT: AnnotationEvaluationMetricSortExpr = {
     evaluation_run_id: 'run-1',
     metric_name: 'iou',
     direction: 'asc'
-} as const;
+};
 
 describe('AnnotationDetailsNavigation', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.runsProxy.data = [STALE_RUN];
         mocks.runsParams = [];
-        useAnnotationSortBy().setSortBy(COLLECTION_ID, null);
+        mocks.adjacentSortBy = undefined;
     });
 
     it('warns without offering a recompute when the run the order follows is stale', () => {
-        useAnnotationSortBy().setSortBy(COLLECTION_ID, IOU_SORT);
+        mocks.adjacentSortBy = IOU_SORT;
         render(AnnotationDetailsNavigation, { props: defaultProps });
 
         expect(screen.getByTestId('annotation-navigation-stale-icon')).toBeInTheDocument();
@@ -91,7 +94,7 @@ describe('AnnotationDetailsNavigation', () => {
 
     it('shows no warning when the run the order follows is up to date', () => {
         mocks.runsProxy.data = [FRESH_RUN];
-        useAnnotationSortBy().setSortBy(COLLECTION_ID, IOU_SORT);
+        mocks.adjacentSortBy = IOU_SORT;
         render(AnnotationDetailsNavigation, { props: defaultProps });
 
         expect(screen.queryByTestId('annotation-navigation-stale-icon')).not.toBeInTheDocument();
@@ -104,7 +107,8 @@ describe('AnnotationDetailsNavigation', () => {
         expect(mocks.runsParams).not.toContainEqual({ datasetId: ROUTE_DATASET_ID });
     });
 
-    it('shows no warning while no sort is active, even with a stale run', () => {
+    // A similarity search also drops the sort, so it reaches the component the same way.
+    it('shows no warning while the adjacent query carries no sort, even with a stale run', () => {
         render(AnnotationDetailsNavigation, { props: defaultProps });
 
         expect(screen.queryByTestId('annotation-navigation-stale-icon')).not.toBeInTheDocument();
