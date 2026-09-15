@@ -8,8 +8,12 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
-from lightly_studio_serve.embedder import ImagePILEmbedder, VideoPathEmbedder
-from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from lightly_studio_serve.embedder import (
+    ImageCropPathEmbedder,
+    ImagePILEmbedder,
+    VideoPathEmbedder,
+)
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
@@ -90,6 +94,28 @@ class _PathIndexVideoEmbedder(VideoPathEmbedder):
         embeddings = np.array(
             [[_path_number(path=paths[index])] * 2 for index in kept_indices], dtype=np.float32
         )
+        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+
+
+class _BoxXImageCropEmbedder(ImageCropPathEmbedder):
+    """Embeds each crop as its left edge x and drops the last crop.
+
+    Deriving the vector from the crop's box, not the input position, makes the test fail
+    if ``embed_annotation_collection`` matches crops to the wrong annotation IDs. A dropped
+    input verifies that only kept embeddings are stored. Shares the random model's space so
+    it resolves as the collection's default.
+    """
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
+        """Embed all crops but the last as [x, x, x], read from the crop's left edge."""
+        kept_indices = list(range(len(crops) - 1))
+        embeddings = np.array([[crops[index].x] * 3 for index in kept_indices], dtype=np.float32)
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
@@ -421,6 +447,59 @@ def test_embed_annotation_collection__no_registered_embedder_skips(
 
     assert "No embedding model loaded" in caplog.text
     assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_annotation_collection__stores_only_kept_crops(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
+) -> None:
+    """Crops the embedder drops are left out, and kept vectors match their annotation IDs."""
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    # One annotation per image at a distinct box x, on ordered paths so the resolver returns
+    # the crops in a known order (it sorts by image path).
+    box_xs = [100, 200, 300]
+    annotation_sample_ids = [
+        create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=create_image(
+                session=db_session,
+                collection_id=collection.collection_id,
+                file_path_abs=f"/path/to/sample_{index}.png",
+            ).sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_data={"x": box_x, "y": 0, "width": 20, "height": 20},
+        ).sample_id
+        for index, box_x in enumerate(box_xs)
+    ]
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    model_id = _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=annotation_collection_id
+    )
+    registry = EmbedderRegistry()
+    registry.register(embedder=_BoxXImageCropEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    embed_samples.embed_annotation_collection(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+
+    # The embedder drops the last crop by path order, so only the first two are stored, each
+    # with the vector encoding its box's left edge.
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=annotation_sample_ids, embedding_model_id=model_id
+    )
+    stored = {row.sample_id: list(row.embedding) for row in rows}
+    assert stored == {
+        annotation_sample_ids[0]: [box_xs[0]] * 3,
+        annotation_sample_ids[1]: [box_xs[1]] * 3,
+    }
 
 
 def test_embed_video_samples(
