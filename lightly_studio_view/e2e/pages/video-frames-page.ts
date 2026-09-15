@@ -8,7 +8,9 @@ export class VideoFramesPage {
 
     async goto() {
         await this.page.goto('/');
-        await this.page.getByTestId('navigation-menu-frames').click();
+        // TODO(Michal 09/2026): Drop the timeout override once the embedder-registry migration
+        // removes the double-loading of built-in embedders, which slows the backend on startup.
+        await this.page.getByTestId('navigation-menu-frames').click({ timeout: 10000 });
         await expect(this.getVideoFrames().first()).toBeVisible({
             timeout: 10000
         });
