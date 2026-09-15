@@ -75,7 +75,7 @@ class _PathIndexVideoEmbedder(VideoPathEmbedder):
         """Embed all paths but the last as [number, number], parsed from the file name."""
         kept_indices = list(range(len(paths) - 1))
         embeddings = np.array(
-            [[_path_number(paths[index])] * 2 for index in kept_indices], dtype=np.float32
+            [[_path_number(path=paths[index])] * 2 for index in kept_indices], dtype=np.float32
         )
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
