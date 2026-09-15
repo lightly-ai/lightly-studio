@@ -2,9 +2,10 @@
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { Canvas, T } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
-    import { createAnnotationFixture } from '../domain/fixtures';
-    import { createCuboidAnnotation } from '../domain';
+    import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
+    import { createCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidLayer from './CuboidLayer.svelte';
+    import CuboidTooltipOverlay from './CuboidTooltip/CuboidTooltipOverlay.svelte';
 
     const classes = [
         { id: 'vehicle', name: 'Vehicle', color: '#3b82f6' },
@@ -44,13 +45,32 @@
         parameters: { layout: 'fullscreen' },
         args: {
             annotationClasses: classes,
-            pointCloudBounds: bounds
+            pointCloudBounds: bounds,
+            selectedAnnotationId: null,
+            hoveredAnnotationId: null,
+            activeTool: 'select' as const
         }
     });
 </script>
 
+<script lang="ts">
+    let cursorX = $state(0);
+    let cursorY = $state(0);
+    let hoveredAnnotationId = $state<string | null>(null);
+
+    function handleMouseMove(event: MouseEvent) {
+        const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
+        cursorX = event.clientX - rect.left;
+        cursorY = event.clientY - rect.top;
+    }
+</script>
+
 {#snippet scene(args)}
-    <div class="h-screen w-screen bg-black">
+    <div
+        class="relative h-screen w-screen bg-black"
+        role="application"
+        onmousemove={handleMouseMove}
+    >
         <Canvas>
             <T.Color attach="background" args={['#10141c']} />
             <T.PerspectiveCamera position={[18, -22, 16]} makeDefault fov={50}>
@@ -58,8 +78,21 @@
             </T.PerspectiveCamera>
             <T.AmbientLight intensity={1.5} />
             <T.GridHelper args={[24, 24, '#344054', '#202938']} rotation={[Math.PI / 2, 0, 0]} />
-            <CuboidLayer {...args} />
+            <CuboidLayer
+                {...args}
+                {hoveredAnnotationId}
+                onhover={(id) => {
+                    hoveredAnnotationId = id;
+                }}
+            />
         </Canvas>
+        <CuboidTooltipOverlay
+            {cursorX}
+            {cursorY}
+            {hoveredAnnotationId}
+            cuboids={args.cuboids ?? []}
+            annotationClasses={args.annotationClasses ?? []}
+        />
     </div>
 {/snippet}
 
@@ -70,6 +103,32 @@
         docs: {
             description: {
                 story: 'Five cuboids at varying yaw angles rendered as class-colored wireframes with heading arrows.'
+            }
+        }
+    }}
+    template={scene}
+/>
+
+<Story
+    name="Selected cuboid"
+    args={{ cuboids: multipleCuboids, selectedAnnotationId: 'annotation-2' }}
+    parameters={{
+        docs: {
+            description: {
+                story: 'The center cuboid is selected. A visual transform gizmo appears at its center and edges are brighter.'
+            }
+        }
+    }}
+    template={scene}
+/>
+
+<Story
+    name="Hovered cuboid"
+    args={{ cuboids: [multipleCuboids[2]] }}
+    parameters={{
+        docs: {
+            description: {
+                story: 'Hover over the cuboid to see the tooltip follow the cursor with annotation metadata.'
             }
         }
     }}
