@@ -18,10 +18,18 @@ recording_router = APIRouter(prefix="/recordings")
 def get_recording(
     recording_id: UUID,
     request: Request,
-    range_header: str | None = Header(None, alias="range"),
-    if_match: str | None = Header(None, alias="if-match"),
+    range_header: str | None = Header(
+        None, alias="range", description="Byte range to serve (RFC 9110)."
+    ),
+    if_match: str | None = Header(
+        None, alias="if-match", description="Precondition ETag list (RFC 9110)."
+    ),
 ) -> Response:
-    """Serve a dataset recording from its local or object-storage URI."""
+    """Serve a dataset recording from its local or object-storage URI.
+
+    Supports partial content via the ``Range`` header (HTTP 206) and
+    conditional requests via ``If-Match`` (HTTP 412 on mismatch).
+    """
     with db_manager.session() as session:
         recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
     if recording is None:
