@@ -275,7 +275,7 @@ class ImageDatasetEvaluate:
             NotImplementedError: If the run's task type has no confusion matrix.
         """
         run, matrix = self._confusion_matrix_with_run(run_id)
-        return aggregate_metrics.compute_from_confusion_matrix(
+        return aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
             matrix=matrix,
             task_type=run.task_type,
         )
