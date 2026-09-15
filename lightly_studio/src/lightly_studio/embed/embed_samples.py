@@ -6,8 +6,8 @@ by hand. Each function resolves the collection's default embedding model itself.
 
 The functions currently delegate to the ``EmbeddingManager`` singleton. The internals
 are being swapped for the capability-typed ``EmbedderRegistry``; ``embed_image_samples``,
-``embed_video_samples`` and ``embed_frame_samples`` already use it. The function signatures
-are the stable surface callers migrate to now.
+``embed_video_samples``, ``embed_frame_samples`` and ``embed_annotation_collection`` already
+use it. The function signatures are the stable surface callers migrate to now.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from uuid import UUID
 
 from PIL.Image import Image
 from sqlmodel import Session
+from tqdm import tqdm
 
 from lightly_studio.dataset.embedding_manager import (
     EmbeddingManagerProvider,
@@ -24,9 +25,14 @@ from lightly_studio.dataset.embedding_manager import (
 )
 from lightly_studio.embed import default_embedder, embedding_storage
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
-from lightly_studio.resolvers import image_resolver, video_resolver
+from lightly_studio.resolvers import annotation_resolver, image_resolver, video_resolver
+from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
+
+# Crops are embedded in chunks so an image's annotations tend to land in the same chunk,
+# keeping a single open per image.
+_ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
 def embed_image_for_collection(collection_id: UUID, filepath: str) -> list[float]:
@@ -116,25 +122,61 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
 def embed_annotation_collection(session: Session, annotation_collection_id: UUID) -> None:
     """Embed the crops of an annotation collection and store the result.
 
-    Uses the annotation collection's default model. Does nothing (and logs a warning) if
-    it has no usable default model.
+    When the collection has a default embedding model, its space selects the embedder.
+    Otherwise the registry's default crop embedder is used and registered as the
+    collection's default. Does nothing (and logs a warning) if no crop embedder is
+    available.
 
     Args:
         session: Database session for resolver operations.
         annotation_collection_id: The annotation collection whose crops are embedded.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(
-        session=session, collection_id=annotation_collection_id
+    default_embedder_and_model_id = default_embedder.resolve_default_embedder(
+        session=session,
+        collection_id=annotation_collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_crop_path_embedder,
     )
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
+    if default_embedder_and_model_id is None:
         return
+    embedder, model_id = default_embedder_and_model_id
 
-    manager.embed_annotations(
+    annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
         session=session,
         annotation_collection_id=annotation_collection_id,
         embedding_model_id=model_id,
+    )
+    if not annotation_sample_ids:
+        logger.info("No annotation crops to embed.")
+        return
+
+    with tqdm(
+        total=len(annotation_sample_ids), desc="Embedding annotations", unit=" crops"
+    ) as progress:
+        for sample_id_chunk in batching.batched(
+            items=annotation_sample_ids, batch_size=_ANNOTATION_EMBED_BATCH_SIZE
+        ):
+            annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
+                session=session, annotation_sample_ids=sample_id_chunk
+            )
+            if not annotation_crops:
+                continue
+
+            result = embedder.embed_image_crops(
+                crops=[crop.image_crop for crop in annotation_crops]
+            )
+            crop_sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
+            kept_sample_ids = [crop_sample_ids[index] for index in result.kept_indices]
+
+            embedding_storage.store_embeddings(
+                session=session,
+                model_id=model_id,
+                sample_ids=kept_sample_ids,
+                embeddings=result.embeddings,
+            )
+            progress.update(len(annotation_crops))
+
+    _register_legacy_default_model(
+        session=session, collection_id=annotation_collection_id, model_id=model_id
     )
 
 
