@@ -143,7 +143,7 @@ class PerceptionEncoderEmbedder(
         return image_embedding.embed_pil_images_batched(
             images=images,
             context=self._embedding_context(),
-            show_progress=True,
+            show_progress=False,
         )
 
     def _embedding_context(self) -> EmbeddingContext:
