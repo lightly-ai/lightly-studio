@@ -193,6 +193,59 @@ Step-by-step guides covering complete workflows — from raw, unlabeled data to 
 - [Plugins](https://docs.lightly.ai/studio/ecosystem/plugins/) — auto-label with SAM and other models
 - [Export](https://docs.lightly.ai/studio/workflows/export/) — write a query back out as COCO or YOLO
 
+## 🗄️ Local cloud storage development
+
+[Floci](https://github.com/floci-io/floci) emulates AWS S3 locally, and [Floci GCP](https://github.com/floci-io/floci-gcp) emulates GCS — no cloud account needed.
+
+### AWS S3 (Floci)
+
+```bash
+# Start Floci (creates the default S3 bucket)
+make start-floci
+
+# Upload MCAP files and list what's available
+make setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make list-floci-mcaps
+
+# Stop and remove the container
+make stop-floci
+```
+
+Point LightlyStudio at the local S3 bucket before starting the server:
+
+```bash
+AWS_ACCESS_KEY_ID=test \
+AWS_SECRET_ACCESS_KEY=test \
+AWS_DEFAULT_REGION=us-east-1 \
+AWS_ENDPOINT_URL=http://localhost:4566 \
+  lightly-studio ...
+```
+
+### GCP Cloud Storage (Floci GCP)
+
+```bash
+# Start Floci GCP (creates the default GCS bucket)
+make start-floci-gcp
+
+# Upload MCAP files and list what's available
+make setup-floci-gcp FLOCI_GCP_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make list-floci-gcp-mcaps
+
+# Stop and remove the container
+make stop-floci-gcp
+```
+
+Point LightlyStudio at the local GCS bucket before starting the server:
+
+```bash
+STORAGE_EMULATOR_HOST=http://localhost:4588 \
+  lightly-studio ...
+```
+
 ## 🐍 Python Interface
 
 Everything in LightlyStudio is scriptable: index datasets, query and edit samples, sample
