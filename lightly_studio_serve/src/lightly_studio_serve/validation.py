@@ -91,8 +91,22 @@ def _to_response(result: EmbeddingResult, space_key: str, dimension: int) -> Emb
         )
     except ValidationError as error:
         raise EmbedderContractError(
-            f"The embedder returned a result that the protocol does not allow: {error}"
+            f"The embedder returned a result that the protocol does not allow: "
+            f"{_name_broken_rules(error=error)}"
         ) from error
+
+
+def _name_broken_rules(error: ValidationError) -> str:
+    """Name the field and the rule of every error in one line.
+
+    The message of a pydantic error repeats the value that failed, here the result of the
+    embedder. That result must not reach LightlyStudio.
+    """
+    rules = []
+    for detail in error.errors():
+        location = ".".join(str(part) for part in detail["loc"])
+        rules.append(f"{location}: {detail['msg']}" if location else detail["msg"])
+    return "; ".join(rules)
 
 
 def _validate_kept_indices(kept_indices: list[int], item_count: int) -> None:
