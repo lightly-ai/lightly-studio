@@ -141,6 +141,12 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
         return
     embedder, model_id = default_embedder_and_model_id
 
+    # Sync the legacy manager up front so text and image search resolve a default model
+    # even when every crop is already embedded and the loop below is skipped.
+    _register_legacy_default_model(
+        session=session, collection_id=annotation_collection_id, model_id=model_id
+    )
+
     annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
         session=session,
         annotation_collection_id=annotation_collection_id,
@@ -163,10 +169,6 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
                 annotation_sample_ids=sample_id_chunk,
             )
             progress.update(embedded_count)
-
-    _register_legacy_default_model(
-        session=session, collection_id=annotation_collection_id, model_id=model_id
-    )
 
 
 def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
@@ -322,11 +324,14 @@ def _embed_annotation_chunk(
     result = embedder.embed_image_crops(crops=[crop.image_crop for crop in annotation_crops])
     crop_sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
     kept_sample_ids = [crop_sample_ids[index] for index in result.kept_indices]
+    # The collection-level bar in embed_annotation_collection tracks progress, so the
+    # per-chunk storage bar is disabled to avoid a redundant bar for every chunk.
     embedding_storage.store_embeddings(
         session=session,
         model_id=model_id,
         sample_ids=kept_sample_ids,
         embeddings=result.embeddings,
+        show_progress=False,
     )
     return len(annotation_crops)
 
