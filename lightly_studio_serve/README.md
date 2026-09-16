@@ -36,6 +36,17 @@ class MyEmbedder(TextEmbedder, ImageBytesEmbedder):
         ...
 
 
+serve(MyEmbedder(), api_key="the-key-you-paste-into-lightlystudio")
+```
+
+`serve` binds `127.0.0.1:8080` by default, where the requests stay on the machine. TLS is
+optional there and off unless you ask for it.
+
+The bearer token travels in the request, so plain HTTP shows it to the network. Any address that
+is not loopback therefore needs TLS. Give `ssl_certfile`, and `ssl_keyfile` if the certificate
+file does not already hold the key, to end TLS in the server itself:
+
+```python
 serve(
     MyEmbedder(),
     host="0.0.0.0",
@@ -46,11 +57,10 @@ serve(
 )
 ```
 
-The bearer token travels in the request, so plain HTTP shows it to the network. Give
-`ssl_certfile` and `ssl_keyfile` for any address that is not loopback. You can also end TLS at a
-proxy. In that case the hop from the proxy to this server must use HTTPS or mTLS, or it must stay
-on loopback or on a private network that you trust. TLS at the proxy alone does not protect the
-token on that hop. `serve` gives a warning when it has no certificate of its own.
+You can also end TLS at a proxy and keep these two arguments out. In that case the hop from the
+proxy to this server must use HTTPS or mTLS, or it must stay on loopback or on a private network
+that you trust. TLS at the proxy alone does not protect the token on that hop. `serve` gives a
+warning when it binds an address that is not loopback and has no certificate of its own.
 
 `EmbeddingResult.embeddings` is a float32 numpy array with the shape
 `(len(kept_indices), dimension)`. LightlyStudio uses the same class for its own embedders.

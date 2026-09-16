@@ -6,9 +6,10 @@ from collections.abc import Iterator
 import numpy as np
 import pytest
 import uvicorn
+from fastapi import status
 from fastapi.testclient import TestClient
 
-from lightly_studio_serve import server
+from lightly_studio_serve import protocol, server
 from lightly_studio_serve.embedder import (
     ImageBytesEmbedder,
     ImagePathEmbedder,
@@ -127,7 +128,7 @@ def test_create_app__describe() -> None:
 
     response = client.get("/v1/describe")
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "protocol_version": "1.0",
         "space_key": SPACE_KEY,
@@ -160,7 +161,7 @@ def test_create_app__describe_while_the_model_loads() -> None:
 
     response = client.get("/v1/describe")
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json()["ready"] is False
     assert response.json()["space_key"] == SPACE_KEY
     assert response.json()["dimension"] == DIMENSION
@@ -175,8 +176,11 @@ def test_create_app__embedder_without_a_served_capability() -> None:
 def test_create_app__text_only_mounts_no_other_route() -> None:
     client = TestClient(create_app(embedder=FakeTextEmbedder()))
 
-    assert client.post("/v1/embed/images/bytes", files={"files": b"\xff\xd8"}).status_code == 404
-    assert client.post("/v1/embed/videos/bytes", files={"files": b"\x00\x00"}).status_code == 404
+    images = client.post("/v1/embed/images/bytes", files={"files": b"\xff\xd8"})
+    videos = client.post("/v1/embed/videos/bytes", files={"files": b"\x00\x00"})
+
+    assert images.status_code == status.HTTP_404_NOT_FOUND
+    assert videos.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_create_app__embed_texts() -> None:
@@ -185,7 +189,7 @@ def test_create_app__embed_texts() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": ["a red car", "a blue car"]})
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "space_key": SPACE_KEY,
         "dimension": DIMENSION,
@@ -201,7 +205,7 @@ def test_create_app__embed_texts_with_skipped_item() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": ["", "a red car"]})
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json()["kept_indices"] == [1]
 
 
@@ -217,7 +221,7 @@ def test_create_app__embed_images_bytes() -> None:
         ],
     )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json()["kept_indices"] == [0, 1]
     assert embedder.received == [b"\xff\xd8a", b"\x89P"]
 
@@ -228,7 +232,7 @@ def test_create_app__embed_videos_bytes() -> None:
 
     response = client.post("/v1/embed/videos/bytes", files=[("files", ("a.mp4", b"\x00moov"))])
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert embedder.received == [b"\x00moov"]
 
 
@@ -238,7 +242,7 @@ def test_create_app__batch_over_max_batch_size() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": ["a red car", "a blue car"]})
 
-    assert response.status_code == 413
+    assert response.status_code == protocol.STATUS_PAYLOAD_TOO_LARGE
     assert "max_batch_size" in response.json()["detail"]
 
 
@@ -248,7 +252,7 @@ def test_create_app__body_over_max_request_bytes() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": ["a red car"]})
 
-    assert response.status_code == 413
+    assert response.status_code == protocol.STATUS_PAYLOAD_TOO_LARGE
     assert "max_request_bytes" in response.json()["detail"]
 
 
@@ -259,14 +263,14 @@ def test_create_app__declared_length_over_max_on_a_route_that_reads_no_body() ->
 
     response = client.request("GET", "/v1/describe", content=b"x" * 64)
 
-    assert response.status_code == 413
+    assert response.status_code == protocol.STATUS_PAYLOAD_TOO_LARGE
     assert "max_request_bytes" in response.json()["detail"]
 
 
 def test_create_app__missing_bearer_token() -> None:
     client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
 
-    assert client.get("/v1/describe").status_code == 401
+    assert client.get("/v1/describe").status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_create_app__wrong_bearer_token() -> None:
@@ -274,7 +278,7 @@ def test_create_app__wrong_bearer_token() -> None:
 
     response = client.get("/v1/describe", headers={"Authorization": "Bearer wrong"})
 
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_create_app__correct_bearer_token() -> None:
@@ -282,7 +286,7 @@ def test_create_app__correct_bearer_token() -> None:
 
     response = client.get("/v1/describe", headers={"Authorization": "Bearer secret"})
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_create_app__lower_case_bearer_scheme() -> None:
@@ -291,7 +295,7 @@ def test_create_app__lower_case_bearer_scheme() -> None:
 
     response = client.get("/v1/describe", headers={"Authorization": "bearer secret"})
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_create_app__several_spaces_before_the_token() -> None:
@@ -299,7 +303,7 @@ def test_create_app__several_spaces_before_the_token() -> None:
 
     response = client.get("/v1/describe", headers={"Authorization": "Bearer   secret"})
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_create_app__another_authorization_scheme() -> None:
@@ -307,7 +311,7 @@ def test_create_app__another_authorization_scheme() -> None:
 
     response = client.get("/v1/describe", headers={"Authorization": "Basic secret"})
 
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_create_app__bearer_scheme_without_a_token() -> None:
@@ -315,13 +319,13 @@ def test_create_app__bearer_scheme_without_a_token() -> None:
 
     response = client.get("/v1/describe", headers={"Authorization": "Bearer"})
 
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_create_app__no_api_key_leaves_the_server_open() -> None:
     client = TestClient(create_app(embedder=FakeTextEmbedder()))
 
-    assert client.get("/v1/describe").status_code == 200
+    assert client.get("/v1/describe").status_code == status.HTTP_200_OK
 
 
 def test_create_app__embed_while_not_ready() -> None:
@@ -329,7 +333,7 @@ def test_create_app__embed_while_not_ready() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": ["a red car"]})
 
-    assert response.status_code == 503
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     assert response.headers["Retry-After"] == "5"
 
 
@@ -339,7 +343,7 @@ def test_create_app__embed_bytes_while_not_ready() -> None:
 
     response = client.post("/v1/embed/images/bytes", files=[("files", ("a.jpg", b"\xff\xd8a"))])
 
-    assert response.status_code == 503
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     assert response.headers["Retry-After"] == "5"
     assert response.json()["detail"] == "The model is still loading."
 
@@ -354,7 +358,7 @@ def test_create_app__not_ready_request_body_is_never_read() -> None:
         headers={"Content-Type": f"multipart/form-data; boundary={_BOUNDARY}"},
     )
 
-    assert response.status_code == 503
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
 
 def test_create_app__token_is_checked_before_readiness() -> None:
@@ -363,7 +367,7 @@ def test_create_app__token_is_checked_before_readiness() -> None:
 
     response = client.post("/v1/embed/images/bytes", files=[("files", ("a.jpg", b"\xff\xd8a"))])
 
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_create_app__model_raises_not_implemented_error() -> None:
@@ -372,7 +376,7 @@ def test_create_app__model_raises_not_implemented_error() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": ["a red car"]})
 
-    assert response.status_code == 500
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert response.json()["detail"] == (
         "The embedder raised NotImplementedError. See the server log."
     )
@@ -387,7 +391,7 @@ def test_create_app__embedder_returns_wrong_dimension() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": ["a red car"]})
 
-    assert response.status_code == 500
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert "dimension 2" in response.json()["detail"]
     # The broken result of the embedder stays in this process.
     assert "0.5" not in response.text
@@ -398,7 +402,7 @@ def test_create_app__non_ascii_bearer_token() -> None:
 
     response = client.get("/v1/describe", headers={b"authorization": b"Bearer \xe9"})
 
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_create_app__non_ascii_api_key() -> None:
@@ -406,7 +410,7 @@ def test_create_app__non_ascii_api_key() -> None:
 
     response = client.get("/v1/describe", headers={b"authorization": "Bearer sécret".encode()})
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_create_app__blank_api_key() -> None:
@@ -422,7 +426,7 @@ def test_create_app__api_key_with_whitespace() -> None:
 
     response = client.get("/v1/describe", headers={"Authorization": "Bearer secret"})
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_create_app__api_key_without_whitespace_gives_no_warning() -> None:
@@ -451,7 +455,7 @@ def test_create_app__chunked_body_over_max_request_bytes() -> None:
     )
 
     assert response.request.headers["transfer-encoding"] == "chunked"
-    assert response.status_code == 413
+    assert response.status_code == protocol.STATUS_PAYLOAD_TOO_LARGE
     assert "max_request_bytes" in response.json()["detail"]
 
 
@@ -465,15 +469,15 @@ def test_create_app__unauthenticated_request_body_is_never_read() -> None:
         headers={"Content-Type": f"multipart/form-data; boundary={_BOUNDARY}"},
     )
 
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_create_app__documentation_needs_no_token() -> None:
     """A browser sends no bearer token, so a gate here makes the documentation unusable."""
     client = TestClient(create_app(embedder=FakeTextEmbedder(), api_key="secret"))
 
-    assert client.get("/openapi.json").status_code == 200
-    assert client.get("/docs").status_code == 200
+    assert client.get("/openapi.json").status_code == status.HTTP_200_OK
+    assert client.get("/docs").status_code == status.HTTP_200_OK
 
 
 def test_create_app__documentation_names_the_bearer_scheme() -> None:
@@ -503,7 +507,7 @@ def test_create_app__batch_at_max_batch_size() -> None:
         files=[("files", (f"{index}.jpg", b"\xff\xd8")) for index in range(item_count)],
     )
 
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert len(embedder.received) == item_count
 
 
@@ -517,7 +521,7 @@ def test_create_app__batch_one_over_max_batch_size_reaches_the_route() -> None:
         files=[("files", (f"{index}.jpg", b"\xff\xd8")) for index in range(item_count)],
     )
 
-    assert response.status_code == 413
+    assert response.status_code == protocol.STATUS_PAYLOAD_TOO_LARGE
     assert "max_batch_size" in response.json()["detail"]
 
 
@@ -526,7 +530,7 @@ def test_create_app__malformed_request() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": "a red car"})
 
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"][0]["loc"] == ["body", "texts"]
 
 
@@ -536,7 +540,7 @@ def test_create_app__malformed_request_does_not_echo_the_request() -> None:
 
     response = client.post("/v1/embed/texts", json={"texts": [{"secret": "abc"}]})
 
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "secret" not in response.text
     assert all("input" not in error for error in response.json()["detail"])
 
