@@ -23,10 +23,11 @@ from lightly_studio.core.file_outcome_report import (
     BrokenInputFileError,
     FileOutcome,
     FileOutcomeReport,
+    InputFileError,
     MissingInputFileError,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.utils import batching
+from lightly_studio.utils import batching, executor, parallelize
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from . import image_crop_embedding, image_embedding
@@ -181,10 +182,16 @@ class PerceptionEncoderEmbedder(
         report = FileOutcomeReport(label_overrides={FileOutcome.ADDED: "embedded"})
 
         def preprocessed_videos_iter() -> Iterator[torch.Tensor]:
-            for index, filepath in enumerate(paths):
-                frames: torch.Tensor | None = None
+            # Order-preserving pool overlaps decode with the GPU forward, bookkeeping stays serial.
+            decode_results = parallelize.thread_imap_lazy(
+                function=lambda item: _decode_video(item=item, preprocess=self._preprocess),
+                iterable=list(enumerate(paths)),
+                max_workers=executor.get_media_worker_count(),
+            )
+            for index, filepath, frames, signal in decode_results:
                 with report.track(path=filepath):
-                    frames = _load_video_frames(filepath, self._preprocess)
+                    if signal is not None:
+                        raise signal
                 if frames is not None:
                     kept_indices.append(index)
                     yield frames
@@ -208,6 +215,32 @@ class PerceptionEncoderEmbedder(
         report.raise_if_all_failed()
 
         return EmbeddingResult(embeddings=embeddings[:position], kept_indices=kept_indices)
+
+
+def _decode_video(
+    item: tuple[int, str],
+    preprocess: Callable[[Image.Image], torch.Tensor],
+) -> tuple[int, str, torch.Tensor | None, InputFileError | None]:
+    """Decode one video's frames in a worker thread, capturing any tolerated file signal.
+
+    Touches no shared state, so the report and kept-index bookkeeping stay single-threaded and
+    in input order on the consumer.
+
+    Args:
+        item: The video's input index paired with its path or URL.
+        preprocess: Transform applied to each sampled frame to produce a model input tensor.
+
+    Returns:
+        ``(index, filepath, frames, signal)`` where ``frames`` is the stacked model input on
+        success and ``None`` on a tolerated failure, and ``signal`` is the raised
+        ``MissingInputFileError`` or ``BrokenInputFileError`` on failure and ``None`` on success.
+    """
+    index, filepath = item
+    try:
+        frames = _load_video_frames(filepath, preprocess)
+    except InputFileError as signal:
+        return index, filepath, None, signal
+    return index, filepath, frames, None
 
 
 def _load_video_frames(
