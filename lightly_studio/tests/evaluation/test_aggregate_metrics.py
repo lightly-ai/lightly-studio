@@ -36,6 +36,7 @@ def test_compute_from_confusion_matrix__classification_metrics() -> None:
     assert per_class["cat"].support == 4
     assert per_class["dog"].precision == pytest.approx(0.8)  # 4 / (1 + 4)
     assert per_class["dog"].recall == pytest.approx(1.0)  # 4 / 4
+    assert per_class["dog"].f1 == pytest.approx(2 * 0.8 * 1.0 / 1.8)
     assert per_class["dog"].support == 4
     # Micro-averaged over the pooled counts.
     assert result.precision == pytest.approx(0.875)  # 7 / 8
@@ -61,9 +62,11 @@ def test_compute_from_confusion_matrix__detection_metrics_with_fp_and_fn_buckets
     per_class = _by_label(result)
     assert per_class["cat"].precision == pytest.approx(5 / 8)  # 5 / (5 + 3)
     assert per_class["cat"].recall == pytest.approx(5 / 7)  # 5 / (5 + 2)
+    assert per_class["cat"].f1 == pytest.approx(2 * (5 / 8) * (5 / 7) / (5 / 8 + 5 / 7))
     assert per_class["cat"].support == 7
     assert result.precision == pytest.approx(5 / 8)
     assert result.recall == pytest.approx(5 / 7)
+    assert result.f1 == pytest.approx(2 * (5 / 8) * (5 / 7) / (5 / 8 + 5 / 7))
     # Accuracy is not defined for detection (predictions and ground truths are matched).
     assert result.accuracy is None
 

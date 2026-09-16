@@ -864,6 +864,7 @@ def test_metrics__object_detection(
     assert metrics.per_class[0].support == 2  # 1 tp + 1 fn
     assert metrics.precision == pytest.approx(0.5)
     assert metrics.recall == pytest.approx(0.5)
+    assert metrics.f1 == pytest.approx(0.5)
     # Accuracy is undefined for detection: predictions and ground truths are matched.
     assert metrics.accuracy is None
 
