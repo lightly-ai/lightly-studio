@@ -4,11 +4,10 @@ Wraps the shared embedding logic behind plain module functions so callers no lon
 reach for the ``EmbeddingManager`` singleton, resolve the default model, and check it
 by hand. Each function resolves the collection's default embedding model itself.
 
-The functions currently delegate to the ``EmbeddingManager`` singleton. The internals
-are being swapped for the capability-typed ``EmbedderRegistry``; ``embed_image_samples``,
-``embed_video_samples``, ``embed_frame_samples``, ``embed_annotation_collection`` and
-``embed_image_for_collection`` already use it. The function signatures are the stable
-surface callers migrate to now.
+The functions resolve their embedder from the capability-typed ``EmbedderRegistry``.
+The storing paths still sync the collection's default model into the legacy
+``EmbeddingManager`` (see ``_register_legacy_default_model``) until its remaining readers
+are gone. The function signatures are the stable surface callers migrate to now.
 """
 
 from __future__ import annotations
@@ -55,13 +54,12 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
 
     Raises:
         ValueError: If the collection has no default embedding model, or no registered
-            embedder embeds images by path for that model's space.
+            embedder matches that model's space.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,
         collection_id=collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-        capability="embeds images by path",
     )
     result = embedder.embed_images(paths=[filepath])
     embedding: list[float] = result.embeddings[0].tolist()
@@ -85,13 +83,12 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
 
     Raises:
         ValueError: If the collection has no default embedding model, or no registered
-            embedder embeds text for that model's space.
+            embedder matches that model's space.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,
         collection_id=collection_id,
         get_embedder_fn=EmbedderRegistry.get_text_embedder,
-        capability="embeds text",
     )
     result = embedder.embed_text(texts=[text])
     embedding: list[float] = result.embeddings[0].tolist()
@@ -363,9 +360,10 @@ def _embed_annotation_chunk(
     return len(annotation_crops)
 
 
-# TODO(Michal, 09/2026): Now that embed_text_for_collection reads from the EmbedderRegistry,
-# no reader is left for the manager's default model. Remove this legacy sync and its call
-# sites in a follow-up once the storing paths no longer need to keep the manager consistent.
+# TODO(Michal, 09/2026): Remove once text and image search read embedders from the
+# EmbedderRegistry instead of the EmbeddingManager. The query functions
+# (embed_text_for_collection, embed_image_for_collection) still resolve their generator
+# from the manager's in-memory maps, which the registry path does not populate.
 def _register_legacy_default_model(session: Session, collection_id: UUID, model_id: UUID) -> None:
     """Sync the collection's default model into the legacy EmbeddingManager.
 

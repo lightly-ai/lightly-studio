@@ -79,7 +79,6 @@ def resolve_query_embedder(
     session: Session,
     collection_id: UUID,
     get_embedder_fn: Callable[[EmbedderRegistry, str | None], _EmbedderT | None],
-    capability: str,
 ) -> _EmbedderT:
     """Resolve the embedder for an interactive query, without mutating the collection.
 
@@ -93,15 +92,14 @@ def resolve_query_embedder(
         collection_id: The collection whose default embedding model is used.
         get_embedder_fn: Given the registry and a space key, returns the embedder for the
             needed capability, or None if none matches.
-        capability: Verb phrase for the error message, for example "embeds text".
 
     Returns:
         The embedder for the collection's default embedding space.
 
     Raises:
         ValueError: If the collection has no default embedding model, no registered embedder
-            provides the capability for that model's space, or the embedder's dimension does
-            not match the space's stored dimension (a wrongly registered embedder).
+            matches that model's space, or the embedder's dimension does not match the
+            space's stored dimension (a wrongly registered embedder).
     """
     default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection_id
@@ -112,7 +110,7 @@ def resolve_query_embedder(
     embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
     if embedder is None:
         raise ValueError(
-            f"No registered embedder {capability} for the collection's default "
+            "No registered embedder matches the collection's default "
             f"embedding space {default_model.name!r}."
         )
     return embedder
