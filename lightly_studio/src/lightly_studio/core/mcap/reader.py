@@ -10,6 +10,7 @@ from typing import Any, overload
 import fsspec
 import numpy as np
 from mcap import reader as mcap_reader
+from mcap.exceptions import DecoderNotFoundError
 from mcap.records import Channel, Message, Schema
 from mcap.summary import Summary
 from numpy.typing import NDArray
@@ -96,6 +97,7 @@ class McapFileReader:
         self._topics: list[TopicInfo] | None = None
         self._topics_by_name: dict[str, TopicInfo] | None = None
         self._locators_by_topic: dict[str, list[FrameLocator]] = {}
+        self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
         self._transform_tree_by_topic: dict[str, TransformTree] = {}
         self._decoder_by_channel_id: dict[int, Callable[[bytes], Any] | None] = {}
 
@@ -213,7 +215,8 @@ class McapFileReader:
     def get_intrinsic(self, topic: str) -> CameraIntrinsics:
         """Returns the camera intrinsics recorded on a camera info topic.
 
-        Intrinsics are static, so the first message on the topic is used.
+        Intrinsics are static, so the first message on the topic is used. The result
+        is cached, so repeated calls for the same topic read the file only once.
 
         Args:
             topic: The camera info topic, e.g. `/cam/front/camera_info`.
@@ -223,12 +226,12 @@ class McapFileReader:
 
         Raises:
             TopicNotFoundError: If the topic is not in the file.
-            McapAccessError: If the topic has no message, or if its messages do not
-                hold camera intrinsics.
+            McapAccessError: If the topic has no message, if its messages do not hold
+                camera intrinsics, or if its messages cannot be decoded.
         """
-        for _, decoded_message in self._iter_decoded_messages(topic):
-            return camera_info.from_decoded_message(decoded_message)
-        raise McapAccessError(f"Topic '{topic}' has no message to read camera intrinsics from.")
+        if topic not in self._intrinsics_by_topic:
+            self._intrinsics_by_topic[topic] = self._read_intrinsic(topic)
+        return self._intrinsics_by_topic[topic]
 
     def get_static_transform(
         self,
@@ -250,6 +253,7 @@ class McapFileReader:
         Raises:
             TopicNotFoundError: If the topic is not in the file.
             TransformNotFoundError: If no chain of transforms connects the two frames.
+            McapAccessError: If a message on the topic cannot be decoded.
         """
         if topic not in self._transform_tree_by_topic:
             self._transform_tree_by_topic[topic] = TransformTree(
@@ -325,21 +329,43 @@ class McapFileReader:
         self._decoder_by_channel_id[channel.id] = decoder
         return decoder
 
+    def _read_intrinsic(self, topic: str) -> CameraIntrinsics:
+        """Reads the camera intrinsics from the first message on a topic.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+            McapAccessError: If the topic has no message, if its messages do not hold
+                camera intrinsics, or if its messages cannot be decoded.
+        """
+        for _, decoded_message in self._iter_decoded_messages(topic):
+            return camera_info.from_decoded_message(decoded_message)
+        raise McapAccessError(f"Topic '{topic}' has no message to read camera intrinsics from.")
+
     def _iter_decoded_messages(self, topic: str) -> Iterator[tuple[int, Any]]:
         """Yields the log time and the payload of every decoded message on a topic.
 
         Raises:
             TopicNotFoundError: If the topic is not in the file.
+            McapAccessError: If a message on the topic cannot be decoded, e.g.
+                because no decoder factory is registered for its encoding.
         """
         self._require_topic_info(topic)
-        for _, _, message, decoded_message in self._reader.iter_decoded_messages(topics=[topic]):
-            yield message.log_time, decoded_message
+        try:
+            for _, _, message, decoded_message in self._reader.iter_decoded_messages(
+                topics=[topic]
+            ):
+                yield message.log_time, decoded_message
+        except DecoderNotFoundError as error:
+            raise McapAccessError(
+                f"Cannot decode a message of topic '{topic}' in '{self.path}': {error}"
+            ) from error
 
     def _read_static_transforms(self, topic: str) -> list[StaticTransform]:
         """Reads all transforms published on a topic.
 
         Raises:
             TopicNotFoundError: If the topic is not in the file.
+            McapAccessError: If a message on the topic cannot be decoded.
         """
         static_transforms: list[StaticTransform] = []
         for log_time_ns, decoded_message in self._iter_decoded_messages(topic):

@@ -232,6 +232,36 @@ def write_mcap_with_undecodable_video(path: Path) -> Path:
     return path
 
 
+def write_mcap_with_undecodable_camera_info(path: Path) -> Path:
+    """Writes an MCAP whose camera info topic has no decoder.
+
+    The topic's encoding is unknown, so no decoder factory can read its payloads.
+
+    Args:
+        path: The path to write the file to.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        schema_id = writer.register_schema(
+            name="sensor_msgs/msg/CameraInfo", encoding="unknown", data=b""
+        )
+        channel_id = writer.register_channel(
+            topic=CAMERA_INFO_TOPIC, message_encoding="unknown", schema_id=schema_id
+        )
+        writer.add_message(
+            channel_id=channel_id,
+            log_time=CAMERA_INFO_LOG_TIME_NS,
+            publish_time=CAMERA_INFO_LOG_TIME_NS,
+            data=b"",
+        )
+        writer.finish()
+    return path
+
+
 def write_mcap_with_malformed_json_video(path: Path) -> Path:
     """Writes an MCAP whose video topic is JSON-encoded with malformed payloads.
 

@@ -194,6 +194,12 @@ class TestMcapFileReader:
         assert intrinsics.frame_id == helpers.CAMERA_FRAME_ID
         assert intrinsics.distortion_model == "plumb_bob"
 
+    def test_get_intrinsic__repeated(self, reader: McapFileReader) -> None:
+        first = reader.get_intrinsic(topic=helpers.CAMERA_INFO_TOPIC)
+        second = reader.get_intrinsic(topic=helpers.CAMERA_INFO_TOPIC)
+
+        assert first == second
+
     def test_get_intrinsic__unknown_topic(self, reader: McapFileReader) -> None:
         with pytest.raises(TopicNotFoundError):
             reader.get_intrinsic(topic="/unknown")
@@ -201,6 +207,12 @@ class TestMcapFileReader:
     def test_get_intrinsic__not_camera_info(self, reader: McapFileReader) -> None:
         with pytest.raises(McapAccessError, match="has no field 'k', 'K'"):
             reader.get_intrinsic(topic=helpers.CAMERA_VIDEO_TOPIC)
+
+    def test_get_intrinsic__undecodable(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_undecodable_camera_info(tmp_path / "undecodable.mcap")
+
+        with McapFileReader(path) as reader, pytest.raises(McapAccessError, match="Cannot decode"):
+            reader.get_intrinsic(topic=helpers.CAMERA_INFO_TOPIC)
 
     def test_get_static_transform(self, reader: McapFileReader) -> None:
         matrix = reader.get_static_transform(
