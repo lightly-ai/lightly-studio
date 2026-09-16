@@ -93,6 +93,7 @@ dev = [
     "ruff>=0.7.4",
     "hatchling>=1.27.0",
     "mypy>=1.19.1",
+    "packaging>=24.0",
     "types-boto3>=1.26.0",
     "types-tqdm>=4.67.0.20241221",
     "types-PyYAML>=6.0.0",
