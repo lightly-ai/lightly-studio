@@ -5,15 +5,14 @@ protocol and reads the answers back into the wire models of ``lightly_studio_ser
 holds no state of the server: ``RemoteEmbedder`` reads ``/v1/describe`` once and keeps the
 answer for the lifetime of the process.
 
-The module turns a status into the exception that names it, waits out a 429 or a 503 for
-as long as the server asks, and splits a batch into the chunks that the server accepts.
+The module turns a status into the exception that names it and waits out a 429 or a 503
+for as long as the server asks.
 """
 
 from __future__ import annotations
 
 import email.utils
 import time
-from collections.abc import Iterator, Sequence
 from datetime import datetime, timezone
 from typing import Any, TypeVar
 
@@ -26,6 +25,7 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderAuthError,
     RemoteEmbedderBatchTooLargeError,
     RemoteEmbedderCapabilityError,
+    RemoteEmbedderError,
     RemoteEmbedderProtocolError,
     RemoteEmbedderUnreachableError,
 )
@@ -44,7 +44,31 @@ _DEFAULT_RETRY_WAIT_SECONDS = 1.0
 # The two statuses that say "later". Every other status says "not this request".
 _RETRY_STATUSES = frozenset({httpx.codes.TOO_MANY_REQUESTS, httpx.codes.SERVICE_UNAVAILABLE})
 
-_AUTH_STATUSES = frozenset({httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN})
+# The error that names each status the protocol defines, with the reason that the server
+# had for it. A 429 and a 503 reach this mapping only after the attempts are spent.
+_STATUS_ERRORS: dict[int, tuple[type[RemoteEmbedderError], str]] = {
+    httpx.codes.UNAUTHORIZED: (RemoteEmbedderAuthError, ", so it did not accept the token"),
+    httpx.codes.FORBIDDEN: (RemoteEmbedderAuthError, ", so it did not accept the token"),
+    protocol.STATUS_PAYLOAD_TOO_LARGE: (
+        RemoteEmbedderBatchTooLargeError,
+        ", so the request is over one of its limits",
+    ),
+    httpx.codes.NOT_IMPLEMENTED: (
+        RemoteEmbedderCapabilityError,
+        ", so it does not serve that input kind",
+    ),
+    httpx.codes.TOO_MANY_REQUESTS: (
+        RemoteEmbedderUnreachableError,
+        f", so it stayed busy for {_MAX_ATTEMPTS} attempts",
+    ),
+    httpx.codes.SERVICE_UNAVAILABLE: (
+        RemoteEmbedderUnreachableError,
+        f", so it stayed busy for {_MAX_ATTEMPTS} attempts",
+    ),
+}
+
+# Every other status. The protocol gives the server no reason to answer it here.
+_UNKNOWN_STATUS_ERROR: tuple[type[RemoteEmbedderError], str] = (RemoteEmbedderProtocolError, "")
 
 # The content type of a multipart part. The server reads the real format from the header
 # of the data, so this value only has to be a type that is not text.
@@ -54,7 +78,6 @@ _OCTET_STREAM = "application/octet-stream"
 # control.
 _MAX_DETAIL_CHARS = 200
 
-_ItemT = TypeVar("_ItemT")
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 # One multipart part: the name of the field, then the filename, the data and the content
@@ -186,12 +209,13 @@ class RemoteTransport:
             RemoteEmbedderError: If the server gives no answer or answers a status that
                 carries no embeddings.
         """
-        response = self._send(method=method, path=path, json=json, files=files)
-        for _ in range(_MAX_ATTEMPTS - 1):
-            if response.status_code not in _RETRY_STATUSES:
-                break
-            time.sleep(_retry_wait_seconds(response=response))
+        attempt = 1
+        while True:
             response = self._send(method=method, path=path, json=json, files=files)
+            if response.status_code not in _RETRY_STATUSES or attempt >= _MAX_ATTEMPTS:
+                break
+            attempt += 1
+            time.sleep(_retry_wait_seconds(response=response))
         _check_status(response=response)
         return response
 
@@ -214,29 +238,6 @@ class RemoteTransport:
             ) from error
 
 
-def split_batches(
-    items: Sequence[_ItemT], max_batch_size: int
-) -> Iterator[tuple[int, list[_ItemT]]]:
-    """Split a batch into the chunks that the server accepts.
-
-    The server refuses a batch over the ``max_batch_size`` that ``/v1/describe`` reports.
-    Splitting before the request keeps the bytes of a batch that is too large off the
-    network, and it is the only split that version 1 makes.
-
-    Args:
-        items: The items to embed. An empty batch yields nothing, so it sends no request.
-        max_batch_size: The largest number of items in one request. Positive, because the
-            caller reads it from ``ServerLimits``.
-
-    Yields:
-        Each chunk together with the index of its first item in ``items``. That index
-        turns the ``kept_indices`` of a chunk back into indices of the whole batch.
-    """
-    assert max_batch_size > 0
-    for offset in range(0, len(items), max_batch_size):
-        yield offset, list(items[offset : offset + max_batch_size])
-
-
 def _check_status(response: httpx.Response) -> None:
     """Raise the error that names the status of an answer. 200 is the only status with a body.
 
@@ -246,30 +247,10 @@ def _check_status(response: httpx.Response) -> None:
     status = response.status_code
     if status == httpx.codes.OK:
         return
-    where = _where(response=response)
-    detail = _detail(response=response)
-    if status in _AUTH_STATUSES:
-        raise RemoteEmbedderAuthError(
-            f"The embedding server answered {status} to {where}, so it did not accept the "
-            f"token: {detail}"
-        )
-    if status == protocol.STATUS_PAYLOAD_TOO_LARGE:
-        raise RemoteEmbedderBatchTooLargeError(
-            f"The embedding server answered {status} to {where}, so the request is over one "
-            f"of its limits: {detail}"
-        )
-    if status == httpx.codes.NOT_IMPLEMENTED:
-        raise RemoteEmbedderCapabilityError(
-            f"The embedding server answered {status} to {where}, so it does not serve that "
-            f"input kind: {detail}"
-        )
-    if status in _RETRY_STATUSES:
-        raise RemoteEmbedderUnreachableError(
-            f"The embedding server answered {status} to {where} for {_MAX_ATTEMPTS} attempts, "
-            f"so it stayed busy: {detail}"
-        )
-    raise RemoteEmbedderProtocolError(
-        f"The embedding server answered {status} to {where}: {detail}"
+    error_type, reason = _STATUS_ERRORS.get(status, _UNKNOWN_STATUS_ERROR)
+    raise error_type(
+        f"The embedding server answered {status} to {_where(response=response)}{reason}: "
+        f"{_detail(response=response)}"
     )
 
 
@@ -373,9 +354,11 @@ def _retry_wait_seconds(response: httpx.Response) -> float:
     if header is None:
         return _DEFAULT_RETRY_WAIT_SECONDS
     seconds = _parse_retry_after(value=header.strip())
-    if seconds is None:
+    # A header that names zero, or a date that has passed, asks for the request again in
+    # the same instant. The default holds the client back from that.
+    if seconds is None or seconds <= 0:
         return _DEFAULT_RETRY_WAIT_SECONDS
-    return min(max(seconds, 0.0), _MAX_RETRY_WAIT_SECONDS)
+    return min(seconds, _MAX_RETRY_WAIT_SECONDS)
 
 
 def _parse_retry_after(value: str) -> float | None:

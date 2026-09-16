@@ -62,10 +62,6 @@ dependencies = [
     # so one major runs everywhere rather than two that have to stay behaviourally identical.
     "posthog>=6.9,<7.0",
     "lightly-studio-serve>=0.1.0,<0.2.0",
-    # The client of the embedding protocol sends its requests with httpx: it separates the
-    # connect timeout from the read timeout, which a query under a key press needs, and it
-    # follows no redirect unless it is told to, which a request to a customer-supplied URL
-    # needs. Already resolved at runtime through `huggingface-hub`, so this adds no download.
     "httpx>=0.27.2",
 ]
 

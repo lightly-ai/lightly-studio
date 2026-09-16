@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import email.utils
+import time
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
@@ -8,7 +9,7 @@ import httpx
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
-from lightly_studio_serve import protocol
+from lightly_studio_serve import protocol, server
 from lightly_studio_serve.embedder import (
     Capability,
     ImageBytesEmbedder,
@@ -16,8 +17,8 @@ from lightly_studio_serve.embedder import (
     VideoBytesEmbedder,
 )
 from lightly_studio_serve.protocol import ServerLimits
-from lightly_studio_serve.server import create_app
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from pytest_mock import MockerFixture
 
 from lightly_studio.embed.remote import transport
 from lightly_studio.embed.remote.errors import (
@@ -74,7 +75,7 @@ class FakeBytesEmbedder(ImageBytesEmbedder, VideoBytesEmbedder):
 class TestRemoteTransport:
     def test_describe(self) -> None:
         embedder = FakeTextEmbedder()
-        with TestClient(create_app(embedder=embedder)) as client:
+        with TestClient(server.create_app(embedder=embedder)) as client:
             description = RemoteTransport(client=client).describe()
 
         assert description.protocol_version == protocol.PROTOCOL_VERSION
@@ -108,7 +109,7 @@ class TestRemoteTransport:
 
     def test_embed_texts(self) -> None:
         embedder = FakeTextEmbedder()
-        with TestClient(create_app(embedder=embedder)) as client:
+        with TestClient(server.create_app(embedder=embedder)) as client:
             response = RemoteTransport(client=client).embed_texts(texts=["a dog", "a cat"])
 
         assert embedder.received == ["a dog", "a cat"]
@@ -117,20 +118,20 @@ class TestRemoteTransport:
         assert response.embeddings == [[0.5, -0.5], [0.5, -0.5]]
 
     def test_embed_texts__sends_the_token(self) -> None:
-        with TestClient(create_app(embedder=FakeTextEmbedder(), api_key=API_KEY)) as client:
+        with TestClient(server.create_app(embedder=FakeTextEmbedder(), api_key=API_KEY)) as client:
             response = RemoteTransport(client=client, api_key=API_KEY).embed_texts(texts=["a dog"])
 
         assert response.kept_indices == [0]
 
     def test_embed_texts__no_token(self) -> None:
-        app = create_app(embedder=FakeTextEmbedder(), api_key=API_KEY)
+        app = server.create_app(embedder=FakeTextEmbedder(), api_key=API_KEY)
         with TestClient(app) as client, pytest.raises(RemoteEmbedderAuthError) as error:
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
 
         assert "did not accept the token" in str(error.value)
 
     def test_embed_texts__batch_over_the_limit(self) -> None:
-        app = create_app(embedder=FakeTextEmbedder(), limits=ServerLimits(max_batch_size=1))
+        app = server.create_app(embedder=FakeTextEmbedder(), limits=ServerLimits(max_batch_size=1))
         with TestClient(app) as client, pytest.raises(RemoteEmbedderBatchTooLargeError) as error:
             RemoteTransport(client=client).embed_texts(texts=["a dog", "a cat"])
 
@@ -162,7 +163,8 @@ class TestRemoteTransport:
         with pytest.raises(RemoteEmbedderProtocolError, match="protocol does not allow"):
             RemoteTransport(client=client).embed_texts(texts=["a dog", "a cat"])
 
-    def test_embed_texts__retries_while_busy(self) -> None:
+    def test_embed_texts__retries_while_busy(self, mocker: MockerFixture) -> None:
+        sleep = mocker.patch.object(time, "sleep")
         answers = [
             httpx.Response(status_code=503, headers={"Retry-After": "0"}),
             httpx.Response(status_code=503, headers={"Retry-After": "0"}),
@@ -181,15 +183,18 @@ class TestRemoteTransport:
 
         assert attempts == 3
         assert response.kept_indices == [0]
+        assert sleep.call_count == 2
 
-    def test_embed_texts__stays_busy(self) -> None:
+    def test_embed_texts__stays_busy(self, mocker: MockerFixture) -> None:
+        mocker.patch.object(time, "sleep")
         answer = httpx.Response(status_code=503, headers={"Retry-After": "0"})
         client = _mock_client(handler=_answers(answer))
 
         with pytest.raises(RemoteEmbedderUnreachableError, match="stayed busy"):
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
 
-    def test_embed_texts__rate_limited(self) -> None:
+    def test_embed_texts__rate_limited(self, mocker: MockerFixture) -> None:
+        mocker.patch.object(time, "sleep")
         answer = httpx.Response(status_code=429, headers={"Retry-After": "0"})
         client = _mock_client(handler=_answers(answer))
 
@@ -207,7 +212,7 @@ class TestRemoteTransport:
 
     def test_embed_image_bytes(self) -> None:
         embedder = FakeBytesEmbedder()
-        with TestClient(create_app(embedder=embedder)) as client:
+        with TestClient(server.create_app(embedder=embedder)) as client:
             response = RemoteTransport(client=client).embed_image_bytes(
                 images=[b"\xff\xd8jpeg", b"\x89PNG"]
             )
@@ -217,33 +222,11 @@ class TestRemoteTransport:
 
     def test_embed_video_bytes(self) -> None:
         embedder = FakeBytesEmbedder()
-        with TestClient(create_app(embedder=embedder)) as client:
+        with TestClient(server.create_app(embedder=embedder)) as client:
             response = RemoteTransport(client=client).embed_video_bytes(videos=[b"\x00\x00mp4"])
 
         assert embedder.received == [b"\x00\x00mp4"]
         assert response.kept_indices == [0]
-
-
-def test_split_batches() -> None:
-    chunks = list(transport.split_batches(items=["a", "b", "c", "d", "e"], max_batch_size=2))
-
-    assert chunks == [(0, ["a", "b"]), (2, ["c", "d"]), (4, ["e"])]
-
-
-def test_split_batches__exact_multiple() -> None:
-    chunks = list(transport.split_batches(items=["a", "b", "c", "d"], max_batch_size=2))
-
-    assert chunks == [(0, ["a", "b"]), (2, ["c", "d"])]
-
-
-def test_split_batches__single_chunk() -> None:
-    chunks = list(transport.split_batches(items=["a", "b"], max_batch_size=999))
-
-    assert chunks == [(0, ["a", "b"])]
-
-
-def test_split_batches__empty() -> None:
-    assert list(transport.split_batches(items=[], max_batch_size=2)) == []
 
 
 def test_retry_wait_seconds() -> None:
@@ -286,7 +269,13 @@ def test_retry_wait_seconds__http_date_over_the_cap() -> None:
 def test_retry_wait_seconds__http_date_in_the_past() -> None:
     response = httpx.Response(status_code=503, headers={"Retry-After": HTTP_DATE_PAST})
 
-    assert transport._retry_wait_seconds(response=response) == 0.0
+    assert transport._retry_wait_seconds(response=response) == 1.0
+
+
+def test_retry_wait_seconds__zero() -> None:
+    response = httpx.Response(status_code=503, headers={"Retry-After": "0"})
+
+    assert transport._retry_wait_seconds(response=response) == 1.0
 
 
 def _rows(count: int) -> EmbeddingResult:
