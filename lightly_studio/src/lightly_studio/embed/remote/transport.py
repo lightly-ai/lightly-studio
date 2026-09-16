@@ -5,8 +5,9 @@ protocol and reads the answers back into the wire models of ``lightly_studio_ser
 holds no state of the server: ``RemoteEmbedder`` reads ``/v1/describe`` once and keeps the
 answer for the lifetime of the process.
 
-The module turns a status into the exception that names it and waits out a 429 or a 503
-for as long as the server asks.
+The module turns a status into the exception that names it and sends a 429 or a 503 again
+a capped number of times, after a wait that it also caps. A server can name a wait of any
+length, and the caller of a text query sits under a key press.
 """
 
 from __future__ import annotations
