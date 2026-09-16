@@ -50,6 +50,7 @@ def test_init(mocker: MockerFixture) -> None:
         max_retries=posthog_tracker.MAX_RETRIES,
         timeout=posthog_tracker.REQUEST_TIMEOUT_SECONDS,
         enable_exception_autocapture=True,
+        before_send=posthog_tracker._redact_sqlalchemy_parameters,
     )
 
 
@@ -121,6 +122,85 @@ def test_shutdown(mocker: MockerFixture) -> None:
     PostHogTracker(project_api_key="phc_test", host=POSTHOG_HOST).shutdown()
 
     client.shutdown.assert_called_once_with()
+
+
+def test_redact_sqlalchemy_parameters__redacts_exception_list_value() -> None:
+    event: dict[str, object] = {
+        "properties": {
+            "$exception_message": "error [parameters: {'col': 'secret'}]",
+            "$exception_list": [
+                {"type": "OperationalError", "value": "error [parameters: {'col': 'secret'}]"},
+            ],
+        }
+    }
+
+    result = posthog_tracker._redact_sqlalchemy_parameters(event)
+
+    properties = result["properties"]
+    assert isinstance(properties, dict)
+    assert properties["$exception_message"] == "error [parameters: <redacted>]"
+    exception_list = properties["$exception_list"]
+    assert isinstance(exception_list, list)
+    assert exception_list[0]["value"] == "error [parameters: <redacted>]"
+
+
+def test_redact_sqlalchemy_parameters__redacts_nested_brackets_in_values() -> None:
+    """Parameter values containing ] (e.g. list literals) must not cause early truncation."""
+    event: dict[str, object] = {
+        "properties": {
+            "$exception_message": "error [parameters: {'ids': [1, 2, 3]}]",
+            "$exception_list": [
+                {"type": "OperationalError", "value": "error [parameters: {'ids': [1, 2, 3]}]"},
+            ],
+        }
+    }
+
+    result = posthog_tracker._redact_sqlalchemy_parameters(event)
+
+    properties = result["properties"]
+    assert isinstance(properties, dict)
+    assert properties["$exception_message"] == "error [parameters: <redacted>]"
+    exception_list = properties["$exception_list"]
+    assert isinstance(exception_list, list)
+    assert exception_list[0]["value"] == "error [parameters: <redacted>]"
+
+
+def test_redact_sqlalchemy_parameters__preserves_exception_type_and_frames() -> None:
+    event: dict[str, object] = {
+        "properties": {
+            "$exception_message": "error [parameters: {'x': 1}]",
+            "$exception_list": [
+                {
+                    "type": "OperationalError",
+                    "value": "error [parameters: {'x': 1}]",
+                    "stacktrace": {"frames": [{"filename": "db.py", "lineno": 42}]},
+                },
+            ],
+        }
+    }
+
+    result = posthog_tracker._redact_sqlalchemy_parameters(event)
+
+    properties = result["properties"]
+    assert isinstance(properties, dict)
+    exception_list = properties["$exception_list"]
+    assert isinstance(exception_list, list)
+    assert exception_list[0]["type"] == "OperationalError"
+    assert exception_list[0]["stacktrace"] == {"frames": [{"filename": "db.py", "lineno": 42}]}
+
+
+def test_redact_sqlalchemy_parameters__passes_through_non_exception_event() -> None:
+    event: dict[str, object] = {
+        "event": "app_launched",
+        "properties": {"os": "Linux", "lightly_studio_version": "1.0.0"},
+    }
+
+    result = posthog_tracker._redact_sqlalchemy_parameters(event)
+
+    assert result == {
+        "event": "app_launched",
+        "properties": {"os": "Linux", "lightly_studio_version": "1.0.0"},
+    }
 
 
 def test_common_properties(mocker: MockerFixture) -> None:
