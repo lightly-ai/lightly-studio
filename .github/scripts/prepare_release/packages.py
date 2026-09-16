@@ -107,9 +107,15 @@ def for_tag(tag: str) -> Package:
     serve package rather than to `lightly-studio`, whose prefix is empty.
 
     Raises:
-        PrepareReleaseError: The tag matches no package's `<prefix>v<version>` shape.
+        PrepareReleaseError: The tag matches no package's `<prefix>v<version>` shape. A
+            bare `v` is one of those: it carries no version, and every stage after this
+            one needs a version.
     """
-    candidates = [package for package in PACKAGES if tag.startswith(f"{package.tag_prefix}v")]
+    candidates = [
+        package
+        for package in PACKAGES
+        if tag.startswith(f"{package.tag_prefix}v") and tag != f"{package.tag_prefix}v"
+    ]
     if not candidates:
         raise PrepareReleaseError(
             f"tag {tag!r} belongs to no known package, expected one of "

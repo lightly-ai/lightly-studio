@@ -53,6 +53,12 @@ def test_version_from_tag__unknown():
         packages.version_from_tag("nightly/v1.2.3")
 
 
+@pytest.mark.parametrize("tag", ["v", "lightly-studio-serve/v"])
+def test_for_tag__no_version(tag: str):
+    with pytest.raises(PrepareReleaseError, match="belongs to no known package"):
+        packages.for_tag(tag)
+
+
 def test_for_tag__no_version_marker():
     with pytest.raises(PrepareReleaseError, match="belongs to no known package"):
         packages.for_tag("1.2.3")
