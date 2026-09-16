@@ -38,6 +38,10 @@ from tests.embed.remote.helpers import (
     SkippingTextEmbedder,
 )
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:You should not use the 'timeout' argument with the TestClient:DeprecationWarning"
+)
+
 
 class TestRemoteEmbedder:
     def test_connect__text_only(self) -> None:
