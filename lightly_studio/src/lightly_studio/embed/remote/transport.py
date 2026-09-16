@@ -58,6 +58,10 @@ _STATUS_ERRORS: dict[int, tuple[type[RemoteEmbedderError], str]] = {
         RemoteEmbedderCapabilityError,
         ", so it does not serve that input kind",
     ),
+    # The protocol names 501, but a server that mounts only the routes of its own
+    # capabilities never reaches one: its router answers 404 first. `create_app` of
+    # `lightly_studio_serve` is such a server.
+    httpx.codes.NOT_FOUND: (RemoteEmbedderCapabilityError, ", so it does not serve that path"),
     httpx.codes.TOO_MANY_REQUESTS: (
         RemoteEmbedderUnreachableError,
         f", so it stayed busy for {_MAX_ATTEMPTS} attempts",
@@ -103,7 +107,12 @@ class RemoteTransport:
                 owns it and closes it.
             api_key: The token to send as ``Authorization: Bearer``. ``None`` sends no
                 header, which is what an unauthenticated server needs.
+
+        Raises:
+            ValueError: If ``api_key`` holds a character that a header cannot carry.
         """
+        if api_key is not None:
+            _check_api_key(api_key=api_key)
         self._client = client
         # A header of the request, not of the client: the caller owns the client, and a
         # transport must not put a token on a client that it was lent.
@@ -122,9 +131,12 @@ class RemoteTransport:
                 ``RemoteEmbedderProtocolError``.
         """
         response = self._request(method="GET", path=protocol.DESCRIBE_PATH)
-        description = _parse(model=DescribeResponse, response=response)
-        _check_protocol_version(description=description, response=response)
-        return description
+        body = _read_json(response=response)
+        # Before the model, not after it. A server of another major version is the one
+        # most likely to answer a body of another shape, and the version names that
+        # reason where a list of broken fields does not.
+        _check_protocol_version(body=body, response=response)
+        return _validate(model=DescribeResponse, body=body, response=response)
 
     def embed_texts(self, texts: list[str]) -> EmbeddingsResponse:
         """Embed a batch of strings on the server.
@@ -176,7 +188,18 @@ class RemoteTransport:
         return self._post_files(path=protocol.EMBED_VIDEOS_BYTES_PATH, items=videos)
 
     def _post_files(self, path: str, items: list[bytes]) -> EmbeddingsResponse:
-        """Send a batch of items as multipart, one part for each item, in input order."""
+        """Send a batch of items as multipart, one part for each item, in input order.
+
+        Raises:
+            ValueError: If ``items`` is empty. httpx writes no body at all for a multipart
+                request without parts, so the server cannot read it and answers 400.
+                ``RemoteEmbedder`` sends no request for an empty batch.
+        """
+        if not items:
+            raise ValueError(
+                f"An empty batch cannot be sent to {path}: a multipart request needs at "
+                f"least one part. Return an empty result instead of calling this."
+            )
         # Every part carries a filename. A parser reads a part without one as a text
         # field, so the route would see no file at all. The name is the position of the
         # item, and the content type only has to be a type that is not text: the server
@@ -272,19 +295,36 @@ def _parse(model: type[_ModelT], response: httpx.Response) -> _ModelT:
         RemoteEmbedderProtocolError: If the body is not JSON, or if it breaks a rule of
             the model.
     """
-    where = _where(response=response)
+    return _validate(model=model, body=_read_json(response=response), response=response)
+
+
+def _read_json(response: httpx.Response) -> Any:
+    """Read the body of an answer as JSON, whatever shape it has.
+
+    Raises:
+        RemoteEmbedderProtocolError: If the body is not JSON.
+    """
     try:
-        body = response.json()
+        return response.json()
     except ValueError as error:
         raise RemoteEmbedderProtocolError(
-            f"The embedding server answered {where} with a body that is not JSON."
+            f"The embedding server answered {_where(response=response)} with a body that is "
+            f"not JSON."
         ) from error
+
+
+def _validate(model: type[_ModelT], body: Any, response: httpx.Response) -> _ModelT:
+    """Read a JSON body into a wire model.
+
+    Raises:
+        RemoteEmbedderProtocolError: If the body breaks a rule of the model.
+    """
     try:
         return model.model_validate(body)
     except ValidationError as error:
         raise RemoteEmbedderProtocolError(
-            f"The embedding server answered {where} with a body that the protocol does not "
-            f"allow: {_broken_rules(error=error)}"
+            f"The embedding server answered {_where(response=response)} with a body that the "
+            f"protocol does not allow: {_broken_rules(error=error)}"
         ) from error
 
 
@@ -299,7 +339,9 @@ def _broken_rules(error: ValidationError) -> str:
     for detail in error.errors():
         location = ".".join(str(part) for part in detail["loc"])
         rules.append(f"{location}: {detail['msg']}" if location else detail["msg"])
-    return "; ".join(rules)
+    # Pydantic gives one error per bad element of a list, so a long batch gives a list
+    # of errors as long as the batch.
+    return _cut(text="; ".join(rules))
 
 
 def _detail(response: httpx.Response) -> str:
@@ -314,26 +356,30 @@ def _detail(response: httpx.Response) -> str:
     except ValueError:
         body = None
     detail = body.get("detail") if isinstance(body, dict) else None
-    text = (str(detail) if detail is not None else response.text).strip()
-    if len(text) > _MAX_DETAIL_CHARS:
-        return f"{text[:_MAX_DETAIL_CHARS]}..."
-    return text
+    return _cut(text=(str(detail) if detail is not None else response.text).strip())
 
 
-def _check_protocol_version(description: DescribeResponse, response: httpx.Response) -> None:
+def _check_protocol_version(body: Any, response: httpx.Response) -> None:
     """Check that the server speaks a version of the protocol that this client reads.
 
     Only the major version has to match. A minor version adds fields, and a reader of the
     wire models ignores the fields that it does not know.
 
+    The check reads the raw body, because it has to run before the model does. A server of
+    another major version is the one most likely to answer a body of another shape, and
+    ``DescribeResponse`` would then fail on the fields rather than on the reason for them.
+    A body that carries no version reaches the model, which holds the default.
+
     Raises:
         RemoteEmbedderProtocolError: If the major versions are different.
     """
-    served = _major(version=description.protocol_version)
-    if served != _major(version=protocol.PROTOCOL_VERSION):
+    served = body.get("protocol_version") if isinstance(body, dict) else None
+    if not isinstance(served, str):
+        return
+    if _major(version=served) != _major(version=protocol.PROTOCOL_VERSION):
         raise RemoteEmbedderProtocolError(
             f"The embedding server at {_where(response=response)} speaks protocol version "
-            f"{description.protocol_version}. This client speaks {protocol.PROTOCOL_VERSION}."
+            f"{served}. This client speaks {protocol.PROTOCOL_VERSION}."
         )
 
 
@@ -390,3 +436,32 @@ def _parse_retry_after(value: str) -> float | None:
 def _where(response: httpx.Response) -> str:
     """Name the request that an answer belongs to, for the message of an exception."""
     return f"{response.request.method} {response.request.url}"
+
+
+def _cut(text: str) -> str:
+    """Cut a message that a server of this protocol wrote, for an exception of this client.
+
+    A server that this client does not control writes the message, so its length is not
+    bounded by anything that this client knows.
+    """
+    if len(text) > _MAX_DETAIL_CHARS:
+        return f"{text[:_MAX_DETAIL_CHARS]}..."
+    return text
+
+
+def _check_api_key(api_key: str) -> None:
+    """Refuse a token that cannot become a header.
+
+    RFC 7235 writes the credentials of a request in ASCII, and httpx raises a
+    ``UnicodeEncodeError`` for a header value outside it. That error is not an
+    ``httpx.HTTPError``, so it would leave the ``RemoteEmbedderError`` hierarchy on the
+    first request. The token is checked where it arrives instead.
+
+    Raises:
+        ValueError: If ``api_key`` holds a character that is not ASCII.
+    """
+    if not api_key.isascii():
+        raise ValueError(
+            "api_key holds a character that is not ASCII, which an Authorization header "
+            "cannot carry. Give a token of ASCII characters."
+        )

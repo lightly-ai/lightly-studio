@@ -73,6 +73,10 @@ class FakeBytesEmbedder(ImageBytesEmbedder, VideoBytesEmbedder):
 
 
 class TestRemoteTransport:
+    def test_init__api_key_not_ascii(self) -> None:
+        with pytest.raises(ValueError, match="not ASCII"):
+            RemoteTransport(client=_mock_client(handler=_answers()), api_key="Bearer-ünïcode")
+
     def test_describe(self) -> None:
         embedder = FakeTextEmbedder()
         with TestClient(server.create_app(embedder=embedder)) as client:
@@ -87,6 +91,15 @@ class TestRemoteTransport:
     def test_describe__protocol_version_mismatch(self) -> None:
         body = _describe_body(capabilities=["text"])
         body["protocol_version"] = "2.0"
+        client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
+
+        with pytest.raises(RemoteEmbedderProtocolError, match=r"speaks protocol version 2\.0"):
+            RemoteTransport(client=client).describe()
+
+    def test_describe__protocol_version_mismatch_before_the_model(self) -> None:
+        # A server of another major version is the one most likely to answer another
+        # shape. The version must still be what the message names.
+        body = {"protocol_version": "2.0", "model": {"name": "acme"}}
         client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
 
         with pytest.raises(RemoteEmbedderProtocolError, match=r"speaks protocol version 2\.0"):
@@ -219,6 +232,37 @@ class TestRemoteTransport:
 
         assert embedder.received == [b"\xff\xd8jpeg", b"\x89PNG"]
         assert response.kept_indices == [0, 1]
+
+    def test_embed_image_bytes__empty(self) -> None:
+        # httpx writes no body at all for a multipart request without parts, so the
+        # server would answer 400. `RemoteEmbedder` sends no request for an empty batch.
+        client = _mock_client(handler=_answers())
+
+        with pytest.raises(ValueError, match="empty batch"):
+            RemoteTransport(client=client).embed_image_bytes(images=[])
+
+    def test_embed_image_bytes__route_not_mounted(self) -> None:
+        # A server that mounts only the routes of its own capabilities answers 404 where
+        # the protocol names 501. Both say the same thing to a client.
+        embedder = FakeTextEmbedder()
+        with (
+            TestClient(server.create_app(embedder=embedder)) as client,
+            pytest.raises(RemoteEmbedderCapabilityError, match="does not serve that path"),
+        ):
+            RemoteTransport(client=client).embed_image_bytes(images=[b"\xff\xd8jpeg"])
+
+    def test_embed_texts__broken_rules_are_cut(self) -> None:
+        # Pydantic gives one error per bad element of a list, so a long batch would
+        # otherwise give an exception as long as the batch.
+        body = _embeddings_body()
+        body["kept_indices"] = [-1] * 200
+        client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
+
+        with pytest.raises(RemoteEmbedderProtocolError) as error:
+            RemoteTransport(client=client).embed_texts(texts=["a dog"])
+
+        assert str(error.value).endswith("...")
+        assert len(str(error.value)) < 400
 
     def test_embed_video_bytes(self) -> None:
         embedder = FakeBytesEmbedder()
