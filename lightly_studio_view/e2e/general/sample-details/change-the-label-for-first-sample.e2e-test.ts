@@ -3,7 +3,7 @@ import { cocoDataset } from '../fixtures';
 
 test('user can change label for first sample', async ({ samplesPage, sampleDetailsPage }) => {
     // samplesPage fixture automatically navigates and loads samples
-    await samplesPage.doubleClickFirstSample();
+    await samplesPage.openFirstSample();
 
     await sampleDetailsPage.pageIsReady();
 

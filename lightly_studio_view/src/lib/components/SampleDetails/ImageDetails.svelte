@@ -47,6 +47,7 @@
         {collectionId}
         {sampleId}
         {sampleURL}
+        fileName={sampleImage.file_name}
         sample={{
             ...sampleImage.sample,
             width: sampleImage.width,

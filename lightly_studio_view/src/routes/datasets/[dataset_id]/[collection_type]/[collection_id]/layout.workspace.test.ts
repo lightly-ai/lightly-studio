@@ -12,7 +12,7 @@ import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
 
 vi.mock('$app/environment', () => ({ browser: false }));
-vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
+vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn(), goto: vi.fn() }));
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     readAnnotationEmbedding: vi.fn()
@@ -40,21 +40,35 @@ vi.mock('paneforge', async () => {
 });
 vi.mock('$lib/components', async () => {
     const { default: Stub } = await import('./LayoutStub.test.svelte');
+    // AppSidebar is real: it owns the filter-panel-body element and the collapse behaviour
+    // these tests assert on, and stubbing it would drop the filters snippet entirely.
+    const { default: AppSidebar } = await import('$lib/components/AppSidebar/AppSidebar.svelte');
     return {
+        AppSidebar,
         Button: Stub,
         CombinedMetadataDimensionsFilters: Stub,
+        ContentHeader: Stub,
         DatasetGridHeader: Stub,
-        Footer: Stub,
         LabelsMenu: Stub,
         MetadataFilterChips: Stub,
-        SelectionPill: Stub,
-        ShowFiltersButton: Stub,
+        StatusBar: Stub,
         TagsMenu: Stub,
         SidePanelTabs: Stub,
-        Header: Stub,
         Separator: Stub
     };
 });
+vi.mock('$lib/components/AnnotationTypesMenu/AnnotationTypesMenu.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
+}));
+vi.mock('$lib/components/EditModeControls/EditModeControls.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
+}));
+vi.mock('$lib/components/UserAvatar/UserAvatar.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
+}));
+vi.mock('$lib/components/Header/Menu.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
+}));
 vi.mock('$lib/components/ui/tooltip', async () => {
     const { default: Stub } = await import('./LayoutStub.test.svelte');
     return { Tooltip: Stub };
@@ -170,6 +184,33 @@ vi.mock('$lib/hooks/useSearchEmbedding/useSearchEmbedding', () => ({
 }));
 vi.mock('$lib/hooks/useEvaluationRuns/useEvaluationRuns', () => ({
     useEvaluationRuns: vi.fn(() => ({ data: undefined, isLoading: false, error: null }))
+}));
+vi.mock('$lib/hooks/useCollection/useCollection', () => ({
+    useCollectionWithChildren: vi.fn(() => ({ collection: { data: undefined } })),
+    useRootCollection: vi.fn(() => ({ collection: { data: undefined } }))
+}));
+vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
+    useAnnotationCollections: vi.fn(() => ({ data: undefined }))
+}));
+vi.mock('$lib/hooks/useExportDialog/useExportDialog', () => ({
+    useExportDialog: vi.fn(() => ({ openExportDialog: vi.fn() }))
+}));
+vi.mock('$lib/hooks/useResetFilters/useResetFilters', () => ({
+    useResetFilters: vi.fn(() => ({ resetFilters: vi.fn() }))
+}));
+vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+    default: vi.fn(() => ({ user: undefined }))
+}));
+vi.mock('$lib/hooks/useImageAnnotationTypeCounts/useImageAnnotationTypeCounts.svelte', () => ({
+    useImageAnnotationTypeCounts: vi.fn(() => ({ data: undefined }))
+}));
+vi.mock('$lib/hooks/useAnnotationTypeFilter/useAnnotationTypeFilter', () => ({
+    useAnnotationTypeFilter: vi.fn(() => ({
+        selectedAnnotationTypes: writable(new Set()),
+        annotationTypes: writable(undefined),
+        toggleAnnotationType: vi.fn(),
+        clearAnnotationTypes: vi.fn()
+    }))
 }));
 
 import * as useGlobalStorageModule from '$lib/hooks/useGlobalStorage';
@@ -287,15 +328,15 @@ describe('+layout.svelte collection-grid workspace', () => {
     });
 });
 
-// Details routes bypass the workspace
+// Details routes keep the workspace chrome
 
-describe('+layout.svelte details-route bypass', () => {
-    it('does NOT render filter panel on image-details route', async () => {
+describe('+layout.svelte details routes', () => {
+    it('keeps the filter panel on image-details route', async () => {
         setPageRoute(APP_ROUTES.imageDetails);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
     it('still renders child content on image-details route', async () => {
@@ -306,12 +347,12 @@ describe('+layout.svelte details-route bypass', () => {
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
     });
 
-    it('does NOT render filter panel on annotation-details route', async () => {
+    it('keeps the filter panel on annotation-details route', async () => {
         setPageRoute(APP_ROUTES.annotationDetails);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
     it('still renders child content on annotation-details route', async () => {
@@ -322,12 +363,12 @@ describe('+layout.svelte details-route bypass', () => {
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
     });
 
-    it('does NOT render filter panel on video-details route', async () => {
+    it('keeps the filter panel on video-details route', async () => {
         setPageRoute(APP_ROUTES.videoDetails);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
     it('still renders child content on video-details route', async () => {
@@ -338,12 +379,12 @@ describe('+layout.svelte details-route bypass', () => {
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
     });
 
-    it('does NOT render workspace frame on frame-details route', async () => {
+    it('keeps the workspace frame on frame-details route', async () => {
         setPageRoute(APP_ROUTES.framesDetails);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('workspace-body')).not.toBeInTheDocument();
+        expect(screen.getByTestId('workspace-body')).toBeInTheDocument();
     });
 
     it('still renders child content on frame-details route', async () => {
@@ -388,14 +429,14 @@ describe('filter sidebar collapse/expand', () => {
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
-    it('filter panel is not rendered on a details route regardless of collapse state', async () => {
+    it('filter panel collapse state applies on a details route too', async () => {
         setPageRoute(APP_ROUTES.imageDetails);
-        mockFilterPanelCollapsed.set(false);
+        mockFilterPanelCollapsed.set(true);
 
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).toHaveAttribute('aria-hidden', 'true');
     });
 });
 
@@ -474,13 +515,13 @@ describe('SidePanelTabs availability', () => {
         expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
     });
 
-    it('is absent on a details route', async () => {
+    it('is present on the image-details route, which the rail steps back from', async () => {
         setPageRoute(APP_ROUTES.imageDetails);
 
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
+        expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
     });
 
     it('is absent on a collection-grid route without embeddings', async () => {

@@ -19,6 +19,7 @@
         dragData,
         onDragStart,
         onSelect,
+        onOpen,
         ondblclick
     }: {
         children: Snippet;
@@ -36,6 +37,11 @@
         /** Fires once when a drag actually begins (past the movement threshold). */
         onDragStart?: () => void;
         onSelect?: (event: MouseEvent | KeyboardEvent) => void;
+        /**
+         * Opts the tile into "click opens, checkbox selects". Without it a click selects and
+         * opening is a double click, which is what the other grids still do.
+         */
+        onOpen?: () => void;
         ondblclick?: (event: MouseEvent) => void;
     } = $props();
 
@@ -49,21 +55,29 @@
     }
 
     function handleOnClick(event: MouseEvent) {
-        if (!onSelect) return;
+        if (!onSelect && !onOpen) return;
         if (drag.suppressNextClick) {
             drag.suppressNextClick = false;
             event.preventDefault();
             return;
         }
         event.preventDefault();
-        onSelect(event);
+        if (onOpen) {
+            onOpen();
+            return;
+        }
+        onSelect?.(event);
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-        if (!onSelect) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (!onSelect && !onOpen) return;
         event.preventDefault();
-        onSelect(event);
+        if (onOpen) {
+            onOpen();
+            return;
+        }
+        onSelect?.(event);
     }
 </script>
 
@@ -91,7 +105,7 @@
         tabindex="0"
     >
         {#if tag}
-            <GridItemTag {isSelected} />
+            <GridItemTag {isSelected} onSelect={onOpen ? onSelect : undefined} />
         {/if}
 
         {@render children()}

@@ -1,11 +1,12 @@
 <script lang="ts">
     import { page } from '$app/state';
+    import RangeFilterField from '$lib/components/RangeFilterField/RangeFilterField.svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Slider } from '$lib/components/ui/slider/index.js';
+    import { getSegmentRowStyles } from '$lib/components/Segment/segmentDensity';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { MetadataValues } from '$lib/services/types';
-    import { formatInteger } from '$lib/utils';
+    import { cn, formatInteger } from '$lib/utils';
     import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
@@ -22,6 +23,8 @@
     }
 
     const { isVideos = false, isVideoFrames = false, onFilterChanged }: Props = $props();
+
+    const styles = getSegmentRowStyles();
 
     // Dimension filters logic
     const {
@@ -87,44 +90,30 @@
 </script>
 
 <Segment title="Metadata">
-    <div class="space-y-4">
+    <div class={cn('space-y-2.5', styles.contentIndent)}>
         {#if !isVideos && !isVideoFrames && $bounds && $values}
             <!-- Dimension Filters -->
-            <div class="space-y-1">
-                <h2 class="text-md">Width</h2>
-                <div class="flex justify-between text-sm text-diffuse-foreground">
-                    <span>{formatInteger($values.min_width)}px</span>
-                    <span>{formatInteger($values.max_width)}px</span>
-                </div>
-                <div class="relative p-2">
-                    <Slider
-                        type="multiple"
-                        class="filter-width"
-                        min={$bounds.min_width}
-                        max={$bounds.max_width}
-                        value={[$values.min_width, $values.max_width]}
-                        onValueCommit={handleChangeWidth}
-                    />
-                </div>
-            </div>
+            <RangeFilterField
+                label="Width"
+                minText={`${formatInteger($values.min_width)}px`}
+                maxText={`${formatInteger($values.max_width)}px`}
+                min={$bounds.min_width}
+                max={$bounds.max_width}
+                value={[$values.min_width, $values.max_width]}
+                onValueCommit={handleChangeWidth}
+                sliderClass="filter-width"
+            />
 
-            <div class="space-y-1">
-                <h2 class="text-md">Height</h2>
-                <div class="flex justify-between text-sm text-diffuse-foreground">
-                    <span>{formatInteger($values.min_height)}px</span>
-                    <span>{formatInteger($values.max_height)}px</span>
-                </div>
-                <div class="relative p-2">
-                    <Slider
-                        type="multiple"
-                        class="filter-height"
-                        min={$bounds.min_height}
-                        max={$bounds.max_height}
-                        value={[$values.min_height, $values.max_height]}
-                        onValueCommit={handleChangeHeight}
-                    />
-                </div>
-            </div>
+            <RangeFilterField
+                label="Height"
+                minText={`${formatInteger($values.min_height)}px`}
+                maxText={`${formatInteger($values.max_height)}px`}
+                min={$bounds.min_height}
+                max={$bounds.max_height}
+                value={[$values.min_height, $values.max_height]}
+                onValueCommit={handleChangeHeight}
+                sliderClass="filter-height"
+            />
         {:else if isVideos}
             <VideoFieldBoundsFilters {onFilterChanged} />
         {/if}

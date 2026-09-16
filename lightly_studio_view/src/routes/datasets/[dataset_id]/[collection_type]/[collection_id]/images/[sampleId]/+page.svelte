@@ -43,13 +43,13 @@
         </div>
     </div>
 {:else}
-    <div class="flex h-full w-full space-x-4 px-4 pb-4" data-testid="sample-details">
-        <div class="h-full w-full space-y-6 rounded-[1vw] bg-card p-4">
-            <ImageDetails {sampleId} {collection}>
-                {#if children}
-                    {@render children()}
-                {/if}
-            </ImageDetails>
-        </div>
+    <!-- Flush: the collection layout supplies the surrounding chrome and SampleDetailsPanel
+         its own padding, so an extra card here would nest one panel inside another. -->
+    <div class="h-full min-h-0 w-full" data-testid="sample-details">
+        <ImageDetails {sampleId} {collection}>
+            {#if children}
+                {@render children()}
+            {/if}
+        </ImageDetails>
     </div>
 {/if}

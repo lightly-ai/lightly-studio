@@ -12,24 +12,12 @@ export class CaptionsPage {
     /**
      * Navigates to the captions page via the navigation menu.
      *
-     * A breadcrumb level without siblings renders as an <a> link and clicking
-     * navigates directly; a level with siblings renders as a Select trigger
-     * (button) and clicking opens a dropdown to pick from.
-     *
-     * @param menuLevel - Zero-based index of the menu button to interact with.
+     * The sidebar lists every collection of the dataset as its own row, so the captions view
+     * is one click away rather than a breadcrumb level to expand.
      */
-    async goto(menuLevel: number = 1) {
+    async goto() {
         await this.page.goto('/');
-        const menuButton = this.page
-            .getByTestId('navigation-menu')
-            .locator('[data-testid^="navigation-menu-"]')
-            .nth(menuLevel);
-
-        const tag = await menuButton.evaluate((el) => el.tagName);
-        await menuButton.click();
-        if (tag !== 'A') {
-            await this.page.getByTestId('navigation-dropdown-captions').click();
-        }
+        await this.page.getByTestId('navigation-menu-captions').click();
 
         await expect(this.getNthGridItem(0)).toBeVisible();
     }

@@ -3,113 +3,109 @@
     import { ChartColumn, ChartNetwork, Gauge, SearchCode } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useSidePanelTabs } from './useSidePanelTabs';
+    import type { PanelType } from '$lib/hooks/useGlobalStorage';
+    import type { Component } from 'svelte';
 
     interface Props {
         collectionId: string;
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
+        /**
+         * Called after a panel is activated from a route that cannot host it (a detail view).
+         * Use it to return to the grid, where the panel is rendered.
+         */
+        onLeaveDetails?: () => void;
     }
-    const { collectionId, isImages, hasMediaWithEmbeddings, supportsEvaluation }: Props = $props();
+    const {
+        collectionId,
+        isImages,
+        hasMediaWithEmbeddings,
+        supportsEvaluation,
+        onLeaveDetails
+    }: Props = $props();
 
     const { activePanel, toggle } = useSidePanelTabs({ getCollectionId: () => collectionId });
+
+    interface RailItem {
+        panel: PanelType;
+        label: string;
+        ariaLabel: string;
+        tooltip: string;
+        icon: Component;
+        testId: string;
+        enabled: boolean;
+    }
+
+    const items = $derived.by<RailItem[]>(() =>
+        (
+            [
+                {
+                    panel: 'embeddingPlot',
+                    label: 'Embed',
+                    ariaLabel: 'Embeddings',
+                    tooltip: 'Explore the embedding space',
+                    icon: ChartNetwork,
+                    testId: 'side-panel-tabs-embed',
+                    enabled: hasMediaWithEmbeddings
+                },
+                {
+                    panel: 'queryEditor',
+                    label: 'Query',
+                    ariaLabel: 'Query',
+                    tooltip: 'Write a query expression to filter your dataset',
+                    icon: SearchCode,
+                    testId: 'side-panel-tabs-query',
+                    enabled: isImages
+                },
+                {
+                    panel: 'evaluationRuns',
+                    label: 'Eval',
+                    ariaLabel: 'Evaluation',
+                    tooltip: 'Review evaluation run results',
+                    icon: Gauge,
+                    testId: 'side-panel-tabs-eval',
+                    enabled: supportsEvaluation
+                },
+                {
+                    panel: 'distribution',
+                    label: 'Distr',
+                    ariaLabel: 'Distribution',
+                    tooltip: 'View dataset distribution',
+                    icon: ChartColumn,
+                    testId: 'side-panel-tabs-distribution',
+                    enabled: isImages
+                }
+            ] satisfies RailItem[]
+        ).filter((item) => item.enabled)
+    );
 </script>
 
-<div class="flex w-14 flex-col gap-2 rounded-xl bg-card p-1.5">
-    {#if hasMediaWithEmbeddings}
-        <Tooltip
-            content="Explore the embedding space"
-            position="left"
-            triggerClass="w-full"
-            class="w-max"
-        >
+<div
+    class="flex w-[62px] shrink-0 flex-col items-center gap-1 border-l border-border-hard bg-sidebar py-1.5"
+>
+    {#each items as item (item.panel)}
+        {@const Icon = item.icon}
+        {@const isActive = $activePanel === item.panel}
+        <Tooltip content={item.tooltip} position="left" triggerClass="w-[50px]" class="w-max">
             <button
                 class={cn(
-                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
-                    $activePanel === 'embeddingPlot'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    'flex h-[50px] w-[50px] flex-col items-center justify-center gap-1 rounded-lg text-[9.5px] transition-colors',
+                    isActive
+                        ? 'bg-sidebar-accent text-foreground'
+                        : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground'
                 )}
-                data-testid="side-panel-tabs-embed"
-                aria-label="Embeddings"
-                aria-pressed={$activePanel === 'embeddingPlot'}
-                onclick={() => toggle($activePanel, 'embeddingPlot')}
+                data-testid={item.testId}
+                aria-label={item.ariaLabel}
+                aria-pressed={isActive}
+                onclick={() => {
+                    toggle($activePanel, item.panel);
+                    onLeaveDetails?.();
+                }}
             >
-                <ChartNetwork class="size-4" />
-                <span>Embed</span>
+                <Icon class="size-[17px]" />
+                <span>{item.label}</span>
             </button>
         </Tooltip>
-    {/if}
-    {#if isImages}
-        <Tooltip
-            content="Write a query expression to filter your dataset"
-            position="left"
-            triggerClass="w-full"
-            class="w-max"
-        >
-            <button
-                class={cn(
-                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
-                    $activePanel === 'queryEditor'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-                data-testid="side-panel-tabs-query"
-                aria-label="Query"
-                aria-pressed={$activePanel === 'queryEditor'}
-                onclick={() => toggle($activePanel, 'queryEditor')}
-            >
-                <SearchCode class="size-4" />
-                <span>Query</span>
-            </button>
-        </Tooltip>
-    {/if}
-    {#if supportsEvaluation}
-        <Tooltip
-            content="Review evaluation run results"
-            position="left"
-            triggerClass="w-full"
-            class="w-max"
-        >
-            <button
-                class={cn(
-                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
-                    $activePanel === 'evaluationRuns'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-                data-testid="side-panel-tabs-eval"
-                aria-label="Evaluation"
-                aria-pressed={$activePanel === 'evaluationRuns'}
-                onclick={() => toggle($activePanel, 'evaluationRuns')}
-            >
-                <Gauge class="size-4" />
-                <span>Eval</span>
-            </button>
-        </Tooltip>
-    {/if}
-    {#if isImages}
-        <Tooltip
-            content="View dataset distribution"
-            position="left"
-            triggerClass="w-full"
-            class="w-max"
-        >
-            <button
-                class={cn(
-                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
-                    $activePanel === 'distribution'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-                data-testid="side-panel-tabs-distribution"
-                aria-label="Distribution"
-                aria-pressed={$activePanel === 'distribution'}
-                onclick={() => toggle($activePanel, 'distribution')}
-            >
-                <ChartColumn class="size-4" />
-                <span>Distr</span>
-            </button>
-        </Tooltip>
-    {/if}
+    {/each}
 </div>

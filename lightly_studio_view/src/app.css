@@ -8,7 +8,7 @@
 
 :root {
     /* Base colors */
-    --color-lightly-primary: 159 64% 54%; /* #3bd99f */
+    --color-lightly-primary: 159 64% 54%; /* #3FD5A0 — Lightly brand green (design prototype) */
 }
 
 /* hsl(0deg 0% 73.73%) */
@@ -39,31 +39,54 @@
         --input: 240 5.9% 90%;
         --ring: 142.1 76.2% 36.3%;
         --radius: 0.5rem;
+        /* App chrome: the flush left sidebar and right rail sit one step behind
+           --card so the content surface reads as the foreground plane. */
+        --sidebar-background: 240 5% 96%;
+        --sidebar-foreground: 240 10% 3.9%;
+        --sidebar-primary: 42.1 76.2% 36.3%;
+        --sidebar-primary-foreground: 355.7 100% 97.3%;
+        --sidebar-accent: 240 4.8% 92%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 240 5.9% 90%;
+        --sidebar-ring: 142.1 76.2% 36.3%;
     }
     .dark {
-        --background: 20 14.3% 4.1%;
+        /* Design-prototype dark palette: cool blue-black surfaces (hue ~218) that
+           stack — background #0b0d10, sidebar #0e1115, card #14171c, popover #1b1f26,
+           muted/detail-toolbar #22262e — under the Lightly green brand. Depth comes
+           from the ramp, and the hue is cool, not the warm near-black it was before. */
+        --background: 216 19% 5%;
         --foreground: 0 0% 95%;
-        --card: 220 16% 11%;
+        --card: 218 17% 9%;
         --card-foreground: 0 0% 95%;
         --diffuse: 0 0% 95%;
-        --diffuse-foreground: 0 0% 73.73%;
-        --popover: 0 0% 9%;
+        --diffuse-foreground: 0 0% 74%;
+        --popover: 218 17% 13%;
         --popover-foreground: 0 0% 95%;
         --primary: var(--color-lightly-primary);
-        --primary-foreground: 144.9 80.4% 10%;
-        --secondary: 240 3.7% 15.9%;
+        --primary-foreground: 153 36% 5%;
+        --secondary: 220 15% 16%;
         --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 15%;
-        --muted-foreground: 240 5% 64.9%;
-        --accent: 12 6.5% 15.1%;
+        --muted: 220 15% 16%;
+        --muted-foreground: 223 8% 57%;
+        --accent: 220 16% 15%;
         --accent-foreground: 0 0% 98%;
         --destructive: 0 62.8% 30.6%;
         --destructive-foreground: 0 85.7% 97.3%;
-        --destructive-text: 0 84% 65%;
-        --border: 240 3.7% 15.9%;
-        --border-hard: 223 12% 66%;
-        --input: 240 3.7% 15.9%;
-        --ring: 142.4 71.8% 29.2%;
+        --destructive-text: 0 80% 68%;
+        --border: 218 16% 15%;
+        --border-hard: 220 14% 67%;
+        --input: 218 16% 18%;
+        --ring: 159 64% 54%;
+        /* #0e1115 — one step behind --card so the sidebar recedes behind the grid. */
+        --sidebar-background: 214 20% 7%;
+        --sidebar-foreground: 0 0% 95%;
+        --sidebar-primary: var(--color-lightly-primary);
+        --sidebar-primary-foreground: 153 36% 5%;
+        --sidebar-accent: 220 16% 15%;
+        --sidebar-accent-foreground: 0 0% 98%;
+        --sidebar-border: 218 16% 15%;
+        --sidebar-ring: 159 64% 54%;
     }
 }
 
@@ -71,11 +94,53 @@
     * {
         @apply border-border;
     }
+    html {
+        /* The redesign is drawn at a tighter scale than the 16px default. Tailwind
+           sizes and spacing are rem-based, so moving the root moves the whole grid
+           at once. Revert to 16px to undo the density change wholesale. */
+        font-size: 14px;
+    }
     body {
         @apply bg-background text-foreground;
         /* We follow the font used in the design */
         font-family: 'Open Sans', sans-serif;
-        font-size: 16px;
+        font-size: 0.929rem;
+        letter-spacing: -0.01em;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Thin, theme-aware scrollbars. The native ones render as a heavy gray track
+       against our surfaces; these float a slim rounded thumb in --muted-foreground
+       over a transparent track and adapt to light and dark on their own, so the
+       per-container `color-scheme` hints are no longer what carries the look. */
+
+    /* Firefox */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+    }
+
+    /* WebKit / Chromium */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: hsl(var(--muted-foreground) / 0.35);
+        border-radius: 9999px;
+        /* A transparent border clipped to the content box insets the thumb so it
+           reads as a slim floating pill instead of a full-width bar. */
+        border: 2px solid transparent;
+        background-clip: content-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: hsl(var(--muted-foreground) / 0.55);
+    }
+    ::-webkit-scrollbar-corner {
+        background: transparent;
     }
 }
 

@@ -3,6 +3,7 @@ import {
     GRID_IMAGE_SEARCH_DROP_EVENT,
     GRID_IMAGE_SEARCH_DROP_TARGET_SELECTOR,
     DRAG_START_THRESHOLD_PX,
+    GRID_ITEM_NO_DRAG_SELECTOR,
     type GridItemDragData
 } from '$lib/components/GridItem/GridItem.constants';
 
@@ -72,6 +73,9 @@ export function useGridItemDrag(
     function handlePointerDown(event: PointerEvent) {
         const dragData = getDragData();
         if (!dragData || event.button !== 0) return;
+        if (event.target instanceof Element && event.target.closest(GRID_ITEM_NO_DRAG_SELECTOR)) {
+            return;
+        }
         pointerStart = { x: event.clientX, y: event.clientY, id: event.pointerId };
         isPointerDragging = false;
         capturedPointerElement = getPointerTarget(event);

@@ -16,7 +16,7 @@ test('user can navigate to sample details', async ({ page, samplesPage, sampleDe
     expect(labelsCount).toBe(cocoDataset.totalLabels);
 
     // Double-click on the first sample to navigate to sample details
-    await samplesPage.doubleClickFirstSample();
+    await samplesPage.openFirstSample();
 
     // Wait for sample details to load
     await sampleDetailsPage.pageIsReady();

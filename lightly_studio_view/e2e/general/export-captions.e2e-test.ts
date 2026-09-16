@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 test.describe('Export Captions', () => {
     test('Prepare a test caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
         // Double-click on the first sample to navigate to sample details
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         // Initially there are no captions
@@ -69,7 +69,7 @@ test.describe('Export Captions', () => {
     });
     test('Clean up', async ({ samplesPage, sampleDetailsPage }) => {
         // Navigate to sample details
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         // Start edit mode and delete the remaining caption

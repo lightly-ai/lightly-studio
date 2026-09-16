@@ -25,13 +25,16 @@
         isVideos = false,
         hasEmbeddings = false,
         collection,
-        user
+        user,
+        open = $bindable(false)
     } = $props<{
         isImages?: boolean;
         isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
         user?: LightlyEnterpriseSession['user'];
+        /** Bindable so other chrome (e.g. the sidebar's selection card) can open this menu. */
+        open?: boolean;
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -125,6 +128,7 @@
 {#if menuActions.length > 0}
     <Select
         bind:value={selectedValue}
+        bind:open
         triggerLabel="Menu"
         items={menuActions}
         hideSelectionMarker

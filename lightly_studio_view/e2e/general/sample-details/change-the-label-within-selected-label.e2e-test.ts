@@ -20,7 +20,7 @@ test('user can change label within the selected label', async ({
     await expect(samplesPage.getSamples()).toHaveCount(bearSamplesCount);
 
     // Update first sample
-    await samplesPage.doubleClickFirstSample();
+    await samplesPage.openFirstSample();
     await sampleDetailsPage.clickEditButton();
 
     expect(await sampleDetailsPage.hasAnnotationWithLabel(newLabel)).not.toBeTruthy();
@@ -37,7 +37,7 @@ test('user can change label within the selected label', async ({
     await expect(samplesPage.getSamples()).toHaveCount(baseballBatSamplesCount + 1);
 
     // Revert changes
-    await samplesPage.doubleClickNthSample(1);
+    await samplesPage.openSampleByIndex(1);
     await expect(sampleDetailsPage.getSampleName()).toHaveText(updatedSampleName);
     await expect(sampleDetailsPage.hasAnnotationWithLabel(newLabel)).toBeTruthy();
     await sampleDetailsPage.clickEditButton();

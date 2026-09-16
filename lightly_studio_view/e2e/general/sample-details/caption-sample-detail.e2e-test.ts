@@ -3,7 +3,7 @@ import { test, expect } from '../../utils';
 test.describe('sample-details-caption-flow', () => {
     test('Add and edit captions in sample details', async ({ samplesPage, sampleDetailsPage }) => {
         // Double-click on the first sample to navigate to sample details
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         // Initially there are no captions
@@ -29,7 +29,7 @@ test.describe('sample-details-caption-flow', () => {
 
     test('Delete a caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
         // Navigate to sample details
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         // Start edit mode and delete the first caption
@@ -51,7 +51,7 @@ test.describe('sample-details-caption-flow', () => {
 
     test('Clean up', async ({ samplesPage, sampleDetailsPage }) => {
         // Navigate to sample details
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         // Start edit mode and delete the remaining caption

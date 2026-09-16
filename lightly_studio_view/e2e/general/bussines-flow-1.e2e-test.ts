@@ -47,7 +47,7 @@ test.describe('bussines-flow1', () => {
         await samplesPage.textSearch('cats');
 
         // Click on the first sample
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
 
         // Wait for sample details to load
         await expect(page.getByTestId('sample-details')).toBeVisible();
@@ -113,7 +113,7 @@ test.describe('bussines-flow1', () => {
         await page.getByTestId('search-clear-button').click();
         await clearResponsePromise;
 
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await expect(sampleDetailsPage.getSampleName()).toHaveText(cocoDataset.firstSampleName);
     });
 
@@ -132,7 +132,7 @@ test.describe('bussines-flow1', () => {
         // Select all dog samples.
         const samples = samplesPage.getSamples();
         for (let i = 0; i < cocoDataset.labels.dog.sampleCount; i++) {
-            await samples.nth(i).click();
+            await samplesPage.selectSample(samples.nth(i));
             await page.waitForTimeout(10);
         }
         expect(await samplesPage.getNumSelectedSamples()).toBe(cocoDataset.labels.dog.sampleCount);

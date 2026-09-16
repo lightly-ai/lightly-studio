@@ -37,7 +37,7 @@
 
 <div
     class="flex shrink-0 items-center text-diffuse-foreground"
-    class:w-36={!compact}
+    class:w-28={!compact}
     class:space-x-2={!compact}
     class:space-x-4={compact}
 >
@@ -45,10 +45,10 @@
         <button
             onclick={zoomOut}
             disabled={width >= max}
-            class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
+            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
             aria-label="Zoom out"
         >
-            <ZoomOut class="h-4 w-4" />
+            <ZoomOut class="size-[13px]" />
         </button>
     </Tooltip>
 
@@ -57,6 +57,8 @@
             <Slider
                 type="multiple"
                 class="w-full flex-1"
+                trackClass="data-[orientation='horizontal']:h-1.5"
+                thumbClass="size-3.5 border"
                 value={[sliderValue]}
                 {min}
                 {max}
@@ -70,10 +72,10 @@
         <button
             onclick={zoomIn}
             disabled={width <= min}
-            class="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
+            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
             aria-label="Zoom in"
         >
-            <ZoomIn class="h-4 w-4" />
+            <ZoomIn class="size-[13px]" />
         </button>
     </Tooltip>
 </div>

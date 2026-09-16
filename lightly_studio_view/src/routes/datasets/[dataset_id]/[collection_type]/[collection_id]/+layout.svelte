@@ -2,25 +2,37 @@
     import { browser } from '$app/environment';
     import { page } from '$app/state';
     import {
-        Button,
+        AppSidebar,
         CombinedMetadataDimensionsFilters,
+        ContentHeader,
         DatasetGridHeader,
-        Footer,
         LabelsMenu,
         MetadataFilterChips,
-        SelectionPill,
-        ShowFiltersButton,
+        StatusBar,
         TagsMenu
     } from '$lib/components';
-    import { Tooltip } from '$lib/components/ui/tooltip';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
+    import { GripVertical } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { afterNavigate } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import { toStore } from 'svelte/store';
-    import { Header } from '$lib/components';
+    import Menu from '$lib/components/Header/Menu.svelte';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
+    import EditModeControls from '$lib/components/EditModeControls/EditModeControls.svelte';
+    import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
+    import AnnotationTypesMenu from '$lib/components/AnnotationTypesMenu/AnnotationTypesMenu.svelte';
+    import { buildSidebarNavItems } from '$lib/components/AppSidebar/SidebarNav/buildSidebarNavItems';
+    import { useAnnotationTypeFilter } from '$lib/hooks/useAnnotationTypeFilter/useAnnotationTypeFilter';
+    import { useImageAnnotationTypeCounts } from '$lib/hooks/useImageAnnotationTypeCounts/useImageAnnotationTypeCounts.svelte';
+    import {
+        useCollectionWithChildren,
+        useRootCollection
+    } from '$lib/hooks/useCollection/useCollection';
+    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
+    import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+    import { useResetFilters } from '$lib/hooks/useResetFilters/useResetFilters';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -39,7 +51,9 @@
         isVideosRoute,
         isGroupsRoute,
         isGroupDetailsRoute,
-        isVideoDetailsRoute
+        isVideoDetailsRoute,
+        routeHelpers,
+        routes
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
@@ -370,16 +384,24 @@
     // backend restricts the counted annotations by their own collection id.
     const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
         useAnnotationCollectionsFilter();
+    const { annotationTypes: selectedAnnotationTypes } = useAnnotationTypeFilter();
+
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
         const base = $annotationFilterStore;
+        const withTypes: AnnotationsFilter | undefined = $selectedAnnotationTypes
+            ? {
+                  ...(base ?? { filter_type: 'annotations' }),
+                  annotation_types: $selectedAnnotationTypes
+              }
+            : base;
         const sourceIds =
             isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
         // An empty list cannot be sent: the backend skips collection_ids when it is falsy, so
         // it would read as "every source". The unchecked-everything case is handled on the
         // results instead, via allSourcesHidden below.
-        if (sourceIds.length === 0) return base;
+        if (sourceIds.length === 0) return withTypes;
         return {
-            ...(base ?? { filter_type: 'annotations' }),
+            ...(withTypes ?? { filter_type: 'annotations' }),
             collection_ids: sourceIds
         };
     });
@@ -422,6 +444,27 @@
         filter: imageAnnotationCountsFilter,
         enabled: !isVideos && !isVideoFrames
     }));
+
+    // The Annotation Types group counts against every filter *except* its own, so checking a
+    // type doesn't zero out the rows next to it and leave the user unable to compare.
+    const annotationTypeCountsFilter = $derived(
+        buildImageFilter({
+            dimensionsValues: $dimensionsValues,
+            annotationFilter: $annotationFilterStore,
+            metadataFilters,
+            sampleIds: plotFilterImageSampleIds,
+            tagIds: plotFilterTagIds,
+            confusionCell: plotFilterConfusionCell,
+            queryExpr: plotFilterQueryExpr
+        })
+    );
+
+    const annotationTypeCountsQuery = useImageAnnotationTypeCounts(() => ({
+        collectionId,
+        filter: annotationTypeCountsFilter,
+        enabled: isImages
+    }));
+    const annotationTypeCounts = $derived(annotationTypeCountsQuery.data ?? []);
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -752,248 +795,331 @@
             max
         });
     }
+
+    // --- App chrome -------------------------------------------------------------------------
+
+    // The dataset's root collection, used for the sidebar's switcher and nav rows. The old
+    // header fetched this for its breadcrumb; the sidebar is now its only consumer.
+    const { collection: datasetCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
+    const datasetName = $derived(datasetCollection.data?.name ?? collection.name);
+
+    // The dataset's own sample count, keyed on the stable dataset id rather than the active
+    // `collection`. Opening the Annotations tab swaps `collection` for the annotation collection,
+    // whose `total_sample_count` is the annotation total; feeding that to the Images nav row (and
+    // the switcher subtitle) is what made those counts jump on tab switches. The collection
+    // hierarchy (useCollectionWithChildren) carries no per-collection counts, so read the root
+    // collection directly. Keyed reactively on `datasetId` so it also tracks a navigation to a
+    // different dataset (this layout component is reused across param changes).
+    const { collection: rootCollectionQuery } = useRootCollection({
+        getCollectionId: () => datasetId
+    });
+    // On the Images tab the route `collection` already IS the root and the layout load awaited it,
+    // so fall back to its count until the query resolves to avoid the number briefly disappearing.
+    const rootSampleCount = $derived(
+        rootCollectionQuery.data?.total_sample_count ??
+            (collectionId === datasetId ? collection.total_sample_count : undefined)
+    );
+
+    const navItems = $derived.by(() =>
+        datasetCollection.data
+            ? buildSidebarNavItems({
+                  rootCollection: datasetCollection.data,
+                  currentCollectionId: collectionId,
+                  datasetId,
+                  sampleCount: rootSampleCount,
+                  annotationCount: totalAnnotations
+              })
+            : []
+    );
+
+    const { user } = useAuth();
+    const { openExportDialog } = useExportDialog();
+    let isOverflowMenuOpen = $state(false);
+
+    const annotationSourcesQuery = useAnnotationCollections(() => ({ collectionId }));
+    const annotationSourceIds = $derived(
+        (annotationSourcesQuery.data ?? []).map((source) => source.collection_id)
+    );
+
+    const { resetFilters } = $derived(
+        useResetFilters({ collectionId, gridType, annotationSourceIds })
+    );
+
+    const isDetailsRoute = $derived(
+        isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails
+    );
+    // Every view under this layout wears the same chrome: the grids, the detail routes the
+    // sidebar and rail now persist into, and captions, which is not a "collection grid" but
+    // still needs the header's edit toggle.
+    const showWorkspaceChrome = $derived(isCollectionGrid || isDetailsRoute || isCaptions);
+
+    // The analysis panels only exist alongside a grid, so picking one from a detail view steps
+    // back to the grid rather than leaving the rail button looking broken.
+    const returnToGrid = () => {
+        goto(routeHelpers.toImages(datasetId, page.params.collection_type!, collectionId));
+    };
+
+    // The rail persists into the image detail view, so its entries follow the grid it came from
+    // rather than disappearing the moment a sample is opened.
+    const railIsImages = $derived(isImages || isSampleDetails);
+    const railHasEmbeddings = $derived(
+        hasMediaWithEmbeddings || (isSampleDetails && hasEmbeddings)
+    );
+
+    const viewTitle = $derived(navItems.find((item) => item.isSelected)?.title ?? collection.name);
+    const viewCount = $derived(
+        isAnnotations || isAnnotationDetails ? totalAnnotations : collection.total_sample_count
+    );
 </script>
 
-<div class="flex-none">
-    <Header {collection} />
-    <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
-</div>
+<MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 
-<div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails}
+{#snippet sidebarFilters()}
+    {#if isImages}
+        <QueryControl
+            onOpen={() => {
+                setActivePanel($activePanel === 'queryEditor' ? 'none' : 'queryEditor');
+            }}
+        />
+    {/if}
+
+    <TagsMenu collection_id={collectionId} {gridType} />
+
+    <EmbeddingSelectionFilterItem {collectionIdStore} {isVideos} {isImages} {isAnnotations} />
+    {#if isImages}
+        <ConfusionCellFilterItem />
+        <AnnotationCollectionsMenu {collectionId} />
+        <AnnotationTypesMenu counts={annotationTypeCounts} />
+    {/if}
+    <LabelsMenu
+        {annotationFilterRows}
+        onToggleAnnotationFilter={(label) => toggleAnnotationFilterSelection(label, collectionId)}
+        showVisibilityToggle={showAnnotationVisibilityToggle}
+    />
+
+    {#if isImages || isVideos || isVideoFrames}
+        {#key collectionId}
+            <MetadataFilterChips {collectionId} />
+            <CombinedMetadataDimensionsFilters
+                {isVideos}
+                {isVideoFrames}
+                onFilterChanged={handleCombinedMetadataFilterChanged}
+            />
+        {/key}
+    {/if}
+{/snippet}
+
+{#snippet headerActions()}
+    <!--
+        Views built on SampleDetailsPanel own this toggle in their own breadcrumb row, next to
+        the canvas it acts on. Everywhere else it stays here: edit mode also gates grid-level
+        actions such as deleting annotations from the annotations grid and editing captions.
+    -->
+    {#if !isImages && !isSampleDetails && !isAnnotationDetails && !isFrameDetails}
+        <EditModeControls {collectionId} />
+    {/if}
+    <Menu
+        {isImages}
+        {isVideos}
+        {hasEmbeddings}
+        {collection}
+        {user}
+        bind:open={isOverflowMenuOpen}
+    />
+    {#if user}
+        <div data-testid="header-user-avatar">
+            <UserAvatar {user} />
+        </div>
+    {/if}
+{/snippet}
+
+{#snippet gridContent()}
+    {#if isCollectionGrid}
+        <div class="min-w-0 px-3.5">
+            <DatasetGridHeader
+                {collectionId}
+                {canSelectAll}
+                isSelectionActive={$selectedCount > 0}
+                {isImages}
+                {isAnnotations}
+                {hasMediaWithEmbeddings}
+                collectionDatasetId={collection.dataset_id}
+                onSelectAll={selectAllHandle.handleSelectAll}
+                onDeselectAll={clearSelection}
+                searchImage={$searchImage}
+                searchPending={$searchPending}
+                searchPlaceholder={collectionSearchPlaceholder}
+                initialQueryText={$textEmbedding?.queryText ?? ''}
+                onSubmitText={search.setText}
+                onSubmitFile={search.setImage}
+                onSearchClear={search.clear}
+                onSearchError={search.onError}
+            />
+        </div>
+        <Separator class="bg-border-hard" />
+    {/if}
+
+    <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden p-3.5">
         {@render children()}
-    {:else}
-        <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
-            {#if isCollectionGrid}
-                <!--
-                    Keep the panel mounted while collapsed (only visually hidden). Its children
-                    run mount-time $effects that must still fire after a reload with the panel
-                    collapsed.
-                -->
-                <div
-                    class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
-                    data-testid="filter-panel-body"
-                    aria-hidden={$filterPanelCollapsed}
-                >
-                    <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
-                        >
-                            <h2
-                                class="flex items-center justify-between py-2 text-lg font-semibold"
-                            >
-                                <span class="flex items-center space-x-2">
-                                    <SlidersHorizontal class="size-5" />
-                                    <span>Filters</span>
-                                </span>
-                                <Tooltip content="Hide filters" position="bottom" class="w-max">
-                                    <Button
-                                        variant="ghost"
-                                        icon={PanelLeftClose}
-                                        ariaLabel="Hide filters"
-                                        buttonProps={{
-                                            onclick: toggleFilterPanelCollapsed,
-                                            'aria-expanded': true,
-                                            'data-testid': 'filter-panel-collapse',
-                                            class: 'size-6 p-0'
-                                        }}
-                                    />
-                                </Tooltip>
-                            </h2>
+    </div>
+{/snippet}
 
-                            {#if isImages}
-                                <QueryControl
-                                    onOpen={() => {
-                                        setActivePanel(
-                                            $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
-                                        );
-                                    }}
-                                />
-                            {/if}
+{#snippet paneResizer()}
+    <PaneResizer
+        class="group relative flex w-1 cursor-col-resize items-center justify-center bg-border-hard/40 transition-colors hover:bg-border-hard/70"
+    >
+        <div
+            class="z-10 flex h-7 w-[7px] items-center justify-center rounded-full bg-border-hard text-diffuse-foreground"
+        >
+            <GripVertical class="size-3.5" />
+        </div>
+    </PaneResizer>
+{/snippet}
 
-                            <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
-                            </div>
+{#snippet sidePanel()}
+    {#if $activePanel === 'evaluationRuns' && supportsEvaluation}
+        {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
+            <EvaluationRunsPanel
+                onClose={() => setActivePanel('none')}
+                {evaluationRuns}
+                isLoading={evaluationRunsQuery.isLoading}
+                error={evaluationRunsQuery.error?.message}
+                datasetId={collection.dataset_id}
+                {collectionId}
+            />
+        {/await}
+    {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
+        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+            <!-- PlotPanel captures collectionId at mount; remount it when
+                 switching collections (e.g. images <-> annotations tab). -->
+            {#key collectionId}
+                <PlotPanel {collectionId} />
+            {/key}
+        {/await}
+    {:else if $activePanel === 'queryEditor' && isImages}
+        {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
+            <QueryEditorPanel onClose={() => setActivePanel('none')} />
+        {/await}
+    {:else if distributionPanelVisible}
+        {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
+            {#key collectionId}
+                <DatasetDistributionPanel
+                    sources={distributionSources}
+                    initialCountMode={distributionCountMode}
+                    onClose={() => setActivePanel('none')}
+                    onCountModeChange={(mode) => {
+                        distributionCountMode = mode;
+                    }}
+                    onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
+                    onCategoricalValueToggle={handleCategoricalValueToggle}
+                    onCategoricalValuesClear={clearCategoricalValues}
+                    onCategoricalRetry={() => categoricalMetadataQuery.refetch()}
+                    {histogramBinCount}
+                    onHistogramBinCountChange={(binCount) => (histogramBinCount = binCount)}
+                />
+            {/key}
+        {/await}
+    {/if}
+{/snippet}
 
-                            <EmbeddingSelectionFilterItem
-                                {collectionIdStore}
-                                {isVideos}
-                                {isImages}
-                                {isAnnotations}
-                            />
-                            {#if isImages}
-                                <ConfusionCellFilterItem />
-                            {/if}
-                            {#if isImages}
-                                <AnnotationCollectionsMenu {collectionId} />
-                            {/if}
-                            <LabelsMenu
-                                {annotationFilterRows}
-                                onToggleAnnotationFilter={(label) =>
-                                    toggleAnnotationFilterSelection(label, collectionId)}
-                                showVisibilityToggle={showAnnotationVisibilityToggle}
-                            />
+<div class="flex min-h-0 flex-1" data-testid="workspace-body">
+    {#if showWorkspaceChrome}
+        <AppSidebar
+            {datasetName}
+            datasetHref={routes.collection.home(
+                datasetId,
+                collection.sample_type.toLowerCase(),
+                datasetId
+            )}
+            sampleCount={rootSampleCount}
+            {navItems}
+            collapsed={$filterPanelCollapsed}
+            selectedCount={$selectedCount}
+            onClearSelection={clearSelection}
+            onExportSelection={() => openExportDialog({ collectionId: collection.collection_id })}
+            onMoreActions={() => (isOverflowMenuOpen = true)}
+            onResetFilters={resetFilters}
+            filters={sidebarFilters}
+        />
+    {/if}
 
-                            {#if isImages || isVideos || isVideoFrames}
-                                {#key collectionId}
-                                    <MetadataFilterChips {collectionId} />
-                                    <CombinedMetadataDimensionsFilters
-                                        {isVideos}
-                                        {isVideoFrames}
-                                        onFilterChanged={handleCombinedMetadataFilterChanged}
-                                    />
-                                {/key}
-                            {/if}
-                        </div>
-                    </div>
-                </div>
-            {/if}
+    <div class="flex min-w-0 flex-1 flex-col">
+        {#if showWorkspaceChrome}
+            <ContentHeader
+                title={viewTitle}
+                count={viewCount}
+                sidebarCollapsed={$filterPanelCollapsed}
+                onToggleSidebar={toggleFilterPanelCollapsed}
+                actions={headerActions}
+            />
+        {/if}
 
-            {#snippet mainContent()}
-                {#if isCollectionGrid}
-                    <div class="flex min-w-0 items-center gap-x-4">
-                        {#if $filterPanelCollapsed}
-                            <ShowFiltersButton />
-                        {/if}
-                        <div class="min-w-0 flex-1">
-                            <DatasetGridHeader
-                                {collectionId}
-                                {canSelectAll}
-                                isSelectionActive={$selectedCount > 0}
-                                {isImages}
-                                {isAnnotations}
-                                {hasMediaWithEmbeddings}
-                                collectionDatasetId={collection.dataset_id}
-                                onSelectAll={selectAllHandle.handleSelectAll}
-                                onDeselectAll={clearSelection}
-                                searchImage={$searchImage}
-                                searchPending={$searchPending}
-                                searchPlaceholder={collectionSearchPlaceholder}
-                                initialQueryText={$textEmbedding?.queryText ?? ''}
-                                onSubmitText={search.setText}
-                                onSubmitFile={search.setImage}
-                                onSearchClear={search.clear}
-                                onSearchError={search.onError}
-                            />
-                        </div>
-                    </div>
-                    <Separator class="mb-4 bg-border-hard" />
-                {/if}
-
-                <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-                    {@render children()}
-                </div>
-                {#if isCollectionGrid}
-                    <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
-                {/if}
-            {/snippet}
-
-            {#snippet paneResizer()}
-                <PaneResizer
-                    class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
-                >
-                    <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
-                        <GripVertical class="text-diffuse-foreground" />
-                    </div>
-                </PaneResizer>
-            {/snippet}
-
-            {#if panelIsVisible}
+        <div class="relative flex min-h-0 flex-1 flex-col">
+            {#if isDetailsRoute}
+                {@render children()}
+            {:else if panelIsVisible}
                 <div data-testid="pane-group-layout" class="contents">
-                    <PaneGroup direction="horizontal" class="min-w-0 flex-1">
+                    <PaneGroup direction="horizontal" class="min-h-0 min-w-0 flex-1">
                         <Pane defaultSize={65} minSize={35} class="flex">
-                            <div
-                                class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
-                            >
-                                {@render mainContent()}
+                            <div class="relative flex min-w-0 flex-1 flex-col">
+                                {@render gridContent()}
                             </div>
                         </Pane>
 
                         {@render paneResizer()}
 
-                        <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                            {#if $activePanel === 'evaluationRuns' && supportsEvaluation}
-                                {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
-                                    <EvaluationRunsPanel
-                                        onClose={() => setActivePanel('none')}
-                                        {evaluationRuns}
-                                        isLoading={evaluationRunsQuery.isLoading}
-                                        error={evaluationRunsQuery.error?.message}
-                                        datasetId={collection.dataset_id}
-                                        {collectionId}
-                                    />
-                                {/await}
-                            {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
-                                {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                                    <!-- PlotPanel captures collectionId at mount; remount it when
-                                     switching collections (e.g. images <-> annotations tab). -->
-                                    {#key collectionId}
-                                        <PlotPanel {collectionId} />
-                                    {/key}
-                                {/await}
-                            {:else if $activePanel === 'queryEditor' && isImages}
-                                {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
-                                    <QueryEditorPanel onClose={() => setActivePanel('none')} />
-                                {/await}
-                            {:else if distributionPanelVisible}
-                                {#await import('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte') then { default: DatasetDistributionPanel }}
-                                    {#key collectionId}
-                                        <DatasetDistributionPanel
-                                            sources={distributionSources}
-                                            initialCountMode={distributionCountMode}
-                                            onClose={() => setActivePanel('none')}
-                                            onCountModeChange={(mode) => {
-                                                distributionCountMode = mode;
-                                            }}
-                                            onHistogramRangeSelect={handleDistributionHistogramRangeSelect}
-                                            onCategoricalValueToggle={handleCategoricalValueToggle}
-                                            onCategoricalValuesClear={clearCategoricalValues}
-                                            onCategoricalRetry={() =>
-                                                categoricalMetadataQuery.refetch()}
-                                            {histogramBinCount}
-                                            onHistogramBinCountChange={(binCount) =>
-                                                (histogramBinCount = binCount)}
-                                        />
-                                    {/key}
-                                {/await}
-                            {/if}
+                        <Pane
+                            defaultSize={35}
+                            minSize={25}
+                            class="flex min-h-0 flex-col border-l border-border-hard"
+                        >
+                            {@render sidePanel()}
                         </Pane>
                     </PaneGroup>
                 </div>
             {:else}
-                <!-- Normal layout (no side panel) -->
-                <div
-                    class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
-                >
-                    {@render mainContent()}
-                </div>
-            {/if}
-            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
-                <div data-testid="side-panel-tabs" class="contents">
-                    <SidePanelTabs
-                        {collectionId}
-                        {isImages}
-                        {hasMediaWithEmbeddings}
-                        {supportsEvaluation}
-                    />
-                </div>
-            {/if}
-            {#if hasEmbeddings && $isCreateClassifiersPanelOpen}
-                {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
-                    <CreateClassifierDialog />
-                {/await}
-            {/if}
-            {#if hasEmbeddings && $isRefineClassifiersPanelOpen}
-                {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then { default: RefineClassifierDialog }}
-                    <RefineClassifierDialog />
-                {/await}
+                {@render gridContent()}
             {/if}
         </div>
-        <Footer
-            totalSamples={collection?.total_sample_count}
-            filteredSamples={$filteredSampleCount}
-            {totalAnnotations}
-            filteredAnnotations={$filteredAnnotationCount}
-        />
+
+        {#if showWorkspaceChrome}
+            <!-- No grid is mounted on a detail route, so its filtered count is stale at 0. -->
+            <StatusBar
+                totalSamples={collection?.total_sample_count}
+                filteredSamples={isCollectionGrid
+                    ? $filteredSampleCount
+                    : collection?.total_sample_count}
+                {totalAnnotations}
+                filteredAnnotations={$filteredAnnotationCount}
+                selectedCount={$selectedCount}
+                sourceCount={$selectedAnnotationSourceIds.length}
+                classCount={$annotationFilterRows.length}
+            />
+        {/if}
+    </div>
+
+    {#if showWorkspaceChrome && (railIsImages || railHasEmbeddings)}
+        <div data-testid="side-panel-tabs" class="contents">
+            <SidePanelTabs
+                {collectionId}
+                isImages={railIsImages}
+                hasMediaWithEmbeddings={railHasEmbeddings}
+                supportsEvaluation={railIsImages}
+                onLeaveDetails={isDetailsRoute ? returnToGrid : undefined}
+            />
+        </div>
     {/if}
 </div>
+
+{#if hasEmbeddings && $isCreateClassifiersPanelOpen}
+    {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
+        <CreateClassifierDialog />
+    {/await}
+{/if}
+{#if hasEmbeddings && $isRefineClassifiersPanelOpen}
+    {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then { default: RefineClassifierDialog }}
+        <RefineClassifierDialog />
+    {/await}
+{/if}

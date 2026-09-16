@@ -1,4 +1,7 @@
 export { default as Alert } from '$lib/components/Alert/index.svelte';
+export { default as AppSidebar } from '$lib/components/AppSidebar/AppSidebar.svelte';
+export { default as ContentHeader } from '$lib/components/ContentHeader/ContentHeader.svelte';
+export { default as StatusBar } from '$lib/components/StatusBar/StatusBar.svelte';
 export { Button } from '$lib/components/Button';
 export { Select } from '$lib/components/Select';
 export type { SelectItem, SelectSize } from '$lib/components/Select';
@@ -60,7 +63,6 @@ export { default as VideoDetailsNavigation } from '$lib/components/VideoDetailsN
 export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/VideoFrameDetails.svelte';
 export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
-export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
 export { default as ShowFiltersButton } from '$lib/components/ShowFiltersButton/ShowFiltersButton.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
 export { default as CollectionSearch } from '$lib/components/CollectionSearch/CollectionSearch.svelte';

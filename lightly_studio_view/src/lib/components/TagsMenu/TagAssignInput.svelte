@@ -3,6 +3,9 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import type { TagView } from '$lib/services/types';
     import { Button } from '$lib/components';
+    import { TAG_ASSIGN_INPUT_TEST_ID } from './tagAssignInput';
+    import { getSegmentRowStyles } from '$lib/components/Segment/segmentDensity';
+    import { cn } from '$lib/utils';
 
     interface Props {
         options: TagView[];
@@ -12,6 +15,8 @@
     }
 
     let { options, hasSelection, busy, onSelect }: Props = $props();
+
+    const rowStyles = getSegmentRowStyles();
     const showSelectionHint = $derived(!hasSelection);
 
     let searchQuery = $state('');
@@ -80,6 +85,8 @@
         <Input
             type="text"
             placeholder="Assign tag to selection"
+            class={rowStyles.input}
+            data-testid={TAG_ASSIGN_INPUT_TEST_ID}
             bind:value={searchQuery}
             onkeydown={handleKeydown}
             oninput={handleInput}
@@ -91,7 +98,7 @@
     </div>
 {/snippet}
 
-<div class="relative pt-2">
+<div class={cn('relative pt-2', rowStyles.contentIndent)}>
     {#if showSelectionHint}
         <Tooltip
             content="Select items in the grid, then assign or create a tag here."

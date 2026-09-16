@@ -6,7 +6,7 @@ test.describe('sample-details-tag-flow', () => {
         samplesPage,
         sampleDetailsPage
     }) => {
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         const firstTagName = `e2e-tag-${Date.now()}-1`;
@@ -30,7 +30,7 @@ test.describe('sample-details-tag-flow', () => {
         samplesPage,
         sampleDetailsPage
     }) => {
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         const tagName = `e2e-tag-${Date.now()}-duplicate`;
@@ -50,7 +50,7 @@ test.describe('sample-details-tag-flow', () => {
         samplesPage,
         sampleDetailsPage
     }) => {
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         const tagName = `e2e-tag-${Date.now()}-remove`;
@@ -63,7 +63,7 @@ test.describe('sample-details-tag-flow', () => {
         samplesPage,
         sampleDetailsPage
     }) => {
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         const firstSampleName = await sampleDetailsPage.getSampleName().textContent();

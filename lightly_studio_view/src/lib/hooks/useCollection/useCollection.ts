@@ -65,3 +65,17 @@ export const useCollectionWithChildren = ({
         refetch
     };
 };
+
+/**
+ * Reactive single-collection read keyed on a getter, so it re-queries when the id
+ * changes (e.g. navigating between datasets). Unlike `useCollection`, which freezes
+ * its options once, this tracks `getCollectionId()`. Used for counts that must stay
+ * pinned to a specific collection regardless of which tab is active.
+ */
+export const useRootCollection = ({ getCollectionId }: { getCollectionId: () => string }) => {
+    const collection = createQuery(() =>
+        readCollectionOptions({ path: { collection_id: getCollectionId() } })
+    );
+
+    return { collection };
+};

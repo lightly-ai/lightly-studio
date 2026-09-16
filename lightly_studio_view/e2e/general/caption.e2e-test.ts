@@ -3,7 +3,7 @@ import { test, expect } from '../utils';
 test.describe('captions-page-flow', () => {
     test('Add a caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
         // Double-click on the first sample to navigate to sample details
-        await samplesPage.doubleClickFirstSample();
+        await samplesPage.openFirstSample();
         await sampleDetailsPage.pageIsReady();
 
         // Initially there are no captions

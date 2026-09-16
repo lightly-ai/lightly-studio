@@ -99,7 +99,7 @@ test('brush stays effective across keyboard navigation while creating masks on 3
         });
     });
 
-    await samplesPage.doubleClickFirstSample();
+    await samplesPage.openFirstSample();
     await sampleDetailsPage.pageIsReady();
     const collectionId = getCollectionIdFromUrl(page);
 

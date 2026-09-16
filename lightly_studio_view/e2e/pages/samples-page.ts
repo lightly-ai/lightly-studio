@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { pressButton, waitForRequestsToSettle } from '../utils';
 
 type SamplingStrategy = 'diversity' | 'typicality' | 'similarity';
@@ -22,13 +22,34 @@ export class SamplesPage {
         return this.page.getByTestId('sample-grid-item');
     }
 
+    /**
+     * Selection checkbox of a tile. Clicking the tile itself opens the sample, so selection
+     * always goes through this box.
+     */
+    getSelectBox(sample: Locator) {
+        return sample.getByTestId('sample-selected-box');
+    }
+
+    async selectSample(sample: Locator, options?: { modifiers?: ('Shift' | 'Meta')[] }) {
+        await this.getSelectBox(sample).click(options);
+    }
+
+    async selectSampleByIndex(index: number, options?: { modifiers?: ('Shift' | 'Meta')[] }) {
+        await this.selectSample(this.getSampleByIndex(index), options);
+    }
+
+    async openSampleByIndex(index: number): Promise<void> {
+        await this.getSampleByIndex(index).click();
+        await this.page.getByTestId('sample-details-loading').waitFor({ state: 'hidden' });
+    }
+
     async startEditing() {
         await this.page.getByTestId('header-editing-mode-button').click();
         await expect(this.page.getByText('Done')).toBeVisible();
     }
 
-    async doubleClickFirstSample() {
-        await this.doubleClickNthSample(0);
+    async openFirstSample() {
+        await this.openSampleByIndex(0);
     }
 
     getSampleByIndex(index: number) {
@@ -251,10 +272,5 @@ export class SamplesPage {
             }
         }
         return selectedCount;
-    }
-
-    async doubleClickNthSample(index: number): Promise<void> {
-        await this.getSampleByIndex(index).dblclick();
-        await this.page.getByTestId('sample-details-loading').waitFor({ state: 'hidden' });
     }
 }

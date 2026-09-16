@@ -1,7 +1,8 @@
 <script lang="ts">
     import { afterNavigate } from '$app/navigation';
     import { page } from '$app/state';
-    import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
+    import { SampleDetailsSidePanel } from '$lib/components';
+    import EditModeControls from '$lib/components/EditModeControls/EditModeControls.svelte';
     import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -42,11 +43,14 @@
         sidePanelItem,
         isOnAnnotationDetailsView = false,
         selectableBox,
-        dataTestId
+        dataTestId,
+        fileName
     }: {
         sampleId: string;
         collectionId: string;
         sampleURL: string;
+        /** Shown as a chip under the image. Omitted where there is no single source file. */
+        fileName?: string;
         sample: {
             width: number;
             height: number;
@@ -235,59 +239,75 @@
 </script>
 
 {#if sample}
-    <div class="flex h-full w-full flex-col space-y-4" data-testid={dataTestId}>
-        <div class="flex w-full items-center justify-between">
+    <div class="flex h-full w-full flex-col px-3.5 pb-3.5 pt-[11px]" data-testid={dataTestId}>
+        <!--
+            Wrapping, not clipping. Editing mode adds ~340px of adjustments to this row; forced
+            onto one line the crumbs collapse past their own icons and you lose track of which
+            dataset and which sample you are looking at.
+        -->
+        <div
+            class="flex min-h-[26px] w-full flex-wrap items-center justify-between gap-x-3.5 gap-y-2.5"
+        >
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            {#if $isEditingMode}
-                <ImageAdjustments
-                    bind:brightness={$imageBrightness}
-                    bind:contrast={$imageContrast}
-                />
-            {/if}
-        </div>
-        <Separator class="bg-border-hard" />
-
-        <div class="flex min-h-0 flex-1 gap-4">
-            <div class="flex-1">
-                <Card className="h-full">
-                    <CardContent className="h-full">
-                        <div class="h-full w-full overflow-hidden">
-                            <div class="sample relative h-full w-full">
-                                {#if selectableBox}
-                                    {@render selectableBox()}
-                                {:else}
-                                    <SampleDetailsSelectableBox {sampleId} {collectionId} />
-                                {/if}
-
-                                {#if children}
-                                    {@render children()}
-                                {/if}
-                                <SampleDetailsImageContainer
-                                    sample={{
-                                        ...sample,
-                                        sampleId,
-                                        annotations: annotationsToShow
-                                    }}
-                                    {collectionId}
-                                    imageUrl={sampleURL}
-                                    hideAnnotationsIds={annotationsIdsToHide}
-                                    {isResizable}
-                                    {isEraser}
-                                    selectedAnnotationId={annotationLabelContext?.annotationId}
-                                    annotationLabel={annotationLabelContext.annotationLabel}
-                                    {brushRadius}
-                                    {refetch}
-                                    {annotationType}
-                                    {toggleAnnotationSelection}
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            <div class="flex items-center gap-3">
+                {#if $isEditingMode}
+                    <ImageAdjustments
+                        bind:brightness={$imageBrightness}
+                        bind:contrast={$imageContrast}
+                    />
+                {/if}
+                <EditModeControls {collectionId} />
             </div>
-            <div class="relative w-[375px]">
+        </div>
+        <Separator class="my-3 bg-border-hard" />
+
+        <div class="flex min-h-0 flex-1 gap-3.5">
+            <div
+                class="relative min-w-0 flex-[1_1_60%] overflow-hidden rounded-lg border border-border-hard bg-black"
+            >
+                {#if selectableBox}
+                    {@render selectableBox()}
+                {:else}
+                    <SampleDetailsSelectableBox {sampleId} {collectionId} />
+                {/if}
+
+                {#if children}
+                    {@render children()}
+                {/if}
+                <SampleDetailsImageContainer
+                    sample={{
+                        ...sample,
+                        sampleId,
+                        annotations: annotationsToShow
+                    }}
+                    {collectionId}
+                    imageUrl={sampleURL}
+                    hideAnnotationsIds={annotationsIdsToHide}
+                    {isResizable}
+                    {isEraser}
+                    selectedAnnotationId={annotationLabelContext?.annotationId}
+                    annotationLabel={annotationLabelContext.annotationLabel}
+                    {brushRadius}
+                    {refetch}
+                    {annotationType}
+                    {toggleAnnotationSelection}
+                />
+                {#if fileName}
+                    <div
+                        class="pointer-events-none absolute bottom-2.5 left-1/2 z-20 max-w-[70%] -translate-x-1/2 truncate rounded-md border border-white/10 bg-black/60 px-2.5 py-[3px] text-[11px] text-muted-foreground backdrop-blur-sm"
+                        data-testid="sample-details-filename"
+                    >
+                        {fileName}
+                    </div>
+                {/if}
+            </div>
+            <!--
+                Shrinkable, not fixed: with a hard 375px the whole deficit lands on the image and
+                the subject ends up narrower than the panel describing it.
+            -->
+            <div class="relative min-w-0 max-w-[40%] flex-[0_1_375px] overflow-y-auto">
                 {#if sidePanelItem}
                     {@render sidePanelItem()}
                 {:else}

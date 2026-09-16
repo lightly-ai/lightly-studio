@@ -2,12 +2,10 @@ import { expect, test, pressButton, isInViewport } from '../utils';
 import { cocoDataset } from './fixtures';
 
 test('Shift+click adds the full range in image grid', async ({ samplesPage }) => {
-    await samplesPage.getSampleByIndex(1).click();
+    await samplesPage.selectSampleByIndex(1);
     expect(await samplesPage.getNumSelectedSamples()).toBe(1);
 
-    await samplesPage.getSampleByIndex(7).click({
-        modifiers: ['Shift']
-    });
+    await samplesPage.selectSampleByIndex(7, { modifiers: ['Shift'] });
     expect(await samplesPage.getNumSelectedSamples()).toBe(7);
 });
 
@@ -15,8 +13,8 @@ test('selection is cleared when switching from samples view and back', async ({
     page,
     samplesPage
 }) => {
-    await samplesPage.getSampleByIndex(0).click();
-    await samplesPage.getSampleByIndex(1).click();
+    await samplesPage.selectSampleByIndex(0);
+    await samplesPage.selectSampleByIndex(1);
     expect(await samplesPage.getNumSelectedSamples()).toBe(2);
 
     const annotationsMenu = page.getByTestId('navigation-menu-annotations');
@@ -60,7 +58,7 @@ test('Tag filtering shows distinct samples only', async ({ samplesPage }) => {
     // Select first 3 samples.
     const samples = samplesPage.getSamples();
     for (let i = 0; i < 3; i++) {
-        await samples.nth(i).click();
+        await samplesPage.selectSample(samples.nth(i));
     }
     expect(await samplesPage.getNumSelectedSamples()).toBe(3);
 
@@ -69,13 +67,13 @@ test('Tag filtering shows distinct samples only', async ({ samplesPage }) => {
 
     // Clear the first selection before selecting the overlapping second range.
     for (let i = 0; i < 3; i++) {
-        await samples.nth(i).click();
+        await samplesPage.selectSample(samples.nth(i));
     }
     expect(await samplesPage.getNumSelectedSamples()).toBe(0);
 
     // Select next samples.
     for (let i = 2; i < 5; i++) {
-        await samples.nth(i).click();
+        await samplesPage.selectSample(samples.nth(i));
     }
     expect(await samplesPage.getNumSelectedSamples()).toBe(3);
 
@@ -94,8 +92,8 @@ test('Tags can be created from the side panel for selected samples', async ({ sa
     const timestamp = Date.now();
     const tagName = `side_panel_tag_${timestamp}`;
 
-    await samplesPage.getSampleByIndex(0).click();
-    await samplesPage.getSampleByIndex(1).click();
+    await samplesPage.selectSampleByIndex(0);
+    await samplesPage.selectSampleByIndex(1);
     expect(await samplesPage.getNumSelectedSamples()).toBe(2);
 
     await samplesPage.createTag(tagName);
@@ -238,7 +236,7 @@ test('Similarity sampling creates tag with correct number of samples', async ({
     const samplingTagName = `similarity_sampling_${timestamp}`;
     const nSamples = 5;
 
-    await samplesPage.getSampleByIndex(0).click();
+    await samplesPage.selectSampleByIndex(0);
     await samplesPage.createTag(queryTagName);
 
     const queryTagId = await samplesPage.getTagIdByName(queryTagName);

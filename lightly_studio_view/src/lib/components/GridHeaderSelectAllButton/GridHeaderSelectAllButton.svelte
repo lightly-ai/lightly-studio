@@ -28,9 +28,12 @@
 </script>
 
 <Tooltip content={tooltipContent} position="top" triggerClass="inline-flex">
-    <div class="flex h-8 shrink-0 items-center gap-2 px-2">
+    <div
+        class="flex h-7 shrink-0 items-center gap-2 rounded-md px-2 transition-colors hover:bg-accent"
+    >
         <Checkbox
             id="select-all-checkbox"
+            class="box-border size-3.5 rounded-[4px] border-[1.5px] [&>div]:size-full [&_svg]:size-2.5"
             {checked}
             onCheckedChange={handleCheckedChange}
             data-testid="select-all-button"
@@ -39,7 +42,7 @@
         {#if !compact}
             <Label
                 for="select-all-checkbox"
-                class="cursor-pointer text-sm font-normal text-diffuse-foreground hover:text-foreground"
+                class="cursor-pointer text-[12.5px] font-normal text-diffuse-foreground hover:text-foreground"
             >
                 Select all
             </Label>

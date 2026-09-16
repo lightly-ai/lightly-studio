@@ -63,7 +63,9 @@ export class SampleDetailsPage {
     }
 
     async hasAnnotationWithLabel(label: string) {
-        return this.page.getByLabel(label).isVisible();
+        // Scoped to the details view: the sidebar persists here, and its annotation-class
+        // filter rows carry the same label text.
+        return this.getSampleDetails().getByLabel(label).isVisible();
     }
 
     getAnnotationBoxByLabel(label: string) {

@@ -194,3 +194,49 @@ def count_image_annotations_by_collection(
         }
         for label_name, current_count, total_count in counts
     ]
+
+
+class ReadCountImageAnnotationsByTypeRequest(BaseModel):
+    """Request body for reading image annotation counts grouped by annotation type."""
+
+    filter: ImageFilter | None = None
+    count_mode: AnnotationCountMode = Field(
+        AnnotationCountMode.OBJECTS,
+        description="Whether to count annotation objects or distinct annotated samples.",
+    )
+
+
+class AnnotationTypeCount(BaseModel):
+    """Total and filtered annotation counts for one annotation type."""
+
+    annotation_type: AnnotationType
+    current_count: int
+    total_count: int
+
+
+@image_router.post("/collections/{collection_id}/images/annotations/count_by_type")
+def count_image_annotations_by_type(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ReadCountImageAnnotationsByTypeRequest | None = None,
+) -> list[AnnotationTypeCount]:
+    """Get image annotation counts per annotation type for a specific collection."""
+    counts = image_resolver.count_image_annotations_by_type(
+        session=session,
+        collection_id=collection.collection_id,
+        image_filter=body.filter if body else None,
+        count_mode=body.count_mode if body else AnnotationCountMode.OBJECTS,
+    )
+
+    return [
+        AnnotationTypeCount(
+            annotation_type=annotation_type,
+            current_count=current_count,
+            total_count=total_count,
+        )
+        for annotation_type, current_count, total_count in counts
+    ]

@@ -4,6 +4,7 @@
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+    import { useAnnotationTypeFilter } from '$lib/hooks/useAnnotationTypeFilter/useAnnotationTypeFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
@@ -19,7 +20,7 @@
     import { isEqual } from 'lodash-es';
     import { mergeExternalFilters, paramsWithoutExternalFilters } from './syncFilterParams';
     import { GridContainer } from '../GridContainer';
-    import { Grid } from '../Grid';
+    import JustifiedGrid from '../JustifiedGrid/JustifiedGrid.svelte';
     import { GridItem } from '../GridItem';
     import { getGridImageURL } from '$lib/utils';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
@@ -38,6 +39,7 @@
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
+    const { annotationTypes } = useAnnotationTypeFilter();
 
     const { tagsSelected } = $derived.by(() =>
         useTags({
@@ -67,6 +69,7 @@
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
+            annotation_types: $annotationTypes,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
         },
@@ -112,6 +115,9 @@
             ? infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
+    // Real pixel dimensions, so tiles keep their true shape instead of being cropped to squares.
+    const aspectRatios = $derived(samples.map((sample) => sample.width / sample.height));
+
     const selectedSampleIds = $derived(getSelectedSampleIds(collection_id));
     let selectionAnchorSampleId = $state<string | null>(null);
 
@@ -141,6 +147,7 @@
     const filterHash = $derived.by(() => {
         const parts = [
             $selectedAnnotationFilterIds.join(','),
+            ($annotationTypes ?? []).join(','),
             $imageQueryExpression?.query_expr_str || '',
             Array.from($tagsSelected).join(','),
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
@@ -184,7 +191,7 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
 
-    function handleOnDoubleClick(sampleId: string) {
+    function handleOpenSample(sampleId: string) {
         if (datasetId && collectionType) {
             goto(
                 routeHelpers.toSample({
@@ -252,8 +259,8 @@
     itemCount={samples.length}
 >
     {#snippet children({ footer })}
-        <Grid
-            itemCount={samples.length}
+        <JustifiedGrid
+            {aspectRatios}
             {columnCount}
             overScan={sampleGridOverscan}
             onScroll={handleScroll}
@@ -261,7 +268,7 @@
             {scrollResetKey}
             gridProps={{ 'data-testid': 'images-grid', class: 'dark:[color-scheme:dark]' }}
         >
-            {#snippet gridItem({ index, style, width, height })}
+            {#snippet gridItem({ index, width, height })}
                 {#if samples[index]}
                     {#key samples[index].sample_id}
                         {@const displayTextOnImage = $showSampleFilenamesStore
@@ -270,7 +277,6 @@
                         <GridItem
                             {width}
                             {height}
-                            {style}
                             dataSampleName={samples[index].file_name}
                             dataIndex={index}
                             dataTestId="sample-grid-item"
@@ -283,7 +289,7 @@
                                 }),
                                 fileName: samples[index].file_name
                             }}
-                            ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
+                            onOpen={() => handleOpenSample(samples[index].sample_id)}
                             onSelect={(event) =>
                                 handleGridItemSelect(event, samples[index].sample_id, index)}
                         >
@@ -301,6 +307,6 @@
             {#snippet footerItem()}
                 {@render footer()}
             {/snippet}
-        </Grid>
+        </JustifiedGrid>
     {/snippet}
 </GridContainer>

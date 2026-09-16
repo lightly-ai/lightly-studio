@@ -2,7 +2,7 @@
     import { page } from '$app/state';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import { formatInteger } from '$lib/utils';
-    import { Slider } from '$lib/components/ui/slider/index.js';
+    import RangeFilterField from '$lib/components/RangeFilterField/RangeFilterField.svelte';
 
     interface Props {
         /** Called when a video field filter (width, height, fps, duration) range changes. */
@@ -65,79 +65,51 @@
 </script>
 
 {#if $videoBounds && $videoBoundsValues}
-    <div class="space-y-1">
-        <h2 class="text-md">Width</h2>
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoBoundsValues.width.min)}px</span>
-            <span>{formatInteger($videoBoundsValues.width.max)}px</span>
-        </div>
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-width"
-                min={$videoBounds?.width.min}
-                max={$videoBounds?.width.max}
-                value={[$videoBoundsValues.width.min, $videoBoundsValues.width.max]}
-                onValueCommit={handleChangeWidth}
-            />
-        </div>
-    </div>
+    <RangeFilterField
+        label="Width"
+        minText={`${formatInteger($videoBoundsValues.width.min)}px`}
+        maxText={`${formatInteger($videoBoundsValues.width.max)}px`}
+        min={$videoBounds.width.min}
+        max={$videoBounds.width.max}
+        value={[$videoBoundsValues.width.min, $videoBoundsValues.width.max]}
+        onValueCommit={handleChangeWidth}
+        sliderClass="filter-width"
+    />
 
-    <div class="space-y-1">
-        <h2 class="text-md">Height</h2>
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoBoundsValues.height.min)}px</span>
-            <span>{formatInteger($videoBoundsValues.height.max)}px</span>
-        </div>
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-height"
-                min={$videoBounds.height.min}
-                max={$videoBounds.height.max}
-                value={[$videoBoundsValues.height.min, $videoBoundsValues.height.max]}
-                onValueCommit={handleChangeHeight}
-            />
-        </div>
-    </div>
+    <RangeFilterField
+        label="Height"
+        minText={`${formatInteger($videoBoundsValues.height.min)}px`}
+        maxText={`${formatInteger($videoBoundsValues.height.max)}px`}
+        min={$videoBounds.height.min}
+        max={$videoBounds.height.max}
+        value={[$videoBoundsValues.height.min, $videoBoundsValues.height.max]}
+        onValueCommit={handleChangeHeight}
+        sliderClass="filter-height"
+    />
 
     {#if $videoBoundsValues.fps.min != $videoBoundsValues.fps.max}
-        <div class="space-y-1">
-            <h2 class="text-md">FPS</h2>
-            <div class="flex justify-between text-sm text-diffuse-foreground">
-                <span>{formatInteger($videoBoundsValues.fps.min)}</span>
-                <span>{formatInteger($videoBoundsValues.fps.max)}</span>
-            </div>
-            <div class="relative p-2">
-                <Slider
-                    type="multiple"
-                    class="filter-width"
-                    min={$videoBounds?.fps.min}
-                    max={$videoBounds?.fps.max}
-                    step={0.01}
-                    value={[$videoBoundsValues.fps.min, $videoBoundsValues.fps.max]}
-                    onValueCommit={handleChangeFps}
-                />
-            </div>
-        </div>
+        <RangeFilterField
+            label="FPS"
+            minText={formatInteger($videoBoundsValues.fps.min)}
+            maxText={formatInteger($videoBoundsValues.fps.max)}
+            min={$videoBounds.fps.min}
+            max={$videoBounds.fps.max}
+            step={0.01}
+            value={[$videoBoundsValues.fps.min, $videoBoundsValues.fps.max]}
+            onValueCommit={handleChangeFps}
+            sliderClass="filter-fps"
+        />
     {/if}
 
-    <div class="space-y-1">
-        <h2 class="text-md">Duration</h2>
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoBoundsValues.duration_s.min)}s</span>
-            <span>{formatInteger($videoBoundsValues.duration_s.max)}s</span>
-        </div>
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-width"
-                min={$videoBounds.duration_s.min}
-                max={$videoBounds.duration_s.max}
-                step={0.01}
-                value={[$videoBoundsValues.duration_s.min, $videoBoundsValues.duration_s.max]}
-                onValueCommit={handleChangeDuration}
-            />
-        </div>
-    </div>
+    <RangeFilterField
+        label="Duration"
+        minText={`${formatInteger($videoBoundsValues.duration_s.min)}s`}
+        maxText={`${formatInteger($videoBoundsValues.duration_s.max)}s`}
+        min={$videoBounds.duration_s.min}
+        max={$videoBounds.duration_s.max}
+        step={0.01}
+        value={[$videoBoundsValues.duration_s.min, $videoBoundsValues.duration_s.max]}
+        onValueCommit={handleChangeDuration}
+        sliderClass="filter-duration"
+    />
 {/if}

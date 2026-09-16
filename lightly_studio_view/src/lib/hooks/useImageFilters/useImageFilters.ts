@@ -86,10 +86,12 @@ const imageFilter = derived(
         }
 
         const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
-        if (annotationLabelIds && annotationLabelIds.length > 0) {
+        const annotationTypes = $filterParams.filters?.annotation_types;
+        if (annotationLabelIds?.length || annotationTypes?.length) {
             sampleFilter.annotations_filter = {
                 filter_type: 'annotations',
-                annotation_label_ids: annotationLabelIds
+                ...(annotationLabelIds?.length ? { annotation_label_ids: annotationLabelIds } : {}),
+                ...(annotationTypes?.length ? { annotation_types: annotationTypes } : {})
             } satisfies AnnotationsFilter;
         }
 

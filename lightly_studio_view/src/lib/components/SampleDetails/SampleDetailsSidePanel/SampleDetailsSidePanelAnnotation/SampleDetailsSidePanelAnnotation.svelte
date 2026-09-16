@@ -12,6 +12,7 @@
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
+    import AnnotationTypeGlyph from '$lib/components/AnnotationTypeGlyph/AnnotationTypeGlyph.svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useAnnotationCollectionsFilter } from '$lib/hooks';
 
@@ -47,19 +48,6 @@
         // grid).
         colorBySource?: boolean;
     } = $props();
-
-    const formatAnnotationType = (annotationType: string) => {
-        switch (annotationType) {
-            case 'object_detection':
-                return 'Object Detection';
-            case 'segmentation_mask':
-                return 'Segmentation Mask';
-            case 'classification':
-                return 'Image Classification';
-            default:
-                return annotationType;
-        }
-    };
 
     const getAnnotationDimensions = (annotation: AnnotationView) => {
         const annotationWithDimensions =
@@ -111,9 +99,9 @@
 
 <div
     class={cn(
-        'gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
-        isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
-        canHighlight ? 'border border-primary' : ''
+        'gap-2 rounded-md px-2 py-2 text-left align-baseline transition-colors',
+        isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+        canHighlight ? 'ring-1 ring-inset ring-primary' : ''
     )}
 >
     <button
@@ -138,6 +126,7 @@
                                 />
                             </div>
                         {/if}
+                        <AnnotationTypeGlyph type={annotation.annotation_type} />
                         <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
@@ -275,19 +264,20 @@
                     </span>
                 </div>
             {/if}
-            <div
-                class={cn(
-                    'flex w-full items-center justify-between',
-                    annotation.object_track_number != null ? 'pt-0' : 'pt-1'
-                )}
-            >
-                <span class="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    {formatAnnotationType(annotation.annotation_type)}
-                    {#if getAnnotationDimensions(annotation)}
-                        ({getAnnotationDimensions(annotation)})
-                    {/if}
-                </span>
-            </div>
+            <!-- The type itself is carried by the glyph next to the label, so only the
+                 dimensions remain worth spelling out here. -->
+            {#if getAnnotationDimensions(annotation)}
+                <div
+                    class={cn(
+                        'flex w-full items-center justify-between',
+                        annotation.object_track_number != null ? 'pt-0' : 'pt-1'
+                    )}
+                >
+                    <span class="text-xs text-muted-foreground">
+                        {getAnnotationDimensions(annotation)}
+                    </span>
+                </div>
+            {/if}
         </div>
     </button>
 </div>
