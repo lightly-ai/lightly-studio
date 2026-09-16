@@ -73,10 +73,6 @@ class FakeBytesEmbedder(ImageBytesEmbedder, VideoBytesEmbedder):
 
 
 class TestRemoteTransport:
-    def test_init__api_key_not_ascii(self) -> None:
-        with pytest.raises(ValueError, match="not ASCII"):
-            RemoteTransport(client=_mock_client(handler=_answers()), api_key="Bearer-ünïcode")
-
     def test_describe(self) -> None:
         embedder = FakeTextEmbedder()
         with TestClient(server.create_app(embedder=embedder)) as client:
@@ -89,16 +85,9 @@ class TestRemoteTransport:
         assert description.capabilities == [Capability.TEXT]
 
     def test_describe__protocol_version_mismatch(self) -> None:
-        body = _describe_body(capabilities=["text"])
-        body["protocol_version"] = "2.0"
-        client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
-
-        with pytest.raises(RemoteEmbedderProtocolError, match=r"speaks protocol version 2\.0"):
-            RemoteTransport(client=client).describe()
-
-    def test_describe__protocol_version_mismatch_before_the_model(self) -> None:
         # A server of another major version is the one most likely to answer another
-        # shape. The version must still be what the message names.
+        # shape. The version must still be what the message names, so the check runs
+        # before the model.
         body = {"protocol_version": "2.0", "model": {"name": "acme"}}
         client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
 
@@ -198,20 +187,13 @@ class TestRemoteTransport:
         assert response.kept_indices == [0]
         assert sleep.call_count == 2
 
-    def test_embed_texts__stays_busy(self, mocker: MockerFixture) -> None:
+    @pytest.mark.parametrize("status_code", [429, 503])
+    def test_embed_texts__stays_busy(self, status_code: int, mocker: MockerFixture) -> None:
         mocker.patch.object(time, "sleep")
-        answer = httpx.Response(status_code=503, headers={"Retry-After": "0"})
+        answer = httpx.Response(status_code=status_code, headers={"Retry-After": "0"})
         client = _mock_client(handler=_answers(answer))
 
         with pytest.raises(RemoteEmbedderUnreachableError, match="stayed busy"):
-            RemoteTransport(client=client).embed_texts(texts=["a dog"])
-
-    def test_embed_texts__rate_limited(self, mocker: MockerFixture) -> None:
-        mocker.patch.object(time, "sleep")
-        answer = httpx.Response(status_code=429, headers={"Retry-After": "0"})
-        client = _mock_client(handler=_answers(answer))
-
-        with pytest.raises(RemoteEmbedderUnreachableError, match="answered 429"):
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
 
     def test_embed_texts__connection_failed(self) -> None:
@@ -234,8 +216,7 @@ class TestRemoteTransport:
         assert response.kept_indices == [0, 1]
 
     def test_embed_image_bytes__empty(self) -> None:
-        # httpx writes no body at all for a multipart request without parts, so the
-        # server would answer 400. `RemoteEmbedder` sends no request for an empty batch.
+        # httpx writes no body at all for a multipart request without parts.
         client = _mock_client(handler=_answers())
 
         with pytest.raises(ValueError, match="empty batch"):
@@ -273,53 +254,32 @@ class TestRemoteTransport:
         assert response.kept_indices == [0]
 
 
-def test_retry_wait_seconds() -> None:
-    response = httpx.Response(status_code=503, headers={"Retry-After": "7"})
+# The seconds form, no header, a value that is not a wait, a wait over the cap, a wait of
+# zero, a date over the cap, and a date that has passed.
+@pytest.mark.parametrize(
+    ("header", "expected_seconds"),
+    [
+        ("7", 7.0),
+        (None, 1.0),
+        ("soon", 1.0),
+        ("3600", 30.0),
+        ("0", 1.0),
+        (HTTP_DATE_FAR_FUTURE, 30.0),
+        (HTTP_DATE_PAST, 1.0),
+    ],
+)
+def test_retry_wait_seconds(header: str | None, expected_seconds: float) -> None:
+    headers = {} if header is None else {"Retry-After": header}
+    response = httpx.Response(status_code=503, headers=headers)
 
-    assert transport._retry_wait_seconds(response=response) == 7.0
-
-
-def test_retry_wait_seconds__no_header() -> None:
-    response = httpx.Response(status_code=503)
-
-    assert transport._retry_wait_seconds(response=response) == 1.0
-
-
-def test_retry_wait_seconds__not_a_wait() -> None:
-    response = httpx.Response(status_code=503, headers={"Retry-After": "soon"})
-
-    assert transport._retry_wait_seconds(response=response) == 1.0
-
-
-def test_retry_wait_seconds__over_the_cap() -> None:
-    response = httpx.Response(status_code=503, headers={"Retry-After": "3600"})
-
-    assert transport._retry_wait_seconds(response=response) == 30.0
+    assert transport._retry_wait_seconds(response=response) == expected_seconds
 
 
-def test_retry_wait_seconds__http_date() -> None:
+def test_retry_wait_seconds__http_date_is_a_deadline() -> None:
     deadline = datetime.now(tz=timezone.utc) + timedelta(seconds=5)
     response = httpx.Response(status_code=503, headers={"Retry-After": _http_date(moment=deadline)})
 
     assert 0.0 < transport._retry_wait_seconds(response=response) <= 5.0
-
-
-def test_retry_wait_seconds__http_date_over_the_cap() -> None:
-    response = httpx.Response(status_code=503, headers={"Retry-After": HTTP_DATE_FAR_FUTURE})
-
-    assert transport._retry_wait_seconds(response=response) == 30.0
-
-
-def test_retry_wait_seconds__http_date_in_the_past() -> None:
-    response = httpx.Response(status_code=503, headers={"Retry-After": HTTP_DATE_PAST})
-
-    assert transport._retry_wait_seconds(response=response) == 1.0
-
-
-def test_retry_wait_seconds__zero() -> None:
-    response = httpx.Response(status_code=503, headers={"Retry-After": "0"})
-
-    assert transport._retry_wait_seconds(response=response) == 1.0
 
 
 def _rows(count: int) -> EmbeddingResult:

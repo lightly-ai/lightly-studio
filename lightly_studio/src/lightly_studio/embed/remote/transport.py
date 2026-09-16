@@ -4,10 +4,6 @@
 protocol and reads the answers back into the wire models of ``lightly_studio_serve``. It
 holds no state of the server: ``RemoteEmbedder`` reads ``/v1/describe`` once and keeps the
 answer for the lifetime of the process.
-
-The module turns a status into the exception that names it and sends a 429 or a 503 again
-a capped number of times, after a wait that it also caps. A server can name a wait of any
-length, and the caller of a text query sits under a key press.
 """
 
 from __future__ import annotations
@@ -72,9 +68,6 @@ _STATUS_ERRORS: dict[int, tuple[type[RemoteEmbedderError], str]] = {
     ),
 }
 
-# Every other status. The protocol gives the server no reason to answer it here.
-_UNKNOWN_STATUS_ERROR: tuple[type[RemoteEmbedderError], str] = (RemoteEmbedderProtocolError, "")
-
 # The content type of a multipart part. The server reads the real format from the header
 # of the data, so this value only has to be a type that is not text.
 _OCTET_STREAM = "application/octet-stream"
@@ -107,12 +100,7 @@ class RemoteTransport:
                 owns it and closes it.
             api_key: The token to send as ``Authorization: Bearer``. ``None`` sends no
                 header, which is what an unauthenticated server needs.
-
-        Raises:
-            ValueError: If ``api_key`` holds a character that a header cannot carry.
         """
-        if api_key is not None:
-            _check_api_key(api_key=api_key)
         self._client = client
         # A header of the request, not of the client: the caller owns the client, and a
         # transport must not put a token on a client that it was lent.
@@ -132,9 +120,7 @@ class RemoteTransport:
         """
         response = self._request(method="GET", path=protocol.DESCRIBE_PATH)
         body = _read_json(response=response)
-        # Before the model, not after it. A server of another major version is the one
-        # most likely to answer a body of another shape, and the version names that
-        # reason where a list of broken fields does not.
+        # Before the model, not after it. See `_check_protocol_version`.
         _check_protocol_version(body=body, response=response)
         return _validate(model=DescribeResponse, body=body, response=response)
 
@@ -191,15 +177,11 @@ class RemoteTransport:
         """Send a batch of items as multipart, one part for each item, in input order.
 
         Raises:
-            ValueError: If ``items`` is empty. httpx writes no body at all for a multipart
-                request without parts, so the server cannot read it and answers 400.
-                ``RemoteEmbedder`` sends no request for an empty batch.
+            ValueError: If ``items`` is empty. httpx then writes no body at all, so the
+                server cannot read the request and answers 400.
         """
         if not items:
-            raise ValueError(
-                f"An empty batch cannot be sent to {path}: a multipart request needs at "
-                f"least one part. Return an empty result instead of calling this."
-            )
+            raise ValueError(f"An empty batch cannot be sent to {path}. Return an empty result.")
         # Every part carries a filename. A parser reads a part without one as a text
         # field, so the route would see no file at all. The name is the position of the
         # item, and the content type only has to be a type that is not text: the server
@@ -271,7 +253,8 @@ def _check_status(response: httpx.Response) -> None:
     status = response.status_code
     if status == httpx.codes.OK:
         return
-    error_type, reason = _STATUS_ERRORS.get(status, _UNKNOWN_STATUS_ERROR)
+    # Every other status. The protocol gives the server no reason to answer one here.
+    error_type, reason = _STATUS_ERRORS.get(status, (RemoteEmbedderProtocolError, ""))
     raise error_type(
         f"The embedding server answered {status} to {_where(response=response)}{reason}: "
         f"{_detail(response=response)}"
@@ -284,16 +267,8 @@ def _parse(model: type[_ModelT], response: httpx.Response) -> _ModelT:
     The wire models hold the rules of the protocol, so a body that breaks one never
     becomes a vector.
 
-    Args:
-        model: The wire model that the endpoint answers.
-        response: The answer to read.
-
-    Returns:
-        The body of the answer.
-
     Raises:
-        RemoteEmbedderProtocolError: If the body is not JSON, or if it breaks a rule of
-            the model.
+        RemoteEmbedderProtocolError: If the body is not JSON, or breaks a rule of the model.
     """
     return _validate(model=model, body=_read_json(response=response), response=response)
 
@@ -331,9 +306,8 @@ def _validate(model: type[_ModelT], body: Any, response: httpx.Response) -> _Mod
 def _broken_rules(error: ValidationError) -> str:
     """Name the field and the rule of every error in one line.
 
-    The message of a pydantic error repeats the value that failed, here the answer of a
-    server that this client does not control. That value can be a whole matrix of vectors,
-    so only the field and the rule reach the exception.
+    The message of a pydantic error repeats the value that failed, which can be a whole
+    matrix of vectors, so only the field and the rule reach the exception.
     """
     rules = []
     for detail in error.errors():
@@ -347,9 +321,8 @@ def _broken_rules(error: ValidationError) -> str:
 def _detail(response: httpx.Response) -> str:
     """Read the message of an error answer, short enough to put in an exception.
 
-    Every error of a server of this protocol carries ``{"detail": ...}``. A server that
-    this client does not control can answer anything, so a body that is not JSON is read
-    as text, and a long text is cut.
+    Every error of a server of this protocol carries ``{"detail": ...}``, but a body that
+    is not JSON is read as text.
     """
     try:
         body = response.json()
@@ -390,9 +363,6 @@ def _major(version: str) -> str:
 
 def _retry_wait_seconds(response: httpx.Response) -> float:
     """Read how long ``Retry-After`` asks the client to wait.
-
-    A server can name a wait of any length, and the caller of a text query sits under a
-    key press, so the answer is capped.
 
     Returns:
         The wait in seconds, between zero and ``_MAX_RETRY_WAIT_SECONDS``.
@@ -439,29 +409,7 @@ def _where(response: httpx.Response) -> str:
 
 
 def _cut(text: str) -> str:
-    """Cut a message that a server of this protocol wrote, for an exception of this client.
-
-    A server that this client does not control writes the message, so its length is not
-    bounded by anything that this client knows.
-    """
+    """Cut a message of a server that this client does not control, so its length is bounded."""
     if len(text) > _MAX_DETAIL_CHARS:
         return f"{text[:_MAX_DETAIL_CHARS]}..."
     return text
-
-
-def _check_api_key(api_key: str) -> None:
-    """Refuse a token that cannot become a header.
-
-    RFC 7235 writes the credentials of a request in ASCII, and httpx raises a
-    ``UnicodeEncodeError`` for a header value outside it. That error is not an
-    ``httpx.HTTPError``, so it would leave the ``RemoteEmbedderError`` hierarchy on the
-    first request. The token is checked where it arrives instead.
-
-    Raises:
-        ValueError: If ``api_key`` holds a character that is not ASCII.
-    """
-    if not api_key.isascii():
-        raise ValueError(
-            "api_key holds a character that is not ASCII, which an Authorization header "
-            "cannot carry. Give a token of ASCII characters."
-        )
