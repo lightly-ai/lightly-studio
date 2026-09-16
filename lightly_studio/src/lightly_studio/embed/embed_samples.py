@@ -302,7 +302,7 @@ def embed_frame_samples(
     _register_legacy_default_model(session=session, collection_id=collection_id, model_id=model_id)
 
 
-def frame_embedder_available() -> bool:
+def has_frame_embedder() -> bool:
     """Report whether the registry can supply an embedder for video frames.
 
     A pure, side-effect-free check used as an up-front guard before decoding frames to
