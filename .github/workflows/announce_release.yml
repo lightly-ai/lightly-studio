@@ -1,0 +1,99 @@
+name: Announce Release
+
+# Posts a released changelog section to the Slack channel sales reads. Called by Finish
+# Release once the release is public, and dispatchable on its own to re-post one.
+#
+# Not `on: release: published`: Finish Release un-drafts with GITHUB_TOKEN, and GitHub
+# creates no run from a GITHUB_TOKEN-triggered event.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag of the published release, e.g. v1.2.3.
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the published release, e.g. v1.2.3.
+        type: string
+        required: true
+      channel:
+        description: >-
+          Channel to post in. Leave empty for the release channel; name a test
+          channel to rehearse. Nothing here stops a second post of the same tag.
+        type: string
+        required: false
+        default: ""
+
+permissions: {}
+
+env:
+  SLACK_CHANNEL: studio-issues-and-feedback
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Where SLACK_ACTION_BOT_TOKEN lives, restricted to `main` like `pypi`.
+    environment: slack
+    permissions:
+      contents: read
+    steps:
+      # Never the released tag: that would run the tagged commit's own release code with
+      # the bot token in the environment.
+      - name: Checkout the release tooling
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Resolve the package
+        id: package
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.github/scripts
+          TAG: ${{ inputs.tag }}
+        run: |
+          python3 -m prepare_release package-config --tag "${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Render the announcement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: ${{ github.workspace }}/.github/scripts
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          CHANGELOG: ${{ steps.package.outputs.changelog }}
+        # The changelog is read at the tag, not from main, which has moved on since.
+        run: |
+          set -euo pipefail
+          gh api "repos/${REPO}/contents/${CHANGELOG}?ref=${TAG}" \
+            -H "Accept: application/vnd.github.raw" > "${RUNNER_TEMP}/CHANGELOG.md"
+          release_url="$(gh release view "${TAG}" --repo "${REPO}" --json url --jq .url)"
+          python3 -m prepare_release render-slack-message \
+            --changelog "${RUNNER_TEMP}/CHANGELOG.md" \
+            --tag "${TAG}" \
+            --release-url "${release_url}" \
+            --output "${RUNNER_TEMP}/slack-message.txt"
+          cat "${RUNNER_TEMP}/slack-message.txt" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post the announcement
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_ACTION_BOT_TOKEN }}
+          # Declared on workflow_dispatch only, so it is empty on a workflow_call run.
+          CHANNEL: ${{ inputs.channel || env.SLACK_CHANNEL }}
+        # `jq --rawfile` keeps the message out of both `${{ }}` expansion and shell
+        # quoting. Slack rejects a message with `ok: false` and HTTP 200, so the status
+        # code alone would report a silent success.
+        run: |
+          set -euo pipefail
+          jq -n --arg channel "${CHANNEL}" --rawfile text "${RUNNER_TEMP}/slack-message.txt" \
+            '{channel: $channel, text: $text, unfurl_links: false, unfurl_media: false}' \
+            > "${RUNNER_TEMP}/slack-payload.json"
+          curl -sS -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_TOKEN}" \
+            -H 'Content-type: application/json; charset=utf-8' \
+            --data @"${RUNNER_TEMP}/slack-payload.json" > "${RUNNER_TEMP}/slack-response.json"
+          if [ "$(jq -r .ok < "${RUNNER_TEMP}/slack-response.json")" != "true" ]; then
+            echo "::error::Slack rejected the message: $(jq -r .error < "${RUNNER_TEMP}/slack-response.json")"
+            exit 1
+          fi
