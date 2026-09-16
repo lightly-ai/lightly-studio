@@ -41,8 +41,8 @@ _UNAVAILABLE = JSONResponse(
 class _HttpMiddleware(ABC):
     """Passes a scope that is not HTTP straight through.
 
-    A lifespan scope and a websocket scope carry no path and no headers. Every check
-    below reads one of the two, so ``handle`` sees an HTTP scope only.
+    The lifespan scope reaches every middleware at startup and carries no path and no
+    headers, so a check that reads one raises before the server serves a request.
     """
 
     def __init__(self, app: ASGIApp) -> None:
