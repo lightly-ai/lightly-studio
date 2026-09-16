@@ -3,7 +3,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
-    import { Hand, Lasso, SquareDashed } from '@lucide/svelte';
+    import { Hand, Lasso, SquareDashed, type IconProps } from '@lucide/svelte';
     import {
         SELECTION_TOOLS,
         createSelectionToolController,
@@ -363,7 +363,7 @@
     // it is to click the library's own toolbar buttons. We hide those buttons via CSS and click
     // them programmatically; the pure helpers in ./selectionTool find them and decide which one
     // to toggle, and createSelectionToolController owns the MutationObserver wiring.
-    const TOOL_ICONS: Record<ToolMode, Component> = {
+    const TOOL_ICONS: Record<ToolMode, Component<IconProps>> = {
         pan: Hand,
         rectangle: SquareDashed,
         lasso: Lasso
@@ -608,21 +608,22 @@
                         data-testid="plot-tool-pill"
                     >
                         {#each SELECTION_TOOLS as tool (tool.mode)}
-                            {@const Icon = TOOL_ICONS[tool.mode]}
-                            <button
-                                type="button"
-                                title={tool.label}
-                                aria-label={tool.label}
-                                aria-pressed={activeTool === tool.mode}
-                                data-testid={`plot-tool-${tool.mode}`}
-                                onclick={() => selectTool(tool.mode)}
-                                class={cn(
-                                    'flex size-[26px] items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground',
-                                    activeTool === tool.mode && 'bg-white/[0.14] text-foreground'
-                                )}
-                            >
-                                <Icon class="size-[15px]" />
-                            </button>
+                            <Button
+                                icon={TOOL_ICONS[tool.mode]}
+                                ariaLabel={tool.label}
+                                buttonProps={{
+                                    size: 'icon',
+                                    title: tool.label,
+                                    'aria-pressed': activeTool === tool.mode,
+                                    'data-testid': `plot-tool-${tool.mode}`,
+                                    onclick: () => selectTool(tool.mode),
+                                    class: cn(
+                                        'size-[26px] text-muted-foreground hover:bg-white/10 hover:text-foreground',
+                                        activeTool === tool.mode &&
+                                            'bg-white/[0.14] text-foreground'
+                                    )
+                                }}
+                            />
                         {/each}
                     </div>
                 {/if}
