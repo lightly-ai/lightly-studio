@@ -16,6 +16,7 @@
     import { useSamplingCombinationDialog } from './useSamplingCombinationDialog/useSamplingCombinationDialog';
     import { useStrategyOptions } from './useSamplingCombinationDialog/useStrategyOptions.svelte';
     import SampleCountInput from '$lib/components/Sampling/SampleCountInput/SampleCountInput.svelte';
+    import { PreselectedTagField } from './PreselectedTagField';
 
     const collectionId = $derived(page.params.collection_id!);
     const isVideoCollection = $derived(
@@ -45,6 +46,7 @@
         updateAbsolute,
         updatePercentage,
         selectionResultTagName,
+        preselectedTagId,
         filteredSampleCount,
         noSamples,
         notEnoughSamples,
@@ -231,6 +233,12 @@
                                 data-testid="sampling-dialog-tag-name-input"
                             />
                         </div>
+
+                        <PreselectedTagField
+                            tags={$tags}
+                            value={$preselectedTagId}
+                            onValueChange={(value) => preselectedTagId.set(value)}
+                        />
 
                         {#if $noSamples}
                             <p
