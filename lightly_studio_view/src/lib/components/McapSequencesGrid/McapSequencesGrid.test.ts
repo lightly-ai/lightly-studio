@@ -82,13 +82,13 @@ describe('McapSequencesGrid', () => {
         expect(screen.getByText('Something went wrong.')).toBeInTheDocument();
     });
 
-    it('renders the loading and empty messages for their respective states', () => {
+    it('renders the loading and empty messages for their respective states', async () => {
         const { rerender } = render(McapSequencesGridTestWrapper, {
             props: { ...defaultProps, sequences: [], isLoading: true }
         });
         expect(screen.getByText('Loading sequences...')).toBeInTheDocument();
 
-        rerender({ ...defaultProps, sequences: [], isEmpty: true });
+        await rerender({ ...defaultProps, sequences: [], isEmpty: true });
         expect(screen.getByText('No sequences found')).toBeInTheDocument();
     });
 
