@@ -118,6 +118,17 @@ describe('LabelsMenu', () => {
         expect(screen.getByText('person')).toBeInTheDocument();
     });
 
+    it('shows a zero count when the filter matches no annotations of a label', () => {
+        render(LabelsMenu, {
+            ...defaultProps,
+            annotationFilterRows: writable<Annotation[]>([
+                { label_name: 'dog', current_count: 0, total_count: 8, selected: false }
+            ])
+        });
+
+        expect(screen.getByTestId('label-menu-label-count')).toHaveTextContent('0 of 8');
+    });
+
     it('explains the empty list when every annotation source is unchecked', () => {
         mocks.allSourcesHidden.set(true);
         render(LabelsMenu, { ...defaultProps, annotationFilterRows: writable<Annotation[]>([]) });

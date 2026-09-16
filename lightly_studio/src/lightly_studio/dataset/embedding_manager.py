@@ -78,6 +78,9 @@ def set_default_embedding_model(embedding_generator: EmbeddingGenerator) -> None
         embedding_generator: A generator that implements ImageEmbeddingGenerator and/or
             VideoEmbeddingGenerator.
     """
+    # TODO(Michal, 09/2026): Bridge this generator into the EmbedderRegistry. Its space lives
+    # only in the EmbeddingManager, so a collection with such a default model has no matching
+    # registry embedder and the registry-based query paths fail.
     EmbeddingManagerProvider.get_embedding_manager().set_default_embedding_model(
         embedding_generator=embedding_generator
     )

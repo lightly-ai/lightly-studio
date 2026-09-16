@@ -10,7 +10,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from lightly_studio.core.mcap import message_fields
-from lightly_studio.core.mcap.errors import TransformNotFoundError
+from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
 from lightly_studio.core.mcap.type_definitions import StaticTransform
 
 _TRANSFORMS_FIELDS = ("transforms",)
@@ -35,11 +35,12 @@ class TransformTree:
 
         Args:
             transforms: The transforms to compose, for example the edges published on
-                `/tf_static`. A later transform between the same two frames replaces an
-                earlier one.
+                `/tf_static`. A later transform for the same child frame replaces the
+                earlier one, including the earlier one's parent edge.
         """
         self._matrix_by_edge: dict[tuple[str, str], NDArray[np.float64]] = {}
         self._neighbor_frame_ids: dict[str, set[str]] = {}
+        self._parent_frame_id_by_child: dict[str, str] = {}
         for transform in transforms:
             self._add(transform)
 
@@ -74,14 +75,41 @@ class TransformTree:
         return matrix
 
     def _add(self, transform: StaticTransform) -> None:
-        """Adds a transform as an edge that can be traversed in both directions."""
+        """Adds a transform as an edge that can be traversed in both directions.
+
+        A child frame has at most one parent. If the child already has a different
+        parent, its edge to that parent is removed first.
+        """
         parent = transform.parent_frame_id
         child = transform.child_frame_id
+        previous_parent = self._parent_frame_id_by_child.get(child)
+        if previous_parent is not None and previous_parent != parent:
+            self._remove_edge(previous_parent, child)
+
         matrix = to_matrix(transform)
         self._matrix_by_edge[(parent, child)] = matrix
         self._matrix_by_edge[(child, parent)] = np.linalg.inv(matrix)
         self._neighbor_frame_ids.setdefault(parent, set()).add(child)
         self._neighbor_frame_ids.setdefault(child, set()).add(parent)
+        self._parent_frame_id_by_child[child] = parent
+
+    def _remove_edge(self, parent_frame_id: str, child_frame_id: str) -> None:
+        """Removes a parent-child edge in both directions.
+
+        Drops a frame that the edge leaves without any neighbors, so `frame_ids` only
+        reports frames the tree can still reach.
+        """
+        del self._matrix_by_edge[(parent_frame_id, child_frame_id)]
+        del self._matrix_by_edge[(child_frame_id, parent_frame_id)]
+        self._disconnect(frame_id=parent_frame_id, neighbor_frame_id=child_frame_id)
+        self._disconnect(frame_id=child_frame_id, neighbor_frame_id=parent_frame_id)
+
+    def _disconnect(self, frame_id: str, neighbor_frame_id: str) -> None:
+        """Removes one direction of a neighbor relationship, pruning an empty frame."""
+        neighbors = self._neighbor_frame_ids[frame_id]
+        neighbors.discard(neighbor_frame_id)
+        if not neighbors:
+            del self._neighbor_frame_ids[frame_id]
 
     def _find_path(self, target_frame_id: str, source_frame_id: str) -> list[str] | None:
         """Returns the shortest chain of frames from the source to the target frame.
@@ -165,7 +193,8 @@ def _transform(decoded_transform: Any, log_time_ns: int) -> StaticTransform:
         The transform.
 
     Raises:
-        McapAccessError: If the value does not hold a transform.
+        McapAccessError: If the value does not hold a transform, or its translation or
+            rotation is not finite.
     """
     # ROS nests the translation and rotation in a `transform` field, Foxglove keeps them
     # on the transform itself.
@@ -174,11 +203,18 @@ def _transform(decoded_transform: Any, log_time_ns: int) -> StaticTransform:
         pose = decoded_transform
 
     child_frame_id = message_fields.require_field(decoded_transform, _CHILD_FRAME_ID_FIELDS)
+    translation = _vector(message_fields.require_field(pose, _TRANSLATION_FIELDS))
+    rotation = _quaternion(message_fields.require_field(pose, _ROTATION_FIELDS))
+    if not np.isfinite((*translation, *rotation)).all():
+        raise McapAccessError(
+            f"Transform from child frame '{child_frame_id}' has a non-finite translation or "
+            "rotation."
+        )
     return StaticTransform(
         parent_frame_id=_parent_frame_id(decoded_transform),
         child_frame_id=str(child_frame_id),
-        translation=_vector(message_fields.require_field(pose, _TRANSLATION_FIELDS)),
-        rotation=_quaternion(message_fields.require_field(pose, _ROTATION_FIELDS)),
+        translation=translation,
+        rotation=rotation,
         log_time_ns=log_time_ns,
     )
 
