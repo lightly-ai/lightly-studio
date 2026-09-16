@@ -4,10 +4,10 @@ Wraps the shared embedding logic behind plain module functions so callers no lon
 reach for the ``EmbeddingManager`` singleton, resolve the default model, and check it
 by hand. Each function resolves the collection's default embedding model itself.
 
-The functions currently delegate to the ``EmbeddingManager`` singleton. The internals
-are being swapped for the capability-typed ``EmbedderRegistry``; ``embed_image_samples``,
-``embed_video_samples``, ``embed_frame_samples`` and ``embed_annotation_collection`` already
-use it. The function signatures are the stable surface callers migrate to now.
+The functions resolve their embedder from the capability-typed ``EmbedderRegistry``.
+The storing paths still sync the collection's default model into the legacy
+``EmbeddingManager`` (see ``_register_legacy_default_model``) until its remaining readers
+are gone. The function signatures are the stable surface callers migrate to now.
 """
 
 from __future__ import annotations
@@ -20,13 +20,14 @@ from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManagerProvider,
-    TextEmbedQuery,
-)
+from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.embed import default_embedder, embedding_storage
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
-from lightly_studio.resolvers import annotation_resolver, image_resolver, video_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    image_resolver,
+    video_resolver,
+)
 from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
@@ -36,10 +37,15 @@ logger = logging.getLogger(__name__)
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
-def embed_image_for_collection(collection_id: UUID, filepath: str) -> list[float]:
+def embed_image_for_collection(session: Session, collection_id: UUID, filepath: str) -> list[float]:
     """Embed a single image with the collection's default model, without storing it.
 
+    Resolves the collection's default model from the database and embeds the image with the
+    registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
+    never bootstraps a default model, since an interactive query must not mutate the collection.
+
     Args:
+        session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
         filepath: fsspec path or URL of the image to embed.
 
@@ -47,17 +53,31 @@ def embed_image_for_collection(collection_id: UUID, filepath: str) -> list[float
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model, or the model does
-            not support images.
+        ValueError: If the collection has no default embedding model, no registered
+            embedder matches that model's space, or the embedder produced no embedding
+            for the image.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    return manager.compute_image_embedding(collection_id=collection_id, filepath=filepath)
+    embedder = default_embedder.resolve_query_embedder(
+        session=session,
+        collection_id=collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+    )
+    result = embedder.embed_images(paths=[filepath])
+    if result.kept_indices != [0]:
+        raise ValueError(f"The embedder produced no embedding for image {filepath!r}.")
+    embedding: list[float] = result.embeddings[0].tolist()
+    return embedding
 
 
-def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
+def embed_text_for_collection(session: Session, collection_id: UUID, text: str) -> list[float]:
     """Embed a text query with the collection's default model, without storing it.
 
+    Resolves the collection's default model from the database and embeds the text with the
+    registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
+    never bootstraps a default model, since an interactive query must not mutate the collection.
+
     Args:
+        session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
         text: The text to embed.
 
@@ -65,10 +85,20 @@ def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model.
+        ValueError: If the collection has no default embedding model, no registered
+            embedder matches that model's space, or the embedder produced no embedding
+            for the text.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    return manager.embed_text(collection_id=collection_id, text_query=TextEmbedQuery(text=text))
+    embedder = default_embedder.resolve_query_embedder(
+        session=session,
+        collection_id=collection_id,
+        get_embedder_fn=EmbedderRegistry.get_text_embedder,
+    )
+    result = embedder.embed_text(texts=[text])
+    if result.kept_indices != [0]:
+        raise ValueError(f"The embedder produced no embedding for text {text!r}.")
+    embedding: list[float] = result.embeddings[0].tolist()
+    return embedding
 
 
 def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
