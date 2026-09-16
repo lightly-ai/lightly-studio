@@ -22,8 +22,11 @@ _DEFAULT_TIMEOUT_SECONDS = 30.0
 def build_client(url: str) -> httpx.Client:
     """Open a client against ``url``.
 
-    ``follow_redirects`` stays off, which is also the default of httpx. A redirect would
-    carry the batch, and the bearer token with it, to an address that nobody configured.
+    ``follow_redirects`` stays off, which is also the default of httpx. It is written out
+    because it is a control and not a preference: a redirect would carry the batch, and
+    the bearer token with it, to an address that nobody configured.
+    ``url_policy.check_no_redirects`` then checks the value, here and for a client that a
+    caller passes in.
 
     The embedder owns this client and closes it in ``RemoteEmbedder.close``. A registered
     embedder is never closed, because ``EmbedderRegistry`` holds it for the lifetime of the
