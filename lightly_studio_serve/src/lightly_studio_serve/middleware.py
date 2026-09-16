@@ -37,6 +37,10 @@ _UNAVAILABLE = JSONResponse(
     headers={"Retry-After": "5"},
 )
 
+_TOO_LARGE_DETAIL = (
+    "The request body is over the advertised max_request_bytes of {max_request_bytes}."
+)
+
 
 class _HttpMiddleware(ABC):
     """Passes a scope that is not HTTP straight through.
@@ -112,7 +116,11 @@ class RequestSizeLimit(_HttpMiddleware):
         """Check the declared length, then pass the request on and count the body."""
         declared = _content_length(scope=scope)
         if declared is not None and declared > self.max_request_bytes:
-            await _too_large(max_request_bytes=self.max_request_bytes)(scope, receive, send)
+            detail = _TOO_LARGE_DETAIL.format(max_request_bytes=self.max_request_bytes)
+            response = JSONResponse(
+                status_code=protocol.STATUS_PAYLOAD_TOO_LARGE, content={"detail": detail}
+            )
+            await response(scope, receive, send)
             return
         await self.app(scope, self._counted(receive=receive), send)
 
@@ -129,7 +137,7 @@ class RequestSizeLimit(_HttpMiddleware):
                     # The route raises this through to the handler that FastAPI has for it.
                     raise HTTPException(
                         status_code=protocol.STATUS_PAYLOAD_TOO_LARGE,
-                        detail=_too_large_detail(max_request_bytes=self.max_request_bytes),
+                        detail=_TOO_LARGE_DETAIL.format(max_request_bytes=self.max_request_bytes),
                     )
             return message
 
@@ -181,14 +189,3 @@ def _content_length(scope: Scope) -> int | None:
         return int(value)
     except ValueError:
         return None
-
-
-def _too_large_detail(max_request_bytes: int) -> str:
-    return f"The request body is over the advertised max_request_bytes of {max_request_bytes}."
-
-
-def _too_large(max_request_bytes: int) -> JSONResponse:
-    return JSONResponse(
-        status_code=protocol.STATUS_PAYLOAD_TOO_LARGE,
-        content={"detail": _too_large_detail(max_request_bytes=max_request_bytes)},
-    )
