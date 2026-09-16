@@ -15,7 +15,7 @@ implement one of the generator protocols below and register it with
 [`set_default_embedding_model`](#set_default_embedding_model). The registration
 must happen before you load a dataset or before the GUI is started.
 
-See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
+See the [Embeddings page](../core_concepts/embeddings.md) for more details.
 
 ## set_default_embedding_model
 

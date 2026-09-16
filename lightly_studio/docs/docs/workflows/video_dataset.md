@@ -24,7 +24,7 @@ The `ls.VideoDataset.create()` method call is lightweight and initializes an emp
 
 The `add_videos_from_path(...)` method accepts a path to a file or a folder. If the path is a folder,
 it will recursively search for videos in it. A remote path like `s3://my-bucket/my-folder` is also
-supported, see [Using Cloud Storage](cloud_storage.md) for more details.
+supported, see [Using Cloud Storage](../ecosystem/cloud_storage.md) for more details.
 
 Videos are automatically embedded so that embedding plot and video search
 are enabled. To skip embedding, pass `embed=False` to the method.
@@ -268,4 +268,4 @@ on dedicated pages.
 
 ### Querying the Dataset
 
-Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or sampling. Video query expressions use `VideoSampleField`.
+Use [Dataset Query in Python](search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or sampling. Video query expressions use `VideoSampleField`.

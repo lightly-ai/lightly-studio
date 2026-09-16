@@ -100,7 +100,7 @@ The right value for `stopping_condition_minimum_distance` depends on the embeddi
 !!! tip "When to use"
     You already have a number attached to each sample that says how much you want it, and you want to
     sample by that number. A common case is active learning: keep the images your model is least
-    confident about. See [Metadata](metadata.md) for how to attach or compute such fields.
+    confident about. See [Metadata](../core_concepts/metadata.md) for how to attach or compute such fields.
 
 Metadata weighting simply prefers samples with a higher (or, with a negative `strength`, lower) value of one numeric metadata field. It does not balance or spread the selection in any way. Any float or int metadata field can be used as the weight.
 

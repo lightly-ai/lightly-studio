@@ -1455,7 +1455,7 @@ input[data-md-toggle="search"]:checked ~ .md-header .search-shortcut-hint {
 
    The previous version put the title in a `max-content` grid column and the
    body in the second. That made the body start wherever the title happened to
-   end: eight callouts on `concepts_and_tools/sampling.md` started at eight
+   end: eight callouts on `workflows/sampling.md` started at eight
    different x positions, 181px apart end to end. It also charged a
    sentence-length title — `search_and_filter.md` has one — a quarter of the
    box, forever, and pushed any fenced block inside a callout into the same
@@ -1687,7 +1687,7 @@ html .md-typeset :is(.admonition, details) > :last-child {
 
    Only the header. The mock also sets the first *body* column in mono, which
    works for the reference tables it mocks up and not for the ones these docs
-   actually have — `concepts_and_tools/sampling.md` opens its first column with
+   actually have — `workflows/sampling.md` opens its first column with
    "Pick a diverse subset that covers the whole dataset". Mono is for a column
    of identifiers, and nothing declares which columns those are. */
 .md-typeset table:not([class]) th {

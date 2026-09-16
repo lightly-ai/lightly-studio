@@ -67,6 +67,16 @@ describe('useEvaluationRuns', () => {
         );
     });
 
+    it('disables the query when enabled is false', () => {
+        const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
+
+        useEvaluationRuns(() => ({ datasetId: 'dataset-1', enabled: false }));
+
+        const optionsArg = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
+
+        expect(optionsArg.enabled).toBe(false);
+    });
+
     it('returns the result of createQuery', () => {
         const result = useEvaluationRuns(() => ({ datasetId: 'dataset-3' }));
 

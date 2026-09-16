@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import type { Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
-import { REPO_ROOT, BACKEND_DIR, BACKEND_PREFIX } from './shared';
+import type { ChangedFile, Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
+import { BACKEND_MEMBERS, REPO_ROOT, memberDir } from './shared';
 import { extractStdoutOrThrow, runLoggedCommand } from '../shared/utils';
 
 const NAME = 'backend/complexity';
@@ -16,7 +16,7 @@ interface RuffViolation {
     location: { row: number; column: number };
 }
 
-async function runLinter(paths: string[]): Promise<RuffViolation[]> {
+async function runLinter(paths: string[], cwd: string): Promise<RuffViolation[]> {
     let stdout: string;
     try {
         const result = await runLoggedCommand(
@@ -32,7 +32,7 @@ async function runLinter(paths: string[]): Promise<RuffViolation[]> {
                 'json',
                 ...paths
             ],
-            { cwd: BACKEND_DIR, timeout: LINTER_TIMEOUT_MS, maxBuffer: LINTER_MAX_BUFFER }
+            { cwd, timeout: LINTER_TIMEOUT_MS, maxBuffer: LINTER_MAX_BUFFER }
         );
         stdout = result.stdout;
     } catch (err: unknown) {
@@ -43,13 +43,35 @@ async function runLinter(paths: string[]): Promise<RuffViolation[]> {
     return JSON.parse(stdout) as RuffViolation[];
 }
 
+function backendFiles(files: ChangedFile[]): ChangedFile[] {
+    return files.filter(
+        (f) => f.path.endsWith('.py') && BACKEND_MEMBERS.some((m) => f.path.startsWith(m.prefix))
+    );
+}
+
+function formatViolation(entry: RuffViolation): string {
+    return `${relative(REPO_ROOT, entry.filename)}:${entry.location.row} — ${entry.message}`;
+}
+
+/** One ruff run per member, from that member's directory, so its own config applies. */
+async function lintPerMember(files: ChangedFile[]): Promise<string[]> {
+    const violations: string[] = [];
+    for (const member of BACKEND_MEMBERS) {
+        const paths = files
+            .filter((f) => f.path.startsWith(member.prefix))
+            .map((f) => resolve(REPO_ROOT, f.path));
+        if (paths.length === 0) continue;
+        const entries = await runLinter(paths, memberDir(member));
+        violations.push(...entries.map(formatViolation));
+    }
+    return violations;
+}
+
 export const backendComplexityGuardrail: Guardrail = {
     name: NAME,
     required: true,
     async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
-        const files = (await ctx.changedFiles()).filter(
-            (f) => f.path.startsWith(BACKEND_PREFIX) && f.path.endsWith('.py')
-        );
+        const files = backendFiles(await ctx.changedFiles());
 
         if (files.length === 0) {
             return { status: 'pass', summary: '0 file(s) checked.' };
@@ -65,12 +87,7 @@ export const backendComplexityGuardrail: Guardrail = {
             };
         }
 
-        const violations = (
-            await runLinter(existingFiles.map((f) => resolve(REPO_ROOT, f.path)))
-        ).map(
-            (entry) =>
-                `${relative(REPO_ROOT, entry.filename)}:${entry.location.row} — ${entry.message}`
-        );
+        const violations = await lintPerMember(existingFiles);
 
         if (violations.length === 0) {
             return {

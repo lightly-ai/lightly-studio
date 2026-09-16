@@ -26,4 +26,8 @@ dataset_examples_studio
 # Top-level tmp dir.
 /tmp/
 
+# Coverage artifacts, written into whichever workspace member the suite ran in.
+.coverage
+coverage.json
+
 .local.gitignore

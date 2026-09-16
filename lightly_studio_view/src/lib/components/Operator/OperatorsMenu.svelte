@@ -169,7 +169,7 @@
             </div>
             <Dialog.Footer class="px-4 pb-4">
                 <a
-                    href="https://docs.lightly.ai/studio/concepts_and_tools/plugins/"
+                    href="https://docs.lightly.ai/studio/ecosystem/plugins/"
                     target="_blank"
                     rel="noreferrer"
                     class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"
