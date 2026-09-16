@@ -21,7 +21,7 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.embed import default_embedder, embedder_registry, embedding_storage
+from lightly_studio.embed import default_embedder, embedding_storage
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -302,13 +302,28 @@ def embed_frame_samples(
     _register_legacy_default_model(session=session, collection_id=collection_id, model_id=model_id)
 
 
-def has_frame_embedder() -> bool:
-    """Report whether the registry can supply an embedder for video frames.
+def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
+    """Report whether an embedder is available for a collection's video frames.
 
-    Guards frame decoding: skip it when no embedder is available. Bootstraps and caches
-    the default frame embedder on the first call, so it is not side-effect-free.
+    Resolves the embedder the same way as ``embed_frame_samples``, so frame decoding is
+    skipped exactly when ``embed_frame_samples`` would find no embedder for the collection's
+    space and store nothing.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The video-frame collection whose default model selects the space.
     """
-    return embedder_registry.get_registry().get_image_pil_embedder() is not None
+    # TODO(Michal, 09/2026): This loads the built-in embedder and registers a default model,
+    # which is wasted when the caller embeds no frames, for example when every video is
+    # already present. A cheaper check would report availability without loading the model.
+    return (
+        default_embedder.resolve_default_embedder(
+            session=session,
+            collection_id=collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
+        )
+        is not None
+    )
 
 
 def _embed_annotation_chunk(

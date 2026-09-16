@@ -41,6 +41,7 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
     create_image,
     create_images,
 )
@@ -935,18 +936,44 @@ def test_embed_frame_samples__count_mismatch_raises(
 
 
 @pytest.mark.usefixtures("patched_registry")
-def test_has_frame_embedder__true_when_registry_has_embedder() -> None:
+def test_has_frame_embedder__true_when_embedder_available(db_session: Session) -> None:
     """The guard reports True when the registry can supply a frame embedder."""
-    assert embed_samples.has_frame_embedder() is True
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
+
+    assert (
+        embed_samples.has_frame_embedder(
+            session=db_session, collection_id=collection.collection_id
+        )
+        is True
+    )
 
 
-def test_has_frame_embedder__false_when_no_pil_embedder(mocker: MockerFixture) -> None:
-    """The guard reports False when the registry has no frame embedder."""
-    registry = mocker.MagicMock(spec=EmbedderRegistry)
-    registry.get_image_pil_embedder.return_value = None
+def test_has_frame_embedder__false_when_default_space_unavailable(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """The guard reports False when no embedder matches the collection's default space.
+
+    The registry can still supply a bootstrap embedder for a different space, so the result
+    must follow the collection's default model rather than mere registry availability.
+    """
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="other_space",
+        embedding_dimension=3,
+        set_as_default=True,
+    )
 
-    assert embed_samples.has_frame_embedder() is False
+    assert (
+        embed_samples.has_frame_embedder(
+            session=db_session, collection_id=collection.collection_id
+        )
+        is False
+    )
 
 
 def _register_default_random_model(
