@@ -31,3 +31,26 @@ def test_create_tag__unique_tag_name(db_session: Session) -> None:
             ),
         )
     db_session.rollback()
+
+
+def test_create_tag__unique_tag_name_across_kinds(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    create_tag(
+        session=db_session,
+        collection_id=collection_id,
+        tag_name="example_tag",
+        kind="sample",
+    )
+
+    with pytest.raises(IntegrityError):
+        tag_resolver.create(
+            session=db_session,
+            tag=TagCreate(
+                collection_id=collection_id,
+                name="example_tag",
+                kind="annotation",
+            ),
+        )
+    db_session.rollback()
