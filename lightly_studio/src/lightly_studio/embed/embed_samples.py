@@ -53,8 +53,9 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model, or no registered
-            embedder matches that model's space.
+        ValueError: If the collection has no default embedding model, no registered
+            embedder matches that model's space, or the embedder produced no embedding
+            for the image.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,
@@ -62,6 +63,8 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
         get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
     )
     result = embedder.embed_images(paths=[filepath])
+    if result.kept_indices != [0]:
+        raise ValueError(f"The embedder produced no embedding for image {filepath!r}.")
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding
 
@@ -82,8 +85,9 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model, or no registered
-            embedder matches that model's space.
+        ValueError: If the collection has no default embedding model, no registered
+            embedder matches that model's space, or the embedder produced no embedding
+            for the text.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,
@@ -91,6 +95,8 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
         get_embedder_fn=EmbedderRegistry.get_text_embedder,
     )
     result = embedder.embed_text(texts=[text])
+    if result.kept_indices != [0]:
+        raise ValueError(f"The embedder produced no embedding for text {text!r}.")
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding
 
