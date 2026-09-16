@@ -17,6 +17,11 @@ class TestPackage:
     def test_branch_prefix__prefixed_package_flattens_the_slash(self):
         assert SERVE.branch_prefix == "release-lightly-studio-serve-"
 
+    # Both packages announce in the same channel, so only one of them can be "Release X.Y.Z".
+    def test_announcement_prefix(self):
+        assert STUDIO.announcement_prefix == ""
+        assert SERVE.announcement_prefix == "LightlyStudio Serve "
+
 
 def test_get():
     assert packages.get("lightly-studio").directory == "lightly_studio"
@@ -38,6 +43,19 @@ def test_for_tag__longest_prefix_wins():
 def test_for_tag__unknown():
     with pytest.raises(PrepareReleaseError, match="belongs to no known package"):
         packages.for_tag("nightly/v1.2.3")
+
+
+def test_version_from_tag():
+    assert packages.version_from_tag("v1.2.3") == "1.2.3"
+
+
+def test_version_from_tag__prefixed_package():
+    assert packages.version_from_tag("lightly-studio-serve/v0.1.2") == "0.1.2"
+
+
+def test_version_from_tag__unknown():
+    with pytest.raises(PrepareReleaseError, match="belongs to no known package"):
+        packages.version_from_tag("nightly/v1.2.3")
 
 
 def test_for_tag__no_version_marker():

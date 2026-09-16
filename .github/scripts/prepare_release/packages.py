@@ -29,6 +29,9 @@ class Package:
         tag_prefix: Prefixed to `v<version>` to form the release tag. Empty for
             `lightly-studio`, which keeps the bare `v<version>` namespace it already
             published under.
+        announcement_prefix: Prefixed to "Release <version>" in the Slack announcement.
+            Empty for `lightly-studio`, whose releases are what that channel calls a
+            release; every other package says its own name, because both announce there.
         needs_node: Whether building the distribution needs Node.js.
         forbidden_dependencies: Substrings that no name in the built wheel's resolved
             dependency tree may contain.
@@ -40,6 +43,7 @@ class Package:
     changelog: str
     tag_prefix: str
     needs_node: bool
+    announcement_prefix: str = ""
     forbidden_dependencies: tuple[str, ...] = ()
 
     @property
@@ -73,6 +77,7 @@ PACKAGES = (
         changelog="lightly_studio_serve/CHANGELOG.md",
         tag_prefix="lightly-studio-serve/",
         needs_node=False,
+        announcement_prefix="LightlyStudio Serve ",
         # Substrings of the normalized name, so one entry covers a whole family.
         forbidden_dependencies=(
             "torch",
@@ -114,6 +119,15 @@ def for_tag(tag: str) -> Package:
             f"{', '.join(f'{p.tag_prefix}v<version>' for p in PACKAGES)}"
         )
     return max(candidates, key=lambda package: len(package.tag_prefix))
+
+
+def version_from_tag(tag: str) -> str:
+    """Returns the version a release tag carries, e.g. "0.1.2" for `lightly-studio-serve/v0.1.2`.
+
+    Raises:
+        PrepareReleaseError: The tag matches no package's `<prefix>v<version>` shape.
+    """
+    return tag.removeprefix(f"{for_tag(tag).tag_prefix}v")
 
 
 def render_config(package: Package) -> str:
