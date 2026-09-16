@@ -151,6 +151,38 @@ def write_mcap_with_undecodable_video(path: Path) -> Path:
     return path
 
 
+def write_mcap_with_malformed_json_video(path: Path) -> Path:
+    """Writes an MCAP whose video topic is JSON-encoded with malformed payloads.
+
+    The schema name marks the topic as video, and its encoding has a decoder, but
+    the payloads are not valid JSON, so no keyframe can be detected.
+
+    Args:
+        path: The path to write the file to.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        schema_id = writer.register_schema(
+            name="foxglove_msgs/msg/CompressedVideo", encoding="jsonschema", data=b""
+        )
+        channel_id = writer.register_channel(
+            topic=CAMERA_VIDEO_TOPIC, message_encoding="json", schema_id=schema_id
+        )
+        for log_time_ns in VIDEO_LOG_TIMES_NS:
+            writer.add_message(
+                channel_id=channel_id,
+                log_time=log_time_ns,
+                publish_time=log_time_ns,
+                data=b"not valid json",
+            )
+        writer.finish()
+    return path
+
+
 def h265_keyframe(payload: bytes = b"\x00\x01\x02") -> bytes:
     """Returns an Annex B H.265 frame holding an IDR picture."""
     return b"\x00\x00\x00\x01\x26\x01" + payload

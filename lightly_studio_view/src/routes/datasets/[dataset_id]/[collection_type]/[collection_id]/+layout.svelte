@@ -427,17 +427,20 @@
         })
     );
 
-    const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
-        collectionId: datasetId,
-        filter: imageAnnotationCountsFilter,
-        enabled: !isVideos && !isVideoFrames
-    }));
-
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
     const isVideoFrameAnnotations = $derived(
         isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME
     );
+
+    // The count queries skip the request while every annotation source is unchecked:
+    // their results are replaced with an empty list (see annotationCountsData).
+    const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
+    }));
+
     const videoFrameCountsCollectionId = $derived(
         isVideoFrameAnnotations ? (parentCollection?.collectionId ?? collectionId) : collectionId
     );
@@ -482,7 +485,11 @@
             // Drop selected label filters whose label is absent from the fresh,
             // source-scoped counts (e.g. after switching to a source that doesn't
             // contain the label) so the active filter never points at a hidden label.
-            pruneInvalidSelections();
+            // Cached rows can be stale while their refetch runs. Pruning on them would
+            // move the query to another key and abort that refetch, so wait for it.
+            if (!annotationCounts.isFetching) {
+                pruneInvalidSelections();
+            }
         }
     });
 
@@ -540,6 +547,10 @@
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
 
+    // The class count queries share one gate: the panel has to be open, and with every
+    // annotation source unchecked their results are replaced with an empty list anyway.
+    const distributionCountsEnabled = $derived(distributionPanelVisible && !$allSourcesHidden);
+
     // Global count mode for the distribution panel (applies to all sources).
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
     let distributionSampleTagIds = $state<string[]>([]);
@@ -573,7 +584,7 @@
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
         queryKey: distributionAllQueryKey,
-        enabled: distributionPanelVisible
+        enabled: distributionCountsEnabled
     }));
 
     let activeDistributionSourceId = $state<string | undefined>(undefined);
@@ -592,7 +603,7 @@
         annotationType: AnnotationType.CLASSIFICATION,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible
+        enabled: distributionCountsEnabled
     }));
 
     const distributionObjectDetectionQuery = useImageAnnotationCounts(() => ({
@@ -600,7 +611,7 @@
         annotationType: AnnotationType.OBJECT_DETECTION,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible
+        enabled: distributionCountsEnabled
     }));
 
     const distributionSegmentationQuery = useImageAnnotationCounts(() => ({
@@ -608,7 +619,7 @@
         annotationType: AnnotationType.SEGMENTATION_MASK,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible
+        enabled: distributionCountsEnabled
     }));
 
     interface GroupedCountsParams {
