@@ -9,6 +9,25 @@ import requests
 from lightly_studio.utils import download
 
 
+def test_example_dataset_dir(tmp_path: pathlib.Path) -> None:
+    assert download.example_dataset_dir(cache_dir=tmp_path) == tmp_path / "dataset_examples"
+
+
+def test_download_example_dataset__default_dir(
+    mocker: pytest_mock.MockerFixture, tmp_path: pathlib.Path
+) -> None:
+    """Tests that the cached directory is used when no download directory is given."""
+    mock_get = mocker.patch(target="requests.get")
+    target_dir = tmp_path / "dataset_examples"
+    target_dir.mkdir()
+    mocker.patch.object(download, attribute="example_dataset_dir", return_value=target_dir)
+
+    result = download.download_example_dataset()
+
+    assert result == str(target_dir)
+    mock_get.assert_not_called()
+
+
 def test_download_example_dataset__success(
     mocker: pytest_mock.MockerFixture, tmp_path: pathlib.Path
 ) -> None:
@@ -36,7 +55,8 @@ def test_download_example_dataset__success(
     assert (target_dir / "test_file.txt").exists()
     assert (target_dir / "test_file.txt").read_text() == "hello"
 
-    assert not (tmp_path / "my_data.zip").exists()
+    # No scratch files are left beside the target.
+    assert list(tmp_path.iterdir()) == [target_dir]
 
 
 def test_download_skips_if_exists(
@@ -98,7 +118,5 @@ def test_download_example_dataset__cleanup_on_error(
     # Verify the 'finally' block in download.py worked:
     # The target directory shouldn't be half-created
     assert not target_dir.exists()
-    # The zip file should be gone
-    assert not (tmp_path / "data_fail.zip").exists()
-    # The extract folder should be gone
-    assert not (tmp_path / "data_fail_temp_extract").exists()
+    # The scratch directory with the zip and the extracted files should be gone
+    assert list(tmp_path.iterdir()) == []

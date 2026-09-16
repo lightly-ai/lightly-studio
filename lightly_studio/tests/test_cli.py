@@ -126,12 +126,19 @@ def test_gui__with_empty_db_file__complains_about_missing_dataset(
     assert "No datasets found" in str(result.exception)
 
 
-def test_quickstart(mocker: MockerFixture, mock_track: MagicMock) -> None:
+def test_quickstart(
+    mocker: MockerFixture,
+    mock_track: MagicMock,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     mock_download, mock_connect, mock_create, mock_start_gui = _mock_quickstart_dependencies(mocker)
+    # An empty working directory, so a local 'dataset_examples' does not change the download dir.
+    monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart"])
     assert result.exit_code == 0
-    mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=False)
+    mock_download.assert_called_once_with(download_dir=None, force_redownload=False)
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
     mock_create.assert_called_once_with()
     mock_start_gui.assert_called_once_with(port=None, open_browser=True)
@@ -141,13 +148,32 @@ def test_quickstart(mocker: MockerFixture, mock_track: MagicMock) -> None:
     )
 
 
-def test_quickstart__with_force_download(mocker: MockerFixture) -> None:
+def test_quickstart__with_force_download(
+    mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     mock_download, mock_connect, _, _ = _mock_quickstart_dependencies(mocker)
+    monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart", "--force-download"])
     assert result.exit_code == 0
-    mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=True)
+    mock_download.assert_called_once_with(download_dir=None, force_redownload=True)
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
+
+
+def test_quickstart__with_local_dataset_dir(
+    mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A dataset downloaded before the move to the cache is reused, not downloaded again."""
+    mock_download, _, _, _ = _mock_quickstart_dependencies(mocker)
+    monkeypatch.chdir(tmp_path)
+    local_dir = Path.cwd() / "dataset_examples"
+    local_dir.mkdir()
+
+    runner = CliRunner()
+    result = runner.invoke(cli=cli.main, args=["quickstart"])
+
+    assert result.exit_code == 0
+    mock_download.assert_called_once_with(download_dir=local_dir, force_redownload=False)
 
 
 def test_quickstart__with_port(mocker: MockerFixture) -> None:

@@ -1,14 +1,17 @@
 """Module for downloading example datasets from the web."""
 
+from __future__ import annotations
+
 import logging
-import os
 import shutil
+import tempfile
 import zipfile
 from pathlib import Path
 
 import requests
 from tqdm import tqdm
 
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATASET_CACHE_DIR
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -17,16 +20,34 @@ logger = logging.getLogger(__name__)
 ZIP_URL = "https://github.com/lightly-ai/dataset_examples/archive/refs/heads/main.zip"
 # name of the folder inside the zip
 REPO_DIR_IN_ZIP = "dataset_examples-main"
+# Name of the directory the example dataset is extracted into.
+EXAMPLE_DATASET_DIR_NAME = "dataset_examples"
+
+
+def example_dataset_dir(cache_dir: Path = LIGHTLY_STUDIO_DATASET_CACHE_DIR) -> Path:
+    """Gets the directory the example dataset is cached in.
+
+    Args:
+        cache_dir:
+            The dataset cache root. Defaults to the value of the
+            `LIGHTLY_STUDIO_DATASET_CACHE_DIR` environment variable.
+
+    Returns:
+        The path to the cached example dataset directory.
+    """
+    return cache_dir / EXAMPLE_DATASET_DIR_NAME
 
 
 def download_example_dataset(
-    download_dir: PathLike = "dataset_examples", force_redownload: bool = False
+    download_dir: PathLike | None = None, force_redownload: bool = False
 ) -> str:
     """Downloads the lightly-ai/dataset_examples repository from GitHub.
 
     Args:
         download_dir:
-            The directory where the dataset will be saved.
+            The directory where the dataset will be saved. If None, the dataset is cached
+            in `<LIGHTLY_STUDIO_DATASET_CACHE_DIR>/dataset_examples`, which defaults to
+            `~/.cache/lightly-studio/datasets/dataset_examples`.
         force_redownload:
             If True, will download and overwrite existing data.
             If False, will skip download if target_dir exists.
@@ -34,11 +55,11 @@ def download_example_dataset(
     Returns:
         The path to the downloaded dataset directory.
     """
+    if download_dir is None:
+        download_dir = example_dataset_dir()
     # Convert the user-provided path to an absolute, standard path.
     # This handles '~' (home) and relative paths (../).
     target_path = Path(download_dir).expanduser().resolve()
-    zip_path = target_path.with_name(f"{target_path.name}.zip")
-    temp_extract_dir = target_path.with_name(f"{target_path.name}_temp_extract")
 
     # Check if data already exists.
     if target_path.exists():
@@ -54,6 +75,12 @@ def download_example_dataset(
 
     # Ensure parent folders exist.
     target_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # A unique scratch directory, because several processes can share one cache directory and
+    # fixed names would let them overwrite each other's download.
+    scratch_dir = Path(tempfile.mkdtemp(dir=target_path.parent, prefix=f"{target_path.name}_tmp"))
+    zip_path = scratch_dir / f"{target_path.name}.zip"
+    temp_extract_dir = scratch_dir / "extract"
 
     try:
         with requests.get(url=ZIP_URL, stream=True, timeout=30) as response:
@@ -89,9 +116,6 @@ def download_example_dataset(
 
     finally:
         # Clean up temporary files.
-        if zip_path.exists():
-            os.remove(path=zip_path)
-        if temp_extract_dir.exists():
-            shutil.rmtree(path=temp_extract_dir)
+        shutil.rmtree(path=scratch_dir, ignore_errors=True)
 
     return str(target_path)
