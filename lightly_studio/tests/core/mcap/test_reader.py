@@ -73,23 +73,64 @@ def s3_mcap_uri(moto_server: ThreadedMotoServer, mcap_path: Path) -> str:
 
 class TestMcapFileReader:
     def test_get_frame_locators(self, reader: McapFileReader) -> None:
-        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC, helpers.LIDAR_POINTS_TOPIC])
 
-        locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+        video_locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+        lidar_locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
 
-        assert [locator.log_time_ns for locator in locators] == list(helpers.LIDAR_LOG_TIMES_NS)
+        assert [locator.log_time_ns for locator in video_locators] == list(
+            helpers.VIDEO_LOG_TIMES_NS
+        )
+        assert [locator.log_time_ns for locator in lidar_locators] == list(
+            helpers.LIDAR_LOG_TIMES_NS
+        )
+        # Only the video topic tracks keyframes, and it does so in the combined pass.
+        assert [locator.keyframe_log_time_ns for locator in video_locators] == [
+            helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0],
+            helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0],
+            helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[1],
+            helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[1],
+        ]
+        assert all(locator.keyframe_log_time_ns is None for locator in lidar_locators)
+
+    def test_get_frame_locators__video_without_decoder(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_undecodable_video(tmp_path / "undecodable.mcap")
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+            locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+
+        assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
         assert all(locator.keyframe_log_time_ns is None for locator in locators)
 
     def test_get_frame_locators__time_range(self, reader: McapFileReader) -> None:
         reader.load_data_for_topics(
-            [helpers.LIDAR_POINTS_TOPIC],
-            start_time_ns=helpers.LIDAR_LOG_TIMES_NS[0] + 1,
-            end_time_ns=helpers.LIDAR_LOG_TIMES_NS[1] + 1,
+            [helpers.CAMERA_VIDEO_TOPIC, helpers.LIDAR_POINTS_TOPIC],
+            start_time_ns=helpers.VIDEO_LOG_TIMES_NS[1],
+            end_time_ns=helpers.VIDEO_LOG_TIMES_NS[3],
         )
 
-        locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+        video_locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+        # The first lidar sweep is logged before the range, so only the second remains.
+        lidar_locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
 
-        assert [locator.log_time_ns for locator in locators] == [helpers.LIDAR_LOG_TIMES_NS[1]]
+        assert [locator.log_time_ns for locator in video_locators] == [
+            helpers.VIDEO_LOG_TIMES_NS[1],
+            helpers.VIDEO_LOG_TIMES_NS[2],
+        ]
+        assert [locator.log_time_ns for locator in lidar_locators] == [
+            helpers.LIDAR_LOG_TIMES_NS[1]
+        ]
+
+    def test_get_frame_locators__malformed_video_payload(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_malformed_json_video(tmp_path / "malformed.mcap")
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+            locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+
+        assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
+        assert all(locator.keyframe_log_time_ns is None for locator in locators)
 
     def test_get_frame_locators__repeated_topic(self, reader: McapFileReader) -> None:
         reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC, helpers.LIDAR_POINTS_TOPIC])
@@ -113,35 +154,35 @@ class TestMcapFileReader:
             reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
 
     def test_get_frame_locators__sync_timestamps(self, reader: McapFileReader) -> None:
-        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
 
         locators = reader.get_frame_locators(
-            helpers.LIDAR_POINTS_TOPIC,
-            sync_timestamps=[1_040_000_000, 1_240_000_000],
+            helpers.CAMERA_VIDEO_TOPIC,
+            sync_timestamps=[1_040_000_000, 1_190_000_000],
         )
 
         assert [locator.log_time_ns for locator in locators if locator is not None] == [
-            helpers.LIDAR_LOG_TIMES_NS[0],
-            helpers.LIDAR_LOG_TIMES_NS[1],
+            helpers.VIDEO_LOG_TIMES_NS[0],
+            helpers.VIDEO_LOG_TIMES_NS[2],
         ]
 
     def test_get_frame_locators__sync_timestamps_miss(self, reader: McapFileReader) -> None:
-        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
 
         locators = reader.get_frame_locators(
-            helpers.LIDAR_POINTS_TOPIC,
+            helpers.CAMERA_VIDEO_TOPIC,
             sync_timestamps=[1_040_000_000, 9_000_000_000],
             sync_rule=matching.closest(max_diff_ns=50_000_000),
         )
 
         assert locators[0] is not None
-        assert locators[0].log_time_ns == helpers.LIDAR_LOG_TIMES_NS[0]
+        assert locators[0].log_time_ns == helpers.VIDEO_LOG_TIMES_NS[0]
         assert locators[1] is None
 
     def test_get_frame_locators__sync_timestamps_empty(self, reader: McapFileReader) -> None:
-        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
 
-        assert reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC, sync_timestamps=[]) == []
+        assert reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC, sync_timestamps=[]) == []
 
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
@@ -168,10 +209,10 @@ def test_mcap_file_reader__not_an_mcap_file(tmp_path: Path) -> None:
 
 def test_mcap_file_reader__file_uri(mcap_path: Path) -> None:
     with McapFileReader(f"file://{mcap_path.as_posix()}") as reader:
-        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
-        locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+        locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
 
-    assert [locator.log_time_ns for locator in locators] == list(helpers.LIDAR_LOG_TIMES_NS)
+    assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
 
 
 def test_mcap_file_reader__memory_uri(mcap_path: Path) -> None:
@@ -180,18 +221,25 @@ def test_mcap_file_reader__memory_uri(mcap_path: Path) -> None:
         file.write(mcap_path.read_bytes())
 
     with McapFileReader(uri) as reader:
-        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
-        locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+        locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
 
-    assert [locator.log_time_ns for locator in locators] == list(helpers.LIDAR_LOG_TIMES_NS)
+    assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
 
 
 def test_mcap_file_reader__s3_uri(s3_mcap_uri: str, s3_storage_options: dict[str, Any]) -> None:
     with McapFileReader(s3_mcap_uri, storage_options=s3_storage_options) as reader:
-        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
-        locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+        locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
 
-    assert [locator.log_time_ns for locator in locators] == list(helpers.LIDAR_LOG_TIMES_NS)
+    # The payloads are read over S3 too, so the keyframes are detected as locally.
+    assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
+    assert [locator.keyframe_log_time_ns for locator in locators] == [
+        helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0],
+        helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0],
+        helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[1],
+        helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[1],
+    ]
 
 
 def test_mcap_file_reader__s3_uri_cached(
@@ -206,10 +254,10 @@ def test_mcap_file_reader__s3_uri_cached(
             "simplecache": {"cache_storage": str(cache_path)},
         },
     ) as reader:
-        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
-        locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+        locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
 
-    assert [locator.log_time_ns for locator in locators] == list(helpers.LIDAR_LOG_TIMES_NS)
+    assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
     assert any(path.is_file() for path in cache_path.iterdir())
 
 

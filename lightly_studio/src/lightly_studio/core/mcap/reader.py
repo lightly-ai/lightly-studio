@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import logging
+from collections.abc import Callable, Mapping, Sequence
 from types import TracebackType
 from typing import Any, overload
 
@@ -11,18 +12,22 @@ from mcap import reader as mcap_reader
 from mcap.records import Channel, Message, Schema
 from mcap.summary import Summary
 
-from lightly_studio.core.mcap import matching, topic_kind
+from lightly_studio.core.mcap import decoding, matching, topic_kind, video_keyframe
 from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.matching import MatchFunction
+from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.type_definitions import FrameLocator, TopicInfo
 from lightly_studio.type_definitions import PathLike
+
+logger = logging.getLogger(__name__)
 
 
 class McapFileReader:
     """Reads frame locators out of an indexed MCAP file.
 
     The reader returns where data is, not the data itself: it never returns decoded
-    video frames or point clouds, and it does not read message payloads.
+    video frames or point clouds. Message payloads are only read internally, to detect
+    video keyframes.
 
     The file is opened through fsspec, so it can live in local storage or in remote
     object storage. Reading an indexed file only fetches the summary and the chunks a
@@ -63,13 +68,18 @@ class McapFileReader:
                     "seekable files can be read, so a remote file needs a filesystem "
                     "that supports range requests."
                 )
-            self._reader = mcap_reader.make_reader(self._stream)
+            # Kept, so that a single message can be decoded without a second pass.
+            self._decoder_factories = decoding.decoder_factories()
+            self._reader = mcap_reader.make_reader(
+                self._stream, decoder_factories=self._decoder_factories
+            )
         except Exception:
             self._open_file.close()
             raise
         self._topics: list[TopicInfo] | None = None
-        self._topic_names: set[str] | None = None
+        self._topics_by_name: dict[str, TopicInfo] | None = None
         self._locators_by_topic: dict[str, list[FrameLocator]] = {}
+        self._decoder_by_channel_id: dict[int, Callable[[bytes], Any] | None] = {}
 
     def close(self) -> None:
         """Closes the MCAP file."""
@@ -111,15 +121,28 @@ class McapFileReader:
             McapAccessError: If the file has messages but no chunk index to locate them.
         """
         unique_topics = list(dict.fromkeys(topics))
-        for topic in unique_topics:
-            self._require_topic(topic)
+        video_topics = {
+            topic
+            for topic in unique_topics
+            if self._require_topic_info(topic).kind is TopicKind.VIDEO
+        }
         self._require_chunk_index()
         locators_by_topic: dict[str, list[FrameLocator]] = {topic: [] for topic in unique_topics}
+        keyframe_log_time_ns_by_topic: dict[str, int | None] = dict.fromkeys(video_topics)
         for schema, channel, message in self._reader.iter_messages(
             topics=unique_topics, start_time=start_time_ns, end_time=end_time_ns
         ):
+            if channel.topic in video_topics and self._is_keyframe(
+                schema=schema, channel=channel, message=message
+            ):
+                keyframe_log_time_ns_by_topic[channel.topic] = message.log_time
             locators_by_topic[channel.topic].append(
-                _frame_locator(schema=schema, channel=channel, message=message)
+                _frame_locator(
+                    schema=schema,
+                    channel=channel,
+                    message=message,
+                    keyframe_log_time_ns=keyframe_log_time_ns_by_topic.get(channel.topic),
+                )
             )
         self._locators_by_topic.update(locators_by_topic)
 
@@ -181,16 +204,72 @@ class McapFileReader:
             )
         return self._locators_by_topic[topic]
 
-    def _require_topic(self, topic: str) -> None:
-        """Checks that a topic is in the file.
+    def _is_keyframe(self, schema: Schema | None, channel: Channel, message: Message) -> bool:
+        """Returns whether a video message holds a keyframe.
+
+        Only this message is decoded, so that a pass over several topics does not pay
+        for decoding the payloads of the topics that are not video.
+
+        Args:
+            schema: The schema of the channel.
+            channel: The channel the message belongs to.
+            message: The message to look at.
+
+        Returns:
+            Whether the message holds a keyframe. `False` if it cannot be decoded.
+        """
+        decoder = self._decoder_for(schema=schema, channel=channel)
+        if decoder is None:
+            return False
+        try:
+            decoded_message = decoder(message.data)
+        except Exception:
+            logger.warning(
+                "Cannot decode a message of topic '%s' in '%s'. It carries no keyframe time.",
+                channel.topic,
+                self.path,
+            )
+            return False
+        return video_keyframe.is_keyframe_message(decoded_message)
+
+    def _decoder_for(
+        self, schema: Schema | None, channel: Channel
+    ) -> Callable[[bytes], Any] | None:
+        """Returns the decoder of a channel, or `None` if no factory can decode it.
+
+        The lookup is cached per channel, and a channel that cannot be decoded is
+        reported once.
+        """
+        if channel.id in self._decoder_by_channel_id:
+            return self._decoder_by_channel_id[channel.id]
+
+        decoder: Callable[[bytes], Any] | None = None
+        for factory in self._decoder_factories:
+            decoder = factory.decoder_for(channel.message_encoding, schema)
+            if decoder is not None:
+                break
+        if decoder is None:
+            logger.warning(
+                "Cannot decode the messages of topic '%s' in '%s'. Its frame locators "
+                "carry no keyframe times.",
+                channel.topic,
+                self.path,
+            )
+        self._decoder_by_channel_id[channel.id] = decoder
+        return decoder
+
+    def _require_topic_info(self, topic: str) -> TopicInfo:
+        """Returns the info of a topic.
 
         Raises:
             TopicNotFoundError: If the topic is not in the file.
         """
         self._get_topics()
-        assert self._topic_names is not None
-        if topic not in self._topic_names:
+        assert self._topics_by_name is not None
+        topic_info = self._topics_by_name.get(topic)
+        if topic_info is None:
             raise TopicNotFoundError(f"Topic '{topic}' is not in MCAP file '{self.path}'.")
+        return topic_info
 
     def _get_topics(self) -> list[TopicInfo]:
         """Returns the topics of the file, ordered by name.
@@ -212,7 +291,9 @@ class McapFileReader:
                 for channel in summary.channels.values()
             ]
             self._topics = sorted(topics, key=lambda topic: topic.name)
-            self._topic_names = {topic.name for topic in self._topics}
+            self._topics_by_name = {}
+            for topic_info in self._topics:
+                self._topics_by_name.setdefault(topic_info.name, topic_info)
         return self._topics
 
     def _require_chunk_index(self) -> None:
@@ -263,11 +344,17 @@ def _topic_info(channel: Channel, schema: Schema | None, message_count: int | No
     )
 
 
-def _frame_locator(schema: Schema | None, channel: Channel, message: Message) -> FrameLocator:
+def _frame_locator(
+    schema: Schema | None,
+    channel: Channel,
+    message: Message,
+    keyframe_log_time_ns: int | None = None,
+) -> FrameLocator:
     """Points at a message without carrying its payload."""
     return FrameLocator(
         channel_id=message.channel_id,
         log_time_ns=message.log_time,
         topic=channel.topic,
+        keyframe_log_time_ns=keyframe_log_time_ns,
         schema_name=None if schema is None else schema.name,
     )
