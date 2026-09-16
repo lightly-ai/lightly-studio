@@ -17,23 +17,6 @@ from lightly_studio.resolvers import (
 from tests.helpers_resolvers import create_collection
 
 
-def _link_frames_to_sequence(
-    session: Session,
-    sequence_sample_id: UUID,
-    frame_sample_ids: list[UUID],
-) -> None:
-    links = [
-        SampleSequenceLinkTable(
-            sample_id=fid,
-            sequence_sample_id=sequence_sample_id,
-            seq_number=i,
-        )
-        for i, fid in enumerate(frame_sample_ids)
-    ]
-    session.bulk_save_objects(links)
-    session.commit()
-
-
 def test_get_all_by_collection_id__empty_collection(db_session: Session) -> None:
     """Returns empty result for a collection with no sequences."""
     seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
@@ -167,3 +150,20 @@ def test_get_all_by_collection_id__pagination(db_session: Session) -> None:
     assert page_2.total_count == 3
     assert len(page_2.samples) == 1
     assert page_2.next_cursor is None
+
+
+def _link_frames_to_sequence(
+    session: Session,
+    sequence_sample_id: UUID,
+    frame_sample_ids: list[UUID],
+) -> None:
+    links = [
+        SampleSequenceLinkTable(
+            sample_id=fid,
+            sequence_sample_id=sequence_sample_id,
+            seq_number=i,
+        )
+        for i, fid in enumerate(frame_sample_ids)
+    ]
+    session.bulk_save_objects(objects=links)
+    session.commit()
