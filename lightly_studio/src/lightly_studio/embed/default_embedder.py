@@ -55,6 +55,8 @@ def resolve_default_embedder(
         ValueError: If the embedder's dimension does not match the space's stored dimension
             (a wrongly registered embedder), or if the collection does not exist.
     """
+    # TODO(Michal, 09/2026): Raise an exception instead of logging a warning and returning
+    # None when no embedder is loaded, and handle it upstream in the callers.
     default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection_id
     )
