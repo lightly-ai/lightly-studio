@@ -305,10 +305,12 @@ def embed_frame_samples(
 def has_frame_embedder() -> bool:
     """Report whether the registry can supply an embedder for video frames.
 
-    A pure, side-effect-free check used as an up-front guard before decoding frames to
-    PIL images. Frame embedding (see ``embed_frame_samples``) resolves an image embedder
-    from the registry, so when none is available the caller can skip the decode instead
-    of doing it for nothing.
+    An up-front guard before decoding frames to PIL images: frame embedding (see
+    ``embed_frame_samples``) resolves an image embedder from the registry, so when none
+    is available the caller can skip the decode instead of doing it for nothing.
+
+    Bootstraps and caches the registry's default frame embedder on the first call, the
+    same embedder ``embed_frame_samples`` then reuses, so it is not side-effect-free.
 
     Returns:
         True if the registry has an image embedder for frames, False otherwise.
