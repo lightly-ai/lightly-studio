@@ -1,9 +1,13 @@
-"""The HTTP half of the remote embedder: one request, one answer, one exception.
+"""Sends the requests of the LightlyStudio embedding protocol over HTTP.
 
-``RemoteTransport`` sends the requests of version 1 of the LightlyStudio embedding
-protocol and reads the answers back into the wire models of ``lightly_studio_serve``. It
-holds no state of the server: ``RemoteEmbedder`` reads ``/v1/describe`` once and keeps the
-answer for the lifetime of the process.
+``RemoteTransport`` sends the requests of version 1 of the protocol and reads the answers
+back into the wire models of ``lightly_studio_serve``, so the client and the server cannot
+drift apart. A status that is not 200 becomes the exception of ``errors`` that names its
+cause. A 429 or a 503 is sent again, for a capped number of attempts and after a capped
+wait.
+
+The transport holds no state of the server. ``RemoteEmbedder`` reads ``/v1/describe`` once
+and keeps the answer for the lifetime of the process.
 """
 
 from __future__ import annotations
@@ -73,8 +77,9 @@ _STATUS_ERRORS: dict[int, tuple[type[RemoteEmbedderError], str]] = {
 _OCTET_STREAM = "application/octet-stream"
 
 # The longest message that an exception repeats from a server that this client does not
-# control.
-_MAX_DETAIL_CHARS = 200
+# control. Long enough to carry a stack trace or a validation report that names the real
+# cause, short enough to keep an unbounded body out of a log line.
+_MAX_DETAIL_CHARS = 1000
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
 
@@ -147,7 +152,10 @@ class RemoteTransport:
         """Embed a batch of encoded images on the server.
 
         Args:
-            images: The encoded images, at most the ``max_batch_size`` of the server.
+            images: The encoded images (JPEG, PNG or WebP), at most the
+                ``max_batch_size`` of the server. Each one goes on the wire as it is
+                stored, with no decoding step here: the server reads the format from the
+                header of the data, and it does not trust what this client claims.
 
         Returns:
             The vectors and the indices of the images that they cover.
@@ -163,6 +171,9 @@ class RemoteTransport:
 
         Args:
             videos: The encoded videos, at most the ``max_batch_size`` of the server.
+                Each one goes on the wire as it is stored, and the server reads the
+                format from the header of the data. The protocol names no fixed set of
+                container formats, so what a server accepts is what its model can read.
 
         Returns:
             The vectors and the indices of the videos that they cover.

@@ -243,7 +243,7 @@ class TestRemoteTransport:
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
 
         assert str(error.value).endswith("...")
-        assert len(str(error.value)) < 400
+        assert len(str(error.value)) < 2 * transport._MAX_DETAIL_CHARS
 
     def test_embed_video_bytes(self) -> None:
         embedder = FakeBytesEmbedder()
