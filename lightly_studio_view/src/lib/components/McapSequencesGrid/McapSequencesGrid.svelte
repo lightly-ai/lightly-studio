@@ -14,6 +14,7 @@
         sequences: McapSequence[];
         isLoading: boolean;
         isEmpty: boolean;
+        isError: boolean;
         hasNextPage: boolean;
         isFetchingNextPage: boolean;
         onLoadMore: () => void;
@@ -24,6 +25,7 @@
         sequences,
         isLoading,
         isEmpty,
+        isError,
         hasNextPage,
         isFetchingNextPage,
         onLoadMore,
@@ -46,9 +48,9 @@
         }}
         status={{
             loading: isLoading,
-            error: false,
+            error: isError,
             empty: isEmpty,
-            success: !isLoading && !isEmpty
+            success: !isLoading && !isEmpty && !isError
         }}
         loader={{
             loadMore: onLoadMore,

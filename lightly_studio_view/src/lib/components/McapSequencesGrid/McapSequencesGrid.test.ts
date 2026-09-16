@@ -58,6 +58,7 @@ describe('McapSequencesGrid', () => {
         sequences,
         isLoading: false,
         isEmpty: false,
+        isError: false,
         hasNextPage: false,
         isFetchingNextPage: false,
         onLoadMore: vi.fn(),
@@ -73,6 +74,13 @@ describe('McapSequencesGrid', () => {
     });
 
     afterEach(() => vi.restoreAllMocks());
+
+    it('renders the error state when isError is true', () => {
+        render(McapSequencesGridTestWrapper, {
+            props: { ...defaultProps, isError: true }
+        });
+        expect(screen.getByText('Something went wrong.')).toBeInTheDocument();
+    });
 
     it('renders the loading and empty messages for their respective states', () => {
         const { rerender } = render(McapSequencesGridTestWrapper, {

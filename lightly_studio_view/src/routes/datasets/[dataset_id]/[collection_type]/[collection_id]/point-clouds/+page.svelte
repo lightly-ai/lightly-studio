@@ -24,6 +24,7 @@
     );
     const isLoading = $derived(query.isPending && sequences.length === 0);
     const isEmpty = $derived(query.isSuccess && sequences.length === 0);
+    const isError = $derived(query.isError);
     const hasNextPage = $derived(query.hasNextPage ?? false);
     const isFetchingNextPage = $derived(query.isFetchingNextPage);
 
@@ -43,6 +44,7 @@
     {sequences}
     {isLoading}
     {isEmpty}
+    {isError}
     {hasNextPage}
     {isFetchingNextPage}
     onLoadMore={loadMore}

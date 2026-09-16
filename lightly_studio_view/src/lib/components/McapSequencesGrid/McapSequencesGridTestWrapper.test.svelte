@@ -6,6 +6,7 @@
         sequences,
         isLoading,
         isEmpty,
+        isError,
         hasNextPage,
         isFetchingNextPage,
         onLoadMore,
@@ -17,6 +18,7 @@
     {sequences}
     {isLoading}
     {isEmpty}
+    {isError}
     {hasNextPage}
     {isFetchingNextPage}
     {onLoadMore}
