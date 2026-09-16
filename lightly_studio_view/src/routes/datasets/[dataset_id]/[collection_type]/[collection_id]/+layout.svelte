@@ -547,6 +547,10 @@
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
 
+    // The class count queries share one gate: the panel has to be open, and with every
+    // annotation source unchecked their results are replaced with an empty list anyway.
+    const distributionCountsEnabled = $derived(distributionPanelVisible && !$allSourcesHidden);
+
     // Global count mode for the distribution panel (applies to all sources).
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
     let distributionSampleTagIds = $state<string[]>([]);
@@ -580,7 +584,7 @@
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
         queryKey: distributionAllQueryKey,
-        enabled: distributionPanelVisible && !$allSourcesHidden
+        enabled: distributionCountsEnabled
     }));
 
     let activeDistributionSourceId = $state<string | undefined>(undefined);
@@ -599,7 +603,7 @@
         annotationType: AnnotationType.CLASSIFICATION,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible && !$allSourcesHidden
+        enabled: distributionCountsEnabled
     }));
 
     const distributionObjectDetectionQuery = useImageAnnotationCounts(() => ({
@@ -607,7 +611,7 @@
         annotationType: AnnotationType.OBJECT_DETECTION,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible && !$allSourcesHidden
+        enabled: distributionCountsEnabled
     }));
 
     const distributionSegmentationQuery = useImageAnnotationCounts(() => ({
@@ -615,7 +619,7 @@
         annotationType: AnnotationType.SEGMENTATION_MASK,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible && !$allSourcesHidden
+        enabled: distributionCountsEnabled
     }));
 
     interface GroupedCountsParams {
