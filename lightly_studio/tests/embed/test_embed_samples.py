@@ -934,64 +934,19 @@ def test_embed_frame_samples__count_mismatch_raises(
     assert _stored_embeddings(session=db_session) == []
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_collection_has_default_embedder__loads_and_reports_true(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    """The helper ensures the default is loaded, then reports it is available.
-
-    The check is ensure-and-check: no default exists up front, and the first call
-    registers one as a side effect before returning True.
-    """
-    collection = create_collection(session=db_session)
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
-    # No default embedding model exists before the call.
-    assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is None
-    )
-
-    has_default = embed_samples.collection_has_default_embedder(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    assert has_default is True
-    # The call registered a default model as its side effect.
-    assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is not None
-    )
+@pytest.mark.usefixtures("patched_registry")
+def test_frame_embedder_available__true_when_registry_has_embedder() -> None:
+    """The guard reports True when the registry can supply a frame embedder."""
+    assert embed_samples.frame_embedder_available() is True
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_collection_has_default_embedder__false_when_none_loadable(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    """The helper reports False when no default model can be loaded."""
-    collection = create_collection(session=db_session)
-    _disable_env_loader(mocker=mocker)
+def test_frame_embedder_available__false_when_no_pil_embedder(mocker: MockerFixture) -> None:
+    """The guard reports False when the registry has no frame embedder."""
+    registry = mocker.MagicMock(spec=EmbedderRegistry)
+    registry.get_image_pil_embedder.return_value = None
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
-    has_default = embed_samples.collection_has_default_embedder(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    assert has_default is False
-    assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is None
-    )
+    assert embed_samples.frame_embedder_available() is False
 
 
 def _register_default_random_model(
@@ -1025,11 +980,6 @@ def _create_annotation_collection(session: Session) -> UUID:
         collection_id=collection.collection_id,
         sample_type=SampleType.ANNOTATION,
     )
-
-
-def _disable_env_loader(mocker: MockerFixture) -> None:
-    """Make loading a default generator from the environment return nothing."""
-    mocker.patch.object(embedding_manager, "_load_embedding_generator_from_env", return_value=None)
 
 
 def _stored_embeddings(session: Session) -> list[SampleEmbeddingTable]:

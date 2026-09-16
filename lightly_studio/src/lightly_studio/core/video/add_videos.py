@@ -171,9 +171,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
-    effective_embed_frames = embed_frames and embed_samples.collection_has_default_embedder(
-        session=session, collection_id=video_frames_collection_id
-    )
+    effective_embed_frames = embed_frames and embed_samples.frame_embedder_available()
     if embed_frames and not effective_embed_frames:
         logger.warning("No embedding model loaded. Skipping frame embedding generation.")
 
