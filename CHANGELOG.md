@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Preselected samples are now part of the sampling result.
 - Move each docs page into a folder named for its nav section. The old URLs redirect.
+- Speed up exporting video frames to image files by decoding videos in parallel.
 
 ### Deprecated
 
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix `hf://` directory ingest reporting every file as missing.
+- Include a path-derived token in exported video-frame image file names so two videos with the same name in different folders no longer overwrite each other.
 
 ### Security
 
