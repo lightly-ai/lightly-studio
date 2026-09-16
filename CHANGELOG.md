@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add an optional preselected tag selector to the sampling dialog.
+
 ### Changed
 
 - Show loading spinners in distribution plots in the GUI. 
@@ -22,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix `hf://` directory ingest reporting every file as missing.
+- Fix the distribution panel and annotation class counts not updating when a filter changes.
 
 ### Security
 
