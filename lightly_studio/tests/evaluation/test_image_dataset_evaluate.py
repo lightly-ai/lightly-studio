@@ -802,6 +802,72 @@ def test_metrics(
     assert metrics.accuracy == pytest.approx(1.0)
 
 
+def test_metrics__object_detection(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Derives aggregate metrics for an object-detection run; accuracy is undefined."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="cat",
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    # One TP: an overlapping gt box and prediction.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="gt",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="pred",
+    )
+    # One FN: a gt box with no matching prediction.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 100, "y": 100, "width": 20, "height": 20},
+        annotation_collection_name="gt",
+    )
+    # One FP: a prediction with no matching gt box.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 200, "y": 200, "width": 20, "height": 20},
+        annotation_collection_name="pred",
+    )
+    dataset.evaluate().object_detection(
+        name="run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(iou_threshold=0.5),
+    )
+    run_id = dataset.evaluate().list_runs()[0].id
+
+    metrics = dataset.evaluate().metrics(run_id=run_id)
+
+    assert [entry.label for entry in metrics.per_class] == ["cat"]
+    assert metrics.per_class[0].precision == pytest.approx(0.5)  # 1 tp / (1 tp + 1 fp)
+    assert metrics.per_class[0].recall == pytest.approx(0.5)  # 1 tp / (1 tp + 1 fn)
+    assert metrics.per_class[0].f1 == pytest.approx(0.5)
+    assert metrics.per_class[0].support == 2  # 1 tp + 1 fn
+    assert metrics.precision == pytest.approx(0.5)
+    assert metrics.recall == pytest.approx(0.5)
+    # Accuracy is undefined for detection: predictions and ground truths are matched.
+    assert metrics.accuracy is None
+
+
 def test_metrics__run_not_found_raises(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
