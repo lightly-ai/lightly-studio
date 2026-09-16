@@ -234,6 +234,7 @@
                             />
                         </div>
 
+                        <!-- TODO: Validate the preselected tag against the active filters before allowing submission. -->
                         <PreselectedTagField
                             tags={$tags}
                             value={$preselectedTagId}

@@ -89,6 +89,7 @@ export function useSamplingCombinationDialog({
 
     const noSamples = derived(filteredSampleCount, ($count) => $count === 0);
 
+    // TODO: Subtract preselected samples from the available count when validating the request.
     const notEnoughSamples = derived(
         [filteredSampleCount, nSamplesToSelect],
         ([$count, $n]) => $count > 0 && $n !== null && $n > $count
