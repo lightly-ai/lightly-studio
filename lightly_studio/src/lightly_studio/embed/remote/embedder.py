@@ -1,12 +1,12 @@
 """An embedder that calls a server instead of running a model.
 
 ``RemoteEmbedder`` is a pure mirror of the wire. It carries what every capability shares,
-and one route class per capability adds the one method that the capability names. An
-fsspec path, a crop and a PIL image do not cross the wire, so they are not served here.
+and one route class per capability adds the method that the capability names. An fsspec
+path, a crop and a PIL image do not cross the wire, so they are not served here.
 
 The capabilities are data of the server. ``connect`` reads ``/v1/describe`` once and
-composes the class out of the route classes that the server advertises, so a capability
-that the server does not advertise has no method to call.
+composes the class out of the route classes it advertises, so an unadvertised capability
+has no method to call.
 """
 
 from __future__ import annotations
@@ -33,11 +33,10 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderError,
     RemoteEmbedderProtocolError,
 )
-from lightly_studio.embed.remote.transport import RemoteTransport
+from lightly_studio.embed.remote.transport import RemoteTimeouts, RemoteTransport
 
-# The capabilities that `EmbedderRegistry` can hand back. Its `_CAPABILITY_TO_TYPE` has no
-# `VIDEO_BYTES` entry, so a video-only server gives an embedder that nothing in
-# LightlyStudio ever asks for, and `register` refuses it with "implements no capability".
+# The capabilities that `EmbedderRegistry` can hand back. It has no `VIDEO_BYTES` entry,
+# so a video-only server gives an embedder that nothing in LightlyStudio ever asks for.
 # TODO(Iunir, 09/2026): Remove this constant when the registry gains a `VIDEO_BYTES` entry.
 _RESOLVABLE_CAPABILITIES = (Capability.TEXT, Capability.IMAGE_BYTES)
 
@@ -48,9 +47,8 @@ class RemoteEmbedder(Embedder):
     """Embeds by calling a conforming embedding server over HTTP.
 
     Every method of an embedder becomes one HTTP call, and the answer becomes an
-    ``EmbeddingResult``. Nothing else in LightlyStudio changes: a caller asks the registry
-    for the capability it needs and calls the method, whether the object behind it runs a
-    model in this process or speaks to a server.
+    ``EmbeddingResult``. A caller asks the registry for the capability it needs, whether
+    the object behind it runs a model in this process or speaks to a server.
 
     This class holds no capability of its own. ``connect`` composes it with one route class
     per advertised capability.
@@ -86,7 +84,11 @@ class RemoteEmbedder(Embedder):
 
     @classmethod
     def connect(
-        cls, url: str, api_key: str | None = None, client: httpx.Client | None = None
+        cls,
+        url: str,
+        api_key: str | None = None,
+        client: httpx.Client | None = None,
+        timeouts: RemoteTimeouts | None = None,
     ) -> RemoteEmbedder:
         """Read ``/v1/describe`` and build the embedder that this server can back.
 
@@ -101,6 +103,8 @@ class RemoteEmbedder(Embedder):
             client: The client to send with, for a test that drives an application in
                 process. Its ``base_url`` then names the server and ``url`` is unused.
                 ``None`` opens a client against ``url``.
+            timeouts: The budget of each capability. ``None`` applies
+                ``transport.DEFAULT_TIMEOUTS``.
 
         Returns:
             An embedder that implements the interface of every capability that the server
@@ -114,7 +118,7 @@ class RemoteEmbedder(Embedder):
         http_client = client if client is not None else connection.build_client(url=url)
         owned_client = http_client if client is None else None
         try:
-            transport = RemoteTransport(client=http_client, api_key=api_key)
+            transport = RemoteTransport(client=http_client, api_key=api_key, timeouts=timeouts)
             description = transport.describe()
             connection.log_if_loading(description=description, client=http_client)
             return _embedder_for(
@@ -148,11 +152,7 @@ class RemoteEmbedder(Embedder):
         self.close()
 
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        """Describe the embedding space that the server produces.
-
-        Returns:
-            The space that ``/v1/describe`` reported at construction.
-        """
+        """Describe the space that ``/v1/describe`` reported at construction."""
         return self._spec
 
     def _embed(
@@ -343,9 +343,8 @@ class _VideoBytesRoute(RemoteEmbedder, VideoBytesEmbedder):
 
 # The capabilities that this client routes to, each with the route class that serves it.
 # `WIRE_CAPABILITIES` is broader: a `DescribeResponse` can legally carry `image_path`,
-# which version 1 never requests. A capability that is absent here is ignored, never
-# assumed routable. The order of this mapping is the order of the bases, so two servers
-# that advertise the same set compose the same class.
+# which version 1 never requests, and a capability absent here is never routed to. The
+# order is the order of the bases, so the same advertised set composes the same class.
 _CAPABILITY_TO_BASE: dict[Capability, type[RemoteEmbedder]] = {
     Capability.TEXT: _TextRoute,
     Capability.IMAGE_BYTES: _ImageBytesRoute,
@@ -367,8 +366,7 @@ def _embedder_for(
             caller owns.
 
     Returns:
-        An embedder that implements the interface of every advertised capability that this
-        client routes to.
+        An embedder that implements every advertised capability this client routes to.
 
     Raises:
         RemoteEmbedderCapabilityError: If nothing advertised is usable from LightlyStudio.
