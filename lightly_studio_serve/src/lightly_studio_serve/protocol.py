@@ -41,9 +41,18 @@ FILES_FIELD_NAME = "files"
 # A number, because starlette renamed its constant for this status.
 STATUS_PAYLOAD_TOO_LARGE = 413
 
+# The number of parts that the multipart parser of starlette accepts. FastAPI gives a
+# route no way to raise it, so a batch over this never reaches a bytes endpoint.
+MULTIPART_MAX_FILES = 1000
+
+# The largest batch that a server of this package applies. It is one under the parser
+# limit, so a batch of `max_batch_size + 1` parts still reaches the route. The route
+# then answers the 413 of the protocol, not the 400 that the parser raises.
+MAX_BATCH_SIZE_CEILING = MULTIPART_MAX_FILES - 1
+
 # TODO(Iunir, 09/2026): Report a limit per capability. Text queries and videos do not
 # belong under one ceiling.
-DEFAULT_MAX_BATCH_SIZE = 1024
+DEFAULT_MAX_BATCH_SIZE = MAX_BATCH_SIZE_CEILING
 
 DEFAULT_MAX_REQUEST_BYTES = 32 * 1024 * 1024
 
@@ -61,7 +70,12 @@ class ServerLimits(BaseModel):
     """The limits that the server applies and reports. A client does not have to guess them."""
 
     max_batch_size: int = Field(default=DEFAULT_MAX_BATCH_SIZE, gt=0)
-    """The largest number of items in one request."""
+    """The largest number of items in one request.
+
+    The model holds no ceiling. A client reads this field from a server that it does not
+    control, and that server can read its batch with another parser. ``create_app``
+    applies ``MAX_BATCH_SIZE_CEILING`` to the server of this package.
+    """
 
     max_request_bytes: int = Field(default=DEFAULT_MAX_REQUEST_BYTES, gt=0)
     """The largest request body that the server accepts, in bytes."""

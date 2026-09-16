@@ -36,6 +36,10 @@ dependencies = [
     # Python 3.9.
     "python-multipart>=0.0.31; python_version >= '3.10'",
     "python-multipart>=0.0.20; python_version < '3.10'",
+    # `lightly_studio_serve.middleware` is ASGI middleware, so it imports the ASGI types
+    # from starlette directly. FastAPI installs starlette, but a direct import needs a
+    # floor of its own. This is the floor that the `fastapi` floor above resolves.
+    "starlette>=0.40.0",
     "uvicorn>=0.32.1",
 ]
 
