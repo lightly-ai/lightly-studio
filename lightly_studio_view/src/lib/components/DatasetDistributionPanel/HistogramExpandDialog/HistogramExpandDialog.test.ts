@@ -65,6 +65,12 @@ describe('HistogramExpandDialog', () => {
         document.body.style.pointerEvents = '';
     });
 
+    it('shows the shared spinner while keeping histogram controls available', () => {
+        renderDialog({ loading: true });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+        expect(screen.getByText('Distribution · confidence')).toBeInTheDocument();
+    });
+
     it('renders the title with the field label', () => {
         renderDialog();
 

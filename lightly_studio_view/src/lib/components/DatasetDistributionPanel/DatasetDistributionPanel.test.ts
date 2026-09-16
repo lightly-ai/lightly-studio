@@ -526,10 +526,36 @@ describe('DatasetDistributionPanel', () => {
         });
 
         expect(screen.getByTestId('dataset-distribution-comparison-error')).toBeInTheDocument();
-        // The error wins over the in-flight refetch behind it.
-        expect(
-            screen.queryByTestId('dataset-distribution-comparison-loading')
-        ).not.toBeInTheDocument();
+        expect(screen.getByTestId('distribution-plot-loading')).toBeInTheDocument();
+    });
+
+    it('keeps the chart mounted during refresh and allows closing the panel', async () => {
+        const onClose = vi.fn();
+        const source = { id: 'classes', label: 'Annotation classes', data: balanced };
+        const view = render(DatasetDistributionPanel, { props: { sources: [source], onClose } });
+        const chart = view.container.querySelector('[data-testid=bar-chart]');
+        await view.rerender({ sources: [{ ...source, loading: true }], onClose });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+        expect(screen.getByTestId('bar-chart')).toBe(chart);
+        await fireEvent.click(screen.getByTestId('dataset-distribution-close-button'));
+        expect(onClose).toHaveBeenCalledOnce();
+        await view.rerender({ sources: [source], onClose });
+        expect(screen.queryByTestId('distribution-plot-loading')).not.toBeInTheDocument();
+    });
+
+    it('shows a spinner before the selected histogram has data', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'metadata',
+                        label: 'Metadata',
+                        groups: [{ id: 'width', label: 'Width', loading: true }]
+                    }
+                ]
+            }
+        });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading...');
     });
 
     it('marks an in-flight tag comparison so an empty chart is not read as no data', () => {
@@ -543,7 +569,7 @@ describe('DatasetDistributionPanel', () => {
             }
         });
 
-        expect(screen.getByTestId('dataset-distribution-comparison-loading')).toBeInTheDocument();
+        expect(screen.getByTestId('distribution-plot-loading')).toBeInTheDocument();
     });
 
     it('defaults to the first source with content when a leading source is empty', () => {
@@ -941,7 +967,7 @@ describe('DatasetDistributionPanel', () => {
         const view = render(DatasetDistributionPanel, {
             props: { sources: source({ loading: true }), onCategoricalRetry }
         });
-        expect(screen.getByRole('status')).toHaveTextContent('Loading metadata distribution');
+        expect(screen.getByRole('status')).toHaveTextContent('Loading...');
 
         await view.rerender({
             sources: source({ error: 'network failure' }),
