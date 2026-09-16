@@ -21,10 +21,7 @@ from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManagerProvider,
-    TextEmbedQuery,
-)
+from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.embed import default_embedder, embedder_registry, embedding_storage
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.resolvers import (
@@ -81,10 +78,15 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
     return embedding
 
 
-def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
+def embed_text_for_collection(session: Session, collection_id: UUID, text: str) -> list[float]:
     """Embed a text query with the collection's default model, without storing it.
 
+    Resolves the collection's default model from the database and embeds the text with the
+    registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
+    never bootstraps a default model, since an interactive query must not mutate the collection.
+
     Args:
+        session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
         text: The text to embed.
 
@@ -92,10 +94,25 @@ def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model.
+        ValueError: If the collection has no default embedding model, or no registered
+            embedder embeds text for that model's space.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    return manager.embed_text(collection_id=collection_id, text_query=TextEmbedQuery(text=text))
+    default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if default_model is None:
+        raise ValueError("The collection has no default embedding model.")
+
+    embedder = embedder_registry.get_registry().get_text_embedder(space_key=default_model.name)
+    if embedder is None:
+        raise ValueError(
+            f"No registered embedder embeds text for the collection's default "
+            f"embedding space {default_model.name!r}."
+        )
+
+    result = embedder.embed_text(texts=[text])
+    embedding: list[float] = result.embeddings[0].tolist()
+    return embedding
 
 
 def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
@@ -363,9 +380,9 @@ def _embed_annotation_chunk(
     return len(annotation_crops)
 
 
-# TODO(Michal, 09/2026): Remove once text search reads embedders from the EmbedderRegistry
-# instead of the EmbeddingManager. embed_text_for_collection still resolves its generator
-# from the manager's in-memory maps, which the registry path does not populate.
+# TODO(Michal, 09/2026): Now that embed_text_for_collection reads from the EmbedderRegistry,
+# no reader is left for the manager's default model. Remove this legacy sync and its call
+# sites in a follow-up once the storing paths no longer need to keep the manager consistent.
 def _register_legacy_default_model(session: Session, collection_id: UUID, model_id: UUID) -> None:
     """Sync the collection's default model into the legacy EmbeddingManager.
 

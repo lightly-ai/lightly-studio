@@ -193,11 +193,12 @@ def test_embed_image_for_collection__no_embedder_for_space_raises(
         )
 
 
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_text_for_collection(
     db_session: Session,
     patched_manager: EmbeddingManager,
 ) -> None:
-    """A text query is embedded with the collection's default model."""
+    """A text query is embedded via the registry with the collection's default model."""
     collection = create_collection(session=db_session)
     _register_default_random_model(
         manager=patched_manager,
@@ -207,21 +208,42 @@ def test_embed_text_for_collection(
     )
 
     embedding = embed_samples.embed_text_for_collection(
-        collection_id=collection.collection_id, text="a red car"
+        session=db_session, collection_id=collection.collection_id, text="a red car"
     )
 
     assert len(embedding) == 3
+    # Nothing is stored for an interactive query embedding.
+    assert _stored_embeddings(session=db_session) == []
 
 
-@pytest.mark.usefixtures("patched_manager")
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_text_for_collection__no_default_model(
     db_session: Session,
 ) -> None:
     """Without a default model the interactive text path raises a clear error."""
     collection = create_collection(session=db_session)
-    with pytest.raises(ValueError, match="No embedding_model_id provided and no default embedding"):
+    with pytest.raises(ValueError, match="no default embedding model"):
         embed_samples.embed_text_for_collection(
-            collection_id=collection.collection_id, text="a red car"
+            session=db_session, collection_id=collection.collection_id, text="a red car"
+        )
+
+
+def test_embed_text_for_collection__no_embedder_for_space_raises(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
+) -> None:
+    """With a default model but no embedder for its space, the query raises."""
+    collection = create_collection(session=db_session)
+    _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=collection.collection_id
+    )
+    # An empty registry cannot supply an embedder for the default model's space.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+
+    with pytest.raises(ValueError, match="No registered embedder embeds text"):
+        embed_samples.embed_text_for_collection(
+            session=db_session, collection_id=collection.collection_id, text="a red car"
         )
 
 
@@ -391,9 +413,9 @@ def test_embed_image_samples__syncs_legacy_embedding_manager(
         session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
     )
 
-    # The manager now serves search without a separate default registration.
+    # The registry serves the text query with the default the image embed just registered.
     embedding = embed_samples.embed_text_for_collection(
-        collection_id=collection.collection_id, text="a red car"
+        session=db_session, collection_id=collection.collection_id, text="a red car"
     )
     assert len(embedding) == 3
 
