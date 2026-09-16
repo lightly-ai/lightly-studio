@@ -18,7 +18,7 @@ export const useAdjacentAnnotations = ({
     const embedding = get(textEmbedding);
     const sortBy = embedding ? undefined : (getSortBy(collectionId) ?? undefined);
 
-    return useAdjacentSamples({
+    const adjacentSamples = useAdjacentSamples({
         params: {
             sampleId,
             body: {
@@ -37,4 +37,7 @@ export const useAdjacentAnnotations = ({
             }
         }
     });
+
+    // The selected sort is not always the applied one, so callers get what the query really used.
+    return { ...adjacentSamples, sortBy };
 };

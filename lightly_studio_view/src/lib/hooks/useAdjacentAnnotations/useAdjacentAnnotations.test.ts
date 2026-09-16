@@ -65,7 +65,11 @@ describe('useAdjacentAnnotations', () => {
                 }
             }
         });
-        expect(result).toEqual({ query: 'query-result', refetch: expect.any(Function) });
+        expect(result).toEqual({
+            query: 'query-result',
+            refetch: expect.any(Function),
+            sortBy: undefined
+        });
     });
 
     it('calls useAdjacentSamplesMock without label or tag filters when none are selected', () => {
@@ -97,7 +101,7 @@ describe('useAdjacentAnnotations', () => {
         };
         getSortByMock.mockReturnValue(sort);
 
-        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+        const result = useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
 
         expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -106,6 +110,7 @@ describe('useAdjacentAnnotations', () => {
                 })
             })
         );
+        expect(result.sortBy).toEqual(sort);
     });
 
     it('suppresses annotation_sort_by when a similarity search is active', () => {
@@ -117,7 +122,7 @@ describe('useAdjacentAnnotations', () => {
         getSortByMock.mockReturnValue(sort);
         textEmbedding.set({ queryText: 'a dog', embedding: [0.1, 0.2] });
 
-        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+        const result = useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
 
         expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -126,5 +131,6 @@ describe('useAdjacentAnnotations', () => {
                 })
             })
         );
+        expect(result.sortBy).toBeUndefined();
     });
 });
