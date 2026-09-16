@@ -941,9 +941,7 @@ def test_has_frame_embedder__true_when_embedder_available(db_session: Session) -
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
 
     assert (
-        embed_samples.has_frame_embedder(
-            session=db_session, collection_id=collection.collection_id
-        )
+        embed_samples.has_frame_embedder(session=db_session, collection_id=collection.collection_id)
         is True
     )
 
@@ -969,9 +967,7 @@ def test_has_frame_embedder__false_when_default_space_unavailable(
     )
 
     assert (
-        embed_samples.has_frame_embedder(
-            session=db_session, collection_id=collection.collection_id
-        )
+        embed_samples.has_frame_embedder(session=db_session, collection_id=collection.collection_id)
         is False
     )
 
