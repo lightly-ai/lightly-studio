@@ -38,6 +38,12 @@ const params = {
 };
 
 describe('buildMetadataDistributionSource', () => {
+    it('scopes base loading states to numeric and categorical groups', () => {
+        const source = buildMetadataDistributionSource({ ...params, numericLoading: true });
+        expect(source?.groups?.[0].loading).toBe(true);
+        expect(source?.groups?.[1].categorical?.loading).toBeUndefined();
+    });
+
     it('keeps unloaded numeric keys selectable when only one histogram is fetched', () => {
         const source = buildMetadataDistributionSource({
             ...params,

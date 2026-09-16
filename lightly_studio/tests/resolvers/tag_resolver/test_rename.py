@@ -114,14 +114,13 @@ def test_rename_tag__unique_tag_name__different_kind(
         tag_name="annotation_tag_1",
     )
 
-    # renaming a tag to an existing name but for a different kind is allowed
-    tag_renamed = tag_resolver.rename(
-        session=db_session,
-        tag_id=sample_tag.tag_id,
-        new_name=annotation_tag.name,
-    )
-    assert tag_renamed is not None
-    assert tag_renamed.name == annotation_tag.name
+    # A name used by an annotation tag cannot be reused by a sample tag.
+    with pytest.raises(IntegrityError):
+        tag_resolver.rename(
+            session=db_session,
+            tag_id=sample_tag.tag_id,
+            new_name=annotation_tag.name,
+        )
 
 
 def test_rename_tag__unknown_tag_returns_none(db_session: Session) -> None:

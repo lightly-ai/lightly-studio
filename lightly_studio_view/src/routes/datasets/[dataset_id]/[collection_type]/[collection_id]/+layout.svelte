@@ -703,6 +703,7 @@
         const allTypesGroup = {
             id: 'all',
             label: 'All types',
+            loading: distributionAllQuery.isFetching,
             data: allDistributionData,
             comparisonData: comparisonAllData
         };
@@ -736,6 +737,7 @@
             .map(({ id, label, query, comparisonQuery }) => ({
                 id,
                 label,
+                loading: query.isFetching,
                 data: toCategoryCounts(query.data),
                 comparisonData:
                     hasTagSelection && !$allSourcesHidden ? comparisonQuery.data : undefined
@@ -747,6 +749,7 @@
         if (typeGroups.length <= 1)
             return {
                 ...base,
+                loading: distributionAllQuery.isFetching,
                 data: allDistributionData,
                 comparisonData: comparisonAllData
             };
@@ -831,7 +834,9 @@
             selectedRanges: $metadataValues,
             selectedValues: $categoricalMetadataValues,
             tagDistributions: metadataTagDistributions,
-            categoricalLoading: categoricalMetadataQuery.isFetching,
+            numericLoading: metadataHistogramsQuery.isFetching,
+            categoricalLoading:
+                categoricalMetadataQuery.isFetching || categoricalMetadataFilteredQuery.isFetching,
             categoricalError: categoricalMetadataQuery.error?.message,
             comparisonLoading: metadataTagDistributionsQuery.isFetching,
             comparisonError: metadataTagDistributionsQuery.error?.message
