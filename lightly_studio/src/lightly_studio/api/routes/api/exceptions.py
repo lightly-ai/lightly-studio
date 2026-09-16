@@ -23,12 +23,12 @@ from lightly_studio.errors import NotFoundError, QueryExprError
 logger = logging.getLogger("lightly_studio.api.exceptions")
 
 
-def _log_error_details(
+def _report_error(
+    *,
     exc: Exception,
     status_code: int,
 ) -> None:
-    """Log detailed error information with request context."""
-    # Log the error with different levels based on status code
+    """Log and track error information."""
     logger.error(f"Server Error {status_code}: {exc}")
     tracking.track_exception(exc)
 
@@ -39,7 +39,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     @app.exception_handler(IntegrityError)
     async def _integrity_error_handler(_request: Request, _exc: IntegrityError) -> JSONResponse:
         """Handle database integrity errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_CONFLICT,
         )
@@ -52,7 +52,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     @app.exception_handler(OperationalError)
     async def _operational_error_handler(_request: Request, _exc: OperationalError) -> JSONResponse:
         """Handle database operational errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
         )
@@ -64,7 +64,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     @app.exception_handler(DataError)
     async def _data_error_handler(_request: Request, _exc: DataError) -> JSONResponse:
         """Handle database data errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_BAD_REQUEST,
         )
@@ -84,7 +84,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
         else:
             detail = "Invalid data provided."
 
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_BAD_REQUEST,
         )
@@ -94,7 +94,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     @app.exception_handler(ValueError)
     async def _value_error_handler(_request: Request, _exc: ValueError) -> JSONResponse:
         """Handle value errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
         )
@@ -128,7 +128,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     @app.exception_handler(QueryExprError)
     async def _query_expr_error_handler(_request: Request, _exc: QueryExprError) -> JSONResponse:
         """Handle query expression errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_BAD_REQUEST,
         )
@@ -140,7 +140,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     @app.exception_handler(Exception)
     async def _unhandled_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
         """Handle all unhandled exceptions."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
         )
