@@ -5,9 +5,9 @@ reach for the ``EmbeddingManager`` singleton, resolve the default model, and che
 by hand. Each function resolves the collection's default embedding model itself.
 
 The functions currently delegate to the ``EmbeddingManager`` singleton. The internals
-are being swapped for the capability-typed ``EmbedderRegistry``; ``embed_image_samples``
-and ``embed_video_samples`` already use it. The function signatures are the stable surface
-callers migrate to now.
+are being swapped for the capability-typed ``EmbedderRegistry``; ``embed_image_samples``,
+``embed_video_samples`` and ``embed_frame_samples`` already use it. The function signatures
+are the stable surface callers migrate to now.
 """
 
 from __future__ import annotations
@@ -193,8 +193,10 @@ def embed_frame_samples(
 ) -> None:
     """Embed the frames of a single video and store the result.
 
-    Uses the frame collection's default model. Does nothing (and logs a warning) if it
-    has no usable default model.
+    When the collection has a default embedding model, its space selects the embedder.
+    Otherwise the registry's default PIL embedder is used and registered as the
+    collection's default. Does nothing (and logs a warning) if no PIL embedder is
+    available.
 
     Args:
         session: Database session for resolver operations.
@@ -202,19 +204,39 @@ def embed_frame_samples(
         sample_ids: Frame sample IDs the embeddings are stored for.
         pil_frames: The frames to embed, in the same order as ``sample_ids``.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
+    if len(sample_ids) != len(pil_frames):
+        raise ValueError(
+            f"Number of sample IDs ({len(sample_ids)}) does not match number of frames "
+            f"({len(pil_frames)})."
+        )
+
+    if not sample_ids:
+        logger.warning("No frame samples to embed. Skipping embedding generation.")
         return
 
-    manager.embed_and_store_pil_images(
+    default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
-        embedding_model_id=model_id,
-        sample_ids=sample_ids,
-        images=pil_frames,
+        collection_id=collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
+    )
+    if default_embedder_and_model_id is None:
+        return
+    embedder, model_id = default_embedder_and_model_id
+
+    result = embedder.embed_images_pil(images=pil_frames)
+    kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
+
+    # Frames are embedded one video-batch at a time during ingest, so the progress bar
+    # is disabled to keep noninteractive output clean.
+    embedding_storage.store_embeddings(
+        session=session,
+        model_id=model_id,
+        sample_ids=kept_sample_ids,
+        embeddings=result.embeddings,
         show_progress=False,
     )
+
+    _register_legacy_default_model(session=session, collection_id=collection_id, model_id=model_id)
 
 
 def collection_has_default_embedder(session: Session, collection_id: UUID) -> bool:
