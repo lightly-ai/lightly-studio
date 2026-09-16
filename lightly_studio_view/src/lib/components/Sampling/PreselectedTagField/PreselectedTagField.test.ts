@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import PreselectedTagField from './PreselectedTagField.svelte';
+import { PreselectedTagField } from '.';
 
 const tags = [
     { tag_id: 'tag-1', name: 'First batch', kind: 'sample' as const },
