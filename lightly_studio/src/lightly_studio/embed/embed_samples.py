@@ -22,11 +22,10 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.embed import default_embedder, embedder_registry, embedding_storage
+from lightly_studio.embed import default_embedder, embedding_storage
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.resolvers import (
     annotation_resolver,
-    collection_embedding_model_resolver,
     image_resolver,
     video_resolver,
 )
@@ -58,21 +57,12 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
         ValueError: If the collection has no default embedding model, or no registered
             embedder embeds images by path for that model's space.
     """
-    default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
-        session=session, collection_id=collection_id
+    embedder = default_embedder.resolve_query_embedder(
+        session=session,
+        collection_id=collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        capability="embeds images by path",
     )
-    if default_model is None:
-        raise ValueError("The collection has no default embedding model.")
-
-    embedder = embedder_registry.get_registry().get_image_path_embedder(
-        space_key=default_model.name
-    )
-    if embedder is None:
-        raise ValueError(
-            f"No registered embedder embeds images by path for the collection's default "
-            f"embedding space {default_model.name!r}."
-        )
-
     result = embedder.embed_images(paths=[filepath])
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding
@@ -97,19 +87,12 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
         ValueError: If the collection has no default embedding model, or no registered
             embedder embeds text for that model's space.
     """
-    default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
-        session=session, collection_id=collection_id
+    embedder = default_embedder.resolve_query_embedder(
+        session=session,
+        collection_id=collection_id,
+        get_embedder_fn=EmbedderRegistry.get_text_embedder,
+        capability="embeds text",
     )
-    if default_model is None:
-        raise ValueError("The collection has no default embedding model.")
-
-    embedder = embedder_registry.get_registry().get_text_embedder(space_key=default_model.name)
-    if embedder is None:
-        raise ValueError(
-            f"No registered embedder embeds text for the collection's default "
-            f"embedding space {default_model.name!r}."
-        )
-
     result = embedder.embed_text(texts=[text])
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding

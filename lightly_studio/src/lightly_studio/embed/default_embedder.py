@@ -12,7 +12,7 @@ from sqlmodel import Session
 
 from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
-from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     collection_resolver,
@@ -58,26 +58,95 @@ def resolve_default_embedder(
     default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection_id
     )
-    space_key = None if default_model is None else default_model.name
+    if default_model is not None:
+        embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
+        if embedder is None:
+            logger.warning("No embedding model loaded. Skipping embedding generation.")
+            return None
+        return embedder, default_model.embedding_model_id
 
-    embedder = get_embedder_fn(embedder_registry.get_registry(), space_key)
+    embedder = get_embedder_fn(embedder_registry.get_registry(), None)
     if embedder is None:
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return None
-
-    if default_model is not None:
-        spec = embedder.embedding_space_spec()
-        if spec.dimension != default_model.embedding_dimension:
-            raise ValueError(
-                f"Embedder dimension {spec.dimension} does not match the collection's default "
-                f"model dimension {default_model.embedding_dimension} for space "
-                f"'{default_model.name}'. A wrongly registered embedder is likely."
-            )
-        return embedder, default_model.embedding_model_id
     model_id = _register_default_model(
         session=session, collection_id=collection_id, embedder=embedder
     )
     return embedder, model_id
+
+
+def resolve_query_embedder(
+    session: Session,
+    collection_id: UUID,
+    get_embedder_fn: Callable[[EmbedderRegistry, str | None], _EmbedderT | None],
+    capability: str,
+) -> _EmbedderT:
+    """Resolve the embedder for an interactive query, without mutating the collection.
+
+    Unlike ``resolve_default_embedder``, this never bootstraps a default model and raises
+    (rather than skipping) when the collection has no default model, since an interactive
+    query must not mutate the collection. The registry still bootstraps the embedder for the
+    default model's space through ``get_embedder_fn``.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The collection whose default embedding model is used.
+        get_embedder_fn: Given the registry and a space key, returns the embedder for the
+            needed capability, or None if none matches.
+        capability: Verb phrase for the error message, for example "embeds text".
+
+    Returns:
+        The embedder for the collection's default embedding space.
+
+    Raises:
+        ValueError: If the collection has no default embedding model, no registered embedder
+            provides the capability for that model's space, or the embedder's dimension does
+            not match the space's stored dimension (a wrongly registered embedder).
+    """
+    default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if default_model is None:
+        raise ValueError("The collection has no default embedding model.")
+
+    embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
+    if embedder is None:
+        raise ValueError(
+            f"No registered embedder {capability} for the collection's default "
+            f"embedding space {default_model.name!r}."
+        )
+    return embedder
+
+
+def _embedder_for_model(
+    default_model: EmbeddingModelTable,
+    get_embedder_fn: Callable[[EmbedderRegistry, str | None], _EmbedderT | None],
+) -> _EmbedderT | None:
+    """Resolve and dimension-check the registry embedder for an existing default model.
+
+    Args:
+        default_model: The collection's default embedding model.
+        get_embedder_fn: Given the registry and the model's space key, returns the embedder
+            for the needed capability, or None if none matches.
+
+    Returns:
+        The embedder for the model's space, or None if the registry has no matching embedder.
+
+    Raises:
+        ValueError: If the embedder's dimension does not match the model's stored dimension
+            (a wrongly registered embedder).
+    """
+    embedder = get_embedder_fn(embedder_registry.get_registry(), default_model.name)
+    if embedder is None:
+        return None
+    spec = embedder.embedding_space_spec()
+    if spec.dimension != default_model.embedding_dimension:
+        raise ValueError(
+            f"Embedder dimension {spec.dimension} does not match the collection's default "
+            f"model dimension {default_model.embedding_dimension} for space "
+            f"'{default_model.name}'. A wrongly registered embedder is likely."
+        )
+    return embedder
 
 
 def _register_default_model(session: Session, collection_id: UUID, embedder: Embedder) -> UUID:
