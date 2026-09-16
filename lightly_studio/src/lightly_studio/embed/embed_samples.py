@@ -67,7 +67,9 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
     if default_model is None:
         raise ValueError("The collection has no default embedding model.")
 
-    embedder = embedder_registry.get_registry().get_image_path_embedder(default_model.name)
+    embedder = embedder_registry.get_registry().get_image_path_embedder(
+        space_key=default_model.name
+    )
     if embedder is None:
         raise ValueError(
             f"No registered embedder embeds images by path for the collection's default "
