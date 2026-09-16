@@ -60,7 +60,7 @@ export { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotatio
 export { useAnnotationEvaluationMetricsInfo } from '$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo.svelte';
 export { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotationOrderBy.svelte';
 export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
-export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications.svelte';
+export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications';
 export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey

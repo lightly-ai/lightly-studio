@@ -4,7 +4,7 @@ import {
     formatBulkCreateToast,
     shouldBulkCreateByFilter,
     useBulkCreateClassifications
-} from './useBulkCreateClassifications.svelte';
+} from './useBulkCreateClassifications';
 
 const mocks = vi.hoisted(() => ({
     invalidateQueries: vi.fn(),
