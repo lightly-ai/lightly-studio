@@ -54,6 +54,4 @@ def require_field(message: Any, names: Sequence[str]) -> Any:
         elif hasattr(message, name):
             return getattr(message, name)
     expected = ", ".join(f"'{name}'" for name in names)
-    raise McapAccessError(
-        f"Message of type '{type(message).__name__}' has no field {expected}."
-    )
+    raise McapAccessError(f"Message of type '{type(message).__name__}' has no field {expected}.")
