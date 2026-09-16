@@ -1,7 +1,9 @@
 <script lang="ts">
-    import { untrack } from 'svelte';
+    import { untrack, type Component } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
+    import { cn } from '$lib/utils';
+    import { Hand, Lasso, SquareDashed } from '@lucide/svelte';
     import {
         EmbeddingView,
         type DataPoint,
@@ -348,6 +350,133 @@
 
     const isReady = true;
 
+    // --- Sticky selection-tool pill ------------------------------------------------
+    // embedding-atlas keeps its active selection mode ("none" = pan, "marquee" =
+    // rectangle, "lasso") in a component-internal signal. It is not part of
+    // EmbeddingViewProps and the class exposes no imperative setter (only
+    // update()/destroy()), so the mode can only be changed by driving the library's
+    // own toolbar buttons — which we hide via CSS below and click programmatically.
+    // Each button toggles its mode on/off (target vs none) and marks the armed tool
+    // with an inline `background: color-mix(...)`; we read that back to keep the pill
+    // in sync via a MutationObserver.
+    type ToolMode = 'pan' | 'rectangle' | 'lasso';
+
+    const tools: { mode: ToolMode; icon: Component; label: string }[] = [
+        { mode: 'pan', icon: Hand, label: 'Pan' },
+        { mode: 'rectangle', icon: SquareDashed, label: 'Rectangle select' },
+        { mode: 'lasso', icon: Lasso, label: 'Lasso select' }
+    ];
+
+    let activeTool = $state<ToolMode>('pan');
+
+    // The library sets `background: color-mix(...)` inline on the armed tool button.
+    const isButtonActive = (button: Element | null): boolean =>
+        button?.getAttribute('style')?.includes('color-mix') ?? false;
+
+    // Resolve the library's rectangle/lasso buttons by their (stable, English) title
+    // text, falling back to DOM order if the library ever changes the wording.
+    const getToolButtons = (): {
+        marquee: HTMLButtonElement | null;
+        lasso: HTMLButtonElement | null;
+    } => {
+        const buttons = Array.from(
+            plotContainer?.querySelectorAll<HTMLButtonElement>('.embedding-view button') ?? []
+        );
+        let marquee: HTMLButtonElement | null = null;
+        let lasso: HTMLButtonElement | null = null;
+        for (const button of buttons) {
+            const title = button.getAttribute('title') ?? '';
+            if (title.startsWith('Toggle rectangle selection')) marquee = button;
+            else if (title.startsWith('Toggle lasso selection')) lasso = button;
+        }
+        if (!marquee && !lasso && buttons.length >= 2) {
+            marquee = buttons[0];
+            lasso = buttons[1];
+        }
+        return { marquee, lasso };
+    };
+
+    // `activeTool` is the user's chosen tool and the pill's source of truth. The library
+    // drops its own selection mode back to "none" after each committed selection, so we
+    // re-assert `activeTool` onto its hidden buttons whenever they drift. That re-arm is
+    // what keeps the tool sticky — pick lasso, stay lasso across selections — until the
+    // user picks another tool.
+    // Clicking a hidden tool button changes the library's mode asynchronously, so the
+    // armed state read right after a click still shows the old value. A second reconcile
+    // (fired by the plot's own DOM churn while switching) would then click the same button
+    // again before the first click lands and toggle it back off — arm → disarm → re-arm,
+    // which reads as a lag when picking a tool. `awaitingLibrary` blocks re-entrant clicks
+    // until the style observer confirms the change (or a short safety timeout elapses).
+    let awaitingLibrary = false;
+    let awaitingTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const clickTool = (button: HTMLButtonElement | null) => {
+        if (!button) return;
+        awaitingLibrary = true;
+        if (awaitingTimer) clearTimeout(awaitingTimer);
+        awaitingTimer = setTimeout(() => {
+            awaitingLibrary = false;
+        }, 250);
+        button.click();
+    };
+
+    const reconcileLibrary = () => {
+        if (awaitingLibrary) return;
+        const { marquee, lasso } = getToolButtons();
+        const marqueeActive = isButtonActive(marquee);
+        const lassoActive = isButtonActive(lasso);
+        if (activeTool === 'rectangle') {
+            if (!marqueeActive) clickTool(marquee);
+        } else if (activeTool === 'lasso') {
+            if (!lassoActive) clickTool(lasso);
+        } else {
+            // Pan is the library's "none" mode: turn off whichever tool is armed.
+            if (marqueeActive) clickTool(marquee);
+            else if (lassoActive) clickTool(lasso);
+        }
+    };
+
+    const selectTool = (mode: ToolMode) => {
+        activeTool = mode;
+        reconcileLibrary();
+    };
+
+    // The library owns the buttons but not the intent. Watch the toolbar for (re)creation
+    // (childList) and each button's inline-style flips — including the post-selection reset
+    // to "none" — and re-assert the chosen tool each time so it stays selected.
+    $effect(() => {
+        if (!plotContainer) return;
+        const observedButtons = new WeakSet<Element>();
+        const styleObserver = new MutationObserver(() => {
+            // The mode actually changed, so a pending click has landed (or the library
+            // reset itself after a selection). Clear the guard and reconcile — this is
+            // where the sticky re-arm happens.
+            awaitingLibrary = false;
+            reconcileLibrary();
+        });
+        const observeButtons = () => {
+            const { marquee, lasso } = getToolButtons();
+            for (const button of [marquee, lasso]) {
+                if (button && !observedButtons.has(button)) {
+                    observedButtons.add(button);
+                    styleObserver.observe(button, {
+                        attributes: true,
+                        attributeFilter: ['style']
+                    });
+                }
+            }
+            reconcileLibrary();
+        };
+        const treeObserver = new MutationObserver(observeButtons);
+        treeObserver.observe(plotContainer, { childList: true, subtree: true });
+        observeButtons();
+        return () => {
+            treeObserver.disconnect();
+            styleObserver.disconnect();
+            if (awaitingTimer) clearTimeout(awaitingTimer);
+        };
+    });
+
     type RangeSelection = Rectangle | Point[] | null;
 
     const isRectangleSelection = (selection: RangeSelection): selection is Rectangle => {
@@ -461,6 +590,18 @@
         })
     );
 
+    // "N / M points": M is everything plotted, N is what survives the active filters. Points
+    // demoted to EXCLUDED_BY_FILTERS are still drawn, just greyed, so they count as hidden.
+    const pointCounts = $derived.by(() => {
+        const categories = $plotData?.category as Uint8Array | undefined;
+        if (!categories) return { visible: 0, total: 0 };
+        let visible = 0;
+        for (const category of categories) {
+            if (category !== EXCLUDED_BY_FILTERS_CATEGORY) visible++;
+        }
+        return { visible, total: categories.length };
+    });
+
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
             return embeddingsData.error?.message ?? 'Unknown error';
@@ -546,6 +687,29 @@
                             );
                         }}
                     />
+
+                    <div
+                        class="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
+                        data-testid="plot-tool-pill"
+                    >
+                        {#each tools as tool (tool.mode)}
+                            {@const Icon = tool.icon}
+                            <button
+                                type="button"
+                                title={tool.label}
+                                aria-label={tool.label}
+                                aria-pressed={activeTool === tool.mode}
+                                data-testid={`plot-tool-${tool.mode}`}
+                                onclick={() => selectTool(tool.mode)}
+                                class={cn(
+                                    'flex size-[26px] items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground',
+                                    activeTool === tool.mode && 'bg-white/[0.14] text-foreground'
+                                )}
+                            >
+                                <Icon class="size-[15px]" />
+                            </button>
+                        {/each}
+                    </div>
                 {/if}
             </div>
         {:else}
@@ -559,6 +723,10 @@
             class="mt-1 flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto text-sm text-muted-foreground"
             data-testid="plot-panel-controls"
         >
+            <span class="shrink-0 text-[11.5px] tabular-nums" data-testid="plot-point-count">
+                {pointCounts.visible} / {pointCounts.total} points
+            </span>
+            <div class="flex-1"></div>
             <PlotColorByPopover
                 {collectionId}
                 withTags={$tags.length > 0}
@@ -587,24 +755,18 @@
 <svelte:window onmouseup={handleMouseUp} onkeydown={onWindowKeyDown} />
 
 <style>
-    :global(.embedding-view button) {
-        width: 20px !important;
-        height: 20px !important;
-    }
-    :global(.embedding-view button svg) {
-        width: 18px !important;
-        height: 18px !important;
-    }
+    /*
+        embedding-atlas renders its own bottom strip: a WebGPU/WebGL status message, the
+        rectangle + lasso tool buttons, a scale bar, and a point count. This replaces all of
+        it — the readout moved to the control row and the selection tools now live in the
+        glass tool pill. Keep the strip in the DOM (so `selectTool` can .click() the hidden
+        tool buttons and drive the library's sticky selection mode), but make it invisible
+        and non-interactive. Use opacity/pointer-events, NOT display:none or
+        visibility:hidden: the buttons stay laid out and clickable, and Playwright still
+        reports them visible (LIG-7691 e2e asserts the tool buttons toBeVisible).
+    */
     :global(.embedding-view div[style*='bottom: 0px'][style*='position: absolute']) {
-        font-size: 15px !important;
-        height: 25px !important;
-        line-height: 25px !important;
-    }
-    /* Hide the library's status message slot (e.g. "WebGPU is unavailable. Falling back
-       to WebGL.") while keeping the selection tools, scale, and point count visible. */
-    :global(
-        .embedding-view div[style*='bottom: 0px'][style*='position: absolute'] > div:first-child
-    ) {
-        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 </style>
