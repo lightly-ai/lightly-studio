@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from mcap.writer import Writer as RawWriter
 from mcap_ros2.writer import Writer
 
 LIDAR_POINTS_TOPIC = "/lidar/points"
@@ -67,6 +68,28 @@ def write_mcap(path: Path) -> Path:
             message=_point_cloud_message(),
             log_time=log_time_ns,
         )
+    writer.finish()
+    return path
+
+
+def write_unchunked_mcap(path: Path) -> Path:
+    """Writes an MCAP file with a summary but no chunk index.
+
+    Args:
+        path: The path to write the file to.
+
+    Returns:
+        The path of the written file.
+    """
+    writer = RawWriter(output=str(path), use_chunking=False)
+    writer.start()
+    schema_id = writer.register_schema(name="empty", encoding="", data=b"")
+    channel_id = writer.register_channel(
+        topic=LIDAR_POINTS_TOPIC, message_encoding="", schema_id=schema_id
+    )
+    writer.add_message(
+        channel_id=channel_id, log_time=LIDAR_LOG_TIMES_NS[0], data=b"", publish_time=0
+    )
     writer.finish()
     return path
 

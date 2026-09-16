@@ -151,6 +151,13 @@ class TestMcapFileReader:
             mcap_file_reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
 
 
+def test_mcap_file_reader__unchunked(tmp_path: Path) -> None:
+    path = helpers.write_unchunked_mcap(tmp_path / "unchunked.mcap")
+
+    with McapFileReader(path) as reader, pytest.raises(McapAccessError, match="no chunk index"):
+        reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC])
+
+
 def test_mcap_file_reader__not_an_mcap_file(tmp_path: Path) -> None:
     path = tmp_path / "not_an_mcap.mcap"
     path.write_bytes(b"not an mcap file")

@@ -108,10 +108,12 @@ class McapFileReader:
 
         Raises:
             TopicNotFoundError: If one of the topics is not in the file.
+            McapAccessError: If the file has messages but no chunk index to locate them.
         """
         unique_topics = list(dict.fromkeys(topics))
         for topic in unique_topics:
             self._require_topic(topic)
+        self._require_chunk_index()
         locators_by_topic: dict[str, list[FrameLocator]] = {topic: [] for topic in unique_topics}
         for schema, channel, message in self._reader.iter_messages(
             topics=unique_topics, start_time=start_time_ns, end_time=end_time_ns
@@ -212,6 +214,26 @@ class McapFileReader:
             self._topics = sorted(topics, key=lambda topic: topic.name)
             self._topic_names = {topic.name for topic in self._topics}
         return self._topics
+
+    def _require_chunk_index(self) -> None:
+        """Checks that the file's messages, if any, are reachable through a chunk index.
+
+        Without a chunk index, `mcap.reader.SeekingReader.iter_messages` falls back to a
+        full, non-seeking scan of the file instead of seeking to the messages a call
+        needs. A file with no messages has no chunks either, so it is let through.
+
+        Raises:
+            McapAccessError: If the file has messages but no chunk index to locate them.
+        """
+        summary = self._require_summary()
+        if len(summary.chunk_indexes) > 0:
+            return
+        message_count = 0 if summary.statistics is None else summary.statistics.message_count
+        if message_count > 0:
+            raise McapAccessError(
+                f"MCAP file '{self.path}' has messages but no chunk index. Only chunked, "
+                "indexed files can be read."
+            )
 
     def _require_summary(self) -> Summary:
         """Returns the summary section of the file.
