@@ -122,6 +122,16 @@ class TestMcapFileReader:
             helpers.LIDAR_LOG_TIMES_NS[1]
         ]
 
+    def test_get_frame_locators__malformed_video_payload(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_malformed_json_video(tmp_path / "malformed.mcap")
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+            locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+
+        assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
+        assert all(locator.keyframe_log_time_ns is None for locator in locators)
+
     def test_get_frame_locators__repeated_topic(self, reader: McapFileReader) -> None:
         reader.load_data_for_topics([helpers.LIDAR_POINTS_TOPIC, helpers.LIDAR_POINTS_TOPIC])
 

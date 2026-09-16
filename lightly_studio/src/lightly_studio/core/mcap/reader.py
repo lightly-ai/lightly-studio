@@ -221,7 +221,16 @@ class McapFileReader:
         decoder = self._decoder_for(schema=schema, channel=channel)
         if decoder is None:
             return False
-        return video_keyframe.is_keyframe_message(decoder(message.data))
+        try:
+            decoded_message = decoder(message.data)
+        except Exception:
+            logger.warning(
+                "Cannot decode a message of topic '%s' in '%s'. It carries no keyframe time.",
+                channel.topic,
+                self.path,
+            )
+            return False
+        return video_keyframe.is_keyframe_message(decoded_message)
 
     def _decoder_for(
         self, schema: Schema | None, channel: Channel
