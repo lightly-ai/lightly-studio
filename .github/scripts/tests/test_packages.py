@@ -17,11 +17,6 @@ class TestPackage:
     def test_branch_prefix__prefixed_package_flattens_the_slash(self):
         assert SERVE.branch_prefix == "release-lightly-studio-serve-"
 
-    # Both packages announce in the same channel, so only one of them can be "Release X.Y.Z".
-    def test_announcement_prefix(self):
-        assert STUDIO.announcement_prefix == ""
-        assert SERVE.announcement_prefix == "LightlyStudio Serve "
-
 
 def test_get():
     assert packages.get("lightly-studio").directory == "lightly_studio"

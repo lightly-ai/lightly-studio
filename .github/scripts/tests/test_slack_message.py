@@ -45,6 +45,7 @@ WRAPPED = """\
 
 
 def render(section_body: str, **kwargs: object) -> str:
+    kwargs.setdefault("display_name", "LightlyStudio")
     return slack_message.render_slack_message(
         section_body=section_body, version="1.1.0", release_url=URL, **kwargs
     )
@@ -54,7 +55,7 @@ def render(section_body: str, **kwargs: object) -> str:
 # blank line between sections, and the empty `Deprecated` heading dropped.
 def test_render_slack_message():
     assert render(SECTION) == (
-        f"*<{URL}|Release 1.1.0>*\n"
+        f"*<{URL}|LightlyStudio Release 1.1.0>*\n"
         "\n"
         "Added\n"
         "• Added thing one.\n"
@@ -68,7 +69,7 @@ def test_render_slack_message():
 # release, and nowhere else.
 def test_render_slack_message__nested_bullets():
     assert render(GROUPED) == (
-        f"*<{URL}|Release 1.1.0>*\n"
+        f"*<{URL}|LightlyStudio Release 1.1.0>*\n"
         "\n"
         "Added\n"
         "• Distribution plot\n"
@@ -80,8 +81,8 @@ def test_render_slack_message__nested_bullets():
     )
 
 
-def test_render_slack_message__title_prefix_names_the_package():
-    message = render(SECTION, title_prefix="LightlyStudio Serve ")
+def test_render_slack_message__title_names_the_package():
+    message = render(SECTION, display_name="LightlyStudio Serve")
 
     assert message.startswith(f"*<{URL}|LightlyStudio Serve Release 1.1.0>*\n\n")
 
@@ -136,16 +137,16 @@ def test_render_slack_message__no_entries():
 # Cut back to a whole bullet, and never leave a heading with nothing under it. The limit
 # is one character under what GROUPED renders to, so exactly one round of cutting runs.
 def test_render_slack_message__truncates_to_whole_entries():
-    message = render(GROUPED, character_limit=166)
+    message = render(GROUPED, character_limit=180)
 
     assert message == (
-        f"*<{URL}|Release 1.1.0>*\n"
+        f"*<{URL}|LightlyStudio Release 1.1.0>*\n"
         "\n"
         "Added\n"
         "• Distribution plot\n"
         "    ◦ Compare by sample tag.\n"
         "\n"
-        f"…\nFull changelog: <{URL}|Release 1.1.0 on GitHub>"
+        f"…\nFull changelog: <{URL}|LightlyStudio Release 1.1.0 on GitHub>"
     )
 
 
@@ -167,7 +168,7 @@ def test_render_slack_message__real_changelog_section(changelog_path: str, versi
     )
 
     message = slack_message.render_slack_message(
-        section_body=section, version=version, release_url=URL
+        section_body=section, version=version, release_url=URL, display_name="LightlyStudio"
     )
 
     assert len(message) <= slack_message.CHARACTER_LIMIT
@@ -182,7 +183,7 @@ def test_render_slack_message__real_changelog_section__1_1_0():
     )
 
     message = slack_message.render_slack_message(
-        section_body=section, version="1.1.0", release_url=URL
+        section_body=section, version="1.1.0", release_url=URL, display_name="LightlyStudio"
     )
 
     assert "Deprecated" not in message

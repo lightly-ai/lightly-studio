@@ -34,15 +34,15 @@ _NESTED_INDENT = 4
 _HEADING_RE = re.compile(r"^### (?P<name>\w+)[ \t]*$")
 _BULLET_RE = re.compile(r"^(?P<indent> *)- (?P<text>.+)$")
 
-_TITLE = "*<{url}|{prefix}Release {version}>*"
-_TRUNCATION_TAIL = "…\nFull changelog: <{url}|{prefix}Release {version} on GitHub>"
+_TITLE = "*<{url}|{display_name} Release {version}>*"
+_TRUNCATION_TAIL = "…\nFull changelog: <{url}|{display_name} Release {version} on GitHub>"
 
 
 def render_slack_message(
     section_body: str,
     version: str,
     release_url: str,
-    title_prefix: str = "",
+    display_name: str,
     character_limit: int = CHARACTER_LIMIT,
 ) -> str:
     """Renders a released changelog section as Slack mrkdwn.
@@ -52,8 +52,8 @@ def render_slack_message(
         version: The version being announced, e.g. "1.1.0".
         release_url: The GitHub release page. Linked from the title, so a truncated message
             always has somewhere to send the reader.
-        title_prefix: Prefixed to "Release <version>" in the title, to tell two packages
-            apart in one channel. Empty for LightlyStudio itself.
+        display_name: The product name the title announces, to tell two packages apart in
+            one channel.
         character_limit: Longest message to produce, the truncation tail included.
 
     Returns:
@@ -67,12 +67,12 @@ def render_slack_message(
     if not entries:
         raise PrepareReleaseError(f"changelog section for {version} has no entries")
 
-    title = _TITLE.format(url=release_url, prefix=title_prefix, version=version)
+    title = _TITLE.format(url=release_url, display_name=display_name, version=version)
     message = "\n".join([title, "", *entries])
     if len(message) <= character_limit:
         return message
 
-    tail = _TRUNCATION_TAIL.format(url=release_url, prefix=title_prefix, version=version)
+    tail = _TRUNCATION_TAIL.format(url=release_url, display_name=display_name, version=version)
     return _truncate(
         entries=entries, title=title, tail=tail, character_limit=character_limit, version=version
     )

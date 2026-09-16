@@ -232,7 +232,7 @@ def test_main__render_slack_message__writes_file(tmp_path: Path):
         == 0
     )
     assert output.read_text() == (
-        "*<https://x/releases/tag/v1.1.0|Release 1.1.0>*\n\nAdded\n• Added thing one."
+        "*<https://x/releases/tag/v1.1.0|LightlyStudio Release 1.1.0>*\n\nAdded\n• Added thing one."
     )
 
 

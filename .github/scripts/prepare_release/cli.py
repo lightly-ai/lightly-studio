@@ -209,7 +209,7 @@ def _cmd_render_slack_message(args: argparse.Namespace) -> None:
         section_body=section,
         version=released_version,
         release_url=args.release_url,
-        title_prefix=package.announcement_prefix,
+        display_name=package.display_name,
     )
     args.output.write_text(message)
 

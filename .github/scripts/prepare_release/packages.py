@@ -23,15 +23,14 @@ class Package:
 
     Attributes:
         distribution: The name on PyPI, and the value of the `package` workflow input.
-        display_name: The product name, for the tag message and the release PR body.
+        display_name: The product name, for the tag message, the release PR body and the
+            Slack announcement. Both packages announce in the same channel, so each one
+            names itself.
         directory: The workspace member directory, relative to the repository root.
         changelog: The changelog to promote, and to take the release notes from.
         tag_prefix: Prefixed to `v<version>` to form the release tag. Empty for
             `lightly-studio`, which keeps the bare `v<version>` namespace it already
             published under.
-        announcement_prefix: Prefixed to "Release <version>" in the Slack announcement.
-            Empty for `lightly-studio`, whose releases are what that channel calls a
-            release; every other package says its own name, because both announce there.
         needs_node: Whether building the distribution needs Node.js.
         forbidden_dependencies: Substrings that no name in the built wheel's resolved
             dependency tree may contain.
@@ -43,7 +42,6 @@ class Package:
     changelog: str
     tag_prefix: str
     needs_node: bool
-    announcement_prefix: str = ""
     forbidden_dependencies: tuple[str, ...] = ()
 
     @property
@@ -77,7 +75,6 @@ PACKAGES = (
         changelog="lightly_studio_serve/CHANGELOG.md",
         tag_prefix="lightly-studio-serve/",
         needs_node=False,
-        announcement_prefix="LightlyStudio Serve ",
         # Substrings of the normalized name, so one entry covers a whole family.
         forbidden_dependencies=(
             "torch",
