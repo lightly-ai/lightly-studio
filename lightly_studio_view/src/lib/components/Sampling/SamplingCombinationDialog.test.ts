@@ -151,6 +151,15 @@ describe('SamplingCombinationDialog', () => {
         expect(screen.getByText('0 samples')).toBeInTheDocument();
     });
 
+    it('shows the optional preselected tag field', () => {
+        render(SamplingCombinationDialog);
+
+        expect(screen.getByText('Preselected Tag (Optional)')).toBeInTheDocument();
+        expect(screen.getByTestId('sampling-preselected-tag-select')).toHaveTextContent(
+            'Select a tag'
+        );
+    });
+
     it('submit button is disabled when no strategies have been added', () => {
         filteredSampleCountStore.set(100);
 

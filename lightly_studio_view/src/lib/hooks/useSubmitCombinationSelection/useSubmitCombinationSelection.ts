@@ -25,6 +25,7 @@ interface SubmitParams {
     nSamplesToSelect: number;
     selectionResultTagName: string;
     selectionFilter: SamplingRequest['filter'];
+    preselectedTagId?: string;
 }
 
 async function computeAllStrategiesMetadata(
@@ -73,7 +74,8 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             instances,
             nSamplesToSelect,
             selectionResultTagName,
-            selectionFilter
+            selectionFilter,
+            preselectedTagId
         } = submitParams;
 
         const filteredCount = get(filteredSampleCount);
@@ -111,7 +113,8 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                     n_samples_to_select: nSamplesToSelect,
                     sampling_result_tag_name: selectionResultTagName,
                     strategies: instances.map(toApiStrategy),
-                    filter: selectionFilter ?? undefined
+                    filter: selectionFilter ?? undefined,
+                    ...(preselectedTagId && { preselected_tag_id: preselectedTagId })
                 }
             });
 
