@@ -49,7 +49,7 @@ class McapFileReader:
                 can also come from the environment, as `AWS_*` variables do.
 
         Raises:
-            McapError: If the file is not an MCAP file.
+            mcap.exceptions.McapError: If the file is not an MCAP file.
             McapAccessError: If the file cannot be read with random access.
         """
         self.path = str(path)
@@ -68,6 +68,7 @@ class McapFileReader:
             self._open_file.close()
             raise
         self._topics: list[TopicInfo] | None = None
+        self._topic_names: set[str] | None = None
         self._locators_by_topic: dict[str, list[FrameLocator]] = {}
 
     def close(self) -> None:
@@ -110,7 +111,7 @@ class McapFileReader:
         """
         unique_topics = list(dict.fromkeys(topics))
         for topic in unique_topics:
-            self._require_topic_info(topic)
+            self._require_topic(topic)
         locators_by_topic: dict[str, list[FrameLocator]] = {topic: [] for topic in unique_topics}
         for schema, channel, message in self._reader.iter_messages(
             topics=unique_topics, start_time=start_time_ns, end_time=end_time_ns
@@ -178,16 +179,16 @@ class McapFileReader:
             )
         return self._locators_by_topic[topic]
 
-    def _require_topic_info(self, topic: str) -> TopicInfo:
-        """Returns the info of a topic.
+    def _require_topic(self, topic: str) -> None:
+        """Checks that a topic is in the file.
 
         Raises:
             TopicNotFoundError: If the topic is not in the file.
         """
-        for topic_info in self._get_topics():
-            if topic_info.name == topic:
-                return topic_info
-        raise TopicNotFoundError(f"Topic '{topic}' is not in MCAP file '{self.path}'.")
+        self._get_topics()
+        assert self._topic_names is not None
+        if topic not in self._topic_names:
+            raise TopicNotFoundError(f"Topic '{topic}' is not in MCAP file '{self.path}'.")
 
     def _get_topics(self) -> list[TopicInfo]:
         """Returns the topics of the file, ordered by name.
@@ -209,6 +210,7 @@ class McapFileReader:
                 for channel in summary.channels.values()
             ]
             self._topics = sorted(topics, key=lambda topic: topic.name)
+            self._topic_names = {topic.name for topic in self._topics}
         return self._topics
 
     def _require_summary(self) -> Summary:
