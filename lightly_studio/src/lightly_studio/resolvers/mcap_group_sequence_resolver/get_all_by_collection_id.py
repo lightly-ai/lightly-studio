@@ -41,7 +41,7 @@ def get_all_by_collection_id(
         select(McapGroupSequenceTable)
         .join(SampleTable, col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == collection_id)
-        .order_by(col(SampleTable.created_at).asc())
+        .order_by(col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc())
     )
 
     total_count_query = (

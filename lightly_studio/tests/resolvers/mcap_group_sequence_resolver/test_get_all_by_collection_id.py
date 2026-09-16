@@ -1,14 +1,16 @@
 """Tests for get_all_by_collection_id in mcap_group_sequence_resolver."""
 
+from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, insert
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
-from lightly_studio.models.sample import SampleCreate
-from lightly_studio.models.sequence import SampleSequenceLinkTable
+from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
 from lightly_studio.resolvers import (
     mcap_group_sequence_resolver,
     recording_resolver,
@@ -105,7 +107,7 @@ def test_get_all_by_collection_id__scoped_to_collection(db_session: Session) -> 
 
 
 def test_get_all_by_collection_id__pagination(db_session: Session) -> None:
-    """Cursor pagination returns the correct page and next_cursor."""
+    """Pagination with tied created_at timestamps is broken by sample_id ascending."""
     seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
 
     recording_id = recording_resolver.create(
@@ -115,21 +117,52 @@ def test_get_all_by_collection_id__pagination(db_session: Session) -> None:
         format_=RecordingFormat.MCAP,
     )
 
-    mcap_group_sequence_resolver.create(
-        session=db_session,
-        collection_id=seq_col.collection_id,
-        recording_id=recording_id,
+    # Insert samples with the same created_at to force ties, using deterministic
+    # UUIDs so the expected tie-break order (sample_id asc) is predictable.
+    fixed_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    seq_id_a = UUID("00000000-0000-0000-0000-000000000001")
+    seq_id_b = UUID("00000000-0000-0000-0000-000000000002")
+    seq_id_c = UUID("00000000-0000-0000-0000-000000000003")
+
+    db_session.execute(
+        insert(SampleTable).values(
+            [
+                {
+                    "sample_id": seq_id_a,
+                    "collection_id": seq_col.collection_id,
+                    "created_at": fixed_time,
+                    "updated_at": fixed_time,
+                },
+                {
+                    "sample_id": seq_id_b,
+                    "collection_id": seq_col.collection_id,
+                    "created_at": fixed_time,
+                    "updated_at": fixed_time,
+                },
+                {
+                    "sample_id": seq_id_c,
+                    "collection_id": seq_col.collection_id,
+                    "created_at": fixed_time,
+                    "updated_at": fixed_time,
+                },
+            ]
+        )
     )
-    mcap_group_sequence_resolver.create(
-        session=db_session,
-        collection_id=seq_col.collection_id,
-        recording_id=recording_id,
+    db_session.bulk_save_objects(
+        [
+            SequenceTable(sample_id=seq_id_a),
+            SequenceTable(sample_id=seq_id_b),
+            SequenceTable(sample_id=seq_id_c),
+        ]
     )
-    mcap_group_sequence_resolver.create(
-        session=db_session,
-        collection_id=seq_col.collection_id,
-        recording_id=recording_id,
+    db_session.bulk_save_objects(
+        [
+            McapGroupSequenceTable(sample_id=seq_id_a, recording_id=recording_id),
+            McapGroupSequenceTable(sample_id=seq_id_b, recording_id=recording_id),
+            McapGroupSequenceTable(sample_id=seq_id_c, recording_id=recording_id),
+        ]
     )
+    db_session.commit()
 
     page_1 = mcap_group_sequence_resolver.get_all_by_collection_id(
         session=db_session,
@@ -138,7 +171,7 @@ def test_get_all_by_collection_id__pagination(db_session: Session) -> None:
     )
 
     assert page_1.total_count == 3
-    assert len(page_1.samples) == 2
+    assert [s.sample_id for s in page_1.samples] == [seq_id_a, seq_id_b]
     assert page_1.next_cursor == 2
 
     page_2 = mcap_group_sequence_resolver.get_all_by_collection_id(
@@ -148,7 +181,7 @@ def test_get_all_by_collection_id__pagination(db_session: Session) -> None:
     )
 
     assert page_2.total_count == 3
-    assert len(page_2.samples) == 1
+    assert [s.sample_id for s in page_2.samples] == [seq_id_c]
     assert page_2.next_cursor is None
 
 
