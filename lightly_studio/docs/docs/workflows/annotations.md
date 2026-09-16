@@ -7,8 +7,8 @@ LightlyStudio supports three annotation types:
 - segmentation.
 
 You can inspect and edit annotations in the GUI, or add and read them in Python. For dataset-level
-imports such as COCO, YOLO, and Label Studio format, see [Image Dataset](../dataset_setup/image_dataset.md)
-and [Video Dataset](../dataset_setup/video_dataset.md).
+imports such as COCO, YOLO, and Label Studio format, see [Image Dataset](image_dataset.md)
+and [Video Dataset](video_dataset.md).
 
 !!! info "Terminology"
     - **Annotation**: A classification, object-detection box, or segmentation mask attached to a sample.

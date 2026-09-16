@@ -76,6 +76,12 @@ cloud-storage = [
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
 ]
+mcap = [
+    # MCAP robotics recordings: the core reader plus the message decoder for the
+    # schema encoding we read (CDR/ros2msg).
+    "mcap>=1.2.0,<2.0",
+    "mcap-ros2-support>=0.5.0,<0.6",
+]
 
 [dependency-groups]
 dev = [
@@ -100,6 +106,7 @@ docs = [
     "mkdocs-material>=9.4.0",
     "mkdocs-git-revision-date-localized-plugin>=1.2.0",
     "mkdocs-llmstxt>=0.4.0",
+    "mkdocs-redirects==1.2.2",
     "mkdocstrings[python]>=0.24.0",
     "mkdocstrings-python>=1.8.0",
     "pymdown-extensions>=10.0.0",
@@ -116,6 +123,9 @@ exclude = [
     "scripts/download_coco_subset.py",
 ]
 plugins = ["pydantic.mypy"]
+# The writer of mcap-ros2-support, which the tests use to build MCAP fixtures, is only
+# partially annotated.
+untyped_calls_exclude = ["mcap_ros2"]
 
 # Only `docs/mkdocs_hooks.py` imports this. CI installs the `docs` group
 # (`make install-optional-deps` is `uv sync --all-groups`), so this is for a
@@ -148,6 +158,13 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "lightly_studio.analytics.posthog_tracker"
 disallow_untyped_calls = false
+
+# `mcap/writer.py` imports `from .__init__ import __version__`, which makes mypy see
+# `mcap/__init__.py` under two module names and give up on the whole run. Not following
+# the module avoids that; the rest of the mcap package stays typed.
+[[tool.mypy.overrides]]
+module = "mcap.writer"
+follow_imports = "skip"
 
 
 [tool.pytest.ini_options]
