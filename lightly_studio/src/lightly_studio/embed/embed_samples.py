@@ -6,8 +6,9 @@ by hand. Each function resolves the collection's default embedding model itself.
 
 The functions currently delegate to the ``EmbeddingManager`` singleton. The internals
 are being swapped for the capability-typed ``EmbedderRegistry``; ``embed_image_samples``,
-``embed_video_samples``, ``embed_frame_samples`` and ``embed_annotation_collection`` already
-use it. The function signatures are the stable surface callers migrate to now.
+``embed_video_samples``, ``embed_frame_samples``, ``embed_annotation_collection`` and
+``embed_image_for_collection`` already use it. The function signatures are the stable
+surface callers migrate to now.
 """
 
 from __future__ import annotations
@@ -24,9 +25,14 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManagerProvider,
     TextEmbedQuery,
 )
-from lightly_studio.embed import default_embedder, embedding_storage
+from lightly_studio.embed import default_embedder, embedder_registry, embedding_storage
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
-from lightly_studio.resolvers import annotation_resolver, image_resolver, video_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_embedding_model_resolver,
+    image_resolver,
+    video_resolver,
+)
 from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
@@ -36,10 +42,15 @@ logger = logging.getLogger(__name__)
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
-def embed_image_for_collection(collection_id: UUID, filepath: str) -> list[float]:
+def embed_image_for_collection(session: Session, collection_id: UUID, filepath: str) -> list[float]:
     """Embed a single image with the collection's default model, without storing it.
 
+    Resolves the collection's default model from the database and embeds the image with the
+    registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
+    never bootstraps a default model, since an interactive query must not mutate the collection.
+
     Args:
+        session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
         filepath: fsspec path or URL of the image to embed.
 
@@ -47,11 +58,25 @@ def embed_image_for_collection(collection_id: UUID, filepath: str) -> list[float
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model, or the model does
-            not support images.
+        ValueError: If the collection has no default embedding model, or no registered
+            embedder embeds images by path for that model's space.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    return manager.compute_image_embedding(collection_id=collection_id, filepath=filepath)
+    default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if default_model is None:
+        raise ValueError("The collection has no default embedding model.")
+
+    embedder = embedder_registry.get_registry().get_image_path_embedder(default_model.name)
+    if embedder is None:
+        raise ValueError(
+            f"No registered embedder embeds images by path for the collection's default "
+            f"embedding space {default_model.name!r}."
+        )
+
+    result = embedder.embed_images(paths=[filepath])
+    embedding: list[float] = result.embeddings[0].tolist()
+    return embedding
 
 
 def embed_text_for_collection(collection_id: UUID, text: str) -> list[float]:
@@ -336,9 +361,8 @@ def _embed_annotation_chunk(
     return len(annotation_crops)
 
 
-# TODO(Michal, 09/2026): Remove once text and image search read embedders from the
-# EmbedderRegistry instead of the EmbeddingManager. The query functions
-# (embed_text_for_collection, embed_image_for_collection) still resolve their generator
+# TODO(Michal, 09/2026): Remove once text search reads embedders from the EmbedderRegistry
+# instead of the EmbeddingManager. embed_text_for_collection still resolves its generator
 # from the manager's in-memory maps, which the registry path does not populate.
 def _register_legacy_default_model(session: Session, collection_id: UUID, model_id: UUID) -> None:
     """Sync the collection's default model into the legacy EmbeddingManager.

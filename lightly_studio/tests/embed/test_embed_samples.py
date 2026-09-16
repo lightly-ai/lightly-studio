@@ -136,37 +136,60 @@ def patched_registry(mocker: MockerFixture) -> EmbedderRegistry:
     return registry
 
 
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_image_for_collection(
     db_session: Session,
     patched_manager: EmbeddingManager,
 ) -> None:
-    """A single image is embedded with the collection's default model, unstored."""
+    """A single image is embedded via the registry with the collection's default model, unstored."""
     collection = create_collection(session=db_session)
     _register_default_random_model(
         manager=patched_manager,
         session=db_session,
         collection_id=collection.collection_id,
-        dimension=5,
     )
 
     embedding = embed_samples.embed_image_for_collection(
-        collection_id=collection.collection_id, filepath="/path/to/image.jpg"
+        session=db_session, collection_id=collection.collection_id, filepath="/path/to/image.jpg"
     )
 
-    assert len(embedding) == 5
+    assert len(embedding) == 3
     # Nothing is stored for an interactive query embedding.
     assert _stored_embeddings(session=db_session) == []
 
 
-@pytest.mark.usefixtures("patched_manager")
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_image_for_collection__no_default_model(
     db_session: Session,
 ) -> None:
     """Without a default model the interactive image path raises a clear error."""
     collection = create_collection(session=db_session)
-    with pytest.raises(ValueError, match="No embedding_model_id provided and no default embedding"):
+    with pytest.raises(ValueError, match="no default embedding model"):
         embed_samples.embed_image_for_collection(
-            collection_id=collection.collection_id, filepath="/path/to/image.jpg"
+            session=db_session,
+            collection_id=collection.collection_id,
+            filepath="/path/to/image.jpg",
+        )
+
+
+def test_embed_image_for_collection__no_embedder_for_space_raises(
+    db_session: Session,
+    patched_manager: EmbeddingManager,
+    mocker: MockerFixture,
+) -> None:
+    """With a default model but no embedder for its space, the query raises."""
+    collection = create_collection(session=db_session)
+    _register_default_random_model(
+        manager=patched_manager, session=db_session, collection_id=collection.collection_id
+    )
+    # An empty registry cannot supply an embedder for the default model's space.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+
+    with pytest.raises(ValueError, match="No registered embedder embeds images by path"):
+        embed_samples.embed_image_for_collection(
+            session=db_session,
+            collection_id=collection.collection_id,
+            filepath="/path/to/image.jpg",
         )
 
 
