@@ -115,6 +115,25 @@ class TestTransformTree:
         with pytest.raises(TransformNotFoundError):
             TransformTree([]).lookup(target_frame_id="cam", source_frame_id="lidar")
 
+    def test_lookup__reparented_child(self) -> None:
+        tree = TransformTree(
+            [
+                _static_transform(
+                    parent_frame_id="base", child_frame_id="cam", translation=(1.0, 0.0, 0.0)
+                ),
+                _static_transform(
+                    parent_frame_id="map", child_frame_id="cam", translation=(0.0, 1.0, 0.0)
+                ),
+            ]
+        )
+
+        assert tree.frame_ids == frozenset({"map", "cam"})
+        with pytest.raises(TransformNotFoundError):
+            tree.lookup(target_frame_id="base", source_frame_id="cam")
+
+        matrix = tree.lookup(target_frame_id="map", source_frame_id="cam")
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0])
+
 
 def test_from_decoded_message__ros() -> None:
     message = SimpleNamespace(
@@ -185,6 +204,29 @@ def test_from_decoded_message__single_transform() -> None:
 def test_from_decoded_message__no_transform() -> None:
     with pytest.raises(McapAccessError, match="has no field 'child_frame_id'"):
         transforms.from_decoded_message({"parent_frame_id": "base"}, log_time_ns=42)
+
+
+@pytest.mark.parametrize(
+    ("translation", "rotation"),
+    [
+        ((float("nan"), 0.0, 0.0), IDENTITY_ROTATION),
+        ((float("inf"), 0.0, 0.0), IDENTITY_ROTATION),
+        ((0.0, 0.0, 0.0), (0.0, 0.0, float("nan"), 1.0)),
+        ((0.0, 0.0, 0.0), (0.0, 0.0, float("inf"), 1.0)),
+    ],
+)
+def test_from_decoded_message__non_finite(
+    translation: tuple[float, float, float], rotation: tuple[float, float, float, float]
+) -> None:
+    message: Any = {
+        "parent_frame_id": "base",
+        "child_frame_id": "cam",
+        "translation": {"x": translation[0], "y": translation[1], "z": translation[2]},
+        "rotation": {"x": rotation[0], "y": rotation[1], "z": rotation[2], "w": rotation[3]},
+    }
+
+    with pytest.raises(McapAccessError, match="non-finite translation or rotation"):
+        transforms.from_decoded_message(message, log_time_ns=42)
 
 
 def test_to_matrix() -> None:
