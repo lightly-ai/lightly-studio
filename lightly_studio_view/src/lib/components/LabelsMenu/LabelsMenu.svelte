@@ -90,7 +90,7 @@
                         >
                             {label_name}
                         </p>
-                        {#if current_count}
+                        {#if current_count !== undefined}
                             <span
                                 class="text-sm text-diffuse-foreground"
                                 data-testid="label-menu-label-count"
