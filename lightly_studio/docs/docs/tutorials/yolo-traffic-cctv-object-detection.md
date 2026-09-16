@@ -62,7 +62,7 @@ import lightly_studio as ls
 from lightly_plugins_yolo_object_detection.operator import YoloObjectDetectionOperator
 
 # This is only needed if you want to download and use the example dataset
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+dataset_path = ls.utils.download_example_dataset()
 
 dataset = ls.ImageDataset.create(name="cctv")
 
@@ -230,7 +230,7 @@ from ultralytics import YOLO
 import yaml
 import lightly_studio as ls
 
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+dataset_path = ls.utils.download_example_dataset()
 
 images_dir = Path(f"{dataset_path}/traffic-accident-cctv/train/")
 train_yolo_dir = Path("train_yolo")

@@ -110,8 +110,8 @@ Create a file named `example_coco.py`:
 ```python
 import lightly_studio as ls
 
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+# Download the example dataset (cached, so it downloads only once)
+dataset_path = ls.utils.download_example_dataset()
 
 dataset = ls.ImageDataset.load_or_create()
 dataset.add_samples_from_coco(
@@ -140,8 +140,8 @@ Create a file named `example_image.py`:
 ```python
 import lightly_studio as ls
 
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+# Download the example dataset (cached, so it downloads only once)
+dataset_path = ls.utils.download_example_dataset()
 
 # Index the images, create embeddings, and store everything in the local database.
 dataset = ls.ImageDataset.load_or_create()

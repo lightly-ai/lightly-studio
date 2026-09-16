@@ -69,8 +69,8 @@ them at your own image, video, or YOLO/COCO dataset by changing the input path.
         ```python title="example_coco.py"
         import lightly_studio as ls
 
-        # Download the example dataset (will be skipped if it already exists)
-        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+        # Download the example dataset (cached, so it downloads only once)
+        dataset_path = ls.utils.download_example_dataset()
 
         dataset = ls.ImageDataset.load_or_create()
         dataset.add_samples_from_coco(
@@ -93,8 +93,8 @@ them at your own image, video, or YOLO/COCO dataset by changing the input path.
         ```python title="example_yolo.py"
         import lightly_studio as ls
 
-        # Download the example dataset (will be skipped if it already exists)
-        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+        # Download the example dataset (cached, so it downloads only once)
+        dataset_path = ls.utils.download_example_dataset()
 
         dataset = ls.ImageDataset.load_or_create()
         dataset.add_samples_from_yolo(
@@ -116,8 +116,8 @@ them at your own image, video, or YOLO/COCO dataset by changing the input path.
         ```python title="example_image.py"
         import lightly_studio as ls
 
-        # Download the example dataset (will be skipped if it already exists)
-        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+        # Download the example dataset (cached, so it downloads only once)
+        dataset_path = ls.utils.download_example_dataset()
 
         # Indexes the dataset, creates embeddings and stores everything in the database.
         dataset = ls.ImageDataset.load_or_create()
@@ -142,8 +142,8 @@ them at your own image, video, or YOLO/COCO dataset by changing the input path.
         ```python title="example_video.py"
         import lightly_studio as ls
 
-        # Download the example dataset (will be skipped if it already exists)
-        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+        # Download the example dataset (cached, so it downloads only once)
+        dataset_path = ls.utils.download_example_dataset()
 
         # Create a dataset and populate it with videos.
         dataset = ls.VideoDataset.load_or_create()

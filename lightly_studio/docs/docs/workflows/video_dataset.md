@@ -13,7 +13,7 @@ Use `add_videos_from_path` to load videos from a folder:
 import lightly_studio as ls
 
 # We download an example dataset for this guide.
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+dataset_path = ls.utils.download_example_dataset()
 
 # Create an empty dataset and add videos from a folder.
 dataset = ls.VideoDataset.create()
@@ -49,8 +49,8 @@ and segmentation mask annotations are supported. See
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    # Download the example dataset (cached, so it downloads only once)
+    dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.VideoDataset.create()
     dataset.add_videos_from_youtube_vis(
@@ -91,8 +91,8 @@ and segmentation mask annotations are supported. See
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    # Download the example dataset (cached, so it downloads only once)
+    dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.VideoDataset.create()
     dataset.add_videos_from_youtube_vis(
