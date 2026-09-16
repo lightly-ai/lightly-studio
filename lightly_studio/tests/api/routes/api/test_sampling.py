@@ -75,12 +75,6 @@ def test_create_combination_sampling__preselected_tag(
     preselected_tag = helpers_resolvers.create_tag(
         session=db_session, collection_id=collection_id, tag_name="growing_batch"
     )
-    helpers_resolvers.create_tag(
-        session=db_session,
-        collection_id=collection_id,
-        tag_name=preselected_tag.name,
-        kind="annotation",
-    )
     tag_resolver.add_sample_ids_to_tag_id(
         session=db_session,
         tag_id=preselected_tag.tag_id,

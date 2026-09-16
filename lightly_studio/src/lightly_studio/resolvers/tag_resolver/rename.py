@@ -24,7 +24,6 @@ def rename(session: Session, tag_id: UUID, new_name: str) -> TagTable | None:
         session=session,
         tag_name=new_name,
         collection_id=tag.collection_id,
-        kind=tag.kind,
     )
     if conflicting_tag and conflicting_tag.tag_id != tag_id:
         raise IntegrityError(statement=None, params=None, orig=Exception("Tag already exists"))
