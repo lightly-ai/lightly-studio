@@ -53,7 +53,7 @@ dataset = ls.VideoDataset.load()
 dataset.match(VideoSampleField.width > 1920).add_tag("high-res")
 ```
 
-See [Search and Filter](search_and_filter.md#query-in-python) for the full query API.
+See [Search and Filter](../workflows/search_and_filter.md#query-in-python) for the full query API.
 
 ### Splitting a dataset
 

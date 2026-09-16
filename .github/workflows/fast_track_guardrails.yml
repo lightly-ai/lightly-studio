@@ -47,12 +47,20 @@ jobs:
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         with:
           filters: |
+            # Every Python workspace member: the backend guardrails judge all of them, so a
+            # change to any one needs the Python toolchain.
+            python:
+              - 'lightly_studio/**'
+              - 'lightly_studio_serve/**'
             backend:
               - 'lightly_studio/**'
             # Superset of the backend/coverage guardrail's own scope, so the full
             # suite runs only for PRs that guardrail will actually judge.
             backend_src:
               - 'lightly_studio/src/lightly_studio/**/*.py'
+            # The same, for lightly_studio_serve's half of that guardrail.
+            backend_serve_src:
+              - 'lightly_studio_serve/src/lightly_studio_serve/**/*.py'
             frontend:
               - 'lightly_studio_view/**'
             # Same idea as backend_src, for the frontend/coverage guardrail.
@@ -63,13 +71,13 @@ jobs:
       # Full backend venv for backend guardrails (e.g. backend/complexity, backend/coverage);
       # frontend PRs need it too, to export the schema for their generated API client.
       - name: Set Up Python
-        if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
+        if: steps.changes.outputs.python == 'true' || steps.changes.outputs.frontend == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
       - name: Set Up uv
-        if: steps.changes.outputs.backend == 'true' || steps.changes.outputs.frontend == 'true'
+        if: steps.changes.outputs.python == 'true' || steps.changes.outputs.frontend == 'true'
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
@@ -118,6 +126,14 @@ jobs:
         working-directory: lightly_studio
         run: make test-coverage
 
+      # Same arrangement as the studio's step above, for the other half of backend/coverage.
+      - name: Run lightly-studio-serve tests with coverage
+        id: backend-serve-tests
+        if: steps.changes.outputs.backend_serve_src == 'true'
+        continue-on-error: true
+        working-directory: lightly_studio_serve
+        run: make test-coverage
+
       # --- Frontend toolchain ------------------------------------------------
       # Deps and generated API client for frontend guardrails (e.g. frontend/complexity,
       # frontend/coverage). prebuild is the app build's generation step, without the
@@ -153,6 +169,9 @@ jobs:
           # so a skipped step does not read as a failing suite.
           BACKEND_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio/coverage.json
           BACKEND_TESTS_PASSED: ${{ steps.backend-tests.outcome != 'failure' }}
+          # The same pair for the other Python member, read by the same guardrail.
+          BACKEND_SERVE_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio_serve/coverage.json
+          BACKEND_SERVE_TESTS_PASSED: ${{ steps.backend-serve-tests.outcome != 'failure' }}
           # frontend/coverage mirrors the backend vars, reading the report the frontend
           # test step wrote.
           FRONTEND_COVERAGE_JSON: ${{ github.workspace }}/lightly_studio_view/coverage/coverage-final.json

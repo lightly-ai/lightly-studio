@@ -80,5 +80,5 @@ dataset.add_images_from_path(path="abfs://my-container/images/")
     ```shell
     pip install "lightly-studio[cloud-storage]"
     ```
-    See [Using Cloud Storage](../../dataset_setup/cloud_storage.md) for more details on
+    See [Using Cloud Storage](../../ecosystem/cloud_storage.md) for more details on
     supported cloud operations.

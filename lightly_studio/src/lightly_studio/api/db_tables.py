@@ -59,6 +59,9 @@ from lightly_studio.models.sequence import (
 from lightly_studio.models.settings import (
     SettingTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.static_transform import (
+    StaticTransformTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.tag import (
     TagTable,  # noqa: F401, required for SQLModel to work properly
 )

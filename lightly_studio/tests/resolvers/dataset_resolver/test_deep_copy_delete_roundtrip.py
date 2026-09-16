@@ -42,6 +42,7 @@ from lightly_studio.models.sample import SampleCreate, SampleTable, SampleTagLin
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import (
@@ -107,6 +108,9 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
         ),
         "sensor_calibration": count(
             SensorCalibrationTable, col(SensorCalibrationTable.recording_id).in_(recording_ids)
+        ),
+        "static_transform": count(
+            StaticTransformTable, col(StaticTransformTable.recording_id).in_(recording_ids)
         ),
         "annotation_base": count(
             AnnotationBaseTable, col(AnnotationBaseTable.sample_id).in_(sample_ids)
@@ -325,6 +329,22 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
             k=[500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0],
         )
     )
+
+    # Static transform: one /tf_static edge on the same recording.
+    session.add(
+        StaticTransformTable(
+            recording_id=recording_id,
+            parent="livox_front_left",
+            child="main",
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            tx=0.1,
+            ty=0.2,
+            tz=0.3,
+        )
+    )
     session.commit()
     return root.dataset_id
 
@@ -360,6 +380,7 @@ def test_deep_copy_then_delete_round_trip(db_session: Session) -> None:
         "sequence",
         "mcap_group_sequence",
         "sensor_calibration",
+        "static_transform",
     ):
         assert original_counts[table] > 0, f"builder did not populate {table}"
 

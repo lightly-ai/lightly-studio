@@ -11,15 +11,15 @@ Samples that look alike get vectors that are close together, so distance in
 embedding space is a measure of visual similarity.
 
 Embeddings are the shared foundation under three features in LightlyStudio:
-[search](search_and_filter.md), the embedding plot, and every embedding-based
-[sampling](sampling.md) strategy. You do not run anything to get them. LightlyStudio
+[search](../workflows/search_and_filter.md), the embedding plot, and every embedding-based
+[sampling](../workflows/sampling.md) strategy. You do not run anything to get them. LightlyStudio
 computes embeddings **automatically** when you add data.
 
 ## How Embeddings Are Created
 
 LightlyStudio embeds each sample when you add it to a dataset with all loading functions,
-for example with `add_images_from_path` for an [image dataset](../dataset_setup/image_dataset.md) or
-`add_videos_from_path` for a [video dataset](../dataset_setup/video_dataset.md).
+for example with `add_images_from_path` for an [image dataset](../workflows/image_dataset.md) or
+`add_videos_from_path` for a [video dataset](../workflows/video_dataset.md).
 
 To skip embedding, pass `embed=False` to the add method. This is faster, but it
 disables search and the embedding plot for those samples. For videos this skips
@@ -28,7 +28,7 @@ only the whole-video embedding; frames are still embedded unless you also pass
 
 Embeddings are stored in the database and reused when you reopen the
 dataset. Only new samples are embedded. See
-[Reuse Datasets](../dataset_setup/reuse_datasets.md).
+[Reuse Datasets](../get_started/reuse_datasets.md).
 
 Beyond whole images and videos, LightlyStudio embeds two more levels of your data.
 
@@ -81,9 +81,9 @@ You can:
 
 ## What Embeddings Power
 
-- **Similarity search** by text or image. See [Search and Filter](search_and_filter.md).
+- **Similarity search** by text or image. See [Search and Filter](../workflows/search_and_filter.md).
 - **Sampling** strategies such as diverse, deduplication, similarity, and
-  typicality/outliers. See [Sampling](sampling.md).
+  typicality/outliers. See [Sampling](../workflows/sampling.md).
 
 ## Using Your Own Embeddings
 

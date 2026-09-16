@@ -22,6 +22,7 @@ from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_embedding_model_resolver,
@@ -480,6 +481,46 @@ def test_delete_dataset__with_sensor_calibrations__deletes_when_component_datase
         is not None
     )
     assert recording_resolver.get_by_id(session=db_session, recording_id=recording_id) is not None
+
+
+def test_delete_dataset__with_static_transforms(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    db_session.add(
+        StaticTransformTable(
+            recording_id=recording_id,
+            parent="livox_front_left",
+            child="main",
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            tx=0.1,
+            ty=0.2,
+            tz=0.3,
+        )
+    )
+    db_session.commit()
+    transform_id = db_session.exec(
+        select(StaticTransformTable.static_transform_id).where(
+            col(StaticTransformTable.recording_id) == recording_id
+        )
+    ).one()
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+    )
+
+    # Assert
+    assert db_session.get(StaticTransformTable, transform_id) is None
 
 
 def test_delete_dataset__with_tags(db_session: Session) -> None:

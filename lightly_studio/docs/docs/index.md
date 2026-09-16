@@ -181,13 +181,13 @@ to explore embeddings, remove near-duplicates, auto-label, and train a model —
 
 <div class="grid cards small" markdown>
 
--   **[Image Dataset](dataset_setup/image_dataset.md)**
+-   **[Image Dataset](workflows/image_dataset.md)**
 
-    [![Image Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png)](dataset_setup/image_dataset.md)
+    [![Image Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png)](workflows/image_dataset.md)
 
--   **[Video Dataset](dataset_setup/video_dataset.md)**
+-   **[Video Dataset](workflows/video_dataset.md)**
 
-    [![Video Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png)](dataset_setup/video_dataset.md)
+    [![Video Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png)](workflows/video_dataset.md)
 
 </div>
 
@@ -195,25 +195,25 @@ to explore embeddings, remove near-duplicates, auto-label, and train a model —
 
 <div class="grid cards small" markdown>
 
--   **[Annotations](concepts_and_tools/annotations.md)**
+-   **[Annotations](workflows/annotations.md)**
 
-    [![Annotations](https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png)](concepts_and_tools/annotations.md)
+    [![Annotations](https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png)](workflows/annotations.md)
 
--   **[Tags](concepts_and_tools/tags.md)**
+-   **[Tags](core_concepts/tags.md)**
 
-    [![Tags](https://storage.googleapis.com/lightly-public/studio/docs_cards/tags.png)](concepts_and_tools/tags.md)
+    [![Tags](https://storage.googleapis.com/lightly-public/studio/docs_cards/tags.png)](core_concepts/tags.md)
 
--   **[Captions](concepts_and_tools/captions.md)**
+-   **[Captions](workflows/captions.md)**
 
-    [![Captions](https://storage.googleapis.com/lightly-public/studio/docs_cards/captions.png)](concepts_and_tools/captions.md)
+    [![Captions](https://storage.googleapis.com/lightly-public/studio/docs_cards/captions.png)](workflows/captions.md)
 
--   **[Metadata](concepts_and_tools/metadata.md)**
+-   **[Metadata](core_concepts/metadata.md)**
 
-    [![Metadata](https://storage.googleapis.com/lightly-public/studio/docs_cards/metadata.png)](concepts_and_tools/metadata.md)
+    [![Metadata](https://storage.googleapis.com/lightly-public/studio/docs_cards/metadata.png)](core_concepts/metadata.md)
 
--   **[Embeddings](concepts_and_tools/embeddings.md)**
+-   **[Embeddings](core_concepts/embeddings.md)**
 
-    [![Embeddings](https://storage.googleapis.com/lightly-public/studio/docs_cards/embeddings.png)](concepts_and_tools/embeddings.md)
+    [![Embeddings](https://storage.googleapis.com/lightly-public/studio/docs_cards/embeddings.png)](core_concepts/embeddings.md)
 
 </div>
 
@@ -221,25 +221,25 @@ to explore embeddings, remove near-duplicates, auto-label, and train a model —
 
 <div class="grid cards small" markdown>
 
--   **[Search and Filter](concepts_and_tools/search_and_filter.md)**
+-   **[Search and Filter](workflows/search_and_filter.md)**
 
-    [![Search and Filter](https://storage.googleapis.com/lightly-public/studio/docs_cards/search_and_filter.png)](concepts_and_tools/search_and_filter.md)
+    [![Search and Filter](https://storage.googleapis.com/lightly-public/studio/docs_cards/search_and_filter.png)](workflows/search_and_filter.md)
 
--   **[Export](concepts_and_tools/export.md)**
+-   **[Export](workflows/export.md)**
 
-    [![Export](https://storage.googleapis.com/lightly-public/studio/docs_cards/export.png)](concepts_and_tools/export.md)
+    [![Export](https://storage.googleapis.com/lightly-public/studio/docs_cards/export.png)](workflows/export.md)
 
--   **[Sampling](concepts_and_tools/sampling.md)**
+-   **[Sampling](workflows/sampling.md)**
 
-    [![Sampling](https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png)](concepts_and_tools/sampling.md)
+    [![Sampling](https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png)](workflows/sampling.md)
 
--   **[Plugins](concepts_and_tools/plugins.md)**
+-   **[Plugins](ecosystem/plugins.md)**
 
-    [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](concepts_and_tools/plugins.md)
+    [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](ecosystem/plugins.md)
 
--   **[Model Evaluation](concepts_and_tools/evaluation.md)**
+-   **[Model Evaluation](workflows/evaluation.md)**
 
-    [![Model Evaluation](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](concepts_and_tools/evaluation.md)
+    [![Model Evaluation](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](workflows/evaluation.md)
 
 </div>
 
@@ -247,4 +247,4 @@ to explore embeddings, remove near-duplicates, auto-label, and train a model —
 
 LightlyStudio has a powerful [Python interface](api/dataset.md). You can not only index datasets but
 also query and manipulate them using code. It supports local and cloud-hosted image and video
-folders; see [Using Cloud Storage](dataset_setup/cloud_storage.md) for setup and limitations.
+folders; see [Using Cloud Storage](ecosystem/cloud_storage.md) for setup and limitations.

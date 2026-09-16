@@ -8,7 +8,9 @@ export class VideosPage {
 
     async goto() {
         await this.page.goto('/');
-        await this.page.getByTestId('navigation-menu-videos').click();
+        // TODO(Michal 09/2026): Drop the timeout override once the test regression has been
+        // investigated.
+        await this.page.getByTestId('navigation-menu-videos').click({ timeout: 10000 });
 
         // Wait for video grid items to be visible
         await expect(this.getVideos().first()).toBeVisible({

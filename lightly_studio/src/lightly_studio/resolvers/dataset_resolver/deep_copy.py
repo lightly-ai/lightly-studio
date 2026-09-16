@@ -67,6 +67,7 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -161,6 +162,7 @@ def deep_copy(
     _copy_group_component_definitions(session=session)
     _copy_mcap_group_component_definitions(session=session)
     _copy_sensor_calibrations(session=session)
+    _copy_static_transforms(session=session)
 
     # Commit so the ON COMMIT DROP map tables are released and a subsequent deep_copy in
     # the same session can recreate them.
@@ -979,6 +981,24 @@ def _copy_sensor_calibrations(session: Session) -> None:
     _copy_table(
         session=session,
         target=SensorCalibrationTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_static_transforms(session: Session) -> None:
+    """Copy static transforms, remapping recording_id and generating a new PK."""
+    src = _table(StaticTransformTable).alias("src")
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"])
+    overrides = {
+        "static_transform_id": func.gen_random_uuid(),
+        "recording_id": map_recording.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=StaticTransformTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,
