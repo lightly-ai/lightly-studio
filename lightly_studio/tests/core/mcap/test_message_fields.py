@@ -31,6 +31,11 @@ def test_require_field() -> None:
     assert message_fields.require_field({"width": 640}, ("width",)) == 640
 
 
+def test_require_field__present_none() -> None:
+    assert message_fields.require_field({"width": None}, ("width",)) is None
+    assert message_fields.require_field(SimpleNamespace(width=None), ("width",)) is None
+
+
 def test_require_field__missing() -> None:
     with pytest.raises(McapAccessError, match="has no field 'k', 'K'"):
         message_fields.require_field(SimpleNamespace(width=1), ("k", "K"))

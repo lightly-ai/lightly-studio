@@ -47,10 +47,13 @@ def require_field(message: Any, names: Sequence[str]) -> Any:
     Raises:
         McapAccessError: If the message has none of the fields.
     """
-    value = get_field(message, names)
-    if value is None:
-        expected = ", ".join(f"'{name}'" for name in names)
-        raise McapAccessError(
-            f"Message of type '{type(message).__name__}' has no field {expected}."
-        )
-    return value
+    for name in names:
+        if isinstance(message, Mapping):
+            if name in message:
+                return message[name]
+        elif hasattr(message, name):
+            return getattr(message, name)
+    expected = ", ".join(f"'{name}'" for name in names)
+    raise McapAccessError(
+        f"Message of type '{type(message).__name__}' has no field {expected}."
+    )
