@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY
 from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
 from lightly_studio.database.db_manager import SessionDep
@@ -81,8 +81,10 @@ def get_camera_frame(
             height=frame_query.h,
             quality=frame_query.q,
         )
-    except (ChannelNotFoundError, McapAccessError) as exc:
+    except ChannelNotFoundError as exc:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(exc)) from exc
+    except McapAccessError as exc:
+        raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail=str(exc)) from exc
     if frame is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
@@ -92,7 +94,8 @@ def get_camera_frame(
                 f"recording {recording_id} in dataset {dataset_id}."
             ),
         )
-    etag = f'"{frame.log_time_ns}-{frame_query.channel_id}"'
+    q = frame_query
+    etag = f'"{frame.log_time_ns}-{q.channel_id}-{q.w}-{q.h}-{q.q}"'
     if_none_match = request.headers.get("if-none-match")
     if if_none_match and any(token.strip() in {"*", etag} for token in if_none_match.split(",")):
         return Response(status_code=304)

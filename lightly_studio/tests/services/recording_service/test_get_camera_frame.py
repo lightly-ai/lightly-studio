@@ -18,11 +18,11 @@ from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import collection_resolver, recording_resolver
-from lightly_studio.services.recording_service import get_camera_frame
 from lightly_studio.services.recording_service.get_camera_frame import (
     _READER_CACHE_SIZE,
     _get_cached_reader,
     _thread_local,
+    get_camera_frame,
 )
 from tests.core.mcap import helpers
 

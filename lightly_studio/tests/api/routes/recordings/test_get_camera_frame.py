@@ -11,8 +11,13 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
 from lightly_studio.core.mcap import compressed_video
+from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.recording import RecordingFormat
@@ -107,7 +112,23 @@ def test_get_camera_frame__etag_in_response(
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.headers["etag"] == f'"{keyframe_ns}-{recording.channel_id}"'
+    assert response.headers["etag"] == f'"{keyframe_ns}-{recording.channel_id}-None-None-85"'
+
+
+def test_get_camera_frame__400_on_mcap_access_error(
+    test_client: TestClient, recording: RecordingFixture, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(
+        compressed_video, "from_decoded_message", side_effect=McapAccessError("bad codec")
+    )
+    keyframe_ns = helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0]
+
+    response = test_client.get(
+        _camera_frame_url(recording.dataset_id, recording.recording_id),
+        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": keyframe_ns},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
 
 
 def test_get_camera_frame__304_on_matching_if_none_match(
@@ -115,7 +136,7 @@ def test_get_camera_frame__304_on_matching_if_none_match(
 ) -> None:
     mocker.patch.object(compressed_video, "from_decoded_message", return_value=b"\xff\xd8\xff")
     keyframe_ns = helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0]
-    etag = f'"{keyframe_ns}-{recording.channel_id}"'
+    etag = f'"{keyframe_ns}-{recording.channel_id}-None-None-85"'
 
     response = test_client.get(
         _camera_frame_url(recording.dataset_id, recording.recording_id),
