@@ -103,6 +103,18 @@ def describe_body(**overrides: Any) -> dict[str, Any]:
     return body
 
 
+def embeddings_body(**overrides: Any) -> dict[str, Any]:
+    """The body of a correct embed answer, with the fields a test changes."""
+    body: dict[str, Any] = {
+        "space_key": SPACE_KEY,
+        "dimension": DIMENSION,
+        "kept_indices": [0],
+        "embeddings": [[0.5, -0.5]],
+    }
+    body.update(overrides)
+    return body
+
+
 def _json_response(body: dict[str, Any]) -> Response:
     """Serialize with the standard library, which writes ``NaN`` the way a server can."""
     return Response(content=json.dumps(body), media_type="application/json")

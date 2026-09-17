@@ -29,6 +29,9 @@ DESCRIBE_TIMEOUT_SECONDS = 5.0
 PROBE_TIMEOUT_SECONDS = 60.0
 """How long one probe may take. A cold model on a CPU takes far longer than a warm one."""
 
+# A probe carries one valid item, so a server that reads the format keeps it.
+_EXPECTED_KEPT_INDICES = [0]
+
 # How much of an unexpected answer a problem repeats.
 _BODY_EXCERPT_CHARS = 200
 
@@ -99,21 +102,25 @@ def _check_capability(
         return CapabilityReport(capability=capability, outcome=Outcome.NOT_ADVERTISED)
     if not described.ready:
         return CapabilityReport(capability=capability, outcome=Outcome.NOT_READY)
-    problems = _run_probe(client=client, probe=probes.PROBES[capability], timeout=timeout)
+    problems = _run_probe(
+        client=client, probe=probes.PROBES[capability], described=described, timeout=timeout
+    )
     outcome = Outcome.FAILED if problems else Outcome.PASSED
     return CapabilityReport(capability=capability, outcome=outcome, details=tuple(problems))
 
 
-def _run_probe(client: ProbeClient, probe: Probe, timeout: float) -> list[str]:
-    """Send one probe and read its answer as the protocol defines it."""
+def _run_probe(
+    client: ProbeClient, probe: Probe, described: DescribeResponse, timeout: float
+) -> list[str]:
+    """Send one probe and check its answer against the protocol and ``/v1/describe``."""
     try:
         response = client.post(
             path=probe.path, content_type=probe.content_type, body=probe.body, timeout=timeout
         )
-        _parsed(model=EmbeddingsResponse, response=response, path=probe.path)
+        embeddings = _parsed(model=EmbeddingsResponse, response=response, path=probe.path)
     except (ConformanceRequestError, _FaultError) as error:
         return [str(error)]
-    return []
+    return _compare_against_describe(embeddings=embeddings, described=described, path=probe.path)
 
 
 def _parsed(model: type[_Body], response: ProbeResponse, path: str) -> _Body:
@@ -130,6 +137,35 @@ def _parsed(model: type[_Body], response: ProbeResponse, path: str) -> _Body:
             f"{path} answers a body that the protocol does not allow: "
             f"{validation.name_broken_rules(error=error)}"
         ) from error
+
+
+def _compare_against_describe(
+    embeddings: EmbeddingsResponse, described: DescribeResponse, path: str
+) -> list[str]:
+    """Check the three rules that need the embed answer and ``/v1/describe`` together.
+
+    ``EmbeddingsResponse`` holds the rules a body shows on its own.
+    """
+    problems = []
+    if embeddings.space_key != described.space_key:
+        problems.append(
+            f"{path} answers space_key {embeddings.space_key!r}, "
+            f"{protocol.DESCRIBE_PATH} answers {described.space_key!r}. Every response "
+            f"repeats the space that the server describes."
+        )
+    if embeddings.dimension != described.dimension:
+        problems.append(
+            f"{path} answers dimension {embeddings.dimension}, "
+            f"{protocol.DESCRIBE_PATH} answers {described.dimension}. LightlyStudio stores "
+            f"vectors of the dimension that the server describes."
+        )
+    if embeddings.kept_indices != _EXPECTED_KEPT_INDICES:
+        problems.append(
+            f"{path} answers kept_indices {embeddings.kept_indices}, expected "
+            f"{_EXPECTED_KEPT_INDICES}. The probe carries one item that the format allows, "
+            f"so a server that reads the format keeps it."
+        )
+    return problems
 
 
 def _excerpt(body: bytes) -> str:
