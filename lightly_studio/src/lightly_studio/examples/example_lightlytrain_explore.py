@@ -129,7 +129,7 @@ for required_path in (IMAGE_PATH, Path(MODEL_FILE)):
             "Run example_lightlytrain_train_and_export.py first."
         )
 
-# 3. Load the model into LightlyStudio. Register the generator BEFORE creating the
+# 3. Load the model into LightlyStudio. Register the embedder BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
 # cleanup_existing=True resets the local database each run; remove it to keep prior runs.
 db_manager.connect(cleanup_existing=True)
