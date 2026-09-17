@@ -46,6 +46,16 @@ LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)
 )
 
+# The address policy of a remote embedding server, see
+# lightly_studio/embed/remote/url_policy.py. True keeps every address usable, which is what
+# a self-hosted LightlyStudio next to its model on the same box or the same private network
+# needs. A hosted deployment, where the address arrives from a user, sets it to False: the
+# address must then be https, and it must not resolve to a loopback, private, link-local,
+# reserved, multicast or unspecified address. Redirects are never followed in either mode.
+LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS: bool = env.bool(
+    "LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS", True
+)
+
 LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED: bool = env.bool(
     "LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED", False
 )

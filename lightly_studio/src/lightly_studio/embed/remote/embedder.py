@@ -27,7 +27,7 @@ from lightly_studio_serve.protocol import DescribeResponse, EmbeddingsResponse, 
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from numpy.typing import NDArray
 
-from lightly_studio.embed.remote import batching, composition, connection
+from lightly_studio.embed.remote import batching, composition, connection, url_policy
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderCapabilityError,
     RemoteEmbedderError,
@@ -99,21 +99,27 @@ class RemoteEmbedder(Embedder):
             api_key: The token to send as ``Authorization: Bearer``, or ``None`` for a
                 server that wants none.
             client: The client to send with, for a test that drives an application in
-                process. Its ``base_url`` then names the server and ``url`` is unused.
-                ``None`` opens a client against ``url``.
+                process. Its ``base_url`` then names the server, so the URL policy reads
+                that address instead of ``url``. ``None`` opens a client against ``url``.
 
         Returns:
             An embedder that implements the interface of every capability that the server
             advertises and this client routes to.
 
         Raises:
+            ValueError: If the URL policy refuses the address of the server, or if the
+                client follows redirects.
             RemoteEmbedderError: If the server gives no answer, rejects the token, answers
                 a description that the protocol does not allow, or advertises no
                 capability that LightlyStudio can use.
         """
+        # The address that the requests really go to, checked before one is sent.
+        address = url if client is None else str(client.base_url)
+        url_policy.check_url(url=address, api_key=api_key)
         http_client = client if client is not None else connection.build_client(url=url)
         owned_client = http_client if client is None else None
         try:
+            url_policy.check_no_redirects(client=http_client)
             transport = RemoteTransport(client=http_client, api_key=api_key)
             description = transport.describe()
             connection.log_if_loading(description=description, client=http_client)
