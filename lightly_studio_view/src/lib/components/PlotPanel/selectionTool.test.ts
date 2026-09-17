@@ -12,23 +12,23 @@ const ARMED_STYLE = 'background: color-mix(in srgb, red 50%, transparent)';
 const RECT_TITLE = 'Toggle rectangle selection mode. In normal mode, use shift + drag.';
 const LASSO_TITLE = 'Toggle lasso selection mode. In normal mode, use shift + meta + drag.';
 
-function buildContainer(options: { armed?: 'marquee' | 'lasso'; titled?: boolean } = {}) {
+function buildContainer(options: { armed?: 'rectangle' | 'lasso'; titled?: boolean } = {}) {
     const { armed, titled = true } = options;
     const container = document.createElement('div');
     const view = document.createElement('div');
     view.className = 'embedding-view';
-    const marquee = document.createElement('button');
-    const lasso = document.createElement('button');
+    const rectangleButton = document.createElement('button');
+    const lassoButton = document.createElement('button');
     if (titled) {
-        marquee.setAttribute('title', RECT_TITLE);
-        lasso.setAttribute('title', LASSO_TITLE);
+        rectangleButton.setAttribute('title', RECT_TITLE);
+        lassoButton.setAttribute('title', LASSO_TITLE);
     }
-    if (armed === 'marquee') marquee.setAttribute('style', ARMED_STYLE);
-    if (armed === 'lasso') lasso.setAttribute('style', ARMED_STYLE);
-    view.append(marquee, lasso);
+    if (armed === 'rectangle') rectangleButton.setAttribute('style', ARMED_STYLE);
+    if (armed === 'lasso') lassoButton.setAttribute('style', ARMED_STYLE);
+    view.append(rectangleButton, lassoButton);
     container.append(view);
     document.body.append(container);
-    return { container, marquee, lasso };
+    return { container, rectangleButton, lassoButton };
 }
 
 // jsdom fires MutationObserver callbacks on the microtask queue; awaiting a macrotask
@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 describe('SELECTION_TOOLS', () => {
-    it('lists pan, rectangle and lasso in order', () => {
+    it('lists pan, rectangle and lassoButton in order', () => {
         expect(SELECTION_TOOLS.map((tool) => tool.mode)).toEqual(['pan', 'rectangle', 'lasso']);
         expect(SELECTION_TOOLS.every((tool) => tool.label.length > 0)).toBe(true);
     });
@@ -62,30 +62,30 @@ describe('isButtonArmed', () => {
 
 describe('findToolButtons', () => {
     it('resolves buttons by their title text', () => {
-        const { container, marquee, lasso } = buildContainer();
-        expect(findToolButtons(container)).toEqual({ marquee, lasso });
+        const { container, rectangleButton, lassoButton } = buildContainer();
+        expect(findToolButtons(container)).toEqual({ rectangleButton, lassoButton });
     });
 
     it('falls back to DOM order when titles are missing', () => {
-        const { container, marquee, lasso } = buildContainer({ titled: false });
-        expect(findToolButtons(container)).toEqual({ marquee, lasso });
+        const { container, rectangleButton, lassoButton } = buildContainer({ titled: false });
+        expect(findToolButtons(container)).toEqual({ rectangleButton, lassoButton });
     });
 
     it('fills only the missing side when one title changes', () => {
-        const { container, marquee, lasso } = buildContainer();
-        lasso.removeAttribute('title');
-        expect(findToolButtons(container)).toEqual({ marquee, lasso });
+        const { container, rectangleButton, lassoButton } = buildContainer();
+        lassoButton.removeAttribute('title');
+        expect(findToolButtons(container)).toEqual({ rectangleButton, lassoButton });
     });
 
     it('returns nulls for a missing container', () => {
-        expect(findToolButtons(undefined)).toEqual({ marquee: null, lasso: null });
+        expect(findToolButtons(undefined)).toEqual({ rectangleButton: null, lassoButton: null });
     });
 });
 
 describe('toolButtonToToggle', () => {
-    it('arms the marquee for rectangle when it is off', () => {
-        const { container, marquee } = buildContainer();
-        expect(toolButtonToToggle(container, 'rectangle')).toBe(marquee);
+    it('arms the rectangleButton for rectangle when it is off', () => {
+        const { container, rectangleButton } = buildContainer();
+        expect(toolButtonToToggle(container, 'rectangle')).toBe(rectangleButton);
     });
 
     it('leaves an already-armed tool alone', () => {
@@ -94,8 +94,8 @@ describe('toolButtonToToggle', () => {
     });
 
     it('disarms the armed tool when switching to pan', () => {
-        const { container, marquee } = buildContainer({ armed: 'marquee' });
-        expect(toolButtonToToggle(container, 'pan')).toBe(marquee);
+        const { container, rectangleButton } = buildContainer({ armed: 'rectangle' });
+        expect(toolButtonToToggle(container, 'pan')).toBe(rectangleButton);
     });
 
     it('does nothing for pan when no tool is armed', () => {
@@ -112,18 +112,18 @@ describe('createSelectionToolController', () => {
     });
 
     it('does not click anything when pan is active and no tool is armed', () => {
-        const { container, marquee, lasso } = buildContainer();
-        const marqueeClick = vi.spyOn(marquee, 'click');
-        const lassoClick = vi.spyOn(lasso, 'click');
+        const { container, rectangleButton, lassoButton } = buildContainer();
+        const rectangleClick = vi.spyOn(rectangleButton, 'click');
+        const lassoClick = vi.spyOn(lassoButton, 'click');
         const controller = createSelectionToolController(container, () => activeTool);
-        expect(marqueeClick).not.toHaveBeenCalled();
+        expect(rectangleClick).not.toHaveBeenCalled();
         expect(lassoClick).not.toHaveBeenCalled();
         controller.destroy();
     });
 
     it('clicks the target button on reconcile and guards against re-entrant clicks', () => {
-        const { container, lasso } = buildContainer();
-        const lassoClick = vi.spyOn(lasso, 'click');
+        const { container, lassoButton } = buildContainer();
+        const lassoClick = vi.spyOn(lassoButton, 'click');
         const controller = createSelectionToolController(container, () => activeTool);
 
         activeTool = 'lasso';
@@ -136,16 +136,16 @@ describe('createSelectionToolController', () => {
     });
 
     it('re-arms the tool after the library resets it (sticky)', async () => {
-        const { container, lasso } = buildContainer({ armed: 'lasso' });
+        const { container, lassoButton } = buildContainer({ armed: 'lasso' });
         activeTool = 'lasso';
-        const lassoClick = vi.spyOn(lasso, 'click');
+        const lassoClick = vi.spyOn(lassoButton, 'click');
         const controller = createSelectionToolController(container, () => activeTool);
 
         // Already armed: nothing to do yet.
         expect(lassoClick).not.toHaveBeenCalled();
 
         // The library commits a selection and drops back to "none".
-        lasso.removeAttribute('style');
+        lassoButton.removeAttribute('style');
         await flushObservers();
 
         expect(lassoClick).toHaveBeenCalledTimes(1);
@@ -154,8 +154,8 @@ describe('createSelectionToolController', () => {
 
     it('clears the guard once the safety timeout elapses', () => {
         vi.useFakeTimers();
-        const { container, lasso } = buildContainer();
-        const lassoClick = vi.spyOn(lasso, 'click');
+        const { container, lassoButton } = buildContainer();
+        const lassoClick = vi.spyOn(lassoButton, 'click');
         const controller = createSelectionToolController(container, () => activeTool);
 
         activeTool = 'lasso';
@@ -170,13 +170,13 @@ describe('createSelectionToolController', () => {
     });
 
     it('stops reacting to mutations after destroy', async () => {
-        const { container, lasso } = buildContainer({ armed: 'lasso' });
+        const { container, lassoButton } = buildContainer({ armed: 'lasso' });
         activeTool = 'lasso';
-        const lassoClick = vi.spyOn(lasso, 'click');
+        const lassoClick = vi.spyOn(lassoButton, 'click');
         const controller = createSelectionToolController(container, () => activeTool);
         controller.destroy();
 
-        lasso.removeAttribute('style');
+        lassoButton.removeAttribute('style');
         await flushObservers();
 
         expect(lassoClick).not.toHaveBeenCalled();
