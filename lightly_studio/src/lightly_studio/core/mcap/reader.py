@@ -314,7 +314,7 @@ class McapFileReader:
                 )
                 if channel.id == channel_id
             ]
-        except DecoderNotFoundError as exc:
+        except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
             raise McapAccessError(
                 f"Cannot decode the messages of channel {channel_id} in '{self.path}': {exc}"
             ) from exc
