@@ -39,15 +39,15 @@ def test_register_default_embedder(mocker: MockerFixture) -> None:
     registry.register.assert_called_once_with(embedder=embedder, bootstrap_for=None)
 
 
-def test_register_default_embedder__bootstrap_for(mocker: MockerFixture) -> None:
+def test_register_default_embedder__for_capabilities(mocker: MockerFixture) -> None:
     registry = mocker.MagicMock(spec=EmbedderRegistry)
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     embedder = mocker.MagicMock(spec=Embedder)
-    bootstrap_for = {Capability.TEXT}
+    for_capabilities = {Capability.TEXT}
 
-    public_api.register_default_embedder(embedder=embedder, bootstrap_for=bootstrap_for)
+    public_api.register_default_embedder(embedder=embedder, for_capabilities=for_capabilities)
 
-    registry.register.assert_called_once_with(embedder=embedder, bootstrap_for=bootstrap_for)
+    registry.register.assert_called_once_with(embedder=embedder, bootstrap_for=for_capabilities)
 
 
 @pytest.mark.usefixtures("patch_collection")
