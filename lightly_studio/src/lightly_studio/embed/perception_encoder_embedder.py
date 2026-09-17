@@ -231,13 +231,15 @@ def _decode_video(
         preprocess: Transform applied to each sampled frame to produce a model input tensor.
 
     Returns:
-        ``(index, filepath, frames, signal)`` where ``frames`` is the stacked model input on
-        success and ``None`` on a tolerated failure, and ``signal`` is the raised
-        ``MissingInputFileError`` or ``BrokenInputFileError`` on failure and ``None`` on success.
+        ``(index, filepath, frames, signal)``. On success ``frames`` is the stacked model input
+        of shape ``(N, C, H, W)``, where ``N`` is VIDEO_FRAMES_PER_SAMPLE sampled frames, ``C`` the
+        channels, and ``H`` and ``W`` the frame height and width. On a tolerated failure ``frames``
+        is ``None``. ``signal`` is the raised ``MissingInputFileError`` or ``BrokenInputFileError``
+        on failure and ``None`` on success.
     """
     index, filepath = item
     try:
-        frames = _load_video_frames(filepath, preprocess)
+        frames = _load_video_frames(filepath=filepath, preprocess=preprocess)
     except InputFileError as signal:
         return index, filepath, None, signal
     return index, filepath, frames, None
