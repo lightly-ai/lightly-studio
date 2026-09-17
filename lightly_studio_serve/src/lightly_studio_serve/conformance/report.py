@@ -59,8 +59,10 @@ class ConformanceReport:
 
         A capability the server does not advertise leaves the answer ``True``.
         """
-        return self.described is not None and not self.describe_problems and not any(
-            capability.outcome in _UNPASSED for capability in self.capabilities
+        return (
+            self.described is not None
+            and not self.describe_problems
+            and not any(capability.outcome in _UNPASSED for capability in self.capabilities)
         )
 
 
