@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `serve`, which runs an embedder over HTTP or HTTPS with an optional bearer token and a
   ceiling on the request body size.
+- Add the conformance kit, `python -m lightly_studio_serve.conformance <url>`. It checks any
+  server that claims to speak the protocol, reports one outcome per capability, and needs no
+  dataset.
 
 ### Changed
 
