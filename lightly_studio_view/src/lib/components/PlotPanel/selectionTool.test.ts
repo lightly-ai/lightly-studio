@@ -71,6 +71,12 @@ describe('findToolButtons', () => {
         expect(findToolButtons(container)).toEqual({ marquee, lasso });
     });
 
+    it('fills only the missing side when one title changes', () => {
+        const { container, marquee, lasso } = buildContainer();
+        lasso.removeAttribute('title');
+        expect(findToolButtons(container)).toEqual({ marquee, lasso });
+    });
+
     it('returns nulls for a missing container', () => {
         expect(findToolButtons(undefined)).toEqual({ marquee: null, lasso: null });
     });

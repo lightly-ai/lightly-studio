@@ -34,9 +34,12 @@ export function findToolButtons(container: HTMLElement | null | undefined): {
         if (title.startsWith('Toggle rectangle selection')) marquee = button;
         else if (title.startsWith('Toggle lasso selection')) lasso = button;
     }
-    if (!marquee && !lasso && buttons.length >= 2) {
-        marquee = buttons[0];
-        lasso = buttons[1];
+    // A partial rename would otherwise leave one tool dead, so fill each missing side from
+    // DOM order separately, skipping whichever button the title match already claimed.
+    if ((!marquee || !lasso) && buttons.length >= 2) {
+        const unclaimed = buttons.filter((button) => button !== marquee && button !== lasso);
+        marquee ??= unclaimed.shift() ?? null;
+        lasso ??= unclaimed.shift() ?? null;
     }
     return { marquee, lasso };
 }
