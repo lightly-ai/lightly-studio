@@ -41,6 +41,7 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
     create_image,
     create_images,
 )
@@ -934,63 +935,40 @@ def test_embed_frame_samples__count_mismatch_raises(
     assert _stored_embeddings(session=db_session) == []
 
 
-@pytest.mark.usefixtures("patched_manager")
-def test_collection_has_default_embedder__loads_and_reports_true(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    """The helper ensures the default is loaded, then reports it is available.
+@pytest.mark.usefixtures("patched_registry")
+def test_has_frame_embedder__true_when_embedder_available(db_session: Session) -> None:
+    """The guard reports True when the registry can supply a frame embedder."""
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
 
-    The check is ensure-and-check: no default exists up front, and the first call
-    registers one as a side effect before returning True.
+    assert (
+        embed_samples.has_frame_embedder(session=db_session, collection_id=collection.collection_id)
+        is True
+    )
+
+
+def test_has_frame_embedder__false_when_default_space_unavailable(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """The guard reports False when no embedder matches the collection's default space.
+
+    The registry can still supply a bootstrap embedder for a different space, so the result
+    must follow the collection's default model rather than mere registry availability.
     """
-    collection = create_collection(session=db_session)
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="other_space",
+        embedding_dimension=3,
+        set_as_default=True,
     )
-    # No default embedding model exists before the call.
+
     assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is None
-    )
-
-    has_default = embed_samples.collection_has_default_embedder(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    assert has_default is True
-    # The call registered a default model as its side effect.
-    assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is not None
-    )
-
-
-@pytest.mark.usefixtures("patched_manager")
-def test_collection_has_default_embedder__false_when_none_loadable(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    """The helper reports False when no default model can be loaded."""
-    collection = create_collection(session=db_session)
-    _disable_env_loader(mocker=mocker)
-
-    has_default = embed_samples.collection_has_default_embedder(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    assert has_default is False
-    assert (
-        collection_embedding_model_resolver.get_default_by_collection_id(
-            session=db_session, collection_id=collection.collection_id
-        )
-        is None
+        embed_samples.has_frame_embedder(session=db_session, collection_id=collection.collection_id)
+        is False
     )
 
 
@@ -1025,11 +1003,6 @@ def _create_annotation_collection(session: Session) -> UUID:
         collection_id=collection.collection_id,
         sample_type=SampleType.ANNOTATION,
     )
-
-
-def _disable_env_loader(mocker: MockerFixture) -> None:
-    """Make loading a default generator from the environment return nothing."""
-    mocker.patch.object(embedding_manager, "_load_embedding_generator_from_env", return_value=None)
 
 
 def _stored_embeddings(session: Session) -> list[SampleEmbeddingTable]:

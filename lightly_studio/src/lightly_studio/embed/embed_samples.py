@@ -302,27 +302,28 @@ def embed_frame_samples(
     _register_legacy_default_model(session=session, collection_id=collection_id, model_id=model_id)
 
 
-def collection_has_default_embedder(session: Session, collection_id: UUID) -> bool:
-    """Ensure the collection's default embedding model is loaded and report whether it exists.
+def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
+    """Report whether an embedder is available for a collection's video frames.
 
-    This is an ensure-and-check, not a pure peek: on the first call for a collection,
-    ``load_or_get_default_model`` loads and registers the collection's default embedding
-    model as a side effect, then this returns whether a usable default model is (now)
-    available.
-
-    This differs from ``embedding_utils.collection_has_embeddings``, which checks whether
-    embeddings are already *stored* for the collection.
+    Resolves the embedder the same way as ``embed_frame_samples``, so frame decoding is
+    skipped exactly when ``embed_frame_samples`` would find no embedder for the collection's
+    space and store nothing.
 
     Args:
         session: Database session for resolver operations.
-        collection_id: The collection whose default embedding model is ensured.
-
-    Returns:
-        True if the collection has a usable default embedding model, False otherwise.
+        collection_id: The video-frame collection whose default model selects the space.
     """
-    manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = manager.load_or_get_default_model(session=session, collection_id=collection_id)
-    return model_id is not None
+    # TODO(Michal, 09/2026): This loads the built-in embedder and registers a default model,
+    # which is wasted when the caller embeds no frames, for example when every video is
+    # already present. A cheaper check would report availability without loading the model.
+    return (
+        default_embedder.resolve_default_embedder(
+            session=session,
+            collection_id=collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
+        )
+        is not None
+    )
 
 
 def _embed_annotation_chunk(
