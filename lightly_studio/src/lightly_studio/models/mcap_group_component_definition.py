@@ -84,8 +84,10 @@ class McapGroupComponentDefinitionView(BaseModel):
         Args:
             gcd: The slot's generic naming/ordering row.
             mcap_gcd: The slot's MCAP-specific row. Its `collection_id` must match
-                `gcd.collection_id`.
+                `gcd.collection_id`. Its `channel_id` must already be set, as views are
+                only built once a recording has been indexed.
         """
+        assert mcap_gcd.channel_id is not None
         return cls(
             collection_id=mcap_gcd.collection_id,
             group_component_name=gcd.group_component_name,
