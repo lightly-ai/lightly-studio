@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getMetadataValueCountsQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type { MetadataValueCountsView } from '$lib/api/lightly_studio_local';
 import {
     getCategoricalMetadataDistributionRequestOptions,
@@ -105,5 +106,36 @@ describe('getCategoricalMetadataDistributionRequestOptions', () => {
             path: { collection_id: 'collection-id' },
             body: { filters: { width: { min: 100 } } }
         });
+    });
+});
+
+describe('categorical field selection', () => {
+    it('preserves selected fields and filters, including an empty field selection', () => {
+        for (const fields of [['city'], ['city', 'weather'], []]) {
+            for (const filter of [undefined, { width: { min: 100 } }]) {
+                expect(
+                    getCategoricalMetadataDistributionRequestOptions({
+                        collectionId: 'collection-id',
+                        fields,
+                        filter
+                    })
+                ).toEqual({
+                    path: { collection_id: 'collection-id' },
+                    body: { fields, ...(filter ? { filters: filter } : {}) }
+                });
+            }
+        }
+    });
+
+    it('uses separate cache entries when the selected field changes', () => {
+        const keys = ['city', 'weather'].map((field) =>
+            getMetadataValueCountsQueryKey(
+                getCategoricalMetadataDistributionRequestOptions({
+                    collectionId: 'collection-id',
+                    fields: [field]
+                })
+            )
+        );
+        expect(keys[0]).not.toEqual(keys[1]);
     });
 });
