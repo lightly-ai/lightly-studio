@@ -5,5 +5,7 @@ extend = "../lightly_studio/ruff.toml"
 # Ruff resolves a relative pattern against the directory of the file that declares it, so the
 # extended configuration's test ignores cover only its own tests. Each package lists the ignores
 # its own tests need.
+# ARG002: a test double implements `ProbeClient`, so it keeps the argument names of the
+# protocol whether or not a double reads them.
 [lint.per-file-ignores]
-"tests/**/*.py" = ["D100", "D101", "D102", "D103", "D107", "PLR2004", "SLF001"]
+"tests/**/*.py" = ["ARG002", "D100", "D101", "D102", "D103", "D107", "PLR2004", "SLF001"]
