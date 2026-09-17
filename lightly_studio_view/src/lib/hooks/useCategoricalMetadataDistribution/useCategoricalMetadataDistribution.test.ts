@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getMetadataValueCountsQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { getMetadataValueCounts } from '$lib/api/lightly_studio_local/sdk.gen';
 import type { MetadataValueCountsView } from '$lib/api/lightly_studio_local';
 import {
     getCategoricalMetadataDistributionRequestOptions,
-    selectCategoricalDistributions
+    selectCategoricalDistributions,
+    useCategoricalMetadataDistribution
 } from './useCategoricalMetadataDistribution.svelte';
 
 describe('selectCategoricalDistributions', () => {
@@ -137,5 +139,75 @@ describe('categorical field selection', () => {
             )
         );
         expect(keys[0]).not.toEqual(keys[1]);
+    });
+});
+
+interface QueryOptions {
+    enabled: boolean;
+    queryFn: (context: { signal: AbortSignal }) => Promise<unknown>;
+    placeholderData: (previous: Record<string, MetadataValueCountsView> | undefined) => unknown;
+    select: typeof selectCategoricalDistributions;
+}
+
+const createQueryMock = vi.hoisted(() => vi.fn<(getOptions: () => QueryOptions) => unknown>());
+
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    createQuery: createQueryMock
+}));
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
+    getMetadataValueCounts: vi.fn()
+}));
+
+describe('useCategoricalMetadataDistribution', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('fetches the selected field with filters and cancellation, and keeps previous bars while loading', async () => {
+        const data = { city: { value_counts: [{ value: 'Zurich', count: 4 }] } };
+        vi.mocked(getMetadataValueCounts).mockResolvedValue({
+            data,
+            request: new Request('http://localhost/metadata/value-counts'),
+            response: new Response()
+        });
+        useCategoricalMetadataDistribution(() => ({
+            collectionId: 'collection-id',
+            fields: ['city'],
+            filter: { width: { min: 100 } }
+        }));
+        const options = createQueryMock.mock.calls[0][0]();
+        const signal = new AbortController().signal;
+
+        expect(options.enabled).toBe(true);
+        await expect(options.queryFn({ signal })).resolves.toEqual(data);
+        expect(getMetadataValueCounts).toHaveBeenCalledWith({
+            path: { collection_id: 'collection-id' },
+            body: { fields: ['city'], filters: { width: { min: 100 } } },
+            signal,
+            throwOnError: true
+        });
+        expect(options.select(data).city).toEqual([
+            {
+                id: '["value","string","Zurich"]',
+                kind: 'value',
+                value: 'Zurich',
+                label: 'Zurich',
+                count: 4
+            }
+        ]);
+        expect(options.placeholderData(data)).toBe(data);
+        expect(options.placeholderData(undefined)).toBeUndefined();
+    });
+
+    it('respects disabled queries and propagates request errors', async () => {
+        useCategoricalMetadataDistribution(() => ({
+            collectionId: 'collection-id',
+            enabled: false
+        }));
+        const options = createQueryMock.mock.calls[0][0]();
+        expect(options.enabled).toBe(false);
+        const error = new Error('Request failed');
+        vi.mocked(getMetadataValueCounts).mockRejectedValue(error);
+        await expect(options.queryFn({ signal: new AbortController().signal })).rejects.toBe(error);
     });
 });
