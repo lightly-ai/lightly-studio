@@ -28,7 +28,7 @@ class AnnotationDescriptor(BaseModel):
     model_key: str = Field(min_length=1)
     ready: bool
     capabilities: list[str]
-    supported_conditioning: list[Literal["targets", "points"]]
+    supported_conditioning: list[Literal["targets", "points", "boxes"]]
     limits: AnnotationLimits
     classes: list[str] | None = None
 
@@ -52,6 +52,27 @@ class AnnotationPoint(BaseModel):
     x: Probability
     y: Probability
     positive: bool
+
+
+class AnnotationBox(BaseModel):
+    """A normalized XYWH box used as interactive conditioning."""
+
+    x: Probability
+    y: Probability
+    width: Probability
+    height: Probability
+
+    @model_validator(mode="after")
+    def validate_box(self) -> AnnotationBox:  # noqa: N804
+        """Reject empty boxes and geometry outside the image."""
+        if (
+            self.width <= 0
+            or self.height <= 0
+            or self.x + self.width > NORMALIZED_BOUND_TOLERANCE
+            or self.y + self.height > NORMALIZED_BOUND_TOLERANCE
+        ):
+            raise ValueError("The normalized conditioning box is invalid.")
+        return self
 
 
 class PredictionBase(BaseModel):
@@ -139,16 +160,19 @@ class AutoLabelBatchResponse(BaseModel):
 
 
 class InteractiveAnnotationRequest(BaseModel):
-    """Stateless image inference with point conditioning."""
+    """Stateless image inference with point or box conditioning."""
 
     collection_id: UUID
     sample_id: UUID
-    points: list[AnnotationPoint] = Field(min_length=1)
+    points: list[AnnotationPoint] | None = Field(default=None, min_length=1)
+    boxes: list[AnnotationBox] | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
-    def validate_points(self) -> InteractiveAnnotationRequest:  # noqa: N804
-        """Require a positive point to select an object."""
-        if not any(point.positive for point in self.points):
+    def validate_conditioning(self) -> InteractiveAnnotationRequest:  # noqa: N804
+        """Require exactly one valid conditioning type."""
+        if (self.points is None) == (self.boxes is None):
+            raise ValueError("Provide either points or boxes, but not both.")
+        if self.points is not None and not any(point.positive for point in self.points):
             raise ValueError("Place at least one positive point.")
         return self
 

@@ -55,7 +55,7 @@ def describe(profile: SAM3ModelProfile) -> dict[str, object]:
         "model_key": profile.model_key,
         "ready": True,
         "capabilities": ["segmentation_image_bytes", "object_detection_image_bytes"],
-        "supported_conditioning": ["targets", "points"],
+        "supported_conditioning": ["targets", "points", "boxes"],
         "limits": {"max_batch_size": 8, "max_request_bytes": 33_554_432},
     }
 

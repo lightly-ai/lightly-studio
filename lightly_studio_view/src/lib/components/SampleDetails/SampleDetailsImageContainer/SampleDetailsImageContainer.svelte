@@ -66,6 +66,19 @@
     const { isEditingMode, imageBrightness, imageContrast, lastSmartSelectOutputType } =
         useGlobalStorage();
     let smartSelectOutputType = $state<'mask' | 'box'>('mask');
+    type SmartSelectActions = {
+        canSave: boolean;
+        save: () => void;
+        startFresh: () => void;
+    };
+    let smartSelectActions = $state<SmartSelectActions>({
+        canSave: false,
+        save: (): void => undefined,
+        startFresh: (): void => undefined
+    });
+    const updateSmartSelectActions = (actions: typeof smartSelectActions) => {
+        smartSelectActions = actions;
+    };
     $effect(() => {
         smartSelectOutputType = $lastSmartSelectOutputType;
     });
@@ -214,7 +227,8 @@
 <ZoomableContainer
     width={sample.width}
     height={sample.height}
-    panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
+    panEnabled={sampleDetailsToolbarContext.status !== 'wand' &&
+        !(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
     autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
@@ -240,6 +254,9 @@
             <SmartSelectPopUp
                 outputType={smartSelectOutputType}
                 onOutputTypeChange={(value) => (smartSelectOutputType = value)}
+                canSave={smartSelectActions.canSave}
+                onSave={smartSelectActions.save}
+                onStartFresh={smartSelectActions.startFresh}
             />
         {/if}
     {/snippet}
@@ -359,6 +376,7 @@
                     annotationLabel={annotationLabelContext.annotationLabel}
                     annotationSource={annotationLabelContext.annotationSource}
                     outputType={smartSelectOutputType}
+                    onActionsChange={updateSmartSelectActions}
                 />
             {/if}
         {/if}

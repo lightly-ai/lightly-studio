@@ -22,6 +22,11 @@
         outputType?: 'mask' | 'box';
         annotationLabel?: string | null;
         annotationSource?: string | null;
+        onActionsChange: (actions: {
+            canSave: boolean;
+            save: () => void;
+            startFresh: () => void;
+        }) => void;
     }
 
     let {
@@ -32,9 +37,15 @@
         refetch,
         outputType = 'mask',
         annotationLabel,
-        annotationSource
+        annotationSource,
+        onActionsChange
     }: Props = $props();
-    let points = $state<{ x: number; y: number; positive: boolean }[]>([]);
+    type Point = { x: number; y: number; positive: boolean };
+    type Box = { x: number; y: number; width: number; height: number };
+
+    let points = $state<Point[]>([]);
+    let dragStart = $state<Point | null>(null);
+    let dragBox = $state<Box | null>(null);
     let previewMask = $state<Uint8Array | null>(null);
     let previewRle = $state<number[] | null>(null);
     let previewBox = $state<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -45,7 +56,7 @@
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
-    const pointFromEvent = (event: PointerEvent) => {
+    const pointFromEvent = (event: PointerEvent): Point | null => {
         if (!interactionRect) return null;
         const rect = interactionRect.getBoundingClientRect();
         return {
@@ -54,6 +65,13 @@
             positive: !event.shiftKey
         };
     };
+
+    const boxFromPoints = (start: Point, end: Point): Box => ({
+        x: Math.min(start.x, end.x),
+        y: Math.min(start.y, end.y),
+        width: Math.abs(end.x - start.x),
+        height: Math.abs(end.y - start.y)
+    });
 
     const classFromDetectionAtPoint = (point: { x: number; y: number; positive: boolean }) => {
         if (!point.positive) return null;
@@ -79,14 +97,24 @@
         );
     };
 
-    const infer = async () => {
-        if (!points.length || !points.some((point) => point.positive)) return;
+    const infer = async (conditioning: { points?: Point[]; boxes?: Box[] }) => {
+        if (
+            (!conditioning.points || !conditioning.points.length) &&
+            (!conditioning.boxes || !conditioning.boxes.length)
+        ) {
+            return;
+        }
+        if (conditioning.points && !conditioning.points.some((point) => point.positive)) return;
         const requestSequence = ++sequence;
         const started = performance.now();
         const response = await fetch('/api/annotate/interactive', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ collection_id: collectionId, sample_id: sampleId, points })
+            body: JSON.stringify({
+                collection_id: collectionId,
+                sample_id: sampleId,
+                ...conditioning
+            })
         });
         if (!response.ok) {
             toast.error('Smart select inference failed');
@@ -169,17 +197,28 @@
     };
 
     const discard = () => {
+        sequence += 1;
         previewMask = null;
         previewRle = null;
         previewBox = null;
         predictedClass = null;
         points = [];
+        dragStart = null;
+        dragBox = null;
     };
+
+    $effect(() => {
+        onActionsChange({
+            canSave: Boolean(previewMask || previewBox),
+            save: () => void commit(),
+            startFresh: discard
+        });
+    });
+
     const onKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Enter') {
             event.preventDefault();
             if (previewMask || previewBox) void commit();
-            else void infer();
         }
         if (event.key === 'Escape') {
             event.preventDefault();
@@ -211,6 +250,19 @@
         stroke-width="2"
         stroke-linejoin="round"
         stroke-dasharray="6 5"
+    />
+{/if}
+{#if dragBox}
+    <rect
+        x={dragBox.x * sample.width}
+        y={dragBox.y * sample.height}
+        width={dragBox.width * sample.width}
+        height={dragBox.height * sample.height}
+        fill="rgba(59, 130, 246, 0.15)"
+        stroke="#93c5fd"
+        stroke-width="2"
+        stroke-dasharray="6 5"
+        pointer-events="none"
     />
 {/if}
 {#each points as point}
@@ -245,13 +297,45 @@
     cursor="crosshair"
     onpointerdown={(event) => {
         const point = pointFromEvent(event);
-        if (point) {
-            points = [...points, point];
-            previewMask = null;
-            previewRle = null;
-            previewBox = null;
+        if (!point) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        sequence += 1;
+        previewMask = null;
+        previewRle = null;
+        previewBox = null;
+        dragStart = point;
+        dragBox = null;
+    }}
+    onpointermove={(event) => {
+        if (!dragStart) return;
+        const point = pointFromEvent(event);
+        if (!point) return;
+        const nextBox = boxFromPoints(dragStart, point);
+        dragBox = nextBox.width > 0.005 || nextBox.height > 0.005 ? nextBox : null;
+    }}
+    onpointerup={(event) => {
+        if (!dragStart) return;
+        const point = pointFromEvent(event);
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        const box = point ? boxFromPoints(dragStart, point) : null;
+        dragStart = null;
+        dragBox = null;
+        if (!box || box.width <= 0.005 || box.height <= 0.005) {
+            if (!point) return;
+            const nextPoints = [...points, point];
+            points = nextPoints;
             predictedClass = classFromDetectionAtPoint(point) || predictedClass;
+            void infer({ points: nextPoints });
+            return;
         }
+        points = [];
+        predictedClass = null;
+        void infer({ boxes: [box] });
+    }}
+    onpointercancel={(event) => {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        dragStart = null;
+        dragBox = null;
     }}
 />
 {#if latencyMs !== null}

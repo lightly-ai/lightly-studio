@@ -91,14 +91,22 @@ def infer_interactive(
         raise ValueError("The image does not belong to this collection.")
     client = AnnotationModelClient()
     descriptor = client.describe()
-    _validate_capability(descriptor=descriptor, task="segmentation", conditioning="points")
+    conditioning_type = "points" if request.points is not None else "boxes"
+    _validate_capability(
+        descriptor=descriptor, task="segmentation", conditioning=conditioning_type
+    )
     content = _read_image(image=image)
     start = time.perf_counter()
+    conditioning = (
+        {"points": [point.model_dump() for point in request.points]}
+        if request.points is not None
+        else {"boxes": [box.model_dump() for box in (request.boxes or [])]}
+    )
     result = client.infer(
         descriptor=descriptor,
         task="segmentation",
         images=[content],
-        conditioning=json.dumps({"points": [point.model_dump() for point in request.points]}),
+        conditioning=json.dumps(conditioning),
     )
     latency = (time.perf_counter() - start) * 1000
     masks = [
