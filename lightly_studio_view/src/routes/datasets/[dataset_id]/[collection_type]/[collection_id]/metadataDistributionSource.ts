@@ -67,6 +67,7 @@ interface MetadataDistributionSourceParams {
     tagDistributions: SampleTagMetadataDistributions[];
     /** Whether the current view's categorical request is in flight. */
     categoricalLoading?: boolean;
+    numericLoading?: boolean;
     /** Message for a failed categorical request for the current view. */
     categoricalError?: string;
     /** Whether the per-tag comparison requests are in flight. */
@@ -107,6 +108,7 @@ const buildNumericGroup = (params: MetadataDistributionSourceParams, key: string
     id: key,
     label: key,
     histogram: params.histograms[key],
+    loading: params.numericLoading,
     histogramSeries: buildTagHistogramSeries(params.tagDistributions, key),
     // Highlight the active filter range; bins outside it dim.
     selectedRange: params.selectedRanges[key]

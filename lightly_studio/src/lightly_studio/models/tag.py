@@ -53,11 +53,8 @@ class TagTable(TagBase, table=True):
     """This class defines the Tag model."""
 
     __tablename__ = "tag"
-    # ensure there can only be one tag named "lightly_studio" per collection
-    # TODO(Lukas, 08/2026): drop "kind" from the constraint, we never mix different kinds
-    __table_args__ = (
-        UniqueConstraint("collection_id", "kind", "name", name="unique_name_constraint"),
-    )
+    # A tag name identifies a tag within a collection, irrespective of its kind.
+    __table_args__ = (UniqueConstraint("collection_id", "name", name="unique_name_constraint"),)
     tag_id: UUID = Field(default_factory=uuid4, primary_key=True)
     collection_id: UUID
     kind: TagKind = Field(sa_type=String)

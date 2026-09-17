@@ -361,6 +361,7 @@ describe('useSamplingCombinationDialog', () => {
             filteredSampleCount.set(5);
             hook.nSamplesToSelect.set(10);
             hook.selectionResultTagName.set('my-tag');
+            hook.preselectedTagId.set('preselected-tag');
             const event = { preventDefault: vi.fn() } as unknown as Event;
 
             hook.handleFormSubmit(event);
@@ -387,6 +388,7 @@ describe('useSamplingCombinationDialog', () => {
             submitFn.mockResolvedValue(false);
             const hook = useSamplingCombinationDialog(defaultParams);
             makeValidForm(hook);
+            hook.preselectedTagId.set('preselected-tag');
             const event = { preventDefault: vi.fn() } as unknown as Event;
 
             hook.handleFormSubmit(event);
@@ -398,6 +400,7 @@ describe('useSamplingCombinationDialog', () => {
                     isVideoCollection: false,
                     nSamplesToSelect: 10,
                     selectionResultTagName: 'my-tag',
+                    preselectedTagId: 'preselected-tag',
                     selectionFilter: { sample_filter: { tag_ids: ['t-1'] }, filter_type: 'image' }
                 })
             );
@@ -534,6 +537,7 @@ describe('useSamplingCombinationDialog', () => {
             filteredSampleCount.set(100);
             hook.nSamplesToSelect.set(50);
             hook.selectionResultTagName.set('result-tag');
+            hook.preselectedTagId.set('preselected-tag');
             const event = { preventDefault: vi.fn() } as unknown as Event;
 
             hook.handleFormSubmit(event);
@@ -542,6 +546,7 @@ describe('useSamplingCombinationDialog', () => {
             expect(resetStrategiesFn).toHaveBeenCalled();
             expect(get(hook.nSamplesToSelect)).toBe(10);
             expect(get(hook.selectionResultTagName)).toBe('');
+            expect(get(hook.preselectedTagId)).toBeUndefined();
         });
 
         it('does not reset form when submit fails', async () => {

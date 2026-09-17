@@ -1,4 +1,5 @@
 <script lang="ts">
+    import DistributionPlotContainer from '../DistributionPlotContainer/DistributionPlotContainer.svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import {
         Histogram,
@@ -10,6 +11,7 @@
     import HistogramExpandToolbar from './HistogramExpandToolbar/HistogramExpandToolbar.svelte';
 
     interface Props {
+        loading?: boolean;
         /** Two-way bound flag controlling dialog visibility. */
         open: boolean;
         /** Bin edges and per-bin counts. */
@@ -36,6 +38,7 @@
 
     let {
         open = $bindable(),
+        loading = false,
         data,
         series = [],
         label,
@@ -69,16 +72,18 @@
             {valueMode}
             {onValueModeChange}
         />
-        <div class="min-h-0 flex-1 dark:[color-scheme:dark]" bind:clientHeight={chartHeight}>
-            <Histogram
-                {data}
-                {series}
-                {selectedRange}
-                heightPx={chartHeight || 480}
-                showAxes
-                {valueMode}
-                {onRangeSelect}
-            />
-        </div>
+        <DistributionPlotContainer {loading}>
+            <div class="min-h-0 flex-1 dark:[color-scheme:dark]" bind:clientHeight={chartHeight}>
+                <Histogram
+                    {data}
+                    {series}
+                    {selectedRange}
+                    heightPx={chartHeight || 480}
+                    showAxes
+                    {valueMode}
+                    {onRangeSelect}
+                />
+            </div>
+        </DistributionPlotContainer>
     </Dialog.Content>
 </Dialog.Root>

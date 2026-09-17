@@ -11,7 +11,7 @@ from lightly_studio_serve.embedder import (
     VideoBytesEmbedder,
     VideoPathEmbedder,
 )
-from lightly_studio_serve.server import create_app
+from lightly_studio_serve.server import create_app, serve
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 
 __all__ = [
@@ -28,4 +28,5 @@ __all__ = [
     "VideoBytesEmbedder",
     "VideoPathEmbedder",
     "create_app",
+    "serve",
 ]
