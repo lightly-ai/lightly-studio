@@ -35,6 +35,13 @@ async function openMenu() {
 describe('Split dataset menu', () => {
     afterEach(closeDatasetSplitDialog);
 
+    it('renders a hamburger icon in the menu trigger', () => {
+        render(Menu, { collection, isImages: true });
+        const trigger = screen.getByTestId('menu-trigger');
+
+        expect(trigger).toHaveAccessibleName('Menu');
+    });
+
     it.each(['image', 'video'] as const)(
         'opens, closes and reopens on the %s grid',
         async (sample_type) => {
