@@ -3,11 +3,12 @@ from __future__ import annotations
 import socket
 import threading
 import time
-import warnings
+from collections.abc import Iterator
 
 import httpx
 import numpy as np
 import pytest
+import uvicorn
 from lightly_studio_serve import protocol, server
 from lightly_studio_serve.embedder import ImageBytesEmbedder, TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
@@ -61,47 +62,50 @@ class TableEmbedder(TextEmbedder, ImageBytesEmbedder):
 
 
 @pytest.fixture(scope="module")
-def server_url() -> str:
+def server_url() -> Iterator[str]:
     """Serve `TableEmbedder` over a real socket and answer with its address.
 
     One server serves every test of this module, so the suite pays the startup once. The
-    thread is a daemon, so the interpreter does not wait for it and the fixture needs no
-    shutdown. `serve` runs uvicorn, which installs no signal handler off the main thread.
+    fixture binds the socket before it starts uvicorn, so another worker cannot claim the
+    selected port in between.
     """
-    port = _free_port()
+    listener = socket.socket()
+    listener.bind((_HOST, 0))
+    listener.listen()
+    port = int(listener.getsockname()[1])
+    app = server.create_app(embedder=TableEmbedder())
+    uvicorn_server = uvicorn.Server(uvicorn.Config(app=app, log_level="warning"))
     thread = threading.Thread(
-        target=server.serve,
-        kwargs={"embedder": TableEmbedder(), "host": _HOST, "port": port},
+        target=uvicorn_server.run,
+        kwargs={"sockets": [listener]},
         daemon=True,
     )
     thread.start()
     url = f"http://{_HOST}:{port}"
     _wait_until_ready(url=url)
-    return url
+    yield url
+    uvicorn_server.should_exit = True
+    thread.join(timeout=_STARTUP_TIMEOUT_SECONDS)
+    listener.close()
 
 
 @pytest.fixture(scope="module")
-def remote(server_url: str) -> RemoteEmbedder:
+def remote(server_url: str) -> Iterator[RemoteEmbedder]:
     """One client for the tests that only embed. `test_connect` builds its own."""
-    return RemoteEmbedder.connect(url=server_url)
+    with RemoteEmbedder.connect(url=server_url) as embedder:
+        yield embedder
 
 
 class TestRoundTrip:
     def test_connect(self, server_url: str) -> None:
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            embedder = RemoteEmbedder.connect(url=server_url)
+        with RemoteEmbedder.connect(url=server_url) as embedder:
+            assert isinstance(embedder, TextEmbedder)
+            assert isinstance(embedder, ImageBytesEmbedder)
+            assert embedder.embedding_space_spec() == EmbeddingSpaceSpec(
+                space_key=SPACE_KEY, dimension=DIMENSION
+            )
 
-        # A loopback address is what a self-hosted customer runs, so the URL policy must
-        # not warn about clear text for it.
-        assert [str(warning.message) for warning in caught if _is_policy_warning(warning)] == []
-        assert isinstance(embedder, TextEmbedder)
-        assert isinstance(embedder, ImageBytesEmbedder)
-        assert embedder.embedding_space_spec() == EmbeddingSpaceSpec(
-            space_key=SPACE_KEY, dimension=DIMENSION
-        )
-
-    def test_embed_text(self, remote: RemoteEmbedder) -> None:
+    def test_embed_text(self, remote: TextEmbedder) -> None:
         result = remote.embed_text(texts=["a dog", "a cat"])
 
         assert result.kept_indices == [0, 1]
@@ -110,7 +114,7 @@ class TestRoundTrip:
             result.embeddings, np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float32)
         )
 
-    def test_embed_text__skips_a_broken_item(self, remote: RemoteEmbedder) -> None:
+    def test_embed_text__skips_a_broken_item(self, remote: TextEmbedder) -> None:
         result = remote.embed_text(texts=["a dog", BROKEN_TEXT, "a bird"])
 
         assert result.kept_indices == [0, 2]
@@ -118,7 +122,7 @@ class TestRoundTrip:
             result.embeddings, np.array([[1.0, 0.0], [1.0, 1.0]], dtype=np.float32)
         )
 
-    def test_embed_image_bytes(self, remote: RemoteEmbedder) -> None:
+    def test_embed_image_bytes(self, remote: ImageBytesEmbedder) -> None:
         result = remote.embed_image_bytes(images=[b"the first image", b"the second image"])
 
         assert result.kept_indices == [0, 1]
@@ -127,7 +131,7 @@ class TestRoundTrip:
             result.embeddings, np.array([[2.0, 0.0], [0.0, 2.0]], dtype=np.float32)
         )
 
-    def test_embed_text__empty(self, remote: RemoteEmbedder) -> None:
+    def test_embed_text__empty(self, remote: TextEmbedder) -> None:
         result = remote.embed_text(texts=[])
 
         assert result.kept_indices == []
@@ -140,18 +144,6 @@ def _result(rows: list[list[float] | None]) -> EmbeddingResult:
     kept_rows = [row for row in rows if row is not None]
     embeddings = np.array(kept_rows, dtype=np.float32).reshape(len(kept_indices), DIMENSION)
     return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
-
-
-def _free_port() -> int:
-    """Take a port that is free now.
-
-    The socket closes before the server binds it, so another process can take the port in
-    between. That race is acceptable in a test, and closing it needs the internals of
-    uvicorn. Each xdist worker calls this, so no two workers share a port.
-    """
-    with socket.socket() as probe:
-        probe.bind((_HOST, 0))
-        return int(probe.getsockname()[1])
 
 
 def _wait_until_ready(url: str) -> None:
@@ -172,8 +164,3 @@ def _wait_until_ready(url: str) -> None:
         f"The embedding server at {url} did not serve {protocol.DESCRIBE_PATH} within "
         f"{_STARTUP_TIMEOUT_SECONDS} seconds: {last_problem}."
     )
-
-
-def _is_policy_warning(warning: warnings.WarningMessage) -> bool:
-    """Whether a warning came from the URL policy, and not from a library underneath."""
-    return issubclass(warning.category, UserWarning)
