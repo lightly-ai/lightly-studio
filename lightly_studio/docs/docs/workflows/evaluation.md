@@ -141,6 +141,9 @@ summary.
     (`tp`). Unmatched predictions count as false positives (`fp`). Unmatched ground truth masks
     count as false negatives (`fn`).
 
+    Both the ground-truth and the prediction annotation source must contain segmentation-mask
+    annotations, the same type semantic segmentation uses.
+
     The `classwise` setting works like it does for object detection. With `classwise=True`, a
     predicted `dog` mask can only match a ground truth `dog` mask.
 
