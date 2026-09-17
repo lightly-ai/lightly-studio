@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Set
+
 from lightly_studio_serve.embedder import Capability, Embedder
 
 from lightly_studio.embed import embedder_registry
@@ -9,7 +11,7 @@ from lightly_studio.embed import embedder_registry
 
 def register_default_embedder(
     embedder: Embedder,
-    bootstrap_for: set[Capability] | None = None,
+    bootstrap_for: Set[Capability] | None = None,
 ) -> None:
     """Register an embedder as the default for the capabilities it implements.
 
