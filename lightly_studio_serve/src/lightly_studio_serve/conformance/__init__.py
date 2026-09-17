@@ -7,7 +7,6 @@ same checks behind its **Check connection** button.
 
 from lightly_studio_serve.conformance.client import (
     ConformanceRequestError,
-    HttpProbeClient,
     ProbeClient,
     ProbeResponse,
 )
@@ -23,7 +22,6 @@ __all__ = [
     "CapabilityReport",
     "ConformanceReport",
     "ConformanceRequestError",
-    "HttpProbeClient",
     "Outcome",
     "ProbeClient",
     "ProbeResponse",
