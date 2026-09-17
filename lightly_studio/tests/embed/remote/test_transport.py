@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import email.utils
 import time
-from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -87,9 +86,10 @@ class TestRemoteTransport:
     def test_describe__protocol_version_mismatch(self) -> None:
         # A server of another major version is the one most likely to answer another
         # shape. The version must still be what the message names, so the check runs
-        # before the model.
+        # before the model. `DescribeResponse` carries no `model` field: this body is
+        # deliberately one that version 1 cannot read.
         body = {"protocol_version": "2.0", "model": {"name": "acme"}}
-        client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
+        client = _client_answering(responses=[httpx.Response(status_code=200, json=body)])
 
         with pytest.raises(RemoteEmbedderProtocolError, match=r"speaks protocol version 2\.0"):
             RemoteTransport(client=client).describe()
@@ -97,13 +97,13 @@ class TestRemoteTransport:
     def test_describe__minor_version_is_accepted(self) -> None:
         body = _describe_body(capabilities=["text"])
         body["protocol_version"] = "1.7"
-        client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
+        client = _client_answering(responses=[httpx.Response(status_code=200, json=body)])
 
         assert RemoteTransport(client=client).describe().protocol_version == "1.7"
 
     def test_describe__body_not_json(self) -> None:
-        client = _mock_client(
-            handler=_answers(httpx.Response(status_code=200, text="<html>hello</html>"))
+        client = _client_answering(
+            responses=[httpx.Response(status_code=200, text="<html>hello</html>")]
         )
 
         with pytest.raises(RemoteEmbedderProtocolError, match="not JSON"):
@@ -140,14 +140,14 @@ class TestRemoteTransport:
         assert "over one of its limits" in str(error.value)
 
     def test_embed_texts__capability_not_served(self) -> None:
-        client = _mock_client(handler=_answers(httpx.Response(status_code=501, json={})))
+        client = _client_answering(responses=[httpx.Response(status_code=501, json={})])
 
         with pytest.raises(RemoteEmbedderCapabilityError, match="does not serve that input kind"):
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
 
     def test_embed_texts__server_error(self) -> None:
         answer = httpx.Response(status_code=500, json={"detail": "The embedder raised OSError."})
-        client = _mock_client(handler=_answers(answer))
+        client = _client_answering(responses=[answer])
 
         with pytest.raises(RemoteEmbedderProtocolError, match="answered 500"):
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
@@ -160,38 +160,32 @@ class TestRemoteTransport:
             "kept_indices": [0, 1],
             "embeddings": [[0.5, -0.5]],
         }
-        client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
+        client = _client_answering(responses=[httpx.Response(status_code=200, json=body)])
 
         with pytest.raises(RemoteEmbedderProtocolError, match="protocol does not allow"):
             RemoteTransport(client=client).embed_texts(texts=["a dog", "a cat"])
 
     def test_embed_texts__retries_while_busy(self, mocker: MockerFixture) -> None:
-        sleep = mocker.patch.object(time, "sleep")
-        answers = [
-            httpx.Response(status_code=503, headers={"Retry-After": "0"}),
-            httpx.Response(status_code=503, headers={"Retry-After": "0"}),
-            httpx.Response(status_code=200, json=_embeddings_body()),
-        ]
-        attempts = 0
-
-        def answer(_request: httpx.Request) -> httpx.Response:
-            nonlocal attempts
-            attempts += 1
-            return answers[attempts - 1]
-
-        client = _mock_client(handler=answer)
+        mock_sleep = mocker.patch.object(time, "sleep")
+        client = _client_answering(
+            responses=[
+                httpx.Response(status_code=503, headers={"Retry-After": "0"}),
+                httpx.Response(status_code=503, headers={"Retry-After": "0"}),
+                httpx.Response(status_code=200, json=_embeddings_body()),
+            ]
+        )
 
         response = RemoteTransport(client=client).embed_texts(texts=["a dog"])
 
-        assert attempts == 3
         assert response.kept_indices == [0]
-        assert sleep.call_count == 2
+        # One wait for each of the two answers that said "later".
+        assert mock_sleep.call_count == 2
 
     @pytest.mark.parametrize("status_code", [429, 503])
     def test_embed_texts__stays_busy(self, status_code: int, mocker: MockerFixture) -> None:
         mocker.patch.object(time, "sleep")
         answer = httpx.Response(status_code=status_code, headers={"Retry-After": "0"})
-        client = _mock_client(handler=_answers(answer))
+        client = _client_answering(responses=[answer])
 
         with pytest.raises(RemoteEmbedderUnreachableError, match="stayed busy"):
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
@@ -200,7 +194,7 @@ class TestRemoteTransport:
         def refuse(request: httpx.Request) -> httpx.Response:
             raise httpx.ConnectError("Connection refused", request=request)
 
-        client = _mock_client(handler=refuse)
+        client = httpx.Client(transport=httpx.MockTransport(refuse), base_url=BASE_URL)
 
         with pytest.raises(RemoteEmbedderUnreachableError, match="did not answer"):
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
@@ -216,8 +210,9 @@ class TestRemoteTransport:
         assert response.kept_indices == [0, 1]
 
     def test_embed_image_bytes__empty(self) -> None:
-        # httpx writes no body at all for a multipart request without parts.
-        client = _mock_client(handler=_answers())
+        # httpx writes no body at all for a multipart request without parts, so the
+        # transport refuses the batch before it sends. This client never answers.
+        client = _client_answering(responses=[])
 
         with pytest.raises(ValueError, match="empty batch"):
             RemoteTransport(client=client).embed_image_bytes(images=[])
@@ -237,7 +232,7 @@ class TestRemoteTransport:
         # otherwise give an exception as long as the batch.
         body = _embeddings_body()
         body["kept_indices"] = [-1] * 200
-        client = _mock_client(handler=_answers(httpx.Response(status_code=200, json=body)))
+        client = _client_answering(responses=[httpx.Response(status_code=200, json=body)])
 
         with pytest.raises(RemoteEmbedderProtocolError) as error:
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
@@ -287,23 +282,19 @@ def _rows(count: int) -> EmbeddingResult:
     return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(count)))
 
 
-def _mock_client(handler: Callable[[httpx.Request], httpx.Response]) -> httpx.Client:
-    """A client that answers from ``handler`` instead of a socket.
+def _client_answering(responses: list[httpx.Response]) -> httpx.Client:
+    """A client that answers each response in turn, and repeats the last one after that.
 
-    It covers the answers that `create_app` cannot give, such as a wrong protocol version
-    or a server that stays busy. A conforming server is tested against `create_app`.
+    It covers the answers that `server.create_app` cannot give, such as a wrong protocol
+    version or a server that stays busy. A conforming server is tested against
+    `server.create_app`.
     """
-    return httpx.Client(transport=httpx.MockTransport(handler), base_url=BASE_URL)
-
-
-def _answers(*responses: httpx.Response) -> Callable[[httpx.Request], httpx.Response]:
-    """Answer with each response in turn, and repeat the last one after that."""
     remaining = list(responses)
 
     def handler(_request: httpx.Request) -> httpx.Response:
         return remaining.pop(0) if len(remaining) > 1 else remaining[0]
 
-    return handler
+    return httpx.Client(transport=httpx.MockTransport(handler), base_url=BASE_URL)
 
 
 def _describe_body(capabilities: list[str]) -> dict[str, object]:
