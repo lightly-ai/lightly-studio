@@ -607,11 +607,13 @@
                         }}
                     />
 
-                    <!-- Top-centered, not bottom: the legend sits bottom-left and grows to
-                         max-w-48, so a bottom-centered pill covers its last rows (and swallows
-                         their clicks, being z-10) once the plot is under ~430px wide. -->
+                    <!-- Bottom-centered, sharing the bottom edge with the legend on the left.
+                         The pill is 6rem wide, so it claims 3rem either side of the centre line;
+                         PlotPanelLegend caps its own width at calc(50% - 4.25rem) to stay clear
+                         of that (3rem + a 0.5rem gap + its own 0.75rem inset). Change one number
+                         and the other has to follow. -->
                     <div
-                        class="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
+                        class="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
                         data-testid="plot-tool-pill"
                     >
                         {#each SELECTION_TOOLS as tool (tool.mode)}
