@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createAnnotationDetails } from './pointCloudAnnotationDetails';
-    import Typography from '$lib/components/Typography';
+    import { Typography } from '$lib/components/Typography';
 
     interface Props {
         /** Cuboid whose metadata is displayed. */
