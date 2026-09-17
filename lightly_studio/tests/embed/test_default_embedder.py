@@ -160,3 +160,102 @@ def test_resolve_default_embedder__missing_collection_raises(
             collection_id=uuid.uuid4(),
             get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
         )
+
+
+def test_resolve_query_embedder__uses_existing_default(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    embedder = RandomEmbedder(dimension=3)
+    registry = EmbedderRegistry()
+    registry.register(embedder=embedder)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    # The default model's name matches the registered embedder's space, so it is selected.
+    model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="random_model",
+        embedding_dimension=3,
+        set_as_default=True,
+    )
+
+    result = default_embedder.resolve_query_embedder(
+        session=db_session,
+        collection_id=collection.collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+    )
+
+    assert result is embedder
+    # The query path never registers an extra model.
+    linked = collection_embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert linked == [model.embedding_model_id]
+
+
+def test_resolve_query_embedder__no_default_model_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    with pytest.raises(ValueError, match=r"no default embedding model"):
+        default_embedder.resolve_query_embedder(
+            session=db_session,
+            collection_id=collection.collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        )
+    # The query path never bootstraps a default model.
+    linked = collection_embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert linked == []
+
+
+def test_resolve_query_embedder__no_embedder_for_space_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    # The registry has no embedder for the default model's space.
+    registry = EmbedderRegistry()
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="random_model",
+        embedding_dimension=3,
+        set_as_default=True,
+    )
+
+    with pytest.raises(ValueError, match=r"No registered embedder matches"):
+        default_embedder.resolve_query_embedder(
+            session=db_session,
+            collection_id=collection.collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        )
+
+
+def test_resolve_query_embedder__dimension_mismatch_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    # The embedder shares the space but produces a different dimension.
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="random_model",
+        embedding_dimension=8,
+        set_as_default=True,
+    )
+
+    with pytest.raises(ValueError, match=r"does not match"):
+        default_embedder.resolve_query_embedder(
+            session=db_session,
+            collection_id=collection.collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        )

@@ -1,28 +1,51 @@
-"""Reads frame locators out of a local or remote MCAP file."""
+"""Reads frame locators and calibration out of a local or remote MCAP file."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import logging
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from types import TracebackType
 from typing import Any, overload
 
 import fsspec
+import numpy as np
 from mcap import reader as mcap_reader
+from mcap.exceptions import DecoderNotFoundError
 from mcap.records import Channel, Message, Schema
 from mcap.summary import Summary
+from numpy.typing import NDArray
 
-from lightly_studio.core.mcap import matching, topic_kind
+from lightly_studio.core.mcap import (
+    camera_info,
+    decoding,
+    matching,
+    topic_kind,
+    transforms,
+    video_keyframe,
+)
 from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.matching import MatchFunction
-from lightly_studio.core.mcap.type_definitions import FrameLocator, TopicInfo
+from lightly_studio.core.mcap.topic_kind import TopicKind
+from lightly_studio.core.mcap.transforms import TransformTree
+from lightly_studio.core.mcap.type_definitions import (
+    CameraIntrinsics,
+    FrameLocator,
+    StaticTransform,
+    TopicInfo,
+)
 from lightly_studio.type_definitions import PathLike
+
+logger = logging.getLogger(__name__)
+
+STATIC_TRANSFORM_TOPIC = "/tf_static"
 
 
 class McapFileReader:
-    """Reads frame locators out of an indexed MCAP file.
+    """Reads frame locators and calibration out of an indexed MCAP file.
 
     The reader returns where data is, not the data itself: it never returns decoded
-    video frames or point clouds, and it does not read message payloads.
+    video frames or point clouds. Message payloads are only read internally, to detect
+    video keyframes and to read calibration.
 
     The file is opened through fsspec, so it can live in local storage or in remote
     object storage. Reading an indexed file only fetches the summary and the chunks a
@@ -63,13 +86,20 @@ class McapFileReader:
                     "seekable files can be read, so a remote file needs a filesystem "
                     "that supports range requests."
                 )
-            self._reader = mcap_reader.make_reader(self._stream)
+            # Kept, so that a single message can be decoded without a second pass.
+            self._decoder_factories = decoding.decoder_factories()
+            self._reader = mcap_reader.make_reader(
+                self._stream, decoder_factories=self._decoder_factories
+            )
         except Exception:
             self._open_file.close()
             raise
         self._topics: list[TopicInfo] | None = None
-        self._topic_names: set[str] | None = None
+        self._topics_by_name: dict[str, TopicInfo] | None = None
         self._locators_by_topic: dict[str, list[FrameLocator]] = {}
+        self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
+        self._transform_tree_by_topic: dict[str, TransformTree] = {}
+        self._decoder_by_channel_id: dict[int, Callable[[bytes], Any] | None] = {}
 
     def close(self) -> None:
         """Closes the MCAP file."""
@@ -111,15 +141,28 @@ class McapFileReader:
             McapAccessError: If the file has messages but no chunk index to locate them.
         """
         unique_topics = list(dict.fromkeys(topics))
-        for topic in unique_topics:
-            self._require_topic(topic)
+        video_topics = {
+            topic
+            for topic in unique_topics
+            if self._require_topic_info(topic).kind is TopicKind.VIDEO
+        }
         self._require_chunk_index()
         locators_by_topic: dict[str, list[FrameLocator]] = {topic: [] for topic in unique_topics}
+        keyframe_log_time_ns_by_topic: dict[str, int | None] = dict.fromkeys(video_topics)
         for schema, channel, message in self._reader.iter_messages(
             topics=unique_topics, start_time=start_time_ns, end_time=end_time_ns
         ):
+            if channel.topic in video_topics and self._is_keyframe(
+                schema=schema, channel=channel, message=message
+            ):
+                keyframe_log_time_ns_by_topic[channel.topic] = message.log_time
             locators_by_topic[channel.topic].append(
-                _frame_locator(schema=schema, channel=channel, message=message)
+                _frame_locator(
+                    schema=schema,
+                    channel=channel,
+                    message=message,
+                    keyframe_log_time_ns=keyframe_log_time_ns_by_topic.get(channel.topic),
+                )
             )
         self._locators_by_topic.update(locators_by_topic)
 
@@ -169,6 +212,57 @@ class McapFileReader:
         )
         return [None if index is None else locators[index] for index in indices]
 
+    def get_intrinsic(self, topic: str) -> CameraIntrinsics:
+        """Returns the camera intrinsics recorded on a camera info topic.
+
+        Intrinsics are static, so the first message on the topic is used. The result
+        is cached, so repeated calls for the same topic read the file only once.
+
+        Args:
+            topic: The camera info topic, e.g. `/cam/front/camera_info`.
+
+        Returns:
+            The intrinsics of the camera.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+            McapAccessError: If the topic has no message, if its messages do not hold
+                camera intrinsics, or if its messages cannot be decoded.
+        """
+        if topic not in self._intrinsics_by_topic:
+            self._intrinsics_by_topic[topic] = self._read_intrinsic(topic)
+        return self._intrinsics_by_topic[topic]
+
+    def get_static_transform(
+        self,
+        parent_frame_id: str,
+        child_frame_id: str,
+        topic: str = STATIC_TRANSFORM_TOPIC,
+    ) -> NDArray[np.float64]:
+        """Returns the static transform between two coordinate frames.
+
+        Args:
+            parent_frame_id: The frame to map points to, e.g. the camera frame.
+            child_frame_id: The frame to map points from, e.g. the lidar frame.
+            topic: The topic the static transforms are published on.
+
+        Returns:
+            The 4x4 homogeneous transform that maps points from the child frame to the
+            parent frame.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+            TransformNotFoundError: If no chain of transforms connects the two frames.
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        if topic not in self._transform_tree_by_topic:
+            self._transform_tree_by_topic[topic] = TransformTree(
+                self._read_static_transforms(topic)
+            )
+        return self._transform_tree_by_topic[topic].lookup(
+            target_frame_id=parent_frame_id, source_frame_id=child_frame_id
+        )
+
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.
 
@@ -181,16 +275,117 @@ class McapFileReader:
             )
         return self._locators_by_topic[topic]
 
-    def _require_topic(self, topic: str) -> None:
-        """Checks that a topic is in the file.
+    def _is_keyframe(self, schema: Schema | None, channel: Channel, message: Message) -> bool:
+        """Returns whether a video message holds a keyframe.
+
+        Only this message is decoded, so that a pass over several topics does not pay
+        for decoding the payloads of the topics that are not video.
+
+        Args:
+            schema: The schema of the channel.
+            channel: The channel the message belongs to.
+            message: The message to look at.
+
+        Returns:
+            Whether the message holds a keyframe. `False` if it cannot be decoded.
+        """
+        decoder = self._decoder_for(schema=schema, channel=channel)
+        if decoder is None:
+            return False
+        try:
+            decoded_message = decoder(message.data)
+        except Exception:
+            logger.warning(
+                "Cannot decode a message of topic '%s' in '%s'. It carries no keyframe time.",
+                channel.topic,
+                self.path,
+            )
+            return False
+        return video_keyframe.is_keyframe_message(decoded_message)
+
+    def _decoder_for(
+        self, schema: Schema | None, channel: Channel
+    ) -> Callable[[bytes], Any] | None:
+        """Returns the decoder of a channel, or `None` if no factory can decode it.
+
+        The lookup is cached per channel, and a channel that cannot be decoded is
+        reported once.
+        """
+        if channel.id in self._decoder_by_channel_id:
+            return self._decoder_by_channel_id[channel.id]
+
+        decoder: Callable[[bytes], Any] | None = None
+        for factory in self._decoder_factories:
+            decoder = factory.decoder_for(channel.message_encoding, schema)
+            if decoder is not None:
+                break
+        if decoder is None:
+            logger.warning(
+                "Cannot decode the messages of topic '%s' in '%s'. Its frame locators "
+                "carry no keyframe times.",
+                channel.topic,
+                self.path,
+            )
+        self._decoder_by_channel_id[channel.id] = decoder
+        return decoder
+
+    def _read_intrinsic(self, topic: str) -> CameraIntrinsics:
+        """Reads the camera intrinsics from the first message on a topic.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+            McapAccessError: If the topic has no message, if its messages do not hold
+                camera intrinsics, or if its messages cannot be decoded.
+        """
+        for _, decoded_message in self._iter_decoded_messages(topic):
+            return camera_info.from_decoded_message(decoded_message)
+        raise McapAccessError(f"Topic '{topic}' has no message to read camera intrinsics from.")
+
+    def _iter_decoded_messages(self, topic: str) -> Iterator[tuple[int, Any]]:
+        """Yields the log time and the payload of every decoded message on a topic.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+            McapAccessError: If a message on the topic cannot be decoded, e.g.
+                because no decoder factory is registered for its encoding.
+        """
+        self._require_topic_info(topic)
+        try:
+            for _, _, message, decoded_message in self._reader.iter_decoded_messages(
+                topics=[topic]
+            ):
+                yield message.log_time, decoded_message
+        except DecoderNotFoundError as error:
+            raise McapAccessError(
+                f"Cannot decode a message of topic '{topic}' in '{self.path}': {error}"
+            ) from error
+
+    def _read_static_transforms(self, topic: str) -> list[StaticTransform]:
+        """Reads all transforms published on a topic.
+
+        Raises:
+            TopicNotFoundError: If the topic is not in the file.
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        static_transforms: list[StaticTransform] = []
+        for log_time_ns, decoded_message in self._iter_decoded_messages(topic):
+            static_transforms.extend(
+                transforms.from_decoded_message(decoded_message, log_time_ns=log_time_ns)
+            )
+        return static_transforms
+
+    def _require_topic_info(self, topic: str) -> TopicInfo:
+        """Returns the info of a topic.
 
         Raises:
             TopicNotFoundError: If the topic is not in the file.
         """
         self._get_topics()
-        assert self._topic_names is not None
-        if topic not in self._topic_names:
+        assert self._topics_by_name is not None
+        topic_info = self._topics_by_name.get(topic)
+        if topic_info is None:
             raise TopicNotFoundError(f"Topic '{topic}' is not in MCAP file '{self.path}'.")
+        return topic_info
 
     def _get_topics(self) -> list[TopicInfo]:
         """Returns the topics of the file, ordered by name.
@@ -212,7 +407,9 @@ class McapFileReader:
                 for channel in summary.channels.values()
             ]
             self._topics = sorted(topics, key=lambda topic: topic.name)
-            self._topic_names = {topic.name for topic in self._topics}
+            self._topics_by_name = {}
+            for topic_info in self._topics:
+                self._topics_by_name.setdefault(topic_info.name, topic_info)
         return self._topics
 
     def _require_chunk_index(self) -> None:
@@ -263,11 +460,17 @@ def _topic_info(channel: Channel, schema: Schema | None, message_count: int | No
     )
 
 
-def _frame_locator(schema: Schema | None, channel: Channel, message: Message) -> FrameLocator:
+def _frame_locator(
+    schema: Schema | None,
+    channel: Channel,
+    message: Message,
+    keyframe_log_time_ns: int | None = None,
+) -> FrameLocator:
     """Points at a message without carrying its payload."""
     return FrameLocator(
         channel_id=message.channel_id,
         log_time_ns=message.log_time,
         topic=channel.topic,
+        keyframe_log_time_ns=keyframe_log_time_ns,
         schema_name=None if schema is None else schema.name,
     )

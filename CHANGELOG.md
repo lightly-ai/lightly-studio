@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python SDK: Read aggregate evaluation metrics (per-class and micro-averaged precision, recall, and F1, plus classification accuracy) with `dataset.evaluate().metrics(run_id)`.
+- Add an optional preselected tag selector to the sampling dialog.
+
 ### Changed
 
 - Show loading spinners in distribution plots in the GUI. 
@@ -22,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix `hf://` directory ingest reporting every file as missing.
+- Fix the distribution panel and annotation class counts not updating when a filter changes.
 
 ### Security
 
