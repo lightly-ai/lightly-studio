@@ -29,8 +29,9 @@ class McapGroupComponentDefinitionBase(SQLModel):
     has no associated calibration/transform."""
     frame_id: str | None = None
 
-    """The MCAP channel id, unique within the source bag. Same meaning as ``mcap.channel_id``."""
-    channel_id: int
+    """The MCAP channel id, unique within the source bag. Same meaning as ``mcap.channel_id``.
+    ``None`` until the first recording is indexed."""
+    channel_id: int | None = None
 
 
 class McapGroupComponentDefinitionCreate(McapGroupComponentDefinitionBase):
