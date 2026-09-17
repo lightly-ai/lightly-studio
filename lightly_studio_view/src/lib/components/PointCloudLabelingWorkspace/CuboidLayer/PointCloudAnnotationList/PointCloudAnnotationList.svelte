@@ -11,7 +11,7 @@
     import { resolveCuboidColor } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidColors';
     import PointCloudAnnotationListGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListGroup';
     import PointCloudAnnotationListItem from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListItem';
-    import Typography from '$lib/components/Typography/Typography.svelte';
+    import Typography from '$lib/components/Typography';
 
     interface Props {
         /** Cuboid annotations to render. */

@@ -1,11 +1,10 @@
 <script lang="ts">
-    import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import { createAnnotationDetails } from './pointCloudAnnotationDetails';
-    import Typography from '$lib/components/Typography/Typography.svelte';
+    import Typography from '$lib/components/Typography';
 
     interface Props {
         /** Cuboid whose metadata is displayed. */
-        annotation: CuboidAnnotation;
+        annotation: Parameters<typeof createAnnotationDetails>[0]['annotation'];
     }
 
     let { annotation }: Props = $props();

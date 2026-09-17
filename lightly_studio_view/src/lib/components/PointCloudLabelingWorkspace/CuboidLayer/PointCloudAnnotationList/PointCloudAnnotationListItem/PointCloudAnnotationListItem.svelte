@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import PointCloudAnnotationDetails from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails';
-    import Typography from '$lib/components/Typography/Typography.svelte';
+    import Typography from '$lib/components/Typography';
     import { ChevronDown } from '@lucide/svelte';
     import { cn } from '$lib/utils';
 

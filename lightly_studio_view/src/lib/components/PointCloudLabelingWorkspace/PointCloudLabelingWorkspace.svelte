@@ -5,7 +5,7 @@
     import ToolRail from './ToolRail/ToolRail.svelte';
     import SceneViewport from './SceneViewport/SceneViewport.svelte';
     import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
-    import PointCloudRightSidePanel from './PointCloudRightSidePanel/PointCloudRightSidePanel.svelte';
+    import PointCloudRightSidePanel from './PointCloudRightSidePanel';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';

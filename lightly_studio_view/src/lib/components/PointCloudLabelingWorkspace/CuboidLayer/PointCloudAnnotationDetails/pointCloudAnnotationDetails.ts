@@ -1,6 +1,11 @@
 import { Euler, Quaternion } from 'three';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
+type AnnotationDetailsAnnotation = Pick<
+    CuboidAnnotation,
+    'center' | 'size' | 'rotation' | 'annotationSourceId' | 'trackId'
+>;
+
 interface AnnotationDetails {
     location: readonly [string, string, string];
     dimensions: readonly [string, string, string];
@@ -10,7 +15,7 @@ interface AnnotationDetails {
 }
 
 interface CreateAnnotationDetailsParams {
-    annotation: CuboidAnnotation;
+    annotation: AnnotationDetailsAnnotation;
 }
 
 /**
