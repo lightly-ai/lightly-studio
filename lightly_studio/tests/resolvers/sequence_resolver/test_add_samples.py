@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.models.sequence import SampleSequenceLinkCreate
@@ -37,6 +38,26 @@ def test_add_samples(db_session: Session) -> None:
     assert links[1].timestamp_ns is None
 
 
+def test_add_samples__orders_by_seq_number(db_session: Session) -> None:
+    sequence_sample_id, sample_ids = helpers.create_sequence_and_samples(
+        session=db_session, sample_count=2
+    )
+
+    sequence_resolver.add_samples(
+        session=db_session,
+        sequence_sample_id=sequence_sample_id,
+        links=[
+            SampleSequenceLinkCreate(sample_id=sample_ids[0], seq_number=1),
+            SampleSequenceLinkCreate(sample_id=sample_ids[1], seq_number=0),
+        ],
+    )
+
+    links = sequence_resolver.get_sample_links(
+        session=db_session, sequence_sample_id=sequence_sample_id
+    )
+    assert [link.sample_id for link in links] == [sample_ids[1], sample_ids[0]]
+
+
 def test_add_samples__empty(db_session: Session) -> None:
     sequence_sample_id, _ = helpers.create_sequence_and_samples(session=db_session, sample_count=0)
 
@@ -48,6 +69,42 @@ def test_add_samples__empty(db_session: Session) -> None:
         session=db_session, sequence_sample_id=sequence_sample_id
     )
     assert links == []
+
+
+def test_add_samples__duplicate_seq_number(db_session: Session) -> None:
+    sequence_sample_id, sample_ids = helpers.create_sequence_and_samples(
+        session=db_session, sample_count=2
+    )
+
+    with pytest.raises(IntegrityError):
+        sequence_resolver.add_samples(
+            session=db_session,
+            sequence_sample_id=sequence_sample_id,
+            links=[
+                SampleSequenceLinkCreate(sample_id=sample_ids[0], seq_number=0),
+                SampleSequenceLinkCreate(sample_id=sample_ids[1], seq_number=0),
+            ],
+        )
+    db_session.rollback()
+
+
+def test_add_samples__duplicate_seq_number_across_calls(db_session: Session) -> None:
+    sequence_sample_id, sample_ids = helpers.create_sequence_and_samples(
+        session=db_session, sample_count=2
+    )
+    sequence_resolver.add_samples(
+        session=db_session,
+        sequence_sample_id=sequence_sample_id,
+        links=[SampleSequenceLinkCreate(sample_id=sample_ids[0], seq_number=0)],
+    )
+
+    with pytest.raises(IntegrityError):
+        sequence_resolver.add_samples(
+            session=db_session,
+            sequence_sample_id=sequence_sample_id,
+            links=[SampleSequenceLinkCreate(sample_id=sample_ids[1], seq_number=0)],
+        )
+    db_session.rollback()
 
 
 def test_add_samples__negative_seq_number(db_session: Session) -> None:
