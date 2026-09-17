@@ -2,10 +2,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
+vi.mock('$lib/hooks', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks')>()),
+    useMcapSequenceSummary: vi.fn(() => ({ summary: { data: null }, refetch: vi.fn() }))
+}));
+
+const defaultProps = { datasetId: 'dataset-1', sampleId: 'sample-1', onExit: vi.fn() };
+
 describe('PointCloudLabelingWorkspace', () => {
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', onExit: vi.fn() }
+            props: defaultProps
         });
 
         expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument();
@@ -25,7 +32,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('renders the source breadcrumb when a path is given', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
+                ...defaultProps,
                 sourcePath: [
                     { label: 'Home', href: '/datasets/d1/mcap/d1' },
                     { label: 'Recordings', href: '/datasets/d1/mcap/c1' },
@@ -43,7 +50,7 @@ describe('PointCloudLabelingWorkspace', () => {
 
     it('falls back to the sample id when no source path is given', () => {
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', onExit: vi.fn() }
+            props: defaultProps
         });
 
         expect(screen.queryByTestId('workspace-breadcrumb')).not.toBeInTheDocument();
@@ -52,7 +59,7 @@ describe('PointCloudLabelingWorkspace', () => {
 
     it('shows the unsupported state and does not render the panel layout', () => {
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', status: 'unsupported', onExit: vi.fn() }
+            props: { ...defaultProps, status: 'unsupported' }
         });
 
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
@@ -66,7 +73,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('shows a recoverable error state with a retry action', async () => {
         const onRetry = vi.fn();
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', status: 'error', onExit: vi.fn(), onRetry }
+            props: { ...defaultProps, status: 'error', onRetry }
         });
 
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
@@ -80,7 +87,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('calls onExit when the close button is clicked', () => {
         const onExit = vi.fn();
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', onExit }
+            props: { ...defaultProps, onExit }
         });
 
         screen.getByRole('button', { name: /close labeling workspace/i }).click();

@@ -72,7 +72,7 @@
             <WorkspaceStatusPanel status="loading" />
         {:then module}
             {@const Workspace = module.default}
-            <Workspace {sampleId} {sourcePath} onExit={handleExit} />
+            <Workspace {datasetId} {sampleId} {sourcePath} onExit={handleExit} />
         {:catch}
             <WorkspaceStatusPanel status="error" onRetry={retryLoadWorkspace} onExit={handleExit} />
         {/await}

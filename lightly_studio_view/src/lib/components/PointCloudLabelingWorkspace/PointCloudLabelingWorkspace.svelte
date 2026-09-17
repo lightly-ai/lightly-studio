@@ -9,6 +9,7 @@
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
+    import { useMcapSequenceSummary } from '$lib/hooks';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -24,6 +25,7 @@
      * fullscreen, timeline) is fully in place and testable ahead of real data.
      */
     interface Props {
+        datasetId: string;
         sampleId: string;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
@@ -33,7 +35,19 @@
         onRetry?: () => void;
     }
 
-    let { sampleId, sourcePath = [], status = 'empty', onExit, onRetry }: Props = $props();
+    let {
+        datasetId,
+        sampleId,
+        sourcePath = [],
+        status = 'empty',
+        onExit,
+        onRetry
+    }: Props = $props();
+
+    const { summary } = useMcapSequenceSummary({
+        getDatasetId: () => datasetId,
+        getSequenceId: () => sampleId
+    });
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
@@ -69,7 +83,7 @@
         onToggleFullscreen={toggleFullscreen}
         {onExit}
     />
-    <WorkspaceFilterBar />
+    <WorkspaceFilterBar {summary} />
     <div class="flex min-h-0 flex-1">
         {#if status === 'unsupported' || status === 'error'}
             <WorkspaceStatusPanel {status} {onRetry} {onExit} />
@@ -113,7 +127,7 @@
                             </div>
                         </PaneResizer>
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline />
+                            <FrameTimeline {summary} />
                         </Pane>
                     </PaneGroup>
                 </Pane>
