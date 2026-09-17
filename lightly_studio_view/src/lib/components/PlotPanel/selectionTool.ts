@@ -15,33 +15,37 @@ export const SELECTION_TOOLS: readonly ToolDescriptor[] = [
 
 // embedding-atlas marks the armed tool button with an inline `background: color-mix(...)`.
 export function isButtonArmed(button: Element | null): boolean {
-    return button?.getAttribute('style')?.includes('color-mix') ?? false;
+    if (button === null) return false;
+    const style = button.getAttribute('style');
+    return style !== null && style.includes('color-mix');
 }
 
-// Resolve the library's rectangle/lasso buttons by their (stable, English) title text,
+// Resolve the library's rectangle and lasso buttons by their (stable, English) title text,
 // falling back to DOM order if the wording ever changes.
 export function findToolButtons(container: HTMLElement | null | undefined): {
-    marquee: HTMLButtonElement | null;
-    lasso: HTMLButtonElement | null;
+    rectangleButton: HTMLButtonElement | null;
+    lassoButton: HTMLButtonElement | null;
 } {
     const buttons = Array.from(
         container?.querySelectorAll<HTMLButtonElement>('.embedding-view button') ?? []
     );
-    let marquee: HTMLButtonElement | null = null;
-    let lasso: HTMLButtonElement | null = null;
+    let rectangleButton: HTMLButtonElement | null = null;
+    let lassoButton: HTMLButtonElement | null = null;
     for (const button of buttons) {
         const title = button.getAttribute('title') ?? '';
-        if (title.startsWith('Toggle rectangle selection')) marquee = button;
-        else if (title.startsWith('Toggle lasso selection')) lasso = button;
+        if (title.startsWith('Toggle rectangle selection')) rectangleButton = button;
+        else if (title.startsWith('Toggle lasso selection')) lassoButton = button;
     }
     // A partial rename would otherwise leave one tool dead, so fill each missing side from
     // DOM order separately, skipping whichever button the title match already claimed.
-    if ((!marquee || !lasso) && buttons.length >= 2) {
-        const unclaimed = buttons.filter((button) => button !== marquee && button !== lasso);
-        marquee ??= unclaimed.shift() ?? null;
-        lasso ??= unclaimed.shift() ?? null;
+    if ((rectangleButton === null || lassoButton === null) && buttons.length >= 2) {
+        const unclaimed = buttons.filter(
+            (button) => button !== rectangleButton && button !== lassoButton
+        );
+        if (rectangleButton === null) rectangleButton = unclaimed.shift() ?? null;
+        if (lassoButton === null) lassoButton = unclaimed.shift() ?? null;
     }
-    return { marquee, lasso };
+    return { rectangleButton, lassoButton };
 }
 
 // Which hidden library button (if any) must be clicked to bring the library's selection
@@ -51,11 +55,11 @@ export function toolButtonToToggle(
     container: HTMLElement | null | undefined,
     activeTool: ToolMode
 ): HTMLButtonElement | null {
-    const { marquee, lasso } = findToolButtons(container);
-    if (activeTool === 'rectangle') return isButtonArmed(marquee) ? null : marquee;
-    if (activeTool === 'lasso') return isButtonArmed(lasso) ? null : lasso;
-    if (isButtonArmed(marquee)) return marquee;
-    if (isButtonArmed(lasso)) return lasso;
+    const { rectangleButton, lassoButton } = findToolButtons(container);
+    if (activeTool === 'rectangle') return isButtonArmed(rectangleButton) ? null : rectangleButton;
+    if (activeTool === 'lasso') return isButtonArmed(lassoButton) ? null : lassoButton;
+    if (isButtonArmed(rectangleButton)) return rectangleButton;
+    if (isButtonArmed(lassoButton)) return lassoButton;
     return null;
 }
 
@@ -85,9 +89,9 @@ export function createSelectionToolController(
     const reconcile = () => {
         if (awaitingLibrary) return;
         const button = toolButtonToToggle(container, getActiveTool());
-        if (!button) return;
+        if (button === null) return;
         awaitingLibrary = true;
-        if (awaitingTimer) clearTimeout(awaitingTimer);
+        if (awaitingTimer !== undefined) clearTimeout(awaitingTimer);
         awaitingTimer = setTimeout(() => {
             awaitingLibrary = false;
         }, 250);
@@ -102,9 +106,9 @@ export function createSelectionToolController(
     });
 
     const observeButtons = () => {
-        const { marquee, lasso } = findToolButtons(container);
-        for (const button of [marquee, lasso]) {
-            if (button && !observedButtons.has(button)) {
+        const { rectangleButton, lassoButton } = findToolButtons(container);
+        for (const button of [rectangleButton, lassoButton]) {
+            if (button !== null && !observedButtons.has(button)) {
                 observedButtons.add(button);
                 // The library's strip is painted out (opacity 0) and replaced by the pill, so
                 // take its buttons out of the tab order and the a11y tree — otherwise focus
@@ -127,7 +131,7 @@ export function createSelectionToolController(
         destroy: () => {
             treeObserver.disconnect();
             styleObserver.disconnect();
-            if (awaitingTimer) clearTimeout(awaitingTimer);
+            if (awaitingTimer !== undefined) clearTimeout(awaitingTimer);
             // Never leave the guard armed across a teardown, or the next controller would
             // ignore every reconcile.
             awaitingLibrary = false;

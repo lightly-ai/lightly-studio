@@ -381,7 +381,7 @@
     // Read `activeTool` untracked so this effect depends only on `plotContainer`: choosing a tool
     // must not tear the controller (and its pending-click guard) down mid-selection.
     $effect(() => {
-        if (!plotContainer) return;
+        if (plotContainer === null) return;
         toolController = createSelectionToolController(plotContainer, () =>
             untrack(() => activeTool)
         );
