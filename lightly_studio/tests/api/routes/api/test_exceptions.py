@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi import FastAPI
-from fastapi.exceptions import ResponseValidationError
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
@@ -14,7 +14,10 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
+from lightly_studio.errors import NotFoundError
 
 
 @pytest.fixture
@@ -127,6 +130,52 @@ def test_register_exception_handlers__value_error_handler(
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
     assert response.json() == {"error": msg}
+
+
+def test_register_exception_handlers__request_validation_error_handler_reports_error(
+    app_with_exception_handlers: FastAPI, client: TestClient, mocker: MockerFixture
+) -> None:
+    """Test the request validation error handler reports the error."""
+    path = "/test-request-validation-error"
+    mock_report_error = mocker.patch("lightly_studio.api.routes.api.exceptions._report_error")
+
+    @app_with_exception_handlers.get(path)
+    async def test_request_validation_error(value: int) -> None:
+        del value
+
+    response = client.get(path, params={"value": "invalid"})
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+    assert response.json()["detail"][0]["loc"] == ["query", "value"]
+    assert response.json()["detail"][0]["msg"] == (
+        "Input should be a valid integer, unable to parse string as an integer"
+    )
+    mock_report_error.assert_called_once()
+    report_error_kwargs = mock_report_error.call_args.kwargs
+    assert isinstance(report_error_kwargs["exc"], RequestValidationError)
+    assert report_error_kwargs["status_code"] == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_register_exception_handlers__not_found_error_handler_reports_error(
+    app_with_exception_handlers: FastAPI, client: TestClient, mocker: MockerFixture
+) -> None:
+    """Test the not-found error handler reports the error."""
+    msg = "Resource was not found."
+    path = "/test-not-found-error"
+    mock_report_error = mocker.patch("lightly_studio.api.routes.api.exceptions._report_error")
+
+    @app_with_exception_handlers.get(path)
+    async def test_not_found_error() -> None:
+        raise NotFoundError(msg)
+
+    response = client.get(path)
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert response.json() == {"error": msg}
+    mock_report_error.assert_called_once()
+    report_error_kwargs = mock_report_error.call_args.kwargs
+    assert isinstance(report_error_kwargs["exc"], NotFoundError)
+    assert report_error_kwargs["status_code"] == HTTP_STATUS_NOT_FOUND
 
 
 def test_register_exception_handlers__unhandled_exception_handler(

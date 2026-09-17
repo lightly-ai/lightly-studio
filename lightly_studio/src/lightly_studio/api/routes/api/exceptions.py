@@ -96,7 +96,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
         """Handle value errors."""
         _report_error(
             exc=_exc,
-            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+            status_code=HTTP_STATUS_BAD_REQUEST,
         )
         return JSONResponse(status_code=HTTP_STATUS_BAD_REQUEST, content={"error": str(_exc)})
 
@@ -104,6 +104,10 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     async def _request_validation_error_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        _report_error(
+            exc=exc,
+            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
+        )
         body = (await request.body()).decode("utf-8", errors="replace")
         logger.warning(
             "Request validation error on %s?%s | errors=%s | body=%s",
@@ -120,6 +124,10 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     @app.exception_handler(NotFoundError)
     async def _not_found_error_handler(_request: Request, _exc: NotFoundError) -> JSONResponse:
         """Handle not-found errors."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_NOT_FOUND,
+        )
         return JSONResponse(
             status_code=HTTP_STATUS_NOT_FOUND,
             content={"error": str(_exc) or "Resource not found."},
