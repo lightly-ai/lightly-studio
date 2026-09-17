@@ -98,7 +98,9 @@ embeddings_by_filepath = create_mock_embeddings(dataset_path=dataset_path)
 
 # Register the embedder BEFORE you create the dataset. It becomes the default for
 # image embedding, so ingestion looks up your vectors for every collection.
-ls.register_default_embedder(embedder=LoadExistingEmbedder(embeddings_by_filepath))
+ls.register_default_embedder(
+    embedder=LoadExistingEmbedder(embeddings_by_filepath=embeddings_by_filepath)
+)
 
 # Create a dataset from a path. The embedder is invoked here.
 dataset = ls.ImageDataset.create()
