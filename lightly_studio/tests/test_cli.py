@@ -131,7 +131,7 @@ def test_quickstart(mocker: MockerFixture, mock_track: MagicMock) -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart"])
     assert result.exit_code == 0
-    mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=False)
+    mock_download.assert_called_once_with(force_redownload=False)
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
     mock_create.assert_called_once_with()
     mock_start_gui.assert_called_once_with(port=None, open_browser=True)
@@ -146,7 +146,7 @@ def test_quickstart__with_force_download(mocker: MockerFixture) -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart", "--force-download"])
     assert result.exit_code == 0
-    mock_download.assert_called_once_with(download_dir="dataset_examples", force_redownload=True)
+    mock_download.assert_called_once_with(force_redownload=True)
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
 
 
@@ -243,7 +243,7 @@ def test_quickstart__second_run_without_force_download_does_not_duplicate_or_cra
 
 def _mock_quickstart_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
     mock_download = mocker.patch.object(
-        lightly_studio.utils, attribute="download_example_dataset", return_value="/dataset_examples"
+        lightly_studio.utils, attribute="download_example_dataset", return_value="/datasets"
     )
     mock_connect = mocker.patch.object(db_manager, attribute="connect")
     mock_dataset = mocker.MagicMock()
@@ -277,7 +277,7 @@ def _coco_dict_with(file_names: list[str]) -> dict[str, Any]:
 
 def _build_quickstart_dataset_dir(root: Path) -> Path:
     """Build a fixture dataset with the same layout as the real demo dataset."""
-    dataset_dir = root / "dataset_examples"
+    dataset_dir = root / "datasets"
     images_dir = dataset_dir / "coco_subset_128_images" / "images"
     images_dir.mkdir(parents=True)
     file_names = ["image0.jpg", "image1.jpg", "image2.jpg"]

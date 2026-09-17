@@ -37,10 +37,7 @@ def main() -> None:
 def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None:
     """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
     dataset_path = Path(
-        lightly_studio.utils.download_example_dataset(
-            download_dir="dataset_examples",
-            force_redownload=force_download,
-        )
+        lightly_studio.utils.download_example_dataset(force_redownload=force_download)
     )
     coco_dir = dataset_path / "coco_subset_128_images"
     images_path = coco_dir / "images"

@@ -20,7 +20,7 @@ REPO_DIR_IN_ZIP = "dataset_examples-main"
 
 
 def download_example_dataset(
-    download_dir: PathLike = "dataset_examples", force_redownload: bool = False
+    download_dir: PathLike = "datasets", force_redownload: bool = False
 ) -> str:
     """Downloads the lightly-ai/dataset_examples repository from GitHub.
 

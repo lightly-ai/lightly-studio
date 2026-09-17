@@ -52,7 +52,7 @@ Create a Python script, for example `evaluate_yolo26.py`, and add the snippet be
 ```python title="evaluate_yolo26.py"
 import lightly_studio as ls
 
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+dataset_path = ls.utils.download_example_dataset()
 
 IMAGE_PATH = f"{dataset_path}/coco_subset_128_images/images"
 COCO_JSON = f"{dataset_path}/coco_subset_128_images/instances_train2017.json"

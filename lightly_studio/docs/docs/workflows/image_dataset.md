@@ -18,7 +18,7 @@ Use `add_images_from_path` to add raw images that have no annotations.
 import lightly_studio as ls
 
 # We download an example dataset for this guide.
-download_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+download_path = ls.utils.download_example_dataset()
 
 # Create an empty dataset and add images from a folder.
 dataset = ls.ImageDataset.create()
@@ -49,7 +49,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     import lightly_studio as ls
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
     dataset.add_samples_from_yolo(
@@ -97,7 +97,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     import lightly_studio as ls
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
     dataset.add_samples_from_coco(
@@ -133,7 +133,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     import lightly_studio as ls
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
     dataset.add_samples_from_coco(
@@ -169,7 +169,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     import lightly_studio as ls
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
     dataset.add_samples_from_coco_caption(
@@ -206,7 +206,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     import lightly_studio as ls
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    dataset_path = ls.utils.download_example_dataset()
 
     # Load a mapping from class IDs to class names. The mapping is not a part of the Pascal VOC format.
     class_id_to_name_path = f"{dataset_path}/voc2012_10_images/class_id_to_name.json"
@@ -280,7 +280,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     )
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    dataset_path = ls.utils.download_example_dataset()
     images_path = f"{dataset_path}/coco_subset_128_images/images"
 
     dataset = ls.ImageDataset.create()
@@ -326,7 +326,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     import lightly_studio as ls
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+    dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
     dataset.add_samples_from_lightly(
@@ -423,7 +423,7 @@ a new `annotation_source` creates a new annotation source.
 ```python title="Attach annotations from multiple sources"
 import lightly_studio as ls
 
-dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+dataset_path = ls.utils.download_example_dataset()
 images_path = f"{dataset_path}/coco_subset_128_images/images"
 
 # Load images once.
