@@ -4,23 +4,21 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,
     McapGroupComponentDefinitionView,
 )
-from lightly_studio.models.mcap_group_sequence import McapGroupSequenceInfoView
+from lightly_studio.models.mcap_group_sequence import (
+    McapGroupSequenceInfoView,
+    McapGroupSequenceTable,
+)
+from lightly_studio.models.recording import RecordingTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sequence import SequenceTable
-from lightly_studio.resolvers import (
-    collection_resolver,
-    mcap_group_component_definition_resolver,
-    recording_resolver,
-    sample_resolver,
-)
-from lightly_studio.resolvers.mcap_group_sequence_resolver.get_by_id import (
-    get_by_id as get_mcap_group_sequence_by_id,
-)
 
 
 def get_info(session: Session, sample_id: UUID) -> McapGroupSequenceInfoView | None:
@@ -52,21 +50,23 @@ def get_info(session: Session, sample_id: UUID) -> McapGroupSequenceInfoView | N
     if session.get(SequenceTable, sample_id) is None:
         raise ValueError(f"Sequence with sample_id '{sample_id}' does not exist.")
 
-    mcap_sequence = get_mcap_group_sequence_by_id(session=session, sample_id=sample_id)
-    if mcap_sequence is None:
+    row = session.exec(
+        select(McapGroupSequenceTable, RecordingTable, SampleTable)
+        .join(
+            RecordingTable,
+            col(McapGroupSequenceTable.recording_id) == col(RecordingTable.recording_id),
+        )
+        .join(
+            SampleTable,
+            col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id),
+        )
+        .where(col(McapGroupSequenceTable.sample_id) == sample_id)
+    ).one_or_none()
+
+    if row is None:
         return None
 
-    recording = recording_resolver.get_by_id(
-        session=session, recording_id=mcap_sequence.recording_id
-    )
-    if recording is None:
-        raise ValueError(
-            f"Recording '{mcap_sequence.recording_id}' is missing for sequence '{sample_id}'."
-        )
-
-    sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
-    if sample is None:
-        raise ValueError(f"Sample '{sample_id}' is missing for sequence '{sample_id}'.")
+    _mcap_sequence, recording, sample = row
 
     group_collection = _get_group_collection(
         session=session, sequence_collection_id=sample.collection_id
@@ -87,15 +87,16 @@ def _get_group_collection(session: Session, sequence_collection_id: UUID) -> Col
         ValueError: If the sequence collection does not exist, or does not have
             exactly one GROUP child.
     """
-    sequence_collection = collection_resolver.get_by_id(
-        session=session, collection_id=sequence_collection_id
+    statement = select(CollectionTable).where(
+        col(CollectionTable.parent_collection_id) == sequence_collection_id,
+        col(CollectionTable.sample_type) == SampleType.GROUP,
     )
-    if sequence_collection is None:
+    group_children = list(session.exec(statement).all())
+
+    parent_exists = session.get(CollectionTable, sequence_collection_id) is not None
+    if not parent_exists:
         raise ValueError(f"Collection '{sequence_collection_id}' does not exist.")
 
-    group_children = [
-        child for child in sequence_collection.children if child.sample_type == SampleType.GROUP
-    ]
     if len(group_children) != 1:
         raise ValueError(
             f"Expected exactly one GROUP child under sequence collection "
@@ -113,25 +114,23 @@ def _get_components(
     `collection_id`. A child collection without an MCAP row (a classic IMAGE/VIDEO
     slot) is not a component and is omitted.
     """
-    component_collections_by_id = {
-        child.collection_id: child
-        for child in collection_resolver.get_group_components(
-            session=session, parent_collection_id=group_collection_id
-        ).values()
-    }
-    mcap_defs = mcap_group_component_definition_resolver.get_all_by_group_collection_id(
-        session=session, group_collection_id=group_collection_id
-    )
-
-    components = []
-    for mcap_def in mcap_defs:
-        component_collection = component_collections_by_id.get(mcap_def.collection_id)
-        if component_collection is None or component_collection.group_component_definition is None:
-            continue
-        components.append(
-            McapGroupComponentDefinitionView.from_definitions(
-                gcd=component_collection.group_component_definition, mcap_gcd=mcap_def
-            )
+    statement = (
+        select(CollectionTable, GroupComponentDefinitionTable, McapGroupComponentDefinitionTable)
+        .join(
+            GroupComponentDefinitionTable,
+            col(CollectionTable.collection_id) == col(GroupComponentDefinitionTable.collection_id),
         )
-    components.sort(key=lambda component: component.group_component_index)
-    return components
+        .join(
+            McapGroupComponentDefinitionTable,
+            col(CollectionTable.collection_id)
+            == col(McapGroupComponentDefinitionTable.collection_id),
+        )
+        .where(col(CollectionTable.parent_collection_id) == group_collection_id)
+        .order_by(col(GroupComponentDefinitionTable.group_component_index))
+    )
+    rows = session.exec(statement).all()
+
+    return [
+        McapGroupComponentDefinitionView.from_definitions(gcd=gcd, mcap_gcd=mcap_gcd)
+        for _collection, gcd, mcap_gcd in rows
+    ]
