@@ -126,19 +126,12 @@ def test_gui__with_empty_db_file__complains_about_missing_dataset(
     assert "No datasets found" in str(result.exception)
 
 
-def test_quickstart(
-    mocker: MockerFixture,
-    mock_track: MagicMock,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_quickstart(mocker: MockerFixture, mock_track: MagicMock) -> None:
     mock_download, mock_connect, mock_create, mock_start_gui = _mock_quickstart_dependencies(mocker)
-    # An empty working directory, so a local 'dataset_examples' does not change the download dir.
-    monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart"])
     assert result.exit_code == 0
-    mock_download.assert_called_once_with(download_dir=None, force_redownload=False)
+    mock_download.assert_called_once_with(force_redownload=False)
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
     mock_create.assert_called_once_with()
     mock_start_gui.assert_called_once_with(port=None, open_browser=True)
@@ -148,32 +141,13 @@ def test_quickstart(
     )
 
 
-def test_quickstart__with_force_download(
-    mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_quickstart__with_force_download(mocker: MockerFixture) -> None:
     mock_download, mock_connect, _, _ = _mock_quickstart_dependencies(mocker)
-    monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart", "--force-download"])
     assert result.exit_code == 0
-    mock_download.assert_called_once_with(download_dir=None, force_redownload=True)
+    mock_download.assert_called_once_with(force_redownload=True)
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
-
-
-def test_quickstart__with_local_dataset_dir(
-    mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A dataset downloaded before the move to the cache is reused, not downloaded again."""
-    mock_download, _, _, _ = _mock_quickstart_dependencies(mocker)
-    monkeypatch.chdir(tmp_path)
-    local_dir = Path.cwd() / "dataset_examples"
-    local_dir.mkdir()
-
-    runner = CliRunner()
-    result = runner.invoke(cli=cli.main, args=["quickstart"])
-
-    assert result.exit_code == 0
-    mock_download.assert_called_once_with(download_dir=local_dir, force_redownload=False)
 
 
 def test_quickstart__with_port(mocker: MockerFixture) -> None:
@@ -269,7 +243,7 @@ def test_quickstart__second_run_without_force_download_does_not_duplicate_or_cra
 
 def _mock_quickstart_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
     mock_download = mocker.patch.object(
-        lightly_studio.utils, attribute="download_example_dataset", return_value="/dataset_examples"
+        lightly_studio.utils, attribute="download_example_dataset", return_value="/datasets"
     )
     mock_connect = mocker.patch.object(db_manager, attribute="connect")
     mock_dataset = mocker.MagicMock()
@@ -303,7 +277,7 @@ def _coco_dict_with(file_names: list[str]) -> dict[str, Any]:
 
 def _build_quickstart_dataset_dir(root: Path) -> Path:
     """Build a fixture dataset with the same layout as the real demo dataset."""
-    dataset_dir = root / "dataset_examples"
+    dataset_dir = root / "datasets"
     images_dir = dataset_dir / "coco_subset_128_images" / "images"
     images_dir.mkdir(parents=True)
     file_names = ["image0.jpg", "image1.jpg", "image2.jpg"]

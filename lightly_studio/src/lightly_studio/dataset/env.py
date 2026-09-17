@@ -13,11 +13,6 @@ LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE: str = env.str(
 LIGHTLY_STUDIO_MODEL_CACHE_DIR: Path = env.path(
     "LIGHTLY_STUDIO_MODEL_CACHE_DIR", Path.home() / ".cache" / "lightly-studio"
 )
-# Where example datasets are cached. It follows the model cache dir by default, so a machine that
-# redirects one off a full home directory redirects both.
-LIGHTLY_STUDIO_DATASET_CACHE_DIR: Path = env.path(
-    "LIGHTLY_STUDIO_DATASET_CACHE_DIR", LIGHTLY_STUDIO_MODEL_CACHE_DIR / "datasets"
-)
 LIGHTLY_STUDIO_PROTOCOL: str = env.str("LIGHTLY_STUDIO_PROTOCOL", "http")
 LIGHTLY_STUDIO_PORT: int = env.int("LIGHTLY_STUDIO_PORT", 8001)
 LIGHTLY_STUDIO_HOST: str = env.str("LIGHTLY_STUDIO_HOST", "localhost")

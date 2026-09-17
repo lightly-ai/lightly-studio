@@ -49,7 +49,7 @@ and segmentation mask annotations are supported. See
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.VideoDataset.create()
@@ -91,7 +91,7 @@ and segmentation mask annotations are supported. See
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.VideoDataset.create()

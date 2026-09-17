@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The example dataset is now cached in `~/.cache/lightly-studio/datasets`, instead of the current
-  working directory. The cache dir can be changed via `LIGHTLY_STUDIO_DATASET_CACHE_DIR`.
+- `download_example_dataset` now defaults to a `datasets` directory instead of
+  `dataset_examples`, matching where the rest of the project keeps datasets. Pass `download_dir`
+  to choose another one.
 - Show loading spinners in distribution plots in the GUI. 
 - Preselected samples are now part of the sampling result.
 - Move each docs page into a folder named for its nav section. The old URLs redirect.

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from importlib import metadata
 from pathlib import Path
 
@@ -13,9 +12,6 @@ from lightly_studio.analytics import tracking
 from lightly_studio.analytics.tracking import LaunchSource
 from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
-from lightly_studio.utils import download
-
-logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -41,10 +37,7 @@ def main() -> None:
 def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None:
     """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
     dataset_path = Path(
-        lightly_studio.utils.download_example_dataset(
-            download_dir=_quickstart_download_dir(),
-            force_redownload=force_download,
-        )
+        lightly_studio.utils.download_example_dataset(force_redownload=force_download)
     )
     coco_dir = dataset_path / "coco_subset_128_images"
     images_path = coco_dir / "images"
@@ -114,24 +107,3 @@ def gui(
         properties={"launch_source": LaunchSource.GUI.value},
     )
     lightly_studio.start_gui(host=host, port=port)
-
-
-def _quickstart_download_dir() -> Path | None:
-    """Gets the directory quickstart downloads the example dataset into.
-
-    Returns:
-        A `dataset_examples` directory in the current working directory, if one is already
-        there. This keeps installations that downloaded the dataset before it moved to the
-        cache from downloading it a second time. Otherwise None, which lets
-        `download_example_dataset` use the cache.
-    """
-    # TODO(Gabriel, 09/2026): Remove the local directory fallback once users had a few
-    # releases to move to the cache.
-    local_dir = Path.cwd() / download.EXAMPLE_DATASET_DIR_NAME
-    if not local_dir.is_dir():
-        return None
-    logger.info(
-        f"Using the example dataset in '{local_dir}'. "
-        f"Delete it to use the cache in '{download.example_dataset_dir()}' instead."
-    )
-    return local_dir

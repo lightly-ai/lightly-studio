@@ -48,7 +48,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
@@ -96,7 +96,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
@@ -132,7 +132,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
@@ -168,7 +168,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
@@ -205,7 +205,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
     import lightly_studio as ls
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
 
     # Load a mapping from class IDs to class names. The mapping is not a part of the Pascal VOC format.
@@ -279,7 +279,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
         CreateSegmentationMask,
     )
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
     images_path = f"{dataset_path}/coco_subset_128_images/images"
 
@@ -325,7 +325,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     ```python
     import lightly_studio as ls
 
-    # Download the example dataset (cached, so it downloads only once)
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset()
 
     dataset = ls.ImageDataset.create()
