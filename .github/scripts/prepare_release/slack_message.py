@@ -63,7 +63,7 @@ def render_slack_message(
         PrepareReleaseError: The section has no entries, or not even its first entry fits
             `character_limit`.
     """
-    entries = _render_entries(section_body)
+    entries = _render_entries(section_body=section_body)
     if not entries:
         raise PrepareReleaseError(f"changelog section for {version} has no entries")
 
