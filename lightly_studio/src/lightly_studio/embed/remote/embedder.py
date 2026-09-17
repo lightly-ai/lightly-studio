@@ -35,12 +35,6 @@ from lightly_studio.embed.remote.errors import (
 )
 from lightly_studio.embed.remote.transport import RemoteTransport
 
-# The capabilities that `EmbedderRegistry` can hand back. Its `_CAPABILITY_TO_TYPE` has no
-# `VIDEO_BYTES` entry, so a video-only server gives an embedder that nothing in
-# LightlyStudio ever asks for, and `register` refuses it with "implements no capability".
-# TODO(Iunir, 09/2026): Remove this constant when the registry gains a `VIDEO_BYTES` entry.
-_RESOLVABLE_CAPABILITIES = (Capability.TEXT, Capability.IMAGE_BYTES)
-
 _ItemT = TypeVar("_ItemT")
 
 
@@ -373,19 +367,14 @@ def _embedder_for(
     Raises:
         RemoteEmbedderCapabilityError: If nothing advertised is usable from LightlyStudio.
     """
-    # A set for the membership test. A message reads the list, which keeps the order.
-    advertised = set(description.capabilities)
-    routable = tuple(capability for capability in _CAPABILITY_TO_BASE if capability in advertised)
-    composition.check_routable(
-        advertised=description.capabilities,
-        routable=routable,
-        routes_to=list(_CAPABILITY_TO_BASE),
-        resolvable=_RESOLVABLE_CAPABILITIES,
+    composed = cast(
+        "type[RemoteEmbedder]",
+        composition.compose_remote_embedder_class(
+            capabilities=description.capabilities,
+            capability_to_base=_CAPABILITY_TO_BASE,
+        ),
     )
-    bases = tuple(_CAPABILITY_TO_BASE[capability] for capability in routable)
-    name = "".join(base.__name__.removeprefix("_").removesuffix("Route") for base in bases)
-    composed = composition.composed_class(bases=bases, name=f"Remote{name}Embedder")
-    return cast("type[RemoteEmbedder]", composed)(
+    return composed(
         transport=transport,
         spec=EmbeddingSpaceSpec(space_key=description.space_key, dimension=description.dimension),
         limits=description.limits,
