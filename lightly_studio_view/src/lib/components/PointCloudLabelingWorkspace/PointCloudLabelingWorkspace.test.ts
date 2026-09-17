@@ -14,7 +14,7 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-annotation-panel')).toBeInTheDocument();
+        expect(screen.getByTestId('point-cloud-right-side-panel')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
             'empty'
@@ -60,7 +60,7 @@ describe('PointCloudLabelingWorkspace', () => {
             'unsupported'
         );
         expect(screen.queryByTestId('workspace-projection-strip')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('workspace-annotation-panel')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('point-cloud-right-side-panel')).not.toBeInTheDocument();
     });
 
     it('shows a recoverable error state with a retry action', async () => {
