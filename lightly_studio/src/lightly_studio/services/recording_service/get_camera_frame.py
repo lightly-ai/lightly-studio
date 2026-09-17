@@ -115,8 +115,8 @@ def get_camera_frame(  # noqa: PLR0913
         return None
 
     reader = _get_cached_reader(recording.uri)
-    nearest = reader.get_decoded_message_near(
-        channel_id=channel_id, timestamp_ns=keyframe_timestamp_ns, max_diff_ns=0
+    nearest = reader.get_decoded_message_at(
+        channel_id=channel_id, timestamp_ns=keyframe_timestamp_ns
     )
     if nearest is None:
         return None
@@ -132,7 +132,7 @@ def _camera_frame_from_decoded(
     """Converts a decoded MCAP message into a servable camera frame.
 
     Args:
-        message: A decoded message from `McapFileReader.get_decoded_message_near`.
+        message: A decoded message from `McapFileReader.get_decoded_message_at`.
         width: Output width in pixels; preserves aspect ratio when `height` is unset.
         height: Output height in pixels; preserves aspect ratio when `width` is unset.
         quality: JPEG quality (1-95).

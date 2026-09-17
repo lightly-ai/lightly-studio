@@ -269,32 +269,27 @@ class McapFileReader:
             target_frame_id=parent_frame_id, source_frame_id=child_frame_id
         )
 
-    def get_decoded_message_near(
+    def get_decoded_message_at(
         self,
         channel_id: int,
         timestamp_ns: int,
-        max_diff_ns: int,
     ) -> DecodedMessage | None:
-        """Returns the decoded message closest to a timestamp on a channel.
+        """Returns the decoded message at an exact timestamp on a channel.
 
         Unlike `get_frame_locators`, does not require pre-loading the topic with
         `load_data_for_topics`. Use this for on-demand single-frame access, e.g.
         serving one frame over HTTP without loading the full recording into memory.
 
-        Only reads the chunks whose time range overlaps
-        `[timestamp_ns - max_diff_ns, timestamp_ns + max_diff_ns]`, instead of the
-        whole channel, so reading one frame does not require downloading or scanning
-        the rest of a remote recording.
+        Only reads the chunks whose time range contains `timestamp_ns`, so reading one
+        frame does not require downloading or scanning the rest of a remote recording.
 
         Args:
             channel_id: The channel to read, e.g. a camera channel located through
                 `get_topics`.
-            timestamp_ns: The timestamp to match, in nanoseconds.
-            max_diff_ns: The largest accepted distance from `timestamp_ns`, in
-                nanoseconds.
+            timestamp_ns: The exact log time to fetch, in nanoseconds.
 
         Returns:
-            The closest message, or `None` if none is within `max_diff_ns`.
+            The message at `timestamp_ns`, or `None` if no message exists at that time.
 
         Raises:
             ChannelNotFoundError: If the channel id is not in the file.
@@ -302,34 +297,25 @@ class McapFileReader:
                 their encoding has no matching decoder factory.
         """
         topic_info = self._require_channel_info(channel_id)
-        window_start_ns = max(timestamp_ns - max_diff_ns, 0)
-        window_end_ns = timestamp_ns + max_diff_ns + 1
         try:
-            candidates = [
-                (message, decoded_message)
-                for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
-                    topics=[topic_info.name],
-                    start_time=window_start_ns,
-                    end_time=window_end_ns,
-                )
-                if channel.id == channel_id
-            ]
+            for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
+                topics=[topic_info.name],
+                start_time=timestamp_ns,
+                end_time=timestamp_ns + 1,
+            ):
+                if channel.id == channel_id and message.log_time == timestamp_ns:
+                    return DecodedMessage(
+                        channel_id=channel_id,
+                        topic=topic_info.name,
+                        log_time_ns=message.log_time,
+                        schema_name=topic_info.schema_name,
+                        decoded_message=decoded_message,
+                    )
         except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
             raise McapAccessError(
                 f"Cannot decode the messages of channel {channel_id} in '{self.path}': {exc}"
             ) from exc
-        if not candidates:
-            return None
-        message, decoded_message = min(
-            candidates, key=lambda candidate: abs(candidate[0].log_time - timestamp_ns)
-        )
-        return DecodedMessage(
-            channel_id=channel_id,
-            topic=topic_info.name,
-            log_time_ns=message.log_time,
-            schema_name=topic_info.schema_name,
-            decoded_message=decoded_message,
-        )
+        return None
 
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.

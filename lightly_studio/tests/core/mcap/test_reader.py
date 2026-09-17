@@ -246,7 +246,7 @@ class TestMcapFileReader:
                 topic="/unknown",
             )
 
-    def test_get_decoded_message_near(self, tmp_path: Path) -> None:
+    def test_get_decoded_message_at(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
         with McapFileReader(path) as reader:
             channel_id = next(
@@ -254,21 +254,20 @@ class TestMcapFileReader:
                 for topic in reader.get_topics()
                 if topic.name == helpers.CAMERA_IMAGE_TOPIC
             )
-            query_ns = helpers.IMAGE_LOG_TIMES_NS[1] + 20_000_000
 
-            nearest = reader.get_decoded_message_near(
-                channel_id=channel_id, timestamp_ns=query_ns, max_diff_ns=100_000_000
+            result = reader.get_decoded_message_at(
+                channel_id=channel_id, timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[1]
             )
 
-        assert nearest is not None
-        assert nearest.channel_id == channel_id
-        assert nearest.topic == helpers.CAMERA_IMAGE_TOPIC
-        assert nearest.log_time_ns == helpers.IMAGE_LOG_TIMES_NS[1]
-        assert nearest.decoded_message.data == helpers.compressed_image_payload(
+        assert result is not None
+        assert result.channel_id == channel_id
+        assert result.topic == helpers.CAMERA_IMAGE_TOPIC
+        assert result.log_time_ns == helpers.IMAGE_LOG_TIMES_NS[1]
+        assert result.decoded_message.data == helpers.compressed_image_payload(
             helpers.IMAGE_LOG_TIMES_NS[1]
         )
 
-    def test_get_decoded_message_near__no_match_within_range(self, tmp_path: Path) -> None:
+    def test_get_decoded_message_at__no_message_at_timestamp(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
         with McapFileReader(path) as reader:
             channel_id = next(
@@ -277,21 +276,18 @@ class TestMcapFileReader:
                 if topic.name == helpers.CAMERA_IMAGE_TOPIC
             )
 
-            nearest = reader.get_decoded_message_near(
+            result = reader.get_decoded_message_at(
                 channel_id=channel_id,
-                timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0] - 1_000_000_000,
-                max_diff_ns=10_000_000,
+                timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0] + 1,
             )
 
-        assert nearest is None
+        assert result is None
 
-    def test_get_decoded_message_near__unknown_channel(self, reader: McapFileReader) -> None:
+    def test_get_decoded_message_at__unknown_channel(self, reader: McapFileReader) -> None:
         with pytest.raises(ChannelNotFoundError):
-            reader.get_decoded_message_near(
-                channel_id=999_999, timestamp_ns=0, max_diff_ns=1_000_000_000
-            )
+            reader.get_decoded_message_at(channel_id=999_999, timestamp_ns=0)
 
-    def test_get_decoded_message_near__undecodable(self, tmp_path: Path) -> None:
+    def test_get_decoded_message_at__undecodable(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_undecodable_compressed_image(tmp_path / "undecodable.mcap")
         with McapFileReader(path) as reader:
             channel_id = next(
@@ -301,10 +297,9 @@ class TestMcapFileReader:
             )
 
             with pytest.raises(McapAccessError):
-                reader.get_decoded_message_near(
+                reader.get_decoded_message_at(
                     channel_id=channel_id,
                     timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
-                    max_diff_ns=10_000_000,
                 )
 
     def test_close(self, mcap_path: Path) -> None:

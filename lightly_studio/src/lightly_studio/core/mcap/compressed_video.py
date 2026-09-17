@@ -3,7 +3,7 @@
 Handles `foxglove_msgs/msg/CompressedVideo` (and the equivalent Foxglove schema),
 which carry Annex B H.264 or H.265 bitstreams. A single message may be a keyframe or
 a delta frame; the caller is responsible for locating the right message via
-`McapFileReader.get_decoded_message_near`.
+`McapFileReader.get_decoded_message_at`.
 
 The frame is decoded with PyAV (libav) and re-encoded as JPEG so the result is
 directly servable from an HTTP endpoint without any further processing.
@@ -17,14 +17,8 @@ from typing import Any
 import av
 from PIL import Image
 
-from lightly_studio.core.mcap import message_fields
+from lightly_studio.core.mcap import _video_formats, message_fields
 from lightly_studio.core.mcap.errors import McapAccessError
-
-_DATA_FIELDS = ("data",)
-_FORMAT_FIELDS = ("format",)
-
-_H264_FORMATS = frozenset({"h264", "avc", "avc1"})
-_H265_FORMATS = frozenset({"h265", "hevc", "hvc1"})
 
 JPEG_QUALITY = 85
 
@@ -59,8 +53,8 @@ def from_decoded_message(
         McapAccessError: If the message fields are missing, the video format is not
             supported (not H.264 or H.265), or PyAV cannot decode the payload.
     """
-    data = message_fields.require_field(decoded_message, _DATA_FIELDS)
-    video_format = message_fields.require_field(decoded_message, _FORMAT_FIELDS)
+    data = message_fields.require_field(decoded_message, _video_formats.DATA_FIELDS)
+    video_format = message_fields.require_field(decoded_message, _video_formats.FORMAT_FIELDS)
     if not isinstance(data, (bytes, bytearray)):
         raise McapAccessError(
             f"Compressed video message has a non-byte 'data' field: {type(data).__name__}."
@@ -86,10 +80,10 @@ def _codec_name(video_format: str) -> str:
     Raises:
         McapAccessError: If the format is not H.264 or H.265.
     """
-    normalized = video_format.strip().lower()
-    if normalized in _H264_FORMATS:
+    normalized = _video_formats.normalize_format(video_format)
+    if normalized in _video_formats.H264_FORMATS:
         return "h264"
-    if normalized in _H265_FORMATS:
+    if normalized in _video_formats.H265_FORMATS:
         return "hevc"
     raise McapAccessError(
         f"Unsupported compressed video format: '{video_format}'. "
