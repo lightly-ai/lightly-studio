@@ -41,7 +41,7 @@ class RecordingTable(RecordingBase, table=True):
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
 
 
-class MCAPSequenceDetails(BaseModel):
+class RecordingDetails(BaseModel):
     """API view of an MCAP sequence: where its bytes are, and what format they are in."""
 
     recording_id: UUID
@@ -50,7 +50,7 @@ class MCAPSequenceDetails(BaseModel):
     uri: str
 
     @classmethod
-    def from_recording_table(cls, recording: RecordingTable) -> "MCAPSequenceDetails":
+    def from_recording_table(cls, recording: RecordingTable) -> "RecordingDetails":
         """Builds the API view from its `RecordingTable` row."""
         return cls(
             recording_id=recording.recording_id,
