@@ -138,6 +138,19 @@ start-e2e-distribution: build
 start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
 
+# Demo target for manual point-cloud testing with a local MCAP file.
+#
+# Usage:
+#   make demo-mcap-server FLOCI_MCAP_FILES=/path/to/perception.mcap
+#
+# The server starts on http://127.0.0.1:8001 and prints the workspace URL.
+# FLOCI_MCAP_FILES defaults to datasets/mcap/perception.mcap (see top of Makefile).
+.PHONY: demo-mcap-server
+demo-mcap-server: build setup-floci
+	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true \
+	$(FLOCI_ENV) \
+	uv run e2e-tests/demo_mcap_seed.py
+
 .PHONY: start-postgres
 start-postgres: stop-postgres
 	@echo "Starting PostgreSQL container ($(POSTGRES_IMAGE))..."
