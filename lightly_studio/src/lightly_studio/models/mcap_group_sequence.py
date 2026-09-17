@@ -15,7 +15,7 @@ from sqlmodel import Field, SQLModel
 from lightly_studio.models.mcap_group_component_definition import (
     McapGroupComponentDefinitionView,
 )
-from lightly_studio.models.recording import MCAPSequenceDetails, RecordingTable
+from lightly_studio.models.recording import RecordingDetails, RecordingTable
 
 
 class McapGroupSequenceTable(SQLModel, table=True):
@@ -37,7 +37,7 @@ class McapGroupSequenceInfoView(BaseModel):
     """
 
     sample_id: UUID
-    recording: MCAPSequenceDetails
+    recording: RecordingDetails
     components: list[McapGroupComponentDefinitionView]
 
     @classmethod
@@ -50,6 +50,6 @@ class McapGroupSequenceInfoView(BaseModel):
         """Builds the view from the sequence's recording row and its sorted slots."""
         return cls(
             sample_id=sample_id,
-            recording=MCAPSequenceDetails.from_recording_table(recording),
+            recording=RecordingDetails.from_recording_table(recording),
             components=components,
         )
