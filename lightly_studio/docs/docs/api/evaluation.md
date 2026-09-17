@@ -41,3 +41,9 @@
 ::: lightly_studio.models.evaluation_confusion_matrix
     options:
         members: [ConfusionMatrix]
+
+## EvaluationMetrics
+
+::: lightly_studio.models.evaluation_metrics
+    options:
+        members: [EvaluationMetrics, ClassMetrics]

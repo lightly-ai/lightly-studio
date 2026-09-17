@@ -15,7 +15,6 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.embed import embedding_utils
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionOverviewView,
@@ -23,7 +22,11 @@ from lightly_studio.models.collection import (
     CollectionView,
     CollectionViewWithCount,
 )
-from lightly_studio.resolvers import collection_resolver, dataset_resolver
+from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
+    collection_resolver,
+    dataset_resolver,
+)
 
 collection_router = APIRouter()
 
@@ -138,7 +141,7 @@ def has_embeddings(
     ],
 ) -> bool:
     """Check if a collection has embeddings."""
-    return embedding_utils.collection_has_embeddings(
+    return collection_embedding_model_resolver.has_default_by_collection_id(
         session=session, collection_id=collection.collection_id
     )
 
