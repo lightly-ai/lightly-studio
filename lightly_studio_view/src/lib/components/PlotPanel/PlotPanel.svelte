@@ -2,6 +2,8 @@
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
+    import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
         type DataPoint,
@@ -348,6 +350,10 @@
 
     const isReady = true;
 
+    // Lives here, not in PlotToolPill: a new filter (a tag, a region) starts a fresh embeddings
+    // query, and the plot unmounts while it loads. State inside the pill would not survive that.
+    let activeTool = $state<ToolMode>('pan');
+
     type RangeSelection = Rectangle | Point[] | null;
 
     const isRectangleSelection = (selection: RangeSelection): selection is Rectangle => {
@@ -461,6 +467,23 @@
         })
     );
 
+    // "N / M points": M is everything the plot received, N is what passes the active filters.
+    // Read `fulfils_filter` off the arrow data rather than the plotted categories: `usePlotData`
+    // demotes out-of-selection points to EXCLUDED_BY_FILTERS, so counting categories would turn
+    // this into a selection count the moment a lasso or a committed region exists.
+    // `null` until the embeddings land, so the readout stays absent instead of claiming "0 / 0".
+    const pointCounts = $derived.by(() => {
+        const total = ($arrowData?.x as Float32Array | undefined)?.length;
+        if (total === undefined) return null;
+        const fulfilsFilter = $arrowData?.fulfils_filter as Uint8Array | undefined;
+        if (!fulfilsFilter) return { matchingFilters: total, total };
+        let matchingFilters = 0;
+        for (const fulfils of fulfilsFilter) {
+            if (fulfils !== 0) matchingFilters++;
+        }
+        return { matchingFilters, total };
+    });
+
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
             return embeddingsData.error?.message ?? 'Unknown error';
@@ -546,6 +569,8 @@
                             );
                         }}
                     />
+
+                    <PlotToolPill {plotContainer} bind:activeTool />
                 {/if}
             </div>
         {:else}
@@ -559,6 +584,12 @@
             class="mt-1 flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto text-sm text-muted-foreground"
             data-testid="plot-panel-controls"
         >
+            {#if pointCounts}
+                <span class="shrink-0 text-[11.5px] tabular-nums" data-testid="plot-point-count">
+                    {pointCounts.matchingFilters} / {pointCounts.total} points
+                </span>
+            {/if}
+            <div class="flex-1"></div>
             <PlotColorByPopover
                 {collectionId}
                 withTags={$tags.length > 0}
@@ -587,24 +618,18 @@
 <svelte:window onmouseup={handleMouseUp} onkeydown={onWindowKeyDown} />
 
 <style>
-    :global(.embedding-view button) {
-        width: 20px !important;
-        height: 20px !important;
-    }
-    :global(.embedding-view button svg) {
-        width: 18px !important;
-        height: 18px !important;
-    }
+    /*
+        embedding-atlas renders its own bottom strip: a WebGPU/WebGL status message, the
+        rectangle + lasso tool buttons, a scale bar, and a point count. This replaces all of
+        it — the readout moved to the control row and the selection tools now live in the
+        glass tool pill. Keep the strip in the DOM (so `selectTool` can .click() the hidden
+        tool buttons and drive the library's sticky selection mode), but make it invisible
+        and non-interactive. Use opacity/pointer-events, NOT display:none or
+        visibility:hidden: the buttons stay laid out and clickable, and Playwright still
+        reports them visible (LIG-7691 e2e asserts the tool buttons toBeVisible).
+    */
     :global(.embedding-view div[style*='bottom: 0px'][style*='position: absolute']) {
-        font-size: 15px !important;
-        height: 25px !important;
-        line-height: 25px !important;
-    }
-    /* Hide the library's status message slot (e.g. "WebGPU is unavailable. Falling back
-       to WebGL.") while keeping the selection tools, scale, and point count visible. */
-    :global(
-        .embedding-view div[style*='bottom: 0px'][style*='position: absolute'] > div:first-child
-    ) {
-        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 </style>
