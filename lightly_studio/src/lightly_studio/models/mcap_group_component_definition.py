@@ -32,8 +32,9 @@ class McapGroupComponentDefinitionBase(SQLModel):
     has no associated calibration/transform."""
     frame_id: str | None = None
 
-    """The MCAP channel id, unique within the source bag. Same meaning as ``mcap.channel_id``."""
-    channel_id: int
+    """The MCAP channel id, unique within the source bag. Same meaning as ``mcap.channel_id``.
+    ``None`` until the first recording is indexed."""
+    channel_id: int | None = None
 
 
 class McapGroupComponentDefinitionCreate(McapGroupComponentDefinitionBase):
@@ -83,8 +84,10 @@ class McapGroupComponentDefinitionView(BaseModel):
         Args:
             gcd: The slot's generic naming/ordering row.
             mcap_gcd: The slot's MCAP-specific row. Its `collection_id` must match
-                `gcd.collection_id`.
+                `gcd.collection_id`. Its `channel_id` must already be set, as views are
+                only built once a recording has been indexed.
         """
+        assert mcap_gcd.channel_id is not None
         return cls(
             collection_id=mcap_gcd.collection_id,
             group_component_name=gcd.group_component_name,
