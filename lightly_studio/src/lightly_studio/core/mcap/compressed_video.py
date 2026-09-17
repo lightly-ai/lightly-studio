@@ -80,19 +80,6 @@ def from_decoded_message(
     )
 
 
-def is_format_supported(video_format: str) -> bool:
-    """Returns whether a video format can be decoded by this module.
-
-    Args:
-        video_format: The video format as recorded in the message, e.g. ``"h265"``.
-
-    Returns:
-        Whether `from_decoded_message` can handle the format.
-    """
-    normalized = video_format.strip().lower()
-    return normalized in _H264_FORMATS or normalized in _H265_FORMATS
-
-
 def _codec_name(video_format: str) -> str:
     """Returns the libav codec name for a recorded format string.
 
