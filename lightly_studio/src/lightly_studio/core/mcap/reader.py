@@ -23,12 +23,18 @@ from lightly_studio.core.mcap import (
     transforms,
     video_keyframe,
 )
-from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError, TopicNotFoundError
+from lightly_studio.core.mcap.errors import (
+    ChannelNotFoundError,
+    DataNotLoadedError,
+    McapAccessError,
+    TopicNotFoundError,
+)
 from lightly_studio.core.mcap.matching import MatchFunction
 from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.transforms import TransformTree
 from lightly_studio.core.mcap.type_definitions import (
     CameraIntrinsics,
+    DecodedMessage,
     FrameLocator,
     StaticTransform,
     TopicInfo,
@@ -263,6 +269,122 @@ class McapFileReader:
             target_frame_id=parent_frame_id, source_frame_id=child_frame_id
         )
 
+    def get_decoded_message_near(
+        self,
+        channel_id: int,
+        timestamp_ns: int,
+        max_diff_ns: int,
+    ) -> DecodedMessage | None:
+        """Returns the decoded message closest to a timestamp on a channel.
+
+        Unlike `get_frame_locators`, does not require pre-loading the topic with
+        `load_data_for_topics`. Use this for on-demand single-frame access, e.g.
+        serving one frame over HTTP without loading the full recording into memory.
+
+        Only reads the chunks whose time range overlaps
+        `[timestamp_ns - max_diff_ns, timestamp_ns + max_diff_ns]`, instead of the
+        whole channel, so reading one frame does not require downloading or scanning
+        the rest of a remote recording.
+
+        Args:
+            channel_id: The channel to read, e.g. a camera channel located through
+                `get_topics`.
+            timestamp_ns: The timestamp to match, in nanoseconds.
+            max_diff_ns: The largest accepted distance from `timestamp_ns`, in
+                nanoseconds.
+
+        Returns:
+            The closest message, or `None` if none is within `max_diff_ns`.
+
+        Raises:
+            ChannelNotFoundError: If the channel id is not in the file.
+            McapAccessError: If the channel's messages cannot be decoded, e.g. because
+                their encoding has no matching decoder factory.
+        """
+        topic_info = self._require_channel_info(channel_id)
+        window_start_ns = max(timestamp_ns - max_diff_ns, 0)
+        window_end_ns = timestamp_ns + max_diff_ns + 1
+        try:
+            candidates = [
+                (message, decoded_message)
+                for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
+                    topics=[topic_info.name],
+                    start_time=window_start_ns,
+                    end_time=window_end_ns,
+                )
+                if channel.id == channel_id
+            ]
+        except DecoderNotFoundError as exc:
+            raise McapAccessError(
+                f"Cannot decode the messages of channel {channel_id} in '{self.path}': {exc}"
+            ) from exc
+        if not candidates:
+            return None
+        message, decoded_message = min(
+            candidates, key=lambda candidate: abs(candidate[0].log_time - timestamp_ns)
+        )
+        return DecodedMessage(
+            channel_id=channel_id,
+            topic=topic_info.name,
+            log_time_ns=message.log_time,
+            schema_name=topic_info.schema_name,
+            decoded_message=decoded_message,
+        )
+
+    def get_video_keyframe_near(
+        self,
+        channel_id: int,
+        timestamp_ns: int,
+        max_diff_ns: int,
+    ) -> DecodedMessage | None:
+        """Returns the keyframe that covers the frame nearest to a timestamp on a channel.
+
+        Finds the frame locator closest to `timestamp_ns`, then fetches the keyframe
+        the locator points to (which may be earlier than the matched frame). The
+        keyframe is the earliest frame a video decoder needs to reconstruct the matched
+        frame; it is always decodable in isolation.
+
+        Loads the full channel index the first time it is called for a topic. Subsequent
+        calls for the same topic reuse the cached locators.
+
+        Args:
+            channel_id: The video channel to read.
+            timestamp_ns: The timestamp to match, in nanoseconds.
+            max_diff_ns: The largest accepted distance from `timestamp_ns` for the
+                matched frame, in nanoseconds.
+
+        Returns:
+            The decoded keyframe message, or `None` if no frame is within `max_diff_ns`
+            or the matched frame has no associated keyframe (i.e. the keyframe precedes
+            the file's start).
+
+        Raises:
+            ChannelNotFoundError: If the channel id is not in the file.
+            McapAccessError: If the channel's messages cannot be decoded.
+        """
+        topic_info = self._require_channel_info(channel_id)
+        if topic_info.name not in self._locators_by_topic:
+            self.load_data_for_topics(topics=[topic_info.name])
+        locators = self._locators_by_topic[topic_info.name]
+        if not locators:
+            return None
+        candidates_ns = [loc.log_time_ns for loc in locators]
+        indices = matching.match_all(
+            queries_ns=[timestamp_ns],
+            candidates_ns=candidates_ns,
+            match=matching.closest(max_diff_ns=max_diff_ns),
+        )
+        index = indices[0]
+        if index is None:
+            return None
+        locator = locators[index]
+        keyframe_time_ns = locator.keyframe_log_time_ns
+        if keyframe_time_ns is None:
+            return None
+        return self.get_decoded_message_near(
+            channel_id=channel_id, timestamp_ns=keyframe_time_ns, max_diff_ns=0
+        )
+
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.
 
@@ -380,18 +502,32 @@ class McapFileReader:
         Raises:
             TopicNotFoundError: If the topic is not in the file.
         """
-        self._get_topics()
+        self.get_topics()
         assert self._topics_by_name is not None
         topic_info = self._topics_by_name.get(topic)
         if topic_info is None:
             raise TopicNotFoundError(f"Topic '{topic}' is not in MCAP file '{self.path}'.")
         return topic_info
 
-    def _get_topics(self) -> list[TopicInfo]:
+    def _require_channel_info(self, channel_id: int) -> TopicInfo:
+        """Returns the topic info of a channel.
+
+        Raises:
+            ChannelNotFoundError: If the channel id is not in the file.
+        """
+        for topic_info in self.get_topics():
+            if topic_info.channel_id == channel_id:
+                return topic_info
+        raise ChannelNotFoundError(f"Channel {channel_id} is not in MCAP file '{self.path}'.")
+
+    def get_topics(self) -> list[TopicInfo]:
         """Returns the topics of the file, ordered by name.
 
         A topic can be recorded on more than one channel, which gives one entry per
-        channel.
+        channel. Reading the topics only reads the file's summary section (footer and
+        summary, not the message chunks), so it does not require downloading or
+        indexing the whole file: a remote file behind a filesystem that supports range
+        requests (local disk, S3, GCS, or plain HTTP) is summarized cheaply.
         """
         if self._topics is None:
             summary = self._require_summary()

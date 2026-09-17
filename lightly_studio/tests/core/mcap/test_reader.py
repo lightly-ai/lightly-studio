@@ -13,7 +13,12 @@ from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import matching
-from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError, TopicNotFoundError
+from lightly_studio.core.mcap.errors import (
+    ChannelNotFoundError,
+    DataNotLoadedError,
+    McapAccessError,
+    TopicNotFoundError,
+)
 from lightly_studio.core.mcap.reader import McapFileReader
 from tests.core.mcap import helpers
 
@@ -240,6 +245,67 @@ class TestMcapFileReader:
                 child_frame_id=helpers.LIDAR_FRAME_ID,
                 topic="/unknown",
             )
+
+    def test_get_decoded_message_near(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+            query_ns = helpers.IMAGE_LOG_TIMES_NS[1] + 20_000_000
+
+            nearest = reader.get_decoded_message_near(
+                channel_id=channel_id, timestamp_ns=query_ns, max_diff_ns=100_000_000
+            )
+
+        assert nearest is not None
+        assert nearest.channel_id == channel_id
+        assert nearest.topic == helpers.CAMERA_IMAGE_TOPIC
+        assert nearest.log_time_ns == helpers.IMAGE_LOG_TIMES_NS[1]
+        assert nearest.decoded_message.data == helpers.compressed_image_payload(
+            helpers.IMAGE_LOG_TIMES_NS[1]
+        )
+
+    def test_get_decoded_message_near__no_match_within_range(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            nearest = reader.get_decoded_message_near(
+                channel_id=channel_id,
+                timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0] - 1_000_000_000,
+                max_diff_ns=10_000_000,
+            )
+
+        assert nearest is None
+
+    def test_get_decoded_message_near__unknown_channel(self, reader: McapFileReader) -> None:
+        with pytest.raises(ChannelNotFoundError):
+            reader.get_decoded_message_near(
+                channel_id=999_999, timestamp_ns=0, max_diff_ns=1_000_000_000
+            )
+
+    def test_get_decoded_message_near__undecodable(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_undecodable_compressed_image(tmp_path / "undecodable.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            with pytest.raises(McapAccessError):
+                reader.get_decoded_message_near(
+                    channel_id=channel_id,
+                    timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
+                    max_diff_ns=10_000_000,
+                )
 
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
