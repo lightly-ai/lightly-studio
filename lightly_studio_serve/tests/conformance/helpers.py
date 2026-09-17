@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.testclient import TestClient
 
+from lightly_studio_serve import protocol
 from lightly_studio_serve.conformance.client import ProbeResponse
 from lightly_studio_serve.embedder import ImageBytesEmbedder, TextEmbedder, VideoBytesEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
@@ -52,6 +56,46 @@ class FakeEmbedder(TextEmbedder, ImageBytesEmbedder, VideoBytesEmbedder):
 
     def embed_video_bytes(self, videos: list[bytes]) -> EmbeddingResult:
         return _rows(count=len(videos))
+
+
+def canned_app(describe: dict[str, Any], embeddings: dict[str, Any] | None = None) -> FastAPI:
+    """Build a server that answers fixed bodies, the way a broken implementation does.
+
+    ``embeddings=None`` mounts no embed route, the way a server that advertises a
+    capability it does not serve behaves.
+    """
+    app = FastAPI()
+
+    @app.get(protocol.DESCRIBE_PATH)
+    def describe_route() -> Response:
+        return _json_response(body=describe)
+
+    if embeddings is not None:
+
+        @app.post(protocol.EMBED_TEXTS_PATH)
+        def embed_route() -> Response:
+            return _json_response(body=embeddings)
+
+    return app
+
+
+def describe_body(**overrides: Any) -> dict[str, Any]:
+    """The body of a correct ``/v1/describe``, with the fields a test changes."""
+    body: dict[str, Any] = {
+        "protocol_version": protocol.PROTOCOL_VERSION,
+        "space_key": SPACE_KEY,
+        "dimension": DIMENSION,
+        "ready": True,
+        "capabilities": ["text"],
+        "limits": {"max_batch_size": 8, "max_request_bytes": 1024},
+    }
+    body.update(overrides)
+    return body
+
+
+def _json_response(body: dict[str, Any]) -> Response:
+    """Serialize with the standard library, which writes ``NaN`` the way a server can."""
+    return Response(content=json.dumps(body), media_type="application/json")
 
 
 def _rows(count: int) -> EmbeddingResult:
