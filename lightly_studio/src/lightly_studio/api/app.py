@@ -17,6 +17,7 @@ from lightly_studio.api.routes import (
     healthz,
     images,
     mcap_sequences,
+    recordings,
     video_frames_media,
     video_media,
     webapp,
@@ -170,6 +171,7 @@ app.include_router(api_router)
 app.include_router(images.app_router, prefix="/images")
 app.include_router(video_frames_media.frames_router)
 app.include_router(video_media.app_router)
+app.include_router(recordings.recordings_router)
 app.include_router(mcap_sequences.mcap_sequences_router)
 
 # health status check
