@@ -3,6 +3,8 @@
     import { type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import { useSettings } from '$lib/hooks';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
+    import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
     import { getThumbnailUrl, getSampleDimensions } from './getThumbnailData';
     import type { CropWindow } from '../AnnotationItem/renderCropObjectUrl';
 
@@ -48,6 +50,8 @@
 
     const sampleDimensions = $derived(getSampleDimensions(annotation));
 
+    const orderValue = $derived(annotation.annotation.order_value);
+
     // Emit a full-image CropWindow so classification tiles participate in drag-to-search.
     // windowX/Y=0 covers the entire sample — there is no bounding box to crop for classification.
     $effect(() => {
@@ -71,5 +75,10 @@
     aria-selected={selected}
     style="width: {containerWidth}px; height: {containerHeight}px; background-image: url('{thumbnailUrl}'); background-size: cover; background-position: center;"
 >
-    <SampleClassificationPills sample={{ annotations: [annotation.annotation] }} showAllSources />
+    <SampleClassificationPills
+        sample={{ annotations: [annotation.annotation] }}
+        hasRightOverlay={hasValueBadge(orderValue)}
+        showAllSources
+    />
+    <SampleValueBadge {orderValue} />
 </div>

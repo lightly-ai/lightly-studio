@@ -19,7 +19,7 @@ from lightly_studio.models.annotation.segmentation import SegmentationAnnotation
 from lightly_studio.models.annotation_collection_coverage import AnnotationCollectionCoverageTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
-from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
@@ -31,15 +31,28 @@ from lightly_studio.models.evaluation_sample_metric import (
 )
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.metadata import SampleMetadataTable
-from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
+from lightly_studio.models.recording import RecordingFormat, RecordingTable
+from lightly_studio.models.sample import SampleCreate, SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
+from lightly_studio.models.sequence import SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import (
+    collection_resolver,
     dataset_resolver,
     evaluation_sample_metric_resolver,
+    mcap_group_sequence_resolver,
     object_track_resolver,
+    recording_resolver,
+    sample_resolver,
     tag_resolver,
 )
 from tests.helpers_resolvers import (
@@ -72,6 +85,9 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
     sample_ids = select(SampleTable.sample_id).where(
         col(SampleTable.collection_id).in_(collection_ids)
     )
+    recording_ids = select(RecordingTable.recording_id).where(
+        col(RecordingTable.dataset_id) == dataset_id
+    )
     run_ids = select(EvaluationRunTable.id).where(
         col(EvaluationRunTable.gt_annotation_collection_id).in_(collection_ids)
     )
@@ -86,6 +102,16 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
         "video": count(VideoTable, col(VideoTable.sample_id).in_(sample_ids)),
         "video_frame": count(VideoFrameTable, col(VideoFrameTable.sample_id).in_(sample_ids)),
         "group": count(GroupTable, col(GroupTable.sample_id).in_(sample_ids)),
+        "sequence": count(SequenceTable, col(SequenceTable.sample_id).in_(sample_ids)),
+        "mcap_group_sequence": count(
+            McapGroupSequenceTable, col(McapGroupSequenceTable.sample_id).in_(sample_ids)
+        ),
+        "sensor_calibration": count(
+            SensorCalibrationTable, col(SensorCalibrationTable.recording_id).in_(recording_ids)
+        ),
+        "static_transform": count(
+            StaticTransformTable, col(StaticTransformTable.recording_id).in_(recording_ids)
+        ),
         "annotation_base": count(
             AnnotationBaseTable, col(AnnotationBaseTable.sample_id).in_(sample_ids)
         ),
@@ -123,6 +149,7 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
             AnnotationLabelTable, col(AnnotationLabelTable.dataset_id) == dataset_id
         ),
         "object_track": count(ObjectTrackTable, col(ObjectTrackTable.dataset_id) == dataset_id),
+        "recording": count(RecordingTable, col(RecordingTable.dataset_id) == dataset_id),
         "evaluation_run": count(
             EvaluationRunTable,
             col(EvaluationRunTable.gt_annotation_collection_id).in_(collection_ids),
@@ -189,6 +216,12 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
         session=session,
         tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=root.dataset_id)],
     )
+    recording_id = recording_resolver.create(
+        session=session,
+        dataset_id=root.dataset_id,
+        uri=f"/data/{name}.mcap",
+        format_=RecordingFormat.MCAP,
+    )
     create_annotation(
         session=session,
         collection_id=root.collection_id,
@@ -246,6 +279,73 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
             )
         ],
     )
+
+    # Sequences: one with an MCAP bag path, one classic sequence without the row.
+    sequence_collection = create_collection(
+        session=session,
+        collection_name=f"{name}_sequences",
+        parent_collection_id=root.collection_id,
+        sample_type=SampleType.SEQUENCE,
+    )
+    mcap_group_sequence_resolver.create(
+        session=session,
+        collection_id=sequence_collection.collection_id,
+        recording_id=recording_id,
+    )
+    classic_sample_ids = sample_resolver.create_many(
+        session=session,
+        samples=[SampleCreate(collection_id=sequence_collection.collection_id)],
+    )
+    session.add(SequenceTable(sample_id=classic_sample_ids[0]))
+
+    # Sensor calibration: a GROUP with one MCAP video_frame slot, nested in the same dataset
+    # so the calibration's collection_id FK stays in scope for the copy.
+    group_collection = create_collection(
+        session=session,
+        collection_name=f"{name}_group",
+        parent_collection_id=root.collection_id,
+        sample_type=SampleType.GROUP,
+    )
+    slot_children = collection_resolver.create_group_components(
+        session=session,
+        parent_collection_id=group_collection.collection_id,
+        components=[("front_camera", SampleType.MCAP)],
+    )
+    front_slot_id = slot_children["front_camera"].collection_id
+    session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=front_slot_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            frame_id="main",
+            channel_id=3,
+        )
+    )
+    session.add(
+        SensorCalibrationTable(
+            recording_id=recording_id,
+            collection_id=front_slot_id,
+            width=1920,
+            height=1080,
+            k=[500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0],
+        )
+    )
+
+    # Static transform: one /tf_static edge on the same recording.
+    session.add(
+        StaticTransformTable(
+            recording_id=recording_id,
+            parent="livox_front_left",
+            child="main",
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            tx=0.1,
+            ty=0.2,
+            tz=0.3,
+        )
+    )
+    session.commit()
     return root.dataset_id
 
 
@@ -273,9 +373,14 @@ def test_deep_copy_then_delete_round_trip(db_session: Session) -> None:
         "collection_embedding_model",
         "annotation_label",
         "object_track",
+        "recording",
         "evaluation_run",
         "evaluation_sample_metric",
         "evaluation_annotation_metric",
+        "sequence",
+        "mcap_group_sequence",
+        "sensor_calibration",
+        "static_transform",
     ):
         assert original_counts[table] > 0, f"builder did not populate {table}"
 

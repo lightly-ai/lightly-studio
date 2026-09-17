@@ -16,6 +16,7 @@
     import { useSamplingCombinationDialog } from './useSamplingCombinationDialog/useSamplingCombinationDialog';
     import { useStrategyOptions } from './useSamplingCombinationDialog/useStrategyOptions.svelte';
     import SampleCountInput from '$lib/components/Sampling/SampleCountInput/SampleCountInput.svelte';
+    import { PreselectedTagField } from './PreselectedTagField';
 
     const collectionId = $derived(page.params.collection_id!);
     const isVideoCollection = $derived(
@@ -45,6 +46,7 @@
         updateAbsolute,
         updatePercentage,
         selectionResultTagName,
+        preselectedTagId,
         filteredSampleCount,
         noSamples,
         notEnoughSamples,
@@ -232,6 +234,13 @@
                             />
                         </div>
 
+                        <!-- TODO: Validate the preselected tag against the active filters before allowing submission. -->
+                        <PreselectedTagField
+                            tags={$tags}
+                            value={$preselectedTagId}
+                            onValueChange={(value) => preselectedTagId.set(value)}
+                        />
+
                         {#if $noSamples}
                             <p
                                 class="text-sm text-destructive-text"
@@ -255,7 +264,7 @@
 
                 <Dialog.Footer class="mt-4">
                     <a
-                        href="https://docs.lightly.ai/studio/concepts_and_tools/sampling/"
+                        href="https://docs.lightly.ai/studio/workflows/sampling/"
                         target="_blank"
                         rel="noreferrer"
                         class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"

@@ -59,6 +59,8 @@ export const HISTOGRAM_BIN_COUNT_ITEMS = [10, 20, 50, 100];
  * several fields — e.g. one entry per metadata key.
  */
 export interface DistributionSourceGroup {
+    /** Whether the base distribution is being fetched or refreshed. */
+    loading?: boolean;
     id: string;
     label: string;
     /** Category counts rendered as a bar chart. Mutually exclusive with `histogram`. */
@@ -106,6 +108,8 @@ export interface DistributionSourceGroup {
  * counts changes.
  */
 export interface DistributionSource {
+    /** Whether the base distribution is being fetched or refreshed. */
+    loading?: boolean;
     id: string;
     label: string;
     /** Counts for a simple source. Mutually exclusive with `groups` and `histogram`. */
@@ -125,7 +129,7 @@ export interface DistributionSource {
     selectedRange?: HistogramRange;
     /**
      * Whether the request backing `comparisonSeries` / `histogramSeries` is in
-     * flight. Surfaced as a status line so an empty chart is not read as
+     * flight. Surfaced as a plot overlay so an empty chart is not read as
      * "no samples".
      */
     comparisonLoading?: boolean;

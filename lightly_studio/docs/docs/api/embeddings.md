@@ -15,7 +15,7 @@ implement one of the generator protocols below and register it with
 [`set_default_embedding_model`](#set_default_embedding_model). The registration
 must happen before you load a dataset or before the GUI is started.
 
-See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
+See the [Embeddings page](../core_concepts/embeddings.md) for more details.
 
 ## set_default_embedding_model
 
@@ -47,18 +47,18 @@ See the [Embeddings page](../concepts_and_tools/embeddings.md) for more details.
 
 ### EmbeddingSpaceSpec
 
-::: lightly_studio.dataset.embedding_generator
+::: lightly_studio_serve.types
     options:
         members: [EmbeddingSpaceSpec]
 
 ### EmbeddingResult
 
-::: lightly_studio.embed.types
+::: lightly_studio_serve.types
     options:
         members: [EmbeddingResult]
 
 ### ImageCrop
 
-::: lightly_studio.dataset.embedding_generator
+::: lightly_studio_serve.types
     options:
         members: [ImageCrop]

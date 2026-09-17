@@ -21,9 +21,11 @@ def rename(session: Session, tag_id: UUID, new_name: str) -> TagTable | None:
         return None
 
     conflicting_tag = tag_resolver.get_by_name(
-        session=session, tag_name=new_name, collection_id=tag.collection_id
+        session=session,
+        tag_name=new_name,
+        collection_id=tag.collection_id,
     )
-    if conflicting_tag and conflicting_tag.tag_id != tag_id and conflicting_tag.kind == tag.kind:
+    if conflicting_tag and conflicting_tag.tag_id != tag_id:
         raise IntegrityError(statement=None, params=None, orig=Exception("Tag already exists"))
 
     if new_name == tag.name:

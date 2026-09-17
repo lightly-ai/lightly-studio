@@ -45,53 +45,53 @@ lightly-studio quickstart
 ```
 
 - **Local only:** your images and datasets never leave your machine.
-- **Your own images:** one Python call indexes them, then start the server. See the [Image Dataset guide](https://docs.lightly.ai/studio/dataset_setup/image_dataset/).
-- **Your own videos:** see the [Video Dataset guide](https://docs.lightly.ai/studio/dataset_setup/video_dataset/).
+- **Your own images:** one Python call indexes them, then start the server. See the [Image Dataset guide](https://docs.lightly.ai/studio/workflows/image_dataset/).
+- **Your own videos:** see the [Video Dataset guide](https://docs.lightly.ai/studio/workflows/video_dataset/).
 - **No install:** [open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
 - **A guided walkthrough:** read the [Tutorials](#-tutorials) below. [Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) goes from raw images to a trained model.
-- Runs on **Python 3.9 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example [SAM autolabeling](https://docs.lightly.ai/studio/concepts_and_tools/plugins/#example-lightlystudio-sam3-plugin).
+- Runs on **Python 3.9 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example [SAM autolabeling](https://docs.lightly.ai/studio/ecosystem/plugins/#example-lightlystudio-sam3-plugin).
 
 ## Workflows
 
 <table>
   <tr>
     <td align="center">
-      <a href="https://docs.lightly.ai/studio/dataset_setup/image_dataset/">
+      <a href="https://docs.lightly.ai/studio/workflows/image_dataset/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png" width="400" alt="Image Datasets"/>
       </a>
-      <br/><strong><a href="https://docs.lightly.ai/studio/dataset_setup/image_dataset/">Image Dataset</a></strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/workflows/image_dataset/">Image Dataset</a></strong>
     </td>
     <td align="center">
-      <a href="https://docs.lightly.ai/studio/dataset_setup/video_dataset/">
+      <a href="https://docs.lightly.ai/studio/workflows/video_dataset/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png" width="400" alt="Video Dataset"/>
       </a>
-      <br/><strong><a href="https://docs.lightly.ai/studio/dataset_setup/video_dataset/">Video Dataset</a></strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/workflows/video_dataset/">Video Dataset</a></strong>
     </td>
     <td align="center">
-      <a href="https://docs.lightly.ai/studio/concepts_and_tools/annotations/">
+      <a href="https://docs.lightly.ai/studio/workflows/annotations/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png" width="400" alt="Annotate"/>
       </a>
-      <br/><strong><a href="https://docs.lightly.ai/studio/concepts_and_tools/annotations/">Annotation</a></strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/workflows/annotations/">Annotation</a></strong>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <a href="https://docs.lightly.ai/studio/concepts_and_tools/sampling/">
+      <a href="https://docs.lightly.ai/studio/workflows/sampling/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png" width="400" alt="Curate"/>
       </a>
-      <br/><strong><a href="https://docs.lightly.ai/studio/concepts_and_tools/sampling/">Curation</a></strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/workflows/sampling/">Curation</a></strong>
     </td>
     <td align="center">
-      <a href="https://docs.lightly.ai/studio/concepts_and_tools/plugins/">
+      <a href="https://docs.lightly.ai/studio/ecosystem/plugins/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png" width="400" alt="Plugins"/>
       </a>
-      <br/><strong><a href="https://docs.lightly.ai/studio/concepts_and_tools/plugins/">Plugins</a></strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/ecosystem/plugins/">Plugins</a></strong>
     </td>
     <td align="center">
-      <a href="https://docs.lightly.ai/studio/concepts_and_tools/evaluation/">
+      <a href="https://docs.lightly.ai/studio/workflows/evaluation/">
         <img src="https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png" width="400" alt="Model Evaluation"/>
       </a>
-      <br/><strong><a href="https://docs.lightly.ai/studio/concepts_and_tools/evaluation/">Model Evaluation</a></strong>
+      <br/><strong><a href="https://docs.lightly.ai/studio/workflows/evaluation/">Model Evaluation</a></strong>
     </td>
   </tr>
 </table>
@@ -159,11 +159,11 @@ Run `python example_image.py` and open the printed URL in your browser.
 </details>
 
 Other starting points:
-[YOLO datasets](https://docs.lightly.ai/studio/dataset_setup/image_dataset/),
-[video folders](https://docs.lightly.ai/studio/dataset_setup/video_dataset/),
-[custom annotations](https://docs.lightly.ai/studio/concepts_and_tools/annotations/#annotations-in-python),
-[model evaluation](https://docs.lightly.ai/studio/concepts_and_tools/evaluation/#model-evaluation-in-python),
-[notebooks](https://docs.lightly.ai/studio/dataset_setup/notebooks/),
+[YOLO datasets](https://docs.lightly.ai/studio/workflows/image_dataset/),
+[video folders](https://docs.lightly.ai/studio/workflows/video_dataset/),
+[custom annotations](https://docs.lightly.ai/studio/workflows/annotations/#annotations-in-python),
+[model evaluation](https://docs.lightly.ai/studio/workflows/evaluation/#model-evaluation-in-python),
+[notebooks](https://docs.lightly.ai/studio/get_started/notebooks/),
 and more in the [docs](https://docs.lightly.ai/studio/).
 
 ## 📚 Tutorials
@@ -177,21 +177,74 @@ Step-by-step guides covering complete workflows — from raw, unlabeled data to 
 
 **Set up a dataset**
 
-- [Image datasets](https://docs.lightly.ai/studio/dataset_setup/image_dataset/) — index folders, COCO, and YOLO data
-- [Video datasets](https://docs.lightly.ai/studio/dataset_setup/video_dataset/) — index videos and work with frames
-- [Cloud storage](https://docs.lightly.ai/studio/dataset_setup/cloud_storage/) — read from S3, GCS, or Azure
-- [Reuse datasets](https://docs.lightly.ai/studio/dataset_setup/reuse_datasets/) — append to an existing database, or point at a custom path
-- [Notebooks](https://docs.lightly.ai/studio/dataset_setup/notebooks/) — run the GUI inside Jupyter or Colab
+- [Image datasets](https://docs.lightly.ai/studio/workflows/image_dataset/) — index folders, COCO, and YOLO data
+- [Video datasets](https://docs.lightly.ai/studio/workflows/video_dataset/) — index videos and work with frames
+- [Cloud storage](https://docs.lightly.ai/studio/ecosystem/cloud_storage/) — read from S3, GCS, or Azure
+- [Reuse datasets](https://docs.lightly.ai/studio/get_started/reuse_datasets/) — append to an existing database, or point at a custom path
+- [Notebooks](https://docs.lightly.ai/studio/get_started/notebooks/) — run the GUI inside Jupyter or Colab
 
 **Work with your data**
 
-- [Query, filter, and sort](https://docs.lightly.ai/studio/concepts_and_tools/search_and_filter/#query-in-python) — build reusable subsets in Python
-- [Lightly Query Language](https://docs.lightly.ai/studio/concepts_and_tools/lightly_query_language/) — the query syntax for the GUI query editor
-- [Annotations](https://docs.lightly.ai/studio/concepts_and_tools/annotations/), [Tags](https://docs.lightly.ai/studio/concepts_and_tools/tags/), [Metadata](https://docs.lightly.ai/studio/concepts_and_tools/metadata/), [Captions](https://docs.lightly.ai/studio/concepts_and_tools/captions/), [Embeddings](https://docs.lightly.ai/studio/concepts_and_tools/embeddings/)
-- [Sampling](https://docs.lightly.ai/studio/concepts_and_tools/sampling/) — pick the most typical and diverse samples to cut labeling cost
-- [Model evaluation](https://docs.lightly.ai/studio/concepts_and_tools/evaluation/) — compare predictions against ground truth
-- [Plugins](https://docs.lightly.ai/studio/concepts_and_tools/plugins/) — auto-label with SAM and other models
-- [Export](https://docs.lightly.ai/studio/concepts_and_tools/export/) — write a query back out as COCO or YOLO
+- [Query, filter, and sort](https://docs.lightly.ai/studio/workflows/search_and_filter/#query-in-python) — build reusable subsets in Python
+- [Lightly Query Language](https://docs.lightly.ai/studio/workflows/lightly_query_language/) — the query syntax for the GUI query editor
+- [Annotations](https://docs.lightly.ai/studio/workflows/annotations/), [Tags](https://docs.lightly.ai/studio/core_concepts/tags/), [Metadata](https://docs.lightly.ai/studio/core_concepts/metadata/), [Captions](https://docs.lightly.ai/studio/workflows/captions/), [Embeddings](https://docs.lightly.ai/studio/core_concepts/embeddings/)
+- [Sampling](https://docs.lightly.ai/studio/workflows/sampling/) — pick the most typical and diverse samples to cut labeling cost
+- [Model evaluation](https://docs.lightly.ai/studio/workflows/evaluation/) — compare predictions against ground truth
+- [Plugins](https://docs.lightly.ai/studio/ecosystem/plugins/) — auto-label with SAM and other models
+- [Export](https://docs.lightly.ai/studio/workflows/export/) — write a query back out as COCO or YOLO
+
+## 🗄️ Local cloud storage development
+
+[Floci](https://github.com/floci-io/floci) emulates AWS S3 locally, and [Floci GCP](https://github.com/floci-io/floci-gcp) emulates GCS — no cloud account needed.
+
+### AWS S3 (Floci)
+
+```bash
+# Start Floci (creates the default S3 bucket)
+make start-floci
+
+# Upload MCAP files and list what's available
+make setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make list-floci-mcaps
+
+# Stop and remove the container
+make stop-floci
+```
+
+Point LightlyStudio at the local S3 bucket before starting the server:
+
+```bash
+AWS_ACCESS_KEY_ID=test \
+AWS_SECRET_ACCESS_KEY=test \
+AWS_DEFAULT_REGION=us-east-1 \
+AWS_ENDPOINT_URL=http://localhost:4566 \
+  lightly-studio ...
+```
+
+### GCP Cloud Storage (Floci GCP)
+
+```bash
+# Start Floci GCP (creates the default GCS bucket)
+make start-floci-gcp
+
+# Upload MCAP files and list what's available
+make setup-floci-gcp FLOCI_GCP_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make list-floci-gcp-mcaps
+
+# Stop and remove the container
+make stop-floci-gcp
+```
+
+Point LightlyStudio at the local GCS bucket before starting the server:
+
+```bash
+STORAGE_EMULATOR_HOST=http://localhost:4588 \
+  lightly-studio ...
+```
 
 ## 🐍 Python Interface
 

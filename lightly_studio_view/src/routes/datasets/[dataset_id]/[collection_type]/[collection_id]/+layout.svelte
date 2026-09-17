@@ -66,6 +66,7 @@
     import {
         buildMetadataDistributionSource,
         selectCategoricalMetadataKeys,
+        selectNumericMetadataKeys,
         selectComparisonSampleTags
     } from './metadataDistributionSource';
     import type { CategoryCount } from '$lib/components/BarChart';
@@ -426,17 +427,20 @@
         })
     );
 
-    const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
-        collectionId: datasetId,
-        filter: imageAnnotationCountsFilter,
-        enabled: !isVideos && !isVideoFrames
-    }));
-
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
     const isVideoFrameAnnotations = $derived(
         isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME
     );
+
+    // The count queries skip the request while every annotation source is unchecked:
+    // their results are replaced with an empty list (see annotationCountsData).
+    const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
+    }));
+
     const videoFrameCountsCollectionId = $derived(
         isVideoFrameAnnotations ? (parentCollection?.collectionId ?? collectionId) : collectionId
     );
@@ -481,7 +485,11 @@
             // Drop selected label filters whose label is absent from the fresh,
             // source-scoped counts (e.g. after switching to a source that doesn't
             // contain the label) so the active filter never points at a hidden label.
-            pruneInvalidSelections();
+            // Cached rows can be stale while their refetch runs. Pruning on them would
+            // move the query to another key and abort that refetch, so wait for it.
+            if (!annotationCounts.isFetching) {
+                pruneInvalidSelections();
+            }
         }
     });
 
@@ -539,6 +547,10 @@
 
     const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
 
+    // The class count queries share one gate: the panel has to be open, and with every
+    // annotation source unchecked their results are replaced with an empty list anyway.
+    const distributionCountsEnabled = $derived(distributionPanelVisible && !$allSourcesHidden);
+
     // Global count mode for the distribution panel (applies to all sources).
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
     let distributionSampleTagIds = $state<string[]>([]);
@@ -572,15 +584,26 @@
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
         queryKey: distributionAllQueryKey,
-        enabled: distributionPanelVisible
+        enabled: distributionCountsEnabled
     }));
+
+    let activeDistributionSourceId = $state<string | undefined>(undefined);
+    let activeDistributionGroupId = $state<string | undefined>(undefined);
+    let distributionSelectionCollectionId = $state<string | undefined>(undefined);
+    $effect(() => {
+        if (!distributionPanelVisible || distributionSelectionCollectionId !== collectionId) {
+            distributionSelectionCollectionId = collectionId;
+            activeDistributionSourceId = undefined;
+            activeDistributionGroupId = undefined;
+        }
+    });
 
     const distributionClassificationQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
         annotationType: AnnotationType.CLASSIFICATION,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible
+        enabled: distributionCountsEnabled
     }));
 
     const distributionObjectDetectionQuery = useImageAnnotationCounts(() => ({
@@ -588,7 +611,7 @@
         annotationType: AnnotationType.OBJECT_DETECTION,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible
+        enabled: distributionCountsEnabled
     }));
 
     const distributionSegmentationQuery = useImageAnnotationCounts(() => ({
@@ -596,7 +619,7 @@
         annotationType: AnnotationType.SEGMENTATION_MASK,
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
-        enabled: distributionPanelVisible
+        enabled: distributionCountsEnabled
     }));
 
     interface GroupedCountsParams {
@@ -613,7 +636,13 @@
         filter: imageAnnotationCountsFilter,
         countMode: distributionCountMode,
         annotationType,
-        enabled: distributionPanelVisible
+        enabled:
+            distributionPanelVisible &&
+            activeDistributionSourceId === 'classes' &&
+            distributionSampleTagIds.length > 0 &&
+            (annotationType === undefined
+                ? activeDistributionGroupId === undefined || activeDistributionGroupId === 'all'
+                : activeDistributionGroupId === annotationType)
     });
     const distributionAllTagQuery = useImageAnnotationCountsBySampleTags(() =>
         groupedCountsParams()
@@ -626,6 +655,21 @@
     );
     const distributionSegmentationTagQuery = useImageAnnotationCountsBySampleTags(() =>
         groupedCountsParams(AnnotationType.SEGMENTATION_MASK)
+    );
+
+    const classComparisonQueries: Record<
+        string,
+        ReturnType<typeof useImageAnnotationCountsBySampleTags>
+    > = {
+        all: distributionAllTagQuery,
+        [AnnotationType.CLASSIFICATION]: distributionClassificationTagQuery,
+        [AnnotationType.OBJECT_DETECTION]: distributionObjectDetectionTagQuery,
+        [AnnotationType.SEGMENTATION_MASK]: distributionSegmentationTagQuery
+    };
+    const activeClassComparisonQuery = $derived(
+        activeDistributionSourceId === 'classes'
+            ? classComparisonQueries[activeDistributionGroupId ?? 'all']
+            : undefined
     );
 
     // The panel's sources are the distribution *types* (class labels,
@@ -652,7 +696,9 @@
             id: 'classes',
             label: 'Annotation classes',
             groupLabel: 'Annotation type',
-            valueNoun
+            valueNoun,
+            comparisonLoading: activeClassComparisonQuery?.isFetching,
+            comparisonError: activeClassComparisonQuery?.error?.message
         };
 
         // Use the distribution-specific "all" query so the "All types" group
@@ -668,6 +714,7 @@
         const allTypesGroup = {
             id: 'all',
             label: 'All types',
+            loading: distributionAllQuery.isFetching,
             data: allDistributionData,
             comparisonData: comparisonAllData
         };
@@ -701,6 +748,7 @@
             .map(({ id, label, query, comparisonQuery }) => ({
                 id,
                 label,
+                loading: query.isFetching,
                 data: toCategoryCounts(query.data),
                 comparisonData:
                     hasTagSelection && !$allSourcesHidden ? comparisonQuery.data : undefined
@@ -712,6 +760,7 @@
         if (typeGroups.length <= 1)
             return {
                 ...base,
+                loading: distributionAllQuery.isFetching,
                 data: allDistributionData,
                 comparisonData: comparisonAllData
             };
@@ -725,11 +774,29 @@
     // User-configurable bin count for the metadata histograms.
     let histogramBinCount = $state(20);
 
+    const numericMetadataKeys = $derived(selectNumericMetadataKeys($metadataInfo));
+    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
+    const activeMetadataField = $derived.by<
+        { name: string; type: 'numeric' | 'categorical' } | undefined
+    >(() => {
+        if (activeDistributionSourceId !== 'metadata' || activeDistributionGroupId === undefined) {
+            return undefined;
+        }
+        if (categoricalMetadataKeys.includes(activeDistributionGroupId)) {
+            return { name: activeDistributionGroupId, type: 'categorical' };
+        }
+        if (numericMetadataKeys.includes(activeDistributionGroupId)) {
+            return { name: activeDistributionGroupId, type: 'numeric' };
+        }
+        return undefined;
+    });
+
     const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
         collectionId: collectionId,
         filter: distributionBaseFilter,
         binCount: histogramBinCount,
-        enabled: distributionPanelVisible
+        fields: activeMetadataField?.type === 'numeric' ? [activeMetadataField.name] : undefined,
+        enabled: distributionPanelVisible && activeMetadataField?.type === 'numeric'
     }));
     // query.data is already Record<string, HistogramData> — the hook applies
     // selectDistributions internally via the TanStack Query `select` option.
@@ -764,21 +831,23 @@
         sampleTags: selectedDistributionSampleTags,
         filter: distributionBaseFilter,
         binCount: histogramBinCount,
-        enabled: distributionPanelVisible && distributionSampleTagIds.length > 0
+        field: activeMetadataField,
+        enabled: distributionPanelVisible
     }));
     const metadataTagDistributions = $derived(metadataTagDistributionsQuery.data ?? []);
-
-    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
     const metadataDistributionSource = $derived(
         buildMetadataDistributionSource({
             histograms: metadataDistributions,
+            numericKeys: numericMetadataKeys,
             categoricalKeys: categoricalMetadataKeys,
             categorical: categoricalMetadataDistributions,
             filteredCategorical: categoricalMetadataFilteredDistributions,
             selectedRanges: $metadataValues,
             selectedValues: $categoricalMetadataValues,
             tagDistributions: metadataTagDistributions,
-            categoricalLoading: categoricalMetadataQuery.isFetching,
+            numericLoading: metadataHistogramsQuery.isFetching,
+            categoricalLoading:
+                categoricalMetadataQuery.isFetching || categoricalMetadataFilteredQuery.isFetching,
             categoricalError: categoricalMetadataQuery.error?.message,
             comparisonLoading: metadataTagDistributionsQuery.isFetching,
             comparisonError: metadataTagDistributionsQuery.error?.message
@@ -1051,6 +1120,10 @@
                                             selectedComparisonTagIds={distributionSampleTagIds}
                                             onComparisonTagIdsChange={(ids) =>
                                                 (distributionSampleTagIds = ids)}
+                                            onGroupChange={(sourceId, groupId) => {
+                                                activeDistributionSourceId = sourceId;
+                                                activeDistributionGroupId = groupId;
+                                            }}
                                         />
                                     {/key}
                                 {/await}

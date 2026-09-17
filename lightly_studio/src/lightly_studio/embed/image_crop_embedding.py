@@ -8,6 +8,7 @@ from typing import Any
 import fsspec
 import numpy as np
 import torch
+from lightly_studio_serve.types import EmbeddingResult, ImageCrop
 from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
@@ -17,8 +18,8 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcome,
     FileOutcomeReport,
 )
+from lightly_studio.embed import image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
-from lightly_studio.embed.types import EmbeddingResult, ImageCrop
 from lightly_studio.utils import executor, parallelize
 
 
@@ -149,6 +150,7 @@ def embed_image_crops_batched(
             progress_bar=progress_bar,
         )
 
+    image_embedding.release_gpu_cache(device=context.device)
     report.raise_if_all_failed()
     report.log_summary()
 

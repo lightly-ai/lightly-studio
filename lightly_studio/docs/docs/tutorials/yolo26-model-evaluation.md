@@ -31,7 +31,7 @@ This tutorial walks through these steps in order, using a single Python script, 
     | **TP / FP / FN** | True positive (correct detection), false positive (wrong or extra prediction), false negative (missed object) |
     | **Confusion matrix** | A table showing which ground-truth classes get predicted as which classes |
 
-    See [Model Evaluation](../concepts_and_tools/evaluation.md) for the full explanation of matching and metrics.
+    See [Model Evaluation](../workflows/evaluation.md) for the full explanation of matching and metrics.
 
 ## Prerequisites
 
@@ -70,7 +70,7 @@ dataset.add_annotations_from_coco(
 )
 ```
 
-If you want to follow along with your own dataset instead, see [Load an Image Dataset](../dataset_setup/image_dataset.md) for loading YOLO, COCO, and other formats, or the [Quickstart](../index.md#quickstart) for a minimal example.
+If you want to follow along with your own dataset instead, see [Load an Image Dataset](../workflows/image_dataset.md) for loading YOLO, COCO, and other formats, or the [Quickstart](../index.md#quickstart) for a minimal example.
 
 Running the script now is optional: you'll keep extending `evaluate_yolo26.py` in the sections below, and it's only complete once you reach [Step 3: Run model evaluation](#step-3-run-model-evaluation).
 
@@ -149,11 +149,11 @@ Running the script again at this point is optional too: the script is still not 
 ![LightlyStudio with the example dataset and predictions loaded](https://storage.googleapis.com/lightly-public/studio/tutorials/detection-model-evaluation/initial-screen.jpg){ width="100%" }
 
 !!! tip
-    You can also generate predictions from the Studio GUI with the YOLO inference plugin instead of Python. See [Using the YOLO plugin](./yolo-traffic-cctv-object-detection.md#using-the-yolo-plugin) in the first tutorial for setup and usage.
+    You can also generate predictions from the Studio GUI with the YOLO inference plugin instead of Python. See [Using the YOLO plugin](yolo-traffic-cctv-object-detection.md#using-the-yolo-plugin) in the first tutorial for setup and usage.
 
 ## Step 3: Run model evaluation
 
-Only images that have both ground truth and predictions are evaluated. See [Model Evaluation](../concepts_and_tools/evaluation.md) for how matching and metrics are computed.
+Only images that have both ground truth and predictions are evaluated. See [Model Evaluation](../workflows/evaluation.md) for how matching and metrics are computed.
 
 | Config | When to use |
 | --- | --- |
@@ -243,7 +243,7 @@ Open the confusion matrix for your evaluation run in the **Evaluation** panel.
 - A high `(no prediction)` column for a class means the model misses that class.
 - A high `(no ground truth)` row means the model hallucinates that class, or its localization is off.
 
-See [Model Evaluation](../concepts_and_tools/evaluation.md#model-evaluation-in-the-gui) for more on reading the confusion matrix.
+See [Model Evaluation](../workflows/evaluation.md#model-evaluation-in-the-gui) for more on reading the confusion matrix.
 
 ![Confusion matrix in the Evaluation panel](https://storage.googleapis.com/lightly-public/studio/tutorials/detection-model-evaluation/confusion-matrix-overview.jpg){ width="100%" }
 

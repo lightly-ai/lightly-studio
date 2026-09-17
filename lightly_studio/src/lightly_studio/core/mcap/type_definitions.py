@@ -1,0 +1,96 @@
+"""Value types returned by the MCAP access layer."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from lightly_studio.core.mcap.topic_kind import TopicKind
+
+
+@dataclass(frozen=True)
+class TopicInfo:
+    """A topic recorded in an MCAP file.
+
+    Attributes:
+        name: The topic name, e.g. `/cam/front/compressed_video`.
+        channel_id: The id of the channel that carries the topic.
+        message_encoding: How the message payloads are encoded, e.g. `cdr`.
+        schema_name: The name of the message schema, `None` without a schema.
+        schema_encoding: How the schema is encoded, e.g. `ros2msg`, `None` without a schema.
+        kind: The kind of data the topic carries.
+        message_count: The number of messages on the topic, `None` if the file does not
+            report statistics.
+    """
+
+    name: str
+    channel_id: int
+    message_encoding: str
+    schema_name: str | None
+    schema_encoding: str | None
+    kind: TopicKind
+    message_count: int | None
+
+
+@dataclass(frozen=True)
+class FrameLocator:
+    """Points at a single message in an MCAP file without carrying its payload.
+
+    Attributes:
+        channel_id: The id of the channel the message belongs to.
+        log_time_ns: The time the message was logged, in nanoseconds.
+        topic: The topic the message was logged on.
+        keyframe_log_time_ns: For video, the log time of the latest keyframe at or
+            before this frame, which is where decoding has to start. `None` for topics
+            that are not video, and for frames that no keyframe precedes.
+        schema_name: The name of the message schema, `None` without a schema.
+    """
+
+    channel_id: int
+    log_time_ns: int
+    topic: str
+    keyframe_log_time_ns: int | None = None
+    schema_name: str | None = None
+
+
+@dataclass(frozen=True)
+class CameraIntrinsics:
+    """The intrinsic calibration of a camera.
+
+    Attributes:
+        width: The image width in pixels.
+        height: The image height in pixels.
+        camera_matrix: The 3x3 camera matrix K in row-major order, 9 values.
+        frame_id: The coordinate frame of the camera, `None` if the message omits it.
+        distortion_model: The distortion model, e.g. `plumb_bob`, `None` if the message
+            omits it.
+        distortion_coefficients: The distortion coefficients D. Empty if the message
+            omits them.
+    """
+
+    width: int
+    height: int
+    camera_matrix: tuple[float, ...]
+    frame_id: str | None
+    distortion_model: str | None = None
+    distortion_coefficients: tuple[float, ...] = ()
+
+
+@dataclass(frozen=True)
+class StaticTransform:
+    """A static transform between two coordinate frames.
+
+    The transform maps points from the child frame to the parent frame.
+
+    Attributes:
+        parent_frame_id: The frame the transform maps points to.
+        child_frame_id: The frame the transform maps points from.
+        translation: The translation as (x, y, z) in meters.
+        rotation: The rotation as a quaternion (x, y, z, w).
+        log_time_ns: The time the transform was logged, in nanoseconds.
+    """
+
+    parent_frame_id: str
+    child_frame_id: str
+    translation: tuple[float, float, float]
+    rotation: tuple[float, float, float, float]
+    log_time_ns: int

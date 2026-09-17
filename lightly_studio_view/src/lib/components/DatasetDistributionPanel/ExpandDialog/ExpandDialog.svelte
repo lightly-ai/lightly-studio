@@ -1,4 +1,5 @@
 <script lang="ts">
+    import DistributionPlotContainer from '../DistributionPlotContainer/DistributionPlotContainer.svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import {
         BarChart,
@@ -13,6 +14,7 @@
     import { DISTRIBUTION_SORT_LABELS } from '../types';
 
     interface Props {
+        loading?: boolean;
         /** Two-way bound flag controlling dialog visibility. */
         open: boolean;
         /** Full class counts; the dialog applies `config` itself. */
@@ -34,6 +36,7 @@
 
     let {
         open = $bindable(),
+        loading = false,
         data,
         series = [],
         config,
@@ -90,22 +93,24 @@
                 })}
             testIdPrefix="dataset-distribution-expanded"
         />
-        <div
-            class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
-            bind:clientHeight={chartHeight}
-        >
-            <BarChart
-                data={visible}
-                orientation={config.orientation}
-                maxHeightPx={chartHeight || undefined}
-                maxWidthPx={clientWidth || undefined}
-                {totalCount}
-                series={visibleSeries}
-                valueMode={config.valueMode}
-                {onBarClick}
-                gridTopPx={4}
-            />
-        </div>
+        <DistributionPlotContainer {loading}>
+            <div
+                class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
+                bind:clientHeight={chartHeight}
+            >
+                <BarChart
+                    data={visible}
+                    orientation={config.orientation}
+                    maxHeightPx={chartHeight || undefined}
+                    maxWidthPx={clientWidth || undefined}
+                    {totalCount}
+                    series={visibleSeries}
+                    valueMode={config.valueMode}
+                    {onBarClick}
+                    gridTopPx={4}
+                />
+            </div>
+        </DistributionPlotContainer>
     </Dialog.Content>
 </Dialog.Root>
 

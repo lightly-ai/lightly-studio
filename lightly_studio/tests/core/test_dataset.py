@@ -13,6 +13,7 @@ from lightly_studio.core.image import image_dataset
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import embedding_manager
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
@@ -460,6 +461,11 @@ def test_generate_embeddings__no_generator(
     mocker.patch.object(
         embedding_manager,
         "_load_embedding_generator_from_env",
+        return_value=None,
+    )
+    mocker.patch.object(
+        EmbedderRegistry,
+        "get_image_path_embedder",
         return_value=None,
     )
 

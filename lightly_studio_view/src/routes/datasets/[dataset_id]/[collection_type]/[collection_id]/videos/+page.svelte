@@ -205,7 +205,7 @@
             <Grid
                 itemCount={items.length}
                 {columnCount}
-                overScan={20}
+                overScan={2}
                 onScroll={handleScroll}
                 {initialScrollPosition}
                 {scrollResetKey}

@@ -38,16 +38,17 @@ def render_release_notes(changelog_section: str, generated_notes: str) -> str:
 
     Args:
         changelog_section: The `[X.Y.Z]` block from `CHANGELOG.md`.
-        generated_notes: The body returned by the releases/generate-notes API.
+        generated_notes: The body returned by the releases/generate-notes API,
+            or empty when there is no earlier release of this package to diff against.
 
     Returns:
         The Markdown body for the GitHub release.
     """
-    return (
-        f"{_CHANGELOG_HEADING}\n\n"
-        f"{changelog_section.strip()}\n\n"
-        f"{sanitize_generated_notes(generated_notes).strip()}\n"
-    )
+    generated = sanitize_generated_notes(generated_notes).strip()
+    if not generated:
+        # A first release has no earlier tag to diff against.
+        return f"{_CHANGELOG_HEADING}\n\n{changelog_section.strip()}\n"
+    return f"{_CHANGELOG_HEADING}\n\n{changelog_section.strip()}\n\n{generated}\n"
 
 
 def sanitize_generated_notes(notes: str) -> str:

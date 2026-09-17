@@ -51,7 +51,7 @@
             <p class="text-sm text-diffuse-foreground">
                 No annotations yet.
                 <a
-                    href="https://docs.lightly.ai/studio/concepts_and_tools/annotations"
+                    href="https://docs.lightly.ai/studio/workflows/annotations"
                     target="_blank"
                     rel="noreferrer"
                     class="text-primary underline-offset-4 hover:underline"
@@ -90,7 +90,7 @@
                         >
                             {label_name}
                         </p>
-                        {#if current_count}
+                        {#if current_count !== undefined}
                             <span
                                 class="text-sm text-diffuse-foreground"
                                 data-testid="label-menu-label-count"

@@ -15,6 +15,7 @@ from typing import TypeVar
 import fsspec
 import numpy as np
 import torch
+from lightly_studio_serve.types import EmbeddingResult
 from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
@@ -24,7 +25,6 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcome,
     FileOutcomeReport,
 )
-from lightly_studio.embed.types import EmbeddingResult
 from lightly_studio.utils import batching, executor, parallelize
 
 _ItemT = TypeVar("_ItemT")
@@ -131,6 +131,16 @@ def embed_pil_images_batched(
     )
 
 
+def release_gpu_cache(device: torch.device) -> None:
+    """Release unused GPU memory while keeping model tensors loaded."""
+    if device.type == "cuda":
+        with torch.cuda.device(device):
+            torch.cuda.empty_cache()
+    elif device.type == "mps":
+        torch.mps.synchronize()
+        torch.mps.empty_cache()
+
+
 def _embed_items_batched(
     items: Sequence[_ItemT],
     preprocess_item: Callable[[_ItemT], torch.Tensor | None],
@@ -178,6 +188,7 @@ def _embed_items_batched(
         show_progress=show_progress,
         progress=progress,
     )
+    release_gpu_cache(device=context.device)
     return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
