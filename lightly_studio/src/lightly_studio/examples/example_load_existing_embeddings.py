@@ -1,17 +1,13 @@
 """Example of how to load precomputed embeddings.
 
-Implement a class inheriting from ls.ImageEmbeddingGenerator. For image datasets,
-only `embedding_space_spec` and `embed_images` functions are necessary.
-Register the generator with `ls.set_default_embedding_model`.
+Implement a class that subclasses ``ImagePathEmbedder``. For image datasets,
+only `embedding_space_spec` and `embed_images` are necessary. Register the embedder
+with `ls.register_default_embedder`.
 
-For video datasets, implement ls.VideoEmbeddingGenerator as well to override the
-video model.
+An embedder subclasses one interface per input it can embed. This one only embeds
+whole images by path, so it subclasses ``ImagePathEmbedder`` alone. Subclass
+``VideoPathEmbedder`` as well to serve precomputed video embeddings.
 """
-
-# TODO(Michal, 09/2026): Migrate this example to the Embedder protocols and the new
-# default-embedder API. mypy is disabled here until then because it still references the
-# removed EmbeddingGenerator protocols and set_default_embedding_model.
-# mypy: ignore-errors
 
 from __future__ import annotations
 
@@ -19,9 +15,8 @@ from pathlib import Path
 
 import numpy as np
 from environs import Env
-from lightly_studio_serve.types import EmbeddingResult
+from lightly_studio_serve.embedder import ImagePathEmbedder
 from numpy.typing import NDArray
-from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
@@ -48,8 +43,8 @@ def create_mock_embeddings(dataset_path: Path) -> dict[str, NDArray[np.float32]]
     return {filepath: rng.random(EMBEDDING_DIMENSION, dtype=np.float32) for filepath in filepaths}
 
 
-class LoadExistingEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
-    """A generator that loads precomputed embeddings by filepath."""
+class LoadExistingEmbedder(ImagePathEmbedder):
+    """An embedder that loads precomputed embeddings by filepath."""
 
     def __init__(self, embeddings_by_filepath: dict[str, NDArray[np.float32]]) -> None:
         """Store the precomputed vectors.
@@ -66,24 +61,15 @@ class LoadExistingEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
             dimension=EMBEDDING_DIMENSION,
         )
 
-    def embed_text(self, text: str) -> list[float]:
-        """Not supported: there is no text encoder for precomputed vectors."""
-        raise NotImplementedError(
-            "LoadExistingEmbeddingsGenerator has no text encoder; text search is "
-            "unavailable. Supply an encoder that shares the precomputed space to "
-            "enable it."
-        )
-
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
+    def embed_images(self, paths: list[str]) -> ls.EmbeddingResult:
         """Look up the precomputed vector for each filepath.
 
         This method returns one row for each filepath that has a stored vector.
         It uses kept_indices to skip a filepath that has no vector.
         """
-        _ = show_progress  # No progress bar. This step is a lookup, not a model run.
         rows: list[NDArray[np.float32]] = []
         kept_indices: list[int] = []
-        for index, filepath in enumerate(filepaths):
+        for index, filepath in enumerate(paths):
             embedding = self._embeddings_by_filepath.get(filepath)
             if embedding is None:
                 continue
@@ -93,25 +79,7 @@ class LoadExistingEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
         embeddings = (
             np.stack(rows) if rows else np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
-
-    def embed_image_crops(
-        self, image_crops: list[ls.ImageCrop], show_progress: bool = True
-    ) -> EmbeddingResult:
-        """Not supported: crops have no precomputed vectors."""
-        raise NotImplementedError(
-            "LoadExistingEmbeddingsGenerator only serves precomputed whole-image "
-            "embeddings; object-level (crop) embeddings are unavailable."
-        )
-
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]:
-        """Not supported: in-memory images have no precomputed vectors."""
-        raise NotImplementedError(
-            "LoadExistingEmbeddingsGenerator only serves precomputed vectors keyed "
-            "by filepath; in-memory PIL images cannot be looked up."
-        )
+        return ls.EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
 # Read environment variables
@@ -128,11 +96,11 @@ dataset_path = env.path("EXAMPLES_DATASET_PATH")
 # your own vectors keyed by filepath.
 embeddings_by_filepath = create_mock_embeddings(dataset_path=dataset_path)
 
-# Register the generator BEFORE you create the dataset. It overrides the model
-# from LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE for every collection.
-ls.set_default_embedding_model(LoadExistingEmbeddingsGenerator(embeddings_by_filepath))
+# Register the embedder BEFORE you create the dataset. It becomes the default for
+# image embedding, so ingestion looks up your vectors for every collection.
+ls.register_default_embedder(embedder=LoadExistingEmbedder(embeddings_by_filepath))
 
-# Create a dataset from a path. The embedding generator is invoked here.
+# Create a dataset from a path. The embedder is invoked here.
 dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=str(dataset_path))
 
