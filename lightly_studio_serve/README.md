@@ -77,6 +77,40 @@ the field `files`. Every path and that field name are constants in `lightly_stud
 next to the wire models. An implementation in another language therefore has one definition to
 follow.
 
+## Check your implementation
+
+The protocol is the contract, so a server in any language can serve LightlyStudio. Point
+the conformance kit at one to see whether it does:
+
+```bash
+python -m lightly_studio_serve.conformance http://127.0.0.1:8080
+```
+
+The run reads `/v1/describe`, then sends one fixed probe for each capability the server
+advertises: a fixed string, an 8x8 PNG and a one-frame MP4. It checks that the answer
+carries as many rows as kept indices, that every row is as wide as the server says, that
+every value is finite, and that the `space_key` and the `dimension` are the ones
+`/v1/describe` reports. It needs no dataset, so you can run it before LightlyStudio ever
+sees the server.
+
+The report names one outcome per capability, so a model that reads images and no video
+reads as `video_bytes  not advertised` rather than as a failure:
+
+```
+protocol 1.0
+space    acme/clip@v3
+vectors  512 values
+ready    yes
+
+text         passed
+image_bytes  passed
+video_bytes  not advertised
+```
+
+The process ends with 0 when the server passes, so you can run the kit in your own build.
+Pass `--api-key`, or set `LIGHTLY_STUDIO_SERVE_API_KEY`, for a server that expects a token.
+LightlyStudio runs the same checks behind its **Check connection** button.
+
 Nothing is published to PyPI yet. Once it is released, installing it will be:
 
 ```bash
