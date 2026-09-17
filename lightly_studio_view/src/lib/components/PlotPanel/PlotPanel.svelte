@@ -3,6 +3,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
         type DataPoint,
@@ -349,6 +350,10 @@
 
     const isReady = true;
 
+    // Lives here, not in PlotToolPill: a new filter (a tag, a region) starts a fresh embeddings
+    // query, and the plot unmounts while it loads. State inside the pill would not survive that.
+    let activeTool = $state<ToolMode>('pan');
+
     type RangeSelection = Rectangle | Point[] | null;
 
     const isRectangleSelection = (selection: RangeSelection): selection is Rectangle => {
@@ -565,7 +570,7 @@
                         }}
                     />
 
-                    <PlotToolPill {plotContainer} />
+                    <PlotToolPill {plotContainer} bind:activeTool />
                 {/if}
             </div>
         {:else}

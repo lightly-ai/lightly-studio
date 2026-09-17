@@ -13,9 +13,12 @@
     interface Props {
         // The element embedding-atlas renders into. Its hidden toolbar is what the pill drives.
         plotContainer: HTMLElement | null;
+        // Owned by the parent on purpose: every filter change unmounts the plot while the new
+        // embeddings load, and local state would drop the user's tool back to pan each time.
+        activeTool: ToolMode;
     }
 
-    let { plotContainer }: Props = $props();
+    let { plotContainer, activeTool = $bindable('pan') }: Props = $props();
 
     // embedding-atlas keeps its active selection mode ("none" = pan, "marquee" = rectangle,
     // "lasso") in a component-internal signal with no public setter, so the only way to change
@@ -30,7 +33,6 @@
 
     // `activeTool` is the user's choice and the pill's source of truth; the controller re-asserts
     // it whenever the library resets to "none" after a selection, keeping the tool sticky.
-    let activeTool = $state<ToolMode>('pan');
     let toolController: SelectionToolController | undefined;
 
     const selectTool = (mode: ToolMode) => {
