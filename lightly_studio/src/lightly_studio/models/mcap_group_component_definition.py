@@ -9,7 +9,10 @@ from __future__ import annotations
 from enum import Enum
 from uuid import UUID
 
+from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
+
+from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 
 
 class McapDataType(str, Enum):
@@ -52,3 +55,41 @@ class McapGroupComponentDefinitionTable(McapGroupComponentDefinitionBase, table=
         foreign_key="group_component_definition.collection_id",
         primary_key=True,
     )
+
+
+class McapGroupComponentDefinitionView(BaseModel):
+    """API view of one MCAP slot on a GROUP collection.
+
+    Merges the generic slot naming/ordering (`GroupComponentDefinitionTable`) with the
+    MCAP-specific metadata (`McapGroupComponentDefinitionTable`) that shares its
+    `collection_id`.
+    """
+
+    collection_id: UUID
+    group_component_name: str
+    group_component_index: int
+    mcap_data_type: McapDataType
+    frame_id: str | None
+    channel_id: int
+
+    @classmethod
+    def from_definitions(
+        cls,
+        gcd: GroupComponentDefinitionTable,
+        mcap_gcd: McapGroupComponentDefinitionTable,
+    ) -> McapGroupComponentDefinitionView:
+        """Builds the API view of a slot from its generic and MCAP-specific rows.
+
+        Args:
+            gcd: The slot's generic naming/ordering row.
+            mcap_gcd: The slot's MCAP-specific row. Its `collection_id` must match
+                `gcd.collection_id`.
+        """
+        return cls(
+            collection_id=mcap_gcd.collection_id,
+            group_component_name=gcd.group_component_name,
+            group_component_index=gcd.group_component_index,
+            mcap_data_type=mcap_gcd.mcap_data_type,
+            frame_id=mcap_gcd.frame_id,
+            channel_id=mcap_gcd.channel_id,
+        )
