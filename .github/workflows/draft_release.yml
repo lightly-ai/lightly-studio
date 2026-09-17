@@ -273,15 +273,6 @@ jobs:
             echo "tag_exists=$([ -n "${tag_commit}" ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
 
-      # TODO(Iunir, 09/2026): Enable once the check-release-ci action lands
-      # (#2125, #2126). Until then whoever merges the bump PR confirms CI.
-      # - name: Require green CI on the release commit
-      #   if: steps.decide.outputs.release == 'true'
-      #   uses: ./.github/actions/check-release-ci
-      #   with:
-      #     ref: ${{ steps.resolve.outputs.sha }}
-      #     github-token: ${{ github.token }}
-
       # Before the tag, so a failure here leaves nothing to clean up.
       - name: Assemble the release notes
         if: steps.decide.outputs.release == 'true'
