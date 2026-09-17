@@ -805,7 +805,9 @@
     const categoricalMetadataQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
         filter: distributionBaseFilter,
-        enabled: distributionPanelVisible
+        fields:
+            activeMetadataField?.type === 'categorical' ? [activeMetadataField.name] : undefined,
+        enabled: distributionPanelVisible && activeMetadataField?.type === 'categorical'
     }));
     const categoricalMetadataDistributions = $derived(categoricalMetadataQuery.data ?? {});
 
@@ -815,7 +817,9 @@
     const categoricalMetadataFilteredQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
         filter: imageAnnotationCountsFilter,
-        enabled: distributionPanelVisible
+        fields:
+            activeMetadataField?.type === 'categorical' ? [activeMetadataField.name] : undefined,
+        enabled: distributionPanelVisible && activeMetadataField?.type === 'categorical'
     }));
     // Keep undefined (not {}) while loading so DatasetDistributionPanel defers
     // rendering the background bars until the filtered data is ready.
