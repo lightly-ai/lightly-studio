@@ -13,8 +13,8 @@ db_manager.connect(cleanup_existing=True)
 # Create a Dataset from a path
 dataset = VideoDataset.create()
 dataset.add_videos_from_youtube_vis(
-    annotations_json="datasets/youtube_vis_50_videos/train/instances_50.json",
-    videos_path="datasets/youtube_vis_50_videos/train/videos",
+    annotations_json="dataset_examples/youtube_vis_50_videos/train/instances_50.json",
+    videos_path="dataset_examples/youtube_vis_50_videos/train/videos",
     annotation_type=AnnotationType.SEGMENTATION_MASK,
     embed=False,
 )

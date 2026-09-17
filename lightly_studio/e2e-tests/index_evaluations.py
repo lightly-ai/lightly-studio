@@ -5,8 +5,8 @@ from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
-IMAGES_PATH = "datasets/coco_subset_128_images/images"
-ANNOTATIONS_JSON = "datasets/coco_subset_128_images/instances_train2017.json"
+IMAGES_PATH = "dataset_examples/coco_subset_128_images/images"
+ANNOTATIONS_JSON = "dataset_examples/coco_subset_128_images/instances_train2017.json"
 
 DATASET_NAME = "evaluation_example_dataset"
 GT_ANNOTATION_SOURCE = "COCO annotations"

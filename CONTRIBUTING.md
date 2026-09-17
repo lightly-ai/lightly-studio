@@ -25,7 +25,7 @@ make start
 ```
 
 This will:
-- Download the example dataset into `lightly_studio/datasets` (see [Clone the Repository with Test Data](#clone-the-repository-with-test-data))
+- Download the example dataset into `lightly_studio/dataset_examples` (see [Clone the Repository with Test Data](#clone-the-repository-with-test-data))
 - Install dependencies (uv installs Python dependencies automatically, `npm ci` the frontend ones)
 - Build the frontend and the Python package
 - Start an example script, which serves the app on <http://localhost:8001>
@@ -78,7 +78,7 @@ skill that matches the file you edit. See [AGENTS.md](./AGENTS.md) for the path-
 
 We use Playwright for end-to-end testing. Tests need to be run separately for images and videos.
 
-The e2e index scripts read the example data from `lightly_studio/datasets`, so make sure it is
+The e2e index scripts read the example data from `lightly_studio/dataset_examples`, so make sure it is
 present first (see [Clone the Repository with Test Data](#clone-the-repository-with-test-data)).
 
 #### Testing with Images
@@ -147,7 +147,7 @@ the repository root:
 make download-example-dataset
 ```
 
-This clones the data into `lightly_studio/datasets`, which is where the `EXAMPLES_*` paths in
+This clones the data into `lightly_studio/dataset_examples`, which is where the `EXAMPLES_*` paths in
 `.env.example` and the e2e index scripts expect to find it.
 
 ### Define Environment Variables

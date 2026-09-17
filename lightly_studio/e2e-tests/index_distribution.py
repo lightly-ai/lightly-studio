@@ -63,7 +63,7 @@ from lightly_studio.resolvers import metadata_resolver
 env = Env()
 env.read_env()
 
-IMAGES_PATH = env.path("EXAMPLES_IMAGES_PATH", "datasets/coco_subset_128_images/images")
+IMAGES_PATH = env.path("EXAMPLES_IMAGES_PATH", "dataset_examples/coco_subset_128_images/images")
 
 ADD_CLASSIFICATIONS = env.bool("ADD_CLASSIFICATIONS", True)
 ADD_OBJECT_DETECTIONS = env.bool("ADD_OBJECT_DETECTIONS", True)

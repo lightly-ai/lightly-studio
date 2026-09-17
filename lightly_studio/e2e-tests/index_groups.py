@@ -5,7 +5,7 @@ from pathlib import Path
 import lightly_studio as ls
 from lightly_studio.core.group.group_dataset import GroupDataset
 
-DATASET_DIR = Path("datasets/midv_2020_10_samples")
+DATASET_DIR = Path("dataset_examples/midv_2020_10_samples")
 
 # Cleanup an existing database
 ls.db_manager.connect(cleanup_existing=True)
