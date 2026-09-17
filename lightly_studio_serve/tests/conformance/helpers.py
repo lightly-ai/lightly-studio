@@ -58,6 +58,16 @@ class FakeEmbedder(TextEmbedder, ImageBytesEmbedder, VideoBytesEmbedder):
         return _rows(count=len(videos))
 
 
+class FakeTextEmbedder(TextEmbedder):
+    """Serves text only, so the report has a capability that is not advertised."""
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION)
+
+    def embed_text(self, texts: list[str]) -> EmbeddingResult:
+        return _rows(count=len(texts))
+
+
 def canned_app(describe: dict[str, Any], embeddings: dict[str, Any] | None = None) -> FastAPI:
     """Build a server that answers fixed bodies, the way a broken implementation does.
 
