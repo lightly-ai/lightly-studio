@@ -1,13 +1,31 @@
 <script lang="ts">
-    import { ChevronDown, Search } from '@lucide/svelte';
-    import { Button } from '$lib/components';
+    import { Search } from '@lucide/svelte';
+    import { Select, type SelectItem } from '$lib/components/Select';
+    import type { CreateQueryResult } from '@tanstack/svelte-query';
+    import type { McapSequenceSummary } from '$lib/api/lightly_studio_local/types.gen';
 
-    /**
-     * Fast-filter strip above the working area: annotation class, camera and frame-range filters
-     * plus a free-text filter. Placeholders until the annotation/frame queries land, so the
-     * controls are disabled rather than wired to no-op handlers.
-     */
-    const filters = ['Annotation class', 'Annotation source', 'Camera', 'Frame range'];
+    interface Props {
+        summary?: CreateQueryResult<McapSequenceSummary, Error>;
+    }
+
+    let { summary }: Props = $props();
+
+    const lidarItems = $derived<SelectItem[]>(
+        summary?.data?.lidar_channels.map((c) => ({
+            value: c.group_component_name,
+            label: c.group_component_name
+        })) ?? []
+    );
+
+    const cameraItems = $derived<SelectItem[]>(
+        summary?.data?.camera_channels.map((c) => ({
+            value: c.group_component_name,
+            label: c.group_component_name
+        })) ?? []
+    );
+
+    let selectedLidar = $state<string | undefined>(undefined);
+    let selectedCamera = $state<string | undefined>(undefined);
 </script>
 
 <div
@@ -27,20 +45,24 @@
             class="h-8 w-full rounded-md border bg-muted/40 pl-8 pr-2 text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed"
         />
     </div>
-    <div class="flex min-w-0 items-center gap-1 overflow-x-auto">
-        {#each filters as filter (filter)}
-            <Button
-                variant="outline"
-                iconAfter={ChevronDown}
-                buttonProps={{
-                    disabled: true,
-                    size: 'sm',
-                    class: 'h-8 shrink-0 gap-1 text-xs',
-                    title: `${filter} (coming soon)`
-                }}
-            >
-                {filter}
-            </Button>
-        {/each}
+    <div class="flex min-w-0 items-center gap-1">
+        <Select
+            items={lidarItems}
+            bind:value={selectedLidar}
+            placeholder="Lidar"
+            disabled={lidarItems.length === 0}
+            size="xs"
+            class="h-8 shrink-0 text-xs"
+            testId="workspace-lidar-select"
+        />
+        <Select
+            items={cameraItems}
+            bind:value={selectedCamera}
+            placeholder="Camera"
+            disabled={cameraItems.length === 0}
+            size="xs"
+            class="h-8 shrink-0 text-xs"
+            testId="workspace-camera-select"
+        />
     </div>
 </div>
