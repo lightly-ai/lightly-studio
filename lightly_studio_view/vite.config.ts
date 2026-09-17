@@ -20,6 +20,12 @@ export default defineConfig({
                     if (id.includes('node_modules/apache-arrow')) {
                         return 'vendor-apache-arrow';
                     }
+                    // Split monaco-editor into its own chunk so it stays lazy (only the
+                    // dynamically imported QueryEditorPanel pulls it) instead of riding the
+                    // eager `vendor` chunk that posthog-js keeps on every route.
+                    if (id.includes('node_modules/monaco-editor')) {
+                        return 'vendor-monaco';
+                    }
                     // Split d3 libraries
                     if (id.includes('node_modules/d3-')) {
                         return 'vendor-d3';
