@@ -9,7 +9,9 @@ You will:
 - Import 9,469 raw images across 10 classes.
 - Explore the embedding plot and find groups of similar images.
 - Use the lasso, the legend, and the `Color by` control to inspect those groups.
-- Annotate a reviewed group and export your work.
+- Annotate a reviewed group.
+- Load the ground truth of the dataset and measure your agreement with it.
+- Export your work.
 
 <!-- Screenshot 1: the embedding plot over the full dataset, with a hovered image preview.
 Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/embedding-overview.jpg
@@ -125,9 +127,12 @@ class of a folder:
 
 The `train/` split has between 858 and 993 images per class.
 
-`noisy_imagenette.csv` holds the reference labels of the dataset, together with variants
-that have deliberate label noise. Keep the file to check your work in step 8, but do not
-import it.
+The folder name is also the ground truth of the dataset. In step 8 you load it into
+LightlyStudio and compare it against your own work.
+
+`noisy_imagenette.csv` holds the same reference classes, together with variants that have
+deliberate noise. This tutorial does not use the file. Keep it if you want to experiment with
+noisy annotations later.
 
 Imagenette is a subset of ImageNet, so the terms of ImageNet apply to the images. See the
 [Imagenette repository](https://github.com/fastai/imagenette) for its license note.
@@ -168,9 +173,9 @@ Wait for ingestion to finish and check the output for skipped images before you 
 Resolve any skipped files rather than treating the import as complete.
 
 `tag_depth=1` tags each image with the name of its first folder below the import path. Each
-image gets one tag, its WordNet ID. These tags are the labels of the dataset, not
-annotations that you created. This tutorial asks you to annotate the images from what you
-see in them, so leave the tags alone until step 8, where you use them to check your work.
+image gets one tag, its WordNet ID. These tags come from the dataset, not from annotations
+that you created. This tutorial asks you to annotate the images from what you see in them, so
+leave the tags alone until step 8.
 
 Embeddings and annotations persist in `lightly_studio.db` in the working directory.
 Rerunning the script with the same database and dataset name reuses existing samples and
@@ -209,12 +214,24 @@ garbage trucks are easy to recognize, but use whichever examples you can identif
 confidently.
 
 Open an image's detail view and use **Add classification** to assign its class as an
-annotation class. Use consistent class names, such as `parachute`, `church`, and
-`garbage_truck`, and keep your manual annotations in the same annotation source.
+annotation class. Put every annotation that you create into one annotation source, named
+`my_labels`. Step 9 compares that source against the ground truth.
+
+Use these exact annotation class names:
+
+```text
+tench              chain_saw    garbage_truck    golf_ball
+english_springer   church       gas_pump         parachute
+cassette_player    french_horn
+```
+
+!!! warning "The names must match exactly"
+    Step 9 compares annotation classes as text. If you write `garbage truck` here and the
+    ground truth says `garbage_truck`, every image of that class counts as a disagreement.
+    Copy the names from this list.
 
 Annotate two or three clear examples for each class you choose. If you are unsure about an
-image, consult the class table in step 1 or the reference labels in
-`noisy_imagenette.csv`, or leave the image for later review.
+image, consult the class table in step 1, or leave the image for later review.
 
 These examples give you visual references for exploring nearby raw images. This is a
 manual workflow: reference annotations do not classify their neighbors automatically.
@@ -256,8 +273,8 @@ Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagene
 The lasso scoped the grid to one region. Now annotate the images you reviewed.
 
 Open the first image in the scoped grid, assign its class with **Add classification**,
-and use the arrow keys to step to the next image. Use the same annotation class name and
-the same annotation source as your reference examples.
+and use the arrow keys to step to the next image. Use the same annotation class names and the
+same `my_labels` annotation source as your reference examples.
 
 Each image still takes one action. The gain is that you no longer hunt for related
 images or decide what each one is: the group already shares a class, so you confirm
@@ -318,7 +335,108 @@ Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagene
 > **Screenshot 4 (placeholder):** The plot colored by annotations, with one class isolated
 > in the legend.
 
-## Step 8: Save and export your progress
+## Step 8: Load the ground truth
+
+Until now you annotated the images from what you see. Imagenette also ships a reliable class
+for every image, in its folder names. Load that as a second annotation source, then compare
+the two.
+
+Stop the GUI with ++ctrl+c++. Save the following as `load_ground_truth.py` in the same working
+directory:
+
+```python title="load_ground_truth.py"
+from pathlib import Path
+
+import lightly_studio as ls
+from lightly_studio.core.annotation import CreateClassification
+
+# The folder names of Imagenette are WordNet IDs. These are the annotation class
+# names from step 4.
+WORDNET_TO_CLASS = {
+    "n01440764": "tench",
+    "n02102040": "english_springer",
+    "n02979186": "cassette_player",
+    "n03000684": "chain_saw",
+    "n03028079": "church",
+    "n03394916": "french_horn",
+    "n03417042": "garbage_truck",
+    "n03425413": "gas_pump",
+    "n03445777": "golf_ball",
+    "n03888257": "parachute",
+}
+
+if __name__ == "__main__":
+    dataset = ls.ImageDataset.load(name="imagenette")
+    for sample in dataset:
+        wordnet_id = Path(sample.file_path_abs).parent.name
+        sample.add_annotation(
+            CreateClassification(class_name=WORDNET_TO_CLASS[wordnet_id]),
+            annotation_source="ground_truth",
+        )
+    print("Ground truth loaded.")
+```
+
+Run it:
+
+```bash
+python load_ground_truth.py
+```
+
+The script writes one classification for each of the 9,469 images. This takes about one
+minute. LightlyStudio creates the ten annotation classes when it first reads each name, so
+there is no separate step for that.
+
+The `ground_truth` source is separate from your `my_labels` source. It does not change or
+overwrite the annotations that you created.
+
+!!! warning "Run this script one time only"
+    `add_annotation` appends to an annotation source. A second run gives every image a second
+    ground truth annotation. If you must run it again, delete the `ground_truth` source in the
+    GUI first.
+
+## Step 9: Compare your annotations against the ground truth
+
+An evaluation run compares two annotation sources and stores a metric for each image. Add
+this to the end of `load_ground_truth.py`, inside the `if __name__ == "__main__":` block:
+
+```python title="load_ground_truth.py"
+    result = dataset.evaluate().classification(
+        name="imagenette-review",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="my_labels",
+    )
+    print(f"Compared {result.sample_count} images.")
+    ls.start_gui()
+```
+
+An evaluation run uses only the images that are in both annotation sources. Your run therefore
+covers the images that you annotated, and no others. Images that you did not annotate are
+skipped. They do not count as errors.
+
+Open the **Evaluation** panel in the GUI and select the `imagenette-review` run:
+
+1. Read the confusion matrix. Green cells on the diagonal are images where you and the ground
+   truth agree.
+2. Find the red cells off the diagonal. These are the classes that you and the ground truth
+   assigned differently.
+3. Sort the image grid by `disagreement` to put those images first.
+4. Open them in detail view and compare what you see against both annotation classes.
+
+A red cell is not always your error. Some Imagenette images contain more than one of the ten
+classes, such as a golf ball on grass beside a person. The confusion matrix shows you where
+visual similarity and annotation class stop agreeing. These are the images that a labeling
+workflow gets wrong most often.
+
+<!-- Screenshot 5: the confusion matrix of the imagenette-review evaluation run.
+Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/confusion-matrix.jpg -->
+
+> **Screenshot 5 (placeholder):** The confusion matrix of the `imagenette-review` evaluation
+> run, with one red off-diagonal cell.
+
+For more about evaluation runs and their metrics, see
+[Model Evaluation](../workflows/evaluation.md).
+
+## Step 10: Save and export your progress
 
 LightlyStudio persists your annotations in its database. To resume later, rerun
 `explore_imagenette.py` from the same working directory. Open an annotated image to verify
@@ -329,12 +447,11 @@ To export your classifications:
 
 1. Clear temporary filters and selections, so you export the scope you intend.
 2. Open **Menu → Export**.
-3. Choose **Image Classifications (CSV)** and your manual annotation source.
+3. Choose **Image Classifications (CSV)** and the `my_labels` annotation source.
 4. Export the file, then check several image paths and their classes against the GUI.
 
-To check your annotations, compare the exported classes against the WordNet tags in the
-GUI, or against the reference labels in `noisy_imagenette.csv`. Use the class table in
-step 1 to translate a WordNet ID.
+Select `my_labels` and not `ground_truth`. The `ground_truth` source is the reference that you
+loaded in step 8, not the work that you did.
 
 The CSV contains classifications and image paths. It does not package the image files, so
 keep the original images and the database. Images you have not annotated stay available
@@ -346,11 +463,12 @@ For more export options, see [Export](../workflows/export.md).
 
 You imported 9,469 raw images, explored their embeddings, and used groups of similar
 images to guide labeling. Instead of deciding what every image shows, you reviewed related
-images together and confirmed a shared annotation class.
+images together and confirmed a shared annotation class. Then you loaded the ground truth of
+the dataset and measured where your annotations and the ground truth disagree.
 
-Continue with more groups until you reach the coverage you need. Use the WordNet tags or
-`noisy_imagenette.csv` to check your work, especially where visually similar classes
-overlap.
+Continue with more groups until you reach the coverage you need. Run the evaluation again
+after each session. The confusion matrix shows whether your accuracy holds as you move into
+groups that are harder to tell apart.
 
 A follow-up workflow could use embeddings and a small set of annotated examples to
 generate nearest-neighbor suggestions. Keep suggestions in their own annotation source
