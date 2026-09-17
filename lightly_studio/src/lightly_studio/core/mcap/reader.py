@@ -331,60 +331,6 @@ class McapFileReader:
             decoded_message=decoded_message,
         )
 
-    def get_video_keyframe_near(
-        self,
-        channel_id: int,
-        timestamp_ns: int,
-        max_diff_ns: int,
-    ) -> DecodedMessage | None:
-        """Returns the keyframe that covers the frame nearest to a timestamp on a channel.
-
-        Finds the frame locator closest to `timestamp_ns`, then fetches the keyframe
-        the locator points to (which may be earlier than the matched frame). The
-        keyframe is the earliest frame a video decoder needs to reconstruct the matched
-        frame; it is always decodable in isolation.
-
-        Loads the full channel index the first time it is called for a topic. Subsequent
-        calls for the same topic reuse the cached locators.
-
-        Args:
-            channel_id: The video channel to read.
-            timestamp_ns: The timestamp to match, in nanoseconds.
-            max_diff_ns: The largest accepted distance from `timestamp_ns` for the
-                matched frame, in nanoseconds.
-
-        Returns:
-            The decoded keyframe message, or `None` if no frame is within `max_diff_ns`
-            or the matched frame has no associated keyframe (i.e. the keyframe precedes
-            the file's start).
-
-        Raises:
-            ChannelNotFoundError: If the channel id is not in the file.
-            McapAccessError: If the channel's messages cannot be decoded.
-        """
-        topic_info = self._require_channel_info(channel_id)
-        if topic_info.name not in self._locators_by_topic:
-            self.load_data_for_topics(topics=[topic_info.name])
-        locators = self._locators_by_topic[topic_info.name]
-        if not locators:
-            return None
-        candidates_ns = [loc.log_time_ns for loc in locators]
-        indices = matching.match_all(
-            queries_ns=[timestamp_ns],
-            candidates_ns=candidates_ns,
-            match=matching.closest(max_diff_ns=max_diff_ns),
-        )
-        index = indices[0]
-        if index is None:
-            return None
-        locator = locators[index]
-        keyframe_time_ns = locator.keyframe_log_time_ns
-        if keyframe_time_ns is None:
-            return None
-        return self.get_decoded_message_near(
-            channel_id=channel_id, timestamp_ns=keyframe_time_ns, max_diff_ns=0
-        )
-
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.
 
