@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Path
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.models.recording_summary import MCAPSequenceSummary
+from lightly_studio.models.mcap_sequence_summary import MCAPSequenceSummary
 from lightly_studio.services.recording_service import get_mcap_sequence_summary
 
 get_summary_router = APIRouter()

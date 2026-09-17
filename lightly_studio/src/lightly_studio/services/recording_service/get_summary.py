@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.recording_summary import MCAPSequenceSummary
+from lightly_studio.models.mcap_sequence_summary import MCAPSequenceSummary
 from lightly_studio.resolvers import mcap_group_sequence_resolver, mcap_resolver
 
 
