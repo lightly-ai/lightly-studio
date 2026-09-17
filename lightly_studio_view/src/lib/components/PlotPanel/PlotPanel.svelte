@@ -42,8 +42,7 @@
         EXCLUDED_BY_FILTERS_CATEGORY,
         INCLUDED_BY_FILTERS_CATEGORY,
         INCLUDED_BY_FILTERS_LABEL,
-        NO_CATEGORY_LABEL,
-        isUnselectableCategory
+        NO_CATEGORY_LABEL
     } from './plotCategories';
     import { page } from '$app/state';
     import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
@@ -505,16 +504,21 @@
         })
     );
 
-    // "N / M points": M is everything plotted, N is what survives the active filters. Points
-    // demoted to EXCLUDED_BY_FILTERS are still drawn, just greyed, so they count as hidden.
+    // "N / M points": M is everything the plot received, N is what passes the active filters.
+    // Read `fulfils_filter` off the arrow data rather than the plotted categories: `usePlotData`
+    // demotes out-of-selection points to EXCLUDED_BY_FILTERS, so counting categories would turn
+    // this into a selection count the moment a lasso or a committed region exists.
+    // `null` until the embeddings land, so the readout stays absent instead of claiming "0 / 0".
     const pointCounts = $derived.by(() => {
-        const categories = $plotData?.category as Uint8Array | undefined;
-        if (!categories) return { visible: 0, total: 0 };
+        const total = ($arrowData?.x as Float32Array | undefined)?.length;
+        if (total === undefined) return null;
+        const fulfilsFilter = $arrowData?.fulfils_filter as Uint8Array | undefined;
+        if (!fulfilsFilter) return { visible: total, total };
         let visible = 0;
-        for (const category of categories) {
-            if (!isUnselectableCategory(category)) visible++;
+        for (const fulfils of fulfilsFilter) {
+            if (fulfils !== 0) visible++;
         }
-        return { visible, total: categories.length };
+        return { visible, total };
     });
 
     const errorText = $derived.by(() => {
@@ -603,8 +607,11 @@
                         }}
                     />
 
+                    <!-- Top-centered, not bottom: the legend sits bottom-left and grows to
+                         max-w-48, so a bottom-centered pill covers its last rows (and swallows
+                         their clicks, being z-10) once the plot is under ~430px wide. -->
                     <div
-                        class="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
+                        class="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
                         data-testid="plot-tool-pill"
                     >
                         {#each SELECTION_TOOLS as tool (tool.mode)}
@@ -639,9 +646,11 @@
             class="mt-1 flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto text-sm text-muted-foreground"
             data-testid="plot-panel-controls"
         >
-            <span class="shrink-0 text-[11.5px] tabular-nums" data-testid="plot-point-count">
-                {pointCounts.visible} / {pointCounts.total} points
-            </span>
+            {#if pointCounts}
+                <span class="shrink-0 text-[11.5px] tabular-nums" data-testid="plot-point-count">
+                    {pointCounts.visible} / {pointCounts.total} points
+                </span>
+            {/if}
             <div class="flex-1"></div>
             <PlotColorByPopover
                 {collectionId}

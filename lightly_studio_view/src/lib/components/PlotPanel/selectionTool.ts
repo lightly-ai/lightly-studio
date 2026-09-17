@@ -103,6 +103,12 @@ export function createSelectionToolController(
         for (const button of [marquee, lasso]) {
             if (button && !observedButtons.has(button)) {
                 observedButtons.add(button);
+                // The library's strip is painted out (opacity 0) and replaced by the pill, so
+                // take its buttons out of the tab order and the a11y tree — otherwise focus
+                // lands on nothing visible and Enter arms a mode the pill does not show.
+                // Neither attribute affects `.click()` or Playwright's visibility check.
+                button.tabIndex = -1;
+                button.setAttribute('aria-hidden', 'true');
                 styleObserver.observe(button, { attributes: true, attributeFilter: ['style'] });
             }
         }
