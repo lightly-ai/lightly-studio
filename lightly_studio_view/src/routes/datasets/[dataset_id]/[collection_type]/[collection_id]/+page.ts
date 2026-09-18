@@ -11,7 +11,8 @@ const sampleTypeRoutes: Partial<
     [SampleType.IMAGE]: routeHelpers.toImages,
     [SampleType.ANNOTATION]: routeHelpers.toAnnotations,
     [SampleType.CAPTION]: routeHelpers.toCaptions,
-    [SampleType.GROUP]: routeHelpers.toGroups
+    [SampleType.GROUP]: routeHelpers.toGroups,
+    [SampleType.SEQUENCE]: routeHelpers.toPointClouds
 };
 
 export const load: PageLoad = async ({ parent, params }) => {
