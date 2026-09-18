@@ -19,13 +19,15 @@ const mockInit = vi.fn();
 const mockCapture = vi.fn();
 const mockRegister = vi.fn();
 const mockIdentify = vi.fn();
+const mockIsIdentified = vi.fn();
 
 vi.mock('posthog-js', () => ({
     default: {
         init: (...args: unknown[]) => mockInit(...args),
         capture: (...args: unknown[]) => mockCapture(...args),
         register: (...args: unknown[]) => mockRegister(...args),
-        identify: (...args: unknown[]) => mockIdentify(...args)
+        identify: (...args: unknown[]) => mockIdentify(...args),
+        _isIdentified: () => mockIsIdentified()
     }
 }));
 
@@ -45,6 +47,9 @@ describe('usePostHog', () => {
         mockCapture.mockClear();
         mockRegister.mockClear();
         mockIdentify.mockClear();
+        mockIsIdentified.mockReset();
+        // Nobody identified yet is the common OSS case.
+        mockIsIdentified.mockReturnValue(false);
         mockGetFeatures.mockReset();
         mockGetFeatures.mockResolvedValue({ data: ['analytics'] });
         mockGetAnalyticsConfig.mockReset();
@@ -65,11 +70,23 @@ describe('usePostHog', () => {
         expect(mockRegister).toHaveBeenCalledWith({ app_version: '1.2.3' });
     });
 
-    it('should identify with the backend install id after initialization', async () => {
+    it('should identify with the backend install id when nobody is identified yet', async () => {
+        mockIsIdentified.mockReturnValue(false);
+
         const { init } = await freshPostHog();
         await init();
 
         expect(mockIdentify).toHaveBeenCalledWith(INSTALL_ID);
+    });
+
+    it('should keep an existing identity instead of overwriting it with the install id', async () => {
+        mockIsIdentified.mockReturnValue(true);
+
+        const { init } = await freshPostHog();
+        await init();
+
+        expect(mockInit).toHaveBeenCalled();
+        expect(mockIdentify).not.toHaveBeenCalled();
     });
 
     it('should not initialize when the config request fails', async () => {
