@@ -581,36 +581,40 @@
     </div>
     {#if isReady}
         <div
-            class="mt-1 flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto text-sm text-muted-foreground"
+            class="mt-1 flex shrink-0 flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground"
             data-testid="plot-panel-controls"
         >
             {#if pointCounts}
-                <span class="shrink-0 text-[11.5px] tabular-nums" data-testid="plot-point-count">
+                <span class="text-[11.5px] tabular-nums" data-testid="plot-point-count">
                     {pointCounts.matchingFilters} / {pointCounts.total} points
                 </span>
             {/if}
-            <div class="flex-1"></div>
-            <PlotColorByPopover
-                {collectionId}
-                withTags={$tags.length > 0}
-                withAnnotationLabels={$annotationLabels.length > 0}
-                selectedKey={$selectedColorByKey}
-                onSelectedKeyChange={(key) => {
-                    setSelectedColorByKey(key);
-                }}
-            />
-            <Button
-                variant="outline"
-                buttonProps={{
-                    size: 'sm',
-                    onclick: reset,
-                    'data-testid': 'plot-reset-zoom-button',
-                    class: 'px-2.5',
-                    title: 'Reset zoom'
-                }}
-            >
-                Reset zoom
-            </Button>
+            <!-- Wraps as one unit: a narrow panel drops the readout to its own row rather than
+                 clipping these two, which justify-end plus overflow-x-auto pushed off the left
+                 edge where no scroll range exists. -->
+            <div class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+                <PlotColorByPopover
+                    {collectionId}
+                    withTags={$tags.length > 0}
+                    withAnnotationLabels={$annotationLabels.length > 0}
+                    selectedKey={$selectedColorByKey}
+                    onSelectedKeyChange={(key) => {
+                        setSelectedColorByKey(key);
+                    }}
+                />
+                <Button
+                    variant="outline"
+                    buttonProps={{
+                        size: 'sm',
+                        onclick: reset,
+                        'data-testid': 'plot-reset-zoom-button',
+                        class: 'px-2.5',
+                        title: 'Reset zoom'
+                    }}
+                >
+                    Reset zoom
+                </Button>
+            </div>
         </div>
     {/if}
 </div>

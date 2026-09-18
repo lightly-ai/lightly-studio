@@ -20,11 +20,8 @@
 
     let { plotContainer, activeTool = $bindable('pan') }: Props = $props();
 
-    // embedding-atlas keeps its active selection mode ("none" = pan, "marquee" = rectangle,
-    // "lasso") in a component-internal signal with no public setter, so the only way to change
-    // it is to click the library's own toolbar buttons. PlotPanel hides those buttons via CSS
-    // and this component clicks them: the pure helpers in ./selectionTool find them and decide
-    // which one to toggle, and createSelectionToolController owns the MutationObserver wiring.
+    // embedding-atlas has no public setter for its selection mode, so the pill clicks the
+    // library's own hidden toolbar buttons. See ./selectionTool.
     const TOOL_ICONS: Record<ToolMode, Component<IconProps>> = {
         pan: Hand,
         rectangle: SquareDashed,
@@ -54,12 +51,10 @@
     });
 </script>
 
-<!-- Bottom-centered, sharing the bottom edge with the legend on the left. The pill is 6rem
-     wide, so it claims 3rem either side of the centre line; PlotPanelLegend caps its own width
-     at calc(50% - 4.25rem) to stay clear of that (3rem + a 0.5rem gap + its own 0.75rem inset).
-     Change one number and the other has to follow. -->
+<!-- Top-right: the legend owns the bottom edge and grows with its labels, so a pill sharing
+     that edge would have to cap the legend's width on a narrow plot. -->
 <div
-    class="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
+    class="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
     data-testid="plot-tool-pill"
 >
     {#each SELECTION_TOOLS as tool (tool.mode)}

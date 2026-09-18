@@ -118,7 +118,7 @@
     onValueChange={handleValueChange}
     onOpenChange={handleOpenChange}
     size="xs"
-    class="w-48"
+    class="w-48 min-w-0"
     testId="plot-color-by-button"
 >
     {#snippet children()}
