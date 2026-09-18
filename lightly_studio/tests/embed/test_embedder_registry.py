@@ -249,6 +249,45 @@ class TestEmbedderRegistry:
         assert registry.get_image_path_embedder(space_key="mobileclip_s0") is builtin
         assert registry.get_image_path_embedder() is custom
 
+    def test_preload_builtin_embedders__loads_each_builtin_once(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        mobileclip = _FakeTextImageEmbedder(space_key="mobileclip_s0")
+        pe = _FakeVideoImageEmbedder(space_key="PE-Core-T16-384")
+        builtins = {"mobileclip_s0": mobileclip, "PE-Core-T16-384": pe}
+        load_builtin = mocker.patch.object(
+            embedder_registry,
+            "_load_builtin_embedder",
+            side_effect=lambda space_key: builtins[space_key],
+        )
+
+        registry.preload_builtin_embedders()
+
+        # The bootstrap capabilities share two spaces, so each builtin loads exactly once.
+        assert load_builtin.call_count == 2
+        load_builtin.assert_any_call(space_key="mobileclip_s0")
+        load_builtin.assert_any_call(space_key="PE-Core-T16-384")
+        assert registry.get_image_path_embedder() is mobileclip
+        assert registry.get_video_path_embedder() is pe
+
+    def test_preload_builtin_embedders__reuses_registered_embedder(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        custom = _FakeVideoImageEmbedder(space_key="PE-Core-T16-384")
+        registry.register(embedder=custom, bootstrap_for={Capability.VIDEO_PATH})
+        mobileclip = _FakeTextImageEmbedder(space_key="mobileclip_s0")
+        load_builtin = mocker.patch.object(
+            embedder_registry, "_load_builtin_embedder", return_value=mobileclip
+        )
+
+        registry.preload_builtin_embedders()
+
+        # The registered custom embedder covers its space, so only the image builtin loads.
+        load_builtin.assert_called_once_with(space_key="mobileclip_s0")
+        assert registry.get_video_path_embedder() is custom
+
 
 def test_get_registry__returns_process_wide_instance() -> None:
     assert embedder_registry.get_registry() is embedder_registry.get_registry()
