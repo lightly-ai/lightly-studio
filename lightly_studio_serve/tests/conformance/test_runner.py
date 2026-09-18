@@ -14,46 +14,6 @@ from tests.conformance.helpers import AppProbeClient, FakeEmbedder, FakeTextEmbe
 
 API_KEY = "the-key"
 
-# What a server that breaks the protocol answers, and the line the report gives for it.
-_BROKEN_ANSWERS = [
-    pytest.param(
-        helpers.embeddings_body(embeddings=[[0.5, -0.5, 0.25]]),
-        "/v1/embed/texts answers a body that the protocol does not allow: "
-        "Value error, Embedding 0 has 3 values. The server declares dimension 2.",
-        id="a row wider than the body declares",
-    ),
-    pytest.param(
-        helpers.embeddings_body(dimension=3, embeddings=[[1.0, 1.0, 1.0]]),
-        "/v1/embed/texts answers dimension 3, /v1/describe answers 2. LightlyStudio stores "
-        "vectors of the dimension that the server describes.",
-        id="a dimension that /v1/describe does not report",
-    ),
-    pytest.param(
-        {"space_key": helpers.SPACE_KEY, "dimension": 2, "embeddings": [[0.5, -0.5]]},
-        "/v1/embed/texts answers a body that the protocol does not allow: "
-        "kept_indices: Field required",
-        id="no kept_indices",
-    ),
-    pytest.param(
-        helpers.embeddings_body(embeddings=[[0.5, float("nan")]]),
-        "/v1/embed/texts answers a body that the protocol does not allow: "
-        "Value error, Embedding 0 holds a value that is not finite.",
-        id="a value that is not finite",
-    ),
-    pytest.param(
-        helpers.embeddings_body(space_key="acme/model@v2"),
-        "/v1/embed/texts answers space_key 'acme/model@v2', /v1/describe answers "
-        "'acme/model@v1'. Every response repeats the space that the server describes.",
-        id="a space_key that /v1/describe does not report",
-    ),
-    pytest.param(
-        helpers.embeddings_body(kept_indices=[], embeddings=[]),
-        "/v1/embed/texts answers kept_indices [], expected [0]. The probe carries one item "
-        "that the format allows, so a server that reads the format keeps it.",
-        id="none of the probe items kept",
-    ),
-]
-
 
 class UnreachableProbeClient:
     """Answers every request the way a client answers a host that is not there."""
@@ -161,11 +121,58 @@ def test_check_conformance__advertised_capability_with_no_route() -> None:
     )
 
 
-@pytest.mark.parametrize(("embeddings", "detail"), _BROKEN_ANSWERS)
+# Every case carries the describe body whose values its line quotes, so the line reads alone.
+@pytest.mark.parametrize(
+    ("describe", "embeddings", "detail"),
+    [
+        pytest.param(
+            helpers.describe_body(dimension=2),
+            helpers.embeddings_body(dimension=2, embeddings=[[0.5, -0.5, 0.25]]),
+            "/v1/embed/texts answers a body that the protocol does not allow: "
+            "Value error, Embedding 0 has 3 values. The server declares dimension 2.",
+            id="a row wider than the body declares",
+        ),
+        pytest.param(
+            helpers.describe_body(dimension=2),
+            helpers.embeddings_body(dimension=3, embeddings=[[1.0, 1.0, 1.0]]),
+            "/v1/embed/texts answers dimension 3, /v1/describe answers 2. LightlyStudio stores "
+            "vectors of the dimension that the server describes.",
+            id="a dimension that /v1/describe does not report",
+        ),
+        pytest.param(
+            helpers.describe_body(),
+            {"space_key": helpers.SPACE_KEY, "dimension": 2, "embeddings": [[0.5, -0.5]]},
+            "/v1/embed/texts answers a body that the protocol does not allow: "
+            "kept_indices: Field required",
+            id="no kept_indices",
+        ),
+        pytest.param(
+            helpers.describe_body(),
+            helpers.embeddings_body(embeddings=[[0.5, float("nan")]]),
+            "/v1/embed/texts answers a body that the protocol does not allow: "
+            "Value error, Embedding 0 holds a value that is not finite.",
+            id="a value that is not finite",
+        ),
+        pytest.param(
+            helpers.describe_body(space_key="acme/model@v1"),
+            helpers.embeddings_body(space_key="acme/model@v2"),
+            "/v1/embed/texts answers space_key 'acme/model@v2', /v1/describe answers "
+            "'acme/model@v1'. Every response repeats the space that the server describes.",
+            id="a space_key that /v1/describe does not report",
+        ),
+        pytest.param(
+            helpers.describe_body(),
+            helpers.embeddings_body(kept_indices=[], embeddings=[]),
+            "/v1/embed/texts answers kept_indices [], expected [0]. The probe carries one item "
+            "that the format allows, so a server that reads the format keeps it.",
+            id="none of the probe items kept",
+        ),
+    ],
+)
 def test_check_conformance__server_that_breaks_the_protocol(
-    embeddings: dict[str, Any], detail: str
+    describe: dict[str, Any], embeddings: dict[str, Any], detail: str
 ) -> None:
-    app = helpers.canned_app(describe=helpers.describe_body(), embeddings=embeddings)
+    app = helpers.canned_app(describe=describe, embeddings=embeddings)
 
     report = runner.check_conformance(client=AppProbeClient(app=app))
 
