@@ -1,12 +1,20 @@
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import { routeHelpers } from '$lib/routes';
-import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
+import {
+    Image,
+    WholeWord,
+    Video,
+    Frame,
+    ComponentIcon,
+    LayoutDashboard,
+    Box
+} from '@lucide/svelte';
 import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
 /**
  * Builds the nav menu item for a collection, or null if the sample type has no
- * dedicated view to navigate to (e.g. MCAP and SEQUENCE, which have no view yet).
+ * dedicated view to navigate to (e.g. MCAP, which has no view yet).
  */
 export function getMenuItem(
     datasetId: string,
@@ -68,8 +76,15 @@ export function getMenuItem(
                 isSelected,
                 icon: LayoutDashboard
             };
-        case SampleType.MCAP:
         case SampleType.SEQUENCE:
+            return {
+                title: groupComponentName || 'Sequences',
+                id: elementId,
+                href: routeHelpers.toPointClouds(datasetId, collectionType, collectionId),
+                isSelected,
+                icon: Box
+            };
+        case SampleType.MCAP:
             return null;
     }
 }
