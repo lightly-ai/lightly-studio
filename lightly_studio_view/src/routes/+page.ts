@@ -17,6 +17,16 @@ export const load = async () => {
         throw new Error('No valid root collection found');
     }
 
+    const sampleType = mostRecentRootDataset.sample_type.toLocaleLowerCase();
+
+    // redirect sequence type to custome route
+    if (sampleType == 'sequence') {
+        redirect(
+            307,
+            `/datasets/${mostRecentRootDataset.collection_id}/point-clouds`
+        );
+    } 
+
     redirect(
         307,
         `/datasets/${mostRecentRootDataset.collection_id}/${mostRecentRootDataset.sample_type.toLowerCase()}/${mostRecentRootDataset.collection_id}`

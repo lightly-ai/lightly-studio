@@ -333,7 +333,7 @@ start-example-mcap:
 EXAMPLE_MCAP_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/$(notdir $(firstword $(FLOCI_MCAP_FILES)))
 
 .PHONY: start-example-mcap-s3
-start-example-mcap-s3: setup-floci
+start-example-mcap-s3: setup-floci build
 	@echo "Starting MCAP sequence example (from S3: $(EXAMPLE_MCAP_S3_URI))..."
 	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(EXAMPLE_MCAP_S3_URI) \
 		uv run --extra mcap --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
@@ -358,8 +358,6 @@ demo-mcap-server: setup-floci mock-webapp-dist
 	@echo "Seeding database at $(DEMO_MCAP_DB) with $(DEMO_MCAP_S3_URI)..."
 	@uv run python src/lightly_studio/scripts/demo_mcap_seed.py \
 		"$(DEMO_MCAP_DB)" "$(DEMO_MCAP_S3_URI)" "$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
-	@printf '<html><body>API demo — use the /datasets/... endpoints.</body></html>' \
-		> src/lightly_studio/dist_lightly_studio_view_app/index.html
 	@echo "Starting server on http://$(DEMO_MCAP_HOST):$(DEMO_MCAP_PORT) — Ctrl-C to stop"
 	@$(FLOCI_ENV) uv run --extra mcap --extra cloud-storage python -c "\
 import uvicorn; \
