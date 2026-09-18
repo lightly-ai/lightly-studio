@@ -8,6 +8,7 @@ embedder only when it implements that capability.
 from __future__ import annotations
 
 import logging
+from collections.abc import Set
 
 from lightly_studio_serve.embedder import (
     Capability,
@@ -61,7 +62,7 @@ class EmbedderRegistry:
     def register(
         self,
         embedder: Embedder,
-        bootstrap_for: set[Capability] | None = None,
+        bootstrap_for: Set[Capability] | None = None,
     ) -> None:
         """Register an embedder for its embedding space.
 
@@ -154,10 +155,12 @@ class EmbedderRegistry:
         self,
         space_key: str,
         capabilities: set[Capability],
-        bootstrap_for: set[Capability] | None,
+        bootstrap_for: Set[Capability] | None,
     ) -> None:
         """Set the space as the bootstrap default for requested capabilities it supports."""
-        defaults = capabilities if bootstrap_for is None else capabilities & bootstrap_for
+        defaults = (
+            capabilities if bootstrap_for is None else capabilities.intersection(bootstrap_for)
+        )
         for capability in defaults:
             self._bootstrap_spaces[capability] = space_key
 
