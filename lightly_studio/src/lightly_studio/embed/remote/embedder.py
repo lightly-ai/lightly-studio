@@ -46,9 +46,6 @@ class RemoteEmbedder(Embedder):
     for the capability it needs and calls the method, whether the object behind it runs a
     model in this process or speaks to a server.
 
-    This class holds no capability of its own. ``connect`` composes it with one route class
-    per advertised capability.
-
     ``ready`` keeps the default of ``True``. The answer of ``/v1/describe`` is read once,
     at construction, so the property could only report a state that has passed. A server
     whose model is still loading answers 503, and the transport waits that out.
@@ -59,19 +56,14 @@ class RemoteEmbedder(Embedder):
         transport: RemoteTransport,
         spec: EmbeddingSpaceSpec,
         limits: ServerLimits,
-        owned_client: httpx.Client | None = None,
+        owned_client: httpx.Client | None,
     ) -> None:
         """Embed through ``transport``, against a server of ``spec`` and ``limits``.
 
         Use ``connect``, which reads ``/v1/describe`` and passes what it learns here. This
         constructor takes the answer as given and validates nothing against the wire.
-
-        Args:
-            transport: The transport that carries every request.
-            spec: The embedding space that the server produces, from ``/v1/describe``.
-            limits: The limits that the server applies, from ``/v1/describe``.
-            owned_client: The client that ``connect`` opened, which ``close`` closes.
-                ``None`` for a client that ``connect_with_client`` got and does not own.
+        ``owned_client`` is the client that ``close`` closes, or ``None`` for one that the
+        caller keeps.
         """
         self._transport = transport
         self._spec = spec
@@ -173,15 +165,6 @@ class RemoteEmbedder(Embedder):
                 server that wants none.
             owned_client: ``http_client`` when the embedder closes it, and ``None`` when
                 the caller keeps it.
-
-        Returns:
-            An embedder that implements the interface of every capability that the server
-            advertises and this client routes to.
-
-        Raises:
-            RemoteEmbedderError: If the server gives no answer, rejects the token, answers
-                a description that the protocol does not allow, or advertises no
-                capability that LightlyStudio can use.
         """
         try:
             transport = RemoteTransport(client=http_client, api_key=api_key)
@@ -319,14 +302,7 @@ class _TextRoute(RemoteEmbedder, TextEmbedder):
     """Adds the text capability, which reaches the server as JSON."""
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
-        """Embed a batch of text strings on the server.
-
-        Args:
-            texts: The strings to embed.
-
-        Returns:
-            The embeddings and the indices of the inputs they cover.
-        """
+        """Embed a batch of text strings on the server."""
         return self._embed(
             items=texts,
             capability=Capability.TEXT,
@@ -339,14 +315,7 @@ class _ImageBytesRoute(RemoteEmbedder, ImageBytesEmbedder):
     """Adds the image-bytes capability, which reaches the server as multipart."""
 
     def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
-        """Embed a batch of encoded images on the server.
-
-        Args:
-            images: Encoded image bytes.
-
-        Returns:
-            The embeddings and the indices of the inputs they cover.
-        """
+        """Embed a batch of encoded images on the server."""
         return self._embed(
             items=images,
             capability=Capability.IMAGE_BYTES,
@@ -359,14 +328,7 @@ class _VideoBytesRoute(RemoteEmbedder, VideoBytesEmbedder):
     """Adds the video-bytes capability, which reaches the server as multipart."""
 
     def embed_video_bytes(self, videos: list[bytes]) -> EmbeddingResult:
-        """Embed a batch of encoded videos on the server.
-
-        Args:
-            videos: Encoded video bytes.
-
-        Returns:
-            The embeddings and the indices of the inputs they cover.
-        """
+        """Embed a batch of encoded videos on the server."""
         return self._embed(
             items=videos,
             capability=Capability.VIDEO_BYTES,
@@ -399,10 +361,6 @@ def _embedder_for(
         description: What ``GET /v1/describe`` answered.
         owned_client: The client that ``connect`` opened, or ``None`` for one that the
             caller owns.
-
-    Returns:
-        An embedder that implements the interface of every advertised capability that this
-        client routes to.
 
     Raises:
         RemoteEmbedderCapabilityError: If nothing advertised is usable from LightlyStudio.
