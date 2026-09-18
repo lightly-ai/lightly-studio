@@ -105,26 +105,27 @@ implementation of `embed_images` does inside.
 | Load precomputed embeddings | Looks up stored vectors by file path | [`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py) |
 
 An embedder subclasses `Embedder` through one interface per input it can embed.
-Subclass only the capabilities your model provides. The
-[API reference](../api/embeddings.md) gives the full method signatures. The interfaces
-live in `lightly_studio_serve.embedder`:
+Subclass only the capabilities your model provides. Every interface inherits
+`embedding_space_spec` from `Embedder` to describe the embedding space; embeddings
+from the same space are comparable.
 
-- **`Embedder`** (base, shared by every interface):
-    - `embedding_space_spec` to describe the embedding space. Embeddings from the same space are comparable.
-- **`ImagePathEmbedder`**: `embed_images` to embed whole images by path.
-- **`ImageCropPathEmbedder`**: `embed_image_crops` to embed annotations.
-- **`ImagePILEmbedder`**: `embed_images_pil` to embed in-memory images, such as video frames.
-- **`TextEmbedder`**: `embed_text` to enable text search.
-- **`VideoPathEmbedder`**: `embed_videos` to embed whole videos by path.
+The interfaces live in `lightly_studio_serve.embedder`. LightlyStudio calls each at
+one of two points — when you **add data** (ingest) or while the **GUI** answers a
+query. The [API reference](../api/embeddings.md) gives the full method signatures.
 
-`ImageBytesEmbedder` and `VideoBytesEmbedder` embed in-memory image and video bytes.
+| Interface | Method | Embeds | Called during |
+|---|---|---|---|
+| `ImagePathEmbedder` | `embed_images` | Whole images by path | Ingest and GUI (image search) |
+| `ImageCropPathEmbedder` | `embed_image_crops` | Annotation crops | Ingest |
+| `ImagePILEmbedder` | `embed_images_pil` | In-memory images, such as video frames | Ingest |
+| `VideoPathEmbedder` | `embed_videos` | Whole videos by path | Ingest |
+| `TextEmbedder` | `embed_text` | Text queries | GUI (text search) |
 
 Examples below show how an embedder is built from the image interfaces.
 
-!!! warning "Some methods also run while the GUI is open"
-    LightlyStudio calls your embedder at two points: when you add data, and while the
-    GUI is open to answer search queries. A capability you do not subclass, such as
-    `TextEmbedder`, has its search feature unavailable in the GUI.
+!!! warning "A capability you skip disables its feature"
+    A capability you do not subclass, such as `TextEmbedder`, leaves its feature
+    unavailable — text search, in that case.
 
 ### Loading precomputed embeddings
 
