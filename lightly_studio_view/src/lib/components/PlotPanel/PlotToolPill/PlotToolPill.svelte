@@ -51,10 +51,9 @@
     });
 </script>
 
-<!-- Top-right: the legend owns the bottom edge and grows with its labels, so a pill sharing
-     that edge would have to cap the legend's width on a narrow plot. -->
+<!-- Placed by PlotPanel's bottom row, which pairs it with the legend. -->
 <div
-    class="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
+    class="pointer-events-auto flex shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
     data-testid="plot-tool-pill"
 >
     {#each SELECTION_TOOLS as tool (tool.mode)}
