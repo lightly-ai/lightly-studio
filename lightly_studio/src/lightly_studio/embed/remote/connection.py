@@ -13,11 +13,6 @@ from lightly_studio_serve.protocol import DescribeResponse
 
 logger = logging.getLogger(__name__)
 
-# The budget of a request of the client that `connect` opens.
-# TODO(Iunir, 09/2026): Replace with a budget per capability. A text query sits under a
-# key press, and an image or a video needs a much higher read ceiling.
-_DEFAULT_TIMEOUT_SECONDS = 30.0
-
 
 def build_client(url: str) -> httpx.Client:
     """Open a client against ``url``.
@@ -25,15 +20,17 @@ def build_client(url: str) -> httpx.Client:
     ``follow_redirects`` stays off, which is also the default of httpx. A redirect would
     carry the batch, and the bearer token with it, to an address that nobody configured.
 
+    The client carries no budget of its own. The right ceiling depends on what a request
+    carries, so ``RemoteTransport`` puts the budget of the capability on each request, out
+    of ``RemoteTimeouts``.
+
     The embedder owns this client and closes it in ``RemoteEmbedder.close``. A registered
     embedder is never closed, because ``EmbedderRegistry`` holds it for the lifetime of the
     process and offers no teardown, so its pool lives as long as the process does.
     """
     # TODO(Iunir, 09/2026): Close a registered embedder when `EmbedderRegistry` gains a
     # teardown hook.
-    return httpx.Client(
-        base_url=url, follow_redirects=False, timeout=httpx.Timeout(_DEFAULT_TIMEOUT_SECONDS)
-    )
+    return httpx.Client(base_url=url, follow_redirects=False)
 
 
 def log_if_loading(description: DescribeResponse, client: httpx.Client) -> None:

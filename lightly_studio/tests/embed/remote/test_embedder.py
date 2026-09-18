@@ -32,6 +32,10 @@ DIMENSION = 2
 BASE_URL = "http://embedding-server"
 ROW = [0.5, -0.5]
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:You should not use the 'timeout' argument with the TestClient:DeprecationWarning"
+)
+
 
 class _FakeEmbedder(Embedder):
     """Records every batch it is handed and returns one fixed row per item.
