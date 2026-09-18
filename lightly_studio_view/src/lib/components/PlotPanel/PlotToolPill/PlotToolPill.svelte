@@ -51,7 +51,7 @@
     });
 </script>
 
-<!-- Bottom-centered. The legend sits top-left, so neither has to give up width for the other. -->
+<!-- Bottom-centered. The legend sits top-right, so neither has to give up width for the other. -->
 <div
     class="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
     data-testid="plot-tool-pill"
