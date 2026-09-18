@@ -17,6 +17,11 @@ fsspec, so the path can also be a URI into object storage, e.g.
 fetched, so a remote recording does not have to be downloaded first. Credentials are
 read from the environment, e.g. from the `AWS_*` variables; pass `storage_options` to
 `McapFileReader` to set them, or an endpoint, explicitly.
+
+Prerequisites — install the optional extras before running::
+
+    uv run --extra mcap python src/lightly_studio/examples/example_mcap.py
+    # For S3 URIs also add: --extra cloud-storage
 """
 
 from __future__ import annotations

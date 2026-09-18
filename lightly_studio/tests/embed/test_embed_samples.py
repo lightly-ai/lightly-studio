@@ -20,12 +20,6 @@ from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
-from lightly_studio.dataset import embedding_manager
-from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManager,
-    EmbeddingManagerProvider,
-)
 from lightly_studio.embed import embed_samples, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
@@ -147,14 +141,6 @@ class _DropInputEmbedder(ImagePathEmbedder, TextEmbedder):
 
 
 @pytest.fixture
-def patched_manager(mocker: MockerFixture) -> EmbeddingManager:
-    """Route embed_samples to a fresh manager so tests never touch the shared singleton."""
-    manager = EmbeddingManager()
-    mocker.patch.object(EmbeddingManagerProvider, "get_embedding_manager", return_value=manager)
-    return manager
-
-
-@pytest.fixture
 def patched_registry(mocker: MockerFixture) -> EmbedderRegistry:
     """Route embed_samples to a fresh registry so tests never touch the shared singleton."""
     registry = EmbedderRegistry()
@@ -166,12 +152,10 @@ def patched_registry(mocker: MockerFixture) -> EmbedderRegistry:
 @pytest.mark.usefixtures("patched_registry")
 def test_embed_image_for_collection(
     db_session: Session,
-    patched_manager: EmbeddingManager,
 ) -> None:
     """A single image is embedded via the registry with the collection's default model, unstored."""
     collection = create_collection(session=db_session)
     _register_default_random_model(
-        manager=patched_manager,
         session=db_session,
         collection_id=collection.collection_id,
     )
@@ -201,14 +185,11 @@ def test_embed_image_for_collection__no_default_model(
 
 def test_embed_image_for_collection__no_embedder_for_space_raises(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
 ) -> None:
     """With a default model but no embedder for its space, the query raises."""
     collection = create_collection(session=db_session)
-    _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=collection.collection_id
-    )
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
@@ -222,14 +203,11 @@ def test_embed_image_for_collection__no_embedder_for_space_raises(
 
 def test_embed_image_for_collection__no_embedding_raises(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
 ) -> None:
     """When the embedder drops the image, the query raises instead of an IndexError."""
     collection = create_collection(session=db_session)
-    _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=collection.collection_id
-    )
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
     registry = EmbedderRegistry()
     registry.register(embedder=_DropInputEmbedder())
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
@@ -245,12 +223,10 @@ def test_embed_image_for_collection__no_embedding_raises(
 @pytest.mark.usefixtures("patched_registry")
 def test_embed_text_for_collection(
     db_session: Session,
-    patched_manager: EmbeddingManager,
 ) -> None:
     """A text query is embedded via the registry with the collection's default model."""
     collection = create_collection(session=db_session)
     _register_default_random_model(
-        manager=patched_manager,
         session=db_session,
         collection_id=collection.collection_id,
         dimension=3,
@@ -279,14 +255,11 @@ def test_embed_text_for_collection__no_default_model(
 
 def test_embed_text_for_collection__no_embedder_for_space_raises(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
 ) -> None:
     """With a default model but no embedder for its space, the query raises."""
     collection = create_collection(session=db_session)
-    _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=collection.collection_id
-    )
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
@@ -298,14 +271,11 @@ def test_embed_text_for_collection__no_embedder_for_space_raises(
 
 def test_embed_text_for_collection__no_embedding_raises(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
 ) -> None:
     """When the embedder drops the text, the query raises instead of an IndexError."""
     collection = create_collection(session=db_session)
-    _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=collection.collection_id
-    )
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
     registry = EmbedderRegistry()
     registry.register(embedder=_DropInputEmbedder())
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
@@ -319,7 +289,6 @@ def test_embed_text_for_collection__no_embedding_raises(
 @pytest.mark.usefixtures("patched_registry")
 def test_embed_image_samples(
     db_session: Session,
-    patched_manager: EmbeddingManager,
 ) -> None:
     """Image samples are stored under the collection's default model, embedded by the registry."""
     collection = create_collection(session=db_session)
@@ -329,7 +298,7 @@ def test_embed_image_samples(
         images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
     )
     model_id = _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=collection.collection_id
+        session=db_session, collection_id=collection.collection_id
     )
     sample_ids = [sample.sample_id for sample in samples]
 
@@ -343,19 +312,11 @@ def test_embed_image_samples(
     assert count == len(sample_ids)
 
 
-@pytest.mark.usefixtures("patched_registry", "patched_manager")
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_image_samples__no_default_registers_registry_default(
     db_session: Session,
-    mocker: MockerFixture,
 ) -> None:
     """With no default model, the registry's image embedder is used and set as default."""
-    # The manager's generator shares the registry embedder's space, so the legacy bridge
-    # syncs the same default instead of registering a different one.
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
     collection = create_collection(session=db_session)
     samples = create_images(
         db_session=db_session,
@@ -379,16 +340,11 @@ def test_embed_image_samples__no_default_registers_registry_default(
     assert count == len(sample_ids)
 
 
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_image_samples__missing_id_bootstraps_no_default(
     db_session: Session,
-    mocker: MockerFixture,
 ) -> None:
     """A missing image ID raises before a default model is bootstrapped."""
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
     collection = create_collection(session=db_session)
     samples = create_images(
         db_session=db_session,
@@ -412,7 +368,6 @@ def test_embed_image_samples__missing_id_bootstraps_no_default(
 
 def test_embed_image_samples__no_registered_embedder_skips(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -423,9 +378,7 @@ def test_embed_image_samples__no_registered_embedder_skips(
         collection_id=collection.collection_id,
         images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
     )
-    _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=collection.collection_id
-    )
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
     sample_ids = [sample.sample_id for sample in samples]
@@ -455,21 +408,14 @@ def test_embed_image_samples__empty_ids_warns_and_skips(
     assert _stored_embeddings(session=db_session) == []
 
 
-@pytest.mark.usefixtures("patched_registry", "patched_manager")
-def test_embed_image_samples__syncs_legacy_embedding_manager(
+@pytest.mark.usefixtures("patched_registry")
+def test_embed_image_samples__enables_text_query(
     db_session: Session,
-    mocker: MockerFixture,
 ) -> None:
-    """After the registry path stores embeddings, the manager can serve a text query.
+    """After the image embed registers a default, a text query resolves the same model.
 
-    The registry path does not populate the manager's in-memory maps, so the legacy
-    bridge re-registers the default. This mirrors the e2e flow of indexing then searching.
+    This mirrors the e2e flow of indexing then searching over the shared registry.
     """
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
     collection = create_collection(session=db_session)
     samples = create_images(
         db_session=db_session,
@@ -492,12 +438,11 @@ def test_embed_image_samples__syncs_legacy_embedding_manager(
 @pytest.mark.usefixtures("patched_registry")
 def test_embed_annotation_collection(
     db_session: Session,
-    patched_manager: EmbeddingManager,
 ) -> None:
     """Annotation crops are stored under the collection's default model, via the registry."""
     annotation_collection_id = _create_annotation_collection(session=db_session)
     model_id = _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=annotation_collection_id
+        session=db_session, collection_id=annotation_collection_id
     )
 
     embed_samples.embed_annotation_collection(
@@ -510,19 +455,11 @@ def test_embed_annotation_collection(
     assert count == 1
 
 
-@pytest.mark.usefixtures("patched_registry", "patched_manager")
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_annotation_collection__no_default_registers_registry_default(
     db_session: Session,
-    mocker: MockerFixture,
 ) -> None:
     """With no default model, the registry's crop embedder is used and set as default."""
-    # The manager's generator shares the registry embedder's space, so the legacy bridge
-    # syncs the same default instead of registering a different one.
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
     annotation_collection_id = _create_annotation_collection(session=db_session)
 
     embed_samples.embed_annotation_collection(
@@ -542,15 +479,12 @@ def test_embed_annotation_collection__no_default_registers_registry_default(
 
 def test_embed_annotation_collection__no_registered_embedder_skips(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """With a default model but no embedder for its space, annotation embedding is skipped."""
     annotation_collection_id = _create_annotation_collection(session=db_session)
-    _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=annotation_collection_id
-    )
+    _register_default_random_model(session=db_session, collection_id=annotation_collection_id)
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
@@ -565,7 +499,6 @@ def test_embed_annotation_collection__no_registered_embedder_skips(
 
 def test_embed_annotation_collection__stores_only_kept_crops(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
 ) -> None:
     """Crops the embedder drops are left out, and kept vectors match their annotation IDs."""
@@ -595,7 +528,7 @@ def test_embed_annotation_collection__stores_only_kept_crops(
         sample_type=SampleType.ANNOTATION,
     )
     model_id = _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=annotation_collection_id
+        session=db_session, collection_id=annotation_collection_id
     )
     registry = EmbedderRegistry()
     registry.register(embedder=_BoxXImageCropEmbedder())
@@ -619,7 +552,6 @@ def test_embed_annotation_collection__stores_only_kept_crops(
 
 def test_embed_video_samples(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
 ) -> None:
     """The registry embedder's vectors are stored against the matching video sample IDs."""
@@ -634,7 +566,6 @@ def test_embed_video_samples(
         ],
     )
     model_id = _register_default_random_model(
-        manager=patched_manager,
         session=db_session,
         collection_id=video_collection.collection_id,
         dimension=2,
@@ -656,19 +587,11 @@ def test_embed_video_samples(
     assert stored == {video_ids[0]: [0.0, 0.0], video_ids[1]: [1.0, 1.0]}
 
 
-@pytest.mark.usefixtures("patched_registry", "patched_manager")
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_video_samples__no_default_registers_registry_default(
     db_session: Session,
-    mocker: MockerFixture,
 ) -> None:
     """With no default model, the registry's video embedder is used and set as default."""
-    # The manager's generator shares the registry embedder's space, so the legacy bridge
-    # syncs the same default instead of registering a different one.
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video_ids = create_videos(
         session=db_session,
@@ -693,16 +616,11 @@ def test_embed_video_samples__no_default_registers_registry_default(
     assert count == len(video_ids)
 
 
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_video_samples__missing_id_bootstraps_no_default(
     db_session: Session,
-    mocker: MockerFixture,
 ) -> None:
     """A missing video ID raises before a default model is bootstrapped."""
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video_ids = create_videos(
         session=db_session,
@@ -726,7 +644,6 @@ def test_embed_video_samples__missing_id_bootstraps_no_default(
 
 def test_embed_video_samples__no_registered_embedder_skips(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -737,9 +654,7 @@ def test_embed_video_samples__no_registered_embedder_skips(
         collection_id=video_collection.collection_id,
         videos=[VideoStub(path="/videos/video_0.mp4")],
     )
-    _register_default_random_model(
-        manager=patched_manager, session=db_session, collection_id=video_collection.collection_id
-    )
+    _register_default_random_model(session=db_session, collection_id=video_collection.collection_id)
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
@@ -770,7 +685,6 @@ def test_embed_video_samples__empty_ids_warns_and_skips(
 
 def test_embed_frame_samples(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
 ) -> None:
     """The registry embedder's vectors are stored against the matching frame sample IDs."""
@@ -781,7 +695,6 @@ def test_embed_frame_samples(
         video=VideoStub(duration_s=1.0, fps=3.0),
     )
     model_id = _register_default_random_model(
-        manager=patched_manager,
         session=db_session,
         collection_id=frames.video_frames_collection_id,
     )
@@ -812,19 +725,11 @@ def test_embed_frame_samples(
     }
 
 
-@pytest.mark.usefixtures("patched_registry", "patched_manager")
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_frame_samples__no_default_registers_registry_default(
     db_session: Session,
-    mocker: MockerFixture,
 ) -> None:
     """With no default model, the registry's PIL embedder is used and set as default."""
-    # The manager's generator shares the registry embedder's space, so the legacy bridge
-    # syncs the same default instead of registering a different one.
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
-    )
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     frames = create_video_with_frames(
         session=db_session,
@@ -855,7 +760,6 @@ def test_embed_frame_samples__no_default_registers_registry_default(
 
 def test_embed_frame_samples__no_registered_embedder_skips(
     db_session: Session,
-    patched_manager: EmbeddingManager,
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -867,7 +771,6 @@ def test_embed_frame_samples__no_registered_embedder_skips(
         video=VideoStub(duration_s=1.0, fps=3.0),
     )
     _register_default_random_model(
-        manager=patched_manager,
         session=db_session,
         collection_id=frames.video_frames_collection_id,
     )
@@ -973,16 +876,16 @@ def test_has_frame_embedder__false_when_default_space_unavailable(
 
 
 def _register_default_random_model(
-    manager: EmbeddingManager,
     session: Session,
     collection_id: UUID,
     dimension: int = 3,
 ) -> UUID:
-    """Register a random embedding generator as the collection's default and return its model ID."""
-    return manager.register_embedding_model(
+    """Register the random embedder's space as the collection's default and return its model ID."""
+    return create_embedding_model(
         session=session,
-        embedding_generator=RandomEmbeddingGenerator(dimension=dimension),
         collection_id=collection_id,
+        embedding_model_name="random_model",
+        embedding_dimension=dimension,
         set_as_default=True,
     ).embedding_model_id
 
