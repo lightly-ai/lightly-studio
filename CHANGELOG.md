@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Speed up coloring the embedding plot by tags on large datasets by up to 2x.
 - Show loading spinners in distribution plots in the GUI. 
 - Preselected samples are now part of the sampling result.
 - Move each docs page into a folder named for its nav section. The old URLs redirect.
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Categorical distribution requests are now up to 80% faster by fetching only the selected field.
 - Fix `hf://` directory ingest reporting every file as missing.
 - Fix the distribution panel and annotation class counts not updating when a filter changes.
 - Speed up the initial page load in the GUI by up to ~3.5 seconds by no longer loading the query editor on every page.

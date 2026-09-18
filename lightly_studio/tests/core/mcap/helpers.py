@@ -15,6 +15,7 @@ from mcap_ros2.writer import Writer
 CAMERA_VIDEO_TOPIC = "/cam/front/compressed_video"
 CAMERA_INFO_TOPIC = "/cam/front/camera_info"
 LIDAR_POINTS_TOPIC = "/lidar/points"
+CAMERA_IMAGE_TOPIC = "/cam/front/compressed_image"
 STATIC_TRANSFORM_TOPIC = "/tf_static"
 
 CAMERA_FRAME_ID = "cam_front_optical"
@@ -33,6 +34,10 @@ STATIC_TRANSFORM_LOG_TIME_NS = 900_000_000
 CAMERA_MATRIX = (600.0, 0.0, 320.0, 0.0, 600.0, 240.0, 0.0, 0.0, 1.0)
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 480
+
+# The log times of the compressed-image frames, one every 100 ms.
+IMAGE_LOG_TIMES_NS = (1_000_000_000, 1_100_000_000, 1_200_000_000)
+IMAGE_FORMAT = "jpeg"
 
 _HEADER_MSGDEF = """
 ================================================================================
@@ -73,6 +78,13 @@ uint32 width
 bool do_rectify
 """
 )
+
+_COMPRESSED_IMAGE_MSGDEF = """
+builtin_interfaces/Time timestamp
+string frame_id
+uint8[] data
+string format
+"""
 
 _POINT_CLOUD_MSGDEF = (
     """
@@ -178,6 +190,30 @@ def write_mcap(path: Path) -> Path:
     return path
 
 
+def write_mcap_with_compressed_image(path: Path) -> Path:
+    """Writes an MCAP with a compressed-image camera topic, for camera-frame tests.
+
+    Args:
+        path: The path to write the file to.
+
+    Returns:
+        The path of the written file.
+    """
+    writer = Writer(output=str(path))
+    image_schema = writer.register_msgdef(
+        datatype="foxglove_msgs/msg/CompressedImage", msgdef_text=_COMPRESSED_IMAGE_MSGDEF
+    )
+    for log_time_ns in IMAGE_LOG_TIMES_NS:
+        writer.write_message(
+            topic=CAMERA_IMAGE_TOPIC,
+            schema=image_schema,
+            message=_compressed_image_message(log_time_ns),
+            log_time=log_time_ns,
+        )
+    writer.finish()
+    return path
+
+
 def write_unchunked_mcap(path: Path) -> Path:
     """Writes an MCAP file with a summary but no chunk index.
 
@@ -197,6 +233,38 @@ def write_unchunked_mcap(path: Path) -> Path:
         channel_id=channel_id, log_time=LIDAR_LOG_TIMES_NS[0], data=b"", publish_time=0
     )
     writer.finish()
+    return path
+
+
+def write_mcap_with_undecodable_compressed_image(path: Path) -> Path:
+    """Writes an MCAP whose compressed-image topic has no decoder.
+
+    The schema name marks the topic as an image, but its encoding is unknown, so no
+    decoder factory can read the payloads.
+
+    Args:
+        path: The path to write the file to.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        schema_id = writer.register_schema(
+            name="foxglove_msgs/msg/CompressedImage", encoding="unknown", data=b""
+        )
+        channel_id = writer.register_channel(
+            topic=CAMERA_IMAGE_TOPIC, message_encoding="unknown", schema_id=schema_id
+        )
+        for log_time_ns in IMAGE_LOG_TIMES_NS:
+            writer.add_message(
+                channel_id=channel_id,
+                log_time=log_time_ns,
+                publish_time=log_time_ns,
+                data=compressed_image_payload(log_time_ns),
+            )
+        writer.finish()
     return path
 
 
@@ -294,6 +362,11 @@ def write_mcap_with_malformed_json_video(path: Path) -> Path:
     return path
 
 
+def compressed_image_payload(log_time_ns: int) -> bytes:
+    """Returns a distinguishable fake encoded-image payload for a given log time."""
+    return f"{IMAGE_FORMAT}-bytes-{log_time_ns}".encode()
+
+
 def h265_keyframe(payload: bytes = b"\x00\x01\x02") -> bytes:
     """Returns an Annex B H.265 frame holding an IDR picture."""
     return b"\x00\x00\x00\x01\x26\x01" + payload
@@ -312,6 +385,15 @@ def h264_keyframe(payload: bytes = b"\x00\x01\x02") -> bytes:
 def h264_delta_frame(payload: bytes = b"\x00\x01\x02") -> bytes:
     """Returns an Annex B H.264 frame holding a non-IDR picture."""
     return b"\x00\x00\x00\x01\x41" + payload
+
+
+def _compressed_image_message(log_time_ns: int) -> dict[str, Any]:
+    return {
+        "timestamp": _time(log_time_ns),
+        "frame_id": CAMERA_FRAME_ID,
+        "data": compressed_image_payload(log_time_ns),
+        "format": IMAGE_FORMAT,
+    }
 
 
 def _compressed_video_message(log_time_ns: int) -> dict[str, Any]:
