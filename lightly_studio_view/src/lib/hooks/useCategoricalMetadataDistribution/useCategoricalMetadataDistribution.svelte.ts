@@ -58,24 +58,29 @@ export const selectCategoricalDistributions = (
 export interface CategoricalMetadataDistributionOptions {
     collectionId: string;
     filter?: ImageFilter;
+    fields?: string[];
 }
 
 export const getCategoricalMetadataDistributionRequestOptions = ({
     collectionId,
-    filter
+    filter,
+    fields
 }: CategoricalMetadataDistributionOptions) => ({
     path: { collection_id: collectionId },
-    ...(filter ? { body: { filters: filter } } : {})
+    ...(filter || fields
+        ? { body: { ...(filter ? { filters: filter } : {}), ...(fields ? { fields } : {}) } }
+        : {})
 });
 
 export const useCategoricalMetadataDistribution = (
     getOptions: () => CategoricalMetadataDistributionOptions & { enabled?: boolean }
 ) =>
     createQuery(() => {
-        const { collectionId, filter, enabled = true } = getOptions();
+        const { collectionId, filter, fields, enabled = true } = getOptions();
         const requestOptions = getCategoricalMetadataDistributionRequestOptions({
             collectionId,
-            filter
+            filter,
+            fields
         });
         return {
             ...getMetadataValueCountsOptions(requestOptions),
