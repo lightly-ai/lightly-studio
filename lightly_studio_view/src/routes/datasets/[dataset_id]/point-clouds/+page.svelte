@@ -4,7 +4,8 @@
     import { routeHelpers } from '$lib/routes';
     import GridContainer from '$lib/components/GridContainer/GridContainer.svelte';
 
-    const collectionId = $derived(page.params.dataset_id!);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionId = $derived(page.url.searchParams.get('collection_id') ?? datasetId);
     const { data: sequences, loadMore, query } = useMcapSequences(() => collectionId);
 </script>
 
@@ -38,7 +39,7 @@
                     <a
                         class="rounded-lg border p-4 transition-colors hover:bg-muted"
                         href={routeHelpers.toPointCloudLabeling({
-                            datasetId: collectionId,
+                            datasetId,
                             collectionId,
                             sampleId: sequence.sample_id
                         })}

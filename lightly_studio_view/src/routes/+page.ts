@@ -23,7 +23,7 @@ export const load = async () => {
     if (sampleType == 'sequence') {
         redirect(
             307,
-            `/datasets/${mostRecentRootDataset.collection_id}/point-clouds`
+            `/datasets/${mostRecentRootDataset.dataset_id}/point-clouds?collection_id=${mostRecentRootDataset.collection_id}`
         );
     } 
 
