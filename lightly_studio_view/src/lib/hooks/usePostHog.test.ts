@@ -9,6 +9,8 @@ vi.mock('$lib/version.json', () => ({
 }));
 
 const INSTALL_ID = '0199f1a2-b775-76b8-9b09-c2fd260c67c1';
+// A distinct id posthog generates for an anonymous visitor, before anyone identifies.
+const ANONYMOUS_ID = '0198aaaa-0000-7000-8000-000000000000';
 const CONFIG = {
     install_id: INSTALL_ID,
     posthog_key: 'prod-key',
@@ -19,7 +21,7 @@ const mockInit = vi.fn();
 const mockCapture = vi.fn();
 const mockRegister = vi.fn();
 const mockIdentify = vi.fn();
-const mockIsIdentified = vi.fn();
+const mockGetDistinctId = vi.fn();
 
 vi.mock('posthog-js', () => ({
     default: {
@@ -27,7 +29,7 @@ vi.mock('posthog-js', () => ({
         capture: (...args: unknown[]) => mockCapture(...args),
         register: (...args: unknown[]) => mockRegister(...args),
         identify: (...args: unknown[]) => mockIdentify(...args),
-        _isIdentified: () => mockIsIdentified()
+        get_distinct_id: () => mockGetDistinctId()
     }
 }));
 
@@ -47,9 +49,9 @@ describe('usePostHog', () => {
         mockCapture.mockClear();
         mockRegister.mockClear();
         mockIdentify.mockClear();
-        mockIsIdentified.mockReset();
-        // Nobody identified yet is the common OSS case.
-        mockIsIdentified.mockReturnValue(false);
+        mockGetDistinctId.mockReset();
+        // Nobody identified yet is the common OSS case: posthog holds an anonymous id.
+        mockGetDistinctId.mockReturnValue(ANONYMOUS_ID);
         mockGetFeatures.mockReset();
         mockGetFeatures.mockResolvedValue({ data: ['analytics'] });
         mockGetAnalyticsConfig.mockReset();
@@ -70,8 +72,8 @@ describe('usePostHog', () => {
         expect(mockRegister).toHaveBeenCalledWith({ app_version: '1.2.3' });
     });
 
-    it('should identify with the backend install id when nobody is identified yet', async () => {
-        mockIsIdentified.mockReturnValue(false);
+    it('should identify with the backend install id when the visitor is anonymous', async () => {
+        mockGetDistinctId.mockReturnValue(ANONYMOUS_ID);
 
         const { init } = await freshPostHog();
         await init();
@@ -79,14 +81,23 @@ describe('usePostHog', () => {
         expect(mockIdentify).toHaveBeenCalledWith(INSTALL_ID);
     });
 
-    it('should keep an existing identity instead of overwriting it with the install id', async () => {
-        mockIsIdentified.mockReturnValue(true);
+    it('should keep an enterprise user identified by email instead of the install id', async () => {
+        mockGetDistinctId.mockReturnValue('user@lightly.ai');
 
         const { init } = await freshPostHog();
         await init();
 
         expect(mockInit).toHaveBeenCalled();
         expect(mockIdentify).not.toHaveBeenCalled();
+    });
+
+    it('should reconcile a stale install id to the current one', async () => {
+        mockGetDistinctId.mockReturnValue('0199aaaa-b775-76b8-9b09-000000000000');
+
+        const { init } = await freshPostHog();
+        await init();
+
+        expect(mockIdentify).toHaveBeenCalledWith(INSTALL_ID);
     });
 
     it('should not initialize when the config request fails', async () => {
