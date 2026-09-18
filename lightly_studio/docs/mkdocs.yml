@@ -194,7 +194,7 @@ nav:
     - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
     - "Tutorial 2: Evaluate YOLO26 on Your Dataset with LightlyStudio": tutorials/yolo26-model-evaluation.md
     - "Tutorial 3: Explore LightlyTrain Embeddings in LightlyStudio": tutorials/lightlytrain-embeddings.md
-    - "Tutorial 4: Explore and Annotate Imagenette with Embeddings": tutorials/imagenette-image-embeddings.md
+    - "Tutorial 4: Explore and Annotate Images with Embeddings": tutorials/imagenette-image-embeddings.md
   - Enterprise:
     - Overview: enterprise/index.md
     - Collaboration and Permissions: enterprise/collaboration.md

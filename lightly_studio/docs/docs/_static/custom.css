@@ -2087,6 +2087,60 @@ code.doc-symbol-module {
   text-transform: none;
 }
 
+/* Inline GUI icons, so prose that names a button can show it. Write
+   `<span class="ls-inline-icon ls-inline-icon--embed"></span>` after the bold
+   button name. Same technique as the doc badge below: the glyph is a data-URI
+   SVG used as a mask, so it is painted in `currentcolor` and follows the text
+   into dark mode.
+
+   A mask reads alpha only, so each glyph has to carry whatever paints it. The
+   Lucide icons below are strokes on an empty fill and need the stroke attributes
+   on the SVG itself, or they mask to nothing; the embedding-atlas ones are
+   filled paths and need nothing. Either way the color is arbitrary — only the
+   alpha reaches the mask.
+
+   `--ls-inline-icon--embed` is Lucide `chart-network`, the icon the GUI renders
+   for the Embed tab (see `SidePanelTabs.svelte`). The rectangle and lasso icons
+   are the selection buttons of the embedding-atlas plot toolbar, which the GUI
+   embeds as-is (see `PlotPanel.svelte`); upstream calls the rectangle one
+   `marquee`. Re-check them against the package when embedding-atlas is bumped,
+   since they are copied out of its bundle rather than imported. */
+:root {
+  --ls-inline-icon--embed: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13.11 7.664 1.78 2.672"/><path d="m14.162 12.788-3.324 1.424"/><path d="m20 4-6.06 1.515"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><circle cx="12" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="9" cy="15" r="2"/></svg>');
+  --ls-inline-icon--lasso: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.703 2.265A10 10 0 0 1 12 2c.79 0 1.559.092 2.297.265a.75.75 0 1 1-.343 1.46A8.5 8.5 0 0 0 12 3.5a8.6 8.6 0 0 0-1.954.225a.75.75 0 1 1-.343-1.46m-1.93 1.47a.75.75 0 0 1-.242 1.033a8.55 8.55 0 0 0-2.763 2.763a.75.75 0 1 1-1.275-.79a10.05 10.05 0 0 1 3.248-3.248a.75.75 0 0 1 1.032.243m8.454 0a.75.75 0 0 1 1.032-.242a10.05 10.05 0 0 1 3.248 3.248a.75.75 0 1 1-1.275.79a8.55 8.55 0 0 0-2.763-2.763a.75.75 0 0 1-.242-1.032m-13.06 5.41a.75.75 0 0 1 .558.901A8.5 8.5 0 0 0 3.5 12c0 .673.078 1.327.225 1.954a.75.75 0 1 1-1.46.343A10 10 0 0 1 2 12c0-.79.092-1.559.265-2.297a.75.75 0 0 1 .902-.559m17.666 0a.75.75 0 0 1 .902.558a10.1 10.1 0 0 1 0 4.595a.75.75 0 1 1-1.46-.343a8.54 8.54 0 0 0-.001-3.908a.75.75 0 0 1 .559-.902M3.736 16.226a.75.75 0 0 1 1.032.242a8.55 8.55 0 0 0 2.763 2.763a.75.75 0 0 1-.79 1.275a10.05 10.05 0 0 1-3.248-3.248a.75.75 0 0 1 .243-1.032m16.685.858a.75.75 0 1 0-1.342-.67l-.002.004l-.015.029l-.069.123a8 8 0 0 1-.289.466a9.6 9.6 0 0 1-.965 1.219c-1.17-1.073-2.756-2.006-4.74-2.006c-2.347 0-3.99 1.203-3.99 2.875S10.653 22 13 22c1.942 0 3.495-.75 4.658-1.645a11.7 11.7 0 0 1 1.315 2.01q.05.099.073.149l.017.035l.004.009a.75.75 0 0 0 1.368-.615c-.087-.183 0-.001 0-.001v-.002l-.003-.004l-.007-.015l-.024-.052l-.091-.184a13.2 13.2 0 0 0-1.538-2.337a11 11 0 0 0 1.525-2.032l.09-.162l.024-.047l.007-.014l.002-.005zM13 17.75c1.433 0 2.644.652 3.616 1.512c-.95.7-2.155 1.238-3.616 1.238c-1.973 0-2.49-.922-2.49-1.375s.517-1.375 2.49-1.375"/></svg>');
+  --ls-inline-icon--rectangle: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 5a2 2 0 1 1-4 0a2 2 0 0 1 4 0m1-.25c0 .414.336.75.75.75h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0-.75.75M4.75 8a.75.75 0 0 0-.75.75v6.5a.75.75 0 0 0 1.5 0v-6.5A.75.75 0 0 0 4.75 8m14.5 0a.75.75 0 0 0-.75.75v6.5a.75.75 0 0 0 1.5 0v-6.5a.75.75 0 0 0-.75-.75M8.75 20a.75.75 0 0 1 0-1.5h6.5a.75.75 0 0 1 0 1.5zM5 21a2 2 0 1 0 0-4a2 2 0 0 0 0 4M21 5a2 2 0 1 1-4 0a2 2 0 0 1 4 0m-2 16a2 2 0 1 0 0-4a2 2 0 0 0 0 4"/></svg>');
+}
+
+/* Sized in `em` so the icon tracks the surrounding text. The negative
+   `vertical-align` drops the box from the baseline to sit optically centered on
+   the x-height, as the glyph is drawn to the full 24px viewBox. */
+.md-typeset .ls-inline-icon {
+  background-color: currentcolor;
+  display: inline-block;
+  height: 1em;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  vertical-align: -0.15em;
+  width: 1em;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
+.md-typeset .ls-inline-icon--embed {
+  mask-image: var(--ls-inline-icon--embed);
+  -webkit-mask-image: var(--ls-inline-icon--embed);
+}
+
+.md-typeset .ls-inline-icon--lasso {
+  mask-image: var(--ls-inline-icon--lasso);
+  -webkit-mask-image: var(--ls-inline-icon--lasso);
+}
+
+.md-typeset .ls-inline-icon--rectangle {
+  mask-image: var(--ls-inline-icon--rectangle);
+  -webkit-mask-image: var(--ls-inline-icon--rectangle);
+}
+
 /* Inline status badges rendered inside a docstring (see the API reference).
    Add `<span class="doc-badge doc-badge--beta">Beta</span>` at the top of a
    class or method docstring; omit it for stable members. */

@@ -1,26 +1,27 @@
-# Explore and annotate Imagenette with embeddings
+# Explore and annotate images with embeddings
 
-In this tutorial, you explore the Imagenette dataset in LightlyStudio and use image
-similarity to guide labeling. Reviewing images one at a time is slow. Embeddings put
-similar images next to each other, so you can review a whole group at once.
+In this tutorial, you explore the [Imagenette](https://github.com/fastai/imagenette)
+dataset in LightlyStudio and use image similarity to guide labeling. Reviewing images one
+at a time is slow. Embeddings put similar images next to each other, so you can review a
+whole group at once and give all of its images the same annotation class in one action.
 
 You will:
 
 - Import 9,469 raw images across 10 classes.
-- Explore the embedding plot and find groups of similar images.
-- Use the lasso, the legend, and the `Color by` control to inspect those groups.
-- Annotate a reviewed group.
+- Explore the embedding plot, and use the lasso to select groups of similar images.
+- Review a selected group and annotate all of it in one action.
+- Use the legend and the `Color by` control to inspect your annotations.
 - Load the ground truth of the dataset and measure your agreement with it.
 - Export your work.
 
-<!-- Screenshot 1: the embedding plot over the full dataset, with a hovered image preview.
-Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/embedding-overview.jpg
-then replace this comment with:
-![The embedding plot over the full Imagenette dataset](https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/embedding-overview.jpg){ width="100%" }
--->
+<!-- TODO: temporary local screenshot. Upload to
+https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/embedding-overview.jpg
+and replace the path below with that URL. -->
 
-> **Screenshot 1 (placeholder):** The embedding plot over the full dataset, with a hovered
-> image preview.
+<figure markdown>
+  <img src="../tutorial_image_1.png" alt="The finished dataset. The sidebar lists ten annotation classes, and the embedding plot colored by annotation shows ten separated groups" style="width: 100%; border-radius: 6px;">
+  <figcaption>The finished dataset, with the embedding plot colored by annotation class.</figcaption>
+</figure>
 
 An embedding represents an image as a numerical vector. Images with similar visual or
 semantic content get nearby embeddings. LightlyStudio projects these vectors into a
@@ -31,8 +32,7 @@ groups, export your progress, and return to the remaining images later.
 
 ## Step 1: Download the dataset
 
-[Imagenette](https://github.com/fastai/imagenette) is a subset of ImageNet with 10 classes,
-assembled by fast.ai. The classes are easy to tell apart, which makes the dataset a good
+Imagenette is a subset of ImageNet with 10 classes, assembled by fast.ai. The classes are easy to tell apart, which makes the dataset a good
 fit for this workflow: you can recognize a church or a parachute without a reference.
 
 This tutorial uses the 320 px variant, where each image has a shortest side of 320 pixels.
@@ -97,7 +97,6 @@ imagenette-tutorial/
 ├── imagenette2-320.tgz
 └── data/
     └── imagenette2-320/
-        ├── noisy_imagenette.csv
         ├── train/
         │   ├── n01440764/
         │   │   ├── n01440764_10026.JPEG
@@ -127,15 +126,11 @@ class of a folder:
 
 The `train/` split has between 858 and 993 images per class.
 
-The folder name is also the ground truth of the dataset. In step 8 you load it into
+The folder name is also the ground truth of the dataset. In step 7 you load it into
 LightlyStudio and compare it against your own work.
 
-`noisy_imagenette.csv` holds the same reference classes, together with variants that have
-deliberate noise. This tutorial does not use the file. Keep it if you want to experiment with
-noisy annotations later.
-
 Imagenette is a subset of ImageNet, so the terms of ImageNet apply to the images. See the
-[Imagenette repository](https://github.com/fastai/imagenette) for its license note.
+Imagenette repository for its license note.
 
 ## Step 2: Import the images
 
@@ -164,37 +159,35 @@ Run it from that directory:
 python explore_imagenette.py
 ```
 
-LightlyStudio indexes the raw images and computes image embeddings during ingestion.
-`add_images_from_path` embeds by default, so there is no separate step and no button in
-the GUI to compute embeddings. The first run needs time to download the embedding model
-and process every image.
+<figure markdown>
+  <img src="../tutorial_image_2.png" alt="The grid view after the import, filled with Imagenette images" style="width: 100%; border-radius: 6px;">
+  <figcaption>After all images load, the main view shows all Imagenette images.</figcaption>
+</figure>
 
-Wait for ingestion to finish and check the output for skipped images before you continue.
-Resolve any skipped files rather than treating the import as complete.
+LightlyStudio computes the image embeddings during ingestion, so there is no separate step
+and no button in the GUI to compute them. The first run also downloads the embedding model,
+which makes it slower than later runs.
 
-`tag_depth=1` tags each image with the name of its first folder below the import path. Each
-image gets one tag, its WordNet ID. These tags come from the dataset, not from annotations
-that you created. This tutorial asks you to annotate the images from what you see in them, so
-leave the tags alone until step 8.
-
-Embeddings and annotations persist in `lightly_studio.db` in the working directory.
-Rerunning the script with the same database and dataset name reuses existing samples and
-embeddings, and skips images that are already present. Keep the original images at their
-imported paths.
-
-If you already have embeddings, follow
-[Loading precomputed embeddings](../core_concepts/embeddings.md#loading-precomputed-embeddings)
-instead. Register the custom generator before ingestion.
+`tag_depth=1` tags each image with the name of its folder, its WordNet ID. These tags come
+from the dataset, not from annotations that you created, so leave them alone until step 7.
 
 ## Step 3: Explore the embedding plot
 
-Click **Embed** in the right-hand tab rail to open the embedding plot. Each point is one
-image, placed by a two-dimensional projection (PaCMAP) of its embedding.
+Click **Embed** <span class="ls-inline-icon ls-inline-icon--embed"></span> in the right-hand
+tab rail to open the embedding plot. Each point is one image, placed by a two-dimensional
+projection of its embedding.
+
 
 !!! note "No Embed tab?"
     The tab only appears when the dataset has embeddings. If it is missing, ingestion ran
     with `embed=False` or the embedding model failed to download. Check the output of
     step 2.
+
+<figure markdown>
+  <img src="../tutorial_image_3.png" alt="The embedding plot of the Imagenette dataset, where points form distinct groups" style="width: 100%; border-radius: 6px;">
+  <figcaption>The embedding plot. Each point is one image.</figcaption>
+</figure>
+
 
 1. Scroll to zoom, and drag to pan.
 2. Hover over several points to preview their images.
@@ -207,15 +200,53 @@ group is not necessarily one class, and one class can appear in several groups. 
 proximity as a reason to inspect images together, not as proof that they share an
 annotation class.
 
+To inspect a group together, select it. The plot toolbar has a lasso button
+<span class="ls-inline-icon ls-inline-icon--lasso"></span> and a rectangle button
+<span class="ls-inline-icon ls-inline-icon--rectangle"></span>. You can also select without
+leaving normal mode:
+
+| Gesture | Result |
+| --- | --- |
+| Shift + drag | Rectangle selection. |
+| Shift + Cmd + drag (Ctrl on Windows) | Freehand lasso selection. |
+
+Draw around a small group. On release, the image grid scopes to the samples in that
+region, and an **Embedding Plot Filter** entry appears in the sidebar with the count.
+
+A lasso scopes the grid. It does not create annotations, and the plot keeps showing every
+point, highlighting the ones inside your region.
+
+A hover over a point previews its image. In the recording below, a rectangle selection scopes
+the grid to 926 images that are mostly gas pumps, and a lasso selection scopes it to 990 images
+that are mostly cassette players.
+
+<!-- TODO: temporary local video. Upload to
+https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/explore-embedding-plot.mp4
+and replace the path below with that URL. -->
+
+<figure markdown>
+  <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
+    <source src="../tutorial_video_2.mp4" type="video/mp4">
+  </video>
+  <figcaption>Zooming, hovering, and selecting a group in the embedding plot.</figcaption>
+</figure>
+
+!!! tip "Select a region, not everything"
+    A selection that covers every point counts as no filter, and the grid does not change.
+    If nothing happens, your lasso was probably too wide.
+
+Press **Esc** to clear the selection.
+
 ## Step 4: Annotate a few reference examples
 
 Choose a few clearly identifiable images from several classes. Parachutes, churches, and
 garbage trucks are easy to recognize, but use whichever examples you can identify
-confidently.
+confidently. Lasso a region from step 3 to narrow the grid first, or work from the full
+grid.
 
 Open an image's detail view and use **Add classification** to assign its class as an
 annotation class. Put every annotation that you create into one annotation source, named
-`my_labels`. Step 9 compares that source against the ground truth.
+`my_labels`. Step 8 compares that source against the ground truth.
 
 Use these exact annotation class names:
 
@@ -226,79 +257,84 @@ cassette_player    french_horn
 ```
 
 !!! warning "The names must match exactly"
-    Step 9 compares annotation classes as text. If you write `garbage truck` here and the
+    Step 8 compares annotation classes as text. If you write `garbage truck` here and the
     ground truth says `garbage_truck`, every image of that class counts as a disagreement.
     Copy the names from this list.
 
 Annotate two or three clear examples for each class you choose. If you are unsure about an
 image, consult the class table in step 1, or leave the image for later review.
 
-These examples give you visual references for exploring nearby raw images. This is a
+**Add classification** in the detail view is the right tool for a few individual images. In
+step 5 you annotate a whole group of images at once instead.
+
+These examples give you visual references for the groups you review next. This is a
 manual workflow: reference annotations do not classify their neighbors automatically.
 
-## Step 5: Lasso and inspect a group
+## Step 5: Review and annotate a group
 
-The plot toolbar has a lasso button and a rectangle button. You can also select without
-leaving normal mode:
-
-| Gesture | Result |
-| --- | --- |
-| Shift + drag | Rectangle selection. |
-| Shift + Cmd + drag (Ctrl on Windows) | Freehand lasso selection. |
-
-Draw around a small group near one of your reference examples. On release, the image grid
-scopes to the samples in that region, and an **Embedding Plot Filter** entry appears in
-the sidebar with the count.
-
-A lasso scopes the grid. It does not create annotations, and the plot keeps showing every
-point, highlighting the ones inside your region.
-
-!!! tip "Select a region, not everything"
-    A selection that covers every point counts as no filter, and the grid does not change.
-    If nothing happens, your lasso was probably too wide.
-
-Press **Esc** to clear the selection.
-
-Review the images in the scoped grid. Open unclear thumbnails in detail view. Exclude
-other classes and ambiguous images. Start with a small group so you can inspect every
-sample.
+Select a group in the embedding plot with the lasso from step 3. Review the images in the
+scoped grid. Open unclear thumbnails in detail view. Exclude other classes and ambiguous
+images. Start with a small group so you can inspect every sample.
 
 <!-- Screenshot 2: a lasso region beside its scoped image grid.
 Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/lasso-scoped-grid.jpg -->
 
 > **Screenshot 2 (placeholder):** A lasso region beside its scoped image grid.
 
-## Step 6: Annotate the reviewed group
+The images that remain share a class, so you can annotate all of them in one action
+instead of opening each image.
 
-The lasso scoped the grid to one region. Now annotate the images you reviewed.
+1. Click **Edit annotations** in the header, or press **E**. A panel appears to the right of
+   the grid. Without this step the panel stays hidden.
+2. Select the images that belong to the class. Click one image, **Shift**-click to select a
+   range, or use the **Select all** checkbox above the grid.
+3. In the panel, set **Annotation source** to `my_labels`. Type the name to create it if it
+   is not in the list.
+4. Set **Annotation class** to the class of the group. Use the names from step 4.
+5. Click **Add annotation class** and confirm. The panel heading shows how many images are
+   selected, and the dialog repeats the count before you apply.
+6. Click **Finish Editing** when you are done.
 
-Open the first image in the scoped grid, assign its class with **Add classification**,
-and use the arrow keys to step to the next image. Use the same annotation class names and the
-same `my_labels` annotation source as your reference examples.
+!!! warning "Select all follows the current view"
+    **Select all** selects every image that matches the current view, not only the images on
+    screen. With a lasso region active, that is the region. With no filter, that is all 9,469
+    images. Check the count in the panel before you apply. You cannot undo the annotations.
 
-Each image still takes one action. The gain is that you no longer hunt for related
-images or decide what each one is: the group already shares a class, so you confirm
-rather than classify from scratch. Skip any image that does not belong to the class.
+Not every group is pure. Deselect the images that do not belong before you apply, or annotate
+them one at a time in the detail view with **Add classification**.
+
+!!! note "Images that already have the class are skipped"
+    Applying a class a second time does not create a second annotation. The message after the
+    run reports how many images changed and how many already had the class.
 
 Open several annotated images again and confirm their classifications before you move on.
 
 Repeat for another group:
 
 1. Press **Esc** to clear the region.
-2. Find another group of similar images.
+2. Find another group of similar images and select it in the plot.
 3. Review the scoped grid.
 4. Annotate the images that belong to the class.
 
 Visual similarity suggests candidates. Your review decides which images get the
 annotation.
 
-<!-- Screenshot 3: the detail view with Add classification open on a scoped image.
-Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/add-classification.jpg -->
+The recording below selects a group with a rectangle, then applies the `church` annotation class
+to all of its images in **Edit annotations**. The new annotation class appears in the sidebar on
+the left.
 
-> **Screenshot 3 (placeholder):** The detail view with **Add classification** open on an
-> image from the scoped group.
+<!-- TODO: temporary local video. Upload to
+https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/bulk-annotate-group.mp4
+and replace the path below with that URL. -->
 
-## Step 7: Use the legend and restore the view
+<figure markdown>
+  <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
+    <source src="../tutorial_video_1.mp4" type="video/mp4">
+  </video>
+  <figcaption>Annotating a whole group of images in one action.</figcaption>
+</figure>
+
+## Step 6: Use the legend and restore the view
 
 Once you have created annotations, open **Color by** below the plot and choose
 **annotations**. The plot colors each point by its annotation class, and a legend appears
@@ -335,13 +371,13 @@ Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagene
 > **Screenshot 4 (placeholder):** The plot colored by annotations, with one class isolated
 > in the legend.
 
-## Step 8: Load the ground truth
+## Step 7: Load the ground truth
 
 Until now you annotated the images from what you see. Imagenette also ships a reliable class
 for every image, in its folder names. Load that as a second annotation source, then compare
 the two.
 
-Stop the GUI with ++ctrl+c++. Save the following as `load_ground_truth.py` in the same working
+Stop the GUI with **Ctrl+C**. Save the following as `load_ground_truth.py` in the same working
 directory:
 
 ```python title="load_ground_truth.py"
@@ -394,7 +430,26 @@ overwrite the annotations that you created.
     ground truth annotation. If you must run it again, delete the `ground_truth` source in the
     GUI first.
 
-## Step 9: Compare your annotations against the ground truth
+Start the GUI again to see both sources. The **Annotation Sources** section of the **Filters**
+panel on the left now has two checkboxes, `my_labels` and `ground_truth`. Select a source to
+show its annotations, and deselect it to hide them.
+
+With both sources selected, each image shows two annotations: violet for `my_labels` and red for
+`ground_truth`. Where your annotation and the ground truth disagree, the two show different
+annotation classes. The counts under **Annotation Classes** follow the selection.
+
+<!-- TODO: temporary local video. Upload to
+https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/annotation-sources.mp4
+and replace the path below with that URL. -->
+
+<figure markdown>
+  <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
+    <source src="../tutorial_video_3.mp4" type="video/mp4">
+  </video>
+  <figcaption>Selecting and deselecting annotation sources.</figcaption>
+</figure>
+
+## Step 8: Compare your annotations against the ground truth
 
 An evaluation run compares two annotation sources and stores a metric for each image. Add
 this to the end of `load_ground_truth.py`, inside the `if __name__ == "__main__":` block:
@@ -436,7 +491,7 @@ Upload to https://storage.googleapis.com/lightly-public/studio/tutorials/imagene
 For more about evaluation runs and their metrics, see
 [Model Evaluation](../workflows/evaluation.md).
 
-## Step 10: Save and export your progress
+## Step 9: Save and export your progress
 
 LightlyStudio persists your annotations in its database. To resume later, rerun
 `explore_imagenette.py` from the same working directory. Open an annotated image to verify
@@ -451,7 +506,7 @@ To export your classifications:
 4. Export the file, then check several image paths and their classes against the GUI.
 
 Select `my_labels` and not `ground_truth`. The `ground_truth` source is the reference that you
-loaded in step 8, not the work that you did.
+loaded in step 7, not the work that you did.
 
 The CSV contains classifications and image paths. It does not package the image files, so
 keep the original images and the database. Images you have not annotated stay available
@@ -463,8 +518,9 @@ For more export options, see [Export](../workflows/export.md).
 
 You imported 9,469 raw images, explored their embeddings, and used groups of similar
 images to guide labeling. Instead of deciding what every image shows, you reviewed related
-images together and confirmed a shared annotation class. Then you loaded the ground truth of
-the dataset and measured where your annotations and the ground truth disagree.
+images together and gave a whole group its shared annotation class in one action. Then you
+loaded the ground truth of the dataset and measured where your annotations and the ground
+truth disagree.
 
 Continue with more groups until you reach the coverage you need. Run the evaluation again
 after each session. The confusion matrix shows whether your accuracy holds as you move into
@@ -474,6 +530,8 @@ A follow-up workflow could use embeddings and a small set of annotated examples 
 generate nearest-neighbor suggestions. Keep suggestions in their own annotation source
 and inspect them before you accept them.
 
-Related guides: [Embeddings](../core_concepts/embeddings.md),
+Related guides: [Embeddings](../core_concepts/embeddings.md), which also shows how to
+[load precomputed embeddings](../core_concepts/embeddings.md#loading-precomputed-embeddings)
+instead of computing them at import,
 [Image Dataset](../workflows/image_dataset.md), and
 [Annotations](../workflows/annotations.md).
