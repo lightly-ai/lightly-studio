@@ -165,6 +165,7 @@ nav:
       - Sampling: workflows/sampling.md
     - Annotate:
       - Annotations: workflows/annotations.md
+      - Annotation QA: workflows/annotation_qa.md
       - Captions: workflows/captions.md
     - Evaluate:
       - Model Evaluation: workflows/evaluation.md
@@ -271,6 +272,7 @@ plugins:
           - workflows/dataset_distributions.md
           - workflows/sampling.md
           - workflows/annotations.md
+          - workflows/annotation_qa.md
           - workflows/captions.md
           - workflows/evaluation.md
           - workflows/export.md
