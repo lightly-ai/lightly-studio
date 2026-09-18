@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Python SDK: Fix an error when recomputing an instance-segmentation evaluation run.
+
 ### Security
 
 ## \[1.1.2\] - 2026-09-21
