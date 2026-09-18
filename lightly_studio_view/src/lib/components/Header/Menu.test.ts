@@ -35,11 +35,11 @@ async function openMenu() {
 describe('Split dataset menu', () => {
     afterEach(closeDatasetSplitDialog);
 
-    it('renders a hamburger icon in the menu trigger', () => {
+    it('shows a visible hamburger icon in the compact menu trigger', () => {
         render(Menu, { collection, isImages: true });
-        const trigger = screen.getByTestId('menu-trigger');
+        const hamburger = screen.getByTestId('menu-trigger').querySelector('.lucide-menu');
 
-        expect(trigger).toHaveAccessibleName('Menu');
+        expect(hamburger).toBeVisible();
     });
 
     it.each(['image', 'video'] as const)(
