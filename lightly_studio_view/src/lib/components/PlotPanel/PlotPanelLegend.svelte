@@ -77,11 +77,8 @@
     ]);
 </script>
 
-<!-- The tool pill is bottom-centered and 6rem wide, so the legend may never reach past
-     3rem left of the centre line: 50% - (3rem + 0.5rem gap + this element's 0.75rem inset).
-     Labels truncate instead, which beats the pill covering rows and eating their clicks. -->
 <div
-    class="absolute bottom-1 left-3 flex max-h-[40%] max-w-[min(12rem,calc(50%-4.25rem))] flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
+    class="absolute bottom-1 left-3 flex max-h-[40%] max-w-[min(12rem,calc(100%-1.5rem))] flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
     data-testid="plot-legend"
 >
     <div
