@@ -21,9 +21,6 @@ from lightly_studio.api.app import app
 from lightly_studio.api.routes.api import analytics
 from lightly_studio.database import db_manager
 from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
-from lightly_studio.dataset import embedding_manager
-from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
-from lightly_studio.dataset.embedding_manager import EmbeddingManager, EmbeddingManagerProvider
 from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
@@ -558,20 +555,6 @@ def patch_collection(
         db_manager,
         "get_engine",
         return_value=_db_engine,
-    )
-
-    # Create a test-specific EmbeddingManager singleton.
-    mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
-    )
-
-    # Fake the default embedding generator.
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
     )
 
     # Create a test-specific EmbedderRegistry with the random embedder registered.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Protocol
 from uuid import UUID
 
 import numpy as np
@@ -20,6 +21,17 @@ from lightly_studio.resolvers import (
 )
 
 METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.create_many
+
+
+class Matchable(Protocol):
+    """Minimal interface the greedy matcher needs: an annotation id and a confidence.
+
+    Both ``BoundingBox`` (object detection) and ``InstanceMask`` (instance
+    segmentation) satisfy this, so ``match_with_iou_matrix`` is shared across tasks.
+    """
+
+    annotation_id: UUID
+    confidence: float | None
 
 
 @dataclass
@@ -174,7 +186,7 @@ def create_and_persist_object_detection_metrics_per_sample(
         )
 
         sample_metrics_to_persist.extend(
-            _get_sample_metric_records(
+            get_sample_metric_records(
                 evaluation_run_id=data.evaluation_run_id,
                 sample_id=sample_id,
                 matching_result=matching_result,
@@ -182,7 +194,7 @@ def create_and_persist_object_detection_metrics_per_sample(
         )
 
         annotation_metrics_to_persist.extend(
-            _get_annotation_metric_records(
+            get_annotation_metric_records(
                 evaluation_run_id=data.evaluation_run_id,
                 sample_id=sample_id,
                 matching_result=matching_result,
@@ -214,8 +226,8 @@ def create_and_persist_object_detection_metrics_per_sample(
 
 
 def match_with_iou_matrix(
-    predictions: Sequence[BoundingBox],
-    ground_truths: Sequence[BoundingBox],
+    predictions: Sequence[Matchable],
+    ground_truths: Sequence[Matchable],
     iou_matrix: NDArray[np.float64],
     iou_threshold: float,
 ) -> MatchingResult:
@@ -366,7 +378,7 @@ def _to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingB
     return boxes
 
 
-def _get_sample_metric_records(
+def get_sample_metric_records(
     evaluation_run_id: UUID,
     sample_id: UUID,
     matching_result: MatchingResult,
@@ -387,7 +399,7 @@ def _get_sample_metric_records(
     ]
 
 
-def _get_annotation_metric_records(
+def get_annotation_metric_records(
     evaluation_run_id: UUID,
     sample_id: UUID,
     matching_result: MatchingResult,

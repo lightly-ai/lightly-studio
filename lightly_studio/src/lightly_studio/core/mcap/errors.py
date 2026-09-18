@@ -9,6 +9,10 @@ class TopicNotFoundError(McapAccessError):
     """Exception signaling that a topic is not present in an MCAP file."""
 
 
+class ChannelNotFoundError(McapAccessError):
+    """Exception signaling that a channel id is not present in an MCAP file."""
+
+
 class DataNotLoadedError(McapAccessError):
     """Exception signaling that a topic was not loaded with `load_data_for_topics`."""
 

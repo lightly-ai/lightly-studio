@@ -57,8 +57,16 @@ export const usePostHog = () => {
         posthog.register({ app_version: version });
         initialized = true;
 
-        // One distinct id per install, shared with the Python SDK, instead of two.
-        posthog.identify(config.install_id);
+        // Only identify with the install_id for non-enterprise.
+        // In enterprise, users would already be logged in/identified, and we don't want to
+        // overwrite that. Overwriting with the install_id would collapse every logged-in user
+        // onto a single install_id.
+        const currentId = posthog.get_distinct_id();
+        const identifiedAsEnterpriseUser = typeof currentId === 'string' && currentId.includes('@');
+        if (!identifiedAsEnterpriseUser) {
+            // One distinct id per install, shared with the Python SDK, instead of two.
+            posthog.identify(config.install_id);
+        }
     };
 
     /**

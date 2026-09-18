@@ -47,7 +47,7 @@
         void goto(
             groupId && collectionType
                 ? routeHelpers.toGroupDetails(datasetId, collectionType, collectionId, groupId)
-                : routeHelpers.toPointClouds(datasetId, collectionId)
+                : routeHelpers.toPointClouds(datasetId, collectionType ?? 'sequence', collectionId)
         );
     };
 
