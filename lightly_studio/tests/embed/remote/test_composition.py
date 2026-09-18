@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 from lightly_studio_serve.embedder import (
     Capability,
@@ -88,32 +90,31 @@ def test_compose_remote_embedder_class__reused() -> None:
 
 
 def test_compose_remote_embedder_class__nothing_routable() -> None:
-    with pytest.raises(RemoteEmbedderCapabilityError) as error:
+    with pytest.raises(
+        RemoteEmbedderCapabilityError, match=re.escape("routes to text, image_bytes, video_bytes")
+    ):
         composition.compose_remote_embedder_class(
             capabilities=[Capability.IMAGE_PATH], capability_to_base=_CAPABILITY_TO_BASE
         )
-
-    assert "routes to text, image_bytes, video_bytes" in str(error.value)
 
 
 def test_compose_remote_embedder_class__nothing_resolvable() -> None:
     # Nothing in LightlyStudio resolves a video-bytes embedder yet, so the error has to
     # name that rather than let `EmbedderRegistry.register` report the symptom.
-    with pytest.raises(RemoteEmbedderCapabilityError) as error:
+    with pytest.raises(
+        RemoteEmbedderCapabilityError,
+        match=re.escape("EmbedderRegistry resolves text, image_bytes"),
+    ):
         composition.compose_remote_embedder_class(
             capabilities=[Capability.VIDEO_BYTES], capability_to_base=_CAPABILITY_TO_BASE
         )
-
-    assert "EmbedderRegistry resolves text, image_bytes" in str(error.value)
 
 
 def test_compose_remote_embedder_class__repeated_capability() -> None:
     # `DescribeResponse.capabilities` is a list and validates no uniqueness, so a message
     # names each capability once.
-    with pytest.raises(RemoteEmbedderCapabilityError) as error:
+    with pytest.raises(RemoteEmbedderCapabilityError, match=re.escape("advertises image_path.")):
         composition.compose_remote_embedder_class(
             capabilities=[Capability.IMAGE_PATH, Capability.IMAGE_PATH],
             capability_to_base=_CAPABILITY_TO_BASE,
         )
-
-    assert "advertises image_path." in str(error.value)
