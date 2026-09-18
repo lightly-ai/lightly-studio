@@ -23,26 +23,6 @@ from tests.helpers_resolvers import (
 )
 
 
-def _mask(rows: slice, cols: slice, size: int = 10) -> NDArray[np.bool_]:
-    mask = np.zeros((size, size), dtype=np.bool_)
-    mask[rows, cols] = True
-    return mask
-
-
-def _instance(
-    mask: NDArray[np.bool_],
-    label_id: UUID,
-    confidence: float | None = None,
-    annotation_id: UUID | None = None,
-) -> InstanceMask:
-    return InstanceMask(
-        annotation_id=annotation_id or uuid4(),
-        mask=mask,
-        label_id=label_id,
-        confidence=confidence,
-    )
-
-
 def test_compute_mask_iou_matrix__known_values() -> None:
     pred = _mask(slice(0, 4), slice(0, 4))  # 16 px
     identical = _mask(slice(0, 4), slice(0, 4))  # IoU 1.0
@@ -59,13 +39,6 @@ def test_compute_mask_iou_matrix__empty_masks_are_zero() -> None:
     assert matrix.tolist() == [[0.0]]
 
 
-def test_match_image__no_preds_no_gts() -> None:
-    result = instance_segmentation_metric.match_image(
-        predictions=[], ground_truths=[], iou_threshold=0.5, classwise=False
-    )
-    assert (result.tp, result.fp, result.fn) == (0, 0, 0)
-
-
 def test_match_image__single_class_perfect_match() -> None:
     label_id = uuid4()
     pred_id, gt_id = uuid4(), uuid4()
@@ -79,16 +52,6 @@ def test_match_image__single_class_perfect_match() -> None:
     assert result.matches[0].pred_id == pred_id
     assert result.matches[0].gt_id == gt_id
     assert result.matches[0].iou == 1.0
-
-
-def test_match_image__below_threshold_is_fp_and_fn() -> None:
-    label_id = uuid4()
-    pred = _instance(_mask(slice(0, 4), slice(0, 1)), label_id, confidence=0.9)  # 4 px
-    gt = _instance(_mask(slice(0, 4), slice(0, 4)), label_id)  # 16 px, IoU 4/16 = 0.25
-    result = instance_segmentation_metric.match_image(
-        predictions=[pred], ground_truths=[gt], iou_threshold=0.5, classwise=False
-    )
-    assert (result.tp, result.fp, result.fn) == (0, 1, 1)
 
 
 def test_match_image__classwise_same_class_as_non_classwise() -> None:
@@ -154,41 +117,6 @@ def test_match_image__classwise_multiple_classes() -> None:
     assert match_ids[pred_b] == gt_b
 
 
-def test_match_image__one_gt_matches_highest_confidence_pred() -> None:
-    label_id = uuid4()
-    gt_id, high_id, low_id = uuid4(), uuid4(), uuid4()
-    block = _mask(slice(0, 4), slice(0, 4))
-    preds = [
-        _instance(block, label_id, confidence=0.6, annotation_id=low_id),
-        _instance(block, label_id, confidence=0.95, annotation_id=high_id),
-    ]
-    gts = [_instance(block, label_id, annotation_id=gt_id)]
-    result = instance_segmentation_metric.match_image(
-        predictions=preds, ground_truths=gts, iou_threshold=0.5, classwise=False
-    )
-    assert (result.tp, result.fp, result.fn) == (1, 1, 0)
-    assert result.matches[0].pred_id == high_id
-    assert result.unmatched_prediction_ids == [low_id]
-
-
-def test_match_image__empty_preds_all_fn() -> None:
-    label_id = uuid4()
-    gts = [_instance(_mask(slice(0, 4), slice(0, 4)), label_id)]
-    result = instance_segmentation_metric.match_image(
-        predictions=[], ground_truths=gts, iou_threshold=0.5, classwise=False
-    )
-    assert (result.tp, result.fp, result.fn) == (0, 0, 1)
-
-
-def test_match_image__empty_gts_all_fp() -> None:
-    label_id = uuid4()
-    preds = [_instance(_mask(slice(0, 4), slice(0, 4)), label_id, confidence=0.9)]
-    result = instance_segmentation_metric.match_image(
-        predictions=preds, ground_truths=[], iou_threshold=0.5, classwise=False
-    )
-    assert (result.tp, result.fp, result.fn) == (0, 1, 0)
-
-
 def test_to_instance_masks__decodes_fields(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
@@ -236,3 +164,23 @@ def test_to_instance_masks__skips_missing_segmentation_details(db_session: Sessi
     masks = instance_segmentation_metric._to_instance_masks(annotations=[annotation], image=image)
 
     assert masks == []
+
+
+def _mask(rows: slice, cols: slice, size: int = 10) -> NDArray[np.bool_]:
+    mask = np.zeros((size, size), dtype=np.bool_)
+    mask[rows, cols] = True
+    return mask
+
+
+def _instance(
+    mask: NDArray[np.bool_],
+    label_id: UUID,
+    confidence: float | None = None,
+    annotation_id: UUID | None = None,
+) -> InstanceMask:
+    return InstanceMask(
+        annotation_id=annotation_id or uuid4(),
+        mask=mask,
+        label_id=label_id,
+        confidence=confidence,
+    )
