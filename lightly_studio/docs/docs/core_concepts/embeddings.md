@@ -94,46 +94,46 @@ You can:
 You may want to replace the built-in models — for example to use a domain-specific
 model, or to reuse vectors you already computed in another pipeline.
 
-Both cases use the same mechanism: e.g. for images, implement the `ImageEmbeddingGenerator`
-protocol and register it with `ls.set_default_embedding_model(...)` **before** you add to
-a dataset or launch the GUI. The only difference is what your implementation of `embed_images`
-does inside.
+Both cases use the same mechanism: subclass the capability interfaces for the inputs
+you can embed and register your embedder with `ls.register_default_embedder(...)`
+**before** you add to a dataset or launch the GUI. The only difference is what your
+implementation of `embed_images` does inside.
 
 | Use-case | What `embed_images` does | Example |
 |---|---|---|
 | Compute embeddings on the fly | Runs your model on the given file paths | [`example_custom_embedding_model.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embedding_model.py) |
 | Load precomputed embeddings | Looks up stored vectors by file path | [`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py) |
 
-Implement these protocol methods based on your needs. The
-[API reference](../api/embeddings.md) gives the full method signatures:
+An embedder subclasses `Embedder` through one interface per input it can embed.
+Subclass only the capabilities your model provides. Every interface inherits
+`embedding_space_spec` from `Embedder` to describe the embedding space; embeddings
+from the same space are comparable.
 
-- **`EmbeddingGenerator`** (base):
-    - `embedding_space_spec` to describe the embedding space. Embeddings from the same space are comparable.
-    - `embed_text` to override the text search model.
-- **`ImageEmbeddingGenerator`**:
-    - `embed_images` to override the image embedding model.
-    - `embed_image_crops` to override the model for embedding annotations.
-    - `embed_pil_images` to override the model to embed video frames.
-- **`VideoEmbeddingGenerator`**:
-    - `embed_videos` to override the video embedding model.
+The interfaces live in `lightly_studio_serve.embedder`. LightlyStudio calls each at
+one of two points — when you **add data** (ingest) or while the **GUI** answers a
+query. The [API reference](../api/embeddings.md) gives the full method signatures.
 
-`ImageEmbeddingGenerator` and `VideoEmbeddingGenerator` both extend the base protocol.
-If you don't need an embedding method raise the `NotImplementedError` exception.
+| Interface | Method | Embeds | Called during |
+|---|---|---|---|
+| `ImagePathEmbedder` | `embed_images` | Whole images by path | Ingest and GUI (image search) |
+| `ImageCropPathEmbedder` | `embed_image_crops` | Annotation crops | Ingest |
+| `ImagePILEmbedder` | `embed_images_pil` | In-memory images, such as video frames | Ingest |
+| `VideoPathEmbedder` | `embed_videos` | Whole videos by path | Ingest |
+| `TextEmbedder` | `embed_text` | Text queries | GUI (text search) |
 
-Examples below show how an override is done for `ImageEmbeddingGenerator`.
+Examples below show how an embedder is built from the image interfaces.
 
-!!! warning "Some methods also run while the GUI is open"
-    LightlyStudio calls your generator at two points: when you add data, and while the
-    GUI is open to answer search queries. If a method raises `NotImplementedError`,
-    its search feature is not available in the GUI.
+!!! warning "A capability you skip disables its feature"
+    A capability you do not subclass, such as `TextEmbedder`, leaves its feature
+    unavailable — text search, in that case.
 
 ### Loading precomputed embeddings
 
 Use this when you already have vectors — from a previous run, an external pipeline,
 or a research model. Instead of running a model, `embed_images` looks up each file
-path in your store.
+path in your store. You only need to subclass `ImagePathEmbedder`.
 
-`embed_images(filepaths)` returns an `EmbeddingResult(embeddings, kept_indices)`.
+`embed_images(paths)` returns an `EmbeddingResult(embeddings, kept_indices)`.
 Return a matrix with one row for each file path you have a vector for, and use `kept_indices`
 to list which input positions those rows belong to. This lets you skip any file path
 that has no vector.
@@ -141,36 +141,24 @@ that has no vector.
 ```python
 import numpy as np
 from numpy.typing import NDArray
-from PIL import Image
+
+from lightly_studio_serve.embedder import ImagePathEmbedder
 
 import lightly_studio as ls
-from lightly_studio import EmbeddingResult
 
 EMBEDDING_DIMENSION = 512
 
 
-class CustomEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
+class LoadExistingEmbedder(ImagePathEmbedder):
     def __init__(self) -> None:
         self._filepath_to_embedding: dict[str, NDArray[np.float32]] = ...  # Implement the loading logic here.
 
     def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
 
-    def embed_text(self, text: str) -> list[float]: ...
-
-    def embed_image_crops(
-        self, image_crops: list[ls.ImageCrop], show_progress: bool = True
-    ) -> EmbeddingResult: ...
-
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]: ...
-
-    def embed_images(
-        self, filepaths: list[str], show_progress: bool = True
-    ) -> EmbeddingResult:
+    def embed_images(self, paths: list[str]) -> ls.EmbeddingResult:
         rows: list[NDArray[np.float32]] = []
         kept_indices: list[int] = []
-        for index, filepath in enumerate(filepaths):
+        for index, filepath in enumerate(paths):
             embedding = self._filepath_to_embedding.get(filepath)
             if embedding is None:
                 continue  # No vector for this path, so skip it.
@@ -181,10 +169,10 @@ class CustomEmbeddingsGenerator(ls.ImageEmbeddingGenerator):
             if rows
             else np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+        return ls.EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
-ls.set_default_embedding_model(CustomEmbeddingsGenerator())
+ls.register_default_embedder(embedder=LoadExistingEmbedder())
 ```
 
 For the full runnable version, including how to key vectors by the absolute path that
@@ -194,41 +182,39 @@ the backend stores, see
 ### Computing embeddings on the fly
 
 Use this when you want a different model than the built-ins. Load your model in
-`__init__` and run it inside `embed_images`.
+`__init__` and run it inside the embed methods. Subclass one interface per
+capability. This embedder handles images, image crops, and text, so text queries
+compare against image embeddings.
 
 ```python
 import numpy as np
 from numpy.typing import NDArray
-from PIL import Image
+
+from lightly_studio_serve.embedder import (
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    TextEmbedder,
+)
 
 import lightly_studio as ls
-from lightly_studio import EmbeddingResult
 
 EMBEDDING_DIMENSION = 512
 
 
-class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
+class CustomEmbedder(ImagePathEmbedder, ImageCropPathEmbedder, TextEmbedder):
     def __init__(self) -> None:
         ...  # Load your model and preprocessing here.
 
     def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
 
-    def embed_text(self, text: str) -> list[float]: ...
+    def embed_image_crops(self, crops: list[ls.ImageCrop]) -> ls.EmbeddingResult: ...
 
-    def embed_image_crops(
-        self, image_crops: list[ls.ImageCrop], show_progress: bool = True
-    ) -> EmbeddingResult: ...
+    def embed_text(self, texts: list[str]) -> ls.EmbeddingResult: ...
 
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]: ...
-
-    def embed_images(
-        self, filepaths: list[str], show_progress: bool = True
-    ) -> EmbeddingResult:
+    def embed_images(self, paths: list[str]) -> ls.EmbeddingResult:
         kept_indices: list[int] = []
         vectors: list[NDArray[np.float32]] = []
-        for index, filepath in enumerate(filepaths):
+        for index, filepath in enumerate(paths):
             image = self._load(filepath)  # Skip a file you cannot read.
             if image is None:
                 continue
@@ -239,14 +225,14 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
             if vectors
             else np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+        return ls.EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
-ls.set_default_embedding_model(CustomEmbeddingGenerator())
+ls.register_default_embedder(embedder=CustomEmbedder())
 ```
 
 For the full runnable version, which wraps MobileCLIP and also implements
-`embed_text`, `embed_image_crops`, and `embed_pil_images`, see
+`embed_text` and `embed_image_crops`, see
 [`example_custom_embedding_model.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embedding_model.py).
 
 !!! note "Text search needs a shared text encoder"
