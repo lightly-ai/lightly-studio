@@ -63,7 +63,8 @@ class RemoteEmbedder(Embedder):
     ) -> None:
         """Embed through ``transport``, against a server of ``spec`` and ``limits``.
 
-        Use ``connect``.
+        Use ``connect``, which reads ``/v1/describe`` and passes what it learns here. This
+        constructor takes the answer as given and validates nothing against the wire.
 
         Args:
             transport: The transport that carries every request.
@@ -172,7 +173,12 @@ class RemoteEmbedder(Embedder):
             RemoteEmbedderError: If this embedder is closed, if a request fails, or if an
                 answer disagrees with what ``/v1/describe`` reported.
         """
-        self._check_open()
+        if self._closed:
+            # httpx would raise a bare `RuntimeError`, outside the hierarchy of this package.
+            raise RemoteEmbedderError(
+                "This embedder is closed and sends no further request. Call "
+                "RemoteEmbedder.connect again to reach the server."
+            )
         rows: list[list[float]] = []
         kept_indices: list[int] = []
         chunks = batching.split_batches(
@@ -188,20 +194,6 @@ class RemoteEmbedder(Embedder):
             # A chunk counts its kept indices from its own start.
             kept_indices.extend(offset + index for index in response.kept_indices)
         return EmbeddingResult(embeddings=self._to_array(rows=rows), kept_indices=kept_indices)
-
-    def _check_open(self) -> None:
-        """Refuse a request on an embedder that ``close`` closed.
-
-        httpx would raise a bare ``RuntimeError``, outside the hierarchy of this package.
-
-        Raises:
-            RemoteEmbedderError: If ``close`` closed this embedder.
-        """
-        if self._closed:
-            raise RemoteEmbedderError(
-                "This embedder is closed and sends no further request. Call "
-                "RemoteEmbedder.connect again to reach the server."
-            )
 
     def _send(
         self,
