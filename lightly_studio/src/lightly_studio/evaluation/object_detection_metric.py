@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, TypeVar
 from uuid import UUID
 
 import numpy as np
@@ -24,14 +24,19 @@ METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.crea
 
 
 class Matchable(Protocol):
-    """Minimal interface the greedy matcher needs: an annotation id and a confidence.
+    """Interface the shared matcher needs: an annotation id, a confidence, and a class label.
 
     Both ``BoundingBox`` (object detection) and ``InstanceMask`` (instance
-    segmentation) satisfy this, so ``match_with_iou_matrix`` is shared across tasks.
+    segmentation) satisfy this, so ``match_with_iou_matrix`` and ``match_by_iou`` are
+    shared across tasks. ``label_id`` is used for class-wise grouping.
     """
 
     annotation_id: UUID
     confidence: float | None
+    label_id: UUID
+
+
+_MatchableT = TypeVar("_MatchableT", bound=Matchable)
 
 
 @dataclass
@@ -112,13 +117,60 @@ class MatchingResult:
         self.unmatched_gt_ids.extend(other.unmatched_gt_ids)
 
 
+def match_by_iou(
+    predictions: Sequence[_MatchableT],
+    ground_truths: Sequence[_MatchableT],
+    iou_threshold: float,
+    classwise: bool,
+    iou_matrix_fn: Callable[[Sequence[_MatchableT], Sequence[_MatchableT]], NDArray[np.float64]],
+) -> MatchingResult:
+    """Greedy-match predictions to ground truths for a single image.
+
+    Shared by object detection (box IoU) and instance segmentation (mask IoU);
+    ``iou_matrix_fn`` supplies the task-specific pairwise IoU matrix.
+
+    Args:
+        predictions: All predictions for the image.
+        ground_truths: All ground truths for the image.
+        iou_threshold: Minimum IoU for a prediction to count as a TP.
+        classwise: If True, match only within the same class. If False, match
+            across all classes.
+        iou_matrix_fn: Returns the pairwise IoU matrix of a prediction and a
+            ground-truth sequence.
+
+    Returns:
+        Per-image matching result.
+    """
+    if classwise:
+        all_labels = {x.label_id for x in predictions} | {x.label_id for x in ground_truths}
+        result = MatchingResult()
+        for label in all_labels:
+            class_predictions = [x for x in predictions if x.label_id == label]
+            class_gts = [x for x in ground_truths if x.label_id == label]
+            result.extend(
+                match_with_iou_matrix(
+                    predictions=class_predictions,
+                    ground_truths=class_gts,
+                    iou_matrix=iou_matrix_fn(class_predictions, class_gts),
+                    iou_threshold=iou_threshold,
+                )
+            )
+        return result
+    return match_with_iou_matrix(
+        predictions=predictions,
+        ground_truths=ground_truths,
+        iou_matrix=iou_matrix_fn(predictions, ground_truths),
+        iou_threshold=iou_threshold,
+    )
+
+
 def match_image(
     predictions: Sequence[BoundingBox],
     ground_truths: Sequence[BoundingBox],
     iou_threshold: float,
     classwise: bool,
 ) -> MatchingResult:
-    """Match predictions to ground truths for a single image.
+    """Match predicted boxes to ground truths for a single image, using box IoU.
 
     Args:
         predictions: All predicted bounding boxes for the image.
@@ -130,60 +182,36 @@ def match_image(
     Returns:
         Per-image matching result.
     """
-    if classwise:
-        all_labels = {b.label_id for b in predictions} | {b.label_id for b in ground_truths}
-        result = MatchingResult()
-        for label in all_labels:
-            class_predictions = [b for b in predictions if b.label_id == label]
-            class_gts = [b for b in ground_truths if b.label_id == label]
-            result.extend(
-                match_with_iou_matrix(
-                    predictions=class_predictions,
-                    ground_truths=class_gts,
-                    iou_matrix=compute_iou_matrix(
-                        pred_corners=to_corner_array(class_predictions),
-                        gt_corners=to_corner_array(class_gts),
-                    ),
-                    iou_threshold=iou_threshold,
-                )
-            )
-        return result
-    return match_with_iou_matrix(
+    return match_by_iou(
         predictions=predictions,
         ground_truths=ground_truths,
-        iou_matrix=compute_iou_matrix(
-            pred_corners=to_corner_array(predictions),
-            gt_corners=to_corner_array(ground_truths),
-        ),
         iou_threshold=iou_threshold,
+        classwise=classwise,
+        iou_matrix_fn=_box_iou_matrix,
     )
 
 
-def create_and_persist_object_detection_metrics_per_sample(
+def create_and_persist_metrics_per_sample(
     session: Session,
     data: EvaluationData,
-    iou_threshold: float,
-    classwise: bool,
+    match_sample: Callable[[UUID], MatchingResult],
 ) -> None:
-    """Create and persist per-sample object-detection metrics."""
-    pred_boxes_per_sample = {
-        sample_id: _to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, []))
-        for sample_id in data.selected_sample_ids
-    }
-    gt_boxes_per_sample = {
-        sample_id: _to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, []))
-        for sample_id in data.selected_sample_ids
-    }
+    """Create and persist per-sample matching metrics.
+
+    Shared by tasks that greedily match predictions to ground truths per image.
+    ``match_sample`` returns the matching result for one sample; this writes the
+    per-sample ``tp``/``fp``/``fn`` and per-match ``iou`` records, batched.
+
+    Args:
+        session: Database session used to persist the metric records.
+        data: Prepared evaluation data (selected samples and per-sample annotations).
+        match_sample: Returns the matching result for one sample, given its id.
+    """
     sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
     annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
 
     for sample_id in data.selected_sample_ids:
-        matching_result = match_image(
-            predictions=pred_boxes_per_sample[sample_id],
-            ground_truths=gt_boxes_per_sample[sample_id],
-            iou_threshold=iou_threshold,
-            classwise=classwise,
-        )
+        matching_result = match_sample(sample_id)
 
         sample_metrics_to_persist.extend(
             get_sample_metric_records(
@@ -192,7 +220,6 @@ def create_and_persist_object_detection_metrics_per_sample(
                 matching_result=matching_result,
             )
         )
-
         annotation_metrics_to_persist.extend(
             get_annotation_metric_records(
                 evaluation_run_id=data.evaluation_run_id,
@@ -223,6 +250,25 @@ def create_and_persist_object_detection_metrics_per_sample(
             session=session,
             records=annotation_metrics_to_persist,
         )
+
+
+def create_and_persist_object_detection_metrics_per_sample(
+    session: Session,
+    data: EvaluationData,
+    iou_threshold: float,
+    classwise: bool,
+) -> None:
+    """Create and persist per-sample object-detection metrics."""
+
+    def match_sample(sample_id: UUID) -> MatchingResult:
+        return match_image(
+            predictions=_to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, [])),
+            ground_truths=_to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, [])),
+            iou_threshold=iou_threshold,
+            classwise=classwise,
+        )
+
+    create_and_persist_metrics_per_sample(session=session, data=data, match_sample=match_sample)
 
 
 def match_with_iou_matrix(
@@ -354,6 +400,17 @@ def to_corner_array(boxes: Sequence[BoundingBox]) -> NDArray[np.int64]:
     return np.array(
         [[b.x, b.y, b.x + b.width, b.y + b.height] for b in boxes],
         dtype=np.int64,
+    )
+
+
+def _box_iou_matrix(
+    predictions: Sequence[BoundingBox],
+    ground_truths: Sequence[BoundingBox],
+) -> NDArray[np.float64]:
+    """Pairwise box IoU for a prediction and a ground-truth sequence."""
+    return compute_iou_matrix(
+        pred_corners=to_corner_array(boxes=predictions),
+        gt_corners=to_corner_array(boxes=ground_truths),
     )
 
 

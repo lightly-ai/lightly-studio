@@ -1,8 +1,9 @@
 """Instance segmentation evaluation metric primitives.
 
 Instance segmentation is matched exactly like object detection, but the greedy
-matcher runs on mask IoU instead of box IoU. The matcher and the metric-record
-builders are therefore reused from ``object_detection_metric``.
+matcher runs on mask IoU instead of box IoU. The shared class-wise matcher and the
+per-sample metric persistence are therefore reused from ``object_detection_metric``;
+only the mask IoU is instance-segmentation specific.
 """
 
 from __future__ import annotations
@@ -20,21 +21,12 @@ from sqlmodel import Session
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.evaluation.object_detection_metric import (
     MatchingResult,
-    get_annotation_metric_records,
-    get_sample_metric_records,
-    match_with_iou_matrix,
+    create_and_persist_metrics_per_sample,
+    match_by_iou,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import (
-    evaluation_annotation_metric_resolver,
-    evaluation_sample_metric_resolver,
-    image_resolver,
-)
-
-METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.create_many
+from lightly_studio.resolvers import image_resolver
 
 
 @dataclass
@@ -83,16 +75,13 @@ def compute_mask_iou_matrix(
     return iou_matrix
 
 
-# TODO (Jonas 9/2026): Refactor duplicated method as helper
 def match_image(
     predictions: Sequence[InstanceMask],
     ground_truths: Sequence[InstanceMask],
     iou_threshold: float,
     classwise: bool,
 ) -> MatchingResult:
-    """Match predicted instance masks to ground truths for a single image.
-
-    Uses mask IoU with the same greedy matcher as object detection.
+    """Match predicted instance masks to ground truths for a single image, using mask IoU.
 
     Args:
         predictions: All predicted instance masks for the image.
@@ -104,36 +93,15 @@ def match_image(
     Returns:
         Per-image matching result.
     """
-    if classwise:
-        all_labels = {m.label_id for m in predictions} | {m.label_id for m in ground_truths}
-        result = MatchingResult()
-        for label in all_labels:
-            class_predictions = [m for m in predictions if m.label_id == label]
-            class_gts = [m for m in ground_truths if m.label_id == label]
-            result.extend(
-                match_with_iou_matrix(
-                    predictions=class_predictions,
-                    ground_truths=class_gts,
-                    iou_matrix=compute_mask_iou_matrix(
-                        pred_masks=[m.mask for m in class_predictions],
-                        gt_masks=[m.mask for m in class_gts],
-                    ),
-                    iou_threshold=iou_threshold,
-                )
-            )
-        return result
-    return match_with_iou_matrix(
+    return match_by_iou(
         predictions=predictions,
         ground_truths=ground_truths,
-        iou_matrix=compute_mask_iou_matrix(
-            pred_masks=[m.mask for m in predictions],
-            gt_masks=[m.mask for m in ground_truths],
-        ),
         iou_threshold=iou_threshold,
+        classwise=classwise,
+        iou_matrix_fn=_mask_iou_matrix,
     )
 
 
-# TODO (Jonas 9/2026): Create shared helper for metric persistence
 def create_and_persist_instance_segmentation_metrics_per_sample(
     session: Session,
     data: EvaluationData,
@@ -156,18 +124,14 @@ def create_and_persist_instance_segmentation_metrics_per_sample(
     )
     image_by_sample_id = {image.sample_id: image for image in images}
 
-    sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
-    annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
-
-    for sample_id in data.selected_sample_ids:
+    def match_sample(sample_id: UUID) -> MatchingResult:
         image = image_by_sample_id.get(sample_id)
         if image is None:
             raise ValueError(
                 f"Instance segmentation evaluation expected image dimensions for "
                 f"sample {sample_id}, but no image was found."
             )
-
-        matching_result = match_image(
+        return match_image(
             predictions=_to_instance_masks(
                 annotations=data.pred_per_sample.get(sample_id, []), image=image
             ),
@@ -178,43 +142,18 @@ def create_and_persist_instance_segmentation_metrics_per_sample(
             classwise=classwise,
         )
 
-        sample_metrics_to_persist.extend(
-            get_sample_metric_records(
-                evaluation_run_id=data.evaluation_run_id,
-                sample_id=sample_id,
-                matching_result=matching_result,
-            )
-        )
-        annotation_metrics_to_persist.extend(
-            get_annotation_metric_records(
-                evaluation_run_id=data.evaluation_run_id,
-                sample_id=sample_id,
-                matching_result=matching_result,
-            )
-        )
-        if len(sample_metrics_to_persist) >= METRIC_BATCH_SIZE:
-            evaluation_sample_metric_resolver.create_many(
-                session=session,
-                records=sample_metrics_to_persist,
-            )
-            sample_metrics_to_persist.clear()
-        if len(annotation_metrics_to_persist) >= METRIC_BATCH_SIZE:
-            evaluation_annotation_metric_resolver.create_many(
-                session=session,
-                records=annotation_metrics_to_persist,
-            )
-            annotation_metrics_to_persist.clear()
+    create_and_persist_metrics_per_sample(session=session, data=data, match_sample=match_sample)
 
-    if sample_metrics_to_persist:
-        evaluation_sample_metric_resolver.create_many(
-            session=session,
-            records=sample_metrics_to_persist,
-        )
-    if annotation_metrics_to_persist:
-        evaluation_annotation_metric_resolver.create_many(
-            session=session,
-            records=annotation_metrics_to_persist,
-        )
+
+def _mask_iou_matrix(
+    predictions: Sequence[InstanceMask],
+    ground_truths: Sequence[InstanceMask],
+) -> NDArray[np.float64]:
+    """Pairwise mask IoU for a prediction and a ground-truth sequence."""
+    return compute_mask_iou_matrix(
+        pred_masks=[instance.mask for instance in predictions],
+        gt_masks=[instance.mask for instance in ground_truths],
+    )
 
 
 def _to_instance_masks(
