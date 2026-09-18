@@ -739,6 +739,65 @@ describe('DatasetDistributionPanel', () => {
         expect(onCategoricalValueToggle).toHaveBeenCalledOnce();
     });
 
+    it('uses the shared settings to show 5, 30, or all metadata values', async () => {
+        const buckets = Array.from({ length: 35 }, (_, index) => ({
+            id: `value-${index}`,
+            kind: 'value' as const,
+            value: `Value ${index}`,
+            label: `Value ${index}`,
+            count: 35 - index
+        }));
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'metadata',
+                        label: 'Metadata',
+                        groups: [
+                            {
+                                id: 'category',
+                                label: 'category',
+                                categorical: { buckets, selectedValues: [] }
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        expect(screen.getByText(/Top 20 of 35 values/)).toBeInTheDocument();
+        for (const n of [5, 30]) {
+            await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+            await fireEvent.input(screen.getByTestId('distribution-config-top-n'), {
+                target: { value: String(n) }
+            });
+            await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+            // Let the dialog release its pointer lock before reopening it.
+            await waitFor(() => expect(document.body.style.pointerEvents).not.toBe('none'));
+            await waitFor(() =>
+                expect(screen.getByText(new RegExp(`Top ${n} of 35 values`))).toBeInTheDocument()
+            );
+            const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+                yAxis: { data: string[] };
+            };
+            expect(option.yAxis.data).toHaveLength(n + 1);
+            expect(option.yAxis.data.at(-1)).toBe('["other"]');
+        }
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        await fireEvent.click(screen.getByTestId('distribution-config-all'));
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+        await waitFor(() =>
+            expect(screen.getByText(/35 values · sorted by count/)).toBeInTheDocument()
+        );
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+        };
+        expect(option.yAxis.data).toHaveLength(35);
+        expect(option.yAxis.data).not.toContain('["other"]');
+        await waitFor(() => expect(document.body.style.pointerEvents).not.toBe('none'));
+    });
+
     it('stores categorical orientation per metadata field', async () => {
         const user = userEvent.setup();
         const categorical = (label: string) => ({
