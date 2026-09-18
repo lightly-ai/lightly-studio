@@ -51,9 +51,9 @@
     });
 </script>
 
-<!-- Bottom-centered. The legend sits top-right, so neither has to give up width for the other. -->
+<!-- Placed by PlotPanel's bottom row, which pairs it with the legend. -->
 <div
-    class="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
+    class="pointer-events-auto flex shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-sm"
     data-testid="plot-tool-pill"
 >
     {#each SELECTION_TOOLS as tool (tool.mode)}
