@@ -54,7 +54,8 @@ import lightly_studio.core.start_gui as start_gui_module
 from lightly_studio import enterprise
 from lightly_studio.api.server import Server
 from lightly_studio.database import db_manager
-from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.embed import default_embedder
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
@@ -70,6 +71,7 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     embedding_model_resolver,
     image_resolver,
@@ -367,37 +369,40 @@ def _verify_annotation_counts(collection_id: UUID, boxes_per_image: int) -> None
 def _resolve_embedding_model(session: Session, collection_id: UUID) -> tuple[UUID, int]:
     """Resolve the embedding model the benchmark stores its embeddings under.
 
-    Prefers the server's configured default embedding generator (e.g. MobileCLIP) so the
-    embedding-model row's identity (name, file hash, and dimension) matches what *any*
-    LightlyStudio server resolves as the collection's default — including a separate or
-    deployed server. This is what makes the GUI's embeddings view appear there: the
-    server falls back to that default generator and finds the embeddings stored under it.
+    Prefers the registry's default image embedder (e.g. MobileCLIP) so the embedding-model
+    row's identity (name, file hash, and dimension) matches what *any* LightlyStudio server
+    resolves as the collection's default — including a separate or deployed server. This is
+    what makes the GUI's embeddings view appear there: the server resolves that default
+    embedder and finds the embeddings stored under it.
 
-    Loading the generator also registers it as the in-process default, so the benchmark's
-    own GUI shows the view too. Returns the model id and the dimension the embeddings must
-    have (dictated by the model, so the ``get_or_create`` hash/dimension check passes).
+    Resolving the embedder also registers it as the collection's default in the database, so
+    the benchmark's own GUI shows the view too. Returns the model id and the dimension the
+    embeddings must have (dictated by the embedder, so the ``get_or_create`` dimension check
+    passes).
 
-    Falls back to a synthetic model if no default generator is available; in that case the
+    Falls back to a synthetic model if no default embedder is available; in that case the
     embeddings view only appears in this process's own GUI, not on a separate server.
     """
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
-        session=session, collection_id=collection_id
+    resolved = default_embedder.resolve_default_embedder(
+        session=session,
+        collection_id=collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
     )
-    if model_id is not None:
+    if resolved is not None:
+        _embedder, model_id = resolved
         model = embedding_model_resolver.get_by_id(session=session, embedding_model_id=model_id)
         assert model is not None, "Default embedding model just registered but not found."
         return model_id, model.embedding_dimension
 
     logger.warning(
-        "No default embedding generator is available (set LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE "
+        "No default embedding model is available (set LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE "
         "and install the model package, e.g. MobileCLIP). Falling back to a synthetic embedding "
         "model: the embeddings view will appear in this process's GUI but not on a separate or "
         "deployed server."
     )
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     assert collection is not None
-    synthetic_model = embedding_model_resolver.create(
+    synthetic_model = embedding_model_resolver.get_or_create(
         session=session,
         embedding_model=EmbeddingModelCreate(
             dataset_id=collection.dataset_id,
@@ -405,8 +410,15 @@ def _resolve_embedding_model(session: Session, collection_id: UUID) -> tuple[UUI
             embedding_dimension=DEFAULT_EMBEDDING_DIM,
         ),
     )
-    embedding_manager._collection_id_to_default_model_id[collection_id] = (
-        synthetic_model.embedding_model_id
+    collection_embedding_model_resolver.get_or_add_collection_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=synthetic_model.embedding_model_id,
+    )
+    collection_embedding_model_resolver.set_default(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=synthetic_model.embedding_model_id,
     )
     return synthetic_model.embedding_model_id, DEFAULT_EMBEDDING_DIM
 
