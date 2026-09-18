@@ -43,7 +43,7 @@ class InstanceMask:
 
     Attributes:
         annotation_id: Unique identifier, used to map results back to source annotations.
-        mask: Binary mask of shape (height, width).
+        mask: Binary mask of shape (H, W), the image height and width.
         label_id: Class label ID.
         confidence: Prediction confidence score. None for ground truth annotations.
     """
@@ -60,13 +60,16 @@ def compute_mask_iou_matrix(
 ) -> NDArray[np.float64]:
     """Compute pairwise mask IoU.
 
+    P is the number of predicted masks, G the number of ground truth masks, and H and W
+    the mask height and width.
+
     Args:
-        pred_masks: Predicted binary masks, each of shape (height, width).
-        gt_masks: Ground truth binary masks, each of shape (height, width).
+        pred_masks: Predicted binary masks, each of shape (H, W).
+        gt_masks: Ground truth binary masks, each of shape (H, W).
 
     Returns:
-        IoU matrix of shape (len(pred_masks), len(gt_masks)). An empty mask pair
-        (union of zero pixels) has an IoU of 0.
+        IoU matrix of shape (P, G). An empty mask pair (union of zero pixels) has an
+        IoU of 0.
     """
     pred_areas = [float(mask.sum()) for mask in pred_masks]
     gt_areas = [float(mask.sum()) for mask in gt_masks]
