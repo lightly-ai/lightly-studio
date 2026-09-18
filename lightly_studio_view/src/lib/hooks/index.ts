@@ -4,6 +4,7 @@ export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfi
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 export { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
+export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
