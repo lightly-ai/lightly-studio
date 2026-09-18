@@ -9,11 +9,15 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database import db_array
+from lightly_studio.models.group import SampleGroupLinkTable
+from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.mcap_group_sequence import (
     McapGroupSequenceTable,
+    McapSequenceFrame,
     McapSequenceView,
     McapSequenceViewsWithCount,
 )
+from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 
@@ -70,11 +74,13 @@ def get_all_by_collection_id(
         session=session,
         sequence_sample_ids=sequence_sample_ids,
     )
+    sequence_frames = _get_sequence_frames(session=session, sequences=sequences)
 
     views = [
         McapSequenceView(
             sample_id=seq.sample_id,
             sample_count=sequence_sample_counts.get(seq.sample_id, 0),
+            sequence_frame=sequence_frames.get(seq.sample_id),
         )
         for seq in sequences
     ]
@@ -115,6 +121,106 @@ def _get_sequence_sample_counts(
 
     results = session.exec(count_query).all()
     return dict(results)
+
+
+def _get_sequence_frames(
+    session: Session,
+    sequences: Sequence[McapGroupSequenceTable],
+) -> dict[UUID, McapSequenceFrame]:
+    """Get the first camera keyframe locator for each sequence.
+
+    Only frames where ``keyframe_log_time_ns == log_time_ns`` are considered —
+    these are self-contained keyframes decodable by the /camera-frame endpoint
+    without any preceding reference frame. When a sequence has no such frames,
+    it is absent from the returned dict. The first frame is chosen by ascending
+    ``log_time_ns`` with ``channel_id`` as tie-breaker.
+
+    Args:
+        session: Database session for executing queries.
+        sequences: Non-empty sequence of McapGroupSequenceTable rows.
+
+    Returns:
+        Dictionary mapping sequence sample_id to its first-keyframe locator.
+    """
+    recording_id_by_sample_id = {
+        sequence.sample_id: sequence.recording_id for sequence in sequences
+    }
+    sequence_sample_ids = list(recording_id_by_sample_id)
+    dataset_id_by_recording_id = _get_dataset_ids_by_recording_id(
+        session=session,
+        recording_ids=list(set(recording_id_by_sample_id.values())),
+    )
+    keyframe_rows = _get_sequence_keyframe_rows(
+        session=session,
+        sequence_sample_ids=sequence_sample_ids,
+    )
+    return _create_sequence_frames(
+        keyframe_rows=keyframe_rows,
+        recording_id_by_sample_id=recording_id_by_sample_id,
+        dataset_id_by_recording_id=dataset_id_by_recording_id,
+    )
+
+
+def _get_dataset_ids_by_recording_id(
+    session: Session,
+    recording_ids: Sequence[UUID],
+) -> dict[UUID, UUID]:
+    """Get the dataset ID for each recording ID."""
+    query = select(RecordingTable.recording_id, RecordingTable.dataset_id).where(
+        col(RecordingTable.recording_id).in_(recording_ids)
+    )
+    return dict(session.exec(query).all())
+
+
+def _get_sequence_keyframe_rows(
+    session: Session,
+    sequence_sample_ids: Sequence[UUID],
+) -> Sequence[tuple[UUID, int, int]]:
+    """Get every independently decodable MCAP frame in the requested sequences."""
+    query = (
+        select(
+            SampleSequenceLinkTable.sequence_sample_id,
+            McapTable.channel_id,
+            McapTable.log_time_ns,
+        )
+        .join(
+            SampleGroupLinkTable,
+            col(SampleGroupLinkTable.parent_sample_id) == col(SampleSequenceLinkTable.sample_id),
+        )
+        .join(McapTable, col(McapTable.sample_id) == col(SampleGroupLinkTable.sample_id))
+        .where(
+            db_array.in_array(
+                column=col(SampleSequenceLinkTable.sequence_sample_id),
+                values=sequence_sample_ids,
+            )
+        )
+        .where(col(McapTable.keyframe_log_time_ns) == col(McapTable.log_time_ns))
+        .order_by(
+            col(SampleSequenceLinkTable.sequence_sample_id),
+            col(McapTable.log_time_ns).asc(),
+            col(McapTable.channel_id).asc(),
+        )
+    )
+    return session.exec(query).all()
+
+
+def _create_sequence_frames(
+    keyframe_rows: Sequence[tuple[UUID, int, int]],
+    recording_id_by_sample_id: dict[UUID, UUID],
+    dataset_id_by_recording_id: dict[UUID, UUID],
+) -> dict[UUID, McapSequenceFrame]:
+    """Create first-keyframe locators from ordered MCAP rows."""
+    result: dict[UUID, McapSequenceFrame] = {}
+    for sequence_sample_id, channel_id, log_time_ns in keyframe_rows:
+        if sequence_sample_id not in result:
+            recording_id = recording_id_by_sample_id[sequence_sample_id]
+            result[sequence_sample_id] = McapSequenceFrame(
+                dataset_id=dataset_id_by_recording_id[recording_id],
+                recording_id=recording_id,
+                channel_id=channel_id,
+                keyframe_log_time_ns=str(log_time_ns),
+            )
+    return result
 
 
 def _compute_next_cursor(
