@@ -25,15 +25,24 @@ class ChannelSummaryView(BaseModel):
         description="The id used to match this slot against calibration/transform data. "
         "`None` if the slot has none.",
     )
+    keyframe_log_time_ns: int | None = Field(
+        default=None,
+        description="The earliest indexed keyframe log time for this channel, in nanoseconds.",
+    )
 
     @classmethod
-    def from_component(cls, component: McapGroupComponentDefinitionView) -> ChannelSummaryView:
+    def from_component(
+        cls,
+        component: McapGroupComponentDefinitionView,
+        keyframe_log_time_ns: int | None = None,
+    ) -> ChannelSummaryView:
         """Builds the API view of a channel from its MCAP group component definition."""
         return cls(
             channel_id=component.channel_id,
             group_component_name=component.group_component_name,
             group_component_index=component.group_component_index,
             frame_id=component.frame_id,
+            keyframe_log_time_ns=keyframe_log_time_ns,
         )
 
 
@@ -60,7 +69,10 @@ class MCAPSequenceSummary(BaseModel):
 
     @classmethod
     def from_info(
-        cls, info: McapGroupSequenceInfoView, start_log_time_ns: int | None
+        cls,
+        info: McapGroupSequenceInfoView,
+        start_log_time_ns: int | None,
+        keyframe_log_time_ns_by_channel: dict[int, int | None],
     ) -> MCAPSequenceSummary:
         """Builds the summary from a sequence's `McapGroupSequenceInfoView`.
 
@@ -69,12 +81,16 @@ class MCAPSequenceSummary(BaseModel):
                 `mcap_group_sequence_resolver.get_info`.
             start_log_time_ns: The earliest log time across all indexed ticks, or
                 `None` if no ticks have been indexed yet.
+            keyframe_log_time_ns_by_channel: Earliest indexed keyframe log time by MCAP channel.
         """
         lidar_channels: list[ChannelSummaryView] = []
         camera_channels: list[ChannelSummaryView] = []
 
         for component in info.components:
-            channel = ChannelSummaryView.from_component(component)
+            channel = ChannelSummaryView.from_component(
+                component,
+                keyframe_log_time_ns=keyframe_log_time_ns_by_channel.get(component.channel_id),
+            )
             if component.mcap_data_type is McapDataType.POINT_CLOUD:
                 lidar_channels.append(channel)
             elif component.mcap_data_type is McapDataType.VIDEO_FRAME:

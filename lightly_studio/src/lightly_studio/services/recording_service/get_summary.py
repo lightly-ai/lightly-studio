@@ -42,4 +42,18 @@ def get_mcap_sequence_summary(
     start_log_time_ns = mcap_resolver.get_start_log_time_ns(
         session=session, sequence_id=sequence_id
     )
-    return MCAPSequenceSummary.from_info(info=info, start_log_time_ns=start_log_time_ns)
+    camera_channel_ids = [
+        component.channel_id
+        for component in info.components
+        if component.mcap_data_type.value == "video_frame"
+    ]
+    keyframe_log_time_ns_by_channel = mcap_resolver.get_initial_keyframe_log_time_ns_by_channel(
+        session=session,
+        sequence_id=sequence_id,
+        channel_ids=camera_channel_ids,
+    )
+    return MCAPSequenceSummary.from_info(
+        info=info,
+        start_log_time_ns=start_log_time_ns,
+        keyframe_log_time_ns_by_channel=keyframe_log_time_ns_by_channel,
+    )

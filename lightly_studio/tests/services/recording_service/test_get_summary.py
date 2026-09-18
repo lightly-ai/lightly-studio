@@ -27,6 +27,7 @@ def test_get_mcap_sequence_summary(db_session: Session) -> None:
     camera_channel = summary.camera_channels[0]
     assert camera_channel.channel_id == 3
     assert camera_channel.frame_id == "main"
+    assert camera_channel.keyframe_log_time_ns is None
 
     lidar_channel = summary.lidar_channels[0]
     assert lidar_channel.channel_id == 7

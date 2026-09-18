@@ -104,6 +104,7 @@ def test_get_summary__with_indexed_ticks(test_client: TestClient, db_session: Se
     assert len(camera_channels) == 1
     assert camera_channels[0]["channel_id"] == 3
     assert camera_channels[0]["group_component_name"] == "front"
+    assert camera_channels[0]["keyframe_log_time_ns"] == _START_LOG_TIME_NS
 
     lidar_channels = body["lidar_channels"]
     assert len(lidar_channels) == 1
