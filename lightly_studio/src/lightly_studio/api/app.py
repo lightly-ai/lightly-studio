@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -59,6 +60,10 @@ from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR,
 )
 from lightly_studio.plugins.operator_registry import operator_registry
+
+_MCAP_AVAILABLE = importlib.util.find_spec("mcap") is not None
+if _MCAP_AVAILABLE:
+    from lightly_studio.api.routes import recordings
 
 SessionDep = Annotated[Session, Depends(db_manager.session)]
 
@@ -171,6 +176,8 @@ app.include_router(images.app_router, prefix="/images")
 app.include_router(video_frames_media.frames_router)
 app.include_router(video_media.app_router)
 app.include_router(mcap_sequences.mcap_sequences_router)
+if _MCAP_AVAILABLE:
+    app.include_router(recordings.recordings_router)
 
 # health status check
 app.include_router(healthz.health_router)
