@@ -7,11 +7,11 @@ from uuid import UUID
 import pytest
 
 from lightly_studio.core.video.video_dataset import VideoDataset
-from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     sample_embedding_resolver,
     video_frame_resolver,
@@ -21,13 +21,16 @@ from tests.resolvers.video.helpers import create_video_file
 
 
 def _count_sample_embeddings(dataset: VideoDataset, collection_id: UUID) -> int:
-    """Return the number of embeddings stored for a collection's default model."""
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
+    """Return the number of embeddings stored for a collection's default model.
+
+    A collection with no default model has no embeddings, so this returns 0.
+    """
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=dataset.session,
         collection_id=collection_id,
     )
-    assert model_id is not None
+    if model_id is None:
+        return 0
     return len(
         sample_embedding_resolver.get_all_by_collection_id(
             session=dataset.session,
@@ -72,8 +75,7 @@ class TestDataset:
             "test_video_0.mp4",
         }
         # Check that embeddings were created
-        embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-        model_id = embedding_manager.load_or_get_default_model(
+        model_id = collection_embedding_model_resolver.get_default_by_collection_id(
             session=dataset.session,
             collection_id=dataset.collection_id,
         )

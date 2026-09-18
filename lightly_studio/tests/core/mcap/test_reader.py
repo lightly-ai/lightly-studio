@@ -13,7 +13,12 @@ from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import matching
-from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError, TopicNotFoundError
+from lightly_studio.core.mcap.errors import (
+    ChannelNotFoundError,
+    DataNotLoadedError,
+    McapAccessError,
+    TopicNotFoundError,
+)
 from lightly_studio.core.mcap.reader import McapFileReader
 from tests.core.mcap import helpers
 
@@ -240,6 +245,62 @@ class TestMcapFileReader:
                 child_frame_id=helpers.LIDAR_FRAME_ID,
                 topic="/unknown",
             )
+
+    def test_get_decoded_message_at(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            result = reader.get_decoded_message_at(
+                channel_id=channel_id, timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[1]
+            )
+
+        assert result is not None
+        assert result.channel_id == channel_id
+        assert result.topic == helpers.CAMERA_IMAGE_TOPIC
+        assert result.log_time_ns == helpers.IMAGE_LOG_TIMES_NS[1]
+        assert result.decoded_message.data == helpers.compressed_image_payload(
+            helpers.IMAGE_LOG_TIMES_NS[1]
+        )
+
+    def test_get_decoded_message_at__no_message_at_timestamp(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            result = reader.get_decoded_message_at(
+                channel_id=channel_id,
+                timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0] + 1,
+            )
+
+        assert result is None
+
+    def test_get_decoded_message_at__unknown_channel(self, reader: McapFileReader) -> None:
+        with pytest.raises(ChannelNotFoundError):
+            reader.get_decoded_message_at(channel_id=999_999, timestamp_ns=0)
+
+    def test_get_decoded_message_at__undecodable(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_undecodable_compressed_image(tmp_path / "undecodable.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            with pytest.raises(McapAccessError):
+                reader.get_decoded_message_at(
+                    channel_id=channel_id,
+                    timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
+                )
 
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
