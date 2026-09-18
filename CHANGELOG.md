@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `hf://` directory ingest reporting every file as missing.
 - Fix the distribution panel and annotation class counts not updating when a filter changes.
 - Speed up the initial page load in the GUI by up to ~3.5 seconds by no longer loading the query editor on every page.
+- Fix undoing an annotation deletion restoring it to the default source instead of its original one.
 
 ### Security
 
