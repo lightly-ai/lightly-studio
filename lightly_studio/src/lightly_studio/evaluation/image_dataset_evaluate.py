@@ -101,7 +101,7 @@ class InstanceSegmentationEvaluationConfig(BaseModel):
         iou_threshold: Mask IoU threshold used to match predictions to ground
             truths. Stored in the run config for reproducibility.
         classwise: If True, match predictions and ground truths only within the
-            same annotation class. If False, match globally across all annotation classes.
+            same annotation class. If False, match across all annotation classes.
     """
 
     iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)

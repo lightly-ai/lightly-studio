@@ -135,17 +135,17 @@ summary.
 
     ```
 
-    Instance segmentation matches each predicted mask to a ground truth mask, like object
-    detection. The match uses mask intersection over union (IoU) instead of box IoU. The
-    `iou_threshold` sets the minimum mask IoU for a match. Matched pairs count as true positives
-    (`tp`). Unmatched predictions count as false positives (`fp`). Unmatched ground truth masks
-    count as false negatives (`fn`).
+    Instance segmentation matches each predicted mask to a ground truth mask, using mask
+    intersection over union (IoU). The `iou_threshold` sets the minimum mask IoU for a match.
+    Matched pairs count as true positives (`tp`). Unmatched predictions count as false positives
+    (`fp`). Unmatched ground truth masks count as false negatives (`fn`).
 
     Both the ground-truth and the prediction annotation source must contain segmentation-mask
     annotations, the same type semantic segmentation uses.
 
-    The `classwise` setting works like it does for object detection. With `classwise=True`, a
-    predicted `dog` mask can only match a ground truth `dog` mask.
+    The `classwise` setting controls whether matching is restricted to masks with the same class
+    label. With `classwise=True`, a predicted `dog` mask can only match a ground truth `dog` mask.
+    With `classwise=False`, a prediction can match a ground truth of any class.
 
     The per-sample metrics are stored as `tp`, `fp`, and `fn`. You can sort samples by the number
     of true positives, false positives, or false negatives.
