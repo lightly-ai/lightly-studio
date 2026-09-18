@@ -83,6 +83,7 @@ def compute_mask_iou_matrix(
     return iou_matrix
 
 
+# TODO (Jonas 9/2026): Refactor duplicated method as helper
 def match_image(
     predictions: Sequence[InstanceMask],
     ground_truths: Sequence[InstanceMask],
@@ -132,6 +133,7 @@ def match_image(
     )
 
 
+# TODO (Jonas 9/2026): Create shared helper for metric persistence
 def create_and_persist_instance_segmentation_metrics_per_sample(
     session: Session,
     data: EvaluationData,
