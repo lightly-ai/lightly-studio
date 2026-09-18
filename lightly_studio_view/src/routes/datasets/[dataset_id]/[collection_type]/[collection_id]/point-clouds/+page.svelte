@@ -19,7 +19,8 @@
     const sequences = $derived(
         $data.map((sequence) => ({
             sampleId: sequence.sample_id,
-            sampleCount: sequence.sample_count
+            sampleCount: sequence.sample_count,
+            sequenceFrame: sequence.sequence_frame ?? null
         }))
     );
     const isLoading = $derived(query.isPending && sequences.length === 0);
