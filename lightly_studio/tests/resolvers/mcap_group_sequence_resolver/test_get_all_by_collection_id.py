@@ -27,10 +27,8 @@ from lightly_studio.resolvers import (
     sequence_resolver,
 )
 from tests.helpers_resolvers import create_collection
-from tests.resolvers.mcap_group_sequence_resolver.helpers import (
-    McapSequenceFixture,
-    create_mcap_sequence,
-)
+from tests.resolvers.mcap_group_sequence_resolver import helpers
+from tests.resolvers.mcap_group_sequence_resolver.helpers import McapSequenceFixture
 
 
 def test_get_all_by_collection_id__empty_collection(db_session: Session) -> None:
@@ -200,7 +198,7 @@ def test_get_all_by_collection_id__pagination(db_session: Session) -> None:
 
 
 def test_get_all_by_collection_id__returns_sequence_frame(db_session: Session) -> None:
-    fixture = create_mcap_sequence(session=db_session, uri="/bags/drive_001.mcap")
+    fixture = helpers.create_mcap_sequence(session=db_session, uri="/bags/drive_001.mcap")
     _add_mcap_ticks_to_sequence(
         session=db_session,
         fixture=fixture,
@@ -225,7 +223,7 @@ def test_get_all_by_collection_id__returns_sequence_frame(db_session: Session) -
 def test_get_all_by_collection_id__no_sequence_frame_without_camera_frames(
     db_session: Session,
 ) -> None:
-    fixture = create_mcap_sequence(session=db_session, uri="/bags/lidar_001.mcap")
+    fixture = helpers.create_mcap_sequence(session=db_session, uri="/bags/lidar_001.mcap")
     _add_mcap_ticks_to_sequence(
         session=db_session,
         fixture=fixture,

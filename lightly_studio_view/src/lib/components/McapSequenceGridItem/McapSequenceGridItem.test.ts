@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, fireEvent } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import McapSequenceGridItem from './McapSequenceGridItem.svelte';
 
 describe('McapSequenceGridItem', () => {
@@ -48,5 +49,30 @@ describe('McapSequenceGridItem', () => {
         expect(img.src).toContain('keyframe_timestamp_ns=90');
         expect(img.src).toContain('w=200');
         expect(img.src).toContain('h=200');
+    });
+
+    it('renders an img when frameUrl changes after a prior URL failed', async () => {
+        const sequenceFrame = {
+            dataset_id: 'ds-recording',
+            recording_id: 'rec-abc',
+            channel_id: 2,
+            keyframe_log_time_ns: '90'
+        };
+
+        const { getByRole, queryByRole, rerender } = render(McapSequenceGridItem, {
+            props: { ...defaultProps, sequenceFrame }
+        });
+
+        fireEvent.error(getByRole('img'));
+        await tick();
+
+        expect(queryByRole('img')).not.toBeInTheDocument();
+
+        await rerender({
+            ...defaultProps,
+            sequenceFrame: { ...sequenceFrame, keyframe_log_time_ns: '100' }
+        });
+
+        expect(getByRole('img')).toBeInTheDocument();
     });
 });

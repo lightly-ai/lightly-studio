@@ -21,7 +21,7 @@
             : null
     );
 
-    let imageError = $state(false);
+    let failedFrameUrl = $state<string | null>(null);
 </script>
 
 <div
@@ -29,23 +29,21 @@
     class="relative h-full w-full"
     style="width: {width}px; height: {height}px"
 >
-    {#key frameUrl}
-        {#if frameUrl !== null && !imageError}
-            <img
-                src={frameUrl}
-                alt="MCAP sequence preview"
-                class="h-full w-full object-cover"
-                onerror={() => (imageError = true)}
-            />
-        {:else}
-            <div
-                class="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted text-muted-foreground"
-            >
-                <BoxIcon class="size-10" />
-                <span class="text-sm font-medium">MCAP sequence</span>
-            </div>
-        {/if}
-    {/key}
+    {#if frameUrl !== null && frameUrl !== failedFrameUrl}
+        <img
+            src={frameUrl}
+            alt="MCAP sequence preview"
+            class="h-full w-full object-cover"
+            onerror={() => (failedFrameUrl = frameUrl)}
+        />
+    {:else}
+        <div
+            class="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted text-muted-foreground"
+        >
+            <BoxIcon class="size-10" />
+            <span class="text-sm font-medium">MCAP sequence</span>
+        </div>
+    {/if}
     {#if sampleCount > 1}
         <div
             class="absolute bottom-1 right-1 rounded-sm bg-black/60 px-1.5 py-0.5 text-xs font-bold text-white"
