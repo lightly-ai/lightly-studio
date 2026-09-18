@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 from fastapi.testclient import TestClient
 from lightly_studio_serve import server
 from lightly_studio_serve.embedder import ImageBytesEmbedder, TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from pytest_mock import MockerFixture
 
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.remote import connection
@@ -38,9 +38,9 @@ class TestRemoteEmbedder:
         assert result.kept_indices == [0, 1]
         np.testing.assert_array_equal(result.embeddings, np.array([[0.5, -0.5]] * 2))
 
-    def test_close__closes_owned_client(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_close__closes_owned_client(self, mocker: MockerFixture) -> None:
         client = TestClient(server.create_app(embedder=_TextImageEmbedder()))
-        monkeypatch.setattr(connection, "build_client", lambda **_kwargs: client)
+        mocker.patch.object(connection, "build_client", return_value=client)
 
         with RemoteEmbedder.connect(url=BASE_URL):
             assert not client.is_closed
