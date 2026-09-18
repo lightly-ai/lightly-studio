@@ -63,7 +63,7 @@ def seed() -> None:
     """Creates the MCAP demo dataset in the database and prints the workspace URL."""
     print(f"Reading MCAP topics from {MCAP_S3_URI} ...")
     with McapFileReader(path=MCAP_S3_URI) as reader:
-        topics = reader._get_topics()  # noqa: SLF001
+        topics = reader.get_topics()
 
     slots: list[tuple[str, McapDataType, int]] = []
     for topic in topics:
