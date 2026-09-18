@@ -249,7 +249,9 @@ class TestEmbedderRegistry:
         assert registry.get_image_path_embedder(space_key="mobileclip_s0") is builtin
         assert registry.get_image_path_embedder() is custom
 
-    def test_preload_builtin_embedders__loads_each_builtin_once(self, mocker: MockerFixture) -> None:
+    def test_preload_builtin_embedders__loads_each_builtin_once(
+        self, mocker: MockerFixture
+    ) -> None:
         registry = EmbedderRegistry()
         mobileclip = _FakeTextImageEmbedder(space_key="mobileclip_s0")
         pe = _FakeVideoImageEmbedder(space_key="PE-Core-T16-384")
