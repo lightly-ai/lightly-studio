@@ -30,7 +30,7 @@ class _TextImageEmbedder(TextEmbedder, ImageBytesEmbedder):
 class TestRemoteEmbedder:
     def test_connect_and_embed(self) -> None:
         with TestClient(server.create_app(embedder=_TextImageEmbedder())) as client:
-            remote = RemoteEmbedder.connect(url=BASE_URL, client=client)
+            remote = RemoteEmbedder.connect_with_client(client=client)
             assert isinstance(remote, TextEmbedder)
             assert isinstance(remote, ImageBytesEmbedder)
             result = remote.embed_text(texts=["first", "second"])
@@ -49,7 +49,7 @@ class TestRemoteEmbedder:
 
     def test_register_and_resolve(self) -> None:
         with TestClient(server.create_app(embedder=_TextImageEmbedder())) as client:
-            remote = RemoteEmbedder.connect(url=BASE_URL, client=client)
+            remote = RemoteEmbedder.connect_with_client(client=client)
 
         registry = EmbedderRegistry()
         registry.register(embedder=remote)

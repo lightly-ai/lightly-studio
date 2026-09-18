@@ -71,7 +71,7 @@ class RemoteEmbedder(Embedder):
             spec: The embedding space that the server produces, from ``/v1/describe``.
             limits: The limits that the server applies, from ``/v1/describe``.
             owned_client: The client that ``connect`` opened, which ``close`` closes.
-                ``None`` for a client that the caller passed in and still owns.
+                ``None`` for a client that ``connect_with_client`` got and does not own.
         """
         self._transport = transport
         self._spec = spec
@@ -80,22 +80,16 @@ class RemoteEmbedder(Embedder):
         self._closed = False
 
     @classmethod
-    def connect(
-        cls, url: str, api_key: str | None = None, client: httpx.Client | None = None
-    ) -> RemoteEmbedder:
-        """Read ``/v1/describe`` and build the embedder that this server can back.
+    def connect(cls, url: str, api_key: str | None = None) -> RemoteEmbedder:
+        """Open a client against ``url`` and build the embedder that this server backs.
 
-        The description is read at construction and not at the first call, because
-        ``EmbedderRegistry.register`` reads ``embedding_space_spec()`` as soon as it gets
-        the embedder and resolves it by ``isinstance`` from that moment.
+        The embedder owns the client that this method opens, and ``close`` closes it. Pass
+        a client of your own to ``connect_with_client`` to keep that ownership.
 
         Args:
             url: The address of the server, without a path of the protocol.
             api_key: The token to send as ``Authorization: Bearer``, or ``None`` for a
                 server that wants none.
-            client: The client to send with, for a test that drives an application in
-                process. Its ``base_url`` then names the server and ``url`` is unused.
-                ``None`` opens a client against ``url``.
 
         Returns:
             An embedder that implements the interface of every capability that the server
@@ -106,28 +100,41 @@ class RemoteEmbedder(Embedder):
                 a description that the protocol does not allow, or advertises no
                 capability that LightlyStudio can use.
         """
-        http_client = client if client is not None else connection.build_client(url=url)
-        owned_client = http_client if client is None else None
-        try:
-            transport = RemoteTransport(client=http_client, api_key=api_key)
-            description = transport.describe()
-            connection.log_if_loading(description=description, client=http_client)
-            return _embedder_for(
-                transport=transport,
-                description=description,
-                owned_client=owned_client,
-            )
-        except BaseException:
-            # A client that this method opened has no other owner once it raises.
-            if owned_client is not None:
-                owned_client.close()
-            raise
+        http_client = connection.build_client(url=url)
+        return cls._from_client(http_client=http_client, api_key=api_key, owned_client=http_client)
+
+    @classmethod
+    def connect_with_client(
+        cls, client: httpx.Client, api_key: str | None = None
+    ) -> RemoteEmbedder:
+        """Build the embedder that the server behind ``client`` backs.
+
+        The ``base_url`` of ``client`` names the server. The caller keeps the client, and
+        ``close`` leaves it open. A test that drives an application in process connects
+        this way.
+
+        Args:
+            client: The client that carries every request.
+            api_key: The token to send as ``Authorization: Bearer``, or ``None`` for a
+                server that wants none.
+
+        Returns:
+            An embedder that implements the interface of every capability that the server
+            advertises and this client routes to.
+
+        Raises:
+            RemoteEmbedderError: If the server gives no answer, rejects the token, answers
+                a description that the protocol does not allow, or advertises no
+                capability that LightlyStudio can use.
+        """
+        return cls._from_client(http_client=client, api_key=api_key, owned_client=None)
 
     def close(self) -> None:
         """Close the connection pool of a client that ``connect`` opened.
 
-        A client that the caller passed to ``connect`` stays the caller's to close. Calling
-        this twice is allowed. An embedder that is closed sends no further request.
+        A client that the caller passed to ``connect_with_client`` stays the caller's to
+        close. Calling this twice is allowed. An embedder that is closed sends no further
+        request.
         """
         self._closed = True
         if self._owned_client is not None:
@@ -149,6 +156,47 @@ class RemoteEmbedder(Embedder):
             The space that ``/v1/describe`` reported at construction.
         """
         return self._spec
+
+    @classmethod
+    def _from_client(
+        cls, http_client: httpx.Client, api_key: str | None, owned_client: httpx.Client | None
+    ) -> RemoteEmbedder:
+        """Read ``/v1/describe`` over ``http_client`` and compose the embedder it reports.
+
+        The description is read here and not at the first call, because
+        ``EmbedderRegistry.register`` reads ``embedding_space_spec()`` as soon as it gets
+        the embedder and resolves it by ``isinstance`` from that moment.
+
+        Args:
+            http_client: The client that carries every request.
+            api_key: The token to send as ``Authorization: Bearer``, or ``None`` for a
+                server that wants none.
+            owned_client: ``http_client`` when the embedder closes it, and ``None`` when
+                the caller keeps it.
+
+        Returns:
+            An embedder that implements the interface of every capability that the server
+            advertises and this client routes to.
+
+        Raises:
+            RemoteEmbedderError: If the server gives no answer, rejects the token, answers
+                a description that the protocol does not allow, or advertises no
+                capability that LightlyStudio can use.
+        """
+        try:
+            transport = RemoteTransport(client=http_client, api_key=api_key)
+            description = transport.describe()
+            connection.log_if_loading(description=description, client=http_client)
+            return _embedder_for(
+                transport=transport,
+                description=description,
+                owned_client=owned_client,
+            )
+        except BaseException:
+            # A client that the embedder owns has no other owner once this raises.
+            if owned_client is not None:
+                owned_client.close()
+            raise
 
     def _embed(
         self,
