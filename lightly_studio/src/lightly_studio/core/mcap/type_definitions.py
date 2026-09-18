@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from lightly_studio.core.mcap.topic_kind import TopicKind
 
@@ -73,6 +74,26 @@ class CameraIntrinsics:
     frame_id: str | None
     distortion_model: str | None = None
     distortion_coefficients: tuple[float, ...] = ()
+
+
+@dataclass(frozen=True)
+class DecodedMessage:
+    """A single decoded message read off a channel.
+
+    Attributes:
+        channel_id: The id of the channel the message was read from.
+        topic: The topic the channel is recorded on.
+        log_time_ns: The time the message was logged, in nanoseconds.
+        schema_name: The name of the message schema, `None` without a schema.
+        decoded_message: The decoded payload, shaped by the message's encoding (a ROS
+            2 message object, a protobuf object, or a plain dict for JSON).
+    """
+
+    channel_id: int
+    topic: str
+    log_time_ns: int
+    schema_name: str | None
+    decoded_message: Any
 
 
 @dataclass(frozen=True)

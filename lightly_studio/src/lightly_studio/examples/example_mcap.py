@@ -8,8 +8,18 @@ Set `COMPONENTS` to the sensors of your recording and `EXAMPLES_MCAP_PATH` to an
 indexed `.mcap` file (or a URI such as `s3://my-bucket/perception.mcap`). The path is
 stored on the recording as given.
 
+The file is read through fsspec. Only the summary and the chunks a step needs are
+fetched, so a remote recording does not have to be downloaded first. Credentials are
+read from the environment, e.g. from the `AWS_*` variables; pass `storage_options` to
+`McapFileReader` to set them, or an endpoint, explicitly.
+
 Every step is timed and printed as it finishes. Writes take lists and commit once per
 call, so a recording is written with four calls, not four per sweep.
+
+Prerequisites — install the optional extras before running::
+
+    uv run --extra mcap python src/lightly_studio/examples/example_mcap.py
+    # For S3 URIs also add: --extra cloud-storage
 """
 
 from __future__ import annotations

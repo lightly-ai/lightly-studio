@@ -11,13 +11,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
-from lightly_studio.core.mcap import message_fields
-
-_DATA_FIELDS = ("data",)
-_FORMAT_FIELDS = ("format",)
-
-_H264_FORMATS = frozenset({"h264", "avc", "avc1"})
-_H265_FORMATS = frozenset({"h265", "hevc", "hvc1"})
+from lightly_studio.core.mcap import _video_formats, message_fields
 
 # NAL unit start code of an Annex B byte stream. Also matches the four byte variant
 # `00 00 00 01`, whose last three bytes are the same.
@@ -41,8 +35,8 @@ def is_keyframe_message(decoded_message: Any) -> bool:
         Whether the message holds a keyframe. `False` if the payload or its format
         cannot be read, for example because the format is not supported.
     """
-    data = message_fields.get_field(decoded_message, _DATA_FIELDS)
-    video_format = message_fields.get_field(decoded_message, _FORMAT_FIELDS)
+    data = message_fields.get_field(decoded_message, _video_formats.DATA_FIELDS)
+    video_format = message_fields.get_field(decoded_message, _video_formats.FORMAT_FIELDS)
     if not isinstance(data, bytes) or not isinstance(video_format, str):
         return False
     if not is_format_supported(video_format):
@@ -59,8 +53,8 @@ def is_format_supported(video_format: str) -> bool:
     Returns:
         Whether `is_keyframe` accepts the format.
     """
-    normalized = _normalize_format(video_format)
-    return normalized in _H264_FORMATS or normalized in _H265_FORMATS
+    normalized = _video_formats.normalize_format(video_format)
+    return normalized in _video_formats.H264_FORMATS or normalized in _video_formats.H265_FORMATS
 
 
 def is_keyframe(data: bytes, video_format: str) -> bool:
@@ -80,22 +74,17 @@ def is_keyframe(data: bytes, video_format: str) -> bool:
     Raises:
         ValueError: If keyframes cannot be detected in the format.
     """
-    normalized = _normalize_format(video_format)
-    if normalized in _H264_FORMATS:
+    normalized = _video_formats.normalize_format(video_format)
+    if normalized in _video_formats.H264_FORMATS:
         return any(
             nal_header & 0x1F == _H264_NAL_TYPE_IDR for nal_header in _iter_nal_headers(data)
         )
-    if normalized in _H265_FORMATS:
+    if normalized in _video_formats.H265_FORMATS:
         return any(
             _H265_NAL_TYPE_IRAP_FIRST <= (nal_header >> 1) & 0x3F <= _H265_NAL_TYPE_IRAP_LAST
             for nal_header in _iter_nal_headers(data)
         )
     raise ValueError(f"Cannot detect keyframes in video format '{video_format}'.")
-
-
-def _normalize_format(video_format: str) -> str:
-    """Returns the video format in lower case and without surrounding whitespace."""
-    return video_format.strip().lower()
 
 
 def _iter_nal_headers(data: bytes) -> Iterator[int]:

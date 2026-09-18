@@ -17,31 +17,20 @@ must happen before you load a dataset or before the GUI is started.
 
 See the [Embeddings page](../core_concepts/embeddings.md) for more details.
 
-## set_default_embedding_model
+<!-- TODO(Michal, 09/2026): Restore the API reference below. The autodoc blocks
+     for set_default_embedding_model and the EmbeddingGenerator protocols were
+     removed with EmbeddingManager; document their registry-based replacements
+     in a follow-up. -->
 
-::: lightly_studio.dataset.embedding_manager
-    options:
-        members: [set_default_embedding_model]
+## set_default_embedding_model
 
 ## Generator protocols
 
 ### EmbeddingGenerator
 
-::: lightly_studio.dataset.embedding_generator
-    options:
-        members: [EmbeddingGenerator]
-
 ### ImageEmbeddingGenerator
 
-::: lightly_studio.dataset.embedding_generator
-    options:
-        members: [ImageEmbeddingGenerator]
-
 ### VideoEmbeddingGenerator
-
-::: lightly_studio.dataset.embedding_generator
-    options:
-        members: [VideoEmbeddingGenerator]
 
 ## Supporting types
 

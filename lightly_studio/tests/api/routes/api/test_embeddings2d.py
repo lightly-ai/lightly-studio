@@ -13,7 +13,7 @@ from pyarrow import ipc
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.dataset.mobileclip_embedding_generator import EMBEDDING_DIMENSION
+from lightly_studio.embed.mobileclip_embedder import EMBEDDING_DIMENSION
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
