@@ -30,8 +30,8 @@ managed cloud credentials.
 
 ### Is LightlyStudio free or paid?
 
-LightlyStudio is free and open source. You can install it and use every feature on your own machine
-at no cost. [LightlyStudio Enterprise](enterprise/index.md) is a separate paid product for teams. It
+LightlyStudio is free and open source. You can install it and use every open-source feature on your own
+machine at no cost. [LightlyStudio Enterprise](enterprise/index.md) is a separate paid product for teams. It
 adds collaboration, role-based access, and central credential management. Your team can
 [start with it for free](https://app.studio.lightly.ai/auth/signup).
 
@@ -149,8 +149,13 @@ cloud storage and stores this metadata in PostgreSQL.
 
 ### Does my data ever leave my machine?
 
-No. LightlyStudio runs on your own machine. The app, the backend server, and the database are all
-local. Your images and datasets never leave your machine.
+No. With the open-source version, the app, the backend server, and the database all run on your own
+machine. Your images and videos stay in your own storage, whether that is a local folder or your own
+cloud bucket. They are never sent to Lightly.
+
+The hosted [LightlyStudio Enterprise](enterprise/index.md) service is different: it runs on Lightly's
+infrastructure and reads your images and videos from cloud storage. See
+[Enterprise security](enterprise/security.md) for what it stores.
 
 <!-- TODO(Michal, 09/2026): Uncomment once `RemoteEmbedder` ships.
 ### Can I use my own embedding model without exposing its weights?
