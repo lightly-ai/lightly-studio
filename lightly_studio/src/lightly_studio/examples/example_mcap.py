@@ -346,7 +346,6 @@ env = Env()
 env.read_env()
 # Read as a string, not as a path, so a URI such as `s3://...` survives unchanged.
 mcap_path = env.str("EXAMPLES_MCAP_PATH", "datasets/perception.mcap")
-mcap_path = "C:\\Users\\horatiu\\Downloads\\Copy of rosbag2_2026_08_02-20_05_43_0.mcap"
 db_manager.connect(cleanup_existing=True)
 db_session = db_manager.persistent_session()
 
