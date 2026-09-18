@@ -19,6 +19,17 @@ class SequenceTable(SQLModel, table=True):
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
 
 
+class SampleSequenceLinkCreate(SQLModel):
+    """Input model for putting one sample in a slot of a sequence.
+
+    The sequence is named once per call, so it is not repeated on every link.
+    """
+
+    sample_id: UUID
+    seq_number: int
+    timestamp_ns: Optional[int] = None
+
+
 class SampleSequenceLinkTable(SQLModel, table=True):
     """Model to define the ordered links between a Sequence and Samples One-to-Many."""
 
