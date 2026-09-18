@@ -50,7 +50,7 @@ STATIC_TRANSFORM_TOPIC = "/tf_static"
 # first read small, because a filesystem fetches a whole block for every read that
 # misses the cache, and the default block of a remote filesystem is tens of megabytes.
 _RANDOM_READ_CACHE_TYPE = "readahead"
-_RANDOM_READ_BLOCK_SIZE_BYTES = 64 * 1024 * 1024
+_RANDOM_READ_BLOCK_SIZE_BYTES = 64 * 1024
 
 
 class ReadPattern(Enum):
