@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Speed up coloring the embedding plot by tags on large datasets by up to 2x.
 - Show loading spinners in distribution plots in the GUI. 
 - Preselected samples are now part of the sampling result.
 - Move each docs page into a folder named for its nav section. The old URLs redirect.
