@@ -555,22 +555,29 @@
                         </div>
                     {/if}
 
-                    <PlotPanelLegend
-                        {categoryColors}
-                        {includedLabel}
-                        {legendEntries}
-                        excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
-                        includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
-                        onToggleCategory={toggleCategoryVisibility}
-                        onDoubleClickCategory={(category) => {
-                            focusCategoryVisibility(
-                                legendEntries.map((entry) => entry.cat),
-                                category
-                            );
-                        }}
-                    />
+                    <!-- Legend and pill share the bottom edge, so they sit in one row rather
+                         than in two absolute corners: the legend then shrinks on a narrow plot
+                         instead of running under the pill. -->
+                    <div
+                        class="pointer-events-none absolute inset-2 z-10 flex items-end justify-between gap-2"
+                    >
+                        <PlotPanelLegend
+                            {categoryColors}
+                            {includedLabel}
+                            {legendEntries}
+                            excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
+                            includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
+                            onToggleCategory={toggleCategoryVisibility}
+                            onDoubleClickCategory={(category) => {
+                                focusCategoryVisibility(
+                                    legendEntries.map((entry) => entry.cat),
+                                    category
+                                );
+                            }}
+                        />
 
-                    <PlotToolPill {plotContainer} bind:activeTool />
+                        <PlotToolPill {plotContainer} bind:activeTool />
+                    </div>
                 {/if}
             </div>
         {:else}
