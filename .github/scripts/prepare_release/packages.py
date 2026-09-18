@@ -23,7 +23,9 @@ class Package:
 
     Attributes:
         distribution: The name on PyPI, and the value of the `package` workflow input.
-        display_name: The product name, for the tag message and the release PR body.
+        display_name: The product name, for the tag message, the release PR body and the
+            Slack announcement. Both packages announce in the same channel, so each one
+            names itself.
         directory: The workspace member directory, relative to the repository root.
         changelog: The changelog to promote, and to take the release notes from.
         tag_prefix: Prefixed to `v<version>` to form the release tag. Empty for
@@ -105,15 +107,30 @@ def for_tag(tag: str) -> Package:
     serve package rather than to `lightly-studio`, whose prefix is empty.
 
     Raises:
-        PrepareReleaseError: The tag matches no package's `<prefix>v<version>` shape.
+        PrepareReleaseError: The tag matches no package's `<prefix>v<version>` shape. A
+            bare `v` is one of those: it carries no version, and every stage after this
+            one needs a version.
     """
-    candidates = [package for package in PACKAGES if tag.startswith(f"{package.tag_prefix}v")]
+    candidates = [
+        package
+        for package in PACKAGES
+        if tag.startswith(f"{package.tag_prefix}v") and tag != f"{package.tag_prefix}v"
+    ]
     if not candidates:
         raise PrepareReleaseError(
             f"tag {tag!r} belongs to no known package, expected one of "
             f"{', '.join(f'{p.tag_prefix}v<version>' for p in PACKAGES)}"
         )
     return max(candidates, key=lambda package: len(package.tag_prefix))
+
+
+def version_from_tag(tag: str) -> str:
+    """Returns the version a release tag carries, e.g. "0.1.2" for `lightly-studio-serve/v0.1.2`.
+
+    Raises:
+        PrepareReleaseError: The tag matches no package's `<prefix>v<version>` shape.
+    """
+    return tag.removeprefix(f"{for_tag(tag).tag_prefix}v")
 
 
 def render_config(package: Package) -> str:
