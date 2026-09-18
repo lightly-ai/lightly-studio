@@ -46,5 +46,7 @@ describe('McapSequenceGridItem', () => {
         expect(img.src).toContain('datasets/ds-recording/recordings/rec-abc/camera-frame');
         expect(img.src).toContain('channel_id=2');
         expect(img.src).toContain('keyframe_timestamp_ns=90');
+        expect(img.src).toContain('w=200');
+        expect(img.src).toContain('h=200');
     });
 });
