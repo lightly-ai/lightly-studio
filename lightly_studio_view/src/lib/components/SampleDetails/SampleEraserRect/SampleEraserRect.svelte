@@ -10,6 +10,7 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationDeleteNavigation } from '$lib/hooks/useAnnotationDeleteNavigation/useAnnotationDeleteNavigation';
+    import { useAnnotationCollections } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
@@ -56,6 +57,8 @@
 
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
+    const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const { addReversibleAction } = useGlobalStorage();
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const eraserApi = $derived.by(() =>
@@ -178,6 +181,7 @@
             addAnnotationDeleteToUndoStack({
                 annotation: annotation!,
                 labels: labels!,
+                sources: annotationSources,
                 addReversibleAction,
                 createAnnotation,
                 refetch
