@@ -189,4 +189,16 @@ for entry in metrics.per_class:
 `confusion_matrix()` and `metrics()` support object-detection and classification runs. They do not
 support segmentation runs.
 
+Use `mean_average_precision()` for object-detection runs. It re-matches the predictions and ground
+truths at IoU 0.50 to 0.95 (step 0.05) and returns per-class and mean average precision. The
+average precision uses 101-point interpolation over the precision-recall curve. This is a
+single-scale metric and is not bit-identical to the pycocotools implementation.
+
+```python
+detection_ap = evaluator.mean_average_precision(run_id=runs[0].id)
+print(detection_ap.mean_average_precision)
+for entry in detection_ap.per_class:
+    print(entry.label, entry.average_precision)
+```
+
 See [Evaluation API Reference](../api/evaluation.md) for the full API surface.

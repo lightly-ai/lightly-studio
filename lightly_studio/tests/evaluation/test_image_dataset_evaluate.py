@@ -940,6 +940,93 @@ def test_metrics__run_from_another_dataset_raises(
         dataset.evaluate().metrics(run_id=run.id)
 
 
+def test_mean_average_precision(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Computes mAP for an object-detection run by re-matching its boxes."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="cat",
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    # A ground-truth box and a prediction that overlaps it exactly -> perfect detection.
+    box = {"x": 10, "y": 10, "width": 20, "height": 20}
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data=box,
+        annotation_collection_name="gt",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={**box, "confidence": 0.9},
+        annotation_collection_name="pred",
+    )
+    dataset.evaluate().object_detection(
+        name="run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+    )
+    run_id = dataset.evaluate().list_runs()[0].id
+
+    result = dataset.evaluate().mean_average_precision(run_id=run_id)
+
+    assert result.mean_average_precision == pytest.approx(1.0)
+    assert [entry.label for entry in result.per_class] == ["cat"]
+    assert result.per_class[0].average_precision == pytest.approx(1.0)
+    assert len(result.iou_thresholds) == 10
+
+
+def test_mean_average_precision__run_not_found_raises(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Raises ValueError when the run does not exist."""
+    dataset = ImageDataset.create(name="test_dataset")
+
+    with pytest.raises(ValueError, match="not found"):
+        dataset.evaluate().mean_average_precision(run_id=uuid4())
+
+
+def test_mean_average_precision__non_detection_run_raises(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Raises NotImplementedError for a run that is not object detection."""
+    dataset = ImageDataset.create(name="test_dataset")
+    gt_label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="cat",
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=gt_label.annotation_label_id,
+            annotation_type=AnnotationType.CLASSIFICATION,
+            annotation_collection_name=source_name,
+        )
+    dataset.evaluate().classification(
+        name="cls-run",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+    )
+    run_id = dataset.evaluate().list_runs()[0].id
+
+    with pytest.raises(NotImplementedError, match="object detection"):
+        dataset.evaluate().mean_average_precision(run_id=run_id)
+
+
 def _create_gt_and_pred_collections(session: Session, collection_id: UUID) -> None:
     """Create child 'gt' and 'pred' annotation collections under the parent collection.
 

@@ -43,3 +43,29 @@ class EvaluationMetrics(BaseModel):
     recall: float
     f1: float
     accuracy: float | None
+
+
+class ClassAveragePrecision(BaseModel):
+    """Average precision of one class in an object-detection run.
+
+    Attributes:
+        label: Annotation label name.
+        average_precision: Average precision, averaged over the IoU thresholds.
+    """
+
+    label: str
+    average_precision: float
+
+
+class DetectionAveragePrecision(BaseModel):
+    """Mean average precision of an object-detection run.
+
+    Attributes:
+        mean_average_precision: Mean of the per-class average precision.
+        per_class: Per-class average precision, for every class in the ground truth.
+        iou_thresholds: IoU thresholds the average precision is averaged over.
+    """
+
+    mean_average_precision: float
+    per_class: list[ClassAveragePrecision]
+    iou_thresholds: list[float]
