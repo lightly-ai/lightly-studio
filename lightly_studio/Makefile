@@ -308,6 +308,36 @@ start-example:
 	@echo "Starting server..."
 	uv run src/lightly_studio/examples/example.py
 
+# Runs the MCAP sequence-indexing example (see example_mcap.py), which syncs the
+# camera/lidar topics in one recording into groups and previews the result.
+# EXAMPLES_MCAP_PATH can be a local path or any fsspec URI, e.g. s3://bucket/key.mcap.
+#
+# Usage:
+#   make start-example-mcap EXAMPLES_MCAP_PATH=/path/to/recording.mcap
+EXAMPLES_MCAP_PATH ?= datasets/mcap/perception.mcap
+
+.PHONY: start-example-mcap
+start-example-mcap:
+	@echo "Starting MCAP sequence example ($(EXAMPLES_MCAP_PATH))..."
+	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(EXAMPLES_MCAP_PATH) \
+		uv run --extra mcap python src/lightly_studio/examples/example_mcap.py
+
+# Same example, but indexed straight from S3: uploads FLOCI_MCAP_FILES (see top of
+# this Makefile) to the local Floci S3 emulator, then points the example at the
+# uploaded s3:// URI so it reads it through fsspec exactly as it would real S3.
+# Point FLOCI_MCAP_FILES at a recording whose topics match COMPONENTS in
+# example_mcap.py (edit that file for your own sensor topics).
+#
+# Usage:
+#   make start-example-mcap-s3 FLOCI_MCAP_FILES=/path/to/recording.mcap
+EXAMPLE_MCAP_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/$(notdir $(firstword $(FLOCI_MCAP_FILES)))
+
+.PHONY: start-example-mcap-s3
+start-example-mcap-s3: setup-floci
+	@echo "Starting MCAP sequence example (from S3: $(EXAMPLE_MCAP_S3_URI))..."
+	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(EXAMPLE_MCAP_S3_URI) \
+		uv run --extra mcap --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+
 # Demo targets for the camera-frame endpoint.
 # Uploads the MCAP to the local Floci S3 emulator and starts the API server so
 # every video channel URL can be opened directly in a browser.
