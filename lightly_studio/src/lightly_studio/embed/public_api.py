@@ -24,7 +24,8 @@ def register_default_embedder(
       image crops, or videos.
     - Before starting the GUI, so that search embeds queries with ``embedder``. This
       draws on the capabilities for the query kinds, such as embedding text, or
-      images for reverse-image search.
+      images for reverse-image search. Search resolves the embedder by the collection's
+      stored embedding space, so ``embedder`` must share that space to take effect.
 
     Args:
         embedder: The embedder to register. Its embedding space is read from

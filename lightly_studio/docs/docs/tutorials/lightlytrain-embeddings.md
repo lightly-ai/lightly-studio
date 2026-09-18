@@ -173,12 +173,12 @@ if __name__ == "__main__":
 
 ## Step 4: Load the model into LightlyStudio
 
-Now create the second script, `explore.py`. This script points at the images and loads the model that you exported. It registers a generator that runs the model. LightlyStudio then embeds each sample during ingestion.
+Now create the second script, `explore.py`. This script points at the images and loads the model that you exported. It registers an embedder that runs the model. LightlyStudio then embeds each sample during ingestion.
 
 !!! example "Beta API"
     The embeddings API is in beta. Its interface can change in future releases without a deprecation period.
 
-Register the generator before you create the dataset, so ingestion embeds with it.
+Register the embedder before you create the dataset, so ingestion embeds with it.
 
 ```python title="explore.py"
 from pathlib import Path
