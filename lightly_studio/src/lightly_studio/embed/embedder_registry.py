@@ -136,6 +136,11 @@ class EmbedderRegistry:
         embedder = self._get_or_bootstrap(space_key=space_key, capability=Capability.IMAGE_BYTES)
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
+    def preload_builtin_models(self) -> None:
+        """Load and cache the built-in bootstrap embedders."""
+        for capability in list(self._bootstrap_spaces):
+            self._get_or_bootstrap(space_key=None, capability=capability)
+
     def _get_or_bootstrap(self, space_key: str | None, capability: Capability) -> Embedder | None:
         """Resolve a registered embedder or lazily load and cache the selected built-in."""
         if space_key is None:
