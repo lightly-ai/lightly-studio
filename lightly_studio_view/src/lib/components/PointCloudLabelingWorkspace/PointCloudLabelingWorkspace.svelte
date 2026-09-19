@@ -5,7 +5,7 @@
     import ToolRail from './ToolRail/ToolRail.svelte';
     import SceneViewport from './SceneViewport/SceneViewport.svelte';
     import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
-    import AnnotationPanel from './AnnotationPanel/AnnotationPanel.svelte';
+    import PointCloudRightSidePanel from './PointCloudRightSidePanel';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
@@ -34,6 +34,8 @@
     }
 
     let { sampleId, sourcePath = [], status = 'empty', onExit, onRetry }: Props = $props();
+
+    let selectedCuboidId = $state<string | null>(null);
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
@@ -129,7 +131,7 @@
                     </div>
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <AnnotationPanel />
+                    <PointCloudRightSidePanel bind:selectedCuboidId />
                 </Pane>
             </PaneGroup>
         {/if}
