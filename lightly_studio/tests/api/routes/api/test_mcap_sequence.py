@@ -35,6 +35,7 @@ def test_list_mcap_sequences(test_client: TestClient, db_session: Session) -> No
     assert result["total_count"] == 1
     assert len(result["data"]) == 1
     assert result["data"][0]["sample_id"] == str(seq_id)
+    assert result["data"][0]["recording_id"] == str(recording_id)
     assert result["data"][0]["sample_count"] == 0
     assert result["nextCursor"] is None
 
