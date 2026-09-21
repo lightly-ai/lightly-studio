@@ -31,17 +31,20 @@ logger = logging.getLogger(__name__)
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
-def embed_image_for_collection(session: Session, collection_id: UUID, filepath: str) -> list[float]:
-    """Embed a single image with the collection's default model, without storing it.
+def embed_image_for_collection(
+    session: Session, collection_id: UUID, image_bytes: bytes
+) -> list[float]:
+    """Embed a single uploaded image with the collection's default model, without storing it.
 
     Resolves the collection's default model from the database and embeds the image with the
     registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
     never bootstraps a default model, since an interactive query must not mutate the collection.
+    Takes bytes rather than a path so a remote backend without filesystem access can serve it.
 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
-        filepath: fsspec path or URL of the image to embed.
+        image_bytes: Encoded image bytes (JPEG, PNG or WebP).
 
     Returns:
         The embedding as a list of floats.
@@ -54,11 +57,11 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
     embedder = default_embedder.resolve_query_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        get_embedder_fn=EmbedderRegistry.get_image_bytes_embedder,
     )
-    result = embedder.embed_images(paths=[filepath])
+    result = embedder.embed_image_bytes(images=[image_bytes])
     if result.kept_indices != [0]:
-        raise ValueError(f"The embedder produced no embedding for image {filepath!r}.")
+        raise ValueError("The embedder produced no embedding for the uploaded image.")
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding
 

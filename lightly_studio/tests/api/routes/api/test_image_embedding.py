@@ -20,7 +20,7 @@ def test_embed_image_from_file(
 ) -> None:
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
-    mocker.patch.object(
+    embed_image = mocker.patch.object(
         embed_samples,
         "embed_image_for_collection",
         return_value=[0.1, 0.2, 0.3],
@@ -36,6 +36,8 @@ def test_embed_image_from_file(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [0.1, 0.2, 0.3]
+    # The upload is forwarded as bytes, so the route never touches the filesystem.
+    assert embed_image.call_args.kwargs["image_bytes"] == b"fake image content"
 
 
 def test_embed_image_from_file_error(

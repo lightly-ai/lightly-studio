@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from av import FFmpegError, container
 from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
@@ -45,6 +46,7 @@ class PerceptionEncoderEmbedder(
     ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
+    ImageBytesEmbedder,
 ):
     """Perception Encoder Core embedding model."""
 
@@ -130,6 +132,21 @@ class PerceptionEncoderEmbedder(
             image_crops=crops,
             context=self._embedding_context(),
             show_progress=True,
+        )
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        """Embed images given as encoded bytes with Perception Encoder.
+
+        Args:
+            images: Encoded image bytes (JPEG, PNG or WebP).
+
+        Returns:
+            The embeddings and the indices of the inputs they cover.
+        """
+        return image_embedding.embed_image_bytes_batched(
+            images=images,
+            context=self._embedding_context(),
+            show_progress=False,
         )
 
     def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
