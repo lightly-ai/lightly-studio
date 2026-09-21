@@ -28,7 +28,7 @@ class AnnotationDescriptor(BaseModel):
     model_key: str = Field(min_length=1)
     ready: bool
     capabilities: list[str]
-    supported_conditioning: list[Literal["targets", "points", "boxes"]]
+    supported_conditioning: list[Literal["targets", "points", "boxes", "instances"]]
     limits: AnnotationLimits
     classes: list[str] | None = None
 
@@ -199,4 +199,27 @@ class InteractiveAnnotationResponse(BaseModel):
     """Preview and measured model-call latency."""
 
     prediction: AnnotationPreview | None
+    latency_ms: float
+
+
+class InstancesAnnotationRequest(BaseModel):
+    """Stateless image inference for all instances matching optional prompts."""
+
+    collection_id: UUID
+    sample_id: UUID
+    prompt: str | None = Field(default=None, min_length=1)
+    boxes: list[AnnotationBox] | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def validate_conditioning(self) -> InstancesAnnotationRequest:  # noqa: N804
+        """Require a non-blank text prompt or at least one box."""
+        if (self.prompt is None or not self.prompt.strip()) and not self.boxes:
+            raise ValueError("Provide a text prompt, boxes, or both.")
+        return self
+
+
+class InstancesAnnotationResponse(BaseModel):
+    """All uncommitted instance mask predictions and model-call latency."""
+
+    predictions: list[AnnotationPreview]
     latency_ms: float

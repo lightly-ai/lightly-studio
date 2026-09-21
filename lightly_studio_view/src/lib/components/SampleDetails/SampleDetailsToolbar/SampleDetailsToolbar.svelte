@@ -10,6 +10,7 @@
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import WandToolbarButton from '../WandToolbarButton/WandToolbarButton.svelte';
+    import InstancesToolbarButton from '../InstancesToolbarButton/InstancesToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
 
     const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
@@ -113,6 +114,11 @@
             setIsDrawing(false);
             setIsErasing(false);
         }
+        if (sampleDetailsToolbarContext.status === 'instances') {
+            setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+            setIsDrawing(false);
+            setIsErasing(false);
+        }
     });
 
     const activateBoundingBox = () => {
@@ -145,9 +151,10 @@
 
     const onClickBrush = () => activateBrush();
     const activateWand = () => setStatus('wand');
+    const activateInstances = () => setStatus('instances');
 </script>
 
-<div class="pointer-events-none absolute left-1 top-1 z-20">
+<div class="pointer-events-none absolute left-1 top-1 z-30">
     <div
         class="
       pointer-events-auto
@@ -199,6 +206,12 @@
                 />
             </SampleDetailsToolbarTooltip>
         {/if}
+        <SampleDetailsToolbarTooltip label="Find all instances" action="select">
+            <InstancesToolbarButton
+                onclick={activateInstances}
+                isActive={sampleDetailsToolbarContext.status === 'instances'}
+            />
+        </SampleDetailsToolbarTooltip>
         <SampleDetailsToolbarTooltip label="Smart select" action="select">
             <WandToolbarButton
                 onclick={activateWand}

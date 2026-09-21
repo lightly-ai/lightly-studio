@@ -11,6 +11,7 @@
     import AutoLabelConfig from './AutoLabelConfig.svelte';
     import AutoLabelSummary from './AutoLabelSummary.svelte';
     import { autoLabelError, useAutoLabelRun } from './useAutoLabelRun.svelte';
+    import { supportsTask } from './AutoLabelDialog.helpers';
 
     const { isAutoLabelDialogOpen, closeAutoLabelDialog } = useAutoLabelDialog();
     const { filteredSampleCount, setLastGridType } = useGlobalStorage();
@@ -28,7 +29,7 @@
             !description.isFetching &&
             description.data.supported_conditioning.includes('targets') &&
             task &&
-            description.data.capabilities.includes(`${task}_image_bytes`) &&
+            supportsTask({ capabilities: description.data.capabilities, task }) &&
             prompts.length > 0 &&
             $filteredSampleCount > 0 &&
             !run.isPending

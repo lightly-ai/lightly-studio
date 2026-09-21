@@ -22,6 +22,8 @@
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import SmartSelectOverlay from '../SmartSelectOverlay/SmartSelectOverlay.svelte';
     import SmartSelectPopUp from '../SmartSelectPopUp/SmartSelectPopUp.svelte';
+    import InstancesToolPopUp from '../InstancesToolPopUp/InstancesToolPopUp.svelte';
+    import InstancesOverlay from '../InstancesOverlay/InstancesOverlay.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
@@ -63,9 +65,13 @@
         annotationType
     }: SampleDetailsImageContainerProps = $props();
 
-    const { isEditingMode, imageBrightness, imageContrast, lastSmartSelectOutputType } =
+    const { isEditingMode, imageBrightness, imageContrast, lastAnnotationOutputType } =
         useGlobalStorage();
     let smartSelectOutputType = $state<'mask' | 'box'>('mask');
+    let instancesOutputType = $state<'mask' | 'box'>('mask');
+    let smartSelectAnnotationClass = $state<string | null>(null);
+    let instancesAnnotationClass = $state<string | null>(null);
+    let isDrawingInstancesBox = $state(false);
     type SmartSelectActions = {
         canSave: boolean;
         save: () => void;
@@ -76,11 +82,46 @@
         save: (): void => undefined,
         startFresh: (): void => undefined
     });
+    type InstancesState = {
+        prompt: string;
+        boxCount: number;
+        canGenerate: boolean;
+        isGenerating: boolean;
+        resultCount: number;
+        generate: () => void;
+        save: () => void;
+        clear: () => void;
+    };
+    let instancesState = $state<InstancesState>({
+        prompt: '',
+        boxCount: 0,
+        canGenerate: false,
+        isGenerating: false,
+        resultCount: 0,
+        generate: () => undefined,
+        save: () => undefined,
+        clear: () => undefined
+    });
+    let hasInstancesState = false;
     const updateSmartSelectActions = (actions: typeof smartSelectActions) => {
         smartSelectActions = actions;
     };
+    const updateInstancesState = (value: Omit<InstancesState, 'prompt'>) => {
+        if (
+            hasInstancesState &&
+            instancesState.boxCount === value.boxCount &&
+            instancesState.canGenerate === value.canGenerate &&
+            instancesState.isGenerating === value.isGenerating &&
+            instancesState.resultCount === value.resultCount
+        ) {
+            return;
+        }
+        hasInstancesState = true;
+        instancesState = { ...value, prompt: instancesState.prompt };
+    };
     $effect(() => {
-        smartSelectOutputType = $lastSmartSelectOutputType;
+        smartSelectOutputType = $lastAnnotationOutputType;
+        instancesOutputType = $lastAnnotationOutputType;
     });
     const { isHidden } = useHideAnnotations();
     const { enforceColoringByClassStore } = useSettings();
@@ -228,6 +269,7 @@
     width={sample.width}
     height={sample.height}
     panEnabled={sampleDetailsToolbarContext.status !== 'wand' &&
+        (sampleDetailsToolbarContext.status !== 'instances' || !isDrawingInstancesBox) &&
         !(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
@@ -242,7 +284,7 @@
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
-        {#if $isEditingMode && !annotationLabelContext.isOnAnnotationDetailsView}
+        {#if $isEditingMode && sampleDetailsToolbarContext.status !== 'wand' && sampleDetailsToolbarContext.status !== 'instances'}
             <div class="mb-1">
                 <AnnotationSourcePill {collectionId} />
             </div>
@@ -252,11 +294,33 @@
         {/if}
         {#if sampleDetailsToolbarContext.status === 'wand'}
             <SmartSelectPopUp
+                {collectionId}
                 outputType={smartSelectOutputType}
+                annotationClass={smartSelectAnnotationClass ??
+                    annotationLabelContext.annotationLabel}
+                onAnnotationClassChange={(value) => (smartSelectAnnotationClass = value)}
                 onOutputTypeChange={(value) => (smartSelectOutputType = value)}
                 canSave={smartSelectActions.canSave}
                 onSave={smartSelectActions.save}
                 onStartFresh={smartSelectActions.startFresh}
+            />
+        {/if}
+        {#if sampleDetailsToolbarContext.status === 'instances'}
+            <InstancesToolPopUp
+                {...instancesState}
+                {collectionId}
+                annotationClass={instancesAnnotationClass ?? annotationLabelContext.annotationLabel}
+                onAnnotationClassChange={(value) => (instancesAnnotationClass = value)}
+                outputType={instancesOutputType}
+                onOutputTypeChange={(value) => (instancesOutputType = value)}
+                isDrawingBox={isDrawingInstancesBox}
+                onDrawBox={() => (isDrawingInstancesBox = true)}
+                onCancelDrawBox={() => (isDrawingInstancesBox = false)}
+                canGenerate={Boolean(instancesState.prompt.trim() || instancesState.boxCount)}
+                onPromptChange={(value) => (instancesState.prompt = value)}
+                onGenerate={instancesState.generate}
+                onSave={instancesState.save}
+                onClear={instancesState.clear}
             />
         {/if}
     {/snippet}
@@ -373,10 +437,29 @@
                     {sampleId}
                     {sample}
                     {refetch}
+                    annotationClass={smartSelectAnnotationClass ??
+                        annotationLabelContext.annotationLabel}
                     annotationLabel={annotationLabelContext.annotationLabel}
                     annotationSource={annotationLabelContext.annotationSource}
                     outputType={smartSelectOutputType}
                     onActionsChange={updateSmartSelectActions}
+                />
+            {:else if sampleDetailsToolbarContext.status === 'instances'}
+                <InstancesOverlay
+                    {collectionId}
+                    {sampleId}
+                    {sample}
+                    {refetch}
+                    prompt={instancesState.prompt}
+                    onPromptChange={(value: string) => (instancesState.prompt = value)}
+                    annotationClass={instancesAnnotationClass ??
+                        annotationLabelContext.annotationLabel}
+                    isDrawingBox={isDrawingInstancesBox}
+                    onBoxDrawn={() => (isDrawingInstancesBox = false)}
+                    annotationLabel={annotationLabelContext.annotationLabel}
+                    annotationSource={annotationLabelContext.annotationSource}
+                    outputType={instancesOutputType}
+                    onStateChange={updateInstancesState}
                 />
             {/if}
         {/if}

@@ -3,6 +3,7 @@
     import { Slider } from '$lib/components/ui/slider';
     import { Button } from '$lib/components/ui/button';
     import AutoLabelTargets from './AutoLabelTargets.svelte';
+    import { supportsTask } from './AutoLabelDialog.helpers';
     import { autoLabelError, type useAutoLabelRun } from './useAutoLabelRun.svelte';
     interface Props {
         description: ReturnType<typeof useAutoLabelRun>['description'];
@@ -11,6 +12,11 @@
         overrides: Record<string, string>;
         threshold: number;
     }
+    const TASK_OPTIONS = [
+        { value: 'object_detection', name: 'Object detection' },
+        { value: 'segmentation', name: 'Segmentation' }
+    ] as const;
+
     let {
         description,
         task = $bindable(),
@@ -45,16 +51,17 @@
     <fieldset class="grid gap-2">
         <legend class="mb-2 text-sm font-medium">Task</legend>
         <div class="flex flex-wrap gap-4">
-            {#each [{ value: 'object_detection', name: 'Object detection' }, { value: 'segmentation', name: 'Segmentation' }] as option (option.value)}
+            {#each TASK_OPTIONS as option (option.value)}
                 <label class="flex items-center gap-2 text-sm">
                     <input
                         type="radio"
                         name="auto-label-task"
                         value={option.value}
                         bind:group={task}
-                        disabled={!description.data?.capabilities.includes(
-                            `${option.value}_image_bytes`
-                        )}
+                        disabled={!supportsTask({
+                            capabilities: description.data?.capabilities,
+                            task: option.value
+                        })}
                     />
                     {option.name}
                 </label>

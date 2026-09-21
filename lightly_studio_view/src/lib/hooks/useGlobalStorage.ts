@@ -83,8 +83,8 @@ const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
     'lightlyStudio_last_annotation_brush_size',
     {}
 );
-const lastSmartSelectOutputType = useSessionStorage<'mask' | 'box'>(
-    'lightlyStudio_smart_select_output_type',
+const lastAnnotationOutputType = useSessionStorage<'mask' | 'box'>(
+    'lightlyStudio_annotation_output_type',
     'mask'
 );
 
@@ -450,9 +450,9 @@ export const useGlobalStorage = () => {
                 return value;
             });
         },
-        lastSmartSelectOutputType,
-        setLastSmartSelectOutputType: (outputType: 'mask' | 'box') => {
-            lastSmartSelectOutputType.set(outputType);
+        lastAnnotationOutputType,
+        setLastAnnotationOutputType: (outputType: 'mask' | 'box') => {
+            lastAnnotationOutputType.set(outputType);
         },
         // Reversible actions
         ...reversibleActionsHook

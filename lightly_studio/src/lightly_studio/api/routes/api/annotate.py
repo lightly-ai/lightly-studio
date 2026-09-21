@@ -9,6 +9,8 @@ from lightly_studio.models.auto_labeling import (
     AnnotationDescriptorView,
     AutoLabelBatchRequest,
     AutoLabelBatchResponse,
+    InstancesAnnotationRequest,
+    InstancesAnnotationResponse,
     InteractiveAnnotationRequest,
     InteractiveAnnotationResponse,
 )
@@ -39,3 +41,11 @@ def create_interactive_annotation_preview(
 ) -> InteractiveAnnotationResponse:
     """Return a Smart select preview without persisting it."""
     return auto_labeling.infer_interactive(session=session, request=request)
+
+
+@annotate_router.post("/instances")
+def create_instances_annotation_preview(
+    session: SessionDep, request: InstancesAnnotationRequest
+) -> InstancesAnnotationResponse:
+    """Return all matching instance masks without persisting them."""
+    return auto_labeling.infer_instances(session=session, request=request)

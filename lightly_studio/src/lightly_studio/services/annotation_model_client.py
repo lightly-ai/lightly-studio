@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import ipaddress
+import logging
 import math
 import os
 import time
@@ -19,6 +20,8 @@ from lightly_studio.models.auto_labeling import AnnotationDescriptor, Annotation
 
 MAX_ATTEMPTS = 3
 MAX_RETRY_DELAY_SECONDS = 60
+MAX_ERROR_DETAIL_LENGTH = 500
+logger = logging.getLogger(__name__)
 
 
 class AnnotationModelClient:
@@ -43,7 +46,16 @@ class AnnotationModelClient:
                 allow_redirects=False,
             )
             _check_status(response=response)
-            return AnnotationDescriptor.model_validate_json(response.content)
+            descriptor = AnnotationDescriptor.model_validate_json(response.content)
+            logger.info(
+                "Annotation model discovery endpoint=%s model_key=%s "
+                "supported_conditioning=%s capabilities=%s",
+                self.endpoint,
+                descriptor.model_key,
+                descriptor.supported_conditioning,
+                descriptor.capabilities,
+            )
+            return descriptor
         except requests.RequestException as exc:
             raise ValueError(
                 "Cannot reach the annotation model. Check its server and endpoint."
@@ -157,9 +169,13 @@ def _validate_endpoint(endpoint: str, key: str) -> None:
 
 def _check_status(response: requests.Response) -> None:
     if response.status_code != HTTPStatus.OK:
+        detail = response.text.strip()
+        if len(detail) > MAX_ERROR_DETAIL_LENGTH:
+            detail = f"{detail[:MAX_ERROR_DETAIL_LENGTH]}..."
+        suffix = f" Response: {detail}" if detail else ""
         raise ValueError(
             f"Annotation model returned HTTP {response.status_code}. "
-            "Check its configuration and readiness."
+            f"Check its configuration and readiness.{suffix}"
         )
 
 

@@ -21,9 +21,13 @@
 
     interface Props {
         collectionId: string;
+        /** Drops the "Adding to" label and the info icon, for use inside a tool popup. */
+        compact?: boolean;
     }
 
-    let { collectionId }: Props = $props();
+    let { collectionId, compact = false }: Props = $props();
+
+    const SOURCE_HELP = 'The annotation will be associated with the selected annotation source.';
 
     // The backend default collection new annotations land in when no name is sent.
     const DEFAULT_SOURCE_NAME = 'annotation';
@@ -91,7 +95,10 @@
 </script>
 
 <div
-    class="pointer-events-auto flex max-w-full items-center gap-1.5 rounded-lg bg-muted/80 px-2.5 py-1.5 text-sm shadow-md"
+    class={cn(
+        'pointer-events-auto flex max-w-full items-center gap-1.5 rounded-lg text-sm',
+        compact ? 'bg-background/60 px-1.5 py-0.5 text-xs' : 'bg-muted/80 px-2.5 py-1.5 shadow-md'
+    )}
 >
     <Popover.Root bind:open>
         <Popover.Trigger>
@@ -101,8 +108,11 @@
                     type="button"
                     class="flex min-w-0 items-center gap-1.5 whitespace-nowrap"
                     data-testid="annotation-source-pill-trigger"
+                    title={compact ? `Adding to ${effectiveSource}. ${SOURCE_HELP}` : undefined}
                 >
-                    <span class="shrink-0 text-muted-foreground">Adding to</span>
+                    {#if !compact}
+                        <span class="shrink-0 text-muted-foreground">Adding to</span>
+                    {/if}
                     {#if showColorMarker}
                         <ColorMarker
                             label={effectiveSource}
@@ -162,18 +172,20 @@
         </Popover.Content>
     </Popover.Root>
 
-    <div class="h-4 w-px shrink-0 bg-white/15"></div>
+    {#if !compact}
+        <div class="h-4 w-px shrink-0 bg-white/15"></div>
 
-    <Tooltip
-        content="The annotation will be associated with the selected annotation source."
-        position="top"
-        triggerClass="flex shrink-0 items-center"
-        ariaLabel="Annotation source help"
-    >
-        <InfoIcon
-            class="size-3.5 text-muted-foreground"
-            aria-hidden="true"
-            data-testid="annotation-source-pill-info"
-        />
-    </Tooltip>
+        <Tooltip
+            content={SOURCE_HELP}
+            position="top"
+            triggerClass="flex shrink-0 items-center"
+            ariaLabel="Annotation source help"
+        >
+            <InfoIcon
+                class="size-3.5 text-muted-foreground"
+                aria-hidden="true"
+                data-testid="annotation-source-pill-info"
+            />
+        </Tooltip>
+    {/if}
 </div>

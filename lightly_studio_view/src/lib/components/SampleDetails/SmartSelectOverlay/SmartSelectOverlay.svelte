@@ -20,6 +20,7 @@
         interactionRect?: SVGRectElement | null;
         refetch: () => void;
         outputType?: 'mask' | 'box';
+        annotationClass?: string | null;
         annotationLabel?: string | null;
         annotationSource?: string | null;
         onActionsChange: (actions: {
@@ -36,6 +37,7 @@
         interactionRect = $bindable(),
         refetch,
         outputType = 'mask',
+        annotationClass,
         annotationLabel,
         annotationSource,
         onActionsChange
@@ -138,6 +140,7 @@
 
     const commit = async () => {
         if (!previewMask && !previewBox) return;
+        const name = annotationClass?.trim() || predictedClass || annotationLabel || 'object';
         const body =
             outputType === 'mask' && previewMask
                 ? {
@@ -147,14 +150,13 @@
                       y: previewBox?.y ?? 0,
                       width: previewBox?.width ?? 0,
                       height: previewBox?.height ?? 0,
-                      annotation_label_name: predictedClass || annotationLabel
+                      annotation_label_name: name
                   }
                 : {
                       annotation_type: AnnotationType.OBJECT_DETECTION,
                       ...previewBox,
-                      annotation_label_name: predictedClass || annotationLabel
+                      annotation_label_name: name
                   };
-        const name = predictedClass || annotationLabel || 'object';
         try {
             let label = labels.data?.find((item) => item.annotation_label_name === name);
             if (!label) {
