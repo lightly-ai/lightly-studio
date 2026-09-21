@@ -33,7 +33,8 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderError,
     RemoteEmbedderProtocolError,
 )
-from lightly_studio.embed.remote.transport import RemoteTimeouts, RemoteTransport
+from lightly_studio.embed.remote.timeouts import RemoteTimeouts
+from lightly_studio.embed.remote.transport import RemoteTransport
 
 _ItemT = TypeVar("_ItemT")
 
@@ -89,7 +90,7 @@ class RemoteEmbedder(Embedder):
             api_key: The token to send as ``Authorization: Bearer``, or ``None`` for a
                 server that wants none.
             timeouts: The budget of each capability. ``None`` applies
-                ``transport.DEFAULT_TIMEOUTS``.
+                ``timeouts.DEFAULT_TIMEOUTS``.
 
         Returns:
             An embedder that implements the interface of every capability that the server

@@ -28,6 +28,7 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderProtocolError,
     RemoteEmbedderUnreachableError,
 )
+from lightly_studio.embed.remote.timeouts import DEFAULT_TIMEOUTS
 from lightly_studio.embed.remote.transport import RemoteTransport
 
 SPACE_KEY = "acme/model@v1"
@@ -258,7 +259,7 @@ class TestRemoteTransport:
         remote.embed_image_bytes(images=[b"jpeg"])
         remote.embed_video_bytes(videos=[b"mp4"])
 
-        defaults = transport.DEFAULT_TIMEOUTS
+        defaults = DEFAULT_TIMEOUTS
         assert sent == [
             defaults.describe.as_dict(),
             defaults.text.as_dict(),
@@ -269,7 +270,7 @@ class TestRemoteTransport:
     def test_custom_timeout_overrides_the_client(self) -> None:
         sent: list[object] = []
         client = _timeout_recording_client(sent=sent, timeout=httpx.Timeout(0.001))
-        timeouts = replace(transport.DEFAULT_TIMEOUTS, text=httpx.Timeout(1.5))
+        timeouts = replace(DEFAULT_TIMEOUTS, text=httpx.Timeout(1.5))
 
         RemoteTransport(client=client, timeouts=timeouts).embed_texts(texts=["a dog"])
 
