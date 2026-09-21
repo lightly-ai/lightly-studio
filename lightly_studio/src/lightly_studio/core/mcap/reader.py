@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Iterator, Mapping, Sequence
+from enum import Enum
 from types import TracebackType
 from typing import Any, overload
 
@@ -23,12 +24,18 @@ from lightly_studio.core.mcap import (
     transforms,
     video_keyframe,
 )
-from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError, TopicNotFoundError
+from lightly_studio.core.mcap.errors import (
+    ChannelNotFoundError,
+    DataNotLoadedError,
+    McapAccessError,
+    TopicNotFoundError,
+)
 from lightly_studio.core.mcap.matching import MatchFunction
 from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.transforms import TransformTree
 from lightly_studio.core.mcap.type_definitions import (
     CameraIntrinsics,
+    DecodedMessage,
     FrameLocator,
     StaticTransform,
     TopicInfo,
@@ -38,6 +45,27 @@ from lightly_studio.type_definitions import PathLike
 logger = logging.getLogger(__name__)
 
 STATIC_TRANSFORM_TOPIC = "/tf_static"
+
+# The fsspec read cache of a reader opened for random access. A small block keeps the
+# first read small, because a filesystem fetches a whole block for every read that
+# misses the cache, and the default block of a remote filesystem is tens of megabytes.
+_RANDOM_READ_CACHE_TYPE = "readahead"
+_RANDOM_READ_BLOCK_SIZE_BYTES = 64 * 1024
+
+
+class ReadPattern(Enum):
+    """How much data the reader fetches ahead of a read.
+
+    Attributes:
+        SEQUENTIAL: Fetches the large blocks the filesystem uses by default. Use it to
+            read a whole recording, e.g. to index it.
+        RANDOM: Fetches small blocks. Use it to open a remote file and read a few
+            messages, e.g. to serve a single frame, where the time to the first byte
+            matters more than the throughput.
+    """
+
+    SEQUENTIAL = "sequential"
+    RANDOM = "random"
 
 
 class McapFileReader:
@@ -59,7 +87,12 @@ class McapFileReader:
 
     path: str
 
-    def __init__(self, path: PathLike, storage_options: Mapping[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        path: PathLike,
+        storage_options: Mapping[str, Any] | None = None,
+        read_pattern: ReadPattern = ReadPattern.SEQUENTIAL,
+    ) -> None:
         """Opens a local or remote MCAP file for reading.
 
         Args:
@@ -70,16 +103,22 @@ class McapFileReader:
             storage_options: Options for the fsspec filesystem, e.g. credentials, an
                 endpoint, or the read cache to use. Local paths need none. Credentials
                 can also come from the environment, as `AWS_*` variables do.
+            read_pattern: How much data a read fetches ahead. Defaults to reading a
+                whole recording. Pass `ReadPattern.RANDOM` to open a remote file and
+                read only a few messages from it.
 
         Raises:
             mcap.exceptions.McapError: If the file is not an MCAP file.
             McapAccessError: If the file cannot be read with random access.
         """
         self.path = str(path)
-        self._open_file = fsspec.open(self.path, mode="rb", **dict(storage_options or {}))
+        # The filesystem is opened separately from the file, because the read cache is
+        # an argument of `open()`, which `fsspec.open()` does not forward to it.
+        filesystem, path_in_filesystem = fsspec.url_to_fs(self.path, **dict(storage_options or {}))
+        self._stream = filesystem.open(
+            path_in_filesystem, mode="rb", **_read_cache_options(read_pattern)
+        )
         try:
-            # `OpenFile.open()` needs the `OpenFile` to stay referenced until close.
-            self._stream = self._open_file.open()
             if not self._stream.seekable():
                 raise McapAccessError(
                     f"MCAP file '{self.path}' cannot be read with random access. Only "
@@ -92,7 +131,7 @@ class McapFileReader:
                 self._stream, decoder_factories=self._decoder_factories
             )
         except Exception:
-            self._open_file.close()
+            self._stream.close()
             raise
         self._topics: list[TopicInfo] | None = None
         self._topics_by_name: dict[str, TopicInfo] | None = None
@@ -103,7 +142,7 @@ class McapFileReader:
 
     def close(self) -> None:
         """Closes the MCAP file."""
-        self._open_file.close()
+        self._stream.close()
 
     def __enter__(self) -> McapFileReader:
         """Returns the reader itself."""
@@ -263,6 +302,54 @@ class McapFileReader:
             target_frame_id=parent_frame_id, source_frame_id=child_frame_id
         )
 
+    def get_decoded_message_at(
+        self,
+        channel_id: int,
+        timestamp_ns: int,
+    ) -> DecodedMessage | None:
+        """Returns the decoded message at an exact timestamp on a channel.
+
+        Unlike `get_frame_locators`, does not require pre-loading the topic with
+        `load_data_for_topics`. Use this for on-demand single-frame access, e.g.
+        serving one frame over HTTP without loading the full recording into memory.
+
+        Only reads the chunks whose time range contains `timestamp_ns`, so reading one
+        frame does not require downloading or scanning the rest of a remote recording.
+
+        Args:
+            channel_id: The channel to read, e.g. a camera channel located through
+                `get_topics`.
+            timestamp_ns: The exact log time to fetch, in nanoseconds.
+
+        Returns:
+            The message at `timestamp_ns`, or `None` if no message exists at that time.
+
+        Raises:
+            ChannelNotFoundError: If the channel id is not in the file.
+            McapAccessError: If the channel's messages cannot be decoded, e.g. because
+                their encoding has no matching decoder factory.
+        """
+        topic_info = self._require_channel_info(channel_id)
+        try:
+            for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
+                topics=[topic_info.name],
+                start_time=timestamp_ns,
+                end_time=timestamp_ns + 1,
+            ):
+                if channel.id == channel_id and message.log_time == timestamp_ns:
+                    return DecodedMessage(
+                        channel_id=channel_id,
+                        topic=topic_info.name,
+                        log_time_ns=message.log_time,
+                        schema_name=topic_info.schema_name,
+                        decoded_message=decoded_message,
+                    )
+        except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
+            raise McapAccessError(
+                f"Cannot decode the messages of channel {channel_id} in '{self.path}': {exc}"
+            ) from exc
+        return None
+
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.
 
@@ -380,18 +467,32 @@ class McapFileReader:
         Raises:
             TopicNotFoundError: If the topic is not in the file.
         """
-        self._get_topics()
+        self.get_topics()
         assert self._topics_by_name is not None
         topic_info = self._topics_by_name.get(topic)
         if topic_info is None:
             raise TopicNotFoundError(f"Topic '{topic}' is not in MCAP file '{self.path}'.")
         return topic_info
 
-    def _get_topics(self) -> list[TopicInfo]:
+    def _require_channel_info(self, channel_id: int) -> TopicInfo:
+        """Returns the topic info of a channel.
+
+        Raises:
+            ChannelNotFoundError: If the channel id is not in the file.
+        """
+        for topic_info in self.get_topics():
+            if topic_info.channel_id == channel_id:
+                return topic_info
+        raise ChannelNotFoundError(f"Channel {channel_id} is not in MCAP file '{self.path}'.")
+
+    def get_topics(self) -> list[TopicInfo]:
         """Returns the topics of the file, ordered by name.
 
         A topic can be recorded on more than one channel, which gives one entry per
-        channel.
+        channel. Reading the topics only reads the file's summary section (footer and
+        summary, not the message chunks), so it does not require downloading or
+        indexing the whole file: a remote file behind a filesystem that supports range
+        requests (local disk, S3, GCS, or plain HTTP) is summarized cheaply.
         """
         if self._topics is None:
             summary = self._require_summary()
@@ -444,6 +545,24 @@ class McapFileReader:
                 f"MCAP file '{self.path}' has no summary section. Only indexed files can be read."
             )
         return summary
+
+
+def _read_cache_options(read_pattern: ReadPattern) -> dict[str, Any]:
+    """Returns the `fsspec` open arguments that give a read pattern its read cache.
+
+    Args:
+        read_pattern: The pattern the file is read with.
+
+    Returns:
+        The arguments to pass to `AbstractFileSystem.open`. Empty for a sequential
+        read, which is what the filesystem defaults are made for.
+    """
+    if read_pattern is ReadPattern.SEQUENTIAL:
+        return {}
+    return {
+        "cache_type": _RANDOM_READ_CACHE_TYPE,
+        "block_size": _RANDOM_READ_BLOCK_SIZE_BYTES,
+    }
 
 
 def _topic_info(channel: Channel, schema: Schema | None, message_count: int | None) -> TopicInfo:

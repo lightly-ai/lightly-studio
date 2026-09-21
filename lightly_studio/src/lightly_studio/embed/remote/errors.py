@@ -29,8 +29,9 @@ class RemoteEmbedderAuthError(RemoteEmbedderError):
 class RemoteEmbedderCapabilityError(RemoteEmbedderError):
     """The server does not serve an input kind that LightlyStudio can use.
 
-    Raised when a server advertises no capability that this client routes to, and when a
-    server answers 501 for a route that its own ``/v1/describe`` advertised.
+    Raised when a server advertises no capability that this client routes to, when the
+    capabilities it does route to are ones that ``EmbedderRegistry`` cannot resolve, and
+    when a server answers 501 for a route that its own ``/v1/describe`` advertised.
     """
 
 

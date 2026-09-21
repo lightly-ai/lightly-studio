@@ -35,12 +35,6 @@ from lightly_studio.embed.remote.errors import (
 )
 from lightly_studio.embed.remote.transport import RemoteTransport
 
-# The capabilities that `EmbedderRegistry` can hand back. Its `_CAPABILITY_TO_TYPE` has no
-# `VIDEO_BYTES` entry, so a video-only server gives an embedder that nothing in
-# LightlyStudio ever asks for, and `register` refuses it with "implements no capability".
-# TODO(Iunir, 09/2026): Remove this constant when the registry gains a `VIDEO_BYTES` entry.
-_RESOLVABLE_CAPABILITIES = (Capability.TEXT, Capability.IMAGE_BYTES)
-
 _ItemT = TypeVar("_ItemT")
 
 
@@ -52,9 +46,6 @@ class RemoteEmbedder(Embedder):
     for the capability it needs and calls the method, whether the object behind it runs a
     model in this process or speaks to a server.
 
-    This class holds no capability of its own. ``connect`` composes it with one route class
-    per advertised capability.
-
     ``ready`` keeps the default of ``True``. The answer of ``/v1/describe`` is read once,
     at construction, so the property could only report a state that has passed. A server
     whose model is still loading answers 503, and the transport waits that out.
@@ -65,42 +56,34 @@ class RemoteEmbedder(Embedder):
         transport: RemoteTransport,
         spec: EmbeddingSpaceSpec,
         limits: ServerLimits,
-        owned_client: httpx.Client | None = None,
     ) -> None:
         """Embed through ``transport``, against a server of ``spec`` and ``limits``.
 
-        Use ``connect``.
-
-        Args:
-            transport: The transport that carries every request.
-            spec: The embedding space that the server produces, from ``/v1/describe``.
-            limits: The limits that the server applies, from ``/v1/describe``.
-            owned_client: The client that ``connect`` opened, which ``close`` closes.
-                ``None`` for a client that the caller passed in and still owns.
+        Use ``connect``, which reads ``/v1/describe`` and passes what it learns here. This
+        constructor takes the answer as given and validates nothing against the wire.
         """
         self._transport = transport
         self._spec = spec
         self._limits = limits
-        self._owned_client = owned_client
-        self._closed = False
 
     @classmethod
-    def connect(
-        cls, url: str, api_key: str | None = None, client: httpx.Client | None = None
-    ) -> RemoteEmbedder:
-        """Read ``/v1/describe`` and build the embedder that this server can back.
+    def connect(cls, client: httpx.Client, api_key: str | None = None) -> RemoteEmbedder:
+        """Read ``/v1/describe`` over ``client`` and build the embedder that answers.
 
-        The description is read at construction and not at the first call, because
+        The ``base_url`` of ``client`` names the server, and ``connection.build_client``
+        opens one against a URL. That ``base_url`` is the address that the URL policy
+        checks, before the first request leaves. The caller owns the client and closes it,
+        because an embedder outlives no request of its own: ``EmbedderRegistry`` holds a
+        registered embedder for the lifetime of the process.
+
+        The description is read here and not at the first call, because
         ``EmbedderRegistry.register`` reads ``embedding_space_spec()`` as soon as it gets
         the embedder and resolves it by ``isinstance`` from that moment.
 
         Args:
-            url: The address of the server, without a path of the protocol.
+            client: The client that carries every request.
             api_key: The token to send as ``Authorization: Bearer``, or ``None`` for a
                 server that wants none.
-            client: The client to send with, for a test that drives an application in
-                process. Its ``base_url`` then names the server, so the URL policy reads
-                that address instead of ``url``. ``None`` opens a client against ``url``.
 
         Returns:
             An embedder that implements the interface of every capability that the server
@@ -114,44 +97,12 @@ class RemoteEmbedder(Embedder):
                 capability that LightlyStudio can use.
         """
         # The address that the requests really go to, checked before one is sent.
-        address = url if client is None else str(client.base_url)
-        url_policy.check_url(url=address, api_key=api_key)
-        http_client = client if client is not None else connection.build_client(url=url)
-        owned_client = http_client if client is None else None
-        try:
-            url_policy.check_no_redirects(client=http_client)
-            transport = RemoteTransport(client=http_client, api_key=api_key)
-            description = transport.describe()
-            connection.log_if_loading(description=description, client=http_client)
-            return _embedder_for(
-                transport=transport,
-                description=description,
-                owned_client=owned_client,
-            )
-        except BaseException:
-            # A client that this method opened has no other owner once it raises.
-            if owned_client is not None:
-                owned_client.close()
-            raise
-
-    def close(self) -> None:
-        """Close the connection pool of a client that ``connect`` opened.
-
-        A client that the caller passed to ``connect`` stays the caller's to close. Calling
-        this twice is allowed. An embedder that is closed sends no further request.
-        """
-        self._closed = True
-        if self._owned_client is not None:
-            self._owned_client.close()
-            self._owned_client = None
-
-    def __enter__(self) -> RemoteEmbedder:
-        """Return the embedder, so a caller that owns it can close it on the way out."""
-        return self
-
-    def __exit__(self, *exc_info: object) -> None:
-        """Close the client that ``connect`` opened."""
-        self.close()
+        url_policy.check_url(url=str(client.base_url), api_key=api_key)
+        url_policy.check_no_redirects(client=client)
+        transport = RemoteTransport(client=client, api_key=api_key)
+        description = transport.describe()
+        connection.log_if_loading(description=description, client=client)
+        return _embedder_for(transport=transport, description=description)
 
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space that the server produces.
@@ -181,10 +132,9 @@ class RemoteEmbedder(Embedder):
             The embeddings and the indices of the inputs they cover.
 
         Raises:
-            RemoteEmbedderError: If this embedder is closed, if a request fails, or if an
-                answer disagrees with what ``/v1/describe`` reported.
+            RemoteEmbedderError: If a request fails, or if an answer disagrees with what
+                ``/v1/describe`` reported.
         """
-        self._check_open()
         rows: list[list[float]] = []
         kept_indices: list[int] = []
         chunks = batching.split_batches(
@@ -200,20 +150,6 @@ class RemoteEmbedder(Embedder):
             # A chunk counts its kept indices from its own start.
             kept_indices.extend(offset + index for index in response.kept_indices)
         return EmbeddingResult(embeddings=self._to_array(rows=rows), kept_indices=kept_indices)
-
-    def _check_open(self) -> None:
-        """Refuse a request on an embedder that ``close`` closed.
-
-        httpx would raise a bare ``RuntimeError``, outside the hierarchy of this package.
-
-        Raises:
-            RemoteEmbedderError: If ``close`` closed this embedder.
-        """
-        if self._closed:
-            raise RemoteEmbedderError(
-                "This embedder is closed and sends no further request. Call "
-                "RemoteEmbedder.connect again to reach the server."
-            )
 
     def _send(
         self,
@@ -291,14 +227,7 @@ class _TextRoute(RemoteEmbedder, TextEmbedder):
     """Adds the text capability, which reaches the server as JSON."""
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
-        """Embed a batch of text strings on the server.
-
-        Args:
-            texts: The strings to embed.
-
-        Returns:
-            The embeddings and the indices of the inputs they cover.
-        """
+        """Embed a batch of text strings on the server."""
         return self._embed(
             items=texts,
             capability=Capability.TEXT,
@@ -311,14 +240,7 @@ class _ImageBytesRoute(RemoteEmbedder, ImageBytesEmbedder):
     """Adds the image-bytes capability, which reaches the server as multipart."""
 
     def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
-        """Embed a batch of encoded images on the server.
-
-        Args:
-            images: Encoded image bytes.
-
-        Returns:
-            The embeddings and the indices of the inputs they cover.
-        """
+        """Embed a batch of encoded images on the server."""
         return self._embed(
             items=images,
             capability=Capability.IMAGE_BYTES,
@@ -331,14 +253,7 @@ class _VideoBytesRoute(RemoteEmbedder, VideoBytesEmbedder):
     """Adds the video-bytes capability, which reaches the server as multipart."""
 
     def embed_video_bytes(self, videos: list[bytes]) -> EmbeddingResult:
-        """Embed a batch of encoded videos on the server.
-
-        Args:
-            videos: Encoded video bytes.
-
-        Returns:
-            The embeddings and the indices of the inputs they cover.
-        """
+        """Embed a batch of encoded videos on the server."""
         return self._embed(
             items=videos,
             capability=Capability.VIDEO_BYTES,
@@ -362,38 +277,25 @@ _CAPABILITY_TO_BASE: dict[Capability, type[RemoteEmbedder]] = {
 def _embedder_for(
     transport: RemoteTransport,
     description: DescribeResponse,
-    owned_client: httpx.Client | None,
 ) -> RemoteEmbedder:
     """Build the embedder of the capabilities that ``description`` advertises.
 
     Args:
         transport: The transport that carries every request.
         description: What ``GET /v1/describe`` answered.
-        owned_client: The client that ``connect`` opened, or ``None`` for one that the
-            caller owns.
-
-    Returns:
-        An embedder that implements the interface of every advertised capability that this
-        client routes to.
 
     Raises:
         RemoteEmbedderCapabilityError: If nothing advertised is usable from LightlyStudio.
     """
-    # A set for the membership test. A message reads the list, which keeps the order.
-    advertised = set(description.capabilities)
-    routable = tuple(capability for capability in _CAPABILITY_TO_BASE if capability in advertised)
-    composition.check_routable(
-        advertised=description.capabilities,
-        routable=routable,
-        routes_to=list(_CAPABILITY_TO_BASE),
-        resolvable=_RESOLVABLE_CAPABILITIES,
+    composed = cast(
+        "type[RemoteEmbedder]",
+        composition.compose_remote_embedder_class(
+            capabilities=description.capabilities,
+            capability_to_base=_CAPABILITY_TO_BASE,
+        ),
     )
-    bases = tuple(_CAPABILITY_TO_BASE[capability] for capability in routable)
-    name = "".join(base.__name__.removeprefix("_").removesuffix("Route") for base in bases)
-    composed = composition.composed_class(bases=bases, name=f"Remote{name}Embedder")
-    return cast("type[RemoteEmbedder]", composed)(
+    return composed(
         transport=transport,
         spec=EmbeddingSpaceSpec(space_key=description.space_key, dimension=description.dimension),
         limits=description.limits,
-        owned_client=owned_client,
     )

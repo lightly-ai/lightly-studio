@@ -205,3 +205,56 @@ def test_main__check_wheel_dependencies__no_wheel_exits_nonzero(
         == 1
     )
     assert "expected exactly one wheel" in capsys.readouterr().err
+
+
+def test_main__render_slack_message__writes_file(tmp_path: Path):
+    changelog_file = tmp_path / "CHANGELOG.md"
+    output = tmp_path / "slack.txt"
+    changelog_file.write_text(
+        changelog.promote_changelog(
+            changelog_text=SAMPLE_CHANGELOG, version="1.1.0", date="2026-08-25"
+        )
+    )
+    assert (
+        cli.main(
+            [
+                "render-slack-message",
+                "--changelog",
+                str(changelog_file),
+                "--tag",
+                "v1.1.0",
+                "--release-url",
+                "https://x/releases/tag/v1.1.0",
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    assert output.read_text() == (
+        "*<https://x/releases/tag/v1.1.0|LightlyStudio Release 1.1.0>*\n\nAdded\n• Added thing one."
+    )
+
+
+def test_main__render_slack_message__unreleased_version_fails(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+):
+    changelog_file = tmp_path / "CHANGELOG.md"
+    changelog_file.write_text(SAMPLE_CHANGELOG)
+    assert (
+        cli.main(
+            [
+                "render-slack-message",
+                "--changelog",
+                str(changelog_file),
+                "--tag",
+                "v1.1.0",
+                "--release-url",
+                "https://x/releases/tag/v1.1.0",
+                "--output",
+                str(tmp_path / "slack.txt"),
+            ]
+        )
+        == 1
+    )
+    assert "no promoted heading" in capsys.readouterr().err

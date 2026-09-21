@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 from lightly_studio_serve.embedder import (
     Capability,
     Embedder,
     ImageBytesEmbedder,
     TextEmbedder,
+    VideoBytesEmbedder,
 )
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
 from lightly_studio.embed.remote import composition
 from lightly_studio.embed.remote.errors import RemoteEmbedderCapabilityError
-
-ROUTES_TO = [Capability.TEXT, Capability.IMAGE_BYTES, Capability.VIDEO_BYTES]
-RESOLVABLE = [Capability.TEXT, Capability.IMAGE_BYTES]
 
 
 class _Base(Embedder):
@@ -33,73 +33,88 @@ class _ImageBytesRoute(_Base, ImageBytesEmbedder):
         raise NotImplementedError
 
 
-def test_composed_class() -> None:
-    built = composition.composed_class(bases=(_TextRoute,), name="RemoteTextEmbedder")
+class _VideoBytesRoute(_Base, VideoBytesEmbedder):
+    def embed_video_bytes(self, videos: list[bytes]) -> EmbeddingResult:
+        raise NotImplementedError
+
+
+# The order of this mapping is the order of the composed bases.
+_CAPABILITY_TO_BASE: dict[Capability, type[Embedder]] = {
+    Capability.TEXT: _TextRoute,
+    Capability.IMAGE_BYTES: _ImageBytesRoute,
+    Capability.VIDEO_BYTES: _VideoBytesRoute,
+}
+
+
+def test_compose_remote_embedder_class() -> None:
+    built = composition.compose_remote_embedder_class(
+        capabilities=[Capability.TEXT], capability_to_base=_CAPABILITY_TO_BASE
+    )
 
     assert built.__name__ == "RemoteTextEmbedder"
     assert issubclass(built, TextEmbedder)
     assert not issubclass(built, ImageBytesEmbedder)
 
 
-def test_composed_class__several_capabilities() -> None:
-    built = composition.composed_class(
-        bases=(_TextRoute, _ImageBytesRoute), name="RemoteTextImageBytesEmbedder"
+def test_compose_remote_embedder_class__several_capabilities() -> None:
+    built = composition.compose_remote_embedder_class(
+        capabilities=[Capability.TEXT, Capability.IMAGE_BYTES],
+        capability_to_base=_CAPABILITY_TO_BASE,
     )
 
+    assert built.__name__ == "RemoteTextImageBytesEmbedder"
     # Nothing abstract is left, so the class is instantiable.
     assert isinstance(built(), TextEmbedder)
     assert isinstance(built(), ImageBytesEmbedder)
 
 
-def test_composed_class__reused() -> None:
-    first = composition.composed_class(bases=(_TextRoute,), name="RemoteTextEmbedder")
-    second = composition.composed_class(bases=(_TextRoute,), name="RemoteTextEmbedder")
+def test_compose_remote_embedder_class__ignores_unroutable_capability() -> None:
+    # `image_path` is a legal wire capability that no client of version 1 requests.
+    built = composition.compose_remote_embedder_class(
+        capabilities=[Capability.TEXT, Capability.IMAGE_PATH],
+        capability_to_base=_CAPABILITY_TO_BASE,
+    )
+
+    assert built.__name__ == "RemoteTextEmbedder"
+
+
+def test_compose_remote_embedder_class__reused() -> None:
+    first = composition.compose_remote_embedder_class(
+        capabilities=[Capability.TEXT], capability_to_base=_CAPABILITY_TO_BASE
+    )
+    second = composition.compose_remote_embedder_class(
+        capabilities=[Capability.TEXT], capability_to_base=_CAPABILITY_TO_BASE
+    )
 
     assert first is second
 
 
-def test_check_routable() -> None:
-    composition.check_routable(
-        advertised=[Capability.TEXT],
-        routable=[Capability.TEXT],
-        routes_to=ROUTES_TO,
-        resolvable=RESOLVABLE,
-    )
-
-
-def test_check_routable__nothing_routable() -> None:
-    # `image_path` is a legal wire capability that no client of version 1 requests.
-    with pytest.raises(RemoteEmbedderCapabilityError) as error:
-        composition.check_routable(
-            advertised=[Capability.IMAGE_PATH],
-            routable=[],
-            routes_to=ROUTES_TO,
-            resolvable=RESOLVABLE,
+def test_compose_remote_embedder_class__nothing_routable() -> None:
+    with pytest.raises(
+        RemoteEmbedderCapabilityError, match=re.escape("routes to text, image_bytes, video_bytes")
+    ):
+        composition.compose_remote_embedder_class(
+            capabilities=[Capability.IMAGE_PATH], capability_to_base=_CAPABILITY_TO_BASE
         )
 
-    assert "routes to text, image_bytes, video_bytes" in str(error.value)
 
-
-def test_check_routable__nothing_resolvable() -> None:
+def test_compose_remote_embedder_class__nothing_resolvable() -> None:
     # Nothing in LightlyStudio resolves a video-bytes embedder yet, so the error has to
     # name that rather than let `EmbedderRegistry.register` report the symptom.
-    with pytest.raises(RemoteEmbedderCapabilityError) as error:
-        composition.check_routable(
-            advertised=[Capability.VIDEO_BYTES],
-            routable=[Capability.VIDEO_BYTES],
-            routes_to=ROUTES_TO,
-            resolvable=RESOLVABLE,
+    with pytest.raises(
+        RemoteEmbedderCapabilityError,
+        match=re.escape("EmbedderRegistry resolves text, image_bytes"),
+    ):
+        composition.compose_remote_embedder_class(
+            capabilities=[Capability.VIDEO_BYTES], capability_to_base=_CAPABILITY_TO_BASE
         )
 
-    assert "EmbedderRegistry resolves text, image_bytes" in str(error.value)
 
-
-def test_names() -> None:
-    assert composition.names(capabilities=[Capability.TEXT, Capability.IMAGE_BYTES]) == (
-        "text, image_bytes"
-    )
-
-
-def test_names__repeated() -> None:
-    # `DescribeResponse.capabilities` is a list and validates no uniqueness.
-    assert composition.names(capabilities=[Capability.TEXT, Capability.TEXT]) == "text"
+def test_compose_remote_embedder_class__repeated_capability() -> None:
+    # `DescribeResponse.capabilities` is a list and validates no uniqueness, so a message
+    # names each capability once.
+    with pytest.raises(RemoteEmbedderCapabilityError, match=re.escape("advertises image_path.")):
+        composition.compose_remote_embedder_class(
+            capabilities=[Capability.IMAGE_PATH, Capability.IMAGE_PATH],
+            capability_to_base=_CAPABILITY_TO_BASE,
+        )

@@ -6,6 +6,9 @@ find later, as a similarity search that gives bad results in LightlyStudio.
 ``EmbeddingsResponse`` holds every rule that a response body shows. This module does not
 repeat them. It checks the two rules that the body cannot show: the embedder returned a
 matrix of numbers, and each kept index names an item of this request.
+
+``name_broken_rules`` reads a broken body of either side. The conformance kit reports the
+response of a server with it.
 """
 
 from __future__ import annotations
@@ -45,6 +48,25 @@ def build_embeddings_response(
     response = _to_response(result=result, space_key=space_key, dimension=dimension)
     _validate_kept_indices(kept_indices=response.kept_indices, item_count=item_count)
     return response
+
+
+def name_broken_rules(error: ValidationError) -> str:
+    """Name the field and the rule of every error of a body, in one line.
+
+    The message of a pydantic error repeats the value that failed, here a whole batch of
+    embeddings. A caller names the rule, never the value.
+
+    Args:
+        error: What a wire model raised.
+
+    Returns:
+        Every broken rule, as ``field: rule``, separated by semicolons.
+    """
+    rules = []
+    for detail in error.errors():
+        location = ".".join(str(part) for part in detail["loc"])
+        rules.append(f"{location}: {detail['msg']}" if location else detail["msg"])
+    return "; ".join(rules)
 
 
 def _validate_embeddings(embeddings: NDArray[np.float32]) -> None:
@@ -92,21 +114,8 @@ def _to_response(result: EmbeddingResult, space_key: str, dimension: int) -> Emb
     except ValidationError as error:
         raise EmbedderContractError(
             f"The embedder returned a result that the protocol does not allow: "
-            f"{_name_broken_rules(error=error)}"
+            f"{name_broken_rules(error=error)}"
         ) from error
-
-
-def _name_broken_rules(error: ValidationError) -> str:
-    """Name the field and the rule of every error in one line.
-
-    The message of a pydantic error repeats the value that failed, here the result of the
-    embedder. That result must not reach LightlyStudio.
-    """
-    rules = []
-    for detail in error.errors():
-        location = ".".join(str(part) for part in detail["loc"])
-        rules.append(f"{location}: {detail['msg']}" if location else detail["msg"])
-    return "; ".join(rules)
 
 
 def _validate_kept_indices(kept_indices: list[int], item_count: int) -> None:

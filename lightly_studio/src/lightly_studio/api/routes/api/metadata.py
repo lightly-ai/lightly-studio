@@ -97,6 +97,12 @@ def get_metadata_histograms(
 class MetadataValueCountsRequest(BaseModel):
     """Request body for computing filtered categorical value counts."""
 
+    limit: int | None = Field(
+        metadata_value_counts_resolver.DEFAULT_VALUE_COUNT_LIMIT,
+        ge=1,
+        description="Maximum concrete values per field; null returns all values",
+    )
+
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
     fields: list[str] | None = Field(
         None, description="Categorical fields to count; all fields are counted when absent"
@@ -115,7 +121,8 @@ def get_metadata_value_counts(
 ) -> dict[str, MetadataValueCountsView]:
     """Compute categorical metadata value counts under optional sample filters.
 
-    Returns the top 20 most frequent concrete values per key, followed by an
+    Returns the requested number of most frequent concrete values per key (default 20),
+    or all values when limit is null, followed by an
     ``__other__`` row aggregating the less frequent concrete values and a
     ``__missing__`` row counting the samples with an absent or null value. Each
     key's own metadata filter is excluded from its counts (faceted-search
@@ -134,6 +141,7 @@ def get_metadata_value_counts(
         collection_id=collection_id,
         filters=request.filters,
         fields=request.fields,
+        limit=request.limit,
     )
 
 

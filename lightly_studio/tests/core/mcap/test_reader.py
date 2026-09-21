@@ -13,8 +13,14 @@ from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import matching
-from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError, TopicNotFoundError
-from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap import reader as reader_module
+from lightly_studio.core.mcap.errors import (
+    ChannelNotFoundError,
+    DataNotLoadedError,
+    McapAccessError,
+    TopicNotFoundError,
+)
+from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
 from tests.core.mcap import helpers
 
 # The bucket and key the recording is uploaded to, to read it back over S3.
@@ -241,6 +247,62 @@ class TestMcapFileReader:
                 topic="/unknown",
             )
 
+    def test_get_decoded_message_at(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            result = reader.get_decoded_message_at(
+                channel_id=channel_id, timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[1]
+            )
+
+        assert result is not None
+        assert result.channel_id == channel_id
+        assert result.topic == helpers.CAMERA_IMAGE_TOPIC
+        assert result.log_time_ns == helpers.IMAGE_LOG_TIMES_NS[1]
+        assert result.decoded_message.data == helpers.compressed_image_payload(
+            helpers.IMAGE_LOG_TIMES_NS[1]
+        )
+
+    def test_get_decoded_message_at__no_message_at_timestamp(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            result = reader.get_decoded_message_at(
+                channel_id=channel_id,
+                timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0] + 1,
+            )
+
+        assert result is None
+
+    def test_get_decoded_message_at__unknown_channel(self, reader: McapFileReader) -> None:
+        with pytest.raises(ChannelNotFoundError):
+            reader.get_decoded_message_at(channel_id=999_999, timestamp_ns=0)
+
+    def test_get_decoded_message_at__undecodable(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_undecodable_compressed_image(tmp_path / "undecodable.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            with pytest.raises(McapAccessError):
+                reader.get_decoded_message_at(
+                    channel_id=channel_id,
+                    timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
+                )
+
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
         mcap_file_reader.close()
@@ -324,11 +386,30 @@ def test_mcap_file_reader__s3_uri_cached(
 def test_mcap_file_reader__not_seekable(mocker: MockerFixture) -> None:
     stream = mocker.MagicMock()
     stream.seekable.return_value = False
-    open_file = mocker.MagicMock()
-    open_file.open.return_value = stream
-    mocker.patch.object(fsspec, "open", return_value=open_file)
+    filesystem = mocker.MagicMock()
+    filesystem.open.return_value = stream
+    mocker.patch.object(fsspec, "url_to_fs", return_value=(filesystem, "recording.mcap"))
 
     with pytest.raises(McapAccessError, match="random access"):
         McapFileReader("https://example.com/recording.mcap")
 
-    open_file.close.assert_called_once_with()
+    stream.close.assert_called_once_with()
+
+
+def test_mcap_file_reader__read_pattern_random(mcap_path: Path) -> None:
+    with McapFileReader(mcap_path, read_pattern=ReadPattern.RANDOM) as reader:
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+        locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+
+    assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
+
+
+def test_read_cache_options() -> None:
+    assert reader_module._read_cache_options(ReadPattern.SEQUENTIAL) == {}
+
+
+def test_read_cache_options__random() -> None:
+    options = reader_module._read_cache_options(ReadPattern.RANDOM)
+
+    assert options["cache_type"] == "readahead"
+    assert 0 < options["block_size"] <= 4 * 1024 * 1024

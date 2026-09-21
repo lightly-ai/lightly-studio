@@ -19,7 +19,16 @@ import argparse
 import sys
 from pathlib import Path
 
-from prepare_release import changelog, lock, packages, pr_body, release_notes, version, wheel
+from prepare_release import (
+    changelog,
+    lock,
+    packages,
+    pr_body,
+    release_notes,
+    slack_message,
+    version,
+    wheel,
+)
 from prepare_release.errors import PrepareReleaseError
 
 PACKAGE_CONFIG = "package-config"
@@ -30,6 +39,7 @@ ASSERT_LOCK_DIFF = "assert-lock-diff"
 RENDER_PR_BODY = "render-pr-body"
 READ_VERSION = "read-version"
 RENDER_RELEASE_NOTES = "render-release-notes"
+RENDER_SLACK_MESSAGE = "render-slack-message"
 CHECK_WHEEL_DEPENDENCIES = "check-wheel-dependencies"
 
 
@@ -92,6 +102,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     release_notes_parser.add_argument("--output", type=Path, required=True)
 
+    slack_parser = subparsers.add_parser(
+        RENDER_SLACK_MESSAGE, help="render the Slack release announcement"
+    )
+    slack_parser.add_argument("--changelog", type=Path, required=True)
+    slack_parser.add_argument("--tag", required=True, help="release tag, e.g. v1.2.3")
+    slack_parser.add_argument("--release-url", required=True, help="the GitHub release page")
+    slack_parser.add_argument("--output", type=Path, required=True)
+
     wheel_deps = subparsers.add_parser(
         CHECK_WHEEL_DEPENDENCIES, help="fail if the built wheel resolves to a forbidden dependency"
     )
@@ -117,6 +135,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         RENDER_PR_BODY: _cmd_render_pr_body,
         READ_VERSION: _cmd_read_version,
         RENDER_RELEASE_NOTES: _cmd_render_release_notes,
+        RENDER_SLACK_MESSAGE: _cmd_render_slack_message,
         CHECK_WHEEL_DEPENDENCIES: _cmd_check_wheel_dependencies,
     }
     handlers[args.command](args)
@@ -178,6 +197,21 @@ def _cmd_render_release_notes(args: argparse.Namespace) -> None:
         changelog_section=section, generated_notes=args.generated.read_text()
     )
     args.output.write_text(body)
+
+
+def _cmd_render_slack_message(args: argparse.Namespace) -> None:
+    package = packages.for_tag(args.tag)
+    released_version = packages.version_from_tag(args.tag)
+    section = changelog.extract_released_section(
+        changelog_text=args.changelog.read_text(), version=released_version
+    )
+    message = slack_message.render_slack_message(
+        section_body=section,
+        version=released_version,
+        release_url=args.release_url,
+        display_name=package.display_name,
+    )
+    args.output.write_text(message)
 
 
 def _cmd_check_wheel_dependencies(args: argparse.Namespace) -> None:
