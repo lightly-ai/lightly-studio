@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio-serve"
-version = "0.1.0"
+version = "0.1.1"
 description = "Serve your own embedding model to LightlyStudio over HTTP."
 readme = "README.md"
 # Matches lightly-studio, so a customer stuck on an old inference image can still install it.
