@@ -5,6 +5,7 @@ from uuid import UUID
 
 import pytest
 
+from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.mcap import add_mcaps
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
@@ -212,6 +213,239 @@ def test_index_recording__components_do_not_match(
             sync_component=POINT_CLOUD_COMPONENT,
             components=[COMPONENTS[0]],
         )
+
+
+def test_index_recordings__continues_after_a_broken_recording(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+    tmp_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+    # A recording without the topics of the components cannot be indexed.
+    other_path = helpers.write_unchunked_mcap(tmp_path / "unchunked.mcap")
+
+    sequence_sample_ids = add_mcaps.index_recordings(
+        dataset=dataset,
+        mcap_paths=[str(other_path), str(mcap_path)],
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    )
+
+    assert len(sequence_sample_ids) == 1
+    assert _get_sample_links(sequence_sample_id=sequence_sample_ids[0]) != []
+
+
+def test_index_recordings__all_broken(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+    other_path = helpers.write_unchunked_mcap(tmp_path / "unchunked.mcap")
+
+    with pytest.raises(AllInputFilesFailedError):
+        add_mcaps.index_recordings(
+            dataset=dataset,
+            mcap_paths=[str(other_path)],
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+        )
+
+
+def test_index_recordings__empty(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    assert (
+        add_mcaps.index_recordings(
+            dataset=dataset,
+            mcap_paths=[],
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+        )
+        == []
+    )
+
+
+def test_index_recordings__skips_already_present(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+    first_ids = add_mcaps.index_recordings(
+        dataset=dataset,
+        mcap_paths=[str(mcap_path)],
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    )
+
+    second_ids = add_mcaps.index_recordings(
+        dataset=dataset,
+        mcap_paths=[str(mcap_path)],
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    )
+
+    assert first_ids != []
+    assert second_ids == []
+    recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    assert len(recordings) == 1
+
+
+def test_index_recordings__skips_duplicate_paths_in_the_same_call(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    sequence_sample_ids = add_mcaps.index_recordings(
+        dataset=dataset,
+        mcap_paths=[str(mcap_path), str(mcap_path)],
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    )
+
+    assert len(sequence_sample_ids) == 1
+    recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    assert len(recordings) == 1
+
+
+class TestMcapDatasetAddMcapsFromPath:
+    def test_add_mcaps_from_path(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        helpers.write_mcap(tmp_path / "first.mcap")
+        helpers.write_mcap(tmp_path / "second.mcap")
+        dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+        dataset.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        )
+
+        recordings = recording_resolver.get_all_by_dataset_id(
+            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+        )
+        assert sorted(Path(recording.uri).name for recording in recordings) == [
+            "first.mcap",
+            "second.mcap",
+        ]
+
+    def test_add_mcaps_from_path__skips_already_present(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        helpers.write_mcap(tmp_path / "first.mcap")
+        helpers.write_mcap(tmp_path / "second.mcap")
+        dataset = McapDataset.create(components=COMPONENTS, name="perception")
+        dataset.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        )
+
+        dataset.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        )
+
+        recordings = recording_resolver.get_all_by_dataset_id(
+            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+        )
+        assert sorted(Path(recording.uri).name for recording in recordings) == [
+            "first.mcap",
+            "second.mcap",
+        ]
+        assert len(dataset.get_sequences()) == 2
+
+    def test_add_mcaps_from_path__limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        helpers.write_mcap(tmp_path / "first.mcap")
+        helpers.write_mcap(tmp_path / "second.mcap")
+        dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+        dataset.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+            limit=1,
+        )
+
+        recordings = recording_resolver.get_all_by_dataset_id(
+            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+        )
+        assert len(recordings) == 1
+
+    def test_add_mcaps_from_path__invalid_limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+        with pytest.raises(ValueError, match="limit must be greater than 0"):
+            dataset.add_mcaps_from_path(
+                path=tmp_path,
+                sync_component=POINT_CLOUD_COMPONENT,
+                components=COMPONENTS,
+                limit=0,
+            )
+
+    def test_add_mcaps_from_path__after_load(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        helpers.write_mcap(tmp_path / "first.mcap")
+        McapDataset.create(components=COMPONENTS, name="perception")
+        loaded = McapDataset.load(name="perception")
+
+        loaded.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        )
+
+        recordings = recording_resolver.get_all_by_dataset_id(
+            session=db_manager.persistent_session(), dataset_id=loaded.dataset_id
+        )
+        assert [Path(recording.uri).name for recording in recordings] == ["first.mcap"]
+
+    def test_add_mcaps_from_path__components_do_not_match(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        McapDataset.create(components=COMPONENTS, name="perception")
+        loaded = McapDataset.load(name="perception")
+
+        with pytest.raises(ValueError, match="already exists with the components"):
+            loaded.add_mcaps_from_path(
+                path=tmp_path,
+                sync_component=POINT_CLOUD_COMPONENT,
+                components=[COMPONENTS[0]],
+            )
 
 
 def _get_sample_links(sequence_sample_id: UUID) -> list[SampleSequenceLinkTable]:
