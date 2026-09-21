@@ -66,8 +66,20 @@ class TestCheckUrlStrict:
         with pytest.raises(ValueError, match="not a public address"):
             url_policy.check_url(url=f"https://{host}", api_key=API_KEY)
 
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://100.64.0.1",
+            "https://224.0.0.1",
+            "https://[ff02::1]",
+            "https://[2001:db8::1]",
+        ],
+    )
+    def test_address_outside_the_public_internet(self, url: str) -> None:
+        with pytest.raises(ValueError, match="not a public address"):
+            url_policy.check_url(url=url, api_key=API_KEY)
+
     def test_link_local_address(self) -> None:
-        # The metadata endpoint of the cloud. It is the reason this control exists.
         with pytest.raises(ValueError, match=re.escape("169.254.169.254")):
             url_policy.check_url(url="https://169.254.169.254", api_key=API_KEY)
 
@@ -83,8 +95,13 @@ class TestCheckUrlStrict:
             url_policy.check_url(url="https://models.example.com", api_key=API_KEY)
 
     def test_name_resolving_to_mixed_addresses(self, mocker: MockerFixture) -> None:
-        # One name can carry several records. Every one of them must pass.
         _resolve_to(mocker=mocker, addresses=[PUBLIC_ADDRESS, PRIVATE_ADDRESS])
+
+        with pytest.raises(ValueError, match="not a public address"):
+            url_policy.check_url(url="https://models.example.com", api_key=API_KEY)
+
+    def test_name_resolving_to_the_shared_range(self, mocker: MockerFixture) -> None:
+        _resolve_to(mocker=mocker, addresses=["100.64.0.1"])
 
         with pytest.raises(ValueError, match="not a public address"):
             url_policy.check_url(url="https://models.example.com", api_key=API_KEY)

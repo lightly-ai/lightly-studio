@@ -148,19 +148,12 @@ def _resolved_addresses(host: str) -> list[ipaddress.IPv4Address | ipaddress.IPv
 
 
 def _reaches_this_network(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    """Whether an address stays on this host or inside this network.
+    """Whether an address fails to name a host on the public internet.
 
-    The ranges overlap: a link-local address is also a private one. They are listed one by
-    one so that a reader sees what the check covers.
+    ``is_global`` covers every range that stays inside a network, the shared range of
+    RFC 6598 among them. It is true for multicast, which names a group and no host.
     """
-    return (
-        address.is_loopback
-        or address.is_private
-        or address.is_link_local
-        or address.is_reserved
-        or address.is_multicast
-        or address.is_unspecified
-    )
+    return not address.is_global or address.is_multicast
 
 
 def _warn_on_clear_text(parsed: SplitResult, api_key: str | None) -> None:
