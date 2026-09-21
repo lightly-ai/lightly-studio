@@ -403,52 +403,6 @@ describe('PlotPanel.svelte', () => {
         ]);
     });
 
-    it('counts points by the active filter, not by the committed selection', async () => {
-        arrowDataStore = writable({
-            x: new Float32Array([0, 1, 2, 3, 4]),
-            y: new Float32Array([0, 0, 0, 0, 0]),
-            fulfils_filter: new Uint8Array([1, 1, 1, 0, 0]),
-            sample_id: ['s0', 's1', 's2', 's3', 's4']
-        });
-        // A lasso committed as region geometry demotes every out-of-region point to
-        // "Excluded by filters" for drawing. The readout must ignore that and keep
-        // reporting the filter, or it silently becomes a second selection counter.
-        imageFilterStore = writable({
-            sample_filter: {
-                sample_ids: [],
-                embedding_region: {
-                    polygon: [
-                        { x: -0.5, y: -1 },
-                        { x: 1.5, y: -1 },
-                        { x: 1.5, y: 1 },
-                        { x: -0.5, y: 1 }
-                    ]
-                }
-            }
-        });
-
-        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
-        await tick();
-
-        expect(screen.getByTestId('plot-point-count')).toHaveTextContent('3 / 5 points');
-    });
-
-    it('omits the point count until the embeddings arrive', async () => {
-        arrowDataStore = writable(undefined);
-        (useEmbeddings as vi.Mock).mockReturnValue({
-            isError: false,
-            error: null,
-            isLoading: true,
-            data: null
-        });
-
-        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
-        await tick();
-
-        // "0 / 0 points" next to a spinner reads as "this collection is empty".
-        expect(screen.queryByTestId('plot-point-count')).not.toBeInTheDocument();
-    });
-
     it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
         const user = userEvent.setup();
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });

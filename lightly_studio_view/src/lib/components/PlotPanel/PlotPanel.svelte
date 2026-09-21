@@ -467,23 +467,6 @@
         })
     );
 
-    // "N / M points": M is everything the plot received, N is what passes the active filters.
-    // Read `fulfils_filter` off the arrow data rather than the plotted categories: `usePlotData`
-    // demotes out-of-selection points to EXCLUDED_BY_FILTERS, so counting categories would turn
-    // this into a selection count the moment a lasso or a committed region exists.
-    // `null` until the embeddings land, so the readout stays absent instead of claiming "0 / 0".
-    const pointCounts = $derived.by(() => {
-        const total = ($arrowData?.x as Float32Array | undefined)?.length;
-        if (total === undefined) return null;
-        const fulfilsFilter = $arrowData?.fulfils_filter as Uint8Array | undefined;
-        if (!fulfilsFilter) return { matchingFilters: total, total };
-        let matchingFilters = 0;
-        for (const fulfils of fulfilsFilter) {
-            if (fulfils !== 0) matchingFilters++;
-        }
-        return { matchingFilters, total };
-    });
-
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
             return embeddingsData.error?.message ?? 'Unknown error';
@@ -588,40 +571,30 @@
     </div>
     {#if isReady}
         <div
-            class="mt-1 flex shrink-0 flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground"
+            class="mt-1 flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground"
             data-testid="plot-panel-controls"
         >
-            {#if pointCounts}
-                <span class="text-[11.5px] tabular-nums" data-testid="plot-point-count">
-                    {pointCounts.matchingFilters} / {pointCounts.total} points
-                </span>
-            {/if}
-            <!-- Wraps as one unit: a narrow panel drops the readout to its own row rather than
-                 clipping these two, which justify-end plus overflow-x-auto pushed off the left
-                 edge where no scroll range exists. -->
-            <div class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-                <PlotColorByPopover
-                    {collectionId}
-                    withTags={$tags.length > 0}
-                    withAnnotationLabels={$annotationLabels.length > 0}
-                    selectedKey={$selectedColorByKey}
-                    onSelectedKeyChange={(key) => {
-                        setSelectedColorByKey(key);
-                    }}
-                />
-                <Button
-                    variant="outline"
-                    buttonProps={{
-                        size: 'sm',
-                        onclick: reset,
-                        'data-testid': 'plot-reset-zoom-button',
-                        class: 'px-2.5',
-                        title: 'Reset zoom'
-                    }}
-                >
-                    Reset zoom
-                </Button>
-            </div>
+            <PlotColorByPopover
+                {collectionId}
+                withTags={$tags.length > 0}
+                withAnnotationLabels={$annotationLabels.length > 0}
+                selectedKey={$selectedColorByKey}
+                onSelectedKeyChange={(key) => {
+                    setSelectedColorByKey(key);
+                }}
+            />
+            <Button
+                variant="outline"
+                buttonProps={{
+                    size: 'sm',
+                    onclick: reset,
+                    'data-testid': 'plot-reset-zoom-button',
+                    class: 'px-2.5',
+                    title: 'Reset zoom'
+                }}
+            >
+                Reset zoom
+            </Button>
         </div>
     {/if}
 </div>
