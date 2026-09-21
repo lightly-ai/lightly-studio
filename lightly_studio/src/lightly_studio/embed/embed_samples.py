@@ -15,7 +15,7 @@ from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.embed import default_embedder, embedding_storage
+from lightly_studio.embed import default_embedder, embedding_storage, image_bytes_adapter
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -48,6 +48,8 @@ def embed_image_for_collection(
     registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
     never bootstraps a default model, since an interactive query must not mutate the collection.
     Takes bytes rather than a path so a remote backend without filesystem access can serve it.
+    A space whose embedder embeds images by PIL image or by path only is served through an
+    adapter, so image search stays available for every embedder that embeds images.
 
     Args:
         session: Database session for resolver operations.
@@ -65,7 +67,7 @@ def embed_image_for_collection(
     embedder = default_embedder.resolve_query_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_bytes_embedder,
+        get_embedder_fn=image_bytes_adapter.get_image_bytes_embedder,
     )
     result = embedder.embed_image_bytes(images=[image_bytes])
     if result.kept_indices != [0]:

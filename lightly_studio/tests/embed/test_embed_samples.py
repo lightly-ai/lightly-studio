@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import re
 from uuid import UUID, uuid4
@@ -11,6 +12,7 @@ import pytest
 from lightly_studio_serve.embedder import (
     ImageBytesEmbedder,
     ImageCropPathEmbedder,
+    ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
@@ -116,6 +118,26 @@ class _BoxXImageCropEmbedder(ImageCropPathEmbedder):
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
+class _PathOnlyEmbedder(ImagePathEmbedder):
+    """Embeds images by path only, as a custom embedder without a bytes capability may.
+
+    Embeds every image as a vector of ones so a test can tell the embedding apart from the
+    random model's output. Shares the random model's space so it resolves as the
+    collection's default.
+    """
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_images(self, paths: list[str]) -> EmbeddingResult:
+        """Embed each image at the given path as a vector of ones."""
+        embeddings = np.ones((len(paths), 3), dtype=np.float32)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(paths))))
+
+
 class _DropInputEmbedder(ImageBytesEmbedder, TextEmbedder):
     """Drops every input, so image and text queries get an empty result.
 
@@ -218,6 +240,30 @@ def test_embed_image_for_collection__no_embedding_raises(
             collection_id=collection.collection_id,
             image_bytes=b"image bytes",
         )
+
+
+def test_embed_image_for_collection__path_only_embedder(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """An embedder that embeds images by path only still serves an image query.
+
+    A custom embedder does not have to subclass ``ImageBytesEmbedder``, so image search
+    must stay available for a space that embeds images by path.
+    """
+    collection = create_collection(session=db_session)
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
+    registry = EmbedderRegistry()
+    registry.register(embedder=_PathOnlyEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    embedding = embed_samples.embed_image_for_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        image_bytes=_png_bytes(),
+    )
+
+    assert embedding == [1.0, 1.0, 1.0]
 
 
 @pytest.mark.usefixtures("patched_registry")
@@ -918,3 +964,14 @@ def _path_number(path: str) -> float:
     match = re.search(r"(\d+)", path)
     assert match is not None
     return float(match.group(1))
+
+
+def _png_bytes() -> bytes:
+    """Encode a one-pixel PNG, as an image upload carries it.
+
+    Returns:
+        The encoded PNG bytes.
+    """
+    buffer = io.BytesIO()
+    Image.new(mode="RGB", size=(1, 1)).save(buffer, format="PNG")
+    return buffer.getvalue()
