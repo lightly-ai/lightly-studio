@@ -59,17 +59,21 @@ def build_remote(config: EmbedderConfig) -> Embedder:
     """Connect to the embedding server that ``config`` names.
 
     Args:
-        config: The stored configuration. It must carry a URL, which the caller checks.
+        config: The stored configuration of a space that a server serves.
 
     Returns:
         An embedder that reaches the server and produces the stored space.
 
     Raises:
-        RemoteEmbedderError: If the URL does not parse, the server gives no answer, rejects
-            the token, breaks the protocol, advertises no capability that LightlyStudio can
-            use, or produces another space than the stored one.
+        RemoteEmbedderError: If the configuration names no server or the URL does not
+            parse, the server gives no answer, rejects the token, breaks the protocol,
+            advertises no capability that LightlyStudio can use, or produces another space
+            than the stored one.
     """
-    assert config.url is not None
+    if config.url is None:
+        raise RemoteEmbedderConfigError(
+            f"The configuration of space {config.space_key!r} names no embedding server."
+        )
     try:
         client = connection.build_client(url=config.url)
     except httpx.InvalidURL as error:

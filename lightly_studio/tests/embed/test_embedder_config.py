@@ -88,6 +88,15 @@ def test_build_remote__dimension_mismatch(mocker: MockerFixture) -> None:
         embedder_config.build_remote(config=_config())
 
 
+def test_build_remote__no_url() -> None:
+    config = EmbedderConfig(
+        dataset_id=uuid.uuid4(), space_key=SPACE_KEY, dimension=DIMENSION, url=None
+    )
+
+    with pytest.raises(RemoteEmbedderConfigError, match=r"names no embedding server"):
+        embedder_config.build_remote(config=config)
+
+
 def test_build_remote__unparsable_url() -> None:
     config = EmbedderConfig(
         dataset_id=uuid.uuid4(),
