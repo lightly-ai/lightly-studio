@@ -106,7 +106,7 @@ describe('getCategoricalMetadataDistributionRequestOptions', () => {
             })
         ).toEqual({
             path: { collection_id: 'collection-id' },
-            body: { filters: { width: { min: 100 } } }
+            body: { limit: null, filters: { width: { min: 100 } } }
         });
     });
 });
@@ -123,7 +123,7 @@ describe('categorical field selection', () => {
                     })
                 ).toEqual({
                     path: { collection_id: 'collection-id' },
-                    body: { fields, ...(filter ? { filters: filter } : {}) }
+                    body: { limit: null, fields, ...(filter ? { filters: filter } : {}) }
                 });
             }
         }
@@ -182,7 +182,7 @@ describe('useCategoricalMetadataDistribution', () => {
         await expect(options.queryFn({ signal })).resolves.toEqual(data);
         expect(getMetadataValueCounts).toHaveBeenCalledWith({
             path: { collection_id: 'collection-id' },
-            body: { fields: ['city'], filters: { width: { min: 100 } } },
+            body: { limit: null, fields: ['city'], filters: { width: { min: 100 } } },
             signal,
             throwOnError: true
         });

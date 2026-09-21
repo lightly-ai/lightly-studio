@@ -13,13 +13,14 @@ from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import matching
+from lightly_studio.core.mcap import reader as reader_module
 from lightly_studio.core.mcap.errors import (
     ChannelNotFoundError,
     DataNotLoadedError,
     McapAccessError,
     TopicNotFoundError,
 )
-from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
 from tests.core.mcap import helpers
 
 # The bucket and key the recording is uploaded to, to read it back over S3.
@@ -385,11 +386,30 @@ def test_mcap_file_reader__s3_uri_cached(
 def test_mcap_file_reader__not_seekable(mocker: MockerFixture) -> None:
     stream = mocker.MagicMock()
     stream.seekable.return_value = False
-    open_file = mocker.MagicMock()
-    open_file.open.return_value = stream
-    mocker.patch.object(fsspec, "open", return_value=open_file)
+    filesystem = mocker.MagicMock()
+    filesystem.open.return_value = stream
+    mocker.patch.object(fsspec, "url_to_fs", return_value=(filesystem, "recording.mcap"))
 
     with pytest.raises(McapAccessError, match="random access"):
         McapFileReader("https://example.com/recording.mcap")
 
-    open_file.close.assert_called_once_with()
+    stream.close.assert_called_once_with()
+
+
+def test_mcap_file_reader__read_pattern_random(mcap_path: Path) -> None:
+    with McapFileReader(mcap_path, read_pattern=ReadPattern.RANDOM) as reader:
+        reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+        locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+
+    assert [locator.log_time_ns for locator in locators] == list(helpers.VIDEO_LOG_TIMES_NS)
+
+
+def test_read_cache_options() -> None:
+    assert reader_module._read_cache_options(ReadPattern.SEQUENTIAL) == {}
+
+
+def test_read_cache_options__random() -> None:
+    options = reader_module._read_cache_options(ReadPattern.RANDOM)
+
+    assert options["cache_type"] == "readahead"
+    assert 0 < options["block_size"] <= 4 * 1024 * 1024
