@@ -113,7 +113,7 @@
                         </PaneResizer>
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
                         <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
-                            <CameraProjectionStrip />
+                            <CameraProjectionStrip {datasetId} {summary} />
                         </Pane>
                         <PaneResizer
                             class="group relative flex h-2 cursor-row-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"

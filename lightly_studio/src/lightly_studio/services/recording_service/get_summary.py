@@ -45,8 +45,12 @@ def get_mcap_sequence_summary(
     start_timestamp_ns = sequence_resolver.get_start_timestamp_ns(
         session=session, sequence_id=sequence_id
     )
+    first_keyframe_log_time_ns_by_channel = mcap_resolver.get_first_keyframe_log_time_ns_by_channel(
+        session=session, sequence_id=sequence_id
+    )
     return MCAPSequenceSummary.from_info(
         info=info,
         start_log_time_ns=start_log_time_ns,
         start_timestamp_ns=start_timestamp_ns,
+        first_keyframe_log_time_ns_by_channel=first_keyframe_log_time_ns_by_channel,
     )

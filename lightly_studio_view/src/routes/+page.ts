@@ -25,10 +25,10 @@ export const load = async () => {
             307,
             `/datasets/${mostRecentRootDataset.dataset_id}/point-clouds?collection_id=${mostRecentRootDataset.collection_id}`
         );
-    } 
+    }
 
     redirect(
         307,
-        `/datasets/${mostRecentRootDataset.collection_id}/${mostRecentRootDataset.sample_type.toLowerCase()}/${mostRecentRootDataset.collection_id}`
+        `/datasets/${mostRecentRootDataset.dataset_id}/${mostRecentRootDataset.sample_type.toLowerCase()}/${mostRecentRootDataset.collection_id}`
     );
 };
