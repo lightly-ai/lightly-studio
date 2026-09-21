@@ -173,19 +173,17 @@ if __name__ == "__main__":
 
 ## Step 4: Load the model into LightlyStudio
 
-Now create the second script, `explore.py`. This script points at the images and loads the model that you exported. It registers a generator that runs the model. LightlyStudio then embeds each sample during ingestion.
+Now create the second script, `explore.py`. This script points at the images and loads the model that you exported. It registers an embedder that runs the model. LightlyStudio then embeds each sample during ingestion.
 
 !!! example "Beta API"
     The embeddings API is in beta. Its interface can change in future releases without a deprecation period.
 
-Register the generator before you create the dataset, so ingestion embeds with it.
+Register the embedder before you create the dataset, so ingestion embeds with it.
 
 ```python title="explore.py"
 from pathlib import Path
 
-import numpy as np
 import torch
-from numpy.typing import NDArray
 from PIL import Image
 from torchvision import transforms
 
@@ -195,6 +193,11 @@ from lightly_studio.dataset import file_utils
 from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio import EmbeddingResult
+from lightly_studio_serve.embedder import (
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    ImagePILEmbedder,
+)
 
 # train_and_export.py already downloaded CUB-200-2011 to data/CUB_200_2011/.
 IMAGE_PATH = Path("data/CUB_200_2011/images")
@@ -210,8 +213,12 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
-class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
-    """Run a model exported from LightlyTrain to embed images on the fly."""
+class LightlyTrainEmbedder(ImagePathEmbedder, ImageCropPathEmbedder, ImagePILEmbedder):
+    """Run a model exported from LightlyTrain to embed images on the fly.
+
+    The model is vision-only, so this embedder does not subclass ``TextEmbedder``
+    and text search stays off.
+    """
 
     def __init__(self, model_file: str) -> None:
         # Auto select device: CUDA > MPS (Apple Silicon) > CPU.
@@ -244,27 +251,20 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
             space_key=f"lightlytrain/{self._model_hash}", dimension=self._dimension
         )
 
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
+    def embed_images(self, paths: list[str]) -> EmbeddingResult:
         return image_embedding.embed_image_files_batched(
-            filepaths=filepaths, context=self._context(), show_progress=show_progress
+            filepaths=paths, context=self._context(), show_progress=True
         )
 
-    def embed_image_crops(
-        self, image_crops: list[ls.ImageCrop], show_progress: bool = True
-    ) -> EmbeddingResult:
+    def embed_image_crops(self, crops: list[ls.ImageCrop]) -> EmbeddingResult:
         return image_crop_embedding.embed_image_crops_batched(
-            image_crops=image_crops, context=self._context(), show_progress=show_progress
+            image_crops=crops, context=self._context(), show_progress=True
         )
 
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
         return image_embedding.embed_pil_images_batched(
-            images=images, context=self._context(), show_progress=show_progress
-        ).embeddings
-
-    def embed_text(self, text: str) -> list[float]:
-        raise NotImplementedError("Vision-only model; text search is unavailable.")
+            images=images, context=self._context(), show_progress=False
+        )
 
     def _context(self) -> EmbeddingContext:
         return EmbeddingContext(
@@ -287,7 +287,7 @@ for required_path in (IMAGE_PATH, Path("out/embedding_model.pt")):
 
 # Resets the local database so a re-run starts clean. Remove to keep prior tags and curation.
 ls.db_manager.connect(cleanup_existing=True)
-ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator("out/embedding_model.pt"))
+ls.register_default_embedder(embedder=LightlyTrainEmbedder("out/embedding_model.pt"))
 
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
 
@@ -322,7 +322,7 @@ for sample in dataset:
 !!! warning "Keep the same LightlyTrain version"
     `torch.load(..., weights_only=False)` unpickles the model class of LightlyTrain. The environment that runs LightlyStudio needs the same `lightly-train` version that you exported with. This load also runs code from the file. Load only model files that you trust.
 
-Text search stays off, because the model has no text encoder. See [Using your own embeddings](../core_concepts/embeddings.md#using-your-own-embeddings) and the [Embeddings API](../api/embeddings.md) for the full `ImageEmbeddingGenerator` protocol.
+Text search stays off, because the model has no text encoder. See [Using your own embeddings](../core_concepts/embeddings.md#using-your-own-embeddings) and the [Embeddings API](../api/embeddings.md) for the full set of embedder capability interfaces.
 
 !!! note "Alternative: precompute the embeddings"
     To embed once, offline, run `lightly_train.embed(...)` to write vectors to a file. Then load them with the pattern in [`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py). That path embeds whole images only.

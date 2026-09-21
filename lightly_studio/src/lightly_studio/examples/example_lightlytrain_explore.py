@@ -11,20 +11,12 @@ export the model, because ``torch.load`` unpickles LightlyTrain's model class:
     pip install lightly-train lightly-studio
 """
 
-# TODO(Michal, 09/2026): Migrate this example to the Embedder protocols and the new
-# default-embedder API. mypy is disabled here until then because it still references the
-# removed EmbeddingGenerator protocols and set_default_embedding_model.
-# mypy: ignore-errors
-
 from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import torch
-from lightly_studio_serve.types import EmbeddingResult
-from numpy.typing import NDArray
-from PIL import Image
+from lightly_studio_serve.embedder import ImageCropPathEmbedder, ImagePathEmbedder
 from torchvision import transforms  # type: ignore[import-untyped]
 
 import lightly_studio as ls
@@ -43,13 +35,14 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
-class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
+class LightlyTrainEmbedder(ImagePathEmbedder, ImageCropPathEmbedder):
     """Embed images on the fly with a model exported from LightlyTrain.
 
     Loads the ``EmbeddingModel`` written by
     ``lightly_train.export(part="embedding_model", format="torch_model")`` and runs
-    it inside LightlyStudio, so whole images, object crops, and video frames are all
-    embedded live during ingestion.
+    it inside LightlyStudio, so whole images and object crops are embedded live
+    during ingestion. A LightlyTrain backbone is vision-only, so this embedder does
+    not subclass ``TextEmbedder`` and text search stays on the default.
     """
 
     def __init__(self, model_file: str) -> None:
@@ -91,39 +84,21 @@ class LightlyTrainEmbeddingGenerator(ls.ImageEmbeddingGenerator):
             dimension=self._embedding_dimension,
         )
 
-    def embed_text(self, text: str) -> list[float]:
-        """Not supported: a LightlyTrain SSL backbone has no text encoder."""
-        raise NotImplementedError(
-            "LightlyTrain backbones are vision-only; text search is unavailable."
-        )
-
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
+    def embed_images(self, paths: list[str]) -> ls.EmbeddingResult:
         """Embed a batch of images, returning one row per readable input path."""
         return image_embedding.embed_image_files_batched(
-            filepaths=filepaths,
+            filepaths=paths,
             context=self._embedding_context(),
-            show_progress=show_progress,
+            show_progress=True,
         )
 
-    def embed_image_crops(
-        self, image_crops: list[ls.ImageCrop], show_progress: bool = True
-    ) -> EmbeddingResult:
+    def embed_image_crops(self, crops: list[ls.ImageCrop]) -> ls.EmbeddingResult:
         """Embed a batch of object crops (used for annotation embeddings)."""
         return image_crop_embedding.embed_image_crops_batched(
-            image_crops=image_crops,
+            image_crops=crops,
             context=self._embedding_context(),
-            show_progress=show_progress,
+            show_progress=True,
         )
-
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]:
-        """Embed a batch of in-memory PIL images (used for video frames)."""
-        return image_embedding.embed_pil_images_batched(
-            images=images,
-            context=self._embedding_context(),
-            show_progress=show_progress,
-        ).embeddings
 
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched embedding."""
@@ -154,11 +129,11 @@ for required_path in (IMAGE_PATH, Path(MODEL_FILE)):
             "Run example_lightlytrain_train_and_export.py first."
         )
 
-# 3. Load the model into LightlyStudio. Register the generator BEFORE creating the
+# 3. Load the model into LightlyStudio. Register the embedder BEFORE creating the
 # dataset, so ingestion embeds live with it instead of a built-in model.
 # cleanup_existing=True resets the local database each run; remove it to keep prior runs.
 db_manager.connect(cleanup_existing=True)
-ls.set_default_embedding_model(LightlyTrainEmbeddingGenerator(model_file=MODEL_FILE))
+ls.register_default_embedder(embedder=LightlyTrainEmbedder(model_file=MODEL_FILE))
 dataset = ls.ImageDataset.create(name="lightlytrain-embeddings")
 
 # This script expects one subfolder per class with the images directly inside, the

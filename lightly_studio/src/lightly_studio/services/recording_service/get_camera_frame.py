@@ -14,7 +14,7 @@ from sqlmodel import Session
 from lightly_studio.core.mcap import compressed_video
 from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY
 from lightly_studio.core.mcap.errors import McapAccessError
-from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
 from lightly_studio.core.mcap.type_definitions import DecodedMessage
 from lightly_studio.resolvers import recording_resolver
 
@@ -45,6 +45,9 @@ def _get_cached_reader(uri: str) -> McapFileReader:
     Keeps up to `_READER_CACHE_SIZE` readers open per thread, evicting the least recently
     used on overflow. Remote S3 URIs include the endpoint from the environment when set,
     so local S3 emulators (e.g. Floci/LocalStack) work without extra configuration.
+
+    The readers are opened for random access, because serving one frame reads only the
+    summary and the chunk that holds it.
     """
     if not hasattr(_thread_local, "reader_cache"):
         _thread_local.reader_cache = OrderedDict()
@@ -62,7 +65,9 @@ def _get_cached_reader(uri: str) -> McapFileReader:
         endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
         if endpoint_url:
             storage_options = {"client_kwargs": {"endpoint_url": endpoint_url}}
-    reader = McapFileReader(uri, storage_options=storage_options)
+    # A frame is a few reads spread over the file, so a small read cache keeps opening
+    # a remote recording fast. A large one would fetch tens of megabytes per read.
+    reader = McapFileReader(uri, storage_options=storage_options, read_pattern=ReadPattern.RANDOM)
     cache[uri] = reader
     while len(cache) > _READER_CACHE_SIZE:
         _, evicted = cache.popitem(last=False)

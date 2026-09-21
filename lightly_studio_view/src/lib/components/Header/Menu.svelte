@@ -15,7 +15,8 @@
         Download as DownloadIcon,
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
-        WandSparkles as WandSparklesIcon
+        WandSparkles as WandSparklesIcon,
+        Menu as MenuIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -138,9 +139,11 @@
         items={menuActions}
         hideSelectionMarker
         itemsAsLinks
+        icon={MenuIcon}
+        selectProps={{ 'aria-label': 'Menu' }}
         onValueChange={handleValueChange}
         variant="ghost"
-        class="nav-button w-[100px]"
+        class="nav-button menu-trigger w-[100px]"
         testId="menu-trigger"
     />
 {/if}
