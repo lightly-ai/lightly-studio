@@ -13,6 +13,7 @@ from lightly_studio_serve import protocol, server
 from lightly_studio_serve.embedder import ImageBytesEmbedder, TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
+from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
 
 SPACE_KEY = "acme/model@v1"
@@ -92,13 +93,15 @@ def server_url() -> Iterator[str]:
 @pytest.fixture(scope="module")
 def remote(server_url: str) -> Iterator[RemoteEmbedder]:
     """One client for the tests that only embed. `test_connect` builds its own."""
-    with RemoteEmbedder.connect(url=server_url) as embedder:
-        yield embedder
+    with connection.build_client(url=server_url) as client:
+        yield RemoteEmbedder.connect(client=client)
 
 
 class TestRoundTrip:
     def test_connect(self, server_url: str) -> None:
-        with RemoteEmbedder.connect(url=server_url) as embedder:
+        with connection.build_client(url=server_url) as client:
+            embedder = RemoteEmbedder.connect(client=client)
+
             assert isinstance(embedder, TextEmbedder)
             assert isinstance(embedder, ImageBytesEmbedder)
             assert embedder.embedding_space_spec() == EmbeddingSpaceSpec(
