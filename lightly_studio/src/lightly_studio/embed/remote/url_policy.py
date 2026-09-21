@@ -18,8 +18,9 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import urllib.parse
 import warnings
-from urllib.parse import SplitResult, urlsplit
+from urllib.parse import SplitResult
 
 import httpx
 
@@ -48,7 +49,7 @@ def check_url(url: str, api_key: str | None) -> None:
     Raises:
         ValueError: If ``url`` is not a usable address, or if the strict mode refuses it.
     """
-    parsed = urlsplit(url)
+    parsed = urllib.parse.urlsplit(url)
     if not parsed.scheme or not parsed.hostname:
         raise ValueError(
             f"{url!r} is not a usable address for an embedding server. Give a scheme and a "
@@ -64,9 +65,9 @@ def check_no_redirects(client: httpx.Client) -> None:
 
     ``False`` is the default of ``httpx.Client``, but it is not the default everywhere:
     ``fastapi.testclient.TestClient`` follows redirects. The value is therefore checked
-    and not assumed, for a client that a caller passes in as much as for the one that
-    ``connect`` opens. A redirect would carry the batch, and the bearer token with it, to
-    an address that nobody configured, which is the same reach that ``check_url`` closes.
+    and not assumed, whichever client a caller hands to ``connect``. A redirect would carry
+    the batch, and the bearer token with it, to an address that nobody configured, which is
+    the same reach that ``check_url`` closes.
 
     Args:
         client: The client that carries the requests.
@@ -103,8 +104,16 @@ def _check_public(parsed: SplitResult) -> None:
     # The addresses are read here, once, when the embedder is built. A name that answers
     # with another address afterwards is out of reach of this check. The ban on redirects
     # and the single read of `/v1/describe` are what keep that window small.
+    # `169.254.169.254` is the reason this check exists: it is link-local, it answers on
+    # most clouds, and it hands out the credentials of the instance to whoever asks.
     for address in _resolved_addresses(host=host):
-        _check_public_address(address=address, host=host)
+        if _reaches_this_network(address=address):
+            raise ValueError(
+                f"The host {host!r} of the embedding server resolves to {address}, which is "
+                f"not a public address. LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS is "
+                f"false, so an embedding server must not be reachable from inside this "
+                f"network."
+            )
 
 
 def _resolved_addresses(host: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
@@ -132,30 +141,6 @@ def _resolved_addresses(host: str) -> list[ipaddress.IPv4Address | ipaddress.IPv
         ) from error
     # An IPv6 address can carry a zone, such as `fe80::1%eth0`, which is not part of it.
     return [ipaddress.ip_address(str(info[4][0]).partition("%")[0]) for info in infos]
-
-
-def _check_public_address(
-    address: ipaddress.IPv4Address | ipaddress.IPv6Address, host: str
-) -> None:
-    """Refuse an address that names this host, this network, or the metadata endpoint.
-
-    ``169.254.169.254`` is the reason this control exists: it is link-local, it answers on
-    most clouds, and it hands out the credentials of the instance to whoever asks.
-
-    Args:
-        address: One address that ``host`` resolves to.
-        host: The host of the URL, for the message.
-
-    Raises:
-        ValueError: If the address is not a public one.
-    """
-    if not _reaches_this_network(address=address):
-        return
-    raise ValueError(
-        f"The host {host!r} of the embedding server resolves to {address}, which is not a "
-        f"public address. LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS is false, so an "
-        f"embedding server must not be reachable from inside this network."
-    )
 
 
 def _reaches_this_network(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
