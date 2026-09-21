@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 
 import httpx
 import numpy as np
@@ -127,6 +127,12 @@ class TestRoundTrip:
             result.embeddings, np.array([[1.0, 0.0], [1.0, 1.0]], dtype=np.float32)
         )
 
+    def test_embed_text__empty(self, remote: TextEmbedder) -> None:
+        result = remote.embed_text(texts=[])
+
+        assert result.kept_indices == []
+        assert result.embeddings.shape == (0, DIMENSION)
+
     def test_embed_image_bytes(self, remote: ImageBytesEmbedder) -> None:
         result = remote.embed_image_bytes(images=[b"the first image", b"the second image"])
 
@@ -136,14 +142,8 @@ class TestRoundTrip:
             result.embeddings, np.array([[2.0, 0.0], [0.0, 2.0]], dtype=np.float32)
         )
 
-    def test_embed_text__empty(self, remote: TextEmbedder) -> None:
-        result = remote.embed_text(texts=[])
 
-        assert result.kept_indices == []
-        assert result.embeddings.shape == (0, DIMENSION)
-
-
-def _result(rows: list[list[float] | None]) -> EmbeddingResult:
+def _result(rows: Sequence[list[float] | None]) -> EmbeddingResult:
     """Keep the inputs that have a vector and skip the rest, the way an embedder does."""
     kept_indices = [index for index, row in enumerate(rows) if row is not None]
     kept_rows = [row for row in rows if row is not None]
@@ -157,7 +157,9 @@ def _wait_until_ready(url: str) -> None:
     last_problem = "it was never reached"
     while time.monotonic() < deadline:
         try:
-            response = httpx.get(f"{url}{protocol.DESCRIBE_PATH}", timeout=_POLL_TIMEOUT_SECONDS)
+            response = httpx.get(
+                url=f"{url}{protocol.DESCRIBE_PATH}", timeout=_POLL_TIMEOUT_SECONDS
+            )
         except httpx.HTTPError as error:
             last_problem = f"{type(error).__name__}: {error}"
         else:
