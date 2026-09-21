@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { BoxIcon } from '@lucide/svelte';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
@@ -21,6 +22,26 @@
             : null
     );
 
+    // Debounce the URL so that rapid width/height changes during a panel resize or
+    // column-count drag do not flood the backend with image requests. Initialize
+    // with the current value via untrack so the first render shows the image
+    // immediately without waiting for the effect to run.
+    let debouncedFrameUrl = $state<string | null>(untrack(() => frameUrl));
+    let frameUrlDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    $effect(() => {
+        const url = frameUrl;
+        if (debouncedFrameUrl === null) {
+            debouncedFrameUrl = url;
+            return;
+        }
+        clearTimeout(frameUrlDebounceTimer);
+        frameUrlDebounceTimer = setTimeout(() => {
+            debouncedFrameUrl = url;
+        }, 150);
+        return () => clearTimeout(frameUrlDebounceTimer);
+    });
+
     let failedFrameUrl = $state<string | null>(null);
 </script>
 
@@ -29,12 +50,12 @@
     class="relative h-full w-full"
     style="width: {width}px; height: {height}px"
 >
-    {#if frameUrl !== null && frameUrl !== failedFrameUrl}
+    {#if debouncedFrameUrl !== null && debouncedFrameUrl !== failedFrameUrl}
         <img
-            src={frameUrl}
+            src={debouncedFrameUrl}
             alt="MCAP sequence preview"
             class="h-full w-full object-cover"
-            onerror={() => (failedFrameUrl = frameUrl)}
+            onerror={() => (failedFrameUrl = debouncedFrameUrl)}
         />
     {:else}
         <div

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import McapSequenceGridItem from './McapSequenceGridItem.svelte';
@@ -52,6 +52,8 @@ describe('McapSequenceGridItem', () => {
     });
 
     it('renders an img when frameUrl changes after a prior URL failed', async () => {
+        vi.useFakeTimers();
+
         const sequenceFrame = {
             dataset_id: 'ds-recording',
             recording_id: 'rec-abc',
@@ -73,6 +75,11 @@ describe('McapSequenceGridItem', () => {
             sequenceFrame: { ...sequenceFrame, keyframe_log_time_ns: '100' }
         });
 
+        vi.runAllTimers();
+        await tick();
+
         expect(getByRole('img')).toBeInTheDocument();
+
+        vi.useRealTimers();
     });
 });
