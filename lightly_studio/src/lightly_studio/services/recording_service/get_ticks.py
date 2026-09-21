@@ -61,7 +61,10 @@ def get_mcap_sequence_tick(
         The tick detail, or `None` if the sequence does not exist, does not belong
         to `dataset_id`, or has no tick at `seq_number`.
     """
-    info = mcap_group_sequence_resolver.get_info(session=session, sample_id=sequence_id)
+    try:
+        info = mcap_group_sequence_resolver.get_info(session=session, sample_id=sequence_id)
+    except ValueError:
+        return None
     if info is None or info.recording.dataset_id != dataset_id:
         return None
 
