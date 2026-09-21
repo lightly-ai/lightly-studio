@@ -7,6 +7,7 @@ so a customer can run it in their own build.
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import sys
 from collections.abc import Sequence
@@ -66,10 +67,10 @@ def _parse(argv: Sequence[str] | None) -> argparse.Namespace:
 
 
 def _positive_seconds(value: str) -> float:
-    """Read a timeout, rejecting the ones under which every probe fails by definition."""
+    """Read a timeout, rejecting the ones a socket refuses and the ones every probe fails."""
     seconds = float(value)
-    if seconds <= 0:
-        raise argparse.ArgumentTypeError(f"must be over 0 seconds, got {value}.")
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise argparse.ArgumentTypeError(f"must be a number over 0 seconds, got {value}.")
     return seconds
 
 

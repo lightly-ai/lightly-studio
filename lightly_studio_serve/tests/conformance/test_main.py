@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from lightly_studio_serve import server
 from lightly_studio_serve.conformance import __main__ as main_module
-from lightly_studio_serve.server import create_app
 from tests.conformance import helpers
 from tests.conformance.helpers import FakeEmbedder
 
@@ -12,7 +12,7 @@ API_KEY = "the-key"
 
 def test_main(capsys: pytest.CaptureFixture[str]) -> None:
     """The server of this package passes over a real socket, which is what CI runs."""
-    with helpers.serving(app=create_app(embedder=FakeEmbedder())) as url:
+    with helpers.serving(app=server.create_app(embedder=FakeEmbedder())) as url:
         status = main_module.main(argv=[url])
 
     output = capsys.readouterr().out
@@ -53,15 +53,16 @@ def test_main__address_that_is_no_http_url(capsys: pytest.CaptureFixture[str]) -
     )
 
 
-def test_main__probe_timeout_that_is_not_positive() -> None:
-    """Every probe would fail under it, which reads as a broken server."""
+@pytest.mark.parametrize("timeout", ["0", "-1", "nan", "inf"])
+def test_main__probe_timeout_that_is_no_number_of_seconds(timeout: str) -> None:
+    """A socket refuses these, and every probe would fail under the rest."""
     with pytest.raises(SystemExit):
-        main_module.main(argv=["http://127.0.0.1:1", "--probe-timeout", "0"])
+        main_module.main(argv=["http://127.0.0.1:1", "--probe-timeout", timeout])
 
 
 def test_main__api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """A key on the command line stays in the history of the terminal, so read one too."""
-    app = create_app(embedder=FakeEmbedder(), api_key=API_KEY)
+    app = server.create_app(embedder=FakeEmbedder(), api_key=API_KEY)
     with helpers.serving(app=app) as url:
         assert main_module.main(argv=[url]) == 1
         assert main_module.main(argv=[url, "--api-key", API_KEY]) == 0

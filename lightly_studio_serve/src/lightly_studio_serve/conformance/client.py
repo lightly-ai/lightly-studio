@@ -8,8 +8,11 @@ one the command line uses.
 from __future__ import annotations
 
 import http.client
+import ipaddress
 import urllib.error
+import urllib.parse
 import urllib.request
+import warnings
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -70,6 +73,12 @@ class HttpProbeClient:
             raise ValueError(f"base_url must start with http:// or https://, got {base_url!r}.")
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
+        if api_key and _is_cleartext_to_another_host(base_url=base_url):
+            warnings.warn(
+                f"Sending the bearer token to {base_url} over plain HTTP, so it goes over "
+                f"the network in clear text. Use https://, or an address on this machine.",
+                stacklevel=2,
+            )
         self._opener = urllib.request.OpenerDirector()
         self._opener.add_handler(urllib.request.HTTPHandler())
         self._opener.add_handler(urllib.request.HTTPSHandler())
@@ -103,8 +112,9 @@ class HttpProbeClient:
             with self._opener.open(request, timeout=timeout) as response:
                 status, answer = response.status, response.read(MAX_RESPONSE_BYTES + 1)
         # A URLError is an OSError, and so is a read that ran out of time. An address a
-        # person mistyped fails here too, and reads as an answer that never came.
-        except (OSError, ValueError, http.client.InvalidURL) as error:
+        # person mistyped, and an answer that is no HTTP at all, fail here too, and read
+        # as an answer that never came.
+        except (OSError, ValueError, http.client.HTTPException) as error:
             raise ConformanceRequestError(f"{url} got no answer: {error}.") from error
         if len(answer) > MAX_RESPONSE_BYTES:
             raise ConformanceRequestError(
@@ -112,3 +122,21 @@ class HttpProbeClient:
                 f"carries one item, so no answer of the protocol is that large."
             )
         return ProbeResponse(status_code=status, body=answer)
+
+
+def _is_cleartext_to_another_host(base_url: str) -> bool:
+    """Whether ``base_url`` carries a token to a host that other machines can reach too.
+
+    A name other than ``localhost`` is not an address, so the answer is yes. ``serve``
+    reads its own host the same way, and warns on the same side of the two.
+    """
+    parsed = urllib.parse.urlsplit(base_url)
+    if parsed.scheme.lower() != "http":
+        return False
+    host = parsed.hostname or ""
+    if host == "localhost":
+        return False
+    try:
+        return not ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return True

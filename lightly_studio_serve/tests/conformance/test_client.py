@@ -4,12 +4,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse, RedirectResponse
 
-from lightly_studio_serve import protocol
+from lightly_studio_serve import protocol, server
 from lightly_studio_serve.conformance import client as client_module
 from lightly_studio_serve.conformance.client import ConformanceRequestError, HttpProbeClient
 from lightly_studio_serve.conformance.probes import PROBES
 from lightly_studio_serve.embedder import Capability
-from lightly_studio_serve.server import create_app
 from tests.conformance import helpers
 from tests.conformance.helpers import FakeEmbedder
 
@@ -29,8 +28,13 @@ class TestHttpProbeClient:
 
         assert client.base_url == "HTTP://127.0.0.1:8080"
 
+    def test_init__api_key_over_http_to_another_host(self) -> None:
+        """The token would go over the network in clear text, as it does for ``serve``."""
+        with pytest.warns(UserWarning, match="clear text"):
+            HttpProbeClient(base_url="http://embed.example.com", api_key=API_KEY)
+
     def test_get(self) -> None:
-        with helpers.serving(app=create_app(embedder=FakeEmbedder())) as url:
+        with helpers.serving(app=server.create_app(embedder=FakeEmbedder())) as url:
             response = HttpProbeClient(base_url=f"{url}/").get(
                 path=protocol.DESCRIBE_PATH, timeout=TIMEOUT
             )
@@ -40,7 +44,7 @@ class TestHttpProbeClient:
 
     def test_post(self) -> None:
         probe = PROBES[Capability.IMAGE_BYTES]
-        with helpers.serving(app=create_app(embedder=FakeEmbedder())) as url:
+        with helpers.serving(app=server.create_app(embedder=FakeEmbedder())) as url:
             response = HttpProbeClient(base_url=url).post(
                 path=probe.path, content_type=probe.content_type, body=probe.body, timeout=TIMEOUT
             )
@@ -49,7 +53,7 @@ class TestHttpProbeClient:
         assert b'"kept_indices":[0]' in response.body
 
     def test_get__api_key(self) -> None:
-        app = create_app(embedder=FakeEmbedder(), api_key=API_KEY)
+        app = server.create_app(embedder=FakeEmbedder(), api_key=API_KEY)
         with helpers.serving(app=app) as url:
             client = HttpProbeClient(base_url=url, api_key=API_KEY)
             response = client.get(path=protocol.DESCRIBE_PATH, timeout=TIMEOUT)
@@ -58,7 +62,7 @@ class TestHttpProbeClient:
 
     def test_get__status_the_server_chose(self) -> None:
         """A status is an answer that the checks read, never an exception."""
-        app = create_app(embedder=FakeEmbedder(), api_key=API_KEY)
+        app = server.create_app(embedder=FakeEmbedder(), api_key=API_KEY)
         with helpers.serving(app=app) as url:
             response = HttpProbeClient(base_url=url).get(
                 path=protocol.DESCRIBE_PATH, timeout=TIMEOUT
@@ -91,7 +95,7 @@ class TestHttpProbeClient:
 
     def test_get__api_key_that_is_empty(self) -> None:
         """An unset variable in a shell reads as empty, and means no key at all."""
-        app = create_app(embedder=FakeEmbedder())
+        app = server.create_app(embedder=FakeEmbedder())
         with helpers.serving(app=app) as url:
             response = HttpProbeClient(base_url=url, api_key="").get(
                 path=protocol.DESCRIBE_PATH, timeout=TIMEOUT
