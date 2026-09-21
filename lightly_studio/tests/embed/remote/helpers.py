@@ -24,8 +24,7 @@ from numpy.typing import NDArray
 
 SPACE_KEY = "acme/model@v1"
 DIMENSION = 2
-# A loopback address, because the URL policy of `RemoteEmbedder.connect` reads the
-# `base_url` of the client and warns about plain HTTP that other hosts can reach.
+# Loopback, so the URL policy of `RemoteEmbedder.connect` gives no clear-text warning.
 BASE_URL = "http://127.0.0.1:8080"
 ROW = [0.5, -0.5]
 

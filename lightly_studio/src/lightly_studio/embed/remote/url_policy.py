@@ -28,9 +28,7 @@ from lightly_studio.dataset import env
 
 _HTTPS_SCHEME = "https"
 
-# A port on this name is out of reach for other hosts. Only `localhost` is listed, because
-# any other name is not an address. A name that does resolve to loopback then gets a
-# warning that it does not need, which is the safe side of the two.
+# The only name that is an address. Any other name is not one.
 _LOOPBACK_HOST_NAME = "localhost"
 
 
@@ -86,6 +84,10 @@ def check_no_redirects(client: httpx.Client) -> None:
 def _check_public(parsed: SplitResult) -> None:
     """Refuse what the strict mode refuses: plain HTTP, and a host inside this network.
 
+    The addresses are read once, here, when the embedder is built. A name that answers with
+    another address afterwards is out of reach of this check. The ban on redirects and the
+    single read of ``/v1/describe`` are what keep that window small.
+
     Args:
         parsed: The address of the server.
 
@@ -101,11 +103,7 @@ def _check_public(parsed: SplitResult) -> None:
         )
     host = parsed.hostname
     assert host is not None
-    # The addresses are read here, once, when the embedder is built. A name that answers
-    # with another address afterwards is out of reach of this check. The ban on redirects
-    # and the single read of `/v1/describe` are what keep that window small.
-    # `169.254.169.254` is the reason this check exists: it is link-local, it answers on
-    # most clouds, and it hands out the credentials of the instance to whoever asks.
+    # `169.254.169.254`, the metadata endpoint of the cloud, is link-local.
     for address in _resolved_addresses(host=host):
         if _reaches_this_network(address=address):
             raise ValueError(
@@ -192,7 +190,11 @@ def _warn_on_clear_text(parsed: SplitResult, api_key: str | None) -> None:
 
 
 def _is_loopback(parsed: SplitResult) -> bool:
-    """Whether a port on the host of this address is out of reach for other hosts."""
+    """Whether a port on the host of this address is out of reach for other hosts.
+
+    A name other than ``localhost`` that resolves to loopback is not read as one, so it
+    gets a warning that it does not need. That is the safe side of the two.
+    """
     host = parsed.hostname
     if host is None:
         return False
