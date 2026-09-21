@@ -333,6 +333,40 @@ class TestEmbedderRegistry:
         assert embedder is builtin
         build_remote.assert_not_called()
 
+    def test_get_text_embedder__unusable_server_is_not_retried(self, mocker: MockerFixture) -> None:
+        registry = EmbedderRegistry()
+        build_remote = mocker.patch.object(
+            embedder_config, "build_remote", side_effect=RemoteEmbedderUnreachableError("down")
+        )
+        config = _config(space_key="space-a", url="http://first.test")
+
+        assert registry.get_text_embedder(config=config) is None
+        assert registry.get_text_embedder(config=config) is None
+
+        build_remote.assert_called_once_with(config=config)
+
+    def test_get_text_embedder__changed_config_retries_after_failure(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        remote = _FakeTextImageEmbedder(space_key="space-a")
+        mocker.patch.object(
+            embedder_config,
+            "build_remote",
+            side_effect=[RemoteEmbedderUnreachableError("down"), remote],
+        )
+        dataset_id = uuid.uuid4()
+
+        first = registry.get_text_embedder(
+            config=_config(space_key="space-a", url="http://first.test", dataset_id=dataset_id)
+        )
+        second = registry.get_text_embedder(
+            config=_config(space_key="space-a", url="http://second.test", dataset_id=dataset_id)
+        )
+
+        assert first is None
+        assert second is remote
+
     def test_get_image_path_embedder__explicit_key_has_no_fallback(
         self, mocker: MockerFixture
     ) -> None:
