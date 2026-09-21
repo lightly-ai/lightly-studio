@@ -1,4 +1,4 @@
-"""Service functions for MCAP sequence tick list and per-tick channel locators."""
+"""Service functions for the MCAP sequence tick list."""
 
 from __future__ import annotations
 
@@ -10,7 +10,12 @@ from lightly_studio.models.mcap_sequence_ticks import (
     TickListView,
     TickView,
 )
-from lightly_studio.resolvers import mcap_group_sequence_resolver, sequence_resolver
+from lightly_studio.resolvers import (
+    collection_resolver,
+    mcap_group_sequence_resolver,
+    sample_resolver,
+    sequence_resolver,
+)
 
 
 def get_ticks(
@@ -42,8 +47,16 @@ def get_ticks(
 
 
 def _sequence_belongs_to_dataset(session: Session, sequence_id: UUID, dataset_id: UUID) -> bool:
-    try:
-        info = mcap_group_sequence_resolver.get_info(session=session, sample_id=sequence_id)
-    except ValueError:
+    """Whether `sequence_id` is an MCAP sequence whose collection is in `dataset_id`.
+
+    Membership derives from the sequence sample's own collection, not from its
+    recording: the two can differ, and a sequence has a valid collection even before
+    its GROUP component schema exists.
+    """
+    if mcap_group_sequence_resolver.get_by_id(session=session, sample_id=sequence_id) is None:
         return False
-    return info is not None and info.recording.dataset_id == dataset_id
+    sample = sample_resolver.get_by_id(session=session, sample_id=sequence_id)
+    if sample is None:
+        return False
+    collection = collection_resolver.get_by_id(session=session, collection_id=sample.collection_id)
+    return collection is not None and collection.dataset_id == dataset_id

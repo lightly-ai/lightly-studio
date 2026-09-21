@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 from sqlmodel import Session
 
@@ -10,11 +10,11 @@ from lightly_studio.models.sample import SampleCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import sample_resolver
 from lightly_studio.services import recording_service
-from tests.resolvers.mcap_group_sequence_resolver.helpers import create_mcap_sequence
+from tests.resolvers.mcap_group_sequence_resolver import helpers
 
 
 def test_get_ticks(db_session: Session) -> None:
-    fixture = create_mcap_sequence(session=db_session)
+    fixture = helpers.create_mcap_sequence(session=db_session)
     sample_ids = sample_resolver.create_many(
         session=db_session,
         samples=[
@@ -55,7 +55,7 @@ def test_get_ticks(db_session: Session) -> None:
 
 
 def test_get_ticks__no_ticks(db_session: Session) -> None:
-    fixture = create_mcap_sequence(session=db_session)
+    fixture = helpers.create_mcap_sequence(session=db_session)
 
     result = recording_service.get_ticks(
         session=db_session,
@@ -70,19 +70,19 @@ def test_get_ticks__no_ticks(db_session: Session) -> None:
 def test_get_ticks__unknown_sequence(db_session: Session) -> None:
     result = recording_service.get_ticks(
         session=db_session,
-        dataset_id=uuid4(),
-        sequence_id=uuid4(),
+        dataset_id=uuid.uuid4(),
+        sequence_id=uuid.uuid4(),
     )
 
     assert result is None
 
 
 def test_get_ticks__wrong_dataset(db_session: Session) -> None:
-    fixture = create_mcap_sequence(session=db_session)
+    fixture = helpers.create_mcap_sequence(session=db_session)
 
     result = recording_service.get_ticks(
         session=db_session,
-        dataset_id=uuid4(),
+        dataset_id=uuid.uuid4(),
         sequence_id=fixture.sample_id,
     )
 
