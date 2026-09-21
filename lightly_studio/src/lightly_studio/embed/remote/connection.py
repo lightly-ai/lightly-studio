@@ -21,9 +21,9 @@ def build_client(url: str) -> httpx.Client:
     ``follow_redirects`` stays off, which is also the default of httpx. A redirect would
     carry the batch, and the bearer token with it, to an address that nobody configured.
 
-    The client carries no budget of its own. The right ceiling depends on what a request
-    carries, so ``RemoteTransport`` puts the budget of the capability on each request, out
-    of ``RemoteTimeouts``.
+    The budget of the client stays at the default of httpx, and ``RemoteTransport``
+    overrides it on every request it sends: the right ceiling depends on what a request
+    carries, so the budget of the capability comes from ``RemoteTimeouts``.
 
     The caller owns the client that this returns. A client behind a registered embedder
     lives as long as the process, because ``EmbedderRegistry`` holds the embedder and

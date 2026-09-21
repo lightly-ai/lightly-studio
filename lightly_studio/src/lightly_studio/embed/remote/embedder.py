@@ -1,12 +1,12 @@
 """An embedder that calls a server instead of running a model.
 
 ``RemoteEmbedder`` is a pure mirror of the wire. It carries what every capability shares,
-and one route class per capability adds the method that the capability names. An fsspec
-path, a crop and a PIL image do not cross the wire, so they are not served here.
+and one route class per capability adds the one method that the capability names. An
+fsspec path, a crop and a PIL image do not cross the wire, so they are not served here.
 
 The capabilities are data of the server. ``connect`` reads ``/v1/describe`` once and
-composes the class out of the route classes it advertises, so an unadvertised capability
-has no method to call.
+composes the class out of the route classes that the server advertises, so a capability
+that the server does not advertise has no method to call.
 """
 
 from __future__ import annotations
@@ -42,8 +42,9 @@ class RemoteEmbedder(Embedder):
     """Embeds by calling a conforming embedding server over HTTP.
 
     Every method of an embedder becomes one HTTP call, and the answer becomes an
-    ``EmbeddingResult``. A caller asks the registry for the capability it needs, whether
-    the object behind it runs a model in this process or speaks to a server.
+    ``EmbeddingResult``. Nothing else in LightlyStudio changes: a caller asks the registry
+    for the capability it needs and calls the method, whether the object behind it runs a
+    model in this process or speaks to a server.
 
     ``ready`` keeps the default of ``True``. The answer of ``/v1/describe`` is read once,
     at construction, so the property could only report a state that has passed. A server
@@ -105,7 +106,11 @@ class RemoteEmbedder(Embedder):
         return _embedder_for(transport=transport, description=description)
 
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        """Describe the space that ``/v1/describe`` reported at construction."""
+        """Describe the embedding space that the server produces.
+
+        Returns:
+            The space that ``/v1/describe`` reported at construction.
+        """
         return self._spec
 
     def _embed(
@@ -260,8 +265,9 @@ class _VideoBytesRoute(RemoteEmbedder, VideoBytesEmbedder):
 
 # The capabilities that this client routes to, each with the route class that serves it.
 # `WIRE_CAPABILITIES` is broader: a `DescribeResponse` can legally carry `image_path`,
-# which version 1 never requests, and a capability absent here is never routed to. The
-# order is the order of the bases, so the same advertised set composes the same class.
+# which version 1 never requests. A capability that is absent here is ignored, never
+# assumed routable. The order of this mapping is the order of the bases, so two servers
+# that advertise the same set compose the same class.
 _CAPABILITY_TO_BASE: dict[Capability, type[RemoteEmbedder]] = {
     Capability.TEXT: _TextRoute,
     Capability.IMAGE_BYTES: _ImageBytesRoute,

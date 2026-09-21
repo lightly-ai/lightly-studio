@@ -39,10 +39,6 @@ BASE_URL = "http://embedding-server"
 HTTP_DATE_FAR_FUTURE = "Wed, 21 Oct 2099 07:28:00 GMT"
 HTTP_DATE_PAST = "Wed, 21 Oct 2015 07:28:00 GMT"
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore:You should not use the 'timeout' argument with the TestClient:DeprecationWarning"
-)
-
 
 class FakeTextEmbedder(TextEmbedder):
     """Returns one fixed row per text and records the texts it was handed."""

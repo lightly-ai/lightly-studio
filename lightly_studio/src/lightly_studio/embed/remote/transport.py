@@ -96,8 +96,9 @@ _CONNECT_SECONDS = 3.0
 # `EmbedderRegistry.register` waiting on it.
 _DESCRIBE_READ_SECONDS = 10.0
 
-# A text query sits under the Enter key of a user in the GUI. A ceiling above this is a
-# hang, not a slow answer.
+# A text query sits under the Enter key of a user in the GUI. A single answer that takes
+# longer than this is a hang, not a slow answer. A retried query still waits out one
+# budget per attempt, so this is not a ceiling on the whole call.
 _TEXT_READ_SECONDS = 10.0
 
 # A batch of encoded images. The server decodes each one and runs a forward pass over it.
@@ -134,34 +135,32 @@ class RemoteTimeouts:
     video_bytes: httpx.Timeout
 
 
-# The write budget follows the read budget of the same capability, because sending a batch
-# of encoded items over a slow link is a write and not a read. The pool budget follows the
-# connect budget: both are the wait for a connection.
+def _budget(read_seconds: float) -> httpx.Timeout:
+    """Build the budget of one capability out of its read budget.
+
+    The write budget follows the read budget, because sending a batch of encoded items
+    over a slow link is a write and not a read. The pool budget follows the connect
+    budget: both are the wait for a connection.
+
+    Args:
+        read_seconds: The time to wait for the answer of the server.
+
+    Returns:
+        The budget to put on a request of the capability.
+    """
+    return httpx.Timeout(
+        connect=_CONNECT_SECONDS,
+        read=read_seconds,
+        write=read_seconds,
+        pool=_CONNECT_SECONDS,
+    )
+
+
 DEFAULT_TIMEOUTS = RemoteTimeouts(
-    describe=httpx.Timeout(
-        connect=_CONNECT_SECONDS,
-        read=_DESCRIBE_READ_SECONDS,
-        write=_DESCRIBE_READ_SECONDS,
-        pool=_CONNECT_SECONDS,
-    ),
-    text=httpx.Timeout(
-        connect=_CONNECT_SECONDS,
-        read=_TEXT_READ_SECONDS,
-        write=_TEXT_READ_SECONDS,
-        pool=_CONNECT_SECONDS,
-    ),
-    image_bytes=httpx.Timeout(
-        connect=_CONNECT_SECONDS,
-        read=_IMAGE_BYTES_READ_SECONDS,
-        write=_IMAGE_BYTES_READ_SECONDS,
-        pool=_CONNECT_SECONDS,
-    ),
-    video_bytes=httpx.Timeout(
-        connect=_CONNECT_SECONDS,
-        read=_VIDEO_BYTES_READ_SECONDS,
-        write=_VIDEO_BYTES_READ_SECONDS,
-        pool=_CONNECT_SECONDS,
-    ),
+    describe=_budget(_DESCRIBE_READ_SECONDS),
+    text=_budget(_TEXT_READ_SECONDS),
+    image_bytes=_budget(_IMAGE_BYTES_READ_SECONDS),
+    video_bytes=_budget(_VIDEO_BYTES_READ_SECONDS),
 )
 
 
