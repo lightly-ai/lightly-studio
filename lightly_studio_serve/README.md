@@ -82,3 +82,37 @@ Nothing is published to PyPI yet. Once it is released, installing it will be:
 ```bash
 pip install lightly-studio-serve
 ```
+
+## Check your implementation
+
+The protocol is the contract, so a server in any language can serve LightlyStudio. Point
+the conformance kit at one to see whether it does:
+
+```bash
+lightly-studio-serve conformance http://127.0.0.1:8080
+```
+
+The run reads `/v1/describe`, then sends one fixed probe for each capability the server
+advertises, and checks every answer against `/v1/describe` and the protocol rules. It needs
+no dataset, so you can run it before LightlyStudio ever sees the server.
+
+The report names one outcome per capability, so a model that reads images and no video
+reads as `video_bytes  not advertised` rather than as a failure:
+
+```text
+http://127.0.0.1:8080
+
+protocol 1.0
+space    acme/clip@v3
+vectors  512 values
+ready    yes
+
+text         passed
+image_bytes  passed
+video_bytes  not advertised
+
+PASSED
+```
+
+The process ends with 0 when the server passes, so you can run the kit in your own build.
+Pass `--api-key`, or set `LIGHTLY_STUDIO_SERVE_API_KEY`, for a server that expects a token.

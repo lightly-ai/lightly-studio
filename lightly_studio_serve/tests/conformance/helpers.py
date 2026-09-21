@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
+import threading
+import time
+from collections.abc import Iterator
 from typing import Any
 
 import numpy as np
+import uvicorn
 from fastapi import FastAPI, Response
 from fastapi.testclient import TestClient
 
@@ -16,6 +21,12 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
 SPACE_KEY = "acme/model@v1"
 DIMENSION = 2
+
+# How long a test waits for a server to bind its port.
+_STARTUP_TIMEOUT_SECONDS = 10.0
+
+# How long a test waits for a server to let go of its port.
+_SHUTDOWN_TIMEOUT_SECONDS = 10.0
 
 
 class AppProbeClient:
@@ -113,6 +124,31 @@ def embeddings_body(**overrides: Any) -> dict[str, Any]:
     }
     body.update(overrides)
     return body
+
+
+@contextlib.contextmanager
+def serving(app: FastAPI) -> Iterator[str]:
+    """Run ``app`` on a loopback port and yield its address. The real client needs a socket."""
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{_bound_port(server=server)}"
+    finally:
+        server.should_exit = True
+        thread.join(timeout=_SHUTDOWN_TIMEOUT_SECONDS)
+        assert not thread.is_alive(), "The server kept its port, so a later test may fail."
+
+
+def _bound_port(server: uvicorn.Server) -> int:
+    """Wait until the server binds, and name the port it got."""
+    deadline = time.monotonic() + _STARTUP_TIMEOUT_SECONDS
+    while not server.started:
+        if time.monotonic() > deadline:
+            raise TimeoutError("The server did not bind a port.")
+        time.sleep(0.01)
+    port: int = server.servers[0].sockets[0].getsockname()[1]
+    return port
 
 
 def _json_response(body: dict[str, Any]) -> Response:

@@ -43,6 +43,9 @@ dependencies = [
     "uvicorn>=0.32.1",
 ]
 
+[project.scripts]
+lightly-studio-serve = "lightly_studio_serve.cli:main"
+
 [dependency-groups]
 # The same floors as the repository's other Python packages, so the tooling behaves alike.
 dev = [
