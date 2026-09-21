@@ -20,6 +20,7 @@ from lightly_studio_serve.embedder import (
     VideoBytesEmbedder,
 )
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from numpy.typing import NDArray
 
 SPACE_KEY = "acme/model@v1"
 DIMENSION = 2
@@ -88,12 +89,11 @@ class SkippingTextEmbedder(_FakeEmbedder, TextEmbedder):
     """Skips the second item of every batch, the way a broken input is skipped."""
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
-        self.batches.append(list(texts))
+        self.batches.append(texts.copy())
         kept_indices = [index for index in range(len(texts)) if index != 1]
-        embeddings = np.array([ROW] * len(kept_indices), dtype=np.float32).reshape(
-            len(kept_indices), DIMENSION
+        return EmbeddingResult(
+            embeddings=_stack(count=len(kept_indices)), kept_indices=kept_indices
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
 class FakeServer:
@@ -147,8 +147,7 @@ class FakeServer:
 
 def rows(count: int) -> EmbeddingResult:
     """Build the result of an embedder that keeps every item it is handed."""
-    embeddings = np.array([ROW] * count, dtype=np.float32).reshape(count, DIMENSION)
-    return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(count)))
+    return EmbeddingResult(embeddings=_stack(count=count), kept_indices=list(range(count)))
 
 
 def embeddings_body(
@@ -164,3 +163,8 @@ def embeddings_body(
         "kept_indices": kept_indices,
         "embeddings": embeddings,
     }
+
+
+def _stack(count: int) -> NDArray[np.float32]:
+    """Repeat ``ROW`` ``count`` times, shaped (count, DIMENSION) even when count is 0."""
+    return np.tile(np.array(ROW, dtype=np.float32), (count, 1))

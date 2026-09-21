@@ -54,6 +54,7 @@ class TestRemoteEmbedder:
 
         assert isinstance(remote, ImageBytesEmbedder)
         assert not isinstance(remote, TextEmbedder)
+        assert not isinstance(remote, VideoBytesEmbedder)
 
     def test_connect__text_and_image_bytes(self) -> None:
         with TestClient(server.create_app(embedder=FakeTextImageEmbedder())) as client:
