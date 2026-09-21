@@ -177,7 +177,7 @@ def match_image(
         ground_truths: All ground truth bounding boxes for the image.
         iou_threshold: Minimum IoU for a prediction to count as a TP.
         classwise: If True, predictions and ground truths are only matched within
-            the same class. If False, matching is done globally across all classes.
+            the same class. If False, matching is done across all classes.
 
     Returns:
         Per-image matching result.
