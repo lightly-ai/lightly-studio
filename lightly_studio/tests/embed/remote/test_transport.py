@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import email.utils
 import time
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -27,6 +28,7 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderProtocolError,
     RemoteEmbedderUnreachableError,
 )
+from lightly_studio.embed.remote.timeouts import DEFAULT_TIMEOUTS
 from lightly_studio.embed.remote.transport import RemoteTransport
 
 SPACE_KEY = "acme/model@v1"
@@ -248,6 +250,32 @@ class TestRemoteTransport:
         assert embedder.received == [b"\x00\x00mp4"]
         assert response.kept_indices == [0]
 
+    def test_requests_use_their_capability_timeout(self) -> None:
+        sent: list[object] = []
+        remote = RemoteTransport(client=_timeout_recording_client(sent=sent))
+
+        remote.describe()
+        remote.embed_texts(texts=["a dog"])
+        remote.embed_image_bytes(images=[b"jpeg"])
+        remote.embed_video_bytes(videos=[b"mp4"])
+
+        defaults = DEFAULT_TIMEOUTS
+        assert sent == [
+            defaults.describe.as_dict(),
+            defaults.text.as_dict(),
+            defaults.image_bytes.as_dict(),
+            defaults.video_bytes.as_dict(),
+        ]
+
+    def test_custom_timeout_overrides_the_client(self) -> None:
+        sent: list[object] = []
+        client = _timeout_recording_client(sent=sent, timeout=httpx.Timeout(0.001))
+        timeouts = replace(DEFAULT_TIMEOUTS, text=httpx.Timeout(1.5))
+
+        RemoteTransport(client=client, timeouts=timeouts).embed_texts(texts=["a dog"])
+
+        assert sent == [httpx.Timeout(1.5).as_dict()]
+
 
 # The seconds form, no header, a value that is not a wait, a wait over the cap, a wait of
 # zero, a date over the cap, and a date that has passed.
@@ -295,6 +323,26 @@ def _client_answering(responses: list[httpx.Response]) -> httpx.Client:
         return remaining.pop(0) if len(remaining) > 1 else remaining[0]
 
     return httpx.Client(transport=httpx.MockTransport(handler), base_url=BASE_URL)
+
+
+def _timeout_recording_client(
+    sent: list[object], timeout: httpx.Timeout | None = None
+) -> httpx.Client:
+    """Return a client that records each request timeout."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(request.extensions["timeout"])
+        body = (
+            _describe_body(capabilities=["text"])
+            if request.url.path == protocol.DESCRIBE_PATH
+            else _embeddings_body()
+        )
+        return httpx.Response(status_code=200, json=body)
+
+    client_timeout = timeout if timeout is not None else httpx.Timeout(5.0)
+    return httpx.Client(
+        transport=httpx.MockTransport(handler), base_url=BASE_URL, timeout=client_timeout
+    )
 
 
 def _describe_body(capabilities: list[str]) -> dict[str, object]:
