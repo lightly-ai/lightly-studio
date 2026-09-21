@@ -38,7 +38,7 @@ class McapCreate(McapBase):
 
 
 class McapTable(McapBase, table=True):
-    """This class reflects the actual message in channel."""
+    """This class defines the Mcap model."""
 
     __tablename__ = "mcap"
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
