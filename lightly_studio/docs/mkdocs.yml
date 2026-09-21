@@ -178,6 +178,7 @@ nav:
     - Plugins: ecosystem/plugins.md
     - Cloud Storage: ecosystem/cloud_storage.md
   - Resources:
+    - FAQ: faq.md
     - Glossary: glossary.md
     - Python API:
       - Dataset: api/dataset.md
@@ -282,6 +283,7 @@ plugins:
           - ecosystem/plugins.md
           - ecosystem/cloud_storage.md
         Resources:
+          - faq.md
           - glossary.md
           - api/dataset.md
           - api/sample.md
