@@ -70,6 +70,36 @@
     template={sidePanel}
 />
 
+<Story
+    name="Categorical metadata (35 values)"
+    args={{
+        sources: [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'collection_label',
+                        label: 'collection_label',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: Array.from({ length: 35 }, (_, index) => ({
+                                id: `category-${index}`,
+                                kind: 'value',
+                                value: `Collection ${index + 1}`,
+                                label: `Collection ${index + 1}`,
+                                count: 35 - index
+                            }))
+                        }
+                    }
+                ]
+            }
+        ]
+    }}
+    template={sidePanel}
+/>
+
 <!-- Classes + categorical + numeric in one panel. Switching between sources
      demonstrates chart-type transitions: bar chart (class labels) →
      categorical bar chart with active filter (location_type) →

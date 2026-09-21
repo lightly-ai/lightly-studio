@@ -36,6 +36,9 @@ class NoOpTracker(Tracker):
     def track(self, event: str, properties: Mapping[str, object]) -> None:
         """Discard the event."""
 
+    def track_exception(self, exc: BaseException) -> None:
+        """Discard the exception."""
+
     def shutdown(self) -> None:
         """Do nothing."""
 
@@ -74,6 +77,20 @@ def track(event: str, properties: Mapping[str, object]) -> None:
         _get_tracker().track(event=event, properties=properties)
     except Exception:
         logger.debug(f"Could not report the '{event}' event.", exc_info=True)
+
+
+def track_exception(exc: BaseException) -> None:
+    """Report an exception with its full stack trace.
+
+    Never raises. Tracking is best effort and must not be able to break the caller.
+
+    Args:
+        exc: The exception to report.
+    """
+    try:
+        _get_tracker().track_exception(exc=exc)
+    except Exception:
+        logger.debug("Could not report exception.", exc_info=True)
 
 
 def shutdown() -> None:
