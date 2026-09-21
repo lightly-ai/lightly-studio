@@ -2,6 +2,7 @@
     import { untrack, type Component } from 'svelte';
     import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import { Hand, Lasso, SquareDashed, type IconProps } from '@lucide/svelte';
     import {
         SELECTION_TOOLS,
@@ -57,20 +58,21 @@
     data-testid="plot-tool-pill"
 >
     {#each SELECTION_TOOLS as tool (tool.mode)}
-        <Button
-            icon={TOOL_ICONS[tool.mode]}
-            ariaLabel={tool.label}
-            buttonProps={{
-                size: 'icon',
-                title: tool.label,
-                'aria-pressed': activeTool === tool.mode,
-                'data-testid': `plot-tool-${tool.mode}`,
-                onclick: () => selectTool(tool.mode),
-                class: cn(
-                    'size-[26px] text-muted-foreground hover:bg-white/10 hover:text-foreground',
-                    activeTool === tool.mode && 'bg-white/[0.14] text-foreground'
-                )
-            }}
-        />
+        <Tooltip content={tool.label} position="top">
+            <Button
+                icon={TOOL_ICONS[tool.mode]}
+                ariaLabel={tool.label}
+                buttonProps={{
+                    size: 'icon',
+                    'aria-pressed': activeTool === tool.mode,
+                    'data-testid': `plot-tool-${tool.mode}`,
+                    onclick: () => selectTool(tool.mode),
+                    class: cn(
+                        'size-[26px] text-muted-foreground hover:bg-white/10 hover:text-foreground',
+                        activeTool === tool.mode && 'bg-white/[0.14] text-foreground'
+                    )
+                }}
+            />
+        </Tooltip>
     {/each}
 </div>
