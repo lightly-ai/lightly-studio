@@ -9,6 +9,7 @@
     import DistributionConfigDialog from '../DistributionConfigDialog/DistributionConfigDialog.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
     import { selectVisibleCounts } from '../selectVisibleCounts';
+    import { selectCategoricalCounts, selectCategoricalSeries } from '../selectCategoricalCounts';
     import { prepareVisibleSeries } from './prepareVisibleSeries';
     import type { DistributionConfig, DistributionSortOption } from '../types';
     import { DISTRIBUTION_SORT_LABELS } from '../types';
@@ -29,6 +30,7 @@
         categoryNounPlural?: string;
         sortLabels?: Record<DistributionSortOption, string>;
         showCountMode?: boolean;
+        aggregateOther?: boolean;
         /** Invoked when the user applies a new config from the expanded view. */
         onConfigChange: (config: DistributionConfig) => void;
         onBarClick?: (item: CategoryCount) => void;
@@ -45,6 +47,7 @@
         categoryNounPlural = 'classes',
         sortLabels = DISTRIBUTION_SORT_LABELS,
         showCountMode = true,
+        aggregateOther = false,
         onConfigChange,
         onBarClick
     }: Props = $props();
@@ -55,9 +58,14 @@
     let chartHeight = $state(0);
     let clientWidth = $state(0);
 
-    const visible = $derived(selectVisibleCounts(data, config));
+    const selected = $derived(selectVisibleCounts(data, config));
+    const visible = $derived(aggregateOther ? selectCategoricalCounts(data, config) : selected);
     const visibleLabels = $derived(new Set(visible.map((item) => item.label)));
-    const visibleSeries = $derived(prepareVisibleSeries(series, visibleLabels));
+    const visibleSeries = $derived(
+        aggregateOther
+            ? selectCategoricalSeries(series, visible, config.mode === 'topN')
+            : prepareVisibleSeries(series, visibleLabels)
+    );
     const totalCount = $derived(data.reduce((sum, item) => sum + item.count, 0));
     const configurationItems = $derived(
         data.map((item) => ({ value: item.id ?? item.label, label: item.label }))
@@ -75,7 +83,7 @@
         <PanelHeader
             {config}
             classCount={data.length}
-            visibleClassCount={visible.length}
+            visibleClassCount={selected.length}
             totalCount={series.length === 0 ? totalCount : undefined}
             seriesCount={series.length || undefined}
             {valueNoun}
@@ -120,6 +128,7 @@
     items={configurationItems}
     {config}
     {showCountMode}
+    itemNoun={categoryNoun}
     itemNounPlural={categoryNounPlural}
     {sortLabels}
     onApply={onConfigChange}
