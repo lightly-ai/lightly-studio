@@ -604,9 +604,9 @@
 <style>
     /*
         embedding-atlas renders its own bottom strip: a WebGPU/WebGL status message, the
-        rectangle + lasso tool buttons, a scale bar, and a point count. This replaces all of
-        it — the readout moved to the control row and the selection tools now live in the
-        glass tool pill. Keep the strip in the DOM (so `selectTool` can .click() the hidden
+        rectangle + lasso tool buttons, a scale bar, and a point count. This hides all of
+        it: the selection tools now live in the glass tool pill and the rest is noise.
+        Keep the strip in the DOM (so `selectTool` can .click() the hidden
         tool buttons and drive the library's sticky selection mode), but make it invisible
         and non-interactive. Use opacity/pointer-events, NOT display:none or
         visibility:hidden: the buttons stay laid out and clickable, and Playwright still
