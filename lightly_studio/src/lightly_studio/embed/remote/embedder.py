@@ -33,6 +33,7 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderError,
     RemoteEmbedderProtocolError,
 )
+from lightly_studio.embed.remote.timeouts import RemoteTimeouts
 from lightly_studio.embed.remote.transport import RemoteTransport
 
 _ItemT = TypeVar("_ItemT")
@@ -67,7 +68,12 @@ class RemoteEmbedder(Embedder):
         self._limits = limits
 
     @classmethod
-    def connect(cls, client: httpx.Client, api_key: str | None = None) -> RemoteEmbedder:
+    def connect(
+        cls,
+        client: httpx.Client,
+        api_key: str | None = None,
+        timeouts: RemoteTimeouts | None = None,
+    ) -> RemoteEmbedder:
         """Read ``/v1/describe`` over ``client`` and build the embedder that answers.
 
         The ``base_url`` of ``client`` names the server, and ``connection.build_client``
@@ -84,6 +90,8 @@ class RemoteEmbedder(Embedder):
             client: The client that carries every request.
             api_key: The token to send as ``Authorization: Bearer``, or ``None`` for a
                 server that wants none.
+            timeouts: The budget of each capability. ``None`` applies
+                ``timeouts.DEFAULT_TIMEOUTS``.
 
         Returns:
             An embedder that implements the interface of every capability that the server
@@ -99,7 +107,7 @@ class RemoteEmbedder(Embedder):
         # The address that the requests really go to, checked before one is sent.
         url_policy.check_url(url=str(client.base_url), api_key=api_key)
         url_policy.check_no_redirects(client=client)
-        transport = RemoteTransport(client=client, api_key=api_key)
+        transport = RemoteTransport(client=client, api_key=api_key, timeouts=timeouts)
         description = transport.describe()
         connection.log_if_loading(description=description, client=client)
         return _embedder_for(transport=transport, description=description)
