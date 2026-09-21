@@ -15,9 +15,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
 from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
-
-SPACE_KEY = "acme/model@v1"
-DIMENSION = 2
+from tests.embed.remote.helpers import DIMENSION, SPACE_KEY
 
 # The vector that the server answers for each input. A table keeps the assertions
 # readable: a round trip has to give back exactly these rows, in this order.
@@ -32,9 +30,9 @@ IMAGE_VECTORS = {
     b"the second image": [0.0, 2.0],
 }
 
-# An input that the server cannot read. It is absent from the table above, so the embedder
-# skips it and keeps the rest of the batch.
-BROKEN_TEXT = "not decodable"
+# An input that the tables above do not hold, so the embedder skips it and keeps the rest
+# of the batch.
+UNKNOWN_TEXT = "an unknown text"
 
 _HOST = "127.0.0.1"
 
@@ -46,7 +44,7 @@ _POLL_TIMEOUT_SECONDS = 1.0
 
 
 class TableEmbedder(TextEmbedder, ImageBytesEmbedder):
-    """Answers a fixed vector for each known input, and skips the ones it cannot read.
+    """Answers a fixed vector for each known input, and skips the rest.
 
     An embedder skips a broken input instead of failing the batch, so an input that the
     tables do not hold stands for that case.
@@ -66,9 +64,9 @@ class TableEmbedder(TextEmbedder, ImageBytesEmbedder):
 def server_url() -> Iterator[str]:
     """Serve `TableEmbedder` over a real socket and answer with its address.
 
-    One server serves every test of this module, so the suite pays the startup once. The
-    fixture binds the socket before it starts uvicorn, so another worker cannot claim the
-    selected port in between.
+    One server serves every test of this module on a worker, so the suite pays the startup
+    once per worker rather than once per test. The fixture binds the socket before it
+    starts uvicorn, so another worker cannot claim the selected port in between.
     """
     listener = socket.socket()
     listener.bind((_HOST, 0))
@@ -82,12 +80,16 @@ def server_url() -> Iterator[str]:
         daemon=True,
     )
     thread.start()
-    url = f"http://{_HOST}:{port}"
-    _wait_until_ready(url=url)
-    yield url
-    uvicorn_server.should_exit = True
-    thread.join(timeout=_STARTUP_TIMEOUT_SECONDS)
-    listener.close()
+    # A startup that fails still has to stop the server, or its thread serves on through
+    # every later module of this worker.
+    try:
+        url = f"http://{_HOST}:{port}"
+        _wait_until_ready(url=url)
+        yield url
+    finally:
+        uvicorn_server.should_exit = True
+        thread.join(timeout=_STARTUP_TIMEOUT_SECONDS)
+        listener.close()
 
 
 @pytest.fixture(scope="module")
@@ -118,7 +120,7 @@ class TestRoundTrip:
         )
 
     def test_embed_text__skips_a_broken_item(self, remote: TextEmbedder) -> None:
-        result = remote.embed_text(texts=["a dog", BROKEN_TEXT, "a bird"])
+        result = remote.embed_text(texts=["a dog", UNKNOWN_TEXT, "a bird"])
 
         assert result.kept_indices == [0, 2]
         np.testing.assert_array_equal(
