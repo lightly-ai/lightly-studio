@@ -284,16 +284,16 @@ explore more available commands directly in the `Makefile`.
 
 ```bash
 # Start Floci (creates the default S3 bucket)
-make start-floci
+make -C lightly_studio start-floci
 
 # Upload MCAP files and list what's available
-make setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+make -C lightly_studio setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
 
 # List uploaded recordings without re-uploading
-make list-floci-mcaps
+make -C lightly_studio list-floci-mcaps
 
 # Stop and remove the container
-make stop-floci
+make -C lightly_studio stop-floci
 ```
 
 Point LightlyStudio at the local S3 bucket before starting the server:
@@ -310,16 +310,16 @@ AWS_ENDPOINT_URL=http://localhost:4566 \
 
 ```bash
 # Start Floci GCP (creates the default GCS bucket)
-make start-floci-gcp
+make -C lightly_studio start-floci-gcp
 
 # Upload MCAP files and list what's available
-make setup-floci-gcp FLOCI_GCP_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+make -C lightly_studio setup-floci-gcp FLOCI_GCP_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
 
 # List uploaded recordings without re-uploading
-make list-floci-gcp-mcaps
+make -C lightly_studio list-floci-gcp-mcaps
 
 # Stop and remove the container
-make stop-floci-gcp
+make -C lightly_studio stop-floci-gcp
 ```
 
 Point LightlyStudio at the local GCS bucket before starting the server:
