@@ -11,9 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `serve`, which runs an embedder over HTTP or HTTPS with an optional bearer token and a
-  ceiling on the request body size.
-
 ### Changed
 
 ### Deprecated
@@ -23,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## \[0.1.1\] - 2026-09-21
+
+### Added
+
+- Add `serve`, which runs an embedder over HTTP or HTTPS with an optional bearer token and a
+  ceiling on the request body size.
 
 ## \[0.1.0\] - 2026-09-11
 
