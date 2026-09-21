@@ -8,6 +8,7 @@ decides which embedder serves a space, and this module owns how one is reached.
 
 from __future__ import annotations
 
+import urllib.parse
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -18,6 +19,8 @@ from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
 from lightly_studio.embed.remote.errors import RemoteEmbedderConfigError
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+
+_URL_SCHEMES = frozenset({"http", "https"})
 
 
 @dataclass(frozen=True)
@@ -65,15 +68,16 @@ def build_remote(config: EmbedderConfig) -> Embedder:
         An embedder that reaches the server and produces the stored space.
 
     Raises:
-        RemoteEmbedderError: If the configuration names no server or the URL does not
-            parse, the server gives no answer, rejects the token, breaks the protocol,
-            advertises no capability that LightlyStudio can use, or produces another space
-            than the stored one.
+        RemoteEmbedderError: If the configuration names no server or the URL is not one
+            that a request can reach, the server gives no answer, rejects the token, breaks
+            the protocol, advertises no capability that LightlyStudio can use, or produces
+            another space than the stored one.
     """
     if config.url is None:
         raise RemoteEmbedderConfigError(
             f"The configuration of space {config.space_key!r} names no embedding server."
         )
+    _check_url(url=config.url, space_key=config.space_key)
     try:
         client = connection.build_client(url=config.url)
     except httpx.InvalidURL as error:
@@ -89,6 +93,22 @@ def build_remote(config: EmbedderConfig) -> Embedder:
     return embedder
 
 
+def _check_url(url: str, space_key: str) -> None:
+    """Refuse a URL that builds a client but reaches no server.
+
+    Raises:
+        RemoteEmbedderConfigError: If the URL carries no http or https scheme, or no host.
+    """
+    # httpx builds a client against a bare host or an unknown scheme without raising, and
+    # the failure then arrives from `connect` as an unreachable server, which a caller retries.
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme not in _URL_SCHEMES or not parsed.hostname:
+        raise RemoteEmbedderConfigError(
+            f"The embedding server URL {url!r} of space {space_key!r} is not an http or https "
+            f"address with a host."
+        )
+
+
 def _check_identity(embedder: Embedder, config: EmbedderConfig) -> None:
     """Refuse a server that produces another space than the stored one.
 
@@ -102,7 +122,7 @@ def _check_identity(embedder: Embedder, config: EmbedderConfig) -> None:
     spec = embedder.embedding_space_spec()
     if spec.space_key != config.space_key or spec.dimension != config.dimension:
         raise RemoteEmbedderConfigError(
-            f"The embedding server at {config.url} produces {spec.space_key!r} with dimension "
+            f"The embedding server at {config.url!r} produces {spec.space_key!r} with dimension "
             f"{spec.dimension}. The configuration names {config.space_key!r} with dimension "
             f"{config.dimension}."
         )

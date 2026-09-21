@@ -77,15 +77,21 @@ def test_build_remote(mocker: MockerFixture) -> None:
 def test_build_remote__space_key_mismatch(mocker: MockerFixture) -> None:
     serving = _serving(embedder=_ServerEmbedder(space_key="acme/other@v1"), mocker=mocker)
 
-    with serving, pytest.raises(RemoteEmbedderConfigError, match=r"produces 'acme/other@v1'"):
-        embedder_config.build_remote(config=_config())
+    with serving:
+        with pytest.raises(RemoteEmbedderConfigError, match=r"produces 'acme/other@v1'"):
+            embedder_config.build_remote(config=_config())
+
+        assert serving.is_closed
 
 
 def test_build_remote__dimension_mismatch(mocker: MockerFixture) -> None:
     serving = _serving(embedder=_ServerEmbedder(dimension=DIMENSION + 1), mocker=mocker)
 
-    with serving, pytest.raises(RemoteEmbedderConfigError, match=r"dimension 3"):
-        embedder_config.build_remote(config=_config())
+    with serving:
+        with pytest.raises(RemoteEmbedderConfigError, match=r"dimension 3"):
+            embedder_config.build_remote(config=_config())
+
+        assert serving.is_closed
 
 
 def test_build_remote__no_url() -> None:
@@ -106,6 +112,16 @@ def test_build_remote__unparsable_url() -> None:
     )
 
     with pytest.raises(RemoteEmbedderConfigError, match=r"does not parse"):
+        embedder_config.build_remote(config=config)
+
+
+@pytest.mark.parametrize("url", ["embedder.test", "", "ftp://embedder.test"])
+def test_build_remote__unreachable_url(url: str) -> None:
+    config = EmbedderConfig(
+        dataset_id=uuid.uuid4(), space_key=SPACE_KEY, dimension=DIMENSION, url=url
+    )
+
+    with pytest.raises(RemoteEmbedderConfigError, match=r"is not an http or https address"):
         embedder_config.build_remote(config=config)
 
 
