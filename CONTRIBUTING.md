@@ -276,6 +276,59 @@ make format
 Run these from the directory you are working in, or from the root to cover both sides. You can
 explore more available commands directly in the `Makefile`.
 
+### Local cloud storage development
+
+[Floci](https://github.com/floci-io/floci) emulates AWS S3 locally, and [Floci GCP](https://github.com/floci-io/floci-gcp) emulates GCS — no cloud account needed.
+
+#### AWS S3 (Floci)
+
+```bash
+# Start Floci (creates the default S3 bucket)
+make -C lightly_studio start-floci
+
+# Upload MCAP files and list what's available
+make -C lightly_studio setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make -C lightly_studio list-floci-mcaps
+
+# Stop and remove the container
+make -C lightly_studio stop-floci
+```
+
+Point LightlyStudio at the local S3 bucket before starting the server:
+
+```bash
+AWS_ACCESS_KEY_ID=test \
+AWS_SECRET_ACCESS_KEY=test \
+AWS_DEFAULT_REGION=us-east-1 \
+AWS_ENDPOINT_URL=http://localhost:4566 \
+  lightly-studio ...
+```
+
+#### GCP Cloud Storage (Floci GCP)
+
+```bash
+# Start Floci GCP (creates the default GCS bucket)
+make -C lightly_studio start-floci-gcp
+
+# Upload MCAP files and list what's available
+make -C lightly_studio setup-floci-gcp FLOCI_GCP_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make -C lightly_studio list-floci-gcp-mcaps
+
+# Stop and remove the container
+make -C lightly_studio stop-floci-gcp
+```
+
+Point LightlyStudio at the local GCS bucket before starting the server:
+
+```bash
+STORAGE_EMULATOR_HOST=http://localhost:4588 \
+  lightly-studio ...
+```
+
 ### Contributor License Agreement (CLA)
 
 To contribute to this repository, you must sign a Contributor License Agreement (CLA).

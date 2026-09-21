@@ -97,7 +97,7 @@ const buildSampleTagQueries = ({
                   })
                 : getMetadataValueCountsOptions({
                       path: { collection_id: collectionId },
-                      body
+                      body: { ...body, limit: null }
                   })),
             enabled
         };
