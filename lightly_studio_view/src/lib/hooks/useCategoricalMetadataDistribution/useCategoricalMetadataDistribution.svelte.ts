@@ -67,9 +67,8 @@ export const getCategoricalMetadataDistributionRequestOptions = ({
     fields
 }: CategoricalMetadataDistributionOptions) => ({
     path: { collection_id: collectionId },
-    ...(filter || fields
-        ? { body: { ...(filter ? { filters: filter } : {}), ...(fields ? { fields } : {}) } }
-        : {})
+    // The shared Top N, manual, and All controls need the complete category list.
+    body: { limit: null, ...(filter ? { filters: filter } : {}), ...(fields ? { fields } : {}) }
 });
 
 export const useCategoricalMetadataDistribution = (

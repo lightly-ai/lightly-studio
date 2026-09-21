@@ -92,7 +92,9 @@ describe('useMetadataDistributionsBySampleTags', () => {
 
         expect(capturedOptions.queries).toHaveLength(1);
         expect(capturedOptions.queries[0].queryKey).toContainEqual(
-            expect.objectContaining({ body: expect.objectContaining({ fields: ['city'] }) })
+            expect.objectContaining({
+                body: expect.objectContaining({ fields: ['city'], limit: null })
+            })
         );
 
         const result = capturedOptions.combine?.([

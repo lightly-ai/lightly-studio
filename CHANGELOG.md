@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Choose how many categorical metadata values to show in distribution plots.
 - Python SDK: Read aggregate evaluation metrics (per-class and micro-averaged precision, recall, and F1, plus classification accuracy) with `dataset.evaluate().metrics(run_id)`.
 - Add an optional preselected tag selector to the sampling dialog.
 
