@@ -30,6 +30,7 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderProtocolError,
     RemoteEmbedderUnreachableError,
 )
+from lightly_studio.embed.remote.timeouts import DEFAULT_TIMEOUTS, RemoteTimeouts
 
 # How many times the client sends one request. A 429 or a 503 names a wait, and a server
 # that still loads its model answers 503 until the weights arrive.
@@ -97,7 +98,12 @@ class RemoteTransport:
     that opens a socket.
     """
 
-    def __init__(self, client: httpx.Client, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        client: httpx.Client,
+        api_key: str | None = None,
+        timeouts: RemoteTimeouts | None = None,
+    ) -> None:
         """Send every request through ``client``.
 
         Args:
@@ -105,11 +111,15 @@ class RemoteTransport:
                 owns it and closes it.
             api_key: The token to send as ``Authorization: Bearer``. ``None`` sends no
                 header, which is what an unauthenticated server needs.
+            timeouts: The budget of each capability. ``None`` applies
+                ``DEFAULT_TIMEOUTS``. The budget goes on the request, so it also overrides
+                the one of a client that the caller passes in.
         """
         self._client = client
         # A header of the request, not of the client: the caller owns the client, and a
         # transport must not put a token on a client that it was lent.
         self._headers = {} if api_key is None else {"Authorization": f"Bearer {api_key}"}
+        self._timeouts = timeouts if timeouts is not None else DEFAULT_TIMEOUTS
 
     def describe(self) -> DescribeResponse:
         """Read the identity, the capabilities and the limits of the server.
@@ -123,7 +133,9 @@ class RemoteTransport:
                 another major version of the protocol raises
                 ``RemoteEmbedderProtocolError``.
         """
-        response = self._request(method="GET", path=protocol.DESCRIBE_PATH)
+        response = self._request(
+            method="GET", path=protocol.DESCRIBE_PATH, timeout=self._timeouts.describe
+        )
         body = _read_json(response=response)
         # Before the model, not after it. See `_check_protocol_version`.
         _check_protocol_version(body=body, response=response)
@@ -144,7 +156,10 @@ class RemoteTransport:
         """
         request = EmbedTextsRequest(texts=texts)
         response = self._request(
-            method="POST", path=protocol.EMBED_TEXTS_PATH, json=request.model_dump()
+            method="POST",
+            path=protocol.EMBED_TEXTS_PATH,
+            json=request.model_dump(),
+            timeout=self._timeouts.text,
         )
         return _parse(model=EmbeddingsResponse, response=response)
 
@@ -164,7 +179,11 @@ class RemoteTransport:
             RemoteEmbedderError: If the server gives no answer, refuses the request, or
                 answers a body that the protocol does not allow.
         """
-        return self._post_files(path=protocol.EMBED_IMAGES_BYTES_PATH, items=images)
+        return self._post_files(
+            path=protocol.EMBED_IMAGES_BYTES_PATH,
+            items=images,
+            timeout=self._timeouts.image_bytes,
+        )
 
     def embed_video_bytes(self, videos: list[bytes]) -> EmbeddingsResponse:
         """Embed a batch of encoded videos on the server.
@@ -182,9 +201,15 @@ class RemoteTransport:
             RemoteEmbedderError: If the server gives no answer, refuses the request, or
                 answers a body that the protocol does not allow.
         """
-        return self._post_files(path=protocol.EMBED_VIDEOS_BYTES_PATH, items=videos)
+        return self._post_files(
+            path=protocol.EMBED_VIDEOS_BYTES_PATH,
+            items=videos,
+            timeout=self._timeouts.video_bytes,
+        )
 
-    def _post_files(self, path: str, items: list[bytes]) -> EmbeddingsResponse:
+    def _post_files(
+        self, path: str, items: list[bytes], timeout: httpx.Timeout
+    ) -> EmbeddingsResponse:
         """Send a batch of items as multipart, one part for each item, in input order.
 
         Raises:
@@ -201,21 +226,28 @@ class RemoteTransport:
             (protocol.FILES_FIELD_NAME, (str(index), data, _OCTET_STREAM))
             for index, data in enumerate(items)
         ]
-        response = self._request(method="POST", path=path, files=files)
+        response = self._request(method="POST", path=path, files=files, timeout=timeout)
         return _parse(model=EmbeddingsResponse, response=response)
 
     def _request(
         self,
         method: str,
         path: str,
+        timeout: httpx.Timeout,
         json: dict[str, Any] | None = None,
         files: list[_FilePart] | None = None,
     ) -> httpx.Response:
         """Send one request, wait out a busy server, and raise for a status that is not 200.
 
+        The budget applies to one attempt, and to one phase of it: httpx limits the wait
+        for a chunk, not the whole exchange. A server that answers slowly but steadily,
+        or one that stays busy and is sent the request again, therefore holds the caller
+        for longer than the budget names.
+
         Args:
             method: The HTTP method of the request.
             path: The path of the protocol, relative to the ``base_url`` of the client.
+            timeout: The budget of this request, from the capability that it serves.
             json: The body to send as JSON, if the endpoint reads JSON.
             files: The multipart parts to send, if the endpoint reads multipart.
 
@@ -228,7 +260,7 @@ class RemoteTransport:
         """
         attempt = 1
         while True:
-            response = self._send(method=method, path=path, json=json, files=files)
+            response = self._send(method=method, path=path, timeout=timeout, json=json, files=files)
             if response.status_code not in _RETRY_STATUSES or attempt >= _MAX_ATTEMPTS:
                 break
             attempt += 1
@@ -240,13 +272,21 @@ class RemoteTransport:
         self,
         method: str,
         path: str,
+        timeout: httpx.Timeout,
         json: dict[str, Any] | None,
         files: list[_FilePart] | None,
     ) -> httpx.Response:
         """Make one attempt. A failure of the network is the one error without a status."""
         try:
+            # The budget goes on the request. It therefore also applies to a client that
+            # the caller passed in, which carries a budget of its own.
             return self._client.request(
-                method=method, url=path, headers=self._headers, json=json, files=files
+                method=method,
+                url=path,
+                headers=self._headers,
+                json=json,
+                files=files,
+                timeout=timeout,
             )
         except httpx.HTTPError as error:
             raise RemoteEmbedderUnreachableError(
