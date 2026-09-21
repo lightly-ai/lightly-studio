@@ -123,6 +123,55 @@ describe('GridItem', () => {
         vi.restoreAllMocks();
     });
 
+    it('cancels native drag of a thumbnail image so the click reaches onSelect', async () => {
+        const onSelect = vi.fn();
+        render(GridItemTestWrapper, { props: { ...defaultProps, onSelect } });
+
+        const gridItem = screen.getByTestId('grid-item');
+        const thumbnail = document.createElement('img');
+        gridItem.appendChild(thumbnail);
+
+        // Browsers fire dragstart on an <img> between mousedown and mouseup as soon as the
+        // pointer drifts a few pixels. Unless it is cancelled, the click never fires.
+        const dragStart = new Event('dragstart', { bubbles: true, cancelable: true });
+        thumbnail.dispatchEvent(dragStart);
+        await fireEvent.click(thumbnail);
+
+        expect(dragStart.defaultPrevented).toBe(true);
+        expect(onSelect).toHaveBeenCalledTimes(1);
+    });
+
+    it('selects once per click when the pointer drifts below the drag threshold', async () => {
+        const onSelect = vi.fn();
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: { url: '/api/images/sample/sample-1', fileName: 'sample-1.jpg' },
+                onSelect
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        for (const drift of [3, 5]) {
+            await fireEvent(
+                gridItem,
+                createPointerEvent('pointerdown', { clientX: 10, clientY: 10 })
+            );
+            await fireEvent(
+                gridItem,
+                createPointerEvent('pointermove', { clientX: 10 + drift, clientY: 12 })
+            );
+            await fireEvent(
+                gridItem,
+                createPointerEvent('pointerup', { clientX: 10 + drift, clientY: 12 })
+            );
+            await fireEvent.click(gridItem);
+        }
+
+        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
+        expect(onSelect).toHaveBeenCalledTimes(2);
+    });
+
     it('applies selected style and renders selectable tag', () => {
         render(GridItemTestWrapper, {
             props: {
