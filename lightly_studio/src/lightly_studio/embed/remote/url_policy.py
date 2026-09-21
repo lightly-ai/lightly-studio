@@ -10,6 +10,12 @@ default, because a self-hosted LightlyStudio and its model usually share a box o
 private network, and such an address is then the normal one. A hosted deployment, where
 the address arrives from a user, sets it to ``False``.
 
+The strict mode requires https for the reach, not for the privacy of the batches. The
+addresses of a host are read once, and httpx reads them again when it connects. Over plain
+HTTP a name can answer with a public address for the check and with an address of this
+network for the connection. Over TLS that second address has to hold a certificate for the
+name, which the metadata endpoint and a service of this network do not.
+
 A refused address raises ``ValueError``, not a ``RemoteEmbedderError``. Nothing was sent
 and no server answered: the configuration is wrong, so no retry and no other server helps.
 """
