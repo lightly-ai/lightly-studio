@@ -2,6 +2,8 @@
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
+    import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
         type DataPoint,
@@ -348,6 +350,10 @@
 
     const isReady = true;
 
+    // Lives here, not in PlotToolPill: a new filter (a tag, a region) starts a fresh embeddings
+    // query, and the plot unmounts while it loads. State inside the pill would not survive that.
+    let activeTool = $state<ToolMode>('pan');
+
     type RangeSelection = Rectangle | Point[] | null;
 
     const isRectangleSelection = (selection: RangeSelection): selection is Rectangle => {
@@ -532,20 +538,29 @@
                         </div>
                     {/if}
 
-                    <PlotPanelLegend
-                        {categoryColors}
-                        {includedLabel}
-                        {legendEntries}
-                        excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
-                        includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
-                        onToggleCategory={toggleCategoryVisibility}
-                        onDoubleClickCategory={(category) => {
-                            focusCategoryVisibility(
-                                legendEntries.map((entry) => entry.cat),
-                                category
-                            );
-                        }}
-                    />
+                    <!-- Legend and pill share the bottom edge, so they sit in one row rather
+                         than in two absolute corners: the legend then shrinks on a narrow plot
+                         instead of running under the pill. -->
+                    <div
+                        class="pointer-events-none absolute inset-2 z-10 flex items-end justify-between gap-2"
+                    >
+                        <PlotPanelLegend
+                            {categoryColors}
+                            {includedLabel}
+                            {legendEntries}
+                            excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
+                            includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
+                            onToggleCategory={toggleCategoryVisibility}
+                            onDoubleClickCategory={(category) => {
+                                focusCategoryVisibility(
+                                    legendEntries.map((entry) => entry.cat),
+                                    category
+                                );
+                            }}
+                        />
+
+                        <PlotToolPill {plotContainer} bind:activeTool />
+                    </div>
                 {/if}
             </div>
         {:else}
@@ -556,7 +571,7 @@
     </div>
     {#if isReady}
         <div
-            class="mt-1 flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto text-sm text-muted-foreground"
+            class="mt-1 flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground"
             data-testid="plot-panel-controls"
         >
             <PlotColorByPopover
@@ -587,24 +602,18 @@
 <svelte:window onmouseup={handleMouseUp} onkeydown={onWindowKeyDown} />
 
 <style>
-    :global(.embedding-view button) {
-        width: 20px !important;
-        height: 20px !important;
-    }
-    :global(.embedding-view button svg) {
-        width: 18px !important;
-        height: 18px !important;
-    }
+    /*
+        embedding-atlas renders its own bottom strip: a WebGPU/WebGL status message, the
+        rectangle + lasso tool buttons, a scale bar, and a point count. This hides all of
+        it: the selection tools now live in the glass tool pill and the rest is noise.
+        Keep the strip in the DOM (so `selectTool` can .click() the hidden
+        tool buttons and drive the library's sticky selection mode), but make it invisible
+        and non-interactive. Use opacity/pointer-events, NOT display:none or
+        visibility:hidden: the buttons stay laid out and clickable, and Playwright still
+        reports them visible (LIG-7691 e2e asserts the tool buttons toBeVisible).
+    */
     :global(.embedding-view div[style*='bottom: 0px'][style*='position: absolute']) {
-        font-size: 15px !important;
-        height: 25px !important;
-        line-height: 25px !important;
-    }
-    /* Hide the library's status message slot (e.g. "WebGPU is unavailable. Falling back
-       to WebGL.") while keeping the selection tools, scale, and point count visible. */
-    :global(
-        .embedding-view div[style*='bottom: 0px'][style*='position: absolute'] > div:first-child
-    ) {
-        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 </style>
