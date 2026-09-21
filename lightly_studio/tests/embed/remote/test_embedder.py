@@ -6,7 +6,6 @@ from collections.abc import Callable
 import httpx
 import numpy as np
 import pytest
-from pytest_mock import MockerFixture
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from lightly_studio_serve import protocol, server
@@ -17,7 +16,9 @@ from lightly_studio_serve.embedder import (
 )
 from lightly_studio_serve.protocol import ServerLimits
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from pytest_mock import MockerFixture
 
+from lightly_studio.dataset import env
 from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.remote import composition, embedder
@@ -26,7 +27,6 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderCapabilityError,
     RemoteEmbedderProtocolError,
 )
-from lightly_studio.dataset import env
 from tests.embed.remote import helpers
 from tests.embed.remote.helpers import (
     BASE_URL,
