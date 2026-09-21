@@ -12,15 +12,17 @@ from sqlmodel import Session
 
 from lightly_studio.evaluation import (
     aggregate_metrics,
+    average_precision,
     classification_metric,
     object_detection_metric,
     semantic_segmentation_metric,
     validators,
 )
 from lightly_studio.evaluation.evaluation_data import EvaluationData
+from lightly_studio.evaluation.object_detection_metric import BoundingBox
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
-from lightly_studio.models.evaluation_metrics import EvaluationMetrics
+from lightly_studio.models.evaluation_metrics import DetectionAveragePrecision, EvaluationMetrics
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
@@ -29,10 +31,12 @@ from lightly_studio.models.evaluation_run import (
 )
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
+    annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
+    evaluation_sample_metric_resolver,
 )
 
 
@@ -280,6 +284,37 @@ class ImageDatasetEvaluate:
             task_type=run.task_type,
         )
 
+    def mean_average_precision(self, run_id: UUID) -> DetectionAveragePrecision:
+        """Return the mean average precision of an object-detection run.
+
+        Re-matches the run's predictions and ground truths at IoU 0.50 to 0.95
+        (step 0.05) and integrates the per-class precision-recall curve. Only
+        object detection is supported.
+
+        Args:
+            run_id: ID of the evaluation run.
+
+        Returns:
+            Per-class and mean average precision.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run is not an object-detection run.
+        """
+        run = self._require_run(run_id)
+        if run.task_type != EvaluationTaskType.OBJECT_DETECTION:
+            raise NotImplementedError(
+                f"Mean average precision is only available for object detection, "
+                f"not {run.task_type.value!r}."
+            )
+        gt_per_image, pred_per_image, label_names = self._load_detection_boxes(run)
+        return average_precision.compute(
+            gt_per_image=gt_per_image,
+            pred_per_image=pred_per_image,
+            label_names=label_names,
+            iou_thresholds=average_precision.COCO_IOU_THRESHOLDS,
+        )
+
     def _confusion_matrix_with_run(
         self, run_id: UUID
     ) -> tuple[EvaluationRunTable, ConfusionMatrix]:
@@ -289,9 +324,7 @@ class ImageDatasetEvaluate:
             ValueError: If no run with ``run_id`` exists in this dataset.
             NotImplementedError: If the run's task type has no confusion matrix.
         """
-        run = evaluation_run_resolver.get_by_id(session=self.session, evaluation_id=run_id)
-        if run is None or run.dataset_id != self._dataset_id():
-            raise ValueError(f"Evaluation run {run_id} not found in this dataset.")
+        run = self._require_run(run_id)
         if not evaluation_annotation_metric_resolver.supports_confusion_matrix(run.task_type):
             raise NotImplementedError(
                 f"Evaluation task type {run.task_type.value!r} has no confusion matrix."
@@ -301,6 +334,57 @@ class ImageDatasetEvaluate:
             evaluation_run_id=run_id,
         )
         return run, matrix
+
+    def _require_run(self, run_id: UUID) -> EvaluationRunTable:
+        """Return the run with ``run_id`` in this dataset, or raise ValueError."""
+        run = evaluation_run_resolver.get_by_id(session=self.session, evaluation_id=run_id)
+        if run is None or run.dataset_id != self._dataset_id():
+            raise ValueError(f"Evaluation run {run_id} not found in this dataset.")
+        return run
+
+    def _load_detection_boxes(
+        self, run: EvaluationRunTable
+    ) -> tuple[list[list[BoundingBox]], list[list[BoundingBox]], dict[UUID, str]]:
+        """Load the run's ground-truth and prediction boxes, grouped per image.
+
+        Uses the samples the run actually scored (its persisted per-sample
+        metrics), so a query-scoped run recomputes over the same samples.
+
+        Returns:
+            Ground-truth boxes per image, prediction boxes per image (in the same
+            image order), and a mapping from label ID to label name.
+        """
+        annotation_type = validators.get_annotation_type_for_task(run.task_type)
+        sample_ids = sorted(self._run_sample_ids(run.id))
+
+        def boxes_per_image(collection_id: UUID) -> list[list[BoundingBox]]:
+            by_sample = self._group_by_parent_sample_id(
+                annotations=annotation_resolver.get_all_by_collection_id_and_parent_sample_ids(
+                    session=self.session,
+                    parent_sample_ids=sample_ids,
+                    annotation_collection_id=collection_id,
+                    annotation_type=annotation_type,
+                )
+            )
+            return [
+                object_detection_metric.to_bounding_boxes(annotations=by_sample.get(sample_id, []))
+                for sample_id in sample_ids
+            ]
+
+        gt_per_image = boxes_per_image(run.gt_annotation_collection_id)
+        pred_per_image = boxes_per_image(run.pred_annotation_collection_id)
+        label_ids = {box.label_id for boxes in (*gt_per_image, *pred_per_image) for box in boxes}
+        labels = annotation_label_resolver.get_by_ids(session=self.session, ids=list(label_ids))
+        label_names = {label.annotation_label_id: label.annotation_label_name for label in labels}
+        return gt_per_image, pred_per_image, label_names
+
+    def _run_sample_ids(self, run_id: UUID) -> set[UUID]:
+        """Return the parent sample IDs the run scored, from its per-sample metrics."""
+        metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+            session=self.session,
+            evaluation_run_id=run_id,
+        )
+        return {metric.sample_id for metric in metrics}
 
     def _dataset_id(self) -> UUID:
         """Resolve the dataset ID of the evaluated collection."""
