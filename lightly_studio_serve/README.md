@@ -99,7 +99,7 @@ no dataset, so you can run it before LightlyStudio ever sees the server.
 The report names one outcome per capability, so a model that reads images and no video
 reads as `video_bytes  not advertised` rather than as a failure:
 
-```
+```text
 http://127.0.0.1:8080
 
 protocol 1.0
