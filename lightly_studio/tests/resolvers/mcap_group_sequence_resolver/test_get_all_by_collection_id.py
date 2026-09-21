@@ -10,6 +10,7 @@ from sqlmodel import Session, insert
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap import McapCreate
+from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate, SampleTable
@@ -19,7 +20,9 @@ from lightly_studio.models.sequence import (
     SequenceTable,
 )
 from lightly_studio.resolvers import (
+    collection_resolver,
     group_resolver,
+    mcap_group_component_definition_resolver,
     mcap_group_sequence_resolver,
     mcap_resolver,
     recording_resolver,
@@ -87,6 +90,7 @@ def test_get_all_by_collection_id__returns_mcap_sequences(db_session: Session) -
     assert len(result.samples) == 1
     assert result.samples[0].sample_id == seq_id
     assert result.samples[0].sample_count == 2
+    assert result.samples[0].sequence_frame is None
     assert result.next_cursor is None
 
 
@@ -236,6 +240,160 @@ def test_get_all_by_collection_id__no_sequence_frame_without_camera_frames(
     )
 
     assert len(result.samples) == 1
+    assert result.samples[0].sequence_frame is None
+
+
+def test_get_all_by_collection_id__sequence_frame_picks_lowest_index_camera(
+    db_session: Session,
+) -> None:
+    """Picks the lowest-indexed VIDEO_FRAME slot, not whichever camera has the earliest keyframe."""
+    sequence_collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    group_collection = create_collection(
+        session=db_session,
+        sample_type=SampleType.GROUP,
+        parent_collection_id=sequence_collection.collection_id,
+    )
+    slots = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_collection.collection_id,
+        components=[("front", SampleType.MCAP), ("rear", SampleType.MCAP)],
+    )
+    mcap_group_component_definition_resolver.create(
+        session=db_session,
+        collection_id=slots["front"].collection_id,
+        mcap_data_type=McapDataType.VIDEO_FRAME,
+        channel_id=3,
+        frame_id="front",
+    )
+    mcap_group_component_definition_resolver.create(
+        session=db_session,
+        collection_id=slots["rear"].collection_id,
+        mcap_data_type=McapDataType.VIDEO_FRAME,
+        channel_id=5,
+        frame_id="rear",
+    )
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=sequence_collection.dataset_id,
+        uri="/bags/two_cameras.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sample_id = mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=sequence_collection.collection_id,
+        recording_id=recording_id,
+    )
+    # Rear (channel 5) has an earlier keyframe than front (channel 3).
+    # Front has the lower group component index.
+    rear_sample_id = _create_mcap_sample(
+        session=db_session,
+        collection_id=slots["rear"].collection_id,
+        channel_id=5,
+        log_time_ns=100,
+        keyframe_log_time_ns=100,
+    )
+    front_sample_id = _create_mcap_sample(
+        session=db_session,
+        collection_id=slots["front"].collection_id,
+        channel_id=3,
+        log_time_ns=200,
+        keyframe_log_time_ns=200,
+    )
+    group_id = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_collection.collection_id,
+        groups=[{front_sample_id, rear_sample_id}],
+    )[0]
+    sequence_resolver.add_samples(
+        session=db_session,
+        sequence_sample_id=sample_id,
+        links=[SampleSequenceLinkCreate(sample_id=group_id, seq_number=0, timestamp_ns=100)],
+    )
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=sequence_collection.collection_id,
+        pagination=None,
+    )
+    sequence_frame = result.samples[0].sequence_frame
+
+    assert sequence_frame is not None
+    assert sequence_frame.channel_id == 3
+    assert sequence_frame.keyframe_log_time_ns == "200"
+
+
+def test_get_all_by_collection_id__no_sequence_frame_when_resolved_channel_has_no_keyframe(
+    db_session: Session,
+) -> None:
+    """sequence_frame is None when the resolved camera has no keyframe, even if another does."""
+    sequence_collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    group_collection = create_collection(
+        session=db_session,
+        sample_type=SampleType.GROUP,
+        parent_collection_id=sequence_collection.collection_id,
+    )
+    slots = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_collection.collection_id,
+        components=[("front", SampleType.MCAP), ("rear", SampleType.MCAP)],
+    )
+    mcap_group_component_definition_resolver.create(
+        session=db_session,
+        collection_id=slots["front"].collection_id,
+        mcap_data_type=McapDataType.VIDEO_FRAME,
+        channel_id=3,
+        frame_id="front",
+    )
+    mcap_group_component_definition_resolver.create(
+        session=db_session,
+        collection_id=slots["rear"].collection_id,
+        mcap_data_type=McapDataType.VIDEO_FRAME,
+        channel_id=5,
+        frame_id="rear",
+    )
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=sequence_collection.dataset_id,
+        uri="/bags/two_cameras.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sample_id = mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=sequence_collection.collection_id,
+        recording_id=recording_id,
+    )
+    # front (resolved camera) has no self-decodable keyframe; rear does.
+    front_sample_id = _create_mcap_sample(
+        session=db_session,
+        collection_id=slots["front"].collection_id,
+        channel_id=3,
+        log_time_ns=100,
+        keyframe_log_time_ns=50,  # Not a keyframe — keyframe_log_time_ns != log_time_ns.
+    )
+    rear_sample_id = _create_mcap_sample(
+        session=db_session,
+        collection_id=slots["rear"].collection_id,
+        channel_id=5,
+        log_time_ns=100,
+        keyframe_log_time_ns=100,
+    )
+    group_id = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_collection.collection_id,
+        groups=[{front_sample_id, rear_sample_id}],
+    )[0]
+    sequence_resolver.add_samples(
+        session=db_session,
+        sequence_sample_id=sample_id,
+        links=[SampleSequenceLinkCreate(sample_id=group_id, seq_number=0, timestamp_ns=100)],
+    )
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=sequence_collection.collection_id,
+        pagination=None,
+    )
+
     assert result.samples[0].sequence_frame is None
 
 

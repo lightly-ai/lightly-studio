@@ -9,8 +9,14 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database import db_array
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import SampleGroupLinkTable
+from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
 from lightly_studio.models.mcap_group_sequence import (
     McapGroupSequenceTable,
     McapSequenceFrame,
@@ -74,7 +80,11 @@ def get_all_by_collection_id(
         session=session,
         sequence_sample_ids=sequence_sample_ids,
     )
-    sequence_frames = _get_sequence_frames(session=session, sequences=sequences)
+    sequence_frames = _get_sequence_frames(
+        session=session,
+        sequences=sequences,
+        collection_id=collection_id,
+    )
 
     views = [
         McapSequenceView(
@@ -126,22 +136,30 @@ def _get_sequence_sample_counts(
 def _get_sequence_frames(
     session: Session,
     sequences: Sequence[McapGroupSequenceTable],
+    collection_id: UUID,
 ) -> dict[UUID, McapSequenceFrame]:
     """Get the first camera keyframe locator for each sequence.
 
     Only frames where ``keyframe_log_time_ns == log_time_ns`` are considered —
     these are self-contained keyframes decodable by the /camera-frame endpoint
-    without any preceding reference frame. When a sequence has no such frames,
-    it is absent from the returned dict. The first frame is chosen by ascending
-    ``log_time_ns`` with ``channel_id`` as tie-breaker.
+    without any preceding reference frame. The camera channel is resolved once
+    for the whole collection (lowest ``group_component_index`` VIDEO_FRAME slot);
+    sequences whose resolved channel has no such frame are absent from the dict.
 
     Args:
         session: Database session for executing queries.
         sequences: Non-empty sequence of McapGroupSequenceTable rows.
+        collection_id: The SEQUENCE collection ID, used to resolve the camera slot.
 
     Returns:
         Dictionary mapping sequence sample_id to its first-keyframe locator.
     """
+    channel_id = _get_first_video_frame_channel_id(
+        session=session,
+        sequence_collection_id=collection_id,
+    )
+    if channel_id is None:
+        return {}
     recording_id_by_sample_id = {
         sequence.sample_id: sequence.recording_id for sequence in sequences
     }
@@ -153,6 +171,7 @@ def _get_sequence_frames(
     keyframe_rows = _get_first_keyframe_per_sequence(
         session=session,
         sequence_sample_ids=sequence_sample_ids,
+        channel_id=channel_id,
     )
     return _create_sequence_frames(
         keyframe_rows=keyframe_rows,
@@ -172,23 +191,71 @@ def _get_dataset_ids_by_recording_id(
     return dict(session.exec(query).all())
 
 
+def _get_first_video_frame_channel_id(
+    session: Session,
+    sequence_collection_id: UUID,
+) -> int | None:
+    """Get the channel_id of the lowest-indexed VIDEO_FRAME slot in the collection.
+
+    Resolves the camera slot once per collection by finding the VIDEO_FRAME component
+    with the smallest ``group_component_index`` in the GROUP child of the SEQUENCE
+    collection. Returns ``None`` when no VIDEO_FRAME slot has a ``channel_id`` assigned.
+
+    Args:
+        session: Database session for executing queries.
+        sequence_collection_id: The SEQUENCE collection to resolve the camera for.
+
+    Returns:
+        The ``channel_id`` of the lowest-indexed VIDEO_FRAME slot, or ``None``.
+    """
+    group_collection_id = session.exec(
+        select(CollectionTable.collection_id)
+        .where(col(CollectionTable.parent_collection_id) == sequence_collection_id)
+        .where(col(CollectionTable.sample_type) == SampleType.GROUP)
+        .limit(1)
+    ).first()
+    if group_collection_id is None:
+        return None
+    return session.exec(
+        select(McapGroupComponentDefinitionTable.channel_id)
+        .join(
+            GroupComponentDefinitionTable,
+            col(GroupComponentDefinitionTable.collection_id)
+            == col(McapGroupComponentDefinitionTable.collection_id),
+        )
+        .join(
+            CollectionTable,
+            col(CollectionTable.collection_id)
+            == col(McapGroupComponentDefinitionTable.collection_id),
+        )
+        .where(col(CollectionTable.parent_collection_id) == group_collection_id)
+        .where(col(McapGroupComponentDefinitionTable.mcap_data_type) == McapDataType.VIDEO_FRAME)
+        .where(col(McapGroupComponentDefinitionTable.channel_id).is_not(None))
+        .order_by(col(GroupComponentDefinitionTable.group_component_index).asc())
+        .limit(1)
+    ).first()
+
+
 def _get_first_keyframe_per_sequence(
     session: Session,
     sequence_sample_ids: Sequence[UUID],
+    channel_id: int,
 ) -> Sequence[tuple[UUID, int, int]]:
     """Get the first independently decodable MCAP keyframe for each sequence.
 
     A ``ROW_NUMBER`` window function partitioned by ``sequence_sample_id`` and
-    ordered by ``log_time_ns ASC, channel_id ASC`` selects the first keyframe
-    per sequence in SQL, avoiding full materialisation of all keyframe rows.
+    ordered by ``log_time_ns ASC`` selects the first keyframe per sequence in SQL,
+    avoiding full materialisation of all keyframe rows. Only frames on ``channel_id``
+    are considered — the caller resolves which channel to use.
 
     Args:
         session: Database session for executing queries.
         sequence_sample_ids: Non-empty sequence of sequence sample IDs.
+        channel_id: The MCAP channel to filter frames by.
 
     Returns:
         One ``(sequence_sample_id, channel_id, log_time_ns)`` tuple per sequence
-        that has at least one independently decodable keyframe.
+        that has at least one independently decodable keyframe on ``channel_id``.
     """
     ranked = (
         select(
@@ -198,7 +265,7 @@ def _get_first_keyframe_per_sequence(
             func.row_number()
             .over(
                 partition_by=col(SampleSequenceLinkTable.sequence_sample_id),
-                order_by=[col(McapTable.log_time_ns).asc(), col(McapTable.channel_id).asc()],
+                order_by=col(McapTable.log_time_ns).asc(),
             )
             .label("rn"),
         )
@@ -213,6 +280,7 @@ def _get_first_keyframe_per_sequence(
                 values=sequence_sample_ids,
             )
         )
+        .where(col(McapTable.channel_id) == channel_id)
         .where(col(McapTable.keyframe_log_time_ns) == col(McapTable.log_time_ns))
     ).subquery()
 
