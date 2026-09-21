@@ -33,7 +33,8 @@ Each method can identify annotations that need correction. To edit them, enter e
 ## Scan the Annotation Grid
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
-  <source src="https://storage.googleapis.com/lightly-public/studio/annotation_qa_grid.mp4" type="video/mp4">
+  <source src="https://storage.googleapis.com/lightly-public/studio/annotation_qa_0_annotation_grid_online.mp4" 
+  type="video/mp4">
 </video>
 
 The `Annotations` view shows one tile per annotation instead of one tile per sample. Object
@@ -53,7 +54,7 @@ To use it as a QA pass:
 ## Scan the Embedding Plot
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
-  <source src="https://storage.googleapis.com/lightly-public/studio/annotation_qa_embedding.mp4" type="video/mp4">
+  <source src="https://storage.googleapis.com/lightly-public/studio/annotation_qa_1_embedding_plot_online.mp4" type="video/mp4">
 </video>
 
 Annotation crops are embedded individually, so the embedding plot places visually similar
@@ -87,7 +88,7 @@ appear inside another class's region. Inspect the candidates before correcting t
 ## Compare Two Annotation Sources
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
-  <source src="https://storage.googleapis.com/lightly-public/studio/annotation_qa_evaluation_sort.mp4" type="video/mp4">
+  <source src="https://storage.googleapis.com/lightly-public/studio/annotation_qa_2_model_eval_online.mp4" type="video/mp4">
 </video>
 
 The first two methods rely on visual inspection. This method compares your annotations with a
