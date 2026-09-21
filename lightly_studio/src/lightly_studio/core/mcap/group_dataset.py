@@ -28,7 +28,7 @@ class McapGroupDataset(GroupDataset):
         """Get one component of the groups by its name.
 
         Args:
-            name: The name of the component in the group schema.
+            name: The name of the component, as given to `McapDataset.create`.
 
         Returns:
             The component.
