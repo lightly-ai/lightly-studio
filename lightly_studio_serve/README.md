@@ -89,7 +89,7 @@ The protocol is the contract, so a server in any language can serve LightlyStudi
 the conformance kit at one to see whether it does:
 
 ```bash
-python -m lightly_studio_serve.conformance http://127.0.0.1:8080
+lightly-studio-serve conformance http://127.0.0.1:8080
 ```
 
 The run reads `/v1/describe`, then sends one fixed probe for each capability the server
