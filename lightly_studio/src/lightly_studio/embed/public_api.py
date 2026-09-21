@@ -17,8 +17,15 @@ def register_default_embedder(
 
     <span class="doc-badge doc-badge--beta">Beta</span>
 
-    Call this before creating a dataset so that ingestion uses ``embedder`` instead
-    of the built-in default. A thin wrapper over the process-wide embedder registry.
+    Call this in either of two cases:
+
+    - Before creating a dataset, so that ingestion embeds with ``embedder``. This
+      draws on the capabilities for the data being added, such as embedding images,
+      image crops, or videos.
+    - Before starting the GUI, so that search embeds queries with ``embedder``. This
+      draws on the capabilities for the query kinds, such as embedding text, or
+      images for reverse-image search. Search resolves the embedder by the collection's
+      stored embedding space, so ``embedder`` must share that space to take effect.
 
     Args:
         embedder: The embedder to register. Its embedding space is read from

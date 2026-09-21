@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preselected samples are now part of the sampling result.
 - Move each docs page into a folder named for its nav section. The old URLs redirect.
 - Speed up video embedding by decoding videos in parallel, overlapping decoding with the model forward (up to about 2.4× faster when embedding many videos).
+- Register a custom embedder with `register_default_embedder` and the capability interfaces from `lightly_studio_serve.embedder`, replacing `set_default_embedding_model` and the `EmbeddingGenerator` protocols.
 
 ### Deprecated
 
