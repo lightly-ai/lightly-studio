@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Path
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import NotFoundError
 from lightly_studio.models.mcap_sequence_ticks import TickListView
-from lightly_studio.services.recording_service import get_mcap_sequence_ticks
+from lightly_studio.services import recording_service
 
 get_ticks_router = APIRouter()
 
@@ -36,15 +36,12 @@ def get_ticks(
         The tick list.
 
     Raises:
-        HTTPException: 404 if the sequence does not exist or does not belong to
+        NotFoundError: If the sequence does not exist or does not belong to
             `dataset_id`.
     """
-    result = get_mcap_sequence_ticks(
+    result = recording_service.get_ticks(
         session=session, dataset_id=dataset_id, sequence_id=sequence_id
     )
     if result is None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"MCAP sequence {sequence_id} not found in dataset {dataset_id}.",
-        )
+        raise NotFoundError(f"MCAP sequence {sequence_id} not found in dataset {dataset_id}.")
     return result
