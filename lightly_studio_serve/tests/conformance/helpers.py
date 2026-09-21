@@ -25,6 +25,9 @@ DIMENSION = 2
 # How long a test waits for a server to bind its port.
 _STARTUP_TIMEOUT_SECONDS = 10.0
 
+# How long a test waits for a server to let go of its port.
+_SHUTDOWN_TIMEOUT_SECONDS = 10.0
+
 
 class AppProbeClient:
     """Sends the probes to an application in this process, so a run opens no port."""
@@ -133,7 +136,8 @@ def serving(app: FastAPI) -> Iterator[str]:
         yield f"http://127.0.0.1:{_bound_port(server=server)}"
     finally:
         server.should_exit = True
-        thread.join(timeout=_STARTUP_TIMEOUT_SECONDS)
+        thread.join(timeout=_SHUTDOWN_TIMEOUT_SECONDS)
+        assert not thread.is_alive(), "The server kept its port, so a later test may fail."
 
 
 def _bound_port(server: uvicorn.Server) -> int:

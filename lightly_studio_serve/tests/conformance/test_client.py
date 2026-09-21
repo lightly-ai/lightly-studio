@@ -23,6 +23,12 @@ class TestHttpProbeClient:
         with pytest.raises(ValueError, match="must start with http"):
             HttpProbeClient(base_url="127.0.0.1:8080")
 
+    def test_init__address_in_upper_case(self) -> None:
+        """The scheme carries no case for urllib, so rejecting one would read as nonsense."""
+        client = HttpProbeClient(base_url="HTTP://127.0.0.1:8080")
+
+        assert client.base_url == "HTTP://127.0.0.1:8080"
+
     def test_get(self) -> None:
         with helpers.serving(app=create_app(embedder=FakeEmbedder())) as url:
             response = HttpProbeClient(base_url=f"{url}/").get(
@@ -75,6 +81,23 @@ class TestHttpProbeClient:
 
         with pytest.raises(ConformanceRequestError, match="got no answer"):
             client.get(path=protocol.DESCRIBE_PATH, timeout=TIMEOUT)
+
+    def test_get__address_that_urllib_cannot_read(self) -> None:
+        """A mistyped address fails here, not at construction, and is no traceback either."""
+        client = HttpProbeClient(base_url="http://127.0.0.1:notaport")
+
+        with pytest.raises(ConformanceRequestError, match="got no answer"):
+            client.get(path=protocol.DESCRIBE_PATH, timeout=TIMEOUT)
+
+    def test_get__api_key_that_is_empty(self) -> None:
+        """An unset variable in a shell reads as empty, and means no key at all."""
+        app = create_app(embedder=FakeEmbedder())
+        with helpers.serving(app=app) as url:
+            response = HttpProbeClient(base_url=url, api_key="").get(
+                path=protocol.DESCRIBE_PATH, timeout=TIMEOUT
+            )
+
+        assert response.status_code == 200
 
     def test_get__body_over_the_limit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(client_module, "MAX_RESPONSE_BYTES", 8)

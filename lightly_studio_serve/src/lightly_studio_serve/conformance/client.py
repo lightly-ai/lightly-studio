@@ -7,6 +7,7 @@ one the command line uses.
 
 from __future__ import annotations
 
+import http.client
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -59,13 +60,13 @@ class HttpProbeClient:
         Args:
             base_url: The address of the server, such as ``http://127.0.0.1:8080``.
             api_key: The token to send as ``Authorization: Bearer <api_key>``. ``None``
-                sends no header, which is what a server without a key expects.
+                or empty sends no header, which is what a server without a key expects.
 
         Raises:
             ValueError: If ``base_url`` names no HTTP address. The opener handles those
                 two schemes alone, and answers nothing at all for any other.
         """
-        if not base_url.startswith(("http://", "https://")):
+        if not base_url.lower().startswith(("http://", "https://")):
             raise ValueError(f"base_url must start with http:// or https://, got {base_url!r}.")
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -75,28 +76,39 @@ class HttpProbeClient:
 
     def get(self, path: str, timeout: float) -> ProbeResponse:
         """Send a ``GET`` to ``path``. See ``ProbeClient``."""
-        request = urllib.request.Request(url=f"{self.base_url}{path}", method="GET")
-        return self._send(request=request, timeout=timeout)
+        return self._send(path=path, method="GET", timeout=timeout)
 
     def post(self, path: str, content_type: str, body: bytes, timeout: float) -> ProbeResponse:
         """Send a ``POST`` to ``path``. See ``ProbeClient``."""
-        request = urllib.request.Request(url=f"{self.base_url}{path}", data=body, method="POST")
-        request.add_header("Content-Type", content_type)
-        return self._send(request=request, timeout=timeout)
+        return self._send(
+            path=path, method="POST", timeout=timeout, content_type=content_type, body=body
+        )
 
-    def _send(self, request: urllib.request.Request, timeout: float) -> ProbeResponse:
+    def _send(
+        self,
+        path: str,
+        method: str,
+        timeout: float,
+        content_type: str | None = None,
+        body: bytes | None = None,
+    ) -> ProbeResponse:
         """Send one request, and read at most the bytes an answer of the protocol needs."""
-        if self.api_key is not None:
-            request.add_header("Authorization", f"Bearer {self.api_key}")
+        url = f"{self.base_url}{path}"
         try:
+            request = urllib.request.Request(url=url, data=body, method=method)
+            if content_type is not None:
+                request.add_header("Content-Type", content_type)
+            if self.api_key:
+                request.add_header("Authorization", f"Bearer {self.api_key}")
             with self._opener.open(request, timeout=timeout) as response:
-                status, body = response.status, response.read(MAX_RESPONSE_BYTES + 1)
-        # A URLError is an OSError, and so is a read that ran out of time.
-        except OSError as error:
-            raise ConformanceRequestError(f"{request.full_url} got no answer: {error}.") from error
-        if len(body) > MAX_RESPONSE_BYTES:
+                status, answer = response.status, response.read(MAX_RESPONSE_BYTES + 1)
+        # A URLError is an OSError, and so is a read that ran out of time. An address a
+        # person mistyped fails here too, and reads as an answer that never came.
+        except (OSError, ValueError, http.client.InvalidURL) as error:
+            raise ConformanceRequestError(f"{url} got no answer: {error}.") from error
+        if len(answer) > MAX_RESPONSE_BYTES:
             raise ConformanceRequestError(
-                f"{request.full_url} answers over {MAX_RESPONSE_BYTES} bytes. One probe "
+                f"{url} answers over {MAX_RESPONSE_BYTES} bytes. One probe "
                 f"carries one item, so no answer of the protocol is that large."
             )
-        return ProbeResponse(status_code=status, body=body)
+        return ProbeResponse(status_code=status, body=answer)

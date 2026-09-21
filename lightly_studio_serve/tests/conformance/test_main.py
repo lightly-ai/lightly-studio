@@ -53,6 +53,12 @@ def test_main__address_that_is_no_http_url(capsys: pytest.CaptureFixture[str]) -
     )
 
 
+def test_main__probe_timeout_that_is_not_positive() -> None:
+    """Every probe would fail under it, which reads as a broken server."""
+    with pytest.raises(SystemExit):
+        main_module.main(argv=["http://127.0.0.1:1", "--probe-timeout", "0"])
+
+
 def test_main__api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """A key on the command line stays in the history of the terminal, so read one too."""
     app = create_app(embedder=FakeEmbedder(), api_key=API_KEY)

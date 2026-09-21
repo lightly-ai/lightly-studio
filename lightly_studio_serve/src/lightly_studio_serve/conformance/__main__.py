@@ -16,7 +16,7 @@ from lightly_studio_serve.conformance import runner
 from lightly_studio_serve.conformance.client import HttpProbeClient
 
 API_KEY_VARIABLE = "LIGHTLY_STUDIO_SERVE_API_KEY"
-"""Holds the key, so no terminal history keeps it."""
+"""The variable that holds the key, so no terminal history keeps it."""
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -58,11 +58,19 @@ def _parse(argv: Sequence[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--probe-timeout",
-        type=float,
+        type=_positive_seconds,
         default=runner.PROBE_TIMEOUT_SECONDS,
         help="The seconds one probe may take. Default: %(default)s.",
     )
     return parser.parse_args(argv)
+
+
+def _positive_seconds(value: str) -> float:
+    """Read a timeout, rejecting the ones under which every probe fails by definition."""
+    seconds = float(value)
+    if seconds <= 0:
+        raise argparse.ArgumentTypeError(f"must be over 0 seconds, got {value}.")
+    return seconds
 
 
 if __name__ == "__main__":
