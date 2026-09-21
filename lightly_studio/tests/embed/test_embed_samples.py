@@ -193,7 +193,7 @@ def test_embed_image_for_collection__no_embedder_for_space_raises(
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
-    with pytest.raises(ValueError, match="No registered embedder matches"):
+    with pytest.raises(ValueError, match="No embedder resolves for"):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
@@ -263,7 +263,7 @@ def test_embed_text_for_collection__no_embedder_for_space_raises(
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
-    with pytest.raises(ValueError, match="No registered embedder matches"):
+    with pytest.raises(ValueError, match="No embedder resolves for"):
         embed_samples.embed_text_for_collection(
             session=db_session, collection_id=collection.collection_id, text="a red car"
         )

@@ -3,18 +3,35 @@ from __future__ import annotations
 import logging
 import uuid
 
+import numpy as np
 import pytest
+from fastapi.testclient import TestClient
+from lightly_studio_serve import server
+from lightly_studio_serve.embedder import TextEmbedder
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.embed import default_embedder, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
+from lightly_studio.embed.remote import connection
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     embedding_model_resolver,
 )
 from tests.helpers_resolvers import create_collection, create_embedding_model
+
+
+class _ServerTextEmbedder(TextEmbedder):
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(space_key="acme/model@v1", dimension=2)
+
+    def embed_text(self, texts: list[str]) -> EmbeddingResult:
+        return EmbeddingResult(
+            embeddings=np.zeros((len(texts), 2), dtype=np.float32),
+            kept_indices=list(range(len(texts))),
+        )
 
 
 def test_resolve_default_embedder__uses_existing_default(
@@ -229,7 +246,7 @@ def test_resolve_query_embedder__no_embedder_for_space_raises(
         set_as_default=True,
     )
 
-    with pytest.raises(ValueError, match=r"No registered embedder matches"):
+    with pytest.raises(ValueError, match=r"No embedder resolves for"):
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
@@ -259,3 +276,31 @@ def test_resolve_query_embedder__dimension_mismatch_raises(
             collection_id=collection.collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
         )
+
+
+def test_resolve_query_embedder__builds_remote_from_stored_config(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    # Nothing is registered: the embedder is built from the configuration of the row.
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="acme/model@v1",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    model.remote_embedder_url = "http://embedder.test"
+    db_session.add(model)
+    db_session.commit()
+    client = TestClient(server.create_app(embedder=_ServerTextEmbedder()))
+    mocker.patch.object(connection, "build_client", return_value=client)
+
+    embedder = default_embedder.resolve_query_embedder(
+        session=db_session,
+        collection_id=collection.collection_id,
+        get_embedder_fn=EmbedderRegistry.get_text_embedder,
+    )
+
+    assert embedder.embed_text(texts=["a query"]).embeddings.shape == (1, 2)
