@@ -6,6 +6,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_OK,
 )
@@ -62,6 +63,31 @@ def test_embed_image_from_file_error(
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
     assert "Embedding failed" in response.json()["detail"]
+
+
+def test_embed_image_from_file__unreadable_image(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    """An upload the embedder cannot read is a bad request, and the file name is reported."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+
+    mocker.patch.object(
+        embed_samples,
+        "embed_image_for_collection",
+        side_effect=embed_samples.UnreadableImageError("The embedder could not read it."),
+    )
+
+    files = {"file": ("broken.jpg", b"not an image", "image/jpeg")}
+
+    response = test_client.post(
+        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+        files=files,
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert "broken.jpg" in response.json()["detail"]
 
 
 def test_embed_image_from_file__model_override_not_supported(test_client: TestClient) -> None:

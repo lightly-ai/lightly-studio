@@ -41,12 +41,12 @@ VIDEO_FRAMES_PER_SAMPLE: int = 8
 
 
 class PerceptionEncoderEmbedder(
-    ImagePathEmbedder,
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
+    ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
-    ImageBytesEmbedder,
 ):
     """Perception Encoder Core embedding model."""
 

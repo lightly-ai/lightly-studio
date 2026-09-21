@@ -9,7 +9,10 @@ from uuid import UUID
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi import Path as FastAPIPath
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_INTERNAL_SERVER_ERROR
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_INTERNAL_SERVER_ERROR,
+)
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.embed import embed_samples
 
@@ -40,6 +43,12 @@ def embed_image_from_file(
         return embed_samples.embed_image_for_collection(
             session=session, collection_id=collection_id, image_bytes=file.file.read()
         )
+    except embed_samples.UnreadableImageError as exc:
+        # An upload the embedder cannot decode is a bad request, not a server fault.
+        raise HTTPException(
+            status_code=HTTP_STATUS_BAD_REQUEST,
+            detail=f"{exc} Uploaded file: {file.filename!r}.",
+        ) from None
     except ValueError as exc:
         raise HTTPException(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,

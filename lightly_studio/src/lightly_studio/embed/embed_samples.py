@@ -31,6 +31,14 @@ logger = logging.getLogger(__name__)
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
+class UnreadableImageError(ValueError):
+    """Raised when the embedder cannot read the bytes of an image to embed.
+
+    Subclasses ``ValueError`` so a caller that handles the other input errors of this
+    module keeps working.
+    """
+
+
 def embed_image_for_collection(
     session: Session, collection_id: UUID, image_bytes: bytes
 ) -> list[float]:
@@ -50,9 +58,9 @@ def embed_image_for_collection(
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model, no registered
-            embedder matches that model's space, or the embedder produced no embedding
-            for the image.
+        UnreadableImageError: If the embedder cannot read the image bytes.
+        ValueError: If the collection has no default embedding model, or no registered
+            embedder matches that model's space.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,
@@ -61,7 +69,7 @@ def embed_image_for_collection(
     )
     result = embedder.embed_image_bytes(images=[image_bytes])
     if result.kept_indices != [0]:
-        raise ValueError("The embedder produced no embedding for the uploaded image.")
+        raise UnreadableImageError("The embedder could not read the uploaded image.")
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding
 

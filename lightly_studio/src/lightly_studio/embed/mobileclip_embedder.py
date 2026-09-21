@@ -36,11 +36,11 @@ EMBEDDING_DIMENSION: int = 512
 
 
 class MobileCLIPEmbedder(
-    ImagePathEmbedder,
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
+    ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
-    ImageBytesEmbedder,
 ):
     """MobileCLIP embedding model.
 

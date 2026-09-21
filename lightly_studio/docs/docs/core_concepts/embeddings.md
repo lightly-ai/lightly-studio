@@ -115,7 +115,8 @@ query. The [API reference](../api/embeddings.md) gives the full method signature
 
 | Interface | Method | Embeds | Called during |
 |---|---|---|---|
-| `ImagePathEmbedder` | `embed_images` | Whole images by path | Ingest and GUI (image search) |
+| `ImagePathEmbedder` | `embed_images` | Whole images by path | Ingest |
+| `ImageBytesEmbedder` | `embed_image_bytes` | Uploaded images, as raw file bytes | GUI (image search) |
 | `ImageCropPathEmbedder` | `embed_image_crops` | Annotation crops | Ingest |
 | `ImagePILEmbedder` | `embed_images_pil` | In-memory images, such as video frames | Ingest |
 | `VideoPathEmbedder` | `embed_videos` | Whole videos by path | Ingest |
