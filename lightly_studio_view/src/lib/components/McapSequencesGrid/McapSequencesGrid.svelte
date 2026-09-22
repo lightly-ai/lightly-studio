@@ -4,10 +4,12 @@
     import { GridItem } from '$lib/components/GridItem';
     import { McapSequenceGridItem } from '$lib/components/McapSequenceGridItem';
     import { useGlobalStorage } from '$lib/hooks';
+    import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
 
     interface McapSequence {
         sampleId: string;
         sampleCount: number;
+        sequenceFrame: McapSequenceFrame | null | undefined;
     }
 
     interface Props {
@@ -81,6 +83,7 @@
                         >
                             <McapSequenceGridItem
                                 sampleCount={sequences[index].sampleCount}
+                                sequenceFrame={sequences[index].sequenceFrame}
                                 {width}
                                 {height}
                             />
