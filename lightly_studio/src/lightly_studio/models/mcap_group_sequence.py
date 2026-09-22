@@ -56,11 +56,30 @@ class McapGroupSequenceInfoView(BaseModel):
         )
 
 
+class McapSequenceFrame(BaseModel):
+    """Locator for the first camera frame of an MCAP sequence thumbnail.
+
+    The timestamp is stored as a string to preserve nanosecond precision.
+
+    Attributes:
+        dataset_id: The recording's dataset ID.
+        recording_id: The MCAP recording ID.
+        channel_id: The camera channel ID.
+        keyframe_log_time_ns: The keyframe timestamp in nanoseconds.
+    """
+
+    dataset_id: UUID
+    recording_id: UUID
+    channel_id: int
+    keyframe_log_time_ns: str
+
+
 class McapSequenceView(BaseModel):
     """View model for a single MCAP sequence in a list response."""
 
     sample_id: UUID
     sample_count: int
+    sequence_frame: McapSequenceFrame | None = None
 
 
 class McapSequenceViewsWithCount(BaseModel):
