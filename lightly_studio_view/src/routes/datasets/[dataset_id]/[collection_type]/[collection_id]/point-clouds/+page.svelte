@@ -4,10 +4,11 @@
     import { McapSequencesGrid } from '$lib/components/McapSequencesGrid';
     import { useGlobalStorage, useMcapSequencesInfinite } from '$lib/hooks';
     import { routeHelpers } from '$lib/routes';
+    import type { PageData } from './$types.js';
 
     const collectionId = $derived(page.params.collection_id!);
     const collectionType = $derived(page.params.collection_type!);
-    const datasetId = $derived(page.params.dataset_id!);
+    const { data: pageData }: { data: PageData } = $props();
 
     const { data, query, loadMore, totalCount } = useMcapSequencesInfinite(() => collectionId);
     const { setfilteredSampleCount } = useGlobalStorage();
@@ -31,7 +32,7 @@
     const handleSequenceClick = (sampleId: string) => {
         void goto(
             routeHelpers.toPointCloudLabeling({
-                datasetId,
+                datasetId: pageData.collection.dataset_id,
                 collectionType,
                 collectionId,
                 sampleId
