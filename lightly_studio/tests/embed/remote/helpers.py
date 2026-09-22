@@ -24,7 +24,8 @@ from numpy.typing import NDArray
 
 SPACE_KEY = "acme/model@v1"
 DIMENSION = 2
-BASE_URL = "http://embedding-server"
+# Loopback, so the URL policy of `RemoteEmbedder.connect` gives no clear-text warning.
+BASE_URL = "http://127.0.0.1:8080"
 ROW = [0.5, -0.5]
 
 # The paths of the protocol. A request to anything else is a routing error of this client.
