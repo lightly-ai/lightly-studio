@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Combine typicality and similarity computation and sampling into one backend request that continues if the frontend disconnects.
+
 ### Security
 
 ## \[1.1.2\] - 2026-09-21
