@@ -27,6 +27,10 @@
      */
     interface Props {
         sampleId: string;
+        /** Dataset the labeled point-cloud sequence belongs to. */
+        datasetId?: string;
+        /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
+        sequenceId?: string;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
         /** Overridable for tests/stories; production always starts at `empty` today. */
@@ -35,7 +39,15 @@
         onRetry?: () => void;
     }
 
-    let { sampleId, sourcePath = [], status = 'empty', onExit, onRetry }: Props = $props();
+    let {
+        sampleId,
+        datasetId = '',
+        sequenceId = '',
+        sourcePath = [],
+        status = 'empty',
+        onExit,
+        onRetry
+    }: Props = $props();
 
     let selectedCuboidId = $state<string | null>(null);
 
@@ -144,7 +156,12 @@
                         </PaneResizer>
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
                         <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
-                            <CameraProjectionStrip />
+                            <CameraProjectionStrip
+                                {datasetId}
+                                {sequenceId}
+                                seqNumber={currentTick}
+                                {cameraChannels}
+                            />
                         </Pane>
                         <PaneResizer
                             class="group relative flex h-2 cursor-row-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"
