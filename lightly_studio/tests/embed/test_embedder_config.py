@@ -115,7 +115,7 @@ def test_build_remote__unparsable_url() -> None:
         embedder_config.build_remote(config=config)
 
 
-@pytest.mark.parametrize("url", ["embedder.test", "", "ftp://embedder.test"])
+@pytest.mark.parametrize("url", ["embedder.test", "", "ftp://embedder.test", "http://[::1"])
 def test_build_remote__unreachable_url(url: str) -> None:
     config = EmbedderConfig(
         dataset_id=uuid.uuid4(), space_key=SPACE_KEY, dimension=DIMENSION, url=url

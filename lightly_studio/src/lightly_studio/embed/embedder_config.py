@@ -97,12 +97,18 @@ def _check_url(url: str, space_key: str) -> None:
     """Refuse a URL that builds a client but reaches no server.
 
     Raises:
-        RemoteEmbedderConfigError: If the URL carries no http or https scheme, or no host.
+        RemoteEmbedderConfigError: If the URL does not parse, or carries no http or https
+            scheme, or no host.
     """
     # httpx builds a client against a bare host or an unknown scheme without raising, and
     # the failure then arrives from `connect` as an unreachable server, which a caller retries.
-    parsed = urllib.parse.urlsplit(url)
-    if parsed.scheme not in _URL_SCHEMES or not parsed.hostname:
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        scheme, host = parsed.scheme, parsed.hostname
+    except ValueError:
+        # `urlsplit` refuses a malformed bracketed host, such as `http://[::1`.
+        scheme, host = "", None
+    if scheme not in _URL_SCHEMES or not host:
         raise RemoteEmbedderConfigError(
             f"The embedding server URL {url!r} of space {space_key!r} is not an http or https "
             f"address with a host."
