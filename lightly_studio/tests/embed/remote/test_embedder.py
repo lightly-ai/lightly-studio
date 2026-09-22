@@ -6,6 +6,7 @@ from collections.abc import Callable
 import httpx
 import numpy as np
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from lightly_studio_serve import protocol, server
 from lightly_studio_serve.embedder import (
@@ -15,7 +16,9 @@ from lightly_studio_serve.embedder import (
 )
 from lightly_studio_serve.protocol import ServerLimits
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from pytest_mock import MockerFixture
 
+from lightly_studio.dataset import env
 from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.remote import composition, embedder
@@ -26,6 +29,7 @@ from lightly_studio.embed.remote.errors import (
 )
 from tests.embed.remote import helpers
 from tests.embed.remote.helpers import (
+    BASE_URL,
     DIMENSION,
     ROW,
     SPACE_KEY,
@@ -41,7 +45,7 @@ from tests.embed.remote.helpers import (
 
 class TestRemoteEmbedder:
     def test_connect__text_only(self) -> None:
-        with TestClient(server.create_app(embedder=FakeTextEmbedder())) as client:
+        with _test_client(server.create_app(embedder=FakeTextEmbedder())) as client:
             remote = RemoteEmbedder.connect(client=client)
 
         assert isinstance(remote, TextEmbedder)
@@ -49,7 +53,7 @@ class TestRemoteEmbedder:
         assert not isinstance(remote, VideoBytesEmbedder)
 
     def test_connect__image_bytes_only(self) -> None:
-        with TestClient(server.create_app(embedder=FakeImageEmbedder())) as client:
+        with _test_client(server.create_app(embedder=FakeImageEmbedder())) as client:
             remote = RemoteEmbedder.connect(client=client)
 
         assert isinstance(remote, ImageBytesEmbedder)
@@ -57,7 +61,7 @@ class TestRemoteEmbedder:
         assert not isinstance(remote, VideoBytesEmbedder)
 
     def test_connect__text_and_image_bytes(self) -> None:
-        with TestClient(server.create_app(embedder=FakeTextImageEmbedder())) as client:
+        with _test_client(server.create_app(embedder=FakeTextImageEmbedder())) as client:
             remote = RemoteEmbedder.connect(client=client)
 
         assert isinstance(remote, TextEmbedder)
@@ -65,15 +69,15 @@ class TestRemoteEmbedder:
         assert type(remote).__name__ == "RemoteTextImageBytesEmbedder"
 
     def test_connect__reuses_the_composed_class(self) -> None:
-        with TestClient(server.create_app(embedder=FakeTextImageEmbedder())) as client:
+        with _test_client(server.create_app(embedder=FakeTextImageEmbedder())) as client:
             first = RemoteEmbedder.connect(client=client)
-        with TestClient(server.create_app(embedder=FakeTextImageEmbedder())) as client:
+        with _test_client(server.create_app(embedder=FakeTextImageEmbedder())) as client:
             second = RemoteEmbedder.connect(client=client)
 
         assert type(first) is type(second)
 
     def test_connect__text_and_video_bytes(self) -> None:
-        with TestClient(server.create_app(embedder=FakeTextVideoEmbedder())) as client:
+        with _test_client(server.create_app(embedder=FakeTextVideoEmbedder())) as client:
             remote = RemoteEmbedder.connect(client=client)
 
         assert isinstance(remote, TextEmbedder)
@@ -83,7 +87,7 @@ class TestRemoteEmbedder:
         # Nothing in LightlyStudio resolves a video-bytes embedder yet, so the error has
         # to name that rather than let `EmbedderRegistry.register` report the symptom.
         app = server.create_app(embedder=FakeVideoEmbedder())
-        with TestClient(app) as client, pytest.raises(RemoteEmbedderCapabilityError) as error:
+        with _test_client(app) as client, pytest.raises(RemoteEmbedderCapabilityError) as error:
             RemoteEmbedder.connect(client=client)
 
         assert "EmbedderRegistry resolves text, image_bytes" in str(error.value)
@@ -97,6 +101,22 @@ class TestRemoteEmbedder:
 
         assert "routes to text, image_bytes, video_bytes" in str(error.value)
 
+    def test_connect__url_policy_refuses_the_address(self, mocker: MockerFixture) -> None:
+        # The policy runs before the first request, so the refused address is never called.
+        mocker.patch.object(env, "LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS", False)
+        server = FakeServer(capabilities=["text"])
+
+        with pytest.raises(ValueError, match="is not https"):
+            RemoteEmbedder.connect(client=server.client())
+
+        assert server.describe_calls == 0
+
+    def test_connect__client_follows_redirects(self) -> None:
+        client = httpx.Client(base_url=BASE_URL, follow_redirects=True)
+
+        with pytest.raises(ValueError, match="must not follow redirects"):
+            RemoteEmbedder.connect(client=client)
+
     def test_connect__server_still_loading(self, caplog: pytest.LogCaptureFixture) -> None:
         server = FakeServer(capabilities=["text"], ready=False)
 
@@ -106,7 +126,7 @@ class TestRemoteEmbedder:
         assert "still loading" in caplog.text
 
     def test_embedding_space_spec(self) -> None:
-        with TestClient(server.create_app(embedder=FakeTextEmbedder())) as client:
+        with _test_client(server.create_app(embedder=FakeTextEmbedder())) as client:
             remote = RemoteEmbedder.connect(client=client)
 
         assert remote.embedding_space_spec() == EmbeddingSpaceSpec(
@@ -115,7 +135,7 @@ class TestRemoteEmbedder:
 
     def test_embed_text(self) -> None:
         fake = FakeTextEmbedder()
-        with TestClient(server.create_app(embedder=fake)) as client:
+        with _test_client(server.create_app(embedder=fake)) as client:
             remote = RemoteEmbedder.connect(client=client)
             assert isinstance(remote, TextEmbedder)
             result = remote.embed_text(texts=["a dog", "a cat"])
@@ -127,7 +147,7 @@ class TestRemoteEmbedder:
 
     def test_embed_text__empty_batch(self) -> None:
         fake = FakeTextEmbedder()
-        with TestClient(server.create_app(embedder=fake)) as client:
+        with _test_client(server.create_app(embedder=fake)) as client:
             remote = RemoteEmbedder.connect(client=client)
             assert isinstance(remote, TextEmbedder)
             result = remote.embed_text(texts=[])
@@ -137,7 +157,7 @@ class TestRemoteEmbedder:
         assert result.embeddings.shape == (0, DIMENSION)
 
     def test_embed_text__skipped_item(self) -> None:
-        with TestClient(server.create_app(embedder=SkippingTextEmbedder())) as client:
+        with _test_client(server.create_app(embedder=SkippingTextEmbedder())) as client:
             remote = RemoteEmbedder.connect(client=client)
             assert isinstance(remote, TextEmbedder)
             result = remote.embed_text(texts=["a dog", "a broken input", "a cat"])
@@ -150,7 +170,7 @@ class TestRemoteEmbedder:
         # the merged indices only line up when every chunk is offset by its own start.
         fake = SkippingTextEmbedder()
         app = server.create_app(embedder=fake, limits=ServerLimits(max_batch_size=2))
-        with TestClient(app) as client:
+        with _test_client(app) as client:
             remote = RemoteEmbedder.connect(client=client)
             assert isinstance(remote, TextEmbedder)
             result = remote.embed_text(texts=["one", "two", "three", "four", "five"])
@@ -230,7 +250,7 @@ class TestRemoteEmbedder:
         fake = FakeImageEmbedder()
         app = server.create_app(embedder=fake, limits=ServerLimits(max_request_bytes=3000))
         images = [bytes([index]) * 1000 for index in range(4)]
-        with TestClient(app) as client:
+        with _test_client(app) as client:
             remote = RemoteEmbedder.connect(client=client)
             assert isinstance(remote, ImageBytesEmbedder)
             result = remote.embed_image_bytes(images=images)
@@ -240,7 +260,7 @@ class TestRemoteEmbedder:
 
     def test_embed_image_bytes(self) -> None:
         fake = FakeImageEmbedder()
-        with TestClient(server.create_app(embedder=fake)) as client:
+        with _test_client(server.create_app(embedder=fake)) as client:
             remote = RemoteEmbedder.connect(client=client)
             assert isinstance(remote, ImageBytesEmbedder)
             result = remote.embed_image_bytes(images=[b"\xff\xd8jpeg", b"\x89PNG"])
@@ -251,7 +271,7 @@ class TestRemoteEmbedder:
 
     def test_embed_video_bytes(self) -> None:
         fake = FakeTextVideoEmbedder()
-        with TestClient(server.create_app(embedder=fake)) as client:
+        with _test_client(server.create_app(embedder=fake)) as client:
             remote = RemoteEmbedder.connect(client=client)
             assert isinstance(remote, VideoBytesEmbedder)
             result = remote.embed_video_bytes(videos=[b"\x00\x00mp4"])
@@ -306,7 +326,7 @@ def test_resolvable_capabilities__match_the_registry() -> None:
 
 
 def test_register_and_resolve() -> None:
-    with TestClient(server.create_app(embedder=FakeTextImageEmbedder())) as client:
+    with _test_client(server.create_app(embedder=FakeTextImageEmbedder())) as client:
         remote = RemoteEmbedder.connect(client=client)
 
     registry = EmbedderRegistry()
@@ -319,3 +339,13 @@ def test_register_and_resolve() -> None:
 
     assert text_embedder is remote
     assert image_embedder is remote
+
+
+def _test_client(app: FastAPI) -> TestClient:
+    """A client that drives ``app`` in process and meets the URL policy.
+
+    ``TestClient`` defaults to ``http://testserver`` and to following redirects. The policy
+    reads the ``base_url`` of the client as the address of the server and refuses a client
+    that follows a redirect, so both are set here rather than left at the default.
+    """
+    return TestClient(app, base_url=BASE_URL, follow_redirects=False)

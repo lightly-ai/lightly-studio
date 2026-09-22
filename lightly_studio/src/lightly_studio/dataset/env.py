@@ -46,6 +46,12 @@ LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)
 )
 
+# The address policy of a remote embedding server, see embed/remote/url_policy.py.
+# True keeps every address usable. False requires https and a public address.
+LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS: bool = env.bool(
+    "LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS", True
+)
+
 LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED: bool = env.bool(
     "LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED", False
 )

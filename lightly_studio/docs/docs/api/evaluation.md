@@ -18,6 +18,12 @@
     options:
         members: [ClassificationEvaluationConfig]
 
+## InstanceSegmentationEvaluationConfig
+
+::: lightly_studio.evaluation.image_dataset_evaluate
+    options:
+        members: [InstanceSegmentationEvaluationConfig]
+
 ## SemanticSegmentationEvaluationConfig
 
 ::: lightly_studio.evaluation.image_dataset_evaluate
