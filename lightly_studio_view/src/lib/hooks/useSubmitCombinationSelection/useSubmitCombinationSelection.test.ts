@@ -7,14 +7,6 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     createSampling: vi.fn()
 }));
 
-vi.mock('./computeStrategyMetadata', () => ({
-    computeStrategyMetadata: vi.fn().mockResolvedValue(true)
-}));
-
-vi.mock('./strategyApiMapping', () => ({
-    toApiStrategy: vi.fn((instance) => ({ strategy_name: 'diversity', _id: instance.id }))
-}));
-
 vi.mock('svelte-sonner', () => ({
     toast: { error: vi.fn(), success: vi.fn() }
 }));
@@ -25,7 +17,6 @@ vi.mock('$lib/hooks', () => ({
 }));
 
 const { toast } = await import('svelte-sonner');
-const { computeStrategyMetadata } = await import('./computeStrategyMetadata');
 
 describe('useSubmitCombinationSelection', () => {
     const defaultHookParams = {
@@ -49,47 +40,66 @@ describe('useSubmitCombinationSelection', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(computeStrategyMetadata).mockResolvedValue(true);
     });
 
-    it('calls computeStrategyMetadata for each instance with collectionId and isVideoCollection', async () => {
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
-
+    it('submits metadata preparation and selection together', async () => {
+        vi.mocked(createSampling).mockResolvedValue({
+            data: undefined,
+            request: new Request('http://localhost'),
+            response: new Response(null, { status: 204 })
+        });
         const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
-        await submit({
+        const call = submit({
             ...defaultSubmitParams,
             instances: [
-                { id: 'inst-a', type: 'diversity', params: { strength: 1 }, isExpanded: true },
-                { id: 'inst-b', type: 'typicality', params: { strength: 1 }, isExpanded: true }
+                { id: 'typ', type: 'typicality', params: { strength: 1 }, isExpanded: true },
+                {
+                    id: 'sim',
+                    type: 'similarity',
+                    params: { strength: 2, query_tag_id: 'query' },
+                    isExpanded: true
+                }
             ]
         });
-
-        expect(computeStrategyMetadata).toHaveBeenCalledTimes(2);
-        expect(computeStrategyMetadata).toHaveBeenCalledWith(
+        expect(createSampling).toHaveBeenCalledTimes(1);
+        expect(createSampling).toHaveBeenCalledWith(
             expect.objectContaining({
-                instance: expect.objectContaining({ id: 'inst-a' }),
-                collectionId: 'col-1',
-                isVideoCollection: false,
-                onProgress: expect.any(Function)
+                body: expect.objectContaining({
+                    sampling_result_tag_name: 'my-tag',
+                    metadata_computations: [
+                        { kind: 'typicality', metadata_name: 'typicality-typ' },
+                        {
+                            kind: 'similarity',
+                            metadata_name: 'similarity-sim',
+                            query_tag_id: 'query'
+                        }
+                    ],
+                    strategies: [
+                        { strategy_name: 'weights', metadata_key: 'typicality-typ', strength: 1 },
+                        { strategy_name: 'weights', metadata_key: 'similarity-sim', strength: 2 }
+                    ]
+                })
             })
         );
-        expect(computeStrategyMetadata).toHaveBeenCalledWith(
-            expect.objectContaining({
-                instance: expect.objectContaining({ id: 'inst-b' }),
-                collectionId: 'col-1',
-                isVideoCollection: false,
-                onProgress: expect.any(Function)
-            })
-        );
+        expect(await call).toBe(true);
     });
 
-    it('stops and returns false without calling createSampling when metadata computation fails', async () => {
-        vi.mocked(computeStrategyMetadata).mockResolvedValue(false);
-
+    it('rejects similarity for video collections before submitting', async () => {
         const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
-        const result = await submit({ ...defaultSubmitParams, selectionResultTagName: 'fail-tag' });
-
-        expect(result).toBe(false);
+        expect(
+            await submit({
+                ...defaultSubmitParams,
+                isVideoCollection: true,
+                instances: [
+                    {
+                        id: 'sim',
+                        type: 'similarity',
+                        params: { strength: 1, query_tag_id: 'query' },
+                        isExpanded: true
+                    }
+                ]
+            })
+        ).toBe(false);
         expect(createSampling).not.toHaveBeenCalled();
     });
 
@@ -113,7 +123,10 @@ describe('useSubmitCombinationSelection', () => {
             body: {
                 n_samples_to_select: 20,
                 sampling_result_tag_name: 'result-tag',
-                strategies: [{ strategy_name: 'diversity', _id: 'inst-1' }],
+                strategies: [
+                    { strategy_name: 'diversity', embedding_model_name: null, strength: 1 }
+                ],
+                metadata_computations: [],
                 filter: selectionFilter
             }
         });
@@ -203,32 +216,8 @@ describe('useSubmitCombinationSelection', () => {
         expect(get(isSubmitting)).toBe(true);
 
         resolveApi({ data: {}, error: null });
-        await call;
+        expect(await call).toBe(true);
         expect(get(isSubmitting)).toBe(false);
-    });
-
-    it('forwards the onProgress callback to computeStrategyMetadata which updates loadingMessage', async () => {
-        vi.mocked(computeStrategyMetadata).mockImplementationOnce(async ({ onProgress }) => {
-            onProgress('Computing typicality metadata...');
-            return true;
-        });
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
-
-        const { loadingMessage, submit } = useSubmitCombinationSelection({ ...defaultHookParams });
-
-        const messages: string[] = [];
-        loadingMessage.subscribe((msg) => messages.push(msg));
-
-        await submit({
-            ...defaultSubmitParams,
-            instances: [
-                { id: 'inst-1', type: 'typicality', params: { strength: 1 }, isExpanded: true }
-            ],
-            nSamplesToSelect: 5,
-            selectionResultTagName: 'tag'
-        });
-
-        expect(messages).toContain('Computing typicality metadata...');
     });
 
     it('tracks sampling_submitted with filteredSampleCount from params', async () => {
@@ -244,25 +233,6 @@ describe('useSubmitCombinationSelection', () => {
         expect(mockTrackEvent).toHaveBeenCalledWith(
             'sampling_submitted',
             expect.objectContaining({ filtered_sample_count: 42 })
-        );
-    });
-
-    it('tracks sampling_triggered with success: false when metadata computation fails', async () => {
-        vi.mocked(computeStrategyMetadata).mockResolvedValue(false);
-
-        const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
-        await submit({ ...defaultSubmitParams });
-
-        expect(mockTrackEvent).toHaveBeenCalledWith(
-            'sampling_triggered',
-            expect.objectContaining({
-                success: false,
-                error_message: 'Metadata computation failed'
-            })
-        );
-        expect(mockTrackEvent).not.toHaveBeenCalledWith(
-            'sampling_triggered',
-            expect.objectContaining({ success: true })
         );
     });
 
