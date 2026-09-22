@@ -70,7 +70,12 @@ jobs:
           REPO: ${{ github.repository }}
           TAG: ${{ inputs.tag }}
           CHANGELOG: ${{ steps.package.outputs.changelog }}
-        # The changelog is read at the tag, not from main, which has moved on since.
+          # Declared on workflow_dispatch only, so it is empty on a workflow_call run.
+          CHANNEL: ${{ inputs.channel || env.SLACK_CHANNEL }}
+        # The changelog is read at the tag, not from main, which has moved on since. The
+        # tooling writes the whole `chat.postMessage` request, so the message never passes
+        # through `${{ }}` expansion or shell quoting, and the request shape is covered by
+        # the tooling's tests rather than by this file. Its stdout is the rendered text.
         run: |
           set -euo pipefail
           gh api "repos/${REPO}/contents/${CHANGELOG}?ref=${TAG}" \
@@ -80,21 +85,8 @@ jobs:
             --changelog "${RUNNER_TEMP}/CHANGELOG.md" \
             --tag "${TAG}" \
             --release-url "${release_url}" \
-            --output "${RUNNER_TEMP}/slack-message.txt"
-          cat "${RUNNER_TEMP}/slack-message.txt" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Build the Slack payload
-        env:
-          # Declared on workflow_dispatch only, so it is empty on a workflow_call run.
-          CHANNEL: ${{ inputs.channel || env.SLACK_CHANNEL }}
-        # `jq --rawfile` keeps the message out of both `${{ }}` expansion and shell
-        # quoting. The action reads it back with templating off, so nothing expands it
-        # later either - unlike the inline `payload:` the Slack docs lead with.
-        run: |
-          set -euo pipefail
-          jq -n --arg channel "${CHANNEL}" --rawfile text "${RUNNER_TEMP}/slack-message.txt" \
-            '{channel: $channel, text: $text, unfurl_links: false, unfurl_media: false}' \
-            > "${RUNNER_TEMP}/slack-payload.json"
+            --channel "${CHANNEL}" \
+            --output "${RUNNER_TEMP}/slack-payload.json" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post the announcement
         # Undeclared on workflow_dispatch, so it is empty there and a manual re-post
@@ -103,7 +95,8 @@ jobs:
         # Pinned by digest: this is the one step that sees the bot token. `errors` is
         # off by default, and Slack rejects a message with `ok: false` and HTTP 200, so
         # without it a rejected post reports success. `retries` defaults to 5, which is
-        # the reason for using the action over a bare curl.
+        # the reason for using the action over a bare curl. `payload-file-path` rather
+        # than an inline `payload:`, so nothing expands the rendered changelog.
         uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           method: chat.postMessage
