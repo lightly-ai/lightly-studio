@@ -153,6 +153,14 @@ export interface AnnotationClass {
     readonly color: string;
 }
 
+/** Display metadata for an annotation source. */
+export interface AnnotationSource {
+    /** Stable source identity used by annotations. */
+    readonly id: string;
+    /** Human-readable source name. */
+    readonly name: string;
+}
+
 /** Object identity and keyframe anchors across a frame sequence. */
 /** An authored annotation anchor in a track. */
 export interface AnnotationKeyframe {
