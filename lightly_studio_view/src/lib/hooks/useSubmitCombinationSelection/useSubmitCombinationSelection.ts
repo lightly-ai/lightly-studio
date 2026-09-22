@@ -5,7 +5,7 @@ import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { usePostHog } from '$lib/hooks';
-import { computeStrategyMetadata } from './computeStrategyMetadata';
+import { getMetadataComputations } from './getMetadataComputations';
 import { toApiStrategy } from './strategyApiMapping';
 
 type SelectionError = { error: string };
@@ -26,24 +26,6 @@ interface SubmitParams {
     selectionResultTagName: string;
     selectionFilter: SamplingRequest['filter'];
     preselectedTagId?: string;
-}
-
-async function computeAllStrategiesMetadata(
-    instances: StrategyInstance[],
-    collectionId: string,
-    isVideoCollection: boolean,
-    onProgress: (message: string) => void
-): Promise<boolean> {
-    for (const instance of instances) {
-        const ok = await computeStrategyMetadata({
-            instance,
-            collectionId,
-            isVideoCollection,
-            onProgress
-        });
-        if (!ok) return false;
-    }
-    return true;
 }
 
 async function handleSelectionSuccess(
@@ -88,21 +70,8 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
         });
 
         try {
-            const metadataOk = await computeAllStrategiesMetadata(
-                instances,
-                collectionId,
-                isVideoCollection,
-                (message) => _loadingMessage.set(message)
-            );
-            if (!metadataOk) {
-                trackEvent('sampling_triggered', {
-                    collection_id: collectionId,
-                    strategies: instances.map((i) => i.type),
-                    n_samples: nSamplesToSelect,
-                    filtered_sample_count: filteredCount,
-                    success: false,
-                    error_message: 'Metadata computation failed'
-                });
+            if (isVideoCollection && instances.some((instance) => instance.type === 'similarity')) {
+                toast.error('Similarity is only available for image collections.');
                 return false;
             }
 
@@ -113,6 +82,7 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                     n_samples_to_select: nSamplesToSelect,
                     sampling_result_tag_name: selectionResultTagName,
                     strategies: instances.map(toApiStrategy),
+                    metadata_computations: getMetadataComputations(instances),
                     filter: selectionFilter ?? undefined,
                     ...(preselectedTagId && { preselected_tag_id: preselectedTagId })
                 }
