@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Camera Station · LightlyStudio</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --panel-2: #1e222b;
+        --line: #2a2f3a;
+        --text: #e6e9ef;
+        --muted: #949cad;
+        --accent: #34d399;
+        --accent-dim: #10b981;
+        --warn: #fbbf24;
+        --error: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+      }
+      header {
+        display: flex; align-items: center; gap: 16px;
+        padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel);
+      }
+      header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: 0.2px; }
+      header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
+      header .dot.on { background: var(--accent); }
+      header .spacer { flex: 1; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      main { display: grid; grid-template-columns: minmax(520px, 1.6fr) minmax(360px, 1fr); gap: 16px; padding: 16px; }
+      @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+      .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+      .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
+      .video { position: relative; background: #000; border-radius: 8px; overflow: hidden; display: flex; justify-content: center; }
+      .video img { width: 100%; display: block; }
+      .video .badge { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); border-radius: 6px; padding: 4px 8px; font-size: 12px; color: var(--muted); }
+      .video .live { position: absolute; top: 10px; right: 10px; background: rgba(16,185,129,0.18); color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      button {
+        background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+        border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer;
+      }
+      button:hover { border-color: #3b4252; }
+      button.primary { background: var(--accent-dim); border-color: var(--accent-dim); color: #04150f; font-weight: 600; }
+      button.primary:hover { background: var(--accent); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      input, select {
+        background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+        border-radius: 8px; padding: 7px 10px; font-size: 13px;
+      }
+      input[type="text"] { min-width: 150px; }
+      .bookmark-btn { font-size: 15px; padding: 12px 20px; }
+      .kv { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; color: var(--muted); }
+      .kv span:last-child { color: var(--text); font-variant-numeric: tabular-nums; }
+      .thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+      .thumbs img { width: 100%; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+      .run { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 8px; background: var(--panel-2); }
+      .run .head { display: flex; align-items: center; gap: 8px; }
+      .run .name { font-weight: 600; }
+      .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+      .tag.running { color: var(--warn); border-color: var(--warn); }
+      .tag.completed { color: var(--accent); border-color: var(--accent-dim); }
+      .tag.failed { color: var(--error); border-color: var(--error); }
+      .bar { height: 5px; background: #0b0d11; border-radius: 3px; overflow: hidden; margin: 8px 0; }
+      .bar > div { height: 100%; background: var(--accent-dim); width: 0; transition: width 0.4s; }
+      .muted { color: var(--muted); }
+      .small { font-size: 12px; }
+      .events { max-height: 220px; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+      .events div { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+      .chan { color: var(--accent); }
+      .chan.mqtt { color: #7dd3fc; }
+      .chan.script { color: #fca5a5; }
+      .chan.curation { color: #fbbf24; }
+      .det { display: inline-block; margin: 2px 6px 2px 0; padding: 2px 8px; border-radius: 999px; background: rgba(52,211,153,0.12); color: var(--accent); font-size: 12px; }
+      .toast { position: fixed; right: 16px; bottom: 16px; background: var(--panel-2); border: 1px solid var(--accent-dim); border-radius: 8px; padding: 10px 14px; opacity: 0; transition: opacity 0.2s; }
+      .toast.show { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="dot" id="camera-dot"></div>
+      <h1>Camera Station</h1>
+      <span class="muted small" id="camera-source">—</span>
+      <div class="spacer"></div>
+      <a id="studio-link" href="#" target="_blank">Open LightlyStudio ↗</a>
+    </header>
+
+    <main>
+      <div>
+        <div class="card">
+          <div class="video">
+            <img src="/stream.mjpg" alt="camera feed" />
+            <div class="badge" id="camera-badge">connecting…</div>
+            <div class="live" id="live-badge" style="display: none">● model live</div>
+          </div>
+          <div class="row" style="margin-top: 12px">
+            <button class="primary bookmark-btn" id="bookmark">Bookmark frame <span class="muted">(space)</span></button>
+            <input type="text" id="tag" placeholder="extra tag, e.g. line-a" />
+            <span class="muted small" id="bookmark-count"></span>
+          </div>
+          <div class="row" style="margin-top: 10px">
+            <input type="text" id="source" placeholder="rtsp://… , 0 for webcam, or a video file" style="flex: 1" />
+            <button id="connect">Connect</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Live detection</h2>
+          <div class="row">
+            <select id="deploy-model"></select>
+            <input type="number" id="threshold" min="0" max="1" step="0.05" value="0.5" style="width: 90px" />
+            <button class="primary" id="deploy">Deploy</button>
+            <button id="undeploy">Stop</button>
+            <label class="muted small"><input type="checkbox" id="auto-capture" /> auto-bookmark low-confidence frames</label>
+          </div>
+          <div id="deploy-info" class="small muted" style="margin-top: 10px">No model on the feed.</div>
+          <div id="detections" style="margin-top: 8px"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>Collected frames</h2>
+          <div class="kv"><span>Bookmarked</span><span id="count">0</span></div>
+          <div class="kv"><span>Dataset</span><span><a id="grid-link" href="#" target="_blank">open grid ↗</a></span></div>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+
+        <div class="card">
+          <h2>Models (LightlyTrain)</h2>
+          <div id="runs" class="small muted">No training runs yet. Label images in LightlyStudio, then run the “Train object detector” plugin.</div>
+        </div>
+
+        <div class="card">
+          <h2>Integrations</h2>
+          <div class="kv"><span>MQTT</span><span id="mqtt">off</span></div>
+          <div class="kv"><span>Python script</span><span id="hook">off</span></div>
+          <div class="events" id="events" style="margin-top: 10px"></div>
+        </div>
+      </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let lastState = null;
+
+      function toast(message, ok = true) {
+        const el = $("toast");
+        el.textContent = message;
+        el.style.borderColor = ok ? "var(--accent-dim)" : "var(--error)";
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), 2600);
+      }
+
+      async function post(path, body) {
+        const response = await fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body || {}),
+        });
+        if (!response.ok) {
+          const detail = await response.json().catch(() => ({ detail: response.statusText }));
+          throw new Error(detail.detail || "request failed");
+        }
+        return response.json();
+      }
+
+      async function bookmark() {
+        try {
+          const result = await post("/api/bookmark", { tag: $("tag").value.trim() });
+          toast("Bookmarked " + result.file_name);
+          refresh();
+        } catch (error) {
+          toast(error.message, false);
+        }
+      }
+
+      $("bookmark").onclick = bookmark;
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "Space" && event.target.tagName !== "INPUT") {
+          event.preventDefault();
+          bookmark();
+        }
+      });
+
+      $("connect").onclick = async () => {
+        const source = $("source").value.trim();
+        if (!source) return;
+        await post("/api/source", { source });
+        toast("Switching to " + source);
+      };
+
+      $("deploy").onclick = async () => {
+        try {
+          const result = await post("/api/deploy", {
+            model: $("deploy-model").value,
+            threshold: parseFloat($("threshold").value),
+          });
+          toast(result.message);
+        } catch (error) {
+          toast(error.message, false);
+        }
+      };
+
+      $("undeploy").onclick = async () => {
+        await post("/api/undeploy", {});
+        toast("Model stopped");
+      };
+
+      $("auto-capture").onchange = async (event) => {
+        await post("/api/auto-capture", { enabled: event.target.checked });
+      };
+
+      function renderRuns(runs) {
+        if (!runs.length) return;
+        $("runs").innerHTML = runs
+          .map((run) => {
+            const metrics = Object.entries(run.metrics || {})
+              .filter(([key]) => key === "map" || key === "map_50")
+              .map(([key, value]) => `${key} ${value.toFixed(3)}`)
+              .join(" · ");
+            const examples = (run.examples || [])
+              .slice(0, 3)
+              .map((name) => `<img src="/runs/${run.run_name}/examples/${name}" />`)
+              .join("");
+            return `
+              <div class="run">
+                <div class="head">
+                  <span class="name">${run.run_name}</span>
+                  <span class="tag ${run.status}">${run.status}</span>
+                  <span class="muted small">${run.model}</span>
+                </div>
+                <div class="bar"><div style="width: ${(run.progress * 100).toFixed(0)}%"></div></div>
+                <div class="small muted">
+                  step ${run.step}/${run.steps}
+                  ${run.loss != null ? "· loss " + run.loss.toFixed(2) : ""}
+                  · ${run.train_image_count} train / ${run.val_image_count} val
+                  ${metrics ? "· " + metrics : ""}
+                </div>
+                ${run.evaluation ? `<div class="small" style="margin-top:4px">${run.evaluation}</div>` : ""}
+                ${examples ? `<div class="thumbs" style="grid-template-columns: repeat(3, 1fr)">${examples}</div>` : ""}
+              </div>`;
+          })
+          .join("");
+      }
+
+      function renderModelOptions(state) {
+        const select = $("deploy-model");
+        const options = state.runs.filter((run) => run.has_model).map((run) => run.run_name);
+        options.unshift("latest");
+        options.push(state.defaults.model);
+        const current = select.value;
+        const html = options.map((name) => `<option value="${name}">${name}</option>`).join("");
+        if (select.dataset.options !== options.join(",")) {
+          select.innerHTML = html;
+          select.dataset.options = options.join(",");
+          if (options.includes(current)) select.value = current;
+        }
+      }
+
+      function render(state) {
+        lastState = state;
+        const camera = state.camera;
+        $("camera-dot").className = "dot" + (camera.connected ? " on" : "");
+        $("camera-source").textContent = camera.source;
+        $("camera-badge").textContent = camera.connected
+          ? `${camera.width}×${camera.height} · ${camera.fps} fps`
+          : camera.error || "connecting…";
+        if (!$("source").value) $("source").placeholder = camera.source;
+
+        $("count").textContent = state.bookmarks.count;
+        $("bookmark-count").textContent = state.bookmarks.count + " frames collected";
+        $("thumbs").innerHTML = state.bookmarks.recent
+          .slice(0, 8)
+          .map((b) => `<img src="/bookmarks/${b.file_name}" title="${b.captured_at} · ${b.tags.join(", ")}" />`)
+          .join("");
+        $("studio-link").href = state.links.studio;
+        $("grid-link").href = state.links.grid;
+
+        renderRuns(state.runs);
+        renderModelOptions(state);
+
+        const deployment = state.deployment;
+        $("live-badge").style.display = deployment.active && !deployment.loading ? "block" : "none";
+        $("auto-capture").checked = deployment.auto_capture;
+        if (deployment.loading) {
+          $("deploy-info").textContent = "Loading " + deployment.model_name + "…";
+        } else if (deployment.active) {
+          $("deploy-info").textContent =
+            `${deployment.model_name} on ${deployment.device} · ${deployment.fps} fps · threshold ${deployment.threshold}` +
+            (deployment.auto_capture_count ? ` · ${deployment.auto_capture_count} frames auto-bookmarked` : "");
+        } else {
+          $("deploy-info").textContent = deployment.error || "No model on the feed.";
+        }
+        const counts = {};
+        deployment.detections.forEach((d) => {
+          counts[d.class_name] = (counts[d.class_name] || 0) + 1;
+        });
+        $("detections").innerHTML = Object.entries(counts)
+          .map(([name, count]) => `<span class="det">${name} × ${count}</span>`)
+          .join("");
+
+        const integrations = state.integrations;
+        $("mqtt").textContent = integrations.mqtt_enabled
+          ? `${integrations.mqtt_broker} ${integrations.mqtt_connected ? "· connected" : "· offline"}`
+          : "off";
+        $("hook").textContent = integrations.hook_error || integrations.hook_script || "off";
+        $("events").innerHTML = integrations.events
+          .map((event) => {
+            const time = new Date(event.timestamp * 1000).toLocaleTimeString();
+            return `<div><span class="muted">${time}</span> <span class="chan ${event.channel}">${event.channel}</span> ${event.message}</div>`;
+          })
+          .join("");
+      }
+
+      async function refresh() {
+        try {
+          const response = await fetch("/api/state");
+          render(await response.json());
+        } catch (error) {
+          $("camera-badge").textContent = "station offline";
+        }
+      }
+
+      refresh();
+      setInterval(refresh, 1000);
+    </script>
+  </body>
+</html>
