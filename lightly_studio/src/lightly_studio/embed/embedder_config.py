@@ -68,10 +68,10 @@ def build_remote(config: EmbedderConfig) -> Embedder:
         An embedder that reaches the server and produces the stored space.
 
     Raises:
-        RemoteEmbedderError: If the configuration names no server or the URL is not one
-            that a request can reach, the server gives no answer, rejects the token, breaks
-            the protocol, advertises no capability that LightlyStudio can use, or produces
-            another space than the stored one.
+        RemoteEmbedderError: If the configuration names no server, the URL is not one that
+            a request can reach, the URL policy refuses the address, the server gives no
+            answer, rejects the token, breaks the protocol, advertises no capability that
+            LightlyStudio can use, or produces another space than the stored one.
     """
     if config.url is None:
         raise RemoteEmbedderConfigError(
@@ -87,6 +87,14 @@ def build_remote(config: EmbedderConfig) -> Embedder:
     try:
         embedder = RemoteEmbedder.connect(client=client, api_key=config.api_key)
         _check_identity(embedder=embedder, config=config)
+    except ValueError as error:
+        # `url_policy` refuses an address outside the policy with a `ValueError`, which says
+        # nothing to a caller that branches on the errors of this package.
+        client.close()
+        raise RemoteEmbedderConfigError(
+            f"The embedding server URL {config.url!r} of space {config.space_key!r} is refused: "
+            f"{error}"
+        ) from error
     except Exception:
         client.close()
         raise

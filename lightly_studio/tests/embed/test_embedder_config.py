@@ -137,6 +137,6 @@ def _config(api_key: str | None = None) -> EmbedderConfig:
 
 def _serving(embedder: TextEmbedder, mocker: MockerFixture) -> TestClient:
     """Serve ``embedder`` to every client that ``build_remote`` opens."""
-    client = TestClient(server.create_app(embedder=embedder))
+    client = TestClient(server.create_app(embedder=embedder), follow_redirects=False)
     mocker.patch.object(connection, "build_client", return_value=client)
     return client
