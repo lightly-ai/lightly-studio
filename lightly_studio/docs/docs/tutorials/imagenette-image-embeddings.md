@@ -53,7 +53,6 @@ DATA_DIR = Path("data")
 # Touched only after extractall returns, so an interrupted extraction is not
 # mistaken for a complete one.
 EXTRACT_DONE = DATA_DIR / ".extracted"
-IMAGE_PATH = DATA_DIR / "imagenette2-320" / "train"
 
 
 def download_dataset() -> None:
@@ -63,8 +62,8 @@ def download_dataset() -> None:
     if not EXTRACT_DONE.exists():
         with tarfile.open(ARCHIVE) as tar:
             # filter="data" refuses members that would write outside DATA_DIR.
-            # Python 3.12 and newer apply this filter by default. Older versions
-            # accept the argument from 3.9.17, 3.10.12, and 3.11.4 onwards.
+            # Python 3.14 and newer apply this filter by default. Versions
+            # without data_filter use unfiltered extraction below.
             if hasattr(tarfile, "data_filter"):
                 tar.extractall(DATA_DIR, filter="data")
             else:
@@ -87,9 +86,9 @@ space, because both the archive and the extracted folder are present after the r
 `imagenette2-320.tgz` afterwards if you need the space.
 
 !!! note "Extraction safety"
-    `filter="data"` refuses archive members that would write outside `data/`. Python 3.12
-    and newer apply this filter by default. The script only passes the argument when your
-    Python version supports it, so it also runs on older versions.
+    `filter="data"` refuses archive members that would write outside `data/`. Python 3.14
+    and newer apply this filter by default. The script explicitly uses it when available;
+    on older Python versions without support, extraction is unfiltered.
 
 The extracted dataset has this layout:
 
@@ -116,14 +115,14 @@ class of a folder:
 | Folder | Class |
 | --- | --- |
 | n01440764 | tench |
-| n02102040 | English springer |
-| n02979186 | cassette player |
-| n03000684 | chain saw |
+| n02102040 | english_springer |
+| n02979186 | cassette_player |
+| n03000684 | chain_saw |
 | n03028079 | church |
-| n03394916 | French horn |
-| n03417042 | garbage truck |
-| n03425413 | gas pump |
-| n03445777 | golf ball |
+| n03394916 | french_horn |
+| n03417042 | garbage_truck |
+| n03425413 | gas_pump |
+| n03445777 | golf_ball |
 | n03888257 | parachute |
 
 The `train/` split has between 858 and 993 images per class.
@@ -144,8 +143,7 @@ import lightly_studio as ls
 if __name__ == "__main__":
     dataset = ls.ImageDataset.load_or_create(name="imagenette")
     # 9,469 images. The first run also downloads the embedding model.
-    # Add limit=1000 for a faster first pass.
-    dataset.add_images_from_path(path="data/imagenette2-320/train", tag_depth=1)
+    dataset.add_images_from_path(path="data/imagenette2-320/train")
     ls.start_gui()
 ```
 
@@ -163,9 +161,6 @@ python explore_imagenette.py
 LightlyStudio computes the image embeddings during ingestion, so there is no separate step
 and no button in the GUI to compute them. The first run also downloads the embedding model,
 which makes it slower than later runs.
-
-`tag_depth=1` tags each image with the name of its folder, its WordNet ID. These tags come
-from the dataset, not from annotations that you created, so leave them alone until step 7.
 
 ## Step 3: Explore the embedding plot
 
@@ -185,7 +180,7 @@ projection of its embedding.
 </figure>
 
 
-1. Scroll to zoom, and drag to pan.
+1. Scroll to zoom, and select **Pan** to drag the view.
 2. Hover over several points to preview their images.
 3. Look for shared characteristics: object shape, scene type, indoor or outdoor, and
    background.
@@ -196,10 +191,11 @@ group is not necessarily one class, and one class can appear in several groups. 
 proximity as a reason to inspect images together, not as proof that they share an
 annotation class.
 
-To inspect a group together, select it. The plot toolbar has a lasso button
-<span class="ls-inline-icon ls-inline-icon--lasso"></span> and a rectangle button
-<span class="ls-inline-icon ls-inline-icon--rectangle"></span>. You can also select without
-leaving normal mode:
+To inspect a group together, select it. The plot controls offer **Pan**, **Rectangle**
+<span class="ls-inline-icon ls-inline-icon--rectangle"></span>, and **Lasso**
+<span class="ls-inline-icon ls-inline-icon--lasso"></span>. The selected tool stays active
+after you draw a region. Select **Pan** to drag the view again. In **Pan** mode, you can
+also select with these shortcuts:
 
 | Gesture | Result |
 | --- | --- |
@@ -236,9 +232,10 @@ garbage trucks are easy to recognize, but use whichever examples you can identif
 confidently. Lasso a region from step 3 to narrow the grid first, or work from the full
 grid.
 
-Open an image's detail view and use **Add classification** to assign its class as an
-annotation class. Put every annotation that you create into one annotation source, named
-`my_labels`. Step 8 compares that source against the ground truth.
+Open an image's detail view. Click **Adding to**, type `my_labels`, and select
+**Create: my_labels**, or select that source if it already exists. Then use
+**Add classification** to assign its annotation class. Put every annotation that you create
+into this source. Step 8 compares it against the ground truth.
 
 Use these exact annotation class names:
 
@@ -252,6 +249,10 @@ cassette_player    french_horn
     Step 8 compares annotation classes as text. If you write `garbage truck` here and the
     ground truth says `garbage_truck`, every image of that class counts as a disagreement.
     Copy the names from this list.
+
+Keep exactly one classification per annotated image in each annotation source. Before
+assigning a different class, remove the previous classification from that source. Step 8
+cannot evaluate an image with multiple classifications in either source.
 
 Annotate two or three clear examples for each class you choose. If you are unsure about an
 image, consult the class table in step 1, or leave the image for later review.
@@ -409,16 +410,16 @@ overwrite the annotations that you created.
 
 !!! warning "Run this script one time only"
     `add_annotation` appends to an annotation source. A second run gives every image a second
-    ground truth annotation. If you must run it again, delete the `ground_truth` source in the
-    GUI first.
+    ground truth annotation, which prevents classification evaluation.
 
 Start the GUI again to see both sources. The **Annotation Sources** section of the **Filters**
 panel on the left now has two checkboxes, `my_labels` and `ground_truth`. Select a source to
 show its annotations, and deselect it to hide them.
 
-With both sources selected, each image shows two annotations: violet for `my_labels` and red for
-`ground_truth`. Where your annotation and the ground truth disagree, the two show different
-annotation classes. The counts under **Annotation Classes** follow the selection.
+With both sources selected, each image you annotated shows annotations from both
+`my_labels` and `ground_truth`. Where your annotation and the ground truth disagree,
+the two show different annotation classes. The counts under **Annotation Classes** follow
+the selection.
 
 <figure markdown>
   <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
@@ -455,11 +456,15 @@ python evaluate_imagenette.py
 This script uses the ground truth loaded in step 7 without adding annotations. Do not rerun
 `load_ground_truth.py` to evaluate your progress.
 
+Each evaluation needs a unique run name within the dataset. Before running this script
+again, change `name` to a new value, such as `"imagenette-review-2"`, and select that run
+in the GUI. Use a new name even if the previous evaluation failed.
+
 An evaluation run uses only the images that are in both annotation sources. Your run therefore
 covers the images that you annotated, and no others. Images that you did not annotate are
 skipped. They do not count as errors.
 
-Open the **Evaluation** panel <span class="ls-inline-icon ls-inline-icon--eval"></span> in the
+Open the **Eval** tab <span class="ls-inline-icon ls-inline-icon--eval"></span> in the
 GUI and select the `imagenette-review` run:
 
 1. Read the confusion matrix. Green cells on the diagonal are images where you and the ground
@@ -513,8 +518,9 @@ images together and gave a whole group its shared annotation class in one action
 loaded the ground truth of the dataset and measured where your annotations and the ground
 truth disagree.
 
-Continue with more groups until you reach the coverage you need. Stop the GUI and rerun
-`evaluate_imagenette.py` after each session. The confusion matrix shows whether your accuracy
+Continue with more groups until you reach the coverage you need. After each session, stop
+the GUI, choose a new run name in `evaluate_imagenette.py` (for example,
+`"imagenette-review-2"`), and rerun it. The confusion matrix shows whether your accuracy
 holds as you move into groups that are harder to tell apart.
 
 A follow-up workflow could use embeddings and a small set of annotated examples to
