@@ -38,6 +38,49 @@ _TITLE = "*<{url}|{display_name} Release {version}>*"
 _TRUNCATION_TAIL = "…\nFull changelog: <{url}|{display_name} Release {version} on GitHub>"
 
 
+def render_slack_payload(
+    section_body: str,
+    version: str,
+    release_url: str,
+    display_name: str,
+    channel: str,
+) -> dict[str, str | bool]:
+    """Renders a released changelog section as a `chat.postMessage` request body.
+
+    The whole request, not just its `text`, so the announcement's shape is covered by
+    these tests rather than by the workflow that posts it.
+
+    Args:
+        section_body: The `[X.Y.Z]` block, as returned by `changelog.extract_released_section`.
+        version: The version being announced, e.g. "1.1.0".
+        release_url: The GitHub release page. Linked from the title, so a truncated message
+            always has somewhere to send the reader.
+        display_name: The product name the title announces, to tell two packages apart in
+            one channel.
+        channel: The channel to post in, e.g. "studio-issues-and-feedback".
+
+    Returns:
+        The request body for `chat.postMessage`.
+
+    Raises:
+        PrepareReleaseError: The section has no entries, or not even its first entry fits
+            `character_limit`.
+    """
+    return {
+        "channel": channel,
+        "text": render_slack_message(
+            section_body=section_body,
+            version=version,
+            release_url=release_url,
+            display_name=display_name,
+        ),
+        # The title links to the GitHub release. Unfurled, every announcement grows a
+        # preview card of that page under the entries.
+        "unfurl_links": False,
+        "unfurl_media": False,
+    }
+
+
 def render_slack_message(
     section_body: str,
     version: str,
