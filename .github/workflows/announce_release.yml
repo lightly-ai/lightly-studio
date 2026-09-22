@@ -83,27 +83,30 @@ jobs:
             --output "${RUNNER_TEMP}/slack-message.txt"
           cat "${RUNNER_TEMP}/slack-message.txt" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Post the announcement
-        # Undeclared on workflow_dispatch, so it is empty there and a manual re-post
-        # still fails loudly.
-        continue-on-error: ${{ inputs.tolerate-failure == true }}
+      - name: Build the Slack payload
         env:
-          SLACK_TOKEN: ${{ secrets.SLACK_ACTION_BOT_TOKEN }}
           # Declared on workflow_dispatch only, so it is empty on a workflow_call run.
           CHANNEL: ${{ inputs.channel || env.SLACK_CHANNEL }}
         # `jq --rawfile` keeps the message out of both `${{ }}` expansion and shell
-        # quoting. Slack rejects a message with `ok: false` and HTTP 200, so the status
-        # code alone would report a silent success.
+        # quoting. The action reads it back with templating off, so nothing expands it
+        # later either - unlike the inline `payload:` the Slack docs lead with.
         run: |
           set -euo pipefail
           jq -n --arg channel "${CHANNEL}" --rawfile text "${RUNNER_TEMP}/slack-message.txt" \
             '{channel: $channel, text: $text, unfurl_links: false, unfurl_media: false}' \
             > "${RUNNER_TEMP}/slack-payload.json"
-          curl -sS -X POST https://slack.com/api/chat.postMessage \
-            -H "Authorization: Bearer ${SLACK_TOKEN}" \
-            -H 'Content-type: application/json; charset=utf-8' \
-            --data @"${RUNNER_TEMP}/slack-payload.json" > "${RUNNER_TEMP}/slack-response.json"
-          if [ "$(jq -r .ok < "${RUNNER_TEMP}/slack-response.json")" != "true" ]; then
-            echo "::error::Slack rejected the message: $(jq -r .error < "${RUNNER_TEMP}/slack-response.json")"
-            exit 1
-          fi
+
+      - name: Post the announcement
+        # Undeclared on workflow_dispatch, so it is empty there and a manual re-post
+        # still fails loudly.
+        continue-on-error: ${{ inputs.tolerate-failure == true }}
+        # Pinned by digest: this is the one step that sees the bot token. `errors` is
+        # off by default, and Slack rejects a message with `ok: false` and HTTP 200, so
+        # without it a rejected post reports success. `retries` defaults to 5, which is
+        # the reason for using the action over a bare curl.
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_ACTION_BOT_TOKEN }}
+          payload-file-path: ${{ runner.temp }}/slack-payload.json
+          errors: true
