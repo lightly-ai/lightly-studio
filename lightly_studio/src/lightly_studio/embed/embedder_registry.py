@@ -5,7 +5,7 @@ capability they need with the matching typed getter, which returns the space's
 embedder only when it implements that capability.
 
 A getter that gets the stored configuration of a space also resolves an embedder that
-nobody registered: it builds the one the configuration names and caches it per dataset.
+nobody registered: it builds the one the configuration names.
 """
 
 from __future__ import annotations
@@ -61,14 +61,11 @@ class EmbedderRegistry:
     space. Initially, MobileCLIP and Perception Encoder serve as default bootstraps
     for preselected capabilities. Bootstraps are updated when a custom embedder is registered.
 
-    Calling a getter with the stored ``config`` of a space adds a third source: a space
-    that no embedder is registered for resolves to the embedder its configuration names.
-    Registered embedders are process-global and keyed on the space alone, while embedders
-    built from a configuration are cached per dataset, because the same space key in two
-    datasets can name two backends. The three sources rank: a call to ``register`` wins over
-    a stored row, and a stored row wins over a built-in. A built-in that a bootstrap call
-    loaded is therefore held apart from the registrations, or the first dataset to load one
-    would serve every other dataset that configures the same space key.
+    Calling a getter with the stored ``config`` of a space adds a third source, and the
+    three rank: a registration wins over a configuration, which wins over a built-in.
+    A registration is process-global and keyed on the space alone, while a configured
+    embedder is cached per dataset, because the same space key in two datasets can name
+    two backends.
     """
 
     def __init__(self) -> None:
@@ -186,16 +183,12 @@ class EmbedderRegistry:
     ) -> Embedder | None:
         """Resolve the embedder of a space from a registration, a configuration or a built-in.
 
-        The sources rank in that order, so a stored row serves a space whose built-in another
-        dataset already loaded.
-
         Args:
             space_key: The space to resolve. None selects the bootstrap space of the
-                capability. A configuration names its own space, so ``space_key`` is
-                ignored when one is given.
+                capability, and a ``config`` names its own space.
             capability: The capability the caller needs. It selects the bootstrap space.
-            config: The stored configuration of the space. It is used only when no
-                embedder is registered for the space.
+            config: The stored configuration of the space, used only when no embedder is
+                registered for it.
 
         Returns:
             The embedder of the space, or None if no source has one.
@@ -216,15 +209,12 @@ class EmbedderRegistry:
     def _embedder_from_config(self, config: EmbedderConfig) -> Embedder | None:
         """Build and cache the embedder that a stored configuration names.
 
-        The cache holds the configuration the embedder was built from, so a changed URL or
-        a rotated key builds a new embedder instead of serving the old one. It is keyed on
-        the dataset as well, so two datasets that share a space key keep their own backend.
-        The embedder is cached before any capability is asked of it, so a dataset reads
-        ``/v1/describe`` once and not once per capability.
+        The cache holds the configuration built from, so a changed URL or a rotated key
+        builds again instead of serving the old embedder.
 
         Returns:
-            The embedder of the configuration, or None if the server serves none. Such a
-            server reads like a space with no embedder, which every caller already handles.
+            The embedder of the configuration, or None if the server cannot be used. That
+            reads like a space with no embedder, which every caller already handles.
         """
         # TODO(Iunir, 09/2026): Close the client of a replaced embedder when the remote
         # embedder gains a teardown hook.
@@ -250,8 +240,7 @@ class EmbedderRegistry:
     def _builtin_embedder(self, space_key: str) -> Embedder | None:
         """Lazily load and cache the built-in embedder of a space.
 
-        The built-in is cached apart from the registrations, so it is loaded once and still
-        loses to a stored configuration of the same space.
+        It is cached apart from the registrations, so it still loses to a configuration.
         """
         cached = self._space_key_to_builtin.get(space_key)
         if cached is not None:
