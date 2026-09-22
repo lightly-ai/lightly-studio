@@ -47,8 +47,8 @@ def render_slack_payload(
 ) -> dict[str, str | bool]:
     """Renders a released changelog section as a `chat.postMessage` request body.
 
-    The whole request, not just its `text`, so the announcement's shape is covered by
-    these tests rather than by the workflow that posts it.
+    The body carries the rendered message as `text`, the channel to post it in, and both
+    unfurl flags turned off.
 
     Args:
         section_body: The `[X.Y.Z]` block, as returned by `changelog.extract_released_section`.
@@ -64,7 +64,7 @@ def render_slack_payload(
 
     Raises:
         PrepareReleaseError: The section has no entries, or not even its first entry fits
-            `character_limit`.
+            `CHARACTER_LIMIT`.
     """
     return {
         "channel": channel,
