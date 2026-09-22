@@ -27,12 +27,13 @@ from lightly_studio_serve.protocol import DescribeResponse, EmbeddingsResponse, 
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from numpy.typing import NDArray
 
-from lightly_studio.embed.remote import batching, composition, connection
+from lightly_studio.embed.remote import batching, composition, connection, url_policy
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderCapabilityError,
     RemoteEmbedderError,
     RemoteEmbedderProtocolError,
 )
+from lightly_studio.embed.remote.timeouts import RemoteTimeouts
 from lightly_studio.embed.remote.transport import RemoteTransport
 
 _ItemT = TypeVar("_ItemT")
@@ -67,13 +68,19 @@ class RemoteEmbedder(Embedder):
         self._limits = limits
 
     @classmethod
-    def connect(cls, client: httpx.Client, api_key: str | None = None) -> RemoteEmbedder:
+    def connect(
+        cls,
+        client: httpx.Client,
+        api_key: str | None = None,
+        timeouts: RemoteTimeouts | None = None,
+    ) -> RemoteEmbedder:
         """Read ``/v1/describe`` over ``client`` and build the embedder that answers.
 
         The ``base_url`` of ``client`` names the server, and ``connection.build_client``
-        opens one against a URL. The caller owns the client and closes it, because an
-        embedder outlives no request of its own: ``EmbedderRegistry`` holds a registered
-        embedder for the lifetime of the process.
+        opens one against a URL. That ``base_url`` is the address that the URL policy
+        checks, before the first request leaves. The caller owns the client and closes it,
+        because an embedder outlives no request of its own: ``EmbedderRegistry`` holds a
+        registered embedder for the lifetime of the process.
 
         The description is read here and not at the first call, because
         ``EmbedderRegistry.register`` reads ``embedding_space_spec()`` as soon as it gets
@@ -83,17 +90,24 @@ class RemoteEmbedder(Embedder):
             client: The client that carries every request.
             api_key: The token to send as ``Authorization: Bearer``, or ``None`` for a
                 server that wants none.
+            timeouts: The budget of each capability. ``None`` applies
+                ``timeouts.DEFAULT_TIMEOUTS``.
 
         Returns:
             An embedder that implements the interface of every capability that the server
             advertises and this client routes to.
 
         Raises:
+            ValueError: If the URL policy refuses the address of the server, or if the
+                client follows redirects.
             RemoteEmbedderError: If the server gives no answer, rejects the token, answers
                 a description that the protocol does not allow, or advertises no
                 capability that LightlyStudio can use.
         """
-        transport = RemoteTransport(client=client, api_key=api_key)
+        # The address that the requests really go to, checked before one is sent.
+        url_policy.check_url(url=str(client.base_url), api_key=api_key)
+        url_policy.check_no_redirects(client=client)
+        transport = RemoteTransport(client=client, api_key=api_key, timeouts=timeouts)
         description = transport.describe()
         connection.log_if_loading(description=description, client=client)
         return _embedder_for(transport=transport, description=description)
