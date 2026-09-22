@@ -6,9 +6,13 @@
     import { routeHelpers } from '$lib/routes';
     import type { PageData } from './$types.js';
 
+    interface Props {
+        data: PageData;
+    }
+
     const collectionId = $derived(page.params.collection_id!);
     const collectionType = $derived(page.params.collection_type!);
-    const { data: pageData }: { data: PageData } = $props();
+    const { data: pageData }: Props = $props();
 
     const { data, query, loadMore, totalCount } = useMcapSequencesInfinite(() => collectionId);
     const { setfilteredSampleCount } = useGlobalStorage();
