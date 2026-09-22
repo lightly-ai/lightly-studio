@@ -294,7 +294,7 @@ def test_resolve_query_embedder__builds_remote_from_stored_config(
     model.remote_embedder_url = "http://embedder.test"
     db_session.add(model)
     db_session.commit()
-    client = TestClient(server.create_app(embedder=_ServerTextEmbedder()))
+    client = TestClient(server.create_app(embedder=_ServerTextEmbedder()), follow_redirects=False)
     mocker.patch.object(connection, "build_client", return_value=client)
 
     embedder = default_embedder.resolve_query_embedder(
