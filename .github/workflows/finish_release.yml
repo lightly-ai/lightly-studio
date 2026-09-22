@@ -124,6 +124,10 @@ jobs:
 
       - name: Build the Distributions
         working-directory: ${{ steps.package.outputs.directory }}
+        env:
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
+          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
         run: make build
 
       # Before the upload, so a wheel that fails it never reaches the publish job.
