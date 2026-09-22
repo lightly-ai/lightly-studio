@@ -12,11 +12,11 @@ from lightly_studio.errors import NotFoundError
 from lightly_studio.models.mcap_sequence_ticks import TickDetailView
 from lightly_studio.services import recording_service
 
-get_tick_router = APIRouter()
+get_tick_details_router = APIRouter()
 
 
-@get_tick_router.get("/ticks/{seq_number}", response_model=TickDetailView)
-def get_tick(
+@get_tick_details_router.get("/ticks/{seq_number}", response_model=TickDetailView)
+def get_tick_details(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset ID")],
     sequence_id: Annotated[UUID, Path(title="Sequence ID")],
