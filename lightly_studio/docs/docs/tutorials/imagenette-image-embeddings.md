@@ -33,6 +33,12 @@ fit for this workflow: you can recognize a church or a parachute without a refer
 
 This tutorial uses the 320 px variant, where each image has a shortest side of 320 pixels.
 
+Install LightlyStudio in your Python environment:
+
+```bash
+pip install lightly-studio
+```
+
 Save the following as `download_imagenette.py` in a working directory:
 
 ```python title="download_imagenette.py"
@@ -129,12 +135,6 @@ Imagenette is a subset of ImageNet, so the terms of ImageNet apply to the images
 Imagenette repository for its license note.
 
 ## Step 2: Import the images
-
-Install LightlyStudio in your Python environment:
-
-```bash
-pip install lightly-studio
-```
 
 Save the following as `explore_imagenette.py` in the same working directory:
 
@@ -388,7 +388,7 @@ if __name__ == "__main__":
     for sample in dataset:
         wordnet_id = Path(sample.file_path_abs).parent.name
         sample.add_annotation(
-            CreateClassification(class_name=WORDNET_TO_CLASS[wordnet_id]),
+            annotation=CreateClassification(class_name=WORDNET_TO_CLASS[wordnet_id]),
             annotation_source="ground_truth",
         )
     print("Ground truth loaded.")
@@ -429,10 +429,14 @@ annotation classes. The counts under **Annotation Classes** follow the selection
 
 ## Step 8: Compare your annotations against the ground truth
 
-An evaluation run compares two annotation sources and stores a metric for each image. Add
-this to the end of `load_ground_truth.py`, inside the `if __name__ == "__main__":` block:
+An evaluation run compares two annotation sources and stores a metric for each image. Save
+the following as `evaluate_imagenette.py` in the same working directory:
 
-```python title="load_ground_truth.py"
+```python title="evaluate_imagenette.py"
+import lightly_studio as ls
+
+if __name__ == "__main__":
+    dataset = ls.ImageDataset.load(name="imagenette")
     result = dataset.evaluate().classification(
         name="imagenette-review",
         gt_annotation_source="ground_truth",
@@ -441,6 +445,15 @@ this to the end of `load_ground_truth.py`, inside the `if __name__ == "__main__"
     print(f"Compared {result.sample_count} images.")
     ls.start_gui()
 ```
+
+Stop the running GUI with **Ctrl+C**, then run:
+
+```bash
+python evaluate_imagenette.py
+```
+
+This script uses the ground truth loaded in step 7 without adding annotations. Do not rerun
+`load_ground_truth.py` to evaluate your progress.
 
 An evaluation run uses only the images that are in both annotation sources. Your run therefore
 covers the images that you annotated, and no others. Images that you did not annotate are
@@ -500,9 +513,9 @@ images together and gave a whole group its shared annotation class in one action
 loaded the ground truth of the dataset and measured where your annotations and the ground
 truth disagree.
 
-Continue with more groups until you reach the coverage you need. Run the evaluation again
-after each session. The confusion matrix shows whether your accuracy holds as you move into
-groups that are harder to tell apart.
+Continue with more groups until you reach the coverage you need. Stop the GUI and rerun
+`evaluate_imagenette.py` after each session. The confusion matrix shows whether your accuracy
+holds as you move into groups that are harder to tell apart.
 
 A follow-up workflow could use embeddings and a small set of annotated examples to
 generate nearest-neighbor suggestions. Keep suggestions in their own annotation source
