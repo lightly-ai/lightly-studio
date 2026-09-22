@@ -83,6 +83,7 @@ def get_all_by_collection_id(
     sequence_frames = _get_sequence_frames(
         session=session,
         sequences=sequences,
+        collection_id=collection_id,
     )
 
     views = [
