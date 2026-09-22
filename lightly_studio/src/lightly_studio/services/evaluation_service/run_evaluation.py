@@ -17,6 +17,7 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
     EvaluationResult,
     ImageDatasetEvaluate,
+    InstanceSegmentationEvaluationConfig,
     ObjectDetectionEvaluationConfig,
     SemanticSegmentationEvaluationConfig,
 )
@@ -28,6 +29,7 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 EvaluationConfig = Union[
     ObjectDetectionEvaluationConfig,
     ClassificationEvaluationConfig,
+    InstanceSegmentationEvaluationConfig,
     SemanticSegmentationEvaluationConfig,
 ]
 
@@ -98,6 +100,13 @@ def run_evaluation(  # noqa: PLR0913
         )
     if isinstance(config, ClassificationEvaluationConfig):
         return evaluator.classification(
+            name=run_name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
+            config=config,
+        )
+    if isinstance(config, InstanceSegmentationEvaluationConfig):
+        return evaluator.instance_segmentation(
             name=run_name,
             gt_annotation_source=gt_annotation_source,
             pred_annotation_source=pred_annotation_source,

@@ -76,6 +76,7 @@ export const canSubmitEvaluation = (params: {
 const TASK_TO_ANNOTATION_TYPE: Record<EvaluationTaskType, string> = {
     object_detection: 'object_detection',
     classification: 'classification',
+    instance_segmentation: 'segmentation_mask',
     semantic_segmentation: 'segmentation_mask'
 };
 

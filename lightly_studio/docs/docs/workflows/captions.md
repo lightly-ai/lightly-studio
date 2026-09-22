@@ -1,4 +1,4 @@
-# Captions
+# Add Captions
 
 Captions are text descriptions associated with samples in your dataset. Each sample can have one or
 more captions. Captions are commonly used as training data for vision-language models.

@@ -1,4 +1,4 @@
-# Annotations
+# Create and Edit Annotations
 
 LightlyStudio supports three annotation types:
 
