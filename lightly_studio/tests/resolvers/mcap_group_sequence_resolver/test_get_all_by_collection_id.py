@@ -243,10 +243,10 @@ def test_get_all_by_collection_id__no_sequence_frame_without_camera_frames(
     assert result.samples[0].sequence_frame is None
 
 
-def test_get_all_by_collection_id__sequence_frame_picks_lowest_index_camera(
+def test_get_all_by_collection_id__sequence_frame_uses_lowest_index_slot_when_channel_changes(
     db_session: Session,
 ) -> None:
-    """Picks the lowest-indexed VIDEO_FRAME slot, not whichever camera has the earliest keyframe."""
+    """Uses the lowest-indexed VIDEO_FRAME slot instead of its stored channel ID."""
     sequence_collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
     group_collection = create_collection(
         session=db_session,
@@ -283,8 +283,8 @@ def test_get_all_by_collection_id__sequence_frame_picks_lowest_index_camera(
         collection_id=sequence_collection.collection_id,
         recording_id=recording_id,
     )
-    # Rear (channel 5) has an earlier keyframe than front (channel 3).
-    # Front has the lower group component index.
+    # The front slot's channel ID is from an earlier bag. This recording uses channel 8.
+    # Rear has an earlier keyframe, but front has the lower group component index.
     rear_sample_id = _create_mcap_sample(
         session=db_session,
         collection_id=slots["rear"].collection_id,
@@ -295,7 +295,7 @@ def test_get_all_by_collection_id__sequence_frame_picks_lowest_index_camera(
     front_sample_id = _create_mcap_sample(
         session=db_session,
         collection_id=slots["front"].collection_id,
-        channel_id=3,
+        channel_id=8,
         log_time_ns=200,
         keyframe_log_time_ns=200,
     )
@@ -318,7 +318,7 @@ def test_get_all_by_collection_id__sequence_frame_picks_lowest_index_camera(
     sequence_frame = result.samples[0].sequence_frame
 
     assert sequence_frame is not None
-    assert sequence_frame.channel_id == 3
+    assert sequence_frame.channel_id == 8
     assert sequence_frame.keyframe_log_time_ns == "200"
 
 

@@ -83,7 +83,6 @@ def get_all_by_collection_id(
     sequence_frames = _get_sequence_frames(
         session=session,
         sequences=sequences,
-        collection_id=collection_id,
     )
 
     views = [
@@ -142,9 +141,9 @@ def _get_sequence_frames(
 
     Only frames where ``keyframe_log_time_ns == log_time_ns`` are considered —
     these are self-contained keyframes decodable by the /camera-frame endpoint
-    without any preceding reference frame. The camera channel is resolved once
-    for the whole collection (lowest ``group_component_index`` VIDEO_FRAME slot);
-    sequences whose resolved channel has no such frame are absent from the dict.
+    without any preceding reference frame. The camera slot is resolved once for
+    the whole collection (lowest ``group_component_index`` VIDEO_FRAME slot);
+    sequences whose resolved slot has no such frame are absent from the dict.
 
     Args:
         session: Database session for executing queries.
@@ -154,11 +153,11 @@ def _get_sequence_frames(
     Returns:
         Dictionary mapping sequence sample_id to its first-keyframe locator.
     """
-    channel_id = _get_first_video_frame_channel_id(
+    video_frame_collection_id = _get_first_video_frame_collection_id(
         session=session,
         sequence_collection_id=collection_id,
     )
-    if channel_id is None:
+    if video_frame_collection_id is None:
         return {}
     recording_id_by_sample_id = {
         sequence.sample_id: sequence.recording_id for sequence in sequences
@@ -171,7 +170,7 @@ def _get_sequence_frames(
     keyframe_rows = _get_first_keyframe_per_sequence(
         session=session,
         sequence_sample_ids=sequence_sample_ids,
-        channel_id=channel_id,
+        collection_id=video_frame_collection_id,
     )
     return _create_sequence_frames(
         keyframe_rows=keyframe_rows,
@@ -191,22 +190,22 @@ def _get_dataset_ids_by_recording_id(
     return dict(session.exec(query).all())
 
 
-def _get_first_video_frame_channel_id(
+def _get_first_video_frame_collection_id(
     session: Session,
     sequence_collection_id: UUID,
-) -> int | None:
-    """Get the channel_id of the lowest-indexed VIDEO_FRAME slot in the collection.
+) -> UUID | None:
+    """Get the collection_id of the lowest-indexed VIDEO_FRAME slot in the collection.
 
     Resolves the camera slot once per collection by finding the VIDEO_FRAME component
     with the smallest ``group_component_index`` in the GROUP child of the SEQUENCE
-    collection. Returns ``None`` when no VIDEO_FRAME slot has a ``channel_id`` assigned.
+    collection. Returns ``None`` when no VIDEO_FRAME slot exists.
 
     Args:
         session: Database session for executing queries.
         sequence_collection_id: The SEQUENCE collection to resolve the camera for.
 
     Returns:
-        The ``channel_id`` of the lowest-indexed VIDEO_FRAME slot, or ``None``.
+        The ``collection_id`` of the lowest-indexed VIDEO_FRAME slot, or ``None``.
     """
     group_collection_id = session.exec(
         select(CollectionTable.collection_id)
@@ -217,7 +216,7 @@ def _get_first_video_frame_channel_id(
     if group_collection_id is None:
         return None
     return session.exec(
-        select(McapGroupComponentDefinitionTable.channel_id)
+        select(McapGroupComponentDefinitionTable.collection_id)
         .join(
             GroupComponentDefinitionTable,
             col(GroupComponentDefinitionTable.collection_id)
@@ -230,7 +229,6 @@ def _get_first_video_frame_channel_id(
         )
         .where(col(CollectionTable.parent_collection_id) == group_collection_id)
         .where(col(McapGroupComponentDefinitionTable.mcap_data_type) == McapDataType.VIDEO_FRAME)
-        .where(col(McapGroupComponentDefinitionTable.channel_id).is_not(None))
         .order_by(col(GroupComponentDefinitionTable.group_component_index).asc())
         .limit(1)
     ).first()
@@ -239,23 +237,23 @@ def _get_first_video_frame_channel_id(
 def _get_first_keyframe_per_sequence(
     session: Session,
     sequence_sample_ids: Sequence[UUID],
-    channel_id: int,
+    collection_id: UUID,
 ) -> Sequence[tuple[UUID, int, int]]:
     """Get the first independently decodable MCAP keyframe for each sequence.
 
     A ``ROW_NUMBER`` window function partitioned by ``sequence_sample_id`` and
     ordered by ``log_time_ns ASC`` selects the first keyframe per sequence in SQL,
-    avoiding full materialisation of all keyframe rows. Only frames on ``channel_id``
-    are considered — the caller resolves which channel to use.
+    avoiding full materialisation of all keyframe rows. Only frames belonging to the
+    component slot identified by ``collection_id`` are considered.
 
     Args:
         session: Database session for executing queries.
         sequence_sample_ids: Non-empty sequence of sequence sample IDs.
-        channel_id: The MCAP channel to filter frames by.
+        collection_id: The component-slot collection_id to filter frames by.
 
     Returns:
         One ``(sequence_sample_id, channel_id, log_time_ns)`` tuple per sequence
-        that has at least one independently decodable keyframe on ``channel_id``.
+        that has at least one independently decodable keyframe in ``collection_id``.
     """
     ranked = (
         select(
@@ -274,13 +272,18 @@ def _get_first_keyframe_per_sequence(
             col(SampleGroupLinkTable.parent_sample_id) == col(SampleSequenceLinkTable.sample_id),
         )
         .join(McapTable, col(McapTable.sample_id) == col(SampleGroupLinkTable.sample_id))
+        .join(SampleTable, col(SampleTable.sample_id) == col(McapTable.sample_id))
+        .join(
+            McapGroupComponentDefinitionTable,
+            col(McapGroupComponentDefinitionTable.collection_id) == col(SampleTable.collection_id),
+        )
         .where(
             db_array.in_array(
                 column=col(SampleSequenceLinkTable.sequence_sample_id),
                 values=sequence_sample_ids,
             )
         )
-        .where(col(McapTable.channel_id) == channel_id)
+        .where(col(McapGroupComponentDefinitionTable.collection_id) == collection_id)
         .where(col(McapTable.keyframe_log_time_ns) == col(McapTable.log_time_ns))
     ).subquery()
 
