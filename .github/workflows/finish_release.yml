@@ -197,16 +197,19 @@ jobs:
             --notes-file "${RUNNER_TEMP}/release-notes.md"
           echo "::notice::Published ${TAG}."
 
-  # After `publish`, so nothing is announced that is not on PyPI and public. A failure here
-  # turns the run red and rolls nothing back, which is the signal wanted - the announcement
-  # can then be re-sent with the Announce Release workflow. What stops a re-dispatch of an
-  # already-published tag from posting twice is `precheck`, which fails the run first.
+  # After `publish`, so nothing is announced that is not on PyPI and public - which is
+  # also why it cannot fail the run: the wheel is on PyPI and the release is out, and a
+  # Slack outage does not undo any of that. A missed announcement is re-sent with the
+  # Announce Release workflow, which fails loudly when dispatched on its own. What stops
+  # a re-dispatch of an already-published tag from posting twice is `precheck`, which
+  # fails the run first.
   announce:
     needs: publish
     if: inputs.target == 'pypi'
     uses: ./.github/workflows/announce_release.yml
     with:
       tag: ${{ inputs.tag }}
+      tolerate-failure: true
     permissions:
       contents: read
     secrets: inherit

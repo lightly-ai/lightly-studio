@@ -12,6 +12,13 @@ on:
         description: Tag of the published release, e.g. v1.2.3.
         type: string
         required: true
+      tolerate-failure:
+        description: >-
+          Leave the calling run green when the post fails. Finish Release sets it:
+          by then the release is public, and a Slack outage must not redden it.
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
     inputs:
       tag:
@@ -77,6 +84,9 @@ jobs:
           cat "${RUNNER_TEMP}/slack-message.txt" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post the announcement
+        # Undeclared on workflow_dispatch, so it is empty there and a manual re-post
+        # still fails loudly.
+        continue-on-error: ${{ inputs.tolerate-failure == true }}
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_ACTION_BOT_TOKEN }}
           # Declared on workflow_dispatch only, so it is empty on a workflow_call run.
