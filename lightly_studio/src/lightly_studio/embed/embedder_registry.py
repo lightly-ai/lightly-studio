@@ -65,13 +65,16 @@ class EmbedderRegistry:
     that no embedder is registered for resolves to the embedder its configuration names.
     Registered embedders are process-global and keyed on the space alone, while embedders
     built from a configuration are cached per dataset, because the same space key in two
-    datasets can name two backends. A registered embedder wins over a configuration, so a
-    call to ``register`` is never overridden by a stored row.
+    datasets can name two backends. The three sources rank: a call to ``register`` wins over
+    a stored row, and a stored row wins over a built-in. A built-in that a bootstrap call
+    loaded is therefore held apart from the registrations, or the first dataset to load one
+    would serve every other dataset that configures the same space key.
     """
 
     def __init__(self) -> None:
         """Create a registry with the built-in bootstrap choices."""
         self._space_key_to_embedder: dict[str, Embedder] = {}
+        self._space_key_to_builtin: dict[str, Embedder] = {}
         self._config_to_embedder: dict[tuple[UUID, str], tuple[EmbedderConfig, Embedder]] = {}
         self._bootstrap_spaces = dict(_INITIAL_BOOTSTRAP_SPACES)
 
@@ -183,6 +186,9 @@ class EmbedderRegistry:
     ) -> Embedder | None:
         """Resolve the embedder of a space from a registration, a configuration or a built-in.
 
+        The sources rank in that order, so a stored row serves a space whose built-in another
+        dataset already loaded.
+
         Args:
             space_key: The space to resolve. None selects the bootstrap space of the
                 capability. A configuration names its own space, so ``space_key`` is
@@ -242,11 +248,18 @@ class EmbedderRegistry:
         return embedder
 
     def _builtin_embedder(self, space_key: str) -> Embedder | None:
-        """Lazily load and register the built-in embedder of a space."""
+        """Lazily load and cache the built-in embedder of a space.
+
+        The built-in is cached apart from the registrations, so it is loaded once and still
+        loses to a stored configuration of the same space.
+        """
+        cached = self._space_key_to_builtin.get(space_key)
+        if cached is not None:
+            return cached
         embedder = _load_builtin_embedder(space_key=space_key)
         if embedder is None:
             return None
-        self.register(embedder=embedder, bootstrap_for=set())
+        self._space_key_to_builtin[space_key] = embedder
         return embedder
 
     def _set_bootstrap_defaults(

@@ -232,6 +232,44 @@ class TestEmbedderRegistry:
         assert embedder is registered
         build_remote.assert_not_called()
 
+    def test_get_text_embedder__config_wins_over_loaded_builtin(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        builtin = _FakeTextImageEmbedder(space_key="mobileclip_s0")
+        remote = _FakeTextImageEmbedder(space_key="mobileclip_s0")
+        mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=builtin)
+        mocker.patch.object(embedder_config, "build_remote", return_value=remote)
+
+        # A dataset without a configuration loads the builtin of the space first.
+        assert registry.get_text_embedder(space_key="mobileclip_s0") is builtin
+        embedder = registry.get_text_embedder(
+            config=_config(space_key="mobileclip_s0", url="http://first.test")
+        )
+
+        assert embedder is remote
+        # The builtin still serves the dataset that configures no server.
+        assert registry.get_text_embedder(space_key="mobileclip_s0") is builtin
+
+    def test_get_text_embedder__config_does_not_register_its_space(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        builtin = _FakeTextImageEmbedder(space_key="mobileclip_s0")
+        remote = _FakeTextImageEmbedder(space_key="mobileclip_s0")
+        mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=builtin)
+        mocker.patch.object(embedder_config, "build_remote", return_value=remote)
+
+        # The reverse order: the configured dataset resolves before the builtin loads.
+        assert (
+            registry.get_text_embedder(
+                config=_config(space_key="mobileclip_s0", url="http://first.test")
+            )
+            is remote
+        )
+
+        assert registry.get_text_embedder(space_key="mobileclip_s0") is builtin
+
     def test_get_text_embedder__changed_url_rebuilds(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()
         first = _FakeTextImageEmbedder(space_key="space-a")
