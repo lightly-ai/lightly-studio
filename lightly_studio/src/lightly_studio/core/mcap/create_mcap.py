@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.core.mcap.type_definitions import FrameLocator
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap import McapCreate
 from lightly_studio.resolvers import mcap_resolver
@@ -30,6 +31,27 @@ class CreateMcap(CreateSample):
     """The sensor/header capture timestamp, in nanoseconds."""
     keyframe_log_time_ns: int | None = None
     """Log time of the keyframe to seek to before decoding. Required for camera channels."""
+
+    @classmethod
+    def from_frame_locator(cls, locator: FrameLocator) -> CreateMcap:
+        """Build the seek key of a sample from a locator the MCAP reader returned.
+
+        Args:
+            locator: The locator of a single message, from
+                `McapFileReader.get_frame_locators`.
+
+        Returns:
+            The sample to add to an MCAP component collection.
+        """
+        # TODO(Horatiu, 09/2026): Use the capture time from the message header once the
+        # reader reports it. The log time is the time the message reached the recorder,
+        # which is close to, but not the same as, the time the sensor captured it.
+        return cls(
+            channel_id=locator.channel_id,
+            log_time_ns=locator.log_time_ns,
+            capture_timestamp_ns=locator.log_time_ns,
+            keyframe_log_time_ns=locator.keyframe_log_time_ns,
+        )
 
     def create_in_collection(self, session: Session, collection_id: UUID) -> UUID:
         """Create an mcap sample in the specified collection.
