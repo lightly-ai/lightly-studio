@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Choose how many categorical metadata values to show in distribution plots.
 - Python SDK: Read aggregate evaluation metrics (per-class and micro-averaged precision, recall, and F1, plus classification accuracy) with `dataset.evaluate().metrics(run_id)`.
+- Python SDK: Evaluate instance-segmentation predictions with `dataset.evaluate().instance_segmentation(...)`, matching predicted masks to ground truth by mask IoU and storing per-image and per-mask metrics.
 - Add an optional preselected tag selector to the sampling dialog.
 
 ### Changed
