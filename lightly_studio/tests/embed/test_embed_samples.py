@@ -212,7 +212,7 @@ def test_embed_image_for_collection__no_embedding_raises(
     registry.register(embedder=_DropInputEmbedder())
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
-    with pytest.raises(embed_samples.UnreadableImageError, match="could not read"):
+    with pytest.raises(embed_samples.ImageNotEmbeddedError, match="returned no embedding"):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
