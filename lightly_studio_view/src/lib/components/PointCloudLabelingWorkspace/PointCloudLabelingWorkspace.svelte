@@ -9,6 +9,7 @@
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
+    import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -34,6 +35,26 @@
     }
 
     let { sampleId, sourcePath = [], status = 'empty', onExit, onRetry }: Props = $props();
+
+    // Placeholder ruler until browser-side MCAP frame loading lands (child issues of LIG-10657).
+    const placeholderTicks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
+        seq_number: index,
+        timestamp_ns: null
+    }));
+
+    // Local transport state until real frame playback lands with MCAP loading.
+    let currentTick = $state(0);
+    let isPlaying = $state(false);
+
+    const goToPreviousFrame = () => {
+        if (currentTick > 0) currentTick -= 1;
+    };
+    const goToNextFrame = () => {
+        if (currentTick < placeholderTicks.length - 1) currentTick += 1;
+    };
+    const togglePlayback = () => {
+        isPlaying = !isPlaying;
+    };
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
@@ -113,7 +134,14 @@
                             </div>
                         </PaneResizer>
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline />
+                            <FrameTimeline
+                                ticks={placeholderTicks}
+                                {currentTick}
+                                {isPlaying}
+                                onPreviousFrame={goToPreviousFrame}
+                                onNextFrame={goToNextFrame}
+                                onPlayToggle={togglePlayback}
+                            />
                         </Pane>
                     </PaneGroup>
                 </Pane>
