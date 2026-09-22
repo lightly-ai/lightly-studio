@@ -9,6 +9,7 @@
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
+    import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
     import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 
     /**
@@ -59,6 +60,18 @@
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
 
+    // Channel data lands with browser-side MCAP loading (later child issues of LIG-10657); until
+    // then the filter bar renders empty but its selection state is already owned here.
+    let lidarChannels = $state<ChannelSummaryView[]>([]);
+    let cameraChannels = $state<ChannelSummaryView[]>([]);
+    let selectedLidarChannels = $state<number[]>([]);
+    let selectedCameraChannels = $state<number[]>([]);
+
+    const toggleChannel = (selected: number[], channelId: number): number[] =>
+        selected.includes(channelId)
+            ? selected.filter((id) => id !== channelId)
+            : [...selected, channelId];
+
     const handleFullscreenChange = () => {
         isFullscreen = document.fullscreenElement === containerEl;
     };
@@ -90,7 +103,16 @@
         onToggleFullscreen={toggleFullscreen}
         {onExit}
     />
-    <WorkspaceFilterBar />
+    <WorkspaceFilterBar
+        {lidarChannels}
+        {cameraChannels}
+        {selectedLidarChannels}
+        {selectedCameraChannels}
+        onToggleLidarChannel={(channelId) =>
+            (selectedLidarChannels = toggleChannel(selectedLidarChannels, channelId))}
+        onToggleCameraChannel={(channelId) =>
+            (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
+    />
     <div class="flex min-h-0 flex-1">
         {#if status === 'unsupported' || status === 'error'}
             <WorkspaceStatusPanel {status} {onRetry} {onExit} />
