@@ -28,12 +28,15 @@ groups, export your progress, and return to the remaining images later.
 
 ## Step 1: Download the dataset
 
-Imagenette is a subset of ImageNet with 10 classes, assembled by fast.ai. The classes are easy to tell apart, which makes the dataset a good
-fit for this workflow: you can recognize a church or a parachute without a reference.
+Imagenette is a subset of ImageNet with 10 classes, assembled by
+[fast.ai](https://www.fast.ai/). The classes are easy to tell apart, which makes the
+dataset a good fit for this workflow: you can recognize a church or a parachute without a
+reference.
 
 This tutorial uses the 320 px variant, where each image has a shortest side of 320 pixels.
 
-Install LightlyStudio in your Python environment:
+Install LightlyStudio in your Python environment. LightlyStudio works on Windows, Linux,
+and macOS with **Python 3.9 to 3.14**.
 
 ```bash
 pip install lightly-studio
@@ -140,11 +143,10 @@ Save the following as `explore_imagenette.py` in the same working directory:
 ```python title="explore_imagenette.py"
 import lightly_studio as ls
 
-if __name__ == "__main__":
-    dataset = ls.ImageDataset.load_or_create(name="imagenette")
-    # 9,469 images. The first run also downloads the embedding model.
-    dataset.add_images_from_path(path="data/imagenette2-320/train")
-    ls.start_gui()
+dataset = ls.ImageDataset.load_or_create(name="imagenette")
+# 9,469 images. The first run also downloads the embedding model.
+dataset.add_images_from_path(path="data/imagenette2-320/train")
+ls.start_gui()
 ```
 
 Run it from that directory:
@@ -166,8 +168,8 @@ which makes it slower than later runs.
 
 Click **Embed** <span class="ls-inline-icon ls-inline-icon--embed"></span> in the right-hand
 tab rail to open the embedding plot. Each point is one image, placed by a two-dimensional
-projection of its embedding.
-
+projection (PaCMAP) of its embedding. See
+[the embedding plot](../core_concepts/embeddings.md#the-embedding-plot-gui).
 
 !!! note "No Embed tab?"
     The tab only appears when the dataset has embeddings. If it is missing, ingestion ran
@@ -385,15 +387,14 @@ WORDNET_TO_CLASS = {
     "n03888257": "parachute",
 }
 
-if __name__ == "__main__":
-    dataset = ls.ImageDataset.load(name="imagenette")
-    for sample in dataset:
-        wordnet_id = Path(sample.file_path_abs).parent.name
-        sample.add_annotation(
-            annotation=CreateClassification(class_name=WORDNET_TO_CLASS[wordnet_id]),
-            annotation_source="ground_truth",
-        )
-    print("Ground truth loaded.")
+dataset = ls.ImageDataset.load(name="imagenette")
+for sample in dataset:
+    wordnet_id = Path(sample.file_path_abs).parent.name
+    sample.add_annotation(
+        annotation=CreateClassification(class_name=WORDNET_TO_CLASS[wordnet_id]),
+        annotation_source="ground_truth",
+    )
+print("Ground truth loaded.")
 ```
 
 Run it:
@@ -437,15 +438,14 @@ the following as `evaluate_imagenette.py` in the same working directory:
 ```python title="evaluate_imagenette.py"
 import lightly_studio as ls
 
-if __name__ == "__main__":
-    dataset = ls.ImageDataset.load(name="imagenette")
-    result = dataset.evaluate().classification(
-        name="imagenette-review",
-        gt_annotation_source="ground_truth",
-        pred_annotation_source="my_labels",
-    )
-    print(f"Compared {result.sample_count} images.")
-    ls.start_gui()
+dataset = ls.ImageDataset.load(name="imagenette")
+result = dataset.evaluate().classification(
+    name="imagenette-review",
+    gt_annotation_source="ground_truth",
+    pred_annotation_source="my_labels",
+)
+print(f"Compared {result.sample_count} images.")
+ls.start_gui()
 ```
 
 Stop the running GUI with **Ctrl+C**, then run:
