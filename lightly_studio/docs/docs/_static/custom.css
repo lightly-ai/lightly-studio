@@ -2097,12 +2097,14 @@ code.doc-symbol-module {
    so the SVG itself must carry the stroke attributes.
 
    `--ls-inline-icon--embed` is Lucide `chart-network` and `--ls-inline-icon--eval`
-   is Lucide `gauge`, matching `SidePanelTabs.svelte`. The rectangle and lasso
-   icons are Lucide `square-dashed` and `lasso`, matching `PlotToolPill.svelte`.
+   is Lucide `gauge`, matching `SidePanelTabs.svelte`. The pan, rectangle, and lasso
+   icons are Lucide `hand`, `square-dashed`, and `lasso`, matching
+   `PlotToolPill.svelte`.
    Re-check the copied SVG paths when the GUI icons change. */
 :root {
   --ls-inline-icon--embed: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13.11 7.664 1.78 2.672"/><path d="m14.162 12.788-3.324 1.424"/><path d="m20 4-6.06 1.515"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><circle cx="12" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="9" cy="15" r="2"/></svg>');
   --ls-inline-icon--eval: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>');
+  --ls-inline-icon--pan: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>');
   --ls-inline-icon--lasso: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>');
   --ls-inline-icon--rectangle: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></svg>');
 }
@@ -2130,6 +2132,11 @@ code.doc-symbol-module {
 .md-typeset .ls-inline-icon--eval {
   mask-image: var(--ls-inline-icon--eval);
   -webkit-mask-image: var(--ls-inline-icon--eval);
+}
+
+.md-typeset .ls-inline-icon--pan {
+  mask-image: var(--ls-inline-icon--pan);
+  -webkit-mask-image: var(--ls-inline-icon--pan);
 }
 
 .md-typeset .ls-inline-icon--lasso {

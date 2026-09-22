@@ -191,7 +191,8 @@ group is not necessarily one class, and one class can appear in several groups. 
 proximity as a reason to inspect images together, not as proof that they share an
 annotation class.
 
-To inspect a group together, select it. The plot controls offer **Pan**, **Rectangle**
+To inspect a group together, select it. The plot controls offer **Pan**
+<span class="ls-inline-icon ls-inline-icon--pan"></span>, **Rectangle**
 <span class="ls-inline-icon ls-inline-icon--rectangle"></span>, and **Lasso**
 <span class="ls-inline-icon ls-inline-icon--lasso"></span>. The selected tool stays active
 after you draw a region. Select **Pan** to drag the view again. In **Pan** mode, you can
