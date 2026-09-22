@@ -31,8 +31,6 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos, video_dataset
 from lightly_studio.core.video.add_videos import FrameExtractionContext
-from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
-from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -43,7 +41,7 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
-from tests.helpers_resolvers import create_collection
+from tests.helpers_resolvers import create_collection, create_embedding_model
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_videos
 
 
@@ -412,6 +410,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     video_file.close()
 
 
+@pytest.mark.usefixtures("patch_collection")
 def test__create_video_frame_samples__embed_frames(
     db_session: Session,
     tmp_path: Path,
@@ -445,11 +444,11 @@ def test__create_video_frame_samples__embed_frames(
         sample_type=SampleType.VIDEO_FRAME,
     )
 
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.register_embedding_model(
+    model_id = create_embedding_model(
         session=db_session,
         collection_id=video_frames_collection_id,
-        embedding_generator=RandomEmbeddingGenerator(),
+        embedding_model_name="random_model",
+        embedding_dimension=3,
         set_as_default=True,
     ).embedding_model_id
 

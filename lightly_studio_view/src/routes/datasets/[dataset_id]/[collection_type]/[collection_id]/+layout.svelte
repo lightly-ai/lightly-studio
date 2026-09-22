@@ -35,6 +35,7 @@
         isFrameDetailsRoute,
         isSampleDetailsRoute,
         isImagesRoute,
+        isPointCloudsRoute,
         isVideoFramesRoute,
         isVideosRoute,
         isGroupsRoute,
@@ -156,6 +157,7 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
+    const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
@@ -504,8 +506,9 @@
     });
 
     const isCollectionGrid = $derived(
-        isImages || isAnnotations || isVideos || isVideoFrames || isGroups
+        isImages || isAnnotations || isVideos || isVideoFrames || isGroups || isPointClouds
     );
+    const hasFilterPanel = $derived(isCollectionGrid && !isPointClouds);
 
     const panelIsVisible = $derived(isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings));
 
@@ -805,7 +808,9 @@
     const categoricalMetadataQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
         filter: distributionBaseFilter,
-        enabled: distributionPanelVisible
+        fields:
+            activeMetadataField?.type === 'categorical' ? [activeMetadataField.name] : undefined,
+        enabled: distributionPanelVisible && activeMetadataField?.type === 'categorical'
     }));
     const categoricalMetadataDistributions = $derived(categoricalMetadataQuery.data ?? {});
 
@@ -815,7 +820,9 @@
     const categoricalMetadataFilteredQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
         filter: imageAnnotationCountsFilter,
-        enabled: distributionPanelVisible
+        fields:
+            activeMetadataField?.type === 'categorical' ? [activeMetadataField.name] : undefined,
+        enabled: distributionPanelVisible && activeMetadataField?.type === 'categorical'
     }));
     // Keep undefined (not {}) while loading so DatasetDistributionPanel defers
     // rendering the background bars until the filtered data is ready.
@@ -925,7 +932,7 @@
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
-            {#if isCollectionGrid}
+            {#if hasFilterPanel}
                 <!--
                     Keep the panel mounted while collapsed (only visually hidden). Its children
                     run mount-time $effects that must still fire after a reload with the panel
@@ -1013,7 +1020,7 @@
             {#snippet mainContent()}
                 {#if isCollectionGrid}
                     <div class="flex min-w-0 items-center gap-x-4">
-                        {#if $filterPanelCollapsed}
+                        {#if hasFilterPanel && $filterPanelCollapsed}
                             <ShowFiltersButton />
                         {/if}
                         <div class="min-w-0 flex-1">

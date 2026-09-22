@@ -11,7 +11,9 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.evaluation import (
+    aggregate_metrics,
     classification_metric,
+    instance_segmentation_metric,
     object_detection_metric,
     semantic_segmentation_metric,
     validators,
@@ -19,6 +21,7 @@ from lightly_studio.evaluation import (
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
+from lightly_studio.models.evaluation_metrics import EvaluationMetrics
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
@@ -89,6 +92,20 @@ class SemanticSegmentationEvaluationConfig(BaseModel):
 
     Currently has no fields. Placeholder for future task-specific options.
     """
+
+
+class InstanceSegmentationEvaluationConfig(BaseModel):
+    """Configuration for instance-segmentation evaluation runs.
+
+    Attributes:
+        iou_threshold: Mask IoU threshold used to match predictions to ground
+            truths. Stored in the run config for reproducibility.
+        classwise: If True, match predictions and ground truths only within the
+            same annotation class. If False, match across all annotation classes.
+    """
+
+    iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    classwise: bool = True
 
 
 class ImageDatasetEvaluate:
@@ -221,6 +238,41 @@ class ImageDatasetEvaluate:
         )
         return EvaluationResult.from_evaluation_data(data)
 
+    def instance_segmentation(
+        self,
+        name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
+        config: InstanceSegmentationEvaluationConfig | None = None,
+    ) -> EvaluationResult:
+        """Create an instance-segmentation evaluation run and persist per-image metrics.
+
+        Args:
+            name: Display name of the evaluation run.
+            gt_annotation_source: Name of the annotation source containing ground truth masks.
+            pred_annotation_source: Name of the annotation source containing predictions.
+            config: Optional instance segmentation evaluation config. If omitted,
+                defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
+        """
+        config = config or InstanceSegmentationEvaluationConfig()
+        data = self._prepare_evaluation_data(
+            name=name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
+            task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+            config_json=config.model_dump(),
+        )
+        instance_segmentation_metric.create_and_persist_instance_segmentation_metrics_per_sample(
+            session=self.session,
+            data=data,
+            iou_threshold=config.iou_threshold,
+            classwise=config.classwise,
+        )
+        return EvaluationResult.from_evaluation_data(data)
+
     def list_runs(self) -> list[EvaluationRunView]:
         """List the evaluation runs stored for this dataset, newest first.
 
@@ -237,8 +289,9 @@ class ImageDatasetEvaluate:
         """Return the confusion matrix of an evaluation run.
 
         The matrix aggregates the run's persisted ground-truth/prediction
-        annotation pairings by label. Object detection and classification are
-        supported; segmentation tasks do not produce a confusion matrix.
+        annotation pairings by label. Object detection, classification, and
+        instance segmentation are supported; semantic segmentation does not
+        produce a confusion matrix.
 
         Args:
             run_id: ID of the evaluation run.
@@ -251,6 +304,42 @@ class ImageDatasetEvaluate:
             ValueError: If no run with ``run_id`` exists in this dataset.
             NotImplementedError: If the run's task type has no confusion matrix.
         """
+        _, matrix = self._confusion_matrix_with_run(run_id)
+        return matrix
+
+    def metrics(self, run_id: UUID) -> EvaluationMetrics:
+        """Return aggregate metrics for an evaluation run.
+
+        Derives per-class and micro-averaged precision, recall, and F1 from the
+        run's confusion matrix, plus accuracy for classification runs. Object
+        detection and classification are supported; segmentation tasks have no
+        confusion matrix and so no confusion-derived metrics.
+
+        Args:
+            run_id: ID of the evaluation run.
+
+        Returns:
+            The aggregate metrics for the run.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run's task type has no confusion matrix.
+        """
+        run, matrix = self._confusion_matrix_with_run(run_id)
+        return aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
+            matrix=matrix,
+            task_type=run.task_type,
+        )
+
+    def _confusion_matrix_with_run(
+        self, run_id: UUID
+    ) -> tuple[EvaluationRunTable, ConfusionMatrix]:
+        """Fetch a run and its confusion matrix, validating the run and its task type.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run's task type has no confusion matrix.
+        """
         run = evaluation_run_resolver.get_by_id(session=self.session, evaluation_id=run_id)
         if run is None or run.dataset_id != self._dataset_id():
             raise ValueError(f"Evaluation run {run_id} not found in this dataset.")
@@ -258,10 +347,11 @@ class ImageDatasetEvaluate:
             raise NotImplementedError(
                 f"Evaluation task type {run.task_type.value!r} has no confusion matrix."
             )
-        return evaluation_annotation_metric_resolver.get_confusion_matrix(
+        matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
             session=self.session,
             evaluation_run_id=run_id,
         )
+        return run, matrix
 
     def _dataset_id(self) -> UUID:
         """Resolve the dataset ID of the evaluated collection."""

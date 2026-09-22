@@ -1,6 +1,6 @@
 ---
 title: Embeddings API
-description: Python API reference for LightlyStudio embeddings — register a custom embedding model, implement the generator protocols, and the supporting result types.
+description: Python API reference for LightlyStudio embeddings — register a custom embedder, implement the capability interfaces, and the supporting result types.
 ---
 
 # Embeddings
@@ -11,37 +11,75 @@ description: Python API reference for LightlyStudio embeddings — register a cu
 
 LightlyStudio embeds your data automatically on ingestion. To supply your own
 embeddings — either computed on the fly or loaded from a precomputed store —
-implement one of the generator protocols below and register it with
-[`set_default_embedding_model`](#set_default_embedding_model). The registration
-must happen before you load a dataset or before the GUI is started.
+subclass the capability interfaces for the inputs you can embed and register the
+embedder with [`register_default_embedder`](#register_default_embedder). The
+registration must happen before you load a dataset or before the GUI is started.
 
 See the [Embeddings page](../core_concepts/embeddings.md) for more details.
 
-## set_default_embedding_model
+## register_default_embedder
 
-::: lightly_studio.dataset.embedding_manager
+::: lightly_studio.embed.public_api
     options:
-        members: [set_default_embedding_model]
+        members: [register_default_embedder]
 
-## Generator protocols
+## Capability interfaces
 
-### EmbeddingGenerator
+An embedder subclasses `Embedder` through one interface per input it can embed.
+Subclass only the capabilities your model provides.
 
-::: lightly_studio.dataset.embedding_generator
+### Embedder
+
+::: lightly_studio_serve.embedder
     options:
-        members: [EmbeddingGenerator]
+        members: [Embedder]
 
-### ImageEmbeddingGenerator
+### ImagePathEmbedder
 
-::: lightly_studio.dataset.embedding_generator
+::: lightly_studio_serve.embedder
     options:
-        members: [ImageEmbeddingGenerator]
+        members: [ImagePathEmbedder]
 
-### VideoEmbeddingGenerator
+### ImageCropPathEmbedder
 
-::: lightly_studio.dataset.embedding_generator
+::: lightly_studio_serve.embedder
     options:
-        members: [VideoEmbeddingGenerator]
+        members: [ImageCropPathEmbedder]
+
+### VideoPathEmbedder
+
+::: lightly_studio_serve.embedder
+    options:
+        members: [VideoPathEmbedder]
+
+### ImagePILEmbedder
+
+::: lightly_studio_serve.embedder
+    options:
+        members: [ImagePILEmbedder]
+
+### TextEmbedder
+
+::: lightly_studio_serve.embedder
+    options:
+        members: [TextEmbedder]
+
+<!-- TODO(Michal, 09/2026): Document ImageBytesEmbedder and VideoBytesEmbedder once LightlyStudio
+calls these capabilities.
+
+### ImageBytesEmbedder
+
+::: lightly_studio_serve.embedder
+    options:
+        members: [ImageBytesEmbedder]
+
+### VideoBytesEmbedder
+
+::: lightly_studio_serve.embedder
+    options:
+        members: [VideoBytesEmbedder]
+-->
+
 
 ## Supporting types
 

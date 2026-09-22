@@ -131,8 +131,10 @@ describe('routes', () => {
         });
 
         it('should generate correct point-clouds route', () => {
-            expect(routeHelpers.toPointClouds(testDatasetId, testCollectionId)).toBe(
-                `/datasets/${testDatasetId}/point-clouds/${testCollectionId}`
+            expect(
+                routeHelpers.toPointClouds(testDatasetId, testCollectionType, testCollectionId)
+            ).toBe(
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/point-clouds`
             );
         });
 

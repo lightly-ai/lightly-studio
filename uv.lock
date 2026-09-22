@@ -3136,19 +3136,19 @@ wheels = [
 
 [[package]]
 name = "lightly-mundig"
-version = "0.1.16b2"
+version = "0.1.16"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7c/ca/d5f1e49d84379885c9e7a82eccd99e8348e3ff232473cf932e822e827201/lightly_mundig-0.1.16b2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:a43f9e5ffcde1307309649d0f4719e62650fb28d6c8461a033a0ca04afc6d1c3", size = 545630, upload-time = "2026-09-15T08:29:00.559Z" },
-    { url = "https://files.pythonhosted.org/packages/c3/04/5ea4a8ee2cfc84635fd1022d109f3fae95259afc69ad27e6787699105b0f/lightly_mundig-0.1.16b2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:8118bbe3c504a352ccc380cc150985e123c50f7b63afdef0ee9d5b87af05ea16", size = 528541, upload-time = "2026-09-15T08:30:06.299Z" },
-    { url = "https://files.pythonhosted.org/packages/64/be/ffec07d489e41345da61e06b88f1fab86838834349dbd23d35523b860aa7/lightly_mundig-0.1.16b2-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:276958d6c1f24b45e8be4dd3f5a8a56da374e3fb4d80d7d17ca78fc9a68ae6ae", size = 1209297, upload-time = "2026-09-15T08:33:05.546Z" },
-    { url = "https://files.pythonhosted.org/packages/df/cc/3d838eeb5675250a70aa7aec8ba01f467b41714879732a931c641209a512/lightly_mundig-0.1.16b2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bc8b4c153b54ac630ed749caa7ec874980903a6cfb56b9d652f925c36de5f6de", size = 3972872, upload-time = "2026-09-15T08:30:53.938Z" },
-    { url = "https://files.pythonhosted.org/packages/0f/4a/d8fdf8415324fec61a5fcc7a819ff782805930fbb28163a18a0b6a51ebfc/lightly_mundig-0.1.16b2-cp39-abi3-win_amd64.whl", hash = "sha256:7d19d6a81acbcbf75788bba681565e0114cb39656c6f024549fc05f1560d1d2c", size = 5993602, upload-time = "2026-09-15T08:18:39.136Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/2c/b6bd38c74b93b0ac10ef2b444ba6a89231d8abe4010f97e20fd388ba44e1/lightly_mundig-0.1.16-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:05746039b42a28f11df053fdf81c2b2d8a023a63d8a2a714e229b850713814d2", size = 545583, upload-time = "2026-09-21T08:00:20.276Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/45/f7356cb887fd1a782251616abaf80ac4ef28079a339843adde660b32dbc8/lightly_mundig-0.1.16-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:304e032603e14ed50d43cb968f95e4990097291d7c91c1aff1ef6ce0c7a68b8a", size = 528519, upload-time = "2026-09-21T08:01:59.833Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/66/6d115c1c36025665eea173c22e828d42b667fe0416b3f7b5843eff3d7298/lightly_mundig-0.1.16-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:35e19386cf14b7a3167d3da61a8bbc8d717e4ebf82e0b7688919a077070b47ec", size = 1209271, upload-time = "2026-09-21T08:20:45.486Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/ff/fda5ac885a85779d809121a84995eacc6a3f7df47ebab104923a722e41d8/lightly_mundig-0.1.16-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e6620834a6729f98fd1e8839e862f1752c7dbfc5aa58e61850a2b65d93498e47", size = 3972872, upload-time = "2026-09-21T08:18:09.068Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/38/650446804703f1225a9030384cc33df0cec4c9cac038fff55cb072438946/lightly_mundig-0.1.16-cp39-abi3-win_amd64.whl", hash = "sha256:c8999c185e00808fae532a1a903ea46f2d3d1f191087a6d23640218074e50c38", size = 13125976, upload-time = "2026-09-21T08:23:34.198Z" },
 ]
 
 [[package]]
 name = "lightly-studio"
-version = "1.1.1"
+version = "1.1.2"
 source = { editable = "lightly_studio" }
 dependencies = [
     { name = "alembic", version = "1.16.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -3169,6 +3169,7 @@ dependencies = [
     { name = "fastapi", version = "0.135.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fsspec", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "httpx" },
     { name = "jinja2" },
     { name = "labelformat" },
     { name = "lightly-mundig" },
@@ -3271,9 +3272,10 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
+    { name = "httpx", specifier = ">=0.27.2" },
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "labelformat", specifier = ">=0.1.17" },
-    { name = "lightly-mundig", specifier = "==0.1.16b2" },
+    { name = "lightly-mundig", specifier = "==0.1.16" },
     { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
     { name = "mcap", marker = "extra == 'mcap'", specifier = ">=1.2.0,<2.0" },
     { name = "mcap-ros2-support", marker = "extra == 'mcap'", specifier = ">=0.5.0,<0.6" },
@@ -3331,7 +3333,7 @@ docs = [
 
 [[package]]
 name = "lightly-studio-serve"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "lightly_studio_serve" }
 dependencies = [
     { name = "fastapi", version = "0.128.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },

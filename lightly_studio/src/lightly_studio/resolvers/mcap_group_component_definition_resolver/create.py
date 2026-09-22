@@ -19,7 +19,7 @@ def create(
     session: Session,
     collection_id: UUID,
     mcap_data_type: McapDataType,
-    channel_id: int,
+    channel_id: int | None = None,
     frame_id: str | None = None,
 ) -> UUID:
     """Create an MCAP group component definition for an existing generic slot.
@@ -28,7 +28,8 @@ def create(
         session: The database session.
         collection_id: The group component definition / child collection ID.
         mcap_data_type: Whether this slot holds video frames or a point cloud.
-        channel_id: The MCAP channel id, same as on mcap samples.
+        channel_id: The MCAP channel id, same as on mcap samples. Left ``None`` when the
+            schema is created before a recording is read; ``update`` fills it later.
         frame_id: The id used to match this slot against calibration/transform data.
             Empty or whitespace-only values are stored as ``None``.
 

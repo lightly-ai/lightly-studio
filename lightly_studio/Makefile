@@ -18,6 +18,9 @@ FLOCI_S3_PREFIX ?= recordings
 # Space-separated local files, e.g.:
 #   make setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
 FLOCI_MCAP_FILES ?= datasets/mcap/perception.mcap
+# S3 URI of the first uploaded file — shared by every MCAP example/demo target so
+# bucket, prefix, or file-selection changes stay consistent across all of them.
+FLOCI_MCAP_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/$(notdir $(firstword $(FLOCI_MCAP_FILES)))
 FLOCI_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
 	AWS_ENDPOINT_URL=http://localhost:$(FLOCI_PORT)
 
@@ -294,6 +297,52 @@ export-version:
 start-example:
 	@echo "Starting server..."
 	uv run src/lightly_studio/examples/example.py
+
+# Runs the MCAP sequence-indexing example from S3: uploads FLOCI_MCAP_FILES (see top of
+# this Makefile) to the local Floci S3 emulator, then points the example at the
+# uploaded s3:// URI so it reads it through fsspec exactly as it would real S3.
+# Point FLOCI_MCAP_FILES at a recording whose topics match COMPONENTS in
+# example_mcap.py (edit that file for your own sensor topics).
+#
+# Usage:
+#   make start-example-mcap-s3 FLOCI_MCAP_FILES=/path/to/recording.mcap
+.PHONY: start-example-mcap-s3
+start-example-mcap-s3: setup-floci build
+	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
+	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
+		uv run --extra mcap --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+
+# Demo targets for the camera-frame endpoint.
+# Uploads the MCAP to the local Floci S3 emulator and starts the API server so
+# every video channel URL can be opened directly in a browser.
+#
+# Usage:
+#   make demo-mcap-server FLOCI_MCAP_FILES=/path/to/recording.mcap
+#   make demo-mcap-urls   FLOCI_MCAP_FILES=/path/to/recording.mcap   (second terminal)
+DEMO_MCAP_HOST ?= 127.0.0.1
+DEMO_MCAP_PORT ?= 8765
+DEMO_MCAP_DB   ?= /tmp/lightly_demo_mcap.db
+DEMO_DATASET_ID   := aaaaaaaa-0000-0000-0000-000000000001
+DEMO_RECORDING_ID := bbbbbbbb-0000-0000-0000-000000000001
+
+.PHONY: demo-mcap-server
+demo-mcap-server: setup-floci mock-webapp-dist
+	@echo "Seeding database at $(DEMO_MCAP_DB) with $(FLOCI_MCAP_S3_URI)..."
+	@uv run python src/lightly_studio/scripts/demo_mcap_seed.py \
+		"$(DEMO_MCAP_DB)" "$(FLOCI_MCAP_S3_URI)" "$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
+	@echo "Starting server on http://$(DEMO_MCAP_HOST):$(DEMO_MCAP_PORT) — Ctrl-C to stop"
+	@$(FLOCI_ENV) uv run --extra mcap --extra cloud-storage python -c "\
+import uvicorn; \
+from lightly_studio.database import db_manager; \
+db_manager.connect(db_file='$(DEMO_MCAP_DB)'); \
+from lightly_studio.api.app import app; \
+uvicorn.run(app, host='$(DEMO_MCAP_HOST)', port=$(DEMO_MCAP_PORT))"
+
+.PHONY: demo-mcap-urls
+demo-mcap-urls:
+	@uv run --extra mcap python src/lightly_studio/scripts/demo_mcap_urls.py \
+		"$(firstword $(FLOCI_MCAP_FILES))" "$(DEMO_MCAP_HOST)" "$(DEMO_MCAP_PORT)" \
+		"$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
 
 .PHONY: test
 test: build

@@ -21,7 +21,7 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
 
-_TOP_VALUE_COUNT = 20
+DEFAULT_VALUE_COUNT_LIMIT = 20
 
 # Aggregate rows appended to the top values so the counts add up to every sample
 # in scope. The frontend matches these exact strings to render the "Other" and
@@ -53,11 +53,12 @@ def get_metadata_value_counts(
     collection_id: UUID,
     filters: ImageFilter | None = None,
     fields: list[str] | None = None,
+    limit: int | None = DEFAULT_VALUE_COUNT_LIMIT,
 ) -> dict[str, MetadataValueCountsView]:
     """Count categorical metadata values for a collection.
 
     Each field's own metadata filter is excluded while all other filters apply.
-    Results contain the 20 most frequent concrete values, followed by an
+    Results contain the requested number of most frequent concrete values, followed by an
     ``__other__`` row aggregating the less frequent concrete values and a
     ``__missing__`` row counting the samples with an absent or null value. Both
     aggregate rows are omitted when their count is zero, so the counts always sum
@@ -71,10 +72,13 @@ def get_metadata_value_counts(
             rendered (e.g. on a bar chart) to avoid running DB queries for
             fields whose results would never be used. All categorical fields
             are counted when absent.
+        limit: Maximum number of concrete values per field. None returns all values.
 
     Returns:
         A mapping from categorical metadata keys to their value counts.
     """
+    if limit is not None and limit < 1:
+        raise ValueError("The category limit must be at least 1.")
     schema = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
     result: dict[str, MetadataValueCountsView] = {}
     for key, metadata_type in schema.items():
@@ -85,36 +89,24 @@ def get_metadata_value_counts(
         field_filters = metadata_helpers.without_metadata_key_filter(
             filters=filters, metadata_key=key
         )
-        result[key] = _get_field_value_counts(
+        value_expr = db_json.json_extract_key_as_text(column=SampleMetadataTable.data, key=key)
+        grouped_counts = _get_top_value_counts(
             session=session,
             collection_id=collection_id,
-            metadata_key=key,
-            metadata_type=metadata_type,
+            value_expr=value_expr,
             filters=field_filters,
+            limit=limit,
+        )
+        result[key] = _build_value_counts(
+            grouped_counts=grouped_counts, metadata_type=metadata_type
         )
     return result
 
 
-def _get_field_value_counts(
-    session: Session,
-    collection_id: UUID,
-    metadata_key: str,
-    metadata_type: str,
-    filters: ImageFilter | None,
+def _build_value_counts(
+    grouped_counts: _GroupedValueCounts, metadata_type: str
 ) -> MetadataValueCountsView:
-    """Build the response from one grouped query for this metadata field.
-
-    The query returns the most frequent concrete values and window totals for
-    all samples in scope. Missing values are kept outside the top-value limit
-    so they can be returned as the separate ``__missing__`` bucket.
-    """
-    value_expr = db_json.json_extract_key_as_text(column=SampleMetadataTable.data, key=metadata_key)
-    grouped_counts = _get_top_value_counts(
-        session=session,
-        collection_id=collection_id,
-        value_expr=value_expr,
-        filters=filters,
-    )
+    """Append Other and Missing so counts include every sample in scope."""
     value_counts = [
         MetadataValueCountView(
             value=_parse_value(value=row.value, metadata_type=metadata_type), count=row.count
@@ -139,6 +131,7 @@ def _get_top_value_counts(
     collection_id: UUID,
     value_expr: ColumnElement[str],
     filters: ImageFilter | None,
+    limit: int | None,
 ) -> _GroupedValueCounts:
     """Return top concrete groups plus totals from the complete grouped result."""
     count_expr = func.count().label("value_count")
@@ -171,7 +164,7 @@ def _get_top_value_counts(
     grouped_values: list[_GroupedValueCount] = []
     total_count = 0
     missing_count = 0
-    for value, count, total, missing in session.execute(totals_query).fetchmany(_TOP_VALUE_COUNT):
+    for value, count, total, missing in session.execute(totals_query.limit(limit)):
         if not grouped_values:
             total_count = int(total)
             missing_count = int(missing)
