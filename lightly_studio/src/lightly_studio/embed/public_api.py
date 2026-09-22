@@ -37,6 +37,6 @@ def register_default_embedder(
 
     Raises:
         ValueError: If the embedder implements no capability, or if it shares a space
-            with an already registered embedder but does not match its spec.
+            with an embedder the registry already holds but does not match its spec.
     """
     embedder_registry.get_registry().register(embedder=embedder, bootstrap_for=for_capabilities)

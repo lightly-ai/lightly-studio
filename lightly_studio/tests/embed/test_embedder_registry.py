@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
 from uuid import UUID
 
@@ -130,10 +131,23 @@ class TestEmbedderRegistry:
         registered = _FakeTextImageEmbedder(space_key="space-a", dimension=2)
         registry.register(embedder=registered)
 
-        with pytest.raises(ValueError, match="already registered"):
+        with pytest.raises(ValueError, match="already in use"):
             registry.register(embedder=_FakeTextImageEmbedder(space_key="space-a", dimension=3))
 
         assert registry.get_text_embedder(space_key="space-a") is registered
+
+    def test_register__conflicting_spec_of_loaded_builtin_raises(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        builtin = _FakeTextImageEmbedder(space_key="mobileclip_s0", dimension=2)
+        mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=builtin)
+        assert registry.get_text_embedder(space_key="mobileclip_s0") is builtin
+
+        with pytest.raises(ValueError, match="already in use"):
+            registry.register(
+                embedder=_FakeTextImageEmbedder(space_key="mobileclip_s0", dimension=3)
+            )
 
     def test_register__separate_spaces(self) -> None:
         registry = EmbedderRegistry()
@@ -366,6 +380,43 @@ class TestEmbedderRegistry:
 
         assert first is None
         assert second is remote
+
+    def test_get_text_embedder__slow_build_leaves_other_spaces_available(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeTextImageEmbedder(space_key="space-b"))
+        started = threading.Event()
+        release = threading.Event()
+
+        def _slow_build(config: EmbedderConfig) -> Embedder:  # noqa: ARG001
+            started.set()
+            release.wait(timeout=5)
+            return _FakeTextImageEmbedder(space_key="space-a")
+
+        mocker.patch.object(embedder_config, "build_remote", side_effect=_slow_build)
+        thread = threading.Thread(
+            target=registry.get_text_embedder,
+            kwargs={"config": _config(space_key="space-a", url="http://first.test")},
+        )
+        thread.start()
+        assert started.wait(timeout=5)
+
+        # Look up apart, to fail on a block instead of waiting for it.
+        looked_up = threading.Event()
+
+        def _look_up_other_space() -> None:
+            registry.get_text_embedder(space_key="space-b")
+            looked_up.set()
+
+        lookup = threading.Thread(target=_look_up_other_space)
+        lookup.start()
+        blocked = not looked_up.wait(timeout=2)
+
+        release.set()
+        lookup.join(timeout=5)
+        thread.join(timeout=5)
+        assert not blocked
 
     def test_get_image_path_embedder__explicit_key_has_no_fallback(
         self, mocker: MockerFixture
