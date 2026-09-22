@@ -1,14 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 import FrameTimeline from './FrameTimeline.svelte';
-
-const createChannel = (overrides: Partial<ChannelSummaryView> = {}): ChannelSummaryView => ({
-    channel_id: 0,
-    group_component_name: 'channel',
-    group_component_index: 0,
-    ...overrides
-});
 
 const createTicks = (timestamps: Array<number | null>): TickView[] =>
     timestamps.map((timestamp_ns, seq_number) => ({ seq_number, timestamp_ns }));
@@ -31,27 +24,30 @@ describe('FrameTimeline', () => {
         expect(screen.getByText('Track 2')).toBeInTheDocument();
     });
 
-    it('shows the one-based active frame and total tick count', () => {
-        render(FrameTimeline, { props: defaultProps });
+    it.each([
+        { currentTick: 0, label: 'Frame 1 / 3' },
+        { currentTick: 1, label: 'Frame 2 / 3' }
+    ])(
+        'shows the one-based active frame and total tick count ($label)',
+        ({ currentTick, label }) => {
+            render(FrameTimeline, { props: { ...defaultProps, currentTick } });
 
-        expect(screen.getByText('Frame 1 / 3')).toBeInTheDocument();
-    });
+            expect(screen.getByText(label)).toBeInTheDocument();
+        }
+    );
 
-    it('shows the one-based position of the current tick', () => {
-        render(FrameTimeline, { props: { ...defaultProps, currentTick: 1 } });
+    it('shows an empty frame counter when the sequence has no ticks', () => {
+        render(FrameTimeline, { props: { ...defaultProps, ticks: [] } });
 
-        expect(screen.getByText('Frame 2 / 3')).toBeInTheDocument();
+        expect(screen.getByText('Frame — / —')).toBeInTheDocument();
     });
 
     it('renders a lane per lidar and camera channel by name', () => {
         render(FrameTimeline, {
             props: {
                 ...defaultProps,
-                lidarChannels: [createChannel({ channel_id: 1, group_component_name: 'top' })],
-                cameraChannels: [
-                    createChannel({ channel_id: 2, group_component_name: 'front' }),
-                    createChannel({ channel_id: 3, group_component_name: 'rear' })
-                ]
+                lidarChannelNames: ['top'],
+                cameraChannelNames: ['front', 'rear']
             }
         });
 
@@ -63,10 +59,7 @@ describe('FrameTimeline', () => {
 
     it('uses channels even when only one channel kind is present', () => {
         render(FrameTimeline, {
-            props: {
-                ...defaultProps,
-                lidarChannels: [createChannel({ group_component_name: 'top' })]
-            }
+            props: { ...defaultProps, lidarChannelNames: ['top'] }
         });
 
         expect(screen.getByText('top')).toBeInTheDocument();

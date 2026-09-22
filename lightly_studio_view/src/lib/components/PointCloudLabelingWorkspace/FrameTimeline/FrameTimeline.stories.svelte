@@ -1,22 +1,11 @@
 <script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { fn } from 'storybook/test';
-    import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
     import FrameTimeline from './FrameTimeline.svelte';
 
-    const channel = (
-        channel_id: number,
-        group_component_name: string,
-        group_component_index: number
-    ): ChannelSummaryView => ({ channel_id, group_component_name, group_component_index });
-
-    const lidarChannels = [channel(0, 'top', 0)];
-    const cameraChannels = [
-        channel(1, 'front', 0),
-        channel(2, 'front_left', 1),
-        channel(3, 'front_right', 2),
-        channel(4, 'rear', 3)
-    ];
+    const lidarChannelNames = ['top'];
+    const cameraChannelNames = ['front', 'front_left', 'front_right', 'rear'];
 
     // Placeholder ruler with no timestamps yet, mirroring the pre-frame-loading state.
     const placeholderTicks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
@@ -54,7 +43,7 @@
 
 <Story
     name="Lidar and camera channels"
-    args={{ lidarChannels, cameraChannels }}
+    args={{ lidarChannelNames, cameraChannelNames }}
     template={frame}
     parameters={{
         docs: {
@@ -67,7 +56,7 @@
 
 <Story
     name="Timestamped ruler"
-    args={{ ticks, currentTick: 8, lidarChannels, cameraChannels }}
+    args={{ ticks, currentTick: 8, lidarChannelNames, cameraChannelNames }}
     template={frame}
     parameters={{
         docs: {
@@ -80,7 +69,7 @@
 
 <Story
     name="Playing"
-    args={{ ticks, currentTick: 8, isPlaying: true, lidarChannels, cameraChannels }}
+    args={{ ticks, currentTick: 8, isPlaying: true, lidarChannelNames, cameraChannelNames }}
     template={frame}
     parameters={{
         docs: {
