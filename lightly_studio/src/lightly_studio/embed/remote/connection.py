@@ -18,8 +18,11 @@ logger = logging.getLogger(__name__)
 def build_client(url: str) -> httpx.Client:
     """Open a client against ``url``.
 
-    ``follow_redirects`` stays off, which is also the default of httpx. A redirect would
-    carry the batch, and the bearer token with it, to an address that nobody configured.
+    ``follow_redirects`` stays off, which is also the default of httpx. It is written out
+    because it is a control and not a preference: a redirect would carry the batch, and
+    the bearer token with it, to an address that nobody configured.
+    ``url_policy.check_no_redirects`` then checks the value, here and for a client that a
+    caller passes in.
 
     The budget of the client stays at the default of httpx, and ``RemoteTransport``
     overrides it on every request it sends: the right ceiling depends on what a request

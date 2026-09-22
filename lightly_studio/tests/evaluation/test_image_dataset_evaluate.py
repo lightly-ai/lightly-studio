@@ -8,6 +8,7 @@ from sqlmodel import Session
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
+    InstanceSegmentationEvaluationConfig,
     ObjectDetectionEvaluationConfig,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -954,4 +955,139 @@ def _create_gt_and_pred_collections(session: Session, collection_id: UUID) -> No
             collection_id=collection_id,
             sample_type=SampleType.ANNOTATION,
             name=name,
+        )
+
+
+def test_instance_segmentation_evaluation(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Creates an instance-segmentation run and persists sample and match metrics."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+    )
+    image = create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        width=4,
+        height=4,
+    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    # The mask over the top two rows; the matching GT and prediction give one TP.
+    top_rows = {"x": 0, "y": 0, "width": 4, "height": 2, "segmentation_mask": [0, 8, 8]}
+    # The GT mask over the bottom row has no matching prediction and gives one FN.
+    bottom_row = {"x": 0, "y": 3, "width": 4, "height": 1, "segmentation_mask": [12, 4]}
+    # The prediction mask over the third row has no matching GT and gives one FP.
+    third_row = {"x": 0, "y": 2, "width": 4, "height": 1, "segmentation_mask": [8, 4, 4]}
+
+    gt_tp = create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_data=top_rows,
+        annotation_collection_name="gt",
+    )
+    gt_fn = create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_data=bottom_row,
+        annotation_collection_name="gt",
+    )
+    pred_tp = create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_data=top_rows,
+        annotation_collection_name="pred",
+    )
+    pred_fp = create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_data=third_row,
+        annotation_collection_name="pred",
+    )
+
+    result = dataset.evaluate().instance_segmentation(
+        name="run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=InstanceSegmentationEvaluationConfig(iou_threshold=0.5),
+    )
+    assert result.sample_count == 1
+    assert result.gt_annotation_count == 2
+    assert result.pred_annotation_count == 2
+
+    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+    )
+    assert len(evaluation_runs) == 1
+    assert evaluation_runs[0].name == "run-1"
+    assert evaluation_runs[0].task_type == EvaluationTaskType.INSTANCE_SEGMENTATION
+    assert evaluation_runs[0].config_json == {"iou_threshold": 0.5, "classwise": True}
+
+    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+    assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
+        (image.sample_id, "tp"): 1.0,
+        (image.sample_id, "fp"): 1.0,
+        (image.sample_id, "fn"): 1.0,
+    }
+
+    annotation_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+    assert len(annotation_metrics) == 3
+    annotation_metrics_by_type = {
+        (m.pred_annotation_id, m.gt_annotation_id): m for m in annotation_metrics
+    }
+    tp_metric = annotation_metrics_by_type[(pred_tp.sample_id, gt_tp.sample_id)]
+    assert tp_metric.metric_name == "iou"
+    assert tp_metric.value == pytest.approx(1.0)
+    fp_metric = annotation_metrics_by_type[(pred_fp.sample_id, None)]
+    assert fp_metric.metric_name is None
+    assert fp_metric.value is None
+    fn_metric = annotation_metrics_by_type[(None, gt_fn.sample_id)]
+    assert fn_metric.metric_name is None
+    assert fn_metric.value is None
+
+
+def test_instance_segmentation_evaluation__raises_on_wrong_annotation_type(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Raises ValueError when a collection contains non-segmentation annotations."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_collection_name="gt",
+    )
+
+    with pytest.raises(ValueError, match="segmentation_mask"):
+        dataset.evaluate().instance_segmentation(
+            name="run-1",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )

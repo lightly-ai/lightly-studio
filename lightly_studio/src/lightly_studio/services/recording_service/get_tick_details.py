@@ -1,4 +1,4 @@
-"""Service functions for the MCAP sequence tick list."""
+"""Service functions for the per-tick details of an MCAP sequence."""
 
 from __future__ import annotations
 
@@ -8,8 +8,10 @@ from sqlmodel import Session
 
 from lightly_studio.models.mcap_sequence_ticks import TickChannelView, TickDetailView
 from lightly_studio.resolvers import (
+    collection_resolver,
     mcap_group_sequence_resolver,
     mcap_resolver,
+    sample_resolver,
     sequence_resolver,
 )
 
@@ -35,10 +37,14 @@ def get_tick_details(
         The tick detail, or `None` if the sequence does not exist, does not belong
         to `dataset_id`, or has no tick at `seq_number`.
     """
-    if mcap_group_sequence_resolver.get_by_id(session=session, sample_id=sequence_id) is None:
+    mcap_sequence = mcap_group_sequence_resolver.get_by_id(session=session, sample_id=sequence_id)
+    if mcap_sequence is None:
         return None
-    info = mcap_group_sequence_resolver.get_info(session=session, sample_id=sequence_id)
-    if info is None or info.recording.dataset_id != dataset_id:
+    sample = sample_resolver.get_by_id(session=session, sample_id=sequence_id)
+    if sample is None:
+        return None
+    collection = collection_resolver.get_by_id(session=session, collection_id=sample.collection_id)
+    if collection is None or collection.dataset_id != dataset_id:
         return None
 
     link = sequence_resolver.get_sample_link(
@@ -49,10 +55,10 @@ def get_tick_details(
 
     channel_mcaps = mcap_resolver.get_tick_channels(session=session, group_sample_id=link.sample_id)
     return TickDetailView(
-        recording_id=info.recording.recording_id,
+        recording_id=mcap_sequence.recording_id,
         seq_number=link.seq_number,
         timestamp_ns=link.timestamp_ns,
         channels={
-            name: TickChannelView.from_mcap_table(mcap) for name, mcap in channel_mcaps.items()
+            name: TickChannelView.from_mcap_table(mcap=mcap) for name, mcap in channel_mcaps.items()
         },
     )
