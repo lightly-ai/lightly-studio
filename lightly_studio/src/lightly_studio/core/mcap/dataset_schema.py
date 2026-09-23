@@ -72,7 +72,9 @@ def check_components_match(
     Raises:
         ValueError: If the dataset has other components than the ones asked for.
     """
-    existing = get_components(session=session, group_collection_id=group_collection_id)
+    existing = mcap_group_component_definition_resolver.get_named_data_types_by_group_collection_id(
+        session=session, group_collection_id=group_collection_id
+    )
     requested = [(component.name, component.mcap_data_type) for component in components]
     if existing != requested:
         raise ValueError(
@@ -80,22 +82,6 @@ def check_components_match(
             f"{_format_components(components=existing)}, but "
             f"{_format_components(components=requested)} were requested."
         )
-
-
-def get_components(session: Session, group_collection_id: UUID) -> list[NamedDataType]:
-    """Get the components of an MCAP dataset, in the order they are shown in.
-
-    Args:
-        session: The database session.
-        group_collection_id: The ID of the GROUP collection holding the components.
-
-    Returns:
-        The components as `(name, mcap_data_type)` pairs, ordered by their index.
-        Components without an MCAP definition, e.g. classic image ones, are left out.
-    """
-    return mcap_group_component_definition_resolver.get_named_data_types_by_group_collection_id(
-        session=session, group_collection_id=group_collection_id
-    )
 
 
 def create_collections(session: Session, name: str) -> tuple[CollectionTable, CollectionTable]:

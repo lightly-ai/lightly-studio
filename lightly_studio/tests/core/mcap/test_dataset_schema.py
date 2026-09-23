@@ -7,7 +7,7 @@ from lightly_studio.core.mcap import dataset_schema
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import mcap_group_component_definition_resolver
 from tests.helpers_resolvers import create_collection
 
 COMPONENTS = [
@@ -35,7 +35,7 @@ def test_create_components(db_session: Session) -> None:
         components=COMPONENTS,
     )
 
-    assert dataset_schema.get_components(
+    assert mcap_group_component_definition_resolver.get_named_data_types_by_group_collection_id(
         session=db_session, group_collection_id=group_collection.collection_id
     ) == [(component.name, component.mcap_data_type) for component in COMPONENTS]
 
@@ -112,43 +112,3 @@ def test_check_components_match__no_components(db_session: Session) -> None:
             components=COMPONENTS,
             dataset_name="perception",
         )
-
-
-def test_get_components__keeps_the_creation_order(db_session: Session) -> None:
-    group_collection = create_collection(session=db_session, sample_type=SampleType.GROUP)
-    components = [
-        McapComponentSpec(
-            name="rear",
-            mcap_data_type=McapDataType.VIDEO_FRAME,
-            topic="/cam/rear/compressed_video",
-        ),
-        COMPONENTS[0],
-        COMPONENTS[1],
-    ]
-    dataset_schema.create_components(
-        session=db_session,
-        group_collection_id=group_collection.collection_id,
-        components=components,
-    )
-
-    # Ordered by the index the components were created with, not by name.
-    assert dataset_schema.get_components(
-        session=db_session, group_collection_id=group_collection.collection_id
-    ) == [(component.name, component.mcap_data_type) for component in components]
-
-
-def test_get_components__without_mcap_definitions(db_session: Session) -> None:
-    group_collection = create_collection(session=db_session, sample_type=SampleType.GROUP)
-    collection_resolver.create_group_components(
-        session=db_session,
-        parent_collection_id=group_collection.collection_id,
-        components=[("thumbnail", SampleType.IMAGE)],
-    )
-
-    # A classic image component has no MCAP definition, so it is left out.
-    assert (
-        dataset_schema.get_components(
-            session=db_session, group_collection_id=group_collection.collection_id
-        )
-        == []
-    )
