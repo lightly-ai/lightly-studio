@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import { writable, readonly } from 'svelte/store';
 import Page from './+page.svelte';
+import { load } from './+page';
 import type { PageData } from './$types';
 
 const featureFlags = writable<string[]>([]);
