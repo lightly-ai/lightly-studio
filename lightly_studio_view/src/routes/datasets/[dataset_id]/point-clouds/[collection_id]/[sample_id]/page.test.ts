@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import { writable, readonly } from 'svelte/store';
 import Page from './+page.svelte';
+import { load } from './+page';
 import type { PageData } from './$types';
 
 const featureFlags = writable<string[]>([]);
@@ -67,5 +68,49 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
         await waitFor(() =>
             expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument()
         );
+    });
+});
+
+describe('point-cloud sample page load', () => {
+    it('maps route and query parameters to page data', async () => {
+        const result = await load({
+            params: {
+                dataset_id: 'dataset',
+                collection_id: 'collection',
+                sample_id: 'sample'
+            },
+            url: new URL(
+                'http://localhost/datasets/dataset/point-clouds/collection/sample?collection_type=group&sequence_id=sequence&group_id=group'
+            )
+        } as Parameters<typeof load>[0]);
+
+        expect(result).toEqual({
+            datasetId: 'dataset',
+            collectionType: 'group',
+            collectionId: 'collection',
+            sampleId: 'sample',
+            sequenceId: 'sequence',
+            groupId: 'group'
+        });
+    });
+
+    it('leaves optional query values undefined when absent', async () => {
+        const result = await load({
+            params: {
+                dataset_id: 'dataset',
+                collection_id: 'collection',
+                sample_id: 'sample'
+            },
+            url: new URL('http://localhost/datasets/dataset/point-clouds/collection/sample')
+        } as Parameters<typeof load>[0]);
+
+        expect(result).toEqual({
+            datasetId: 'dataset',
+            collectionType: undefined,
+            collectionId: 'collection',
+            sampleId: 'sample',
+            sequenceId: undefined,
+            groupId: undefined
+        });
     });
 });
