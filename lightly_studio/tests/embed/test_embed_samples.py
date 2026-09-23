@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import logging
 import re
+import tempfile
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -158,6 +159,24 @@ class _PILOnlyEmbedder(ImagePILEmbedder):
         return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
 
 
+class _DropPathEmbedder(ImagePathEmbedder):
+    """Drops every path, as a precalculated embedder does for a path it does not know.
+
+    Shares the random model's space so it resolves as the collection's default.
+    """
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_images(self, paths: list[str]) -> EmbeddingResult:
+        """Drop every path, returning no embedding."""
+        del paths
+        return EmbeddingResult(embeddings=np.empty((0, 3), dtype=np.float32), kept_indices=[])
+
+
 class _DropInputEmbedder(ImageBytesEmbedder, TextEmbedder):
     """Drops every input, so image and text queries get an empty result.
 
@@ -291,6 +310,70 @@ def test_embed_image_for_collection__path_only_embedder(
     _register_default_random_model(session=db_session, collection_id=collection.collection_id)
     registry = EmbedderRegistry()
     registry.register(embedder=_PathOnlyEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    embedding = embed_samples.embed_image_for_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        image_bytes=_png_bytes(color=(1, 2, 3)),
+    )
+
+    assert embedding == [1.0, 2.0, 3.0]
+
+
+def test_embed_image_for_collection__path_only_embedder_no_embedding_raises(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A path embedder that returns no embedding does not blame the decoded image."""
+    collection = create_collection(session=db_session)
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
+    registry = EmbedderRegistry()
+    registry.register(embedder=_DropPathEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    with pytest.raises(embed_samples.ImageNotEmbeddedError, match="cannot embed an upload"):
+        embed_samples.embed_image_for_collection(
+            session=db_session,
+            collection_id=collection.collection_id,
+            image_bytes=_png_bytes(),
+        )
+
+
+def test_embed_image_for_collection__path_only_embedder_with_url_raises(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A space with a remote URL skips the path embedder and writes no temporary file."""
+    collection = create_collection(session=db_session)
+    _register_default_random_model(
+        session=db_session, collection_id=collection.collection_id, url="http://embedder.test"
+    )
+    registry = EmbedderRegistry()
+    registry.register(embedder=_PathOnlyEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    spy_temp_dir = mocker.spy(tempfile, "TemporaryDirectory")
+
+    with pytest.raises(ValueError, match="No embedder resolves for"):
+        embed_samples.embed_image_for_collection(
+            session=db_session,
+            collection_id=collection.collection_id,
+            image_bytes=_png_bytes(),
+        )
+    spy_temp_dir.assert_not_called()
+
+
+def test_embed_image_for_collection__pil_only_embedder_with_url(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """A PIL embedder next to a text-only remote server still serves image search."""
+    collection = create_collection(session=db_session)
+    _register_default_random_model(
+        session=db_session, collection_id=collection.collection_id, url="http://embedder.test"
+    )
+    registry = EmbedderRegistry()
+    registry.register(embedder=_PILOnlyEmbedder())
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
     embedding = embed_samples.embed_image_for_collection(
@@ -980,15 +1063,21 @@ def _register_default_random_model(
     session: Session,
     collection_id: UUID,
     dimension: int = 3,
+    url: str | None = None,
 ) -> UUID:
     """Register the random embedder's space as the collection's default and return its model ID."""
-    return create_embedding_model(
+    model = create_embedding_model(
         session=session,
         collection_id=collection_id,
         embedding_model_name="random_model",
         embedding_dimension=dimension,
         set_as_default=True,
-    ).embedding_model_id
+    )
+    if url is not None:
+        model.remote_embedder_url = url
+        session.add(model)
+        session.commit()
+    return model.embedding_model_id
 
 
 def _create_annotation_collection(session: Session) -> UUID:
