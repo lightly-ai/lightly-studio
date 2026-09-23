@@ -5,6 +5,8 @@ import type { PointCloudWorkspaceContext, WorkspaceStatus } from './types';
 export type GetInputs = () => {
     datasetId: string;
     sequenceId: string;
+    /** 0-based seq number the transport starts on; defaults to the first tick. */
+    initialTick?: number;
     /** Overrides the summary-derived status; for tests/stories. */
     statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error';
 };
@@ -54,6 +56,8 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         this.#getInputs = getInputs;
         this.#summary = summary;
         this.retry = refetch;
+        // Read once at construction: this is the starting position, not a reactive binding.
+        this.currentTick = getInputs().initialTick ?? 0;
     }
 
     get datasetId(): string {
