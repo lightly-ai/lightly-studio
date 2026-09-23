@@ -27,7 +27,9 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Cold dependency installs can take longer than 15 minutes after a lockfile change or
+    # cache eviction. Keep a job-level limit so genuinely stuck runs are still cancelled.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: fast_track

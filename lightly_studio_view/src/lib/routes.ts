@@ -2,7 +2,8 @@ import type { LayoutRouteId } from '../routes/$types';
 import { getURL } from './utils';
 
 const COLLECTION_BASE_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]';
-const POINT_CLOUD_BASE_ROUTE = '/datasets/[dataset_id]/point-clouds/[collection_id]';
+const POINT_CLOUD_BASE_ROUTE = `${COLLECTION_BASE_ROUTE}/point-clouds`;
+const POINT_CLOUD_LABELING_BASE_ROUTE = '/datasets/[dataset_id]/point-clouds/[collection_id]';
 
 type SampleWithAnnotationParams = {
     datasetId: string;
@@ -32,6 +33,7 @@ type PointCloudLabelingDetailsParams = {
     datasetId: string;
     collectionId: string;
     sampleId: string;
+    sequenceId: string;
     collectionType?: string;
     groupId?: string;
 };
@@ -49,7 +51,7 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`,
     groups: `${COLLECTION_BASE_ROUTE}/groups`,
     pointClouds: `${POINT_CLOUD_BASE_ROUTE}`,
-    pointCloudLabeling: `${POINT_CLOUD_BASE_ROUTE}/[sample_id]`
+    pointCloudLabeling: `${POINT_CLOUD_LABELING_BASE_ROUTE}/[sample_id]`
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -141,8 +143,8 @@ export const routes = {
             `/datasets/${datasetId}/${collectionType}/${collectionId}/videos`,
         frames: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/frames`,
-        pointClouds: (datasetId: string, collectionId: string) =>
-            `/datasets/${datasetId}/point-clouds/${collectionId}`,
+        pointClouds: (datasetId: string, collectionType: string, collectionId: string) =>
+            `/datasets/${datasetId}/${collectionType}/${collectionId}/point-clouds`,
         videosDetails: ({
             datasetId,
             collectionType,
@@ -185,9 +187,11 @@ export const routes = {
             collectionType,
             collectionId,
             sampleId,
-            groupId
+            groupId,
+            sequenceId
         }: PointCloudLabelingDetailsParams) => {
             const queryParams: Record<string, string> = {};
+            queryParams['sequence_id'] = sequenceId;
             if (collectionType !== undefined) queryParams['collection_type'] = collectionType;
             if (groupId !== undefined) queryParams['group_id'] = groupId;
             return getURL(
@@ -236,8 +240,8 @@ export const routeHelpers = {
     toFrames: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.frames(datasetId, collectionType, collectionId);
     },
-    toPointClouds: (datasetId: string, collectionId: string) => {
-        return routes.collection.pointClouds(datasetId, collectionId);
+    toPointClouds: (datasetId: string, collectionType: string, collectionId: string) => {
+        return routes.collection.pointClouds(datasetId, collectionType, collectionId);
     },
     toVideosDetails: (params: VideosDetailsParams) => {
         return routes.collection.videosDetails(params);

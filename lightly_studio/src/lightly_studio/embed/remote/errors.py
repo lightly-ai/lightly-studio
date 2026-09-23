@@ -26,11 +26,20 @@ class RemoteEmbedderAuthError(RemoteEmbedderError):
     """The server rejected the token, or it wants one and the client sent none."""
 
 
+class RemoteEmbedderConfigError(RemoteEmbedderError):
+    """The stored configuration cannot name a usable server.
+
+    The URL does not parse, or the server produces another embedding space than the
+    configuration names. Vectors of another space are meaningless next to the stored ones.
+    """
+
+
 class RemoteEmbedderCapabilityError(RemoteEmbedderError):
     """The server does not serve an input kind that LightlyStudio can use.
 
-    Raised when a server advertises no capability that this client routes to, and when a
-    server answers 501 for a route that its own ``/v1/describe`` advertised.
+    Raised when a server advertises no capability that this client routes to, when the
+    capabilities it does route to are ones that ``EmbedderRegistry`` cannot resolve, and
+    when a server answers 501 for a route that its own ``/v1/describe`` advertised.
     """
 
 

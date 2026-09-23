@@ -164,8 +164,9 @@ nav:
       - Dataset Distributions: workflows/dataset_distributions.md
       - Sampling: workflows/sampling.md
     - Annotate:
-      - Annotations: workflows/annotations.md
-      - Captions: workflows/captions.md
+      - Create and Edit Annotations: workflows/annotations.md
+      - Find Wrong Annotations: workflows/annotation_qa.md
+      - Add Captions: workflows/captions.md
     - Evaluate:
       - Model Evaluation: workflows/evaluation.md
     - Export and Train:
@@ -178,6 +179,7 @@ nav:
     - Plugins: ecosystem/plugins.md
     - Cloud Storage: ecosystem/cloud_storage.md
   - Resources:
+    - FAQ: faq.md
     - Glossary: glossary.md
     - Python API:
       - Dataset: api/dataset.md
@@ -194,6 +196,7 @@ nav:
     - "Tutorial 1: Curate a Traffic CCTV Dataset for YOLO Training": tutorials/yolo-traffic-cctv-object-detection.md
     - "Tutorial 2: Evaluate YOLO26 on Your Dataset with LightlyStudio": tutorials/yolo26-model-evaluation.md
     - "Tutorial 3: Explore LightlyTrain Embeddings in LightlyStudio": tutorials/lightlytrain-embeddings.md
+    - "Tutorial 4: Explore and Annotate Images with Embeddings": tutorials/imagenette-image-embeddings.md
   - Enterprise:
     - Overview: enterprise/index.md
     - Collaboration and Permissions: enterprise/collaboration.md
@@ -271,6 +274,7 @@ plugins:
           - workflows/dataset_distributions.md
           - workflows/sampling.md
           - workflows/annotations.md
+          - workflows/annotation_qa.md
           - workflows/captions.md
           - workflows/evaluation.md
           - workflows/export.md
@@ -282,6 +286,7 @@ plugins:
           - ecosystem/plugins.md
           - ecosystem/cloud_storage.md
         Resources:
+          - faq.md
           - glossary.md
           - api/dataset.md
           - api/sample.md
@@ -297,6 +302,7 @@ plugins:
           - tutorials/yolo-traffic-cctv-object-detection.md
           - tutorials/yolo26-model-evaluation.md
           - tutorials/lightlytrain-embeddings.md
+          - tutorials/imagenette-image-embeddings.md
         Enterprise:
           - enterprise/index.md
           - enterprise/collaboration.md

@@ -107,6 +107,35 @@ cd lightly_studio_view
 npm run test:e2e-videos
 ```
 
+### Running the MCAP Example from S3
+
+The `start-example-mcap-s3` target runs the MCAP sequence-indexing example against a local
+S3 emulator ([Floci](https://github.com/floci-dev/floci)). It uploads your MCAP recording to
+the emulator, then points the example at the resulting `s3://` URI so it reads the file through
+`fsspec` exactly as it would from real S3.
+
+Prerequisites:
+- Docker running locally (for the Floci S3 emulator)
+- The AWS CLI (`aws`) on your `PATH`
+- The `mcap` and `cloud-storage` extras (installed automatically by `uv run --extra` in the target)
+
+Run it from the `lightly_studio` subdirectory, pointing `FLOCI_MCAP_FILES` at your recording:
+
+```bash
+cd lightly_studio
+make start-example-mcap-s3 FLOCI_MCAP_FILES=./datasets/pointcloud_example/perception.mcap
+```
+
+This will:
+- Start the Floci S3 emulator in Docker and create the `lightly-studio` bucket
+- Upload `perception.mcap` to `s3://lightly-studio/recordings/perception.mcap`
+- Build the frontend and Python package
+- Start the example, which reads the MCAP from S3 and serves the app on <http://localhost:8001>
+
+The example reads the topics listed in `COMPONENTS` in
+[example_mcap.py](./lightly_studio/src/lightly_studio/examples/example_mcap.py). Edit that file to
+match the sensor topics in your own recording.
+
 ### Documentation
 
 Documentation is in the [docs](./lightly_studio/docs) folder. To build the documentation, move to the [docs](./lightly_studio/docs) folder and run:
@@ -275,6 +304,59 @@ make format
 
 Run these from the directory you are working in, or from the root to cover both sides. You can
 explore more available commands directly in the `Makefile`.
+
+### Local cloud storage development
+
+[Floci](https://github.com/floci-io/floci) emulates AWS S3 locally, and [Floci GCP](https://github.com/floci-io/floci-gcp) emulates GCS — no cloud account needed.
+
+#### AWS S3 (Floci)
+
+```bash
+# Start Floci (creates the default S3 bucket)
+make -C lightly_studio start-floci
+
+# Upload MCAP files and list what's available
+make -C lightly_studio setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make -C lightly_studio list-floci-mcaps
+
+# Stop and remove the container
+make -C lightly_studio stop-floci
+```
+
+Point LightlyStudio at the local S3 bucket before starting the server:
+
+```bash
+AWS_ACCESS_KEY_ID=test \
+AWS_SECRET_ACCESS_KEY=test \
+AWS_DEFAULT_REGION=us-east-1 \
+AWS_ENDPOINT_URL=http://localhost:4566 \
+  lightly-studio ...
+```
+
+#### GCP Cloud Storage (Floci GCP)
+
+```bash
+# Start Floci GCP (creates the default GCS bucket)
+make -C lightly_studio start-floci-gcp
+
+# Upload MCAP files and list what's available
+make -C lightly_studio setup-floci-gcp FLOCI_GCP_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make -C lightly_studio list-floci-gcp-mcaps
+
+# Stop and remove the container
+make -C lightly_studio stop-floci-gcp
+```
+
+Point LightlyStudio at the local GCS bucket before starting the server:
+
+```bash
+STORAGE_EMULATOR_HOST=http://localhost:4588 \
+  lightly-studio ...
+```
 
 ### Contributor License Agreement (CLA)
 

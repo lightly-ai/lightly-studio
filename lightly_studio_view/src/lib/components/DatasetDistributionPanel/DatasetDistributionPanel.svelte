@@ -14,6 +14,7 @@
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
     import { TagComparisonSelect } from './TagComparisonSelect';
     import { selectVisibleCounts } from './selectVisibleCounts';
+    import { selectCategoricalCounts, selectCategoricalSeries } from './selectCategoricalCounts';
     import {
         CATEGORICAL_DISTRIBUTION_SORT_LABELS,
         HISTOGRAM_BIN_COUNT_ITEMS,
@@ -22,7 +23,7 @@
         type DistributionSourceGroup
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
-    import { MetadataCategoricalFilter } from './MetadataCategoricalFilter';
+    import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
     import HistogramToolbar from './HistogramToolbar/HistogramToolbar.svelte';
     import type { ValueMode } from './PanelHeader/ValueModeSelect';
     import type { CategoricalMetadataValue } from '$lib/services/types';
@@ -270,7 +271,7 @@
     });
     const defaultCategoricalConfig: DistributionConfig = {
         mode: 'topN',
-        n: 1,
+        n: 20,
         sortBy: 'count',
         manualClasses: [],
         orientation: 'horizontal',
@@ -281,10 +282,7 @@
     let histogramValueModes = $state<Record<string, Record<string, ValueMode>>>({});
     const categoricalConfig = $derived<DistributionConfig>(
         activeGroup
-            ? (categoricalConfigs[activeGroup.id] ?? {
-                  ...defaultCategoricalConfig,
-                  n: Math.max(activeData.length, 1)
-              })
+            ? (categoricalConfigs[activeGroup.id] ?? defaultCategoricalConfig)
             : defaultCategoricalConfig
     );
     const activeHistogramId = $derived(activeGroup?.id ?? activeSource.id);
@@ -326,13 +324,19 @@
     const activeViewConfig = $derived<DistributionConfig>(
         activeCategorical ? categoricalConfig : config
     );
-    const visible = $derived(selectVisibleCounts(displayedData, activeViewConfig));
+    const visible = $derived(
+        activeCategorical
+            ? selectCategoricalCounts(displayedData, activeViewConfig)
+            : selectVisibleCounts(displayedData, activeViewConfig)
+    );
     const visibleKeys = $derived(new Set(visible.map((item) => item.id ?? item.label)));
     const visibleSeries = $derived(
-        activeSeries.map((series) => ({
-            ...series,
-            data: series.data.filter((item) => visibleKeys.has(item.id ?? item.label))
-        }))
+        activeCategorical
+            ? selectCategoricalSeries(activeSeries, visible, activeViewConfig.mode === 'topN')
+            : activeSeries.map((series) => ({
+                  ...series,
+                  data: series.data.filter((item) => visibleKeys.has(item.id ?? item.label))
+              }))
     );
     const totalCount = $derived(displayedData.reduce((sum, item) => sum + item.count, 0));
 
@@ -479,32 +483,18 @@
             buckets={activeCategorical.buckets}
             selectedValues={activeCategorical.selectedValues}
             loading={activeCategorical.loading}
+            updating={activeCategorical.updating}
+            error={activeCategorical.error}
+            onRetry={onCategoricalRetry}
             onToggle={(value) => onCategoricalValueToggle?.(activeGroup.id, value)}
             onClear={() => onCategoricalValuesClear?.(activeGroup.id)}
         />
-        {#if activeCategorical.error && activeCategorical.buckets.length > 0}
-            <div
-                class="mt-1 flex items-center justify-between gap-2 text-xs text-destructive"
-                role="alert"
-            >
-                <span>Could not update metadata distribution.</span>
-                {#if onCategoricalRetry}
-                    <button
-                        class="underline max-sm:min-h-11"
-                        type="button"
-                        onclick={onCategoricalRetry}
-                    >
-                        Retry
-                    </button>
-                {/if}
-            </div>
-        {/if}
         {#if categoricalData.length > 0}
             <div class="mt-2">
                 <PanelHeader
                     config={categoricalConfig}
-                    classCount={categoricalData.length}
-                    visibleClassCount={visible.length}
+                    classCount={displayedData.length}
+                    visibleClassCount={selectVisibleCounts(displayedData, activeViewConfig).length}
                     totalCount={activeSeries.length === 0 ? totalCount : undefined}
                     seriesCount={activeSeries.length || undefined}
                     {valueNoun}
@@ -516,7 +506,7 @@
                         setCategoricalConfig({
                             ...categoricalConfig,
                             mode: 'topN',
-                            n: categoricalData.length
+                            n: displayedData.length
                         })}
                     onToggleOrientation={() =>
                         setCategoricalConfig({
@@ -641,6 +631,7 @@
         categoryNounPlural={activeCategorical ? 'values' : 'classes'}
         sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
         showCountMode={!activeCategorical}
+        aggregateOther={activeCategorical !== null}
         onConfigChange={applyConfig}
         onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
     />

@@ -33,13 +33,18 @@ describe('getMenuItem', () => {
         expect(item.id).toBe(expectedId);
     });
 
-    it.each([SampleType.MCAP, SampleType.SEQUENCE] as const)(
-        '%s returns null, having no dedicated view',
-        (sampleType) => {
-            const item = getMenuItem('dataset-id', undefined, 'col-id', sampleType);
-            expect(item).toBeNull();
-        }
-    );
+    it('MCAP returns null, having no dedicated view', () => {
+        const item = getMenuItem('dataset-id', undefined, 'col-id', SampleType.MCAP);
+        expect(item).toBeNull();
+    });
+
+    it('SEQUENCE returns a point-clouds menu item', () => {
+        const item = getMenuItem('dataset-id', undefined, 'col-id', SampleType.SEQUENCE);
+        if (!item) throw new Error('expected a menu item');
+        expect(item.title).toBe('Sequences');
+        expect(item.id).toBe('sequence-col-id');
+        expect(item.href).toBe('/datasets/dataset-id/sequence/col-id/point-clouds');
+    });
 
     it('uses groupComponentName as title when provided', () => {
         const item = getMenuItem(

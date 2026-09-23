@@ -2,7 +2,7 @@
 
 Model evaluation runs let you compare model predictions against ground truth
 [annotations](annotations.md) and surface per-sample quality metrics in LightlyStudio. Supported
-task types are object detection, classification and semantic segmentation.
+task types are object detection, classification, instance segmentation and semantic segmentation.
 
 For a hands-on, end-to-end walkthrough, follow the
 [Evaluate YOLO26 on Your Dataset](../tutorials/yolo26-model-evaluation.md) tutorial.
@@ -113,6 +113,42 @@ summary.
 
     You can sort samples by `disagreement` to inspect the most uncertain correct predictions or the
     most confident wrong predictions first.
+
+=== "Instance Segmentation"
+
+    ```python
+    from lightly_studio.evaluation.image_dataset_evaluate import (
+        InstanceSegmentationEvaluationConfig,
+    )
+
+    config = InstanceSegmentationEvaluationConfig(
+        iou_threshold=0.5,  # minimum mask IoU to count a prediction as a true positive
+        classwise=True,     # match predictions only within the same annotation class
+    )
+
+    dataset.evaluate().instance_segmentation(
+        name="my-insseg-eval",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
+        config=config,
+    )
+
+    ```
+
+    Instance segmentation matches each predicted mask to a ground truth mask, using mask
+    intersection over union (IoU). The `iou_threshold` sets the minimum mask IoU for a match.
+    Matched pairs count as true positives (`tp`). Unmatched predictions count as false positives
+    (`fp`). Unmatched ground truth masks count as false negatives (`fn`).
+
+    Both the ground-truth and the prediction annotation source must contain segmentation-mask
+    annotations, the same type semantic segmentation uses.
+
+    The `classwise` setting controls whether matching is restricted to masks with the same class
+    label. With `classwise=True`, a predicted `dog` mask can only match a ground truth `dog` mask.
+    With `classwise=False`, a prediction can match a ground truth of any class.
+
+    The per-sample metrics are stored as `tp`, `fp`, and `fn`. You can sort samples by the number
+    of true positives, false positives, or false negatives.
 
 === "Semantic Segmentation"
 

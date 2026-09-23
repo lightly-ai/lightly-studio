@@ -1,23 +1,32 @@
 <script lang="ts">
-    import { Camera, SquareDashed } from '@lucide/svelte';
+    import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
+    import { useTickDetails } from '$lib/hooks';
+    import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
 
     /**
-     * Horizontal strip of the camera images and orthographic frame projections that belong to the
-     * active point-cloud frame. It sits directly under the 3D viewport so a selected cuboid can be
-     * checked against every available view without leaving the scene.
-     *
-     * Placeholder tiles: the real ones come from the frame's `cameras` plus the orthographic
-     * renderer views, and stay synchronized with the 3D selection.
+     * Horizontal strip of camera tiles for the active point-cloud tick. Each
+     * camera channel renders its frame for the current tick, resolved from the
+     * tick's per-component MCAP locators keyed by `group_component_name`.
      */
-    const views: { label: string; kind: 'camera' | 'projection' }[] = [
-        { label: 'Front camera', kind: 'camera' },
-        { label: 'Left camera', kind: 'camera' },
-        { label: 'Right camera', kind: 'camera' },
-        { label: 'Rear camera', kind: 'camera' },
-        { label: 'Top (BEV)', kind: 'projection' },
-        { label: 'Side', kind: 'projection' },
-        { label: 'Front', kind: 'projection' }
-    ];
+    interface Props {
+        /** Dataset the sequence belongs to. */
+        datasetId: string;
+        /** MCAP sequence being labeled. */
+        sequenceId: string;
+        /** Zero-based tick position to render frames for. */
+        seqNumber: number;
+        /** Image and video channels rendered as tiles. */
+        cameraChannels: ChannelSummaryView[];
+    }
+
+    let { datasetId, sequenceId, seqNumber, cameraChannels }: Props = $props();
+
+    const { tickDetails } = useTickDetails({
+        getDatasetId: () => datasetId,
+        getSequenceId: () => sequenceId,
+        getSeqNumber: () => seqNumber
+    });
+    const recordingId = $derived(tickDetails.data?.recording_id);
 </script>
 
 <div
@@ -29,17 +38,17 @@
         <span>· synchronized with the 3D selection</span>
     </div>
     <div class="flex min-h-0 flex-1 gap-2 overflow-x-auto px-3 pb-2">
-        {#each views as view (view.label)}
-            <figure
-                class="flex h-full min-w-40 shrink-0 flex-col items-center justify-center gap-1 rounded-md border bg-muted/30 text-muted-foreground"
-            >
-                {#if view.kind === 'camera'}
-                    <Camera class="size-5" aria-hidden="true" />
-                {:else}
-                    <SquareDashed class="size-5" aria-hidden="true" />
-                {/if}
-                <figcaption class="px-2 text-center text-xs">{view.label}</figcaption>
-            </figure>
+        {#each cameraChannels as channel (channel.channel_id)}
+            {@const locator = tickDetails.data?.channels[channel.group_component_name]}
+            {#if recordingId && locator}
+                <CameraProjectionFrame
+                    {datasetId}
+                    {recordingId}
+                    channelId={channel.channel_id}
+                    timestampNs={locator.keyframe_log_time_ns ?? locator.log_time_ns}
+                    label={channel.group_component_name}
+                />
+            {/if}
         {/each}
     </div>
 </div>

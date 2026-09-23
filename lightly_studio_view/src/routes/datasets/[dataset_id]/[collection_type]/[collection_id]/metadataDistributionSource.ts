@@ -67,6 +67,7 @@ interface MetadataDistributionSourceParams {
     tagDistributions: SampleTagMetadataDistributions[];
     /** Whether the current view's categorical request is in flight. */
     categoricalLoading?: boolean;
+    categoricalUpdating?: boolean;
     numericLoading?: boolean;
     /** Message for a failed categorical request for the current view. */
     categoricalError?: string;
@@ -126,6 +127,7 @@ const buildCategoricalGroup = (params: MetadataDistributionSourceParams, key: st
         comparisonBuckets: buildCategoricalComparisonBuckets(params.tagDistributions, key),
         selectedValues: params.selectedValues[key] ?? [],
         loading: params.categoricalLoading,
+        updating: params.categoricalUpdating,
         error: params.categoricalError
     },
     comparisonSeries: buildCategoricalComparisonSeries(params.tagDistributions, key)

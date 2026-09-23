@@ -138,6 +138,39 @@ def test_get_metadata_value_counts__aggregates_sum_to_the_samples_in_scope(
     assert sum(entry.count for entry in counts.value_counts) == 24
 
 
+@pytest.mark.parametrize("limit", [1, 5, 30, 40, None])
+def test_get_metadata_value_counts__configurable_limit(
+    db_session: Session, limit: int | None
+) -> None:
+    collection = create_collection(session=db_session)
+    for index in range(35):
+        _create_sample(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            metadata={"category": f"value-{index:02d}"},
+        )
+    create_image(session=db_session, collection_id=collection.collection_id)
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session, collection_id=collection.collection_id, limit=limit
+    )["category"].value_counts
+
+    shown_count = min(limit, 35) if limit is not None else 35
+    expected = [(f"value-{index:02d}", 1) for index in range(shown_count)]
+    if shown_count < 35:
+        expected.append(("__other__", 35 - shown_count))
+    expected.append(("__missing__", 1))
+    assert [(entry.value, entry.count) for entry in counts] == expected
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+def test_get_metadata_value_counts__invalid_limit(db_session: Session, limit: int) -> None:
+    with pytest.raises(ValueError, match="category limit must be at least 1"):
+        categorical_value_counts.get_metadata_value_counts(
+            session=db_session, collection_id=uuid4(), limit=limit
+        )
+
+
 def test_get_metadata_value_counts__no_aggregates_when_every_value_is_shown(
     db_session: Session,
 ) -> None:
