@@ -26,6 +26,8 @@ export function usePointCloudNavigation() {
                 collectionType: 'group',
                 collectionId: params.collectionId,
                 sampleId: params.sampleId,
+                // An MCAP component's sample is its sequence, so the sample id doubles as the sequence id.
+                sequenceId: params.sampleId,
                 groupId: params.groupId
             }),
             { invalidateAll: true }

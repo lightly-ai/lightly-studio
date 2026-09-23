@@ -7,15 +7,28 @@ the capability-typed ``EmbedderRegistry``.
 
 from __future__ import annotations
 
+import io
 import logging
+import tempfile
+from pathlib import Path
 from uuid import UUID
 
-from lightly_studio_serve.embedder import ImageCropPathEmbedder
+from lightly_studio_serve.embedder import (
+    Embedder,
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    ImagePILEmbedder,
+)
+from lightly_studio_serve.types import EmbeddingResult
+from PIL import Image as PILImage
 from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.file_outcome_report import BROKEN_IMAGE_ERRORS
 from lightly_studio.embed import default_embedder, embedding_storage
+from lightly_studio.embed.embedder_config import EmbedderConfig
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -31,34 +44,52 @@ logger = logging.getLogger(__name__)
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
-def embed_image_for_collection(session: Session, collection_id: UUID, filepath: str) -> list[float]:
-    """Embed a single image with the collection's default model, without storing it.
+class ImageNotEmbeddedError(ValueError):
+    """Raised when the embedder returns no embedding for an image to embed.
+
+    A broken or unsupported image is the reason an embedder drops an input, so a caller
+    may report this as a bad request. Subclasses ``ValueError`` so a caller that handles
+    the other input errors of this module keeps working.
+    """
+
+
+def embed_image_for_collection(
+    session: Session, collection_id: UUID, image_bytes: bytes
+) -> list[float]:
+    """Embed a single uploaded image with the collection's default model, without storing it.
 
     Resolves the collection's default model from the database and embeds the image with the
     registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
     never bootstraps a default model, since an interactive query must not mutate the collection.
+    Takes bytes rather than a path so a remote backend without filesystem access can serve it.
+    A space whose embedder embeds images by PIL image or by path only gets the decoded image
+    or a temporary file, so image search stays available for every embedder that embeds images.
 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
-        filepath: fsspec path or URL of the image to embed.
+        image_bytes: Encoded image bytes (JPEG, PNG or WebP).
 
     Returns:
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model, no registered
-            embedder matches that model's space, or the embedder produced no embedding
-            for the image.
+        ImageNotEmbeddedError: If the image bytes do not decode, or the embedder returns no
+            embedding for them.
+        ValueError: If the collection has no default embedding model, or no registered
+            embedder matches that model's space.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        get_embedder_fn=_get_query_image_embedder,
     )
-    result = embedder.embed_images(paths=[filepath])
+    result = _embed_image_bytes(embedder=embedder, image_bytes=image_bytes)
     if result.kept_indices != [0]:
-        raise ValueError(f"The embedder produced no embedding for image {filepath!r}.")
+        raise ImageNotEmbeddedError(
+            "The embedder returned no embedding for the uploaded image. The image may be "
+            "broken or in a format the embedder does not support."
+        )
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding
 
@@ -306,6 +337,67 @@ def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
         )
         is not None
     )
+
+
+def _get_query_image_embedder(
+    registry: EmbedderRegistry, space_key: str | None, config: EmbedderConfig | None
+) -> ImageBytesEmbedder | ImagePILEmbedder | ImagePathEmbedder | None:
+    """Get the space's image embedder, preferring bytes, then PIL images, then paths.
+
+    Args:
+        registry: The registry the embedder is resolved from.
+        space_key: The embedding space to resolve, or None for the registry default.
+        config: The stored configuration of the space, used only when no embedder is
+            registered for it.
+
+    Returns:
+        The space's image embedder, or None if the space embeds no images.
+    """
+    return (
+        registry.get_image_bytes_embedder(space_key=space_key, config=config)
+        or registry.get_image_pil_embedder(space_key=space_key, config=config)
+        or registry.get_image_path_embedder(space_key=space_key, config=config)
+    )
+
+
+def _embed_image_bytes(embedder: Embedder, image_bytes: bytes) -> EmbeddingResult:
+    """Embed one encoded image with the capability the embedder has.
+
+    An embedder without the bytes capability gets the decoded image, or the bytes written
+    to a temporary file that is removed after the call.
+
+    Args:
+        embedder: The image embedder of the space, as ``_get_query_image_embedder``
+            returns it.
+        image_bytes: Encoded image bytes (JPEG, PNG or WebP).
+
+    Returns:
+        The embedding result for the single image.
+
+    Raises:
+        ImageNotEmbeddedError: If the embedder needs a decoded image or a file and the
+            bytes do not decode.
+        TypeError: If the embedder embeds no images.
+    """
+    if isinstance(embedder, ImageBytesEmbedder):
+        return embedder.embed_image_bytes(images=[image_bytes])
+
+    try:
+        image = PILImage.open(io.BytesIO(image_bytes))
+        image.load()
+    except BROKEN_IMAGE_ERRORS as error:
+        raise ImageNotEmbeddedError("The uploaded image cannot be decoded.") from error
+
+    if isinstance(embedder, ImagePILEmbedder):
+        return embedder.embed_images_pil(images=[image.convert("RGB")])
+
+    if not isinstance(embedder, ImagePathEmbedder):
+        raise TypeError(f"The embedder {type(embedder).__name__} embeds no images.")
+    suffix = "" if image.format is None else f".{image.format.lower()}"
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / f"image{suffix}"
+        path.write_bytes(image_bytes)
+        return embedder.embed_images(paths=[str(path)])
 
 
 def _embed_annotation_chunk(

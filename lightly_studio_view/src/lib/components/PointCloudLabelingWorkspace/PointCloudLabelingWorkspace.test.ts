@@ -2,6 +2,19 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
+// The workspace mounts the camera projection strip, which reads the tick details
+// query; stub it so the chrome renders without a live TanStack query client.
+vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
+    useTickDetails: () => ({ tickDetails: { data: undefined } })
+}));
+
+vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
+    useMcapSequenceSummary: () => ({
+        summary: { data: undefined, isLoading: false, isError: false },
+        refetch: vi.fn()
+    })
+}));
+
 describe('PointCloudLabelingWorkspace', () => {
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
@@ -14,7 +27,7 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-annotation-panel')).toBeInTheDocument();
+        expect(screen.getByTestId('point-cloud-right-side-panel')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
             'empty'
@@ -60,7 +73,7 @@ describe('PointCloudLabelingWorkspace', () => {
             'unsupported'
         );
         expect(screen.queryByTestId('workspace-projection-strip')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('workspace-annotation-panel')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('point-cloud-right-side-panel')).not.toBeInTheDocument();
     });
 
     it('shows a recoverable error state with a retry action', async () => {

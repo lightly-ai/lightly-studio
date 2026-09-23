@@ -6,6 +6,7 @@ export const load: PageLoad = async ({ params, url }) => {
         collectionType: url.searchParams.get('collection_type') ?? undefined,
         collectionId: params.collection_id,
         sampleId: params.sample_id,
+        sequenceId: url.searchParams.get('sequence_id') ?? undefined,
         groupId: url.searchParams.get('group_id') ?? undefined
     };
 };

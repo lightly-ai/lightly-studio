@@ -115,7 +115,8 @@ query. The [API reference](../api/embeddings.md) gives the full method signature
 
 | Interface | Method | Embeds | Called during |
 |---|---|---|---|
-| `ImagePathEmbedder` | `embed_images` | Whole images by path | Ingest and GUI (image search) |
+| `ImagePathEmbedder` | `embed_images` | Whole images by path | Ingest |
+| `ImageBytesEmbedder` | `embed_image_bytes` | Uploaded images, as raw file bytes | GUI (image search) |
 | `ImageCropPathEmbedder` | `embed_image_crops` | Annotation crops | Ingest |
 | `ImagePILEmbedder` | `embed_images_pil` | In-memory images, such as video frames | Ingest |
 | `VideoPathEmbedder` | `embed_videos` | Whole videos by path | Ingest |
@@ -126,6 +127,15 @@ Examples below show how an embedder is built from the image interfaces.
 !!! warning "A capability you skip disables its feature"
     A capability you do not subclass, such as `TextEmbedder`, leaves its feature
     unavailable — text search, in that case.
+
+!!! info "Image search without `ImageBytesEmbedder`"
+    Image search uploads an image, so it calls `embed_image_bytes`. An embedder that
+    subclasses `ImagePILEmbedder` or `ImagePathEmbedder` but not `ImageBytesEmbedder`
+    still serves image search: LightlyStudio decodes the upload, or writes it to a
+    temporary file, and calls that interface instead. An embedder that looks up
+    vectors by file path, such as the one below, finds no vector for that temporary
+    file. Subclass `ImageBytesEmbedder` to read the bytes yourself, which a model
+    behind a remote server must do.
 
 ### Loading precomputed embeddings
 
@@ -183,14 +193,16 @@ the backend stores, see
 
 Use this when you want a different model than the built-ins. Load your model in
 `__init__` and run it inside the embed methods. Subclass one interface per
-capability. This embedder handles images, image crops, and text, so text queries
-compare against image embeddings.
+capability. This embedder handles images by path, uploaded images, image crops, and
+text, so text queries and query images compare against image embeddings.
+`ImageBytesEmbedder` is what enables image search in the GUI.
 
 ```python
 import numpy as np
 from numpy.typing import NDArray
 
 from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     TextEmbedder,
@@ -201,11 +213,18 @@ import lightly_studio as ls
 EMBEDDING_DIMENSION = 512
 
 
-class CustomEmbedder(ImagePathEmbedder, ImageCropPathEmbedder, TextEmbedder):
+class CustomEmbedder(
+    ImagePathEmbedder,
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    TextEmbedder,
+):
     def __init__(self) -> None:
         ...  # Load your model and preprocessing here.
 
     def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
+
+    def embed_image_bytes(self, images: list[bytes]) -> ls.EmbeddingResult: ...
 
     def embed_image_crops(self, crops: list[ls.ImageCrop]) -> ls.EmbeddingResult: ...
 
@@ -232,7 +251,7 @@ ls.register_default_embedder(embedder=CustomEmbedder())
 ```
 
 For the full runnable version, which wraps MobileCLIP and also implements
-`embed_text` and `embed_image_crops`, see
+`embed_image_bytes`, `embed_image_crops` and `embed_text`, see
 [`example_custom_embedding_model.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embedding_model.py).
 
 !!! note "Text search needs a shared text encoder"
