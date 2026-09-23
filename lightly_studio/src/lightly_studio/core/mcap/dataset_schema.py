@@ -93,25 +93,9 @@ def get_components(session: Session, group_collection_id: UUID) -> list[NamedDat
         The components as `(name, mcap_data_type)` pairs, ordered by their index.
         Components without an MCAP definition, e.g. classic image ones, are left out.
     """
-    component_collections = collection_resolver.get_group_components(
-        session=session, parent_collection_id=group_collection_id
+    return mcap_group_component_definition_resolver.get_named_data_types_by_group_collection_id(
+        session=session, group_collection_id=group_collection_id
     )
-    mcap_data_types = {
-        definition.collection_id: definition.mcap_data_type
-        for definition in mcap_group_component_definition_resolver.get_all_by_group_collection_id(
-            session=session, group_collection_id=group_collection_id
-        )
-    }
-    indexed = [
-        (
-            _get_component_index(collection=collection),
-            (component_name, mcap_data_types[collection.collection_id]),
-        )
-        for component_name, collection in component_collections.items()
-        if collection.collection_id in mcap_data_types
-    ]
-    indexed.sort(key=lambda item: item[0])
-    return [component for _, component in indexed]
 
 
 def create_collections(session: Session, name: str) -> tuple[CollectionTable, CollectionTable]:
@@ -140,14 +124,6 @@ def create_collections(session: Session, name: str) -> tuple[CollectionTable, Co
         ),
     )
     return root_collection, group_collection
-
-
-def _get_component_index(collection: CollectionTable) -> int:
-    """Return the position of a component collection in the schema of its groups."""
-    definition = collection.group_component_definition
-    # `get_group_components` only returns collections that have a definition.
-    assert definition is not None
-    return definition.group_component_index
 
 
 def _format_components(components: Sequence[NamedDataType]) -> str:
