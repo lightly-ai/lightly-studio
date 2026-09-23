@@ -23,7 +23,7 @@
         type DistributionSourceGroup
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
-    import { MetadataCategoricalFilter } from './MetadataCategoricalFilter';
+    import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
     import HistogramToolbar from './HistogramToolbar/HistogramToolbar.svelte';
     import type { ValueMode } from './PanelHeader/ValueModeSelect';
     import type { CategoricalMetadataValue } from '$lib/services/types';
@@ -483,26 +483,12 @@
             buckets={activeCategorical.buckets}
             selectedValues={activeCategorical.selectedValues}
             loading={activeCategorical.loading}
+            updating={activeCategorical.updating}
+            error={activeCategorical.error}
+            onRetry={onCategoricalRetry}
             onToggle={(value) => onCategoricalValueToggle?.(activeGroup.id, value)}
             onClear={() => onCategoricalValuesClear?.(activeGroup.id)}
         />
-        {#if activeCategorical.error && activeCategorical.buckets.length > 0}
-            <div
-                class="mt-1 flex items-center justify-between gap-2 text-xs text-destructive"
-                role="alert"
-            >
-                <span>Could not update metadata distribution.</span>
-                {#if onCategoricalRetry}
-                    <button
-                        class="underline max-sm:min-h-11"
-                        type="button"
-                        onclick={onCategoricalRetry}
-                    >
-                        Retry
-                    </button>
-                {/if}
-            </div>
-        {/if}
         {#if categoricalData.length > 0}
             <div class="mt-2">
                 <PanelHeader
