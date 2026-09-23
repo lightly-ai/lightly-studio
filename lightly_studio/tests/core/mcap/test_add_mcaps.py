@@ -66,6 +66,31 @@ def test_index_recording(
     assert [link.seq_number for link in links] == [0, 1]
 
 
+def test_index_recording__sequence_uses_capture_timestamp(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    capture_offset_ns = -50_000_000
+    mcap_path = helpers.write_mcap(
+        tmp_path / "offset.mcap", lidar_stamp_offset_ns=capture_offset_ns
+    )
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    sequence_sample_id = add_mcaps.index_recording(
+        dataset=dataset,
+        mcap_path=str(mcap_path),
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    )
+
+    links = _get_sample_links(sequence_sample_id=sequence_sample_id)
+    assert [link.timestamp_ns for link in links] == [
+        helpers.LIDAR_LOG_TIMES_NS[0] + capture_offset_ns,
+        helpers.LIDAR_LOG_TIMES_NS[1] + capture_offset_ns,
+    ]
+
+
 def test_index_recording__pairs_the_closest_frame(
     patch_collection: None,  # noqa: ARG001
     mcap_path: Path,

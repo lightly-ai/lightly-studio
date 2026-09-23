@@ -122,6 +122,8 @@ def index_recording(
 ) -> UUID:
     """Index one recording into a dataset.
 
+    Sequence timestamps are the capture time of the sync component.
+
     Args:
         dataset: The dataset to index into.
         mcap_path: The path or URI of the `.mcap` file.
@@ -182,7 +184,7 @@ def index_recording(
             McapSequenceEntry(
                 sample_id=group_sample_id,
                 seq_number=seq_number,
-                timestamp_ns=row[sync_object.name].log_time_ns,
+                timestamp_ns=row[sync_object.name].capture_timestamp_ns,
             )
             for seq_number, (group_sample_id, row) in enumerate(zip(group_sample_ids, rows))
         ]
