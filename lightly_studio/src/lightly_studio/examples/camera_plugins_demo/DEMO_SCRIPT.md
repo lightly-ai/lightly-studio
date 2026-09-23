@@ -87,10 +87,14 @@ Double-click one unlabeled frame.
 2. Draw a box. Type the class name. Press Enter.
 3. Press the right arrow key. Draw the next box.
 
-Label 3 or 4 frames. Then stop.
+Label 2 or 3 frames by hand. Then stop and show the faster way:
 
-> "This is the labeling that the customer does in Label Studio today. It is in the same
-> tool as the data, so there is no export and no import."
+4. Go back to the grid. Open **Menu > Plugins > Pre-label frames with a model**.
+5. Keep the COCO model, add the class rows, and run it.
+6. Open one frame. The boxes are there. Correct one of them.
+
+> "The first pass is a model, the second pass is a person. That is the difference
+> between labeling 300 frames and correcting 300 frames."
 
 ### Minute 7 to 8: start the training
 

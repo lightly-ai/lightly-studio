@@ -22,6 +22,7 @@ from lightly_studio.plugins.parameter import (
     FloatParameter,
     IntParameter,
     StringParameter,
+    TableParameter,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -34,6 +35,10 @@ PARAM_BATCH_SIZE = "batch_size"
 PARAM_ANNOTATION_SOURCE = "annotation_source"
 PARAM_VAL_FRACTION = "val_fraction"
 PARAM_THRESHOLD = "score_threshold"
+PARAM_CLASSES = "classes"
+
+PRETRAINED_MODEL = "dinov3/convnext-tiny-ltdetr-coco"
+"""COCO model used for pre-labeling before a run of your own exists."""
 
 
 @dataclass
@@ -284,28 +289,59 @@ class StopDeploymentOperator(BaseOperator):
 
 
 @dataclass
-class BookmarkFrameOperator(BaseOperator):
-    """Saves the current camera frame from inside LightlyStudio."""
+class PrelabelOperator(BaseOperator):
+    """Pre-labels the images of the current view with a model."""
 
     demo: CameraDemo
-    name: str = "Bookmark current camera frame"
-    description: str = "Adds the frame the camera shows right now to this dataset."
+    name: str = "Pre-label frames with a model"
+    description: str = (
+        "Runs a model over the images of this view and writes its boxes into the "
+        "annotation source, for a person to correct."
+    )
 
     @property
     def parameters(self) -> list[BaseParameter]:
         """Return the list of parameters this operator expects."""
         return [
             StringParameter(
-                name="tag",
-                default=demo_app.BOOKMARK_TAG,
-                description="Tag to assign to the new image.",
-            )
+                name=PARAM_MODEL,
+                default=PRETRAINED_MODEL,
+                description=(
+                    "Training run name, 'latest' for the newest run, or a LightlyTrain model name."
+                ),
+            ),
+            FloatParameter(
+                name=PARAM_THRESHOLD,
+                default=0.6,
+                description="Minimum score for a box.",
+            ),
+            StringParameter(
+                name=PARAM_ANNOTATION_SOURCE,
+                default=demo_app.DEFAULT_ANNOTATION_SOURCE,
+                description="Annotation source that receives the boxes.",
+            ),
+            TableParameter(
+                name=PARAM_CLASSES,
+                required=False,
+                description=(
+                    "Which classes of the model to keep, and under which name. "
+                    "Leave empty to keep all of them."
+                ),
+                columns=[
+                    StringParameter(name="model_class", description="Class name of the model."),
+                    StringParameter(
+                        name="label_as",
+                        required=False,
+                        description="Name to store it under. Empty keeps the model name.",
+                    ),
+                ],
+            ),
         ]
 
     @property
     def supported_scopes(self) -> list[OperatorScope]:
         """Return the list of scopes this operator can be triggered from."""
-        return [OperatorScope.IMAGE, OperatorScope.ROOT]
+        return [OperatorScope.IMAGE]
 
     def execute(
         self,
@@ -314,24 +350,56 @@ class BookmarkFrameOperator(BaseOperator):
         context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
-        """Save the current frame as an image sample."""
-        del session, context
-        tag = str(parameters.get("tag") or "").strip()
+        """Write model boxes into the annotation source of this view."""
+        model = str(parameters.get(PARAM_MODEL) or PRETRAINED_MODEL)
         try:
-            file_name = self.demo.bookmark(tags=[tag] if tag else [])
-        except RuntimeError as exc:
+            model_source = self.demo.resolve_model(model=model)
+        except ValueError as exc:
             return OperatorResult(success=False, message=str(exc))
-        return OperatorResult(success=True, message=f"Bookmarked {file_name}.")
+
+        try:
+            written, image_count, class_names = dataset_bridge.prelabel_images(
+                session=session,
+                request=dataset_bridge.PrelabelRequest(
+                    collection_id=context.collection_id,
+                    image_filter=_as_image_filter(context=context),
+                    model=model_source,
+                    annotation_source=str(
+                        parameters.get(PARAM_ANNOTATION_SOURCE)
+                        or demo_app.DEFAULT_ANNOTATION_SOURCE
+                    ),
+                    score_threshold=_as_float(parameters.get(PARAM_THRESHOLD), 0.6),
+                    class_map=_as_class_map(parameters.get(PARAM_CLASSES)),
+                ),
+            )
+        except ValueError as exc:
+            return OperatorResult(success=False, message=str(exc))
+
+        if not written:
+            return OperatorResult(
+                success=True,
+                message=(
+                    "The model found nothing above the threshold, or every image of this "
+                    "view is labeled already."
+                ),
+            )
+        return OperatorResult(
+            success=True,
+            message=(
+                f"Wrote {written} boxes on {image_count} images as {', '.join(class_names)}. "
+                "Open an image and correct them before you train."
+            ),
+        )
 
 
 def build_operators(demo: CameraDemo) -> list[BaseOperator]:
     """Return every operator of the camera demo."""
     return [
+        PrelabelOperator(demo=demo),
         TrainDetectorOperator(demo=demo),
         TrainingStatusOperator(demo=demo),
         DeployModelOperator(demo=demo),
         StopDeploymentOperator(demo=demo),
-        BookmarkFrameOperator(demo=demo),
     ]
 
 
@@ -349,6 +417,17 @@ def _as_int(value: Any, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _as_class_map(value: Any) -> dict[str, str]:
+    if not isinstance(value, list):
+        return {}
+    class_map = {}
+    for row in value:
+        model_class = str(row.get("model_class", "")).strip()
+        if model_class:
+            class_map[model_class] = str(row.get("label_as", "")).strip() or model_class
+    return class_map
 
 
 def _as_float(value: Any, default: float) -> float:

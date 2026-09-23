@@ -136,15 +136,35 @@ seconds. The other four feeds are continuous video.
     the model is unsure about, with the tag `low-confidence`. These frames are the next
     labeling batch.
 
+## Pre-labeling
+
+Bookmarked frames hold no annotations. Drawing every box by hand is the slow part of
+the loop, so the first operator writes the boxes of a model into the same annotation
+source that a person labels in.
+
+The model can be a COCO model for the first round, or a run of your own later. The
+boxes are normal annotations: move them, change the class, or delete them. Images that
+already hold annotations stay untouched.
+
+The `classes` table says which classes to keep and what to call them. For the pool feed:
+
+| model_class | label_as |
+|---|---|
+| person | player |
+| sports ball | ball |
+
+A person then corrects the result and trains on it. The work per frame drops from "draw
+every box" to "fix what is wrong".
+
 ## The five operators
 
 | Operator | Function |
 |---|---|
+| Pre-label frames with a model | Writes the boxes of a model into the annotation source, for a person to correct. |
 | Train object detector (LightlyTrain) | Exports the annotations of the current view and starts a training run. |
 | Training status | Reports the progress and the metrics of the runs. |
 | Deploy model to camera | Runs a model on the live feed. |
 | Stop camera deployment | Takes the model off the feed. |
-| Bookmark current camera frame | Saves the current frame, from inside LightlyStudio. |
 
 Operators run inside the HTTP request, and the LightlyStudio interface is blocked while
 one runs. For this reason the training operator starts a subprocess and returns after

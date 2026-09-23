@@ -67,6 +67,29 @@ class ExportRequest:
 
 
 @dataclass(frozen=True)
+class PrelabelRequest:
+    """What to pre-label and with which model.
+
+    Attributes:
+        collection_id: Root collection of the dataset.
+        image_filter: Filter of the current grid view, or None for the whole collection.
+        model: LightlyTrain model name or path to an exported checkpoint.
+        annotation_source: Annotation source that receives the boxes. Use the source that
+            the user labels in, so that the boxes are there to correct.
+        score_threshold: Minimum score for a box to be written.
+        class_map: Model class name to annotation class name. An empty map keeps every
+            class of the model under its own name.
+    """
+
+    collection_id: UUID
+    image_filter: ImageFilter | None
+    model: str
+    annotation_source: str
+    score_threshold: float
+    class_map: dict[str, str]
+
+
+@dataclass(frozen=True)
 class EvaluationRequest:
     """What to predict on and how to name the resulting evaluation run.
 
@@ -275,6 +298,100 @@ def predict_and_evaluate(request: EvaluationRequest, config: TrainedModelEvaluat
         f"{len(annotations)} predictions on {result.sample_count} validation images. "
         f"See the Eval tab for '{request.evaluation_name}'."
     )
+
+
+def prelabel_images(session: Session, request: PrelabelRequest) -> tuple[int, int, list[str]]:
+    """Write model boxes into the annotation source that the user labels in.
+
+    The boxes are normal annotations, so the user can move them, correct the class, or
+    delete them. Images that already hold annotations in that source stay untouched: a
+    frame that a person labeled must not get a second set of boxes.
+
+    Args:
+        session: Database session.
+        request: Model, view and class names of the pre-labeling.
+
+    Returns:
+        The number of boxes written, the number of images that got boxes, and the
+        class names that were used.
+    """
+    model = lightly_train.load_model(model=str(request.model))
+    model_classes: dict[int, str] = dict(model.classes)
+    class_names: dict[int, str] = {
+        class_id: request.class_map.get(name) or name
+        for class_id, name in model_classes.items()
+        if not request.class_map or name in request.class_map
+    }
+    if not class_names:
+        raise ValueError(
+            f"The model knows none of these classes: {', '.join(sorted(request.class_map))}. "
+            f"It knows: {', '.join(sorted(model_classes.values())[:12])}."
+        )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=session, collection_id=request.collection_id, filters=request.image_filter
+    )
+    samples = list(result.samples)
+    source_id = collection_resolver.get_by_name(
+        session=session, name=request.annotation_source, parent_collection_id=request.collection_id
+    )
+    already_labeled = _samples_with_annotations(
+        session=session, samples=samples, annotation_collection_id=source_id
+    )
+    label_map = _get_or_create_labels(
+        session=session, collection_id=request.collection_id, class_names=class_names
+    )
+    annotations: list[AnnotationCreate] = []
+    image_count = 0
+    for sample in samples:
+        if sample.sample_id in already_labeled:
+            continue
+        with Image.open(sample.file_path_abs) as opened:
+            prediction = model.predict(opened.convert("RGB"), threshold=request.score_threshold)
+        boxes_before = len(annotations)
+        for label, box, score in zip(
+            prediction["labels"].tolist(),
+            prediction["bboxes"].tolist(),
+            prediction["scores"].tolist(),
+        ):
+            label_id = label_map.get(int(label))
+            if label_id is None:
+                continue
+            x1, y1, x2, y2 = (round(value) for value in box)
+            annotations.append(
+                AnnotationCreate(
+                    annotation_label_id=label_id,
+                    annotation_type=AnnotationType.OBJECT_DETECTION,
+                    parent_sample_id=sample.sample_id,
+                    x=max(0, x1),
+                    y=max(0, y1),
+                    width=max(0, x2 - x1),
+                    height=max(0, y2 - y1),
+                    confidence=round(float(score), 3),
+                )
+            )
+        image_count += 1 if len(annotations) > boxes_before else 0
+    if annotations:
+        annotation_resolver.create_many(
+            session=session,
+            parent_collection_id=request.collection_id,
+            annotations=annotations,
+            collection_name=request.annotation_source,
+        )
+    return len(annotations), image_count, sorted(set(class_names.values()))
+
+
+def _samples_with_annotations(
+    session: Session, samples: list[Any], annotation_collection_id: UUID | None
+) -> set[UUID]:
+    if annotation_collection_id is None or not samples:
+        return set()
+    existing = annotation_resolver.get_all_by_parent_sample_ids_and_annotation_collection_id(
+        session=session,
+        parent_sample_ids=[sample.sample_id for sample in samples],
+        annotation_collection_id=annotation_collection_id,
+    )
+    return {annotation.parent_sample_id for annotation in existing}
 
 
 def _write_split(coco: dict[str, Any], images: list[dict[str, Any]], path: Path) -> None:

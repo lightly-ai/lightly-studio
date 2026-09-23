@@ -131,18 +131,41 @@ class CameraDemo:
         Raises:
             ValueError: If no trained model is available.
         """
-        run_name = model
-        if model == "latest":
-            latest = self.trainings.latest_completed()
-            if latest is None:
-                raise ValueError("No finished training run yet. Train a model first.")
-            run_name = latest.run_name
-        checkpoint = self.trainings.checkpoint_path(run_name=run_name)
-        if checkpoint is None and self.trainings.get(run_name=run_name) is not None:
-            raise ValueError(f"Run '{run_name}' has no exported model yet.")
-        source = str(checkpoint) if checkpoint is not None else model
-        self.detector.deploy(model=source, model_name=run_name, threshold=threshold)
+        run_name = self._run_name(model=model)
+        self.detector.deploy(
+            model=self.resolve_model(model=model), model_name=run_name, threshold=threshold
+        )
         return f"'{run_name}' is running on the camera feed. Watch it at {self.station_url}."
+
+    def resolve_model(self, model: str) -> str:
+        """Turn a run name, "latest", or a model name into something a loader accepts.
+
+        Args:
+            model: A training run name, "latest" for the newest finished run, or any
+                LightlyTrain model name or checkpoint path.
+
+        Returns:
+            The path of an exported checkpoint, or the model name unchanged.
+
+        Raises:
+            ValueError: If the run exists but has no exported model, or if there is no
+                finished run and the caller asked for "latest".
+        """
+        run_name = self._run_name(model=model)
+        checkpoint = self.trainings.checkpoint_path(run_name=run_name)
+        if checkpoint is not None:
+            return str(checkpoint)
+        if self.trainings.get(run_name=run_name) is not None:
+            raise ValueError(f"Run '{run_name}' has no exported model yet.")
+        return model
+
+    def _run_name(self, model: str) -> str:
+        if model != "latest":
+            return model
+        latest = self.trainings.latest_completed()
+        if latest is None:
+            raise ValueError("No finished training run yet. Train a model first.")
+        return latest.run_name
 
     def stop_deployment(self) -> None:
         """Take the model off the camera feed."""
