@@ -137,11 +137,13 @@ float64 w
 )
 
 
-def write_mcap(path: Path) -> Path:
+def write_mcap(path: Path, lidar_stamp_offset_ns: int = 0) -> Path:
     """Writes an indexed MCAP file with a camera, a lidar, and static transforms.
 
     Args:
         path: The path to write the file to.
+        lidar_stamp_offset_ns: Added to each lidar log time to form `header.stamp`.
+            Zero keeps the stamp equal to the log time.
 
     Returns:
         The path of the written file.
@@ -183,7 +185,7 @@ def write_mcap(path: Path) -> Path:
         writer.write_message(
             topic=LIDAR_POINTS_TOPIC,
             schema=point_cloud_schema,
-            message=_point_cloud_message(),
+            message=_point_cloud_message(stamp_ns=log_time_ns + lidar_stamp_offset_ns),
             log_time=log_time_ns,
         )
     writer.finish()
@@ -428,9 +430,9 @@ def _camera_info_message() -> dict[str, Any]:
     }
 
 
-def _point_cloud_message() -> dict[str, Any]:
+def _point_cloud_message(stamp_ns: int) -> dict[str, Any]:
     return {
-        "header": {"stamp": _time(LIDAR_LOG_TIMES_NS[0]), "frame_id": LIDAR_FRAME_ID},
+        "header": {"stamp": _time(stamp_ns), "frame_id": LIDAR_FRAME_ID},
         "height": 1,
         "width": 1,
         "fields": [{"name": "x", "offset": 0, "datatype": 7, "count": 1}],
