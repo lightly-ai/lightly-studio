@@ -78,6 +78,7 @@ class McapSequenceView(BaseModel):
     """View model for a single MCAP sequence in a list response."""
 
     sample_id: UUID
+    recording_id: UUID
     sample_count: int
     sequence_frame: McapSequenceFrame | None = None
 
