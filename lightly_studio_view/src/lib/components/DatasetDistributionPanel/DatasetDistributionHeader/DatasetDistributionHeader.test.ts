@@ -33,7 +33,7 @@ const histogramSource = (): DistributionSource => ({
 });
 
 const categoricalSource = (
-    state: { loading?: boolean; error?: string } = {}
+    state: { loading?: boolean; updating?: boolean; error?: string } = {}
 ): DistributionSource => ({
     id: 'metadata',
     label: 'Metadata',
@@ -213,16 +213,15 @@ describe('DatasetDistributionHeader', () => {
         expect(onOpenConfig).toHaveBeenCalledOnce();
     });
 
-    it('shows an inline updating banner when stale buckets are present and loading', () => {
-        // Non-empty buckets → CategoricalStatusBanner shows "Updating values…" inline.
-        renderHeader([categoricalSource({ loading: true })]);
-        expect(screen.getByRole('status')).toHaveTextContent('Updating values');
+    it('shows an inline status while categorical buckets update', () => {
+        renderHeader([categoricalSource({ updating: true })]);
+        expect(screen.getByRole('status')).toHaveTextContent('Updating…');
     });
 
-    it('shows an inline error banner when stale buckets are present and there is an error', () => {
-        // Non-empty buckets + error → CategoricalStatusBanner shows "Could not update" inline.
-        // The chart remains visible in DatasetDistributionContent (not rendered here).
+    it('shows an inline error when categorical buckets are present', () => {
         renderHeader([categoricalSource({ error: 'network failure' })]);
-        expect(screen.getByRole('alert')).toHaveTextContent('Could not update');
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'Could not update metadata distribution.'
+        );
     });
 });

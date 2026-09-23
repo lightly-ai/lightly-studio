@@ -9,8 +9,8 @@ from uuid import UUID, uuid4
 import numpy as np
 import pytest
 from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
-    ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
@@ -116,7 +116,7 @@ class _BoxXImageCropEmbedder(ImageCropPathEmbedder):
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
-class _DropInputEmbedder(ImagePathEmbedder, TextEmbedder):
+class _DropInputEmbedder(ImageBytesEmbedder, TextEmbedder):
     """Drops every input, so image and text queries get an empty result.
 
     Stands in for an embedder that skips inputs it cannot read. Shares the random model's
@@ -129,9 +129,9 @@ class _DropInputEmbedder(ImagePathEmbedder, TextEmbedder):
         """Describe the shared random embedding space with dimension 3."""
         return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
 
-    def embed_images(self, paths: list[str]) -> EmbeddingResult:
-        """Drop every image path, returning no embedding."""
-        del paths
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        """Drop every image, returning no embedding."""
+        del images
         return EmbeddingResult(embeddings=np.empty((0, 3), dtype=np.float32), kept_indices=[])
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
@@ -161,7 +161,7 @@ def test_embed_image_for_collection(
     )
 
     embedding = embed_samples.embed_image_for_collection(
-        session=db_session, collection_id=collection.collection_id, filepath="/path/to/image.jpg"
+        session=db_session, collection_id=collection.collection_id, image_bytes=b"image bytes"
     )
 
     assert len(embedding) == 3
@@ -179,7 +179,7 @@ def test_embed_image_for_collection__no_default_model(
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
-            filepath="/path/to/image.jpg",
+            image_bytes=b"image bytes",
         )
 
 
@@ -193,11 +193,11 @@ def test_embed_image_for_collection__no_embedder_for_space_raises(
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
-    with pytest.raises(ValueError, match="No registered embedder matches"):
+    with pytest.raises(ValueError, match="No embedder resolves for"):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
-            filepath="/path/to/image.jpg",
+            image_bytes=b"image bytes",
         )
 
 
@@ -212,11 +212,11 @@ def test_embed_image_for_collection__no_embedding_raises(
     registry.register(embedder=_DropInputEmbedder())
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
-    with pytest.raises(ValueError, match="produced no embedding"):
+    with pytest.raises(embed_samples.ImageNotEmbeddedError, match="returned no embedding"):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
-            filepath="/path/to/image.jpg",
+            image_bytes=b"image bytes",
         )
 
 
@@ -263,7 +263,7 @@ def test_embed_text_for_collection__no_embedder_for_space_raises(
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
-    with pytest.raises(ValueError, match="No registered embedder matches"):
+    with pytest.raises(ValueError, match="No embedder resolves for"):
         embed_samples.embed_text_for_collection(
             session=db_session, collection_id=collection.collection_id, text="a red car"
         )

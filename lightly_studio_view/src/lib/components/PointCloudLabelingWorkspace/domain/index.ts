@@ -1,6 +1,7 @@
 export type {
     AnnotationClass,
     AnnotationHover,
+    AnnotationSource,
     AnnotationKeyframe,
     AnnotationSelection,
     AnnotationTrack,

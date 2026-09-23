@@ -8,6 +8,7 @@ crop-specific path lives in ``image_crop_embedding.py`` and reuses the same
 
 from __future__ import annotations
 
+import io
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import TypeVar
@@ -104,6 +105,39 @@ def embed_image_files_batched(
     report.log_summary()
 
     return result
+
+
+def embed_image_bytes_batched(
+    images: list[bytes],
+    context: EmbeddingContext,
+    show_progress: bool,
+) -> EmbeddingResult:
+    """Embed encoded image bytes in batches, preserving input order and skipping broken data.
+
+    Args:
+        images: Encoded image bytes (JPEG, PNG or WebP).
+        context: Model-specific embedding configuration.
+        show_progress: Whether to show a tqdm progress bar.
+
+    Returns:
+        An ``EmbeddingResult`` whose embeddings cover only the decodable inputs, with
+        ``kept_indices`` mapping each row back to its input position.
+    """
+
+    def decode_and_preprocess(image_bytes: bytes) -> torch.Tensor | None:
+        try:
+            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        except BROKEN_IMAGE_ERRORS:
+            return None
+        return context.preprocess(image)
+
+    return _embed_items_batched(
+        items=images,
+        preprocess_item=decode_and_preprocess,
+        context=context,
+        show_progress=show_progress,
+        progress=_EmbeddingProgress(desc="Generating embeddings", unit=" images"),
+    )
 
 
 def embed_pil_images_batched(

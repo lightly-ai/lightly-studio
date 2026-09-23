@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -207,9 +208,9 @@ def test_main__check_wheel_dependencies__no_wheel_exits_nonzero(
     assert "expected exactly one wheel" in capsys.readouterr().err
 
 
-def test_main__render_slack_message__writes_file(tmp_path: Path):
+def test_main__render_slack_message__writes_file(tmp_path: Path, capsys: pytest.CaptureFixture):
     changelog_file = tmp_path / "CHANGELOG.md"
-    output = tmp_path / "slack.txt"
+    output = tmp_path / "slack.json"
     changelog_file.write_text(
         changelog.promote_changelog(
             changelog_text=SAMPLE_CHANGELOG, version="1.1.0", date="2026-08-25"
@@ -225,15 +226,25 @@ def test_main__render_slack_message__writes_file(tmp_path: Path):
                 "v1.1.0",
                 "--release-url",
                 "https://x/releases/tag/v1.1.0",
+                "--channel",
+                "studio-issues-and-feedback",
                 "--output",
                 str(output),
             ]
         )
         == 0
     )
-    assert output.read_text() == (
+    text = (
         "*<https://x/releases/tag/v1.1.0|LightlyStudio Release 1.1.0>*\n\nAdded\n• Added thing one."
     )
+    assert json.loads(output.read_text()) == {
+        "channel": "studio-issues-and-feedback",
+        "text": text,
+        "unfurl_links": False,
+        "unfurl_media": False,
+    }
+    # The step summary reads the rendered text off stdout.
+    assert capsys.readouterr().out == f"{text}\n"
 
 
 def test_main__render_slack_message__unreleased_version_fails(
@@ -251,8 +262,10 @@ def test_main__render_slack_message__unreleased_version_fails(
                 "v1.1.0",
                 "--release-url",
                 "https://x/releases/tag/v1.1.0",
+                "--channel",
+                "studio-issues-and-feedback",
                 "--output",
-                str(tmp_path / "slack.txt"),
+                str(tmp_path / "slack.json"),
             ]
         )
         == 1

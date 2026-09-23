@@ -5,10 +5,11 @@
     import ToolRail from './ToolRail/ToolRail.svelte';
     import SceneViewport from './SceneViewport/SceneViewport.svelte';
     import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
-    import AnnotationPanel from './AnnotationPanel/AnnotationPanel.svelte';
+    import PointCloudRightSidePanel from './PointCloudRightSidePanel';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
+    import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
     import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 
     /**
@@ -26,6 +27,10 @@
      */
     interface Props {
         sampleId: string;
+        /** Dataset the labeled point-cloud sequence belongs to. */
+        datasetId?: string;
+        /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
+        sequenceId?: string;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
         /** Overridable for tests/stories; production always starts at `empty` today. */
@@ -34,7 +39,17 @@
         onRetry?: () => void;
     }
 
-    let { sampleId, sourcePath = [], status = 'empty', onExit, onRetry }: Props = $props();
+    let {
+        sampleId,
+        datasetId = '',
+        sequenceId = '',
+        sourcePath = [],
+        status = 'empty',
+        onExit,
+        onRetry
+    }: Props = $props();
+
+    let selectedCuboidId = $state<string | null>(null);
 
     // Placeholder ruler until browser-side MCAP frame loading lands (child issues of LIG-10657).
     const placeholderTicks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
@@ -58,6 +73,18 @@
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
+
+    // Channel data lands with browser-side MCAP loading (later child issues of LIG-10657); until
+    // then the filter bar renders empty but its selection state is already owned here.
+    let lidarChannels = $state<ChannelSummaryView[]>([]);
+    let cameraChannels = $state<ChannelSummaryView[]>([]);
+    let selectedLidarChannels = $state<number[]>([]);
+    let selectedCameraChannels = $state<number[]>([]);
+
+    const toggleChannel = (selected: number[], channelId: number): number[] =>
+        selected.includes(channelId)
+            ? selected.filter((id) => id !== channelId)
+            : [...selected, channelId];
 
     const handleFullscreenChange = () => {
         isFullscreen = document.fullscreenElement === containerEl;
@@ -90,7 +117,16 @@
         onToggleFullscreen={toggleFullscreen}
         {onExit}
     />
-    <WorkspaceFilterBar />
+    <WorkspaceFilterBar
+        {lidarChannels}
+        {cameraChannels}
+        {selectedLidarChannels}
+        {selectedCameraChannels}
+        onToggleLidarChannel={(channelId) =>
+            (selectedLidarChannels = toggleChannel(selectedLidarChannels, channelId))}
+        onToggleCameraChannel={(channelId) =>
+            (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
+    />
     <div class="flex min-h-0 flex-1">
         {#if status === 'unsupported' || status === 'error'}
             <WorkspaceStatusPanel {status} {onRetry} {onExit} />
@@ -120,7 +156,12 @@
                         </PaneResizer>
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
                         <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
-                            <CameraProjectionStrip />
+                            <CameraProjectionStrip
+                                {datasetId}
+                                {sequenceId}
+                                seqNumber={currentTick}
+                                {cameraChannels}
+                            />
                         </Pane>
                         <PaneResizer
                             class="group relative flex h-2 cursor-row-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"
@@ -157,7 +198,7 @@
                     </div>
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <AnnotationPanel />
+                    <PointCloudRightSidePanel bind:selectedCuboidId />
                 </Pane>
             </PaneGroup>
         {/if}

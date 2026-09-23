@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
@@ -35,15 +36,16 @@ EMBEDDING_DIMENSION: int = 512
 
 
 class MobileCLIPEmbedder(
-    ImagePathEmbedder,
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
+    ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
 ):
     """MobileCLIP embedding model.
 
-    Embeds images by path, image crops, PIL images and text into one shared embedding
-    space. MobileCLIP cannot embed a whole video, so there is no video capability; a
+    Embeds images by path or bytes, image crops, PIL images and text into one shared
+    embedding space. MobileCLIP cannot embed a whole video, so there is no video capability; a
     video is covered frame by frame through ``embed_images_pil``.
     """
 
@@ -110,6 +112,21 @@ class MobileCLIPEmbedder(
             image_crops=crops,
             context=self._embedding_context(),
             show_progress=True,
+        )
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        """Embed images given as encoded bytes with MobileCLIP.
+
+        Args:
+            images: Encoded image bytes (JPEG, PNG or WebP).
+
+        Returns:
+            The embeddings and the indices of the inputs they cover.
+        """
+        return image_embedding.embed_image_bytes_batched(
+            images=images,
+            context=self._embedding_context(),
+            show_progress=False,
         )
 
     def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
