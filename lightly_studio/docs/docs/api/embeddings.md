@@ -64,14 +64,14 @@ Subclass only the capabilities your model provides.
     options:
         members: [TextEmbedder]
 
-<!-- TODO(Michal, 09/2026): Document ImageBytesEmbedder and VideoBytesEmbedder once LightlyStudio
-calls these capabilities.
-
 ### ImageBytesEmbedder
 
 ::: lightly_studio_serve.embedder
     options:
         members: [ImageBytesEmbedder]
+
+<!-- TODO(Michal, 09/2026): Document VideoBytesEmbedder once LightlyStudio calls this
+capability.
 
 ### VideoBytesEmbedder
 
