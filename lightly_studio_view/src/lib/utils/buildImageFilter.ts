@@ -25,7 +25,7 @@ export function buildImageFilter({
     tagIds?: string[];
     confusionCell?: ConfusionCell | null;
     queryExpr?: QueryExpr | null;
-}): ImageFilter | undefined {
+}): (ImageFilter & { filter_type: 'image' }) | undefined {
     const filter: ImageFilter = {};
 
     if (dimensionsValues) {
@@ -88,5 +88,6 @@ export function buildImageFilter({
         };
     }
 
-    return Object.keys(filter).length > 0 ? filter : undefined;
+    // The tag lets endpoints that accept image and video filters tell them apart.
+    return Object.keys(filter).length > 0 ? { ...filter, filter_type: 'image' } : undefined;
 }

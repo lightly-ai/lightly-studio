@@ -20,7 +20,7 @@ from lightly_studio.models.metadata import (
     MetadataValueCountsView,
 )
 from lightly_studio.resolvers import collection_embedding_model_resolver
-from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.grid_filter import CollectionFilter
 from lightly_studio.resolvers.metadata_resolver.sample import (
     categorical_value_counts as metadata_value_counts_resolver,
 )
@@ -55,7 +55,7 @@ def get_metadata_info(
 class MetadataHistogramsRequest(BaseModel):
     """Request body for computing filtered metadata histograms."""
 
-    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
+    filters: CollectionFilter | None = Field(None, description="Filter parameters for samples")
     bin_count: int = Field(
         _DEFAULT_BIN_COUNT, ge=1, le=200, description="Number of equal-width bins per histogram"
     )
@@ -103,7 +103,7 @@ class MetadataValueCountsRequest(BaseModel):
         description="Maximum concrete values per field; null returns all values",
     )
 
-    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
+    filters: CollectionFilter | None = Field(None, description="Filter parameters for samples")
     fields: list[str] | None = Field(
         None, description="Categorical fields to count; all fields are counted when absent"
     )
