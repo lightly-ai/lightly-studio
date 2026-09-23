@@ -1,10 +1,7 @@
-import { render } from '@testing-library/svelte';
-import { flushSync } from 'svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import PointCloudWorkspaceContextHarness from './PointCloudWorkspaceContextHarness.svelte';
-import type { createPointCloudWorkspaceContext } from './pointCloudWorkspaceContext.svelte';
+import { PointCloudWorkspace } from './pointCloudWorkspace.svelte';
 
-// The provider wraps useMcapSequenceSummary; stub it so the context can be built without a live
+// The workspace wraps useMcapSequenceSummary; stub it so the class can be built without a live
 // TanStack query client. `summaryState` is mutable so each test drives the derived status/channels.
 const { summaryState, refetch } = vi.hoisted(() => ({
     summaryState: { data: undefined, isLoading: false, isError: false } as {
@@ -27,29 +24,25 @@ const summaryWithChannels = {
     camera_channels: [{ channel_id: 2, group_component_name: 'front', group_component_index: 0 }]
 };
 
-type Context = ReturnType<typeof createPointCloudWorkspaceContext>;
-
-const createContext = (statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error'): Context => {
-    let context: Context | undefined;
-    render(PointCloudWorkspaceContextHarness, {
+const createWorkspace = (statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error') =>
+    new PointCloudWorkspace(() => ({
         datasetId: 'dataset-1',
         sequenceId: 'seq-1',
-        statusOverride,
-        onReady: (ctx: Context) => {
-            context = ctx;
-        }
-    });
-    flushSync();
-    if (!context) throw new Error('PointCloudWorkspaceContextHarness did not initialize');
-    return context;
-};
+        statusOverride
+    }));
 
-describe('pointCloudWorkspaceContext', () => {
+describe('PointCloudWorkspace', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         summaryState.data = undefined;
         summaryState.isLoading = false;
         summaryState.isError = false;
+    });
+
+    it('exposes the inputs it was built with', () => {
+        const workspace = createWorkspace();
+        expect(workspace.datasetId).toBe('dataset-1');
+        expect(workspace.sequenceId).toBe('seq-1');
     });
 
     it.each<[Partial<typeof summaryState>, string]>([
@@ -60,51 +53,48 @@ describe('pointCloudWorkspaceContext', () => {
         [{ data: summaryWithChannels }, 'ready']
     ])('derives status %s from the summary', (patch, expected) => {
         Object.assign(summaryState, patch);
-        expect(createContext().status).toBe(expected);
+        expect(createWorkspace().status).toBe(expected);
     });
 
     it('honors the status override regardless of the summary', () => {
         summaryState.data = summaryWithChannels;
-        expect(createContext('unsupported').status).toBe('unsupported');
+        expect(createWorkspace('unsupported').status).toBe('unsupported');
     });
 
     it('exposes the summary channels, or empty arrays without data', () => {
-        expect(createContext().lidarChannels).toEqual([]);
-        expect(createContext().cameraChannels).toEqual([]);
+        expect(createWorkspace().lidarChannels).toEqual([]);
+        expect(createWorkspace().cameraChannels).toEqual([]);
 
         summaryState.data = summaryWithChannels;
-        const context = createContext();
-        expect(context.lidarChannels).toHaveLength(1);
-        expect(context.cameraChannels[0].group_component_name).toBe('front');
+        const workspace = createWorkspace();
+        expect(workspace.lidarChannels).toHaveLength(1);
+        expect(workspace.cameraChannels[0].group_component_name).toBe('front');
     });
 
     it('advances and rewinds within bounds, clamped at both ends', () => {
-        const context = createContext();
-        expect(context.currentTick).toBe(0);
-        expect(context.isPlaying).toBe(false);
-        expect(context.ticks).toHaveLength(24);
+        const workspace = createWorkspace();
+        expect(workspace.currentTick).toBe(0);
+        expect(workspace.isPlaying).toBe(false);
+        expect(workspace.ticks).toHaveLength(24);
 
         // Clamped at the first tick.
-        context.goToPreviousFrame();
-        context.goToNextFrame();
-        flushSync();
-        expect(context.currentTick).toBe(1);
+        workspace.goToPreviousFrame();
+        workspace.goToNextFrame();
+        expect(workspace.currentTick).toBe(1);
 
         // Clamped at the last tick.
-        for (let i = 0; i < 30; i += 1) context.goToNextFrame();
-        flushSync();
-        expect(context.currentTick).toBe(context.ticks.length - 1);
+        for (let i = 0; i < 30; i += 1) workspace.goToNextFrame();
+        expect(workspace.currentTick).toBe(workspace.ticks.length - 1);
     });
 
     it('toggles playback', () => {
-        const context = createContext();
-        context.togglePlayback();
-        flushSync();
-        expect(context.isPlaying).toBe(true);
+        const workspace = createWorkspace();
+        workspace.togglePlayback();
+        expect(workspace.isPlaying).toBe(true);
     });
 
     it('retry re-fetches the summary', () => {
-        createContext().retry();
+        createWorkspace().retry();
         expect(refetch).toHaveBeenCalledOnce();
     });
 });
