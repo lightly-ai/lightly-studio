@@ -33,6 +33,7 @@ type PointCloudLabelingDetailsParams = {
     datasetId: string;
     collectionId: string;
     sampleId: string;
+    sequenceId: string;
     collectionType?: string;
     groupId?: string;
 };
@@ -186,9 +187,11 @@ export const routes = {
             collectionType,
             collectionId,
             sampleId,
-            groupId
+            groupId,
+            sequenceId
         }: PointCloudLabelingDetailsParams) => {
             const queryParams: Record<string, string> = {};
+            queryParams['sequence_id'] = sequenceId;
             if (collectionType !== undefined) queryParams['collection_type'] = collectionType;
             if (groupId !== undefined) queryParams['group_id'] = groupId;
             return getURL(

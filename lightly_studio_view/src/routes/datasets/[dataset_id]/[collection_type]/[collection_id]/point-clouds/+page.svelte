@@ -40,7 +40,8 @@
                 datasetId: pageData.collection.dataset_id,
                 collectionType,
                 collectionId,
-                sampleId
+                sampleId,
+                sequenceId: sampleId
             })
         );
     };
