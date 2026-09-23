@@ -52,7 +52,9 @@ describe('MetadataCategoricalFilter', () => {
         });
 
         expect(screen.getByText('Updating…')).toBeVisible();
-        expect(screen.getByRole('alert')).toHaveTextContent('Could not update metadata distribution.');
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'Could not update metadata distribution.'
+        );
         await fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
         expect(onRetry).toHaveBeenCalledOnce();
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));

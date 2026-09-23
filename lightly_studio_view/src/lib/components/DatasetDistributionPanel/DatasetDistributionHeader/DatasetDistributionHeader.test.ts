@@ -220,6 +220,8 @@ describe('DatasetDistributionHeader', () => {
 
     it('shows an inline error when categorical buckets are present', () => {
         renderHeader([categoricalSource({ error: 'network failure' })]);
-        expect(screen.getByRole('alert')).toHaveTextContent('Could not update metadata distribution.');
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'Could not update metadata distribution.'
+        );
     });
 });

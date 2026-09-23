@@ -861,9 +861,12 @@
                     (categoricalMetadataFilteredQuery.isLoading ||
                         categoricalMetadataFilteredQuery.isPlaceholderData)),
             categoricalUpdating:
-                (categoricalMetadataQuery.isFetching && !categoricalMetadataQuery.isLoading) ||
+                (categoricalMetadataQuery.isFetching &&
+                    !categoricalMetadataQuery.isLoading &&
+                    !categoricalMetadataQuery.isPlaceholderData) ||
                 (categoricalMetadataFilteredQuery.isFetching &&
-                    !categoricalMetadataFilteredQuery.isLoading),
+                    !categoricalMetadataFilteredQuery.isLoading &&
+                    !categoricalMetadataFilteredQuery.isPlaceholderData),
             categoricalError: categoricalMetadataQuery.error?.message,
             comparisonLoading: metadataTagDistributionsQuery.isFetching,
             comparisonError: metadataTagDistributionsQuery.error?.message

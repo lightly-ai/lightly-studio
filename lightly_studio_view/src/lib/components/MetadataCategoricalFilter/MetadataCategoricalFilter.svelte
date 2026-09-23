@@ -35,7 +35,7 @@
     const options = $derived(buildOptions(buckets, selectedValues));
     const optionLabel = (option: FilterOption) => getOptionLabel(option, options, buckets);
     const checkboxLabel = (option: FilterOption) => getCheckboxLabel(option, optionLabel(option));
-    const showSearch = $derived(options.length > 5);
+    const showSearch = $derived(buckets.filter((bucket) => bucket.kind === 'value').length > 5);
     const hasOtherAggregate = $derived(buckets.some((b) => b.kind === 'other'));
     const disabled = $derived(loading && buckets.length === 0 && selectedValues.length === 0);
     const isSelected = (value: CategoricalMetadataValue) =>
@@ -139,6 +139,16 @@
 {#if error && buckets.length > 0}
     <div class="mt-1 flex items-center justify-between gap-2 text-xs text-destructive" role="alert">
         <span>Could not update metadata distribution.</span>
-        {#if onRetry}<button class="shrink-0 underline" onclick={onRetry}>Retry</button>{/if}
+        {#if onRetry}
+            <Button
+                variant="ghost"
+                buttonProps={{
+                    size: 'sm',
+                    type: 'button',
+                    class: 'shrink-0 h-8 px-2 text-xs max-sm:min-h-11',
+                    onclick: onRetry
+                }}>Retry</Button
+            >
+        {/if}
     </div>
 {/if}
