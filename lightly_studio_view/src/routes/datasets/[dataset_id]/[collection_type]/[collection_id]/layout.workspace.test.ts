@@ -286,6 +286,18 @@ describe('distribution comparison query selection', () => {
     });
 });
 
+describe('video distribution panel', () => {
+    it('opens the video panel on the videos route', async () => {
+        setPageRoute(APP_ROUTES.videos);
+        mockActivePanel.set('distribution');
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+
+        expect(await screen.findByText('Annotation classes')).toBeInTheDocument();
+        expect(useImageAnnotationCountsBySampleTags).not.toHaveBeenCalled();
+    });
+});
+
 describe('annotation label pruning', () => {
     it('waits for the counts refetch before pruning selected labels', async () => {
         vi.mocked(useImageAnnotationCounts).mockReturnValue({
@@ -577,6 +589,15 @@ describe('SidePanelTabs availability', () => {
         await tick();
 
         expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
+    });
+
+    it('is present on videos route without embeddings', async () => {
+        setPageRoute(APP_ROUTES.videos);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
     });
 
     it('is absent on a collection-grid route without embeddings', async () => {
