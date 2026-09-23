@@ -185,7 +185,9 @@ the backend stores, see
 Use this when you want a different model than the built-ins. Load your model in
 `__init__` and run it inside the embed methods. Subclass one interface per
 capability. This embedder handles images, image crops, and text, so text queries
-compare against image embeddings.
+compare against image embeddings. It does not subclass `ImageBytesEmbedder`, so image
+search in the GUI is unavailable. Add `ImageBytesEmbedder` and implement
+`embed_image_bytes` to enable it.
 
 ```python
 import numpy as np
