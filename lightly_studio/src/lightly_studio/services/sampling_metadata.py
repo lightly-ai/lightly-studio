@@ -18,7 +18,6 @@ class TypicalityComputation(BaseModel):
 
     kind: Literal["typicality"]
     metadata_name: str = Field(min_length=1)
-    embedding_model_name: str | None = None
 
 
 class SimilarityComputation(BaseModel):
@@ -26,7 +25,6 @@ class SimilarityComputation(BaseModel):
 
     kind: Literal["similarity"]
     metadata_name: str = Field(min_length=1)
-    embedding_model_name: str | None = None
     query_tag_id: UUID
 
 
@@ -40,7 +38,34 @@ def compute_metadata(
     collection: CollectionTable,
     computations: list[MetadataComputation],
 ) -> None:
-    """Prepare metadata without requiring a second request from the browser."""
+    """Prepare metadata atomically using the collection's default embedding model.
+
+    Roll back all metadata updates in the batch if any computation fails.
+    Selection runs after this transaction and is not part of the rollback.
+    """
+    if not computations:
+        return
+    try:
+        # Resolvers commit individually. Joining the outer transaction prevents those commits
+        # from persisting a partial batch, without requiring savepoints unsupported by DuckDB.
+        with Session(
+            bind=session.connection(), join_transaction_mode="rollback_only"
+        ) as batch_session:
+            _compute_metadata(
+                session=batch_session, collection=collection, computations=computations
+            )
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+
+
+def _compute_metadata(
+    session: Session,
+    collection: CollectionTable,
+    computations: list[MetadataComputation],
+) -> None:
+    """Compute the batch without committing individual metadata updates."""
     for computation in computations:
         if isinstance(computation, SimilarityComputation):
             if collection.sample_type != SampleType.IMAGE:
@@ -52,7 +77,7 @@ def compute_metadata(
         embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
             session=session,
             collection_id=collection.collection_id,
-            embedding_model_name=computation.embedding_model_name,
+            embedding_model_name=None,
         )
         if isinstance(computation, TypicalityComputation):
             compute_typicality.compute_typicality_metadata(

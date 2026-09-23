@@ -101,6 +101,17 @@ describe('useSubmitCombinationSelection', () => {
             })
         ).toBe(false);
         expect(createSampling).not.toHaveBeenCalled();
+        expect(mockTrackEvent).toHaveBeenCalledWith('sampling_triggered', {
+            collection_id: 'col-1',
+            strategies: ['similarity'],
+            n_samples: 10,
+            filtered_sample_count: 100,
+            success: false,
+            error_message: 'Similarity is only available for image collections.'
+        });
+        expect(toast.error).toHaveBeenCalledWith(
+            'Similarity is only available for image collections.'
+        );
     });
 
     it('calls createSampling with mapped strategies, count, tag name, and filter', async () => {

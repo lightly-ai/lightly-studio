@@ -62,6 +62,19 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
 
         const filteredCount = get(filteredSampleCount);
 
+        function reportFailure(errorMessage: string): false {
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                filtered_sample_count: filteredCount,
+                success: false,
+                error_message: errorMessage
+            });
+            toast.error(errorMessage);
+            return false;
+        }
+
         trackEvent('sampling_submitted', {
             collection_id: collectionId,
             strategies: instances.map((i) => i.type),
@@ -71,8 +84,7 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
 
         try {
             if (isVideoCollection && instances.some((instance) => instance.type === 'similarity')) {
-                toast.error('Similarity is only available for image collections.');
-                return false;
+                return reportFailure('Similarity is only available for image collections.');
             }
 
             _loadingMessage.set('Creating selection...');
@@ -84,23 +96,14 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                     strategies: instances.map(toApiStrategy),
                     metadata_computations: getMetadataComputations(instances),
                     filter: selectionFilter ?? undefined,
-                    ...(preselectedTagId && { preselected_tag_id: preselectedTagId })
+                    preselected_tag_id: preselectedTagId
                 }
             });
 
             if (response.error) {
                 const errorMessage =
                     (response.error as SelectionError).error ?? 'Failed to create selection';
-                trackEvent('sampling_triggered', {
-                    collection_id: collectionId,
-                    strategies: instances.map((i) => i.type),
-                    n_samples: nSamplesToSelect,
-                    filtered_sample_count: filteredCount,
-                    success: false,
-                    error_message: errorMessage
-                });
-                toast.error(errorMessage);
-                return false;
+                return reportFailure(errorMessage);
             }
 
             trackEvent('sampling_triggered', {
