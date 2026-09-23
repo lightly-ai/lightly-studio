@@ -12,8 +12,12 @@ from lightly_studio.core.dataset import DEFAULT_DATASET_NAME
 from lightly_studio.core.mcap import dataset_schema
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.group_dataset import McapGroupDataset
+from lightly_studio.core.mcap.recording import Recording
+from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.resolvers import mcap_group_sequence_resolver, recording_resolver
 
 
 class McapDataset:
@@ -46,7 +50,9 @@ class McapDataset:
     )
     ```
 
-    Methods `McapDataset.create()` and `McapDataset.load()` are also available.
+    Methods `McapDataset.create()` and `McapDataset.load()` are also available. To index
+    a recording step by step instead, use `create_recording`, `group_dataset` and
+    `create_sequence`.
     """
 
     def __init__(self, collection: CollectionTable) -> None:
@@ -177,6 +183,90 @@ class McapDataset:
         if self._group_dataset is None:
             self._group_dataset = McapGroupDataset(collection=self._group_collection())
         return self._group_dataset
+
+    def get_sequences(self) -> list[McapSequence]:
+        """Get the sequences of the dataset, one per recording that was indexed.
+
+        Returns:
+            The sequences, ordered by the time they were created at.
+        """
+        views = mcap_group_sequence_resolver.get_all_by_collection_id(
+            session=self._session, collection_id=self.collection_id, pagination=None
+        )
+        return [
+            McapSequence(
+                session=self._session,
+                sample_id=view.sample_id,
+                recording_id=view.recording_id,
+            )
+            for view in views.samples
+        ]
+
+    def get_recording(self, recording_id: UUID) -> Recording:
+        """Get one recording of the dataset by its ID.
+
+        Args:
+            recording_id: The ID of the recording, e.g. `sequence.recording_id`.
+
+        Returns:
+            The recording.
+
+        Raises:
+            ValueError: If no recording of that ID exists.
+        """
+        recording = recording_resolver.get_by_id(session=self._session, recording_id=recording_id)
+        if recording is None:
+            raise ValueError(f"Recording with id {recording_id} not found.")
+        return Recording(session=self._session, inner=recording)
+
+    def create_recording(
+        self, uri: str, recording_format: RecordingFormat = RecordingFormat.MCAP
+    ) -> Recording:
+        """Add a recording to the dataset.
+
+        Create the recording before its groups, so that its calibration can be stored
+        before anything refers to it.
+
+        Args:
+            uri: Where the bytes of the recording are, e.g. `/data/perception.mcap` or
+                `s3://my-bucket/perception.mcap`.
+            recording_format: The format of the recording.
+
+        Returns:
+            The created recording.
+
+        Raises:
+            ValueError: If `uri` is empty or only whitespace.
+        """
+        recording_id = recording_resolver.create(
+            session=self._session,
+            dataset_id=self.dataset_id,
+            uri=uri,
+            format_=recording_format,
+        )
+        recording = recording_resolver.get_by_id(session=self._session, recording_id=recording_id)
+        if recording is None:
+            raise RuntimeError("Failed to retrieve the created recording.")
+        return Recording(session=self._session, inner=recording)
+
+    def create_sequence(self, recording_id: UUID) -> McapSequence:
+        """Add a sequence that orders the groups of one recording.
+
+        Args:
+            recording_id: The ID of the recording the groups are indexed from.
+
+        Returns:
+            The created sequence.
+
+        Raises:
+            ValueError: If no recording of that ID exists.
+        """
+        sample_id = mcap_group_sequence_resolver.create(
+            session=self._session,
+            collection_id=self.collection_id,
+            recording_id=recording_id,
+        )
+        return McapSequence(session=self._session, sample_id=sample_id, recording_id=recording_id)
 
     def _group_collection(self) -> CollectionTable:
         """Return the GROUP child collection holding the groups of the dataset.
