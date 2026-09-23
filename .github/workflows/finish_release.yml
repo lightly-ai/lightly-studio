@@ -196,3 +196,15 @@ jobs:
             --draft=false \
             --notes-file "${RUNNER_TEMP}/release-notes.md"
           echo "::notice::Published ${TAG}."
+
+  # After `publish`, so nothing is announced that is not on PyPI and public.
+  announce:
+    needs: publish
+    if: inputs.target == 'pypi'
+    uses: ./.github/workflows/announce_release.yml
+    with:
+      tag: ${{ inputs.tag }}
+      tolerate-failure: true
+    permissions:
+      contents: read
+    secrets: inherit
