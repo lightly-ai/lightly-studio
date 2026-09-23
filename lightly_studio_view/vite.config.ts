@@ -5,6 +5,7 @@ export default defineConfig({
     plugins: [sveltekit()],
 
     build: {
+        sourcemap: process.env.SOURCEMAP ? 'hidden' : false,
         rollupOptions: {
             output: {
                 manualChunks(id) {
