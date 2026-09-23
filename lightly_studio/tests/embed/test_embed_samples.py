@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import re
 from uuid import UUID, uuid4
@@ -11,6 +12,7 @@ import pytest
 from lightly_studio_serve.embedder import (
     ImageBytesEmbedder,
     ImageCropPathEmbedder,
+    ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
@@ -116,6 +118,46 @@ class _BoxXImageCropEmbedder(ImageCropPathEmbedder):
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
+class _PathOnlyEmbedder(ImagePathEmbedder):
+    """Embeds each image read from its path as the top-left pixel's RGB.
+
+    Reading the pixel from the file verifies that the upload is written to a readable file.
+    Shares the random model's space so it resolves as the collection's default.
+    """
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_images(self, paths: list[str]) -> EmbeddingResult:
+        """Embed each image at the given path as its top-left RGB pixel."""
+        embeddings = np.array(
+            [Image.open(path).convert("RGB").getpixel(xy=(0, 0)) for path in paths],
+            dtype=np.float32,
+        )
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(paths))))
+
+
+class _PILOnlyEmbedder(ImagePILEmbedder):
+    """Embeds each PIL image as its top-left pixel's RGB.
+
+    Shares the random model's space so it resolves as the collection's default.
+    """
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
+        """Embed each image as its top-left RGB pixel."""
+        embeddings = np.array([image.getpixel(xy=(0, 0)) for image in images], dtype=np.float32)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
+
+
 class _DropInputEmbedder(ImageBytesEmbedder, TextEmbedder):
     """Drops every input, so image and text queries get an empty result.
 
@@ -217,6 +259,65 @@ def test_embed_image_for_collection__no_embedding_raises(
             session=db_session,
             collection_id=collection.collection_id,
             image_bytes=b"image bytes",
+        )
+
+
+def test_embed_image_for_collection__pil_only_embedder(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """An embedder that embeds PIL images only gets the decoded upload."""
+    collection = create_collection(session=db_session)
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
+    registry = EmbedderRegistry()
+    registry.register(embedder=_PILOnlyEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    embedding = embed_samples.embed_image_for_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        image_bytes=_png_bytes(color=(1, 2, 3)),
+    )
+
+    assert embedding == [1.0, 2.0, 3.0]
+
+
+def test_embed_image_for_collection__path_only_embedder(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """An embedder that embeds images by path only gets the upload as a temporary file."""
+    collection = create_collection(session=db_session)
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
+    registry = EmbedderRegistry()
+    registry.register(embedder=_PathOnlyEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    embedding = embed_samples.embed_image_for_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        image_bytes=_png_bytes(color=(1, 2, 3)),
+    )
+
+    assert embedding == [1.0, 2.0, 3.0]
+
+
+def test_embed_image_for_collection__undecodable_bytes_raises(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Bytes that do not decode raise when the embedder has no bytes capability."""
+    collection = create_collection(session=db_session)
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
+    registry = EmbedderRegistry()
+    registry.register(embedder=_PathOnlyEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    with pytest.raises(embed_samples.ImageNotEmbeddedError, match="cannot be decoded"):
+        embed_samples.embed_image_for_collection(
+            session=db_session,
+            collection_id=collection.collection_id,
+            image_bytes=b"not an image",
         )
 
 
@@ -918,3 +1019,17 @@ def _path_number(path: str) -> float:
     match = re.search(r"(\d+)", path)
     assert match is not None
     return float(match.group(1))
+
+
+def _png_bytes(color: tuple[int, int, int] = (0, 0, 0)) -> bytes:
+    """Encode a one-pixel PNG of the given RGB color, as an image upload carries it.
+
+    Args:
+        color: RGB value of the single pixel.
+
+    Returns:
+        The encoded PNG bytes.
+    """
+    buffer = io.BytesIO()
+    Image.new(mode="RGB", size=(1, 1), color=color).save(buffer, format="PNG")
+    return buffer.getvalue()
