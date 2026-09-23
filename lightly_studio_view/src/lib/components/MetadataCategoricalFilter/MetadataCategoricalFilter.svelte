@@ -9,21 +9,35 @@
     import { getOptionLabel, getCheckboxLabel, buildOptions, type FilterOption } from './helpers';
 
     interface Props {
+        fieldLabel?: string;
         buckets: CategoricalMetadataBucket[];
         selectedValues: CategoricalMetadataValue[];
         loading?: boolean;
+        updating?: boolean;
+        error?: string;
+        onRetry?: () => void;
         onToggle: (value: CategoricalMetadataValue) => void;
         onClear: () => void;
     }
 
-    const { buckets, selectedValues, loading = false, onToggle, onClear }: Props = $props();
+    const {
+        fieldLabel = 'Values',
+        buckets,
+        selectedValues,
+        loading = false,
+        updating = false,
+        error,
+        onRetry,
+        onToggle,
+        onClear
+    }: Props = $props();
 
     const options = $derived(buildOptions(buckets, selectedValues));
     const optionLabel = (option: FilterOption) => getOptionLabel(option, options, buckets);
     const checkboxLabel = (option: FilterOption) => getCheckboxLabel(option, optionLabel(option));
-    const showSearch = $derived(buckets.filter((b) => b.kind === 'value').length > 5);
+    const showSearch = $derived(options.length > 5);
     const hasOtherAggregate = $derived(buckets.some((b) => b.kind === 'other'));
-    const disabled = $derived(loading && buckets.length === 0);
+    const disabled = $derived(loading && buckets.length === 0 && selectedValues.length === 0);
     const isSelected = (value: CategoricalMetadataValue) =>
         selectedValues.some((selected) => Object.is(selected, value));
     const summary = $derived(
@@ -43,7 +57,9 @@
 </script>
 
 <div class="mt-2 flex items-center gap-2" data-testid="metadata-categorical-filter">
-    <span class="w-[100px] shrink-0 text-xs text-muted-foreground">Values</span>
+    <span class="w-[100px] shrink-0 truncate text-xs text-muted-foreground" title={fieldLabel}
+        >{fieldLabel}</span
+    >
     <Popover.Root onOpenChange={(open) => !open && (search = '')}>
         <Popover.Trigger>
             {#snippet child({ props })}
@@ -59,7 +75,9 @@
                     }}
                     ariaLabel="Select metadata values"
                 >
-                    <span class="truncate">{loading ? 'Loading…' : summary}</span>
+                    <span class="truncate"
+                        >{loading && buckets.length === 0 ? 'Loading…' : summary}</span
+                    >
                     <ChevronsUpDown class="opacity-50" />
                 </Button>
             {/snippet}
@@ -87,7 +105,9 @@
                             >{optionLabel(option)}</span
                         >
                         <span class="text-muted-foreground"
-                            >{option.retained ? 'Not in top 20' : option.bucket.count}</span
+                            >{option.retained
+                                ? 'Not in current results'
+                                : option.bucket.count}</span
                         >
                     </label>
                 {/each}
@@ -112,4 +132,13 @@
             {/if}
         </Popover.Content>
     </Popover.Root>
+    {#if updating}
+        <span class="shrink-0 text-xs text-muted-foreground" role="status">Updating…</span>
+    {/if}
 </div>
+{#if error && buckets.length > 0}
+    <div class="mt-1 flex items-center justify-between gap-2 text-xs text-destructive" role="alert">
+        <span>Could not update metadata distribution.</span>
+        {#if onRetry}<button class="shrink-0 underline" onclick={onRetry}>Retry</button>{/if}
+    </div>
+{/if}

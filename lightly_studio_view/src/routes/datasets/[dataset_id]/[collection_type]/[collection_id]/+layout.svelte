@@ -854,7 +854,16 @@
             tagDistributions: metadataTagDistributions,
             numericLoading: metadataHistogramsQuery.isFetching,
             categoricalLoading:
-                categoricalMetadataQuery.isFetching || categoricalMetadataFilteredQuery.isFetching,
+                (categoricalMetadataQuery.isFetching &&
+                    (categoricalMetadataQuery.isLoading ||
+                        categoricalMetadataQuery.isPlaceholderData)) ||
+                (categoricalMetadataFilteredQuery.isFetching &&
+                    (categoricalMetadataFilteredQuery.isLoading ||
+                        categoricalMetadataFilteredQuery.isPlaceholderData)),
+            categoricalUpdating:
+                (categoricalMetadataQuery.isFetching && !categoricalMetadataQuery.isLoading) ||
+                (categoricalMetadataFilteredQuery.isFetching &&
+                    !categoricalMetadataFilteredQuery.isLoading),
             categoricalError: categoricalMetadataQuery.error?.message,
             comparisonLoading: metadataTagDistributionsQuery.isFetching,
             comparisonError: metadataTagDistributionsQuery.error?.message
