@@ -22,11 +22,14 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from PIL import Image
 
 from lightly_studio.core.file_outcome_report import BROKEN_IMAGE_ERRORS
+from lightly_studio.embed.embedder_config import EmbedderConfig
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 
 
 def get_image_bytes_embedder(
-    registry: EmbedderRegistry, space_key: str | None = None
+    registry: EmbedderRegistry,
+    space_key: str | None = None,
+    config: EmbedderConfig | None = None,
 ) -> ImageBytesEmbedder | None:
     """Get an embedder that embeds images by bytes for the space, or None if none can.
 
@@ -36,20 +39,22 @@ def get_image_bytes_embedder(
     Args:
         registry: The registry the embedder is resolved from.
         space_key: The embedding space to resolve, or None for the registry default.
+        config: The stored configuration of the space, used only when no embedder is
+            registered for it.
 
     Returns:
         An embedder for the space that embeds images by bytes, or None if the space
         embeds no images at all.
     """
-    bytes_embedder = registry.get_image_bytes_embedder(space_key=space_key)
+    bytes_embedder = registry.get_image_bytes_embedder(space_key=space_key, config=config)
     if bytes_embedder is not None:
         return bytes_embedder
 
-    pil_embedder = registry.get_image_pil_embedder(space_key=space_key)
+    pil_embedder = registry.get_image_pil_embedder(space_key=space_key, config=config)
     if pil_embedder is not None:
         return _DecodedImageBytesEmbedder(embedder=pil_embedder)
 
-    path_embedder = registry.get_image_path_embedder(space_key=space_key)
+    path_embedder = registry.get_image_path_embedder(space_key=space_key, config=config)
     if path_embedder is not None:
         return _TempFileImageBytesEmbedder(embedder=path_embedder)
 

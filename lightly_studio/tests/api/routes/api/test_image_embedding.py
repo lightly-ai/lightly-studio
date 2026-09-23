@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 import pytest
@@ -5,10 +6,12 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.api.routes.api import image_embedding
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_OK,
+    HTTP_STATUS_PAYLOAD_TOO_LARGE,
 )
 from lightly_studio.embed import embed_samples
 from tests import helpers_resolvers
@@ -65,18 +68,18 @@ def test_embed_image_from_file_error(
     assert "Embedding failed" in response.json()["detail"]
 
 
-def test_embed_image_from_file__unreadable_image(
+def test_embed_image_from_file__not_embedded(
     db_session: Session,
     mocker: MockerFixture,
     test_client: TestClient,
 ) -> None:
-    """An upload the embedder cannot read is a bad request, and the file name is reported."""
+    """An upload the embedder drops is a bad request, and the file name is reported."""
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
     mocker.patch.object(
         embed_samples,
         "embed_image_for_collection",
-        side_effect=embed_samples.UnreadableImageError("The embedder could not read it."),
+        side_effect=embed_samples.ImageNotEmbeddedError("The embedder returned no embedding."),
     )
 
     files = {"file": ("broken.jpg", b"not an image", "image/jpeg")}
@@ -88,6 +91,71 @@ def test_embed_image_from_file__unreadable_image(
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
     assert "broken.jpg" in response.json()["detail"]
+
+
+def test_embed_image_from_file__too_large(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    """An upload above the size limit is refused before it is read into memory."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    mocker.patch.object(image_embedding, "_MAX_UPLOAD_BYTES", 8)
+    embed_image = mocker.patch.object(embed_samples, "embed_image_for_collection")
+
+    files = {"file": ("large.jpg", b"123456789", "image/jpeg")}
+
+    response = test_client.post(
+        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+        files=files,
+    )
+
+    assert response.status_code == HTTP_STATUS_PAYLOAD_TOO_LARGE
+    assert "large.jpg" in response.json()["detail"]
+    embed_image.assert_not_called()
+
+
+def test_embed_image_from_file__at_size_limit(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    """An upload of exactly the size limit is accepted."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    mocker.patch.object(image_embedding, "_MAX_UPLOAD_BYTES", 8)
+    mocker.patch.object(embed_samples, "embed_image_for_collection", return_value=[0.1, 0.2, 0.3])
+
+    files = {"file": ("small.jpg", b"12345678", "image/jpeg")}
+
+    response = test_client.post(
+        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+        files=files,
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+
+
+def test_embed_image_from_file__large_upload_logs_warning(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An upload above the warning size is embedded and logged."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    mocker.patch.object(image_embedding, "_LARGE_UPLOAD_WARNING_BYTES", 8)
+    mocker.patch.object(embed_samples, "embed_image_for_collection", return_value=[0.1, 0.2, 0.3])
+
+    files = {"file": ("large.jpg", b"123456789", "image/jpeg")}
+
+    with caplog.at_level(logging.WARNING, logger=image_embedding.__name__):
+        response = test_client.post(
+            f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+            files=files,
+        )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert "'large.jpg' is 9 bytes" in caplog.text
 
 
 def test_embed_image_from_file__model_override_not_supported(test_client: TestClient) -> None:

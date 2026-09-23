@@ -16,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -108,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
     slack_parser.add_argument("--changelog", type=Path, required=True)
     slack_parser.add_argument("--tag", required=True, help="release tag, e.g. v1.2.3")
     slack_parser.add_argument("--release-url", required=True, help="the GitHub release page")
+    slack_parser.add_argument("--channel", required=True, help="the channel to post in")
     slack_parser.add_argument("--output", type=Path, required=True)
 
     wheel_deps = subparsers.add_parser(
@@ -205,13 +207,16 @@ def _cmd_render_slack_message(args: argparse.Namespace) -> None:
     section = changelog.extract_released_section(
         changelog_text=args.changelog.read_text(), version=released_version
     )
-    message = slack_message.render_slack_message(
+    payload = slack_message.render_slack_payload(
         section_body=section,
         version=released_version,
         release_url=args.release_url,
         display_name=package.display_name,
+        channel=args.channel,
     )
-    args.output.write_text(message)
+    args.output.write_text(json.dumps(payload, indent=2))
+    # The rendered text on stdout, for the workflow's step summary.
+    print(payload["text"])
 
 
 def _cmd_check_wheel_dependencies(args: argparse.Namespace) -> None:

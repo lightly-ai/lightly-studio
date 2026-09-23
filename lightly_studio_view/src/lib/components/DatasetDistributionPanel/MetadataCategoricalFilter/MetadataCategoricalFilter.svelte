@@ -52,7 +52,8 @@
                     buttonProps={{
                         ...props,
                         size: 'sm',
-                        class: 'min-w-0 flex-1 justify-between max-sm:min-h-11',
+                        // Match the neighbouring panel selects (Select size="xs").
+                        class: 'h-8 min-w-0 flex-1 justify-between px-3 text-xs font-normal max-sm:min-h-11',
                         disabled,
                         'data-testid': 'metadata-categorical-filter-trigger'
                     }}

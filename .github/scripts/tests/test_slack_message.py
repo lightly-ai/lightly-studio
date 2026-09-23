@@ -51,6 +51,45 @@ def render(section_body: str, **kwargs: object) -> str:
     )
 
 
+def test_render_slack_payload():
+    payload = slack_message.render_slack_payload(
+        section_body=SECTION,
+        version="1.1.0",
+        release_url=URL,
+        display_name="LightlyStudio",
+        channel="studio-issues-and-feedback",
+    )
+
+    assert payload["channel"] == "studio-issues-and-feedback"
+    assert payload["text"] == render(SECTION)
+
+
+# The title links to the release page, so without this every announcement grows a preview
+# card of it.
+def test_render_slack_payload__unfurling_off():
+    payload = slack_message.render_slack_payload(
+        section_body=SECTION,
+        version="1.1.0",
+        release_url=URL,
+        display_name="LightlyStudio",
+        channel="studio-issues-and-feedback",
+    )
+
+    assert payload["unfurl_links"] is False
+    assert payload["unfurl_media"] is False
+
+
+def test_render_slack_payload__no_entries():
+    with pytest.raises(PrepareReleaseError, match="has no entries"):
+        slack_message.render_slack_payload(
+            section_body="### Added\n",
+            version="1.1.0",
+            release_url=URL,
+            display_name="LightlyStudio",
+            channel="studio-issues-and-feedback",
+        )
+
+
 # Pins the whole shape: the linked title, a bare heading with no blank line under it, no
 # blank line between sections, and the empty `Deprecated` heading dropped.
 def test_render_slack_message():
