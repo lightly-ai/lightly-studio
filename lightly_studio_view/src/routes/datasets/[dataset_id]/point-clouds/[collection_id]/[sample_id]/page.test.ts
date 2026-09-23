@@ -14,6 +14,10 @@ vi.mock('$lib/hooks', () => ({
         ready,
         error: writable(null)
     }),
+    useMcapSequenceSummary: () => ({
+        summary: { data: undefined, isLoading: false, isError: false },
+        refetch: vi.fn()
+    }),
     // The lazily-loaded workspace mounts the camera projection strip, which reads
     // the tick details query; stub it so no live query runs during the route test.
     useTickDetails: () => ({ tickDetails: { data: undefined } })

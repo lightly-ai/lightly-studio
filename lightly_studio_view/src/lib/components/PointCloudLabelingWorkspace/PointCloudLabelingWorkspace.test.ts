@@ -8,6 +8,13 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails: { data: undefined } })
 }));
 
+vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
+    useMcapSequenceSummary: () => ({
+        summary: { data: undefined, isLoading: false, isError: false },
+        refetch: vi.fn()
+    })
+}));
+
 describe('PointCloudLabelingWorkspace', () => {
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
