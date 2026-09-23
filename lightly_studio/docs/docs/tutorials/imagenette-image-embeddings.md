@@ -15,7 +15,7 @@ You will:
 - Export your work.
 
 <figure markdown>
-  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/tutorial_image_1.png" alt="The finished dataset. The sidebar lists ten annotation classes, and the embedding plot colored by annotation shows ten separated groups" style="width: 100%; border-radius: 6px;">
+  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_000_image.png" alt="The finished dataset. The sidebar lists ten annotation classes, and the embedding plot colored by annotation shows ten separated groups" style="width: 100%; border-radius: 6px;">
   <figcaption>The finished dataset, with the embedding plot colored by annotation class.</figcaption>
 </figure>
 
@@ -156,7 +156,7 @@ python explore_imagenette.py
 ```
 
 <figure markdown>
-  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/tutorial_image_2.png" alt="The grid view after the import, filled with Imagenette images" style="width: 100%; border-radius: 6px;">
+  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_002_image.png" alt="The grid view after the import, filled with Imagenette images" style="width: 100%; border-radius: 6px;">
   <figcaption>After all images load, the main view shows all Imagenette images.</figcaption>
 </figure>
 
@@ -177,7 +177,7 @@ projection (PaCMAP) of its embedding. See
     step 2.
 
 <figure markdown>
-  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/tutorial_image_3.png" alt="The embedding plot of the Imagenette dataset, where points form distinct groups" style="width: 100%; border-radius: 6px;">
+  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_003_image.png" alt="The embedding plot of the Imagenette dataset, where points form distinct groups" style="width: 100%; border-radius: 6px;">
   <figcaption>The embedding plot. Each point is one image.</figcaption>
 </figure>
 
@@ -211,13 +211,12 @@ region, and an **Embedding Plot Filter** entry appears in the sidebar with the c
 A lasso scopes the grid. It does not create annotations, and the plot keeps showing every
 point, highlighting the ones inside your region.
 
-A hover over a point previews its image. In the recording below, a rectangle selection scopes
-the grid to 926 images that are mostly gas pumps, and a lasso selection scopes it to 990 images
-that are mostly cassette players.
+The recording below shows a hover over golf balls. A rectangle selection then scopes the
+grid to english springers (a dog breed). A lasso selection scopes it to gas pumps.
 
 <figure markdown>
   <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
-    <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/tutorial_video_2.mp4" type="video/mp4">
+    <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_003_video.mp4" type="video/mp4">
   </video>
   <figcaption>Zooming, hovering, and selecting a group in the embedding plot.</figcaption>
 </figure>
@@ -274,7 +273,7 @@ in the sidebar on the left.
 
 <figure markdown>
   <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
-    <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/tutorial_video_1.mp4" type="video/mp4">
+    <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_005_video.mp4" type="video/mp4">
   </video>
   <figcaption>Annotating a whole group of images in one action.</figcaption>
 </figure>
@@ -324,7 +323,7 @@ annotation.
 ## Step 6: Use the legend and restore the view
 
 <figure markdown>
-  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/tutorial_image_4.png" alt="The embedding plot colored by annotations" style="width: 100%; border-radius: 6px;">
+  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_006_image.png" alt="The embedding plot colored by annotations" style="width: 100%; border-radius: 6px;">
   <figcaption>The plot colored by annotation class.</figcaption>
 </figure>
 
@@ -425,7 +424,7 @@ the selection.
 
 <figure markdown>
   <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
-    <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/tutorial_video_3.mp4" type="video/mp4">
+    <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_007_video.mp4" type="video/mp4">
   </video>
   <figcaption>Selecting and deselecting annotation sources.</figcaption>
 </figure>
@@ -476,13 +475,19 @@ GUI and select the `imagenette-review` run:
 4. Open them in detail view and compare what you see against both annotation classes.
 
 A red cell is not always your error. Some Imagenette images contain more than one of the ten
-classes, such as a golf ball on grass beside a person. The confusion matrix shows you where
-visual similarity and annotation class stop agreeing. These are the images that a labeling
-workflow gets wrong most often.
+classes. The confusion matrix shows you where visual similarity and annotation class stop
+agreeing. These are the images that a labeling workflow gets wrong most often.
+
+The recording below opens the confusion matrix and examines three disagreements. The first
+two images are a french horn, annotated as a golf ball and as a parachute. The third is a
+gas pump, annotated as a garbage truck. This last image shows a gas pump next to a truck,
+which explains the disagreement.
 
 <figure markdown>
-  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/tutorial_image_5.png" alt="The Evaluation Runs panel showing the confusion matrix of the imagenette-review run, with a green diagonal and red off-diagonal cells" style="width: 100%; border-radius: 6px;">
-  <figcaption>The confusion matrix of the <code>imagenette-review</code> run.</figcaption>
+  <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
+    <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_008_video.mp4" type="video/mp4">
+  </video>
+  <figcaption>Reading the confusion matrix of the <code>imagenette-review</code> run.</figcaption>
 </figure>
 
 For more about evaluation runs and their metrics, see
@@ -501,6 +506,13 @@ To export your classifications:
 2. Open **Menu → Export**.
 3. Choose **Image Classifications (CSV)** and the `my_labels` annotation source.
 4. Export the file, then check several image paths and their classes against the GUI.
+
+<figure markdown>
+  <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
+    <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_009_video.mp4" type="video/mp4">
+  </video>
+  <figcaption>Exporting image classifications from the <code>my_labels</code> annotation source.</figcaption>
+</figure>
 
 Select `my_labels` and not `ground_truth`. The `ground_truth` source is the reference that you
 loaded in step 7, not the work that you did.
