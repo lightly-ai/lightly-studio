@@ -72,7 +72,9 @@ def check_components_match(
     Raises:
         ValueError: If the dataset has other components than the ones asked for.
     """
-    existing = get_components(session=session, group_collection_id=group_collection_id)
+    existing = mcap_group_component_definition_resolver.get_named_data_types_by_group_collection_id(
+        session=session, group_collection_id=group_collection_id
+    )
     requested = [(component.name, component.mcap_data_type) for component in components]
     if existing != requested:
         raise ValueError(
@@ -80,38 +82,6 @@ def check_components_match(
             f"{_format_components(components=existing)}, but "
             f"{_format_components(components=requested)} were requested."
         )
-
-
-def get_components(session: Session, group_collection_id: UUID) -> list[NamedDataType]:
-    """Get the components of an MCAP dataset, in the order they are shown in.
-
-    Args:
-        session: The database session.
-        group_collection_id: The ID of the GROUP collection holding the components.
-
-    Returns:
-        The components as `(name, mcap_data_type)` pairs, ordered by their index.
-        Components without an MCAP definition, e.g. classic image ones, are left out.
-    """
-    component_collections = collection_resolver.get_group_components(
-        session=session, parent_collection_id=group_collection_id
-    )
-    mcap_data_types = {
-        definition.collection_id: definition.mcap_data_type
-        for definition in mcap_group_component_definition_resolver.get_all_by_group_collection_id(
-            session=session, group_collection_id=group_collection_id
-        )
-    }
-    indexed = [
-        (
-            _get_component_index(collection=collection),
-            (component_name, mcap_data_types[collection.collection_id]),
-        )
-        for component_name, collection in component_collections.items()
-        if collection.collection_id in mcap_data_types
-    ]
-    indexed.sort(key=lambda item: item[0])
-    return [component for _, component in indexed]
 
 
 def create_collections(session: Session, name: str) -> tuple[CollectionTable, CollectionTable]:
@@ -140,14 +110,6 @@ def create_collections(session: Session, name: str) -> tuple[CollectionTable, Co
         ),
     )
     return root_collection, group_collection
-
-
-def _get_component_index(collection: CollectionTable) -> int:
-    """Return the position of a component collection in the schema of its groups."""
-    definition = collection.group_component_definition
-    # `get_group_components` only returns collections that have a definition.
-    assert definition is not None
-    return definition.group_component_index
 
 
 def _format_components(components: Sequence[NamedDataType]) -> str:

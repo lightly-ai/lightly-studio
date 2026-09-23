@@ -82,22 +82,25 @@ class TestMcapDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        with pytest.raises(ValueError, match="Duplicate component name 'front'"):
-            McapDataset.create(
-                components=[
-                    McapComponentSpec(
-                        name="front",
-                        mcap_data_type=McapDataType.VIDEO_FRAME,
-                        topic="/cam/front/compressed_video",
-                    ),
-                    McapComponentSpec(
-                        name="front",
-                        mcap_data_type=McapDataType.POINT_CLOUD,
-                        topic="/lidar/points",
-                    ),
-                ],
-                name="perception",
-            )
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"components must not repeat a name\. These names are used more than once: "
+                r"'front'\."
+            ),
+        ):
+            McapDataset.create(components=_duplicate_name_components(), name="perception")
+
+    def test_create__duplicate_component_name__nothing_written(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        with pytest.raises(ValueError, match="components must not repeat a name"):
+            McapDataset.create(components=_duplicate_name_components(), name="perception")
+
+        # The name stays free, so the call can be made again with corrected components.
+        mcap_ds = McapDataset.create(components=COMPONENTS, name="perception")
+        assert mcap_ds.name == "perception"
 
     def test_create__name_taken(
         self,
@@ -301,3 +304,19 @@ class TestMcapDataset:
 
         with pytest.raises(ValueError, match=f"Recording with id {recording_id} not found"):
             mcap_ds.create_sequence(recording_id=recording_id)
+
+
+def _duplicate_name_components() -> list[McapComponentSpec]:
+    """Return two components that use the same name."""
+    return [
+        McapComponentSpec(
+            name="front",
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            topic="/cam/front/compressed_video",
+        ),
+        McapComponentSpec(
+            name="front",
+            mcap_data_type=McapDataType.POINT_CLOUD,
+            topic="/lidar/points",
+        ),
+    ]
