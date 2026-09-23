@@ -22,8 +22,10 @@ logger = logging.getLogger(__name__)
 image_embedding_router = APIRouter()
 
 # An upload is held in memory to embed it, so a query image larger than this is refused
-# instead of read. Query images are screenshots or thumbnails, far below this limit.
-_MAX_UPLOAD_BYTES = 32 * 1024 * 1024
+# instead of read
+_MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+# An upload larger than this is embedded, but logged, since it uses much memory
+_LARGE_UPLOAD_WARNING_BYTES = 20 * 1024 * 1024
 
 
 @image_embedding_router.post(
@@ -53,13 +55,18 @@ def embed_image_from_file(
                 f"Uploaded file: {file.filename!r}."
             ),
         )
+    if len(image_bytes) > _LARGE_UPLOAD_WARNING_BYTES:
+        logger.warning(
+            "The uploaded file %r is %d bytes, which is large for a query image.",
+            file.filename,
+            len(image_bytes),
+        )
     try:
         return embed_samples.embed_image_for_collection(
             session=session, collection_id=collection_id, image_bytes=image_bytes
         )
     except embed_samples.ImageNotEmbeddedError as exc:
-        # An upload the embedder drops is a broken image, so it is a bad request, not a
-        # server fault.
+        # An upload the embedder drops is a broken image, so it is a bad request
         raise HTTPException(
             status_code=HTTP_STATUS_BAD_REQUEST,
             detail=f"{exc} Uploaded file: {file.filename!r}.",
@@ -78,16 +85,7 @@ def embed_image_from_file(
 
 
 def _read_at_most(stream: IO[bytes], max_bytes: int) -> bytes | None:
-    """Read a stream fully, as long as it holds at most ``max_bytes`` bytes.
-
-    Args:
-        stream: The stream to read.
-        max_bytes: The largest number of bytes to accept.
-
-    Returns:
-        The contents of the stream, or ``None`` if it holds more than ``max_bytes`` bytes.
-        At most ``max_bytes + 1`` bytes are read, so an oversized stream never fills memory.
-    """
+    """Read the stream, or return ``None`` if it holds more than ``max_bytes`` bytes."""
     data = stream.read(max_bytes + 1)
     if len(data) > max_bytes:
         return None

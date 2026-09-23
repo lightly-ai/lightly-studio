@@ -48,7 +48,6 @@ def embed_image_for_collection(
     Resolves the collection's default model from the database and embeds the image with the
     registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
     never bootstraps a default model, since an interactive query must not mutate the collection.
-    Takes bytes rather than a path so a remote backend without filesystem access can serve it.
 
     Args:
         session: Database session for resolver operations.

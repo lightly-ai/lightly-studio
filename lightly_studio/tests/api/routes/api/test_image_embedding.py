@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 import pytest
@@ -132,6 +133,29 @@ def test_embed_image_from_file__at_size_limit(
     )
 
     assert response.status_code == HTTP_STATUS_OK
+
+
+def test_embed_image_from_file__large_upload_logs_warning(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An upload above the warning size is embedded and logged."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    mocker.patch.object(image_embedding, "_LARGE_UPLOAD_WARNING_BYTES", 8)
+    mocker.patch.object(embed_samples, "embed_image_for_collection", return_value=[0.1, 0.2, 0.3])
+
+    files = {"file": ("large.jpg", b"123456789", "image/jpeg")}
+
+    with caplog.at_level(logging.WARNING, logger=image_embedding.__name__):
+        response = test_client.post(
+            f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+            files=files,
+        )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert "'large.jpg' is 9 bytes" in caplog.text
 
 
 def test_embed_image_from_file__model_override_not_supported(test_client: TestClient) -> None:
