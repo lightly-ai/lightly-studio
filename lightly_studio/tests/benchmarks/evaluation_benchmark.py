@@ -4,11 +4,6 @@ Measures ``dataset.evaluate().object_detection(...)`` on a synthetic dataset and
 reports the wall-clock time and the number of SELECT statements, on either a
 temporary DuckDB file (default) or PostgreSQL (``--postgres``).
 
-Evaluation matches every sample first and then stores the metrics. If a metric
-commit happens before a sample is matched, the commit expires the loaded
-annotations and each one is loaded again with its own SELECT. The SELECT count
-shows if this happens.
-
 Run from the ``lightly_studio`` directory:
 
     uv run tests/benchmarks/evaluation_benchmark.py
@@ -23,7 +18,6 @@ Against PostgreSQL:
 from __future__ import annotations
 
 import argparse
-import os
 import random
 import time
 from dataclasses import dataclass
@@ -120,9 +114,9 @@ def _parse_args() -> argparse.Namespace:
         "--postgres",
         action="store_true",
         help=(
-            "Benchmark against PostgreSQL instead of a temporary DuckDB file. "
-            "Uses $LIGHTLY_STUDIO_DATABASE_URL if set, otherwise "
-            f"{DEFAULT_POSTGRES_URL}."
+            "Benchmark against the local PostgreSQL from `make start-postgres` "
+            f"({DEFAULT_POSTGRES_URL}) instead of a temporary DuckDB file. "
+            "Drops all its tables."
         ),
     )
     return parser.parse_args()
@@ -146,9 +140,8 @@ def _connect_database(db_path: Path, use_postgres: bool) -> str:
     """Connect to a fresh database and return a description of its target."""
     db_manager.close()
     if use_postgres:
-        database_url = os.environ.get("LIGHTLY_STUDIO_DATABASE_URL", DEFAULT_POSTGRES_URL)
-        db_manager.connect(db_url=database_url, cleanup_existing=True)
-        return database_url
+        db_manager.connect(db_url=DEFAULT_POSTGRES_URL, cleanup_existing=True)
+        return DEFAULT_POSTGRES_URL
     db_manager.connect(db_file=str(db_path), cleanup_existing=True)
     return str(db_path)
 

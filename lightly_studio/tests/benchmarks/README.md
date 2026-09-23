@@ -353,11 +353,6 @@ with ground-truth boxes and noisy predictions (shifted boxes, some wrong labels,
 false positives). It reports the wall-clock time, the throughput, and the number of SELECT
 statements.
 
-Evaluation matches every sample first and then stores the metrics. If a metric commit happens
-before a sample is matched, the commit expires the loaded annotations and each one is loaded again
-with its own SELECT. The SELECT count shows if this happens: it should stay small and grow only
-with the number of query batches, not with the number of annotations.
-
 ### Running the benchmark
 
 From the `lightly_studio` directory (temporary DuckDB by default):
@@ -390,4 +385,4 @@ uv run tests/benchmarks/evaluation_benchmark.py --num-images 1000
 | `--false-positives-per-image` | 3 | Extra low-confidence predictions per image |
 | `--batch-size` | 5 000 | Images inserted per batch |
 | `--seed` | 0 | Random seed for reproducibility |
-| `--postgres` | off | Benchmark PostgreSQL instead of the temporary DuckDB |
+| `--postgres` | off | Benchmark the local PostgreSQL from `make start-postgres` instead of the temporary DuckDB (drops all its tables) |
