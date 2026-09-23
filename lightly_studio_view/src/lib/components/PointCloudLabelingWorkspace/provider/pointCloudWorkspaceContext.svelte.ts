@@ -5,10 +5,9 @@ import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local
 /**
  * Shared data and playback state for the point-cloud labeling workspace.
  *
- * The provider wraps `useMcapSequenceSummary` so the summary is fetched once at the workspace root
- * and its channels/status flow to every pane without prop drilling. It also owns the transport
- * position (`currentTick`, `isPlaying`) that the timeline and camera strip key their per-tick data
- * off. Per-tile fetches (e.g. tick details in the camera strip) stay with their consumers.
+ * Wraps `useMcapSequenceSummary` so the summary is fetched once at the root and flows to every pane
+ * without prop drilling. Owns the transport position (`currentTick`, `isPlaying`); per-tile fetches
+ * stay with their consumers.
  */
 export type WorkspaceStatus = 'loading' | 'unsupported' | 'empty' | 'error' | 'ready';
 
