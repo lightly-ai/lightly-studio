@@ -42,30 +42,14 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
         ready = Promise.resolve();
     });
 
-    it('shows a loading state before the feature flags resolve', () => {
-        ready = new Promise(() => {
-            // Intentionally never resolves for this assertion.
-        });
+    it('renders the route shell but not the workspace when the feature is disabled', () => {
         render(Page, { props: { data: mockPageData } });
 
-        expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
-            'data-status',
-            'loading'
-        );
+        expect(screen.getByTestId('point-cloud-labeling-route')).toBeInTheDocument();
+        expect(screen.queryByTestId('point-cloud-labeling-workspace')).not.toBeInTheDocument();
     });
 
-    it('shows the unsupported state when the feature is disabled', async () => {
-        render(Page, { props: { data: mockPageData } });
-
-        await waitFor(() =>
-            expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
-                'data-status',
-                'unsupported'
-            )
-        );
-    });
-
-    it('lazy-loads and renders the workspace once the feature is enabled', async () => {
+    it('renders the workspace once the feature is enabled', async () => {
         featureFlags.set(['point_cloud_rendering']);
         render(Page, { props: { data: mockPageData } });
 
@@ -98,14 +82,16 @@ describe('point-cloud sample page load', () => {
         });
     });
 
-    it('leaves optional query values undefined when absent', async () => {
+    it('leaves optional query values undefined when absent but sequence_id is present', async () => {
         const result = await load({
             params: {
                 dataset_id: 'dataset',
                 collection_id: 'collection',
                 sample_id: 'sample'
             },
-            url: new URL('http://localhost/datasets/dataset/point-clouds/collection/sample')
+            url: new URL(
+                'http://localhost/datasets/dataset/point-clouds/collection/sample?sequence_id=sequence'
+            )
         } as Parameters<typeof load>[0]);
 
         expect(result).toEqual({
@@ -113,8 +99,21 @@ describe('point-cloud sample page load', () => {
             collectionType: undefined,
             collectionId: 'collection',
             sampleId: 'sample',
-            sequenceId: undefined,
+            sequenceId: 'sequence',
             groupId: undefined
         });
+    });
+
+    it('throws when sequence_id is absent', async () => {
+        await expect(
+            load({
+                params: {
+                    dataset_id: 'dataset',
+                    collection_id: 'collection',
+                    sample_id: 'sample'
+                },
+                url: new URL('http://localhost/datasets/dataset/point-clouds/collection/sample')
+            } as Parameters<typeof load>[0])
+        ).rejects.toThrow(/sequence_id/);
     });
 });

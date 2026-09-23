@@ -27,24 +27,24 @@
     interface Props {
         sampleId: string;
         /** Dataset the labeled point-cloud sequence belongs to. */
-        datasetId?: string;
+        datasetId: string;
         /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
-        sequenceId?: string;
+        sequenceId: string;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
         /** Overridable for tests/stories; production always starts at `empty` today. */
         status?: 'unsupported' | 'empty' | 'error';
-        onExit: () => void;
+        onExit?: () => void;
         onRetry?: () => void;
     }
 
     let {
         sampleId,
-        datasetId = '',
-        sequenceId = '',
+        datasetId,
+        sequenceId,
         sourcePath = [],
         status,
-        onExit,
+        onExit = () => undefined,
         onRetry
     }: Props = $props();
 
