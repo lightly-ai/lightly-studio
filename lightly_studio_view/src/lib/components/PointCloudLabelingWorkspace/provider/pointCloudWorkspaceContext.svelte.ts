@@ -30,79 +30,78 @@ export interface PointCloudWorkspaceContext {
 
 const CONTEXT_KEY = 'point-cloud-workspace';
 
-export const createPointCloudWorkspaceContext = (
-    getInputs: () => {
-        datasetId: string;
-        sequenceId: string;
-        /** Overrides the summary-derived status; for tests/stories. */
-        statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error';
-    }
-): PointCloudWorkspaceContext => {
-    const { summary, refetch } = useMcapSequenceSummary({
-        getDatasetId: () => getInputs().datasetId,
-        getSequenceId: () => getInputs().sequenceId
-    });
+type GetInputs = () => {
+    datasetId: string;
+    sequenceId: string;
+    /** Overrides the summary-derived status; for tests/stories. */
+    statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error';
+};
 
+class PointCloudWorkspace implements PointCloudWorkspaceContext {
     // Placeholder ruler until browser-side MCAP frame loading lands (child issues of LIG-10657).
-    const ticks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
+    readonly ticks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
         seq_number: index,
         timestamp_ns: null
     }));
 
-    let currentTick = $state(0);
-    let isPlaying = $state(false);
+    currentTick = $state(0);
+    isPlaying = $state(false);
 
-    const status = $derived.by((): WorkspaceStatus => {
-        const override = getInputs().statusOverride;
+    readonly #getInputs: GetInputs;
+    readonly #summary: ReturnType<typeof useMcapSequenceSummary>['summary'];
+    readonly retry: () => void;
+
+    // `$derived` is lazy, so referencing `this.#summary` here is safe — the body runs only when
+    // the field is read, by which point the constructor has assigned it.
+    readonly status = $derived.by((): WorkspaceStatus => {
+        const override = this.#getInputs().statusOverride;
         if (override) return override;
         // `isLoading` (not `isPending`) so the disabled query — no dataset/sequence yet — reads as
         // `empty` rather than a perpetual spinner.
-        if (summary.isLoading) return 'loading';
-        if (summary.isError) return 'error';
-        if (!summary.data || summary.data.lidar_channels.length === 0) return 'empty';
+        if (this.#summary.isLoading) return 'loading';
+        if (this.#summary.isError) return 'error';
+        if (!this.#summary.data || this.#summary.data.lidar_channels.length === 0) return 'empty';
         return 'ready';
     });
 
-    const lidarChannels = $derived(summary.data?.lidar_channels ?? []);
-    const cameraChannels = $derived(summary.data?.camera_channels ?? []);
+    readonly lidarChannels = $derived.by(() => this.#summary.data?.lidar_channels ?? []);
+    readonly cameraChannels = $derived.by(() => this.#summary.data?.camera_channels ?? []);
 
-    const context: PointCloudWorkspaceContext = {
-        get datasetId() {
-            return getInputs().datasetId;
-        },
-        get sequenceId() {
-            return getInputs().sequenceId;
-        },
-        get status() {
-            return status;
-        },
-        get lidarChannels() {
-            return lidarChannels;
-        },
-        get cameraChannels() {
-            return cameraChannels;
-        },
-        get ticks() {
-            return ticks;
-        },
-        get currentTick() {
-            return currentTick;
-        },
-        get isPlaying() {
-            return isPlaying;
-        },
-        goToPreviousFrame() {
-            if (currentTick > 0) currentTick -= 1;
-        },
-        goToNextFrame() {
-            if (currentTick < ticks.length - 1) currentTick += 1;
-        },
-        togglePlayback() {
-            isPlaying = !isPlaying;
-        },
-        retry: refetch
-    };
+    constructor(getInputs: GetInputs) {
+        const { summary, refetch } = useMcapSequenceSummary({
+            getDatasetId: () => getInputs().datasetId,
+            getSequenceId: () => getInputs().sequenceId
+        });
+        this.#getInputs = getInputs;
+        this.#summary = summary;
+        this.retry = refetch;
+    }
 
+    get datasetId(): string {
+        return this.#getInputs().datasetId;
+    }
+
+    get sequenceId(): string {
+        return this.#getInputs().sequenceId;
+    }
+
+    goToPreviousFrame(): void {
+        if (this.currentTick > 0) this.currentTick -= 1;
+    }
+
+    goToNextFrame(): void {
+        if (this.currentTick < this.ticks.length - 1) this.currentTick += 1;
+    }
+
+    togglePlayback(): void {
+        this.isPlaying = !this.isPlaying;
+    }
+}
+
+export const createPointCloudWorkspaceContext = (
+    getInputs: GetInputs
+): PointCloudWorkspaceContext => {
+    const context = new PointCloudWorkspace(getInputs);
     setContext(CONTEXT_KEY, context);
     return context;
 };
