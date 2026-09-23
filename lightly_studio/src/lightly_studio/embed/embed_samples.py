@@ -31,8 +31,19 @@ logger = logging.getLogger(__name__)
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
-def embed_image_for_collection(session: Session, collection_id: UUID, filepath: str) -> list[float]:
-    """Embed a single image with the collection's default model, without storing it.
+class ImageNotEmbeddedError(ValueError):
+    """Raised when the embedder returns no embedding for an image to embed.
+
+    A broken or unsupported image is the reason an embedder drops an input, so a caller
+    may report this as a bad request. Subclasses ``ValueError`` so a caller that handles
+    the other input errors of this module keeps working.
+    """
+
+
+def embed_image_for_collection(
+    session: Session, collection_id: UUID, image_bytes: bytes
+) -> list[float]:
+    """Embed a single uploaded image with the collection's default model, without storing it.
 
     Resolves the collection's default model from the database and embeds the image with the
     registry's embedder for that model's space. Unlike the ``embed_*_samples`` functions this
@@ -41,24 +52,27 @@ def embed_image_for_collection(session: Session, collection_id: UUID, filepath: 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
-        filepath: fsspec path or URL of the image to embed.
+        image_bytes: Encoded image bytes (JPEG, PNG or WebP).
 
     Returns:
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model, no registered
-            embedder matches that model's space, or the embedder produced no embedding
-            for the image.
+        ImageNotEmbeddedError: If the embedder returns no embedding for the image bytes.
+        ValueError: If the collection has no default embedding model, or no registered
+            embedder matches that model's space.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        get_embedder_fn=EmbedderRegistry.get_image_bytes_embedder,
     )
-    result = embedder.embed_images(paths=[filepath])
+    result = embedder.embed_image_bytes(images=[image_bytes])
     if result.kept_indices != [0]:
-        raise ValueError(f"The embedder produced no embedding for image {filepath!r}.")
+        raise ImageNotEmbeddedError(
+            "The embedder returned no embedding for the uploaded image. The image may be "
+            "broken or in a format the embedder does not support."
+        )
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding
 

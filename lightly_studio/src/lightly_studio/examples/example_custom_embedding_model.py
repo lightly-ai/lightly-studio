@@ -5,9 +5,9 @@ embedder below mimics the built-in MobileCLIP model, but you can swap in any
 implementation of the ``Embedder`` capability interfaces.
 
 An embedder subclasses one interface per input it can embed. This one embeds
-images by path, image crops and text into one shared space, so text queries can
-be compared against image embeddings. Implement ``VideoPathEmbedder`` as well to
-embed whole videos.
+images by path, uploaded images as bytes, image crops and text into one shared
+space, so text queries and query images can be compared against image embeddings.
+Implement ``VideoPathEmbedder`` as well to embed whole videos.
 
 Register the embedder with ls.register_default_embedder BEFORE creating a dataset,
 so ingestion uses it instead of the built-in default.
@@ -21,6 +21,7 @@ import numpy as np
 import torch
 from environs import Env
 from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     TextEmbedder,
@@ -44,16 +45,17 @@ EMBEDDING_DIMENSION: int = 512
 
 class CustomEmbedder(
     ImagePathEmbedder,
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
     TextEmbedder,
 ):
     """A custom embedder.
 
-    This subclasses the ``ImagePathEmbedder``, ``ImageCropPathEmbedder`` and
-    ``TextEmbedder`` interfaces. Here it wraps MobileCLIP to keep the example
-    runnable, but the same structure works for any model: subclass the interface for
-    each capability you support and implement its embed method. Subclass only the
-    capabilities your model provides.
+    This subclasses the ``ImagePathEmbedder``, ``ImageBytesEmbedder``,
+    ``ImageCropPathEmbedder`` and ``TextEmbedder`` interfaces. Here it wraps MobileCLIP
+    to keep the example runnable, but the same structure works for any model: subclass
+    the interface for each capability you support and implement its embed method.
+    Subclass only the capabilities your model provides.
     """
 
     def __init__(self) -> None:
@@ -92,6 +94,14 @@ class CustomEmbedder(
             filepaths=paths,
             context=self._embedding_context(),
             show_progress=True,
+        )
+
+    def embed_image_bytes(self, images: list[bytes]) -> ls.EmbeddingResult:
+        """Embed uploaded images given as encoded bytes (for image search in the GUI)."""
+        return image_embedding.embed_image_bytes_batched(
+            images=images,
+            context=self._embedding_context(),
+            show_progress=False,
         )
 
     def embed_image_crops(self, crops: list[ls.ImageCrop]) -> ls.EmbeddingResult:
