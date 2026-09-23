@@ -1065,7 +1065,10 @@ def _register_default_random_model(
     dimension: int = 3,
     url: str | None = None,
 ) -> UUID:
-    """Register the random embedder's space as the collection's default and return its model ID."""
+    """Register the random embedder's space as the collection's default and return its model ID.
+
+    A given ``url`` is stored as the model's remote embedder URL.
+    """
     model = create_embedding_model(
         session=session,
         collection_id=collection_id,

@@ -349,8 +349,8 @@ def _get_query_image_embedder(
     Args:
         registry: The registry the embedder is resolved from.
         space_key: The embedding space to resolve, or None for the registry default.
-        config: The stored configuration of the space, used only when no embedder is
-            registered for it.
+        config: The stored configuration of the space, used when no embedder is registered
+            for it. Its URL also disables the path step.
 
     Returns:
         The space's image embedder, or None if the space has no embedder for an upload.
@@ -398,15 +398,18 @@ def _embed_image_bytes(embedder: Embedder, image_bytes: bytes) -> NDArray[np.flo
         raise ImageNotEmbeddedError("The uploaded image cannot be decoded.") from error
 
     if isinstance(embedder, ImagePILEmbedder):
-        result = embedder.embed_images_pil(images=[image.convert("RGB")])
-    elif isinstance(embedder, ImagePathEmbedder):
-        suffix = "" if image.format is None else f".{image.format.lower()}"
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / f"image{suffix}"
-            path.write_bytes(image_bytes)
-            result = embedder.embed_images(paths=[str(path)])
-    else:
+        return _single_embedding(
+            result=embedder.embed_images_pil(images=[image.convert("RGB")]),
+            message="The embedder returned no embedding for the uploaded image.",
+        )
+
+    if not isinstance(embedder, ImagePathEmbedder):
         raise TypeError(f"The embedder {type(embedder).__name__} embeds no images.")
+    suffix = "" if image.format is None else f".{image.format.lower()}"
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / f"image{suffix}"
+        path.write_bytes(image_bytes)
+        result = embedder.embed_images(paths=[str(path)])
     return _single_embedding(
         result=result,
         message=(
@@ -417,7 +420,18 @@ def _embed_image_bytes(embedder: Embedder, image_bytes: bytes) -> NDArray[np.flo
 
 
 def _single_embedding(result: EmbeddingResult, message: str) -> NDArray[np.float32]:
-    """Return the only embedding of a one-input result, or raise with the given message."""
+    """Return the only embedding of a one-input result.
+
+    Args:
+        result: The embedding result for a single input.
+        message: The error message if the embedder dropped the input.
+
+    Returns:
+        The embedding of the input, with shape (dimension,).
+
+    Raises:
+        ImageNotEmbeddedError: If the result holds no embedding for the input.
+    """
     if result.kept_indices != [0]:
         raise ImageNotEmbeddedError(message)
     embedding: NDArray[np.float32] = result.embeddings[0]
