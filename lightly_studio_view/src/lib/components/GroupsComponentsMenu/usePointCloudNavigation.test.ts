@@ -18,7 +18,12 @@ describe('usePointCloudNavigation', () => {
         const { navigate } = usePointCloudNavigation();
 
         expect(
-            navigate({ datasetId: 'dataset', collectionId: 'collection', sampleId: 'sample', groupId: 'group' })
+            navigate({
+                datasetId: 'dataset',
+                collectionId: 'collection',
+                sampleId: 'sample',
+                groupId: 'group'
+            })
         ).toBe(false);
         expect(gotoMock).not.toHaveBeenCalled();
     });
@@ -28,7 +33,12 @@ describe('usePointCloudNavigation', () => {
         const { navigate } = usePointCloudNavigation();
 
         expect(
-            navigate({ datasetId: 'dataset', collectionId: 'collection', sampleId: 'sample', groupId: 'group' })
+            navigate({
+                datasetId: 'dataset',
+                collectionId: 'collection',
+                sampleId: 'sample',
+                groupId: 'group'
+            })
         ).toBe(true);
         expect(gotoMock).toHaveBeenCalledWith(
             '/datasets/dataset/point-clouds/collection/sample?sequence_id=sample&collection_type=group&group_id=group',
