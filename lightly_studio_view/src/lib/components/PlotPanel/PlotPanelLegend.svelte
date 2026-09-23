@@ -78,7 +78,7 @@
 </script>
 
 <div
-    class="absolute bottom-1 left-3 flex max-h-[40%] max-w-48 flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
+    class="pointer-events-auto flex max-h-[40%] min-w-0 max-w-48 flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
     data-testid="plot-legend"
 >
     <div

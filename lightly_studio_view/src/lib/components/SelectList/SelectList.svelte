@@ -4,10 +4,10 @@
         ChevronsUpDown as ChevronsUpDownIcon,
         LoaderCircle as Loader2Icon
     } from '@lucide/svelte';
-    import { tick, type Snippet } from 'svelte';
+    import { tick, untrack, type Snippet } from 'svelte';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
-    import { Button } from '$lib/components/ui/button/index.js';
+    import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
     import type { ListItem } from './types';
 
@@ -42,11 +42,13 @@
         autoFocus = false,
         disabled = false,
         isLoading = false,
-        onKeyboardConfirm
+        onKeyboardConfirm,
+        labelledBy
     }: {
         placeholder?: string;
         name?: string;
         label?: string;
+        labelledBy?: string;
         className?: string;
         contentClassName?: string;
         autoOpen?: boolean;
@@ -60,7 +62,10 @@
         onKeyboardConfirm?: (item: ListItem) => void;
     } = $props();
 
-    let open = $state(autoOpen);
+    // Part of the trigger's accessible name, so it reads as "<field label> <selected value>".
+    const valueId = $props.id();
+
+    let open = $state(untrack(() => autoOpen));
     let inputValue = $state('');
     let highlightedValue = $state('');
 
@@ -145,15 +150,19 @@
         {#snippet child({ props }: ChildProps)}
             <div class="flex w-full min-w-0 max-w-full items-center space-x-4">
                 <Button
-                    {...props}
                     variant="secondary"
-                    {disabled}
-                    class={cn('w-[200px] min-w-0 max-w-full justify-between', className)}
-                    role="combobox"
-                    aria-expanded={open}
-                    data-testid="select-list-trigger"
+                    buttonProps={{
+                        ...props,
+                        disabled,
+                        class: cn('w-[200px] min-w-0 max-w-full justify-between', className),
+                        role: 'combobox',
+                        'aria-expanded': open,
+                        ...(labelledBy ? { 'aria-labelledby': `${labelledBy} ${valueId}` } : {}),
+                        'data-testid': 'select-list-trigger'
+                    }}
                 >
                     <span
+                        id={valueId}
                         class="min-w-0 flex-1 truncate text-left"
                         title={selectedItem?.label || label}
                     >

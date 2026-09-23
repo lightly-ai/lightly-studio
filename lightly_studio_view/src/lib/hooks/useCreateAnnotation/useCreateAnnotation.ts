@@ -9,14 +9,19 @@ import {
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
+import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
+import { useInvalidateEvaluationRunsQueries } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 import { page } from '$app/state';
 
-export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) => {
+export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () => string }) => {
     const mutation = createMutation(() => createAnnotationMutation());
     const client = useQueryClient();
     const { trackEvent } = usePostHog();
+    const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
+    const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
 
-    const refetch = () => {
+    const refetch = (collectionId: string) => {
+        invalidateAnnotationGridQueries(collectionId);
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
@@ -25,10 +30,13 @@ export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) 
         client.invalidateQueries({
             queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: collectionId } })
         });
+        // Annotation mutations can mark evaluation runs as stale, so refresh the runs list.
+        invalidateEvaluationRunsQueries();
     };
 
     const createAnnotation = (inputs: AnnotationCreateInput) =>
         new Promise<CreateAnnotationResponse>((resolve, reject) => {
+            const collectionId = getCollectionId();
             mutation.mutate(
                 {
                     path: {
@@ -38,7 +46,7 @@ export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) 
                 },
                 {
                     onSuccess: (data) => {
-                        refetch();
+                        refetch(collectionId);
                         trackEvent('annotation_created', {
                             collection_id: collectionId,
                             annotation_type: data.annotation_type,

@@ -16,7 +16,16 @@ export function selectVisibleCounts(
             : a.label.localeCompare(b.label)
     );
     if (config.mode === 'manual') {
-        return sorted.filter((item) => config.manualClasses.includes(item.label));
+        return sorted.filter((item) => config.manualClasses.includes(item.id ?? item.label));
     }
-    return sorted.slice(0, Math.max(config.n, 1));
+    const limit = Math.max(config.n, 1);
+    const pinned = sorted.filter((item) => item.pinned);
+    if (pinned.length === 0) return sorted.slice(0, limit);
+
+    const remainingSlots = Math.max(limit - pinned.length, 0);
+    const selected = new Set([
+        ...pinned,
+        ...sorted.filter((item) => !item.pinned).slice(0, remainingSlots)
+    ]);
+    return sorted.filter((item) => selected.has(item));
 }

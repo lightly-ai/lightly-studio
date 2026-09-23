@@ -251,6 +251,17 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"limit must be greater than 0"):
             dataset.add_images_from_path(path=tmp_path, limit=limit)
 
+    @pytest.mark.parametrize("tag_depth", [-1, -5])
+    def test_dataset_add_images_from_path__invalid_tag_depth(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        tag_depth: int,
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match="tag_depth must be non-negative"):
+            dataset.add_images_from_path(path=tmp_path, tag_depth=tag_depth)
+
     def test_add_images_from_path_calls_tag_samples_by_directory(
         self,
         patch_collection: None,  # noqa: ARG002

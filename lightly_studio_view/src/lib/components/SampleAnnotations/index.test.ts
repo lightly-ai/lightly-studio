@@ -91,6 +91,8 @@ type Mock2dContext = {
     strokeRect: ReturnType<typeof vi.fn>;
 };
 
+const SAMPLE_SOURCE_ID = 'col-default';
+
 const createSample = (): ComponentProps<typeof SampleAnnotations>['sample'] =>
     ({
         width: 100,
@@ -98,6 +100,7 @@ const createSample = (): ComponentProps<typeof SampleAnnotations>['sample'] =>
         annotations: [
             {
                 sample_id: 'object-detection-1',
+                annotation_collection_id: SAMPLE_SOURCE_ID,
                 annotation_type: 'object_detection',
                 annotation_label: { annotation_label_name: 'car' },
                 object_detection_details: {
@@ -109,6 +112,7 @@ const createSample = (): ComponentProps<typeof SampleAnnotations>['sample'] =>
             },
             {
                 sample_id: 'instance-segmentation-1',
+                annotation_collection_id: SAMPLE_SOURCE_ID,
                 annotation_type: 'segmentation_mask',
                 annotation_label: { annotation_label_name: 'person' },
                 segmentation_details: {
@@ -171,10 +175,15 @@ describe('SampleAnnotations', () => {
         );
 
         useAnnotationClassVisibility().hiddenClassNamesStore.set([]);
+        const { setSelectedCollectionIds, setCollectionIdToName } =
+            useAnnotationCollectionsFilter();
+        setCollectionIdToName({ [SAMPLE_SOURCE_ID]: 'Ground truth' });
+        setSelectedCollectionIds([SAMPLE_SOURCE_ID]);
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
+        vi.useRealTimers();
     });
 
     it('keeps object-detection boxes visible when showBoundingBoxesForSegmentation is disabled', async () => {
@@ -206,6 +215,43 @@ describe('SampleAnnotations', () => {
         await waitFor(() => {
             expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(true);
             expect(hasStrokeRectCall(mockContext, 2, 3, 4, 5)).toBe(true);
+        });
+    });
+
+    it('draws nothing once the user unchecks every annotation source', async () => {
+        vi.useFakeTimers();
+        setShowBoundingBoxesForSegmentation(true);
+        useAnnotationCollectionsFilter().setSelectedCollectionIds([]);
+
+        render(SampleAnnotations, {
+            props: {
+                sample: createSample()
+            }
+        });
+
+        // The canvas mounts from an idle callback; drain it before asserting nothing drew.
+        await vi.runAllTimersAsync();
+
+        expect(mockContext.strokeRect).not.toHaveBeenCalled();
+    });
+
+    // On the videos grid the frame annotations come from the frames collection, which is not
+    // among the videos collection's own sources, so the filter must leave them alone.
+    it('keeps drawing annotations from a source the filter does not know about', async () => {
+        setShowBoundingBoxesForSegmentation(true);
+        const { setSelectedCollectionIds, setCollectionIdToName } =
+            useAnnotationCollectionsFilter();
+        setCollectionIdToName({});
+        setSelectedCollectionIds([]);
+
+        render(SampleAnnotations, {
+            props: {
+                sample: createSample()
+            }
+        });
+
+        await waitFor(() => {
+            expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(true);
         });
     });
 

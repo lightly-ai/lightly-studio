@@ -14,19 +14,15 @@ from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.image.create_image import CreateImage
+from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.video.create_video import CreateVideo
 from lightly_studio.core.start_gui import (
     start_gui,
     start_gui_background,
     stop_gui_background,
 )
-from lightly_studio.dataset.embedding_generator import (
-    EmbeddingGenerator,
-    ImageCrop,
-    ImageEmbeddingGenerator,
-    VideoEmbeddingGenerator,
-)
-from lightly_studio.dataset.embedding_manager import set_default_embedding_model
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio.embed.public_api import register_default_embedder
 from lightly_studio.models.collection import SampleType
 from lightly_studio.enterprise import connect
 from lightly_studio.core.lightly_train_helpers.generate_train_script import lt_train_script
@@ -38,20 +34,20 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 __all__ = [
     "AnnotationType",
     "CreateImage",
+    "CreateMcap",
     "CreateVideo",
-    "EmbeddingGenerator",
+    "EmbeddingResult",
+    "EmbeddingSpaceSpec",
     "GroupDataset",
     "ImageCrop",
     "ImageDataset",
-    "ImageEmbeddingGenerator",
     "SampleType",
     "VideoDataset",
-    "VideoEmbeddingGenerator",
     "VideoFrameDataset",
     "VideoFrameSample",
     "connect",
     "lt_train_script",
-    "set_default_embedding_model",
+    "register_default_embedder",
     "start_gui",
     "start_gui_background",
     "stop_gui_background",

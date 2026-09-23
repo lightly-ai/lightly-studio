@@ -20,9 +20,11 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { onMount } from 'svelte';
 
-    const collectionId = $derived(page.params.collection_id);
+    const collectionId = $derived(page.params.collection_id!);
 
-    const { metadataValues } = $derived(useMetadataFilters(collectionId));
+    const { metadataValues, categoricalMetadataValues } = $derived(
+        useMetadataFilters(collectionId)
+    );
     const { videoFramesBoundsValues } = $derived(useVideoFramesBounds(collectionId));
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
@@ -41,7 +43,8 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            metadata_values: $metadataValues
+            metadata_values: $metadataValues,
+            categorical_metadata_values: $categoricalMetadataValues
         },
         frame_bounds: $videoFramesBoundsValues
     });
@@ -127,6 +130,8 @@
     ) {
         handleSampleSelect({ sampleId, index, shiftKey: event.shiftKey });
     }
+    // TODO(Mihnea, 09/2026): hash the effective metadata filters, not raw $filterParams.
+    // Same fix as Images.svelte's filterHash.
     const filterHash = $derived(JSON.stringify($filterParams));
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
@@ -169,7 +174,7 @@
             <Grid
                 itemCount={items.length}
                 {columnCount}
-                overScan={30}
+                overScan={2}
                 onScroll={handleScroll}
                 {initialScrollPosition}
                 {scrollResetKey}

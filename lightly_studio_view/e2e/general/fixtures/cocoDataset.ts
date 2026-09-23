@@ -26,6 +26,7 @@ export const cocoDataset = {
 
     /** Expected filenames for export */
     cocoExportFilename: 'coco_export.json',
+    classificationExportFilename: 'classification_export.csv',
     yoloExportFilename: 'yolo.zip',
     segmentationMasksExportFilename: 'coco_segmentation_mask_export.json',
     captionExportFilename: 'coco_captions_export.json',

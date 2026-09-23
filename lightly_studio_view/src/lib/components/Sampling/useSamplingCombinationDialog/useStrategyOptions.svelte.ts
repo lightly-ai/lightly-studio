@@ -1,12 +1,18 @@
 import { get } from 'svelte/store';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
-import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
-import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import {
+    useAnnotationCollections,
+    useAnnotationLabels,
+    useCategoricalMetadataDistribution,
+    useMetadataFilters
+} from '$lib/hooks';
 
 export function useStrategyOptions(getCollectionId: () => string) {
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId: getCollectionId() }));
     const annotationCollectionsQuery = useAnnotationCollections(() => ({
+        collectionId: getCollectionId()
+    }));
+    const categoricalMetadataQuery = useCategoricalMetadataDistribution(() => ({
         collectionId: getCollectionId()
     }));
     const { metadataInfo } = useMetadataFilters(getCollectionId());
@@ -20,12 +26,37 @@ export function useStrategyOptions(getCollectionId: () => string) {
             .map((i) => i.name)
     );
     const hasMetadataFields = $derived(metadataFieldNames.length > 0);
+    const categoricalMetadataFieldNames = $derived(
+        metadataInfoValue
+            .filter((i) => i.type === 'string' || i.type === 'boolean')
+            .map((i) => i.name)
+    );
+    const hasCategoricalMetadataFields = $derived(categoricalMetadataFieldNames.length > 0);
+    // Only concrete values are selectable targets; the "missing" and "other"
+    // buckets are aggregates, not metadata values the backend can balance on.
+    const metadataValuesByKey = $derived(
+        Object.fromEntries(
+            Object.entries(categoricalMetadataQuery.data ?? {}).map(([key, buckets]) => [
+                key,
+                buckets.filter((b) => b.kind === 'value').map((b) => String(b.value))
+            ])
+        )
+    );
     const annotationLabels = $derived(
         (annotationLabelsQuery.data ?? []).map((l) => l.annotation_label_name)
     );
     const hasAnnotationLabels = $derived(annotationLabels.length > 0);
     const annotationSourceOptions = $derived(
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
+    );
+    const croppableAnnotationSourceOptions = $derived(
+        (annotationCollectionsQuery.data ?? [])
+            .filter((c) =>
+                (c.annotation_types ?? []).some(
+                    (t) => t === 'object_detection' || t === 'segmentation_mask'
+                )
+            )
+            .map((c) => ({ id: c.collection_id, name: c.name }))
     );
 
     return {
@@ -35,6 +66,15 @@ export function useStrategyOptions(getCollectionId: () => string) {
         get hasMetadataFields() {
             return hasMetadataFields;
         },
+        get categoricalMetadataFieldNames() {
+            return categoricalMetadataFieldNames;
+        },
+        get hasCategoricalMetadataFields() {
+            return hasCategoricalMetadataFields;
+        },
+        get metadataValuesByKey() {
+            return metadataValuesByKey;
+        },
         get annotationLabels() {
             return annotationLabels;
         },
@@ -43,6 +83,9 @@ export function useStrategyOptions(getCollectionId: () => string) {
         },
         get annotationSourceOptions() {
             return annotationSourceOptions;
+        },
+        get croppableAnnotationSourceOptions() {
+            return croppableAnnotationSourceOptions;
         }
     };
 }

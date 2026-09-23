@@ -60,21 +60,21 @@ describe('approve', () => {
         expect(fake.dismissReview).not.toHaveBeenCalled();
     });
 
-    it('refreshes an approval and dismisses the superseded one', async () => {
+    it('keeps an existing approval on an earlier commit without re-approving or dismissing', async () => {
         const fake = fakeOctokit([{ id: 1, login: BOT_LOGIN, state: 'APPROVED', commitId: 'old' }]);
-        await expect(approve(buildReviewParams(fake.octokit))).resolves.toBe('approved');
-        expect(fake.createReview).toHaveBeenCalledOnce();
-        expect(fake.dismissReview).toHaveBeenCalledWith(expect.objectContaining({ review_id: 1 }));
+        await expect(approve(buildReviewParams(fake.octokit))).resolves.toBe('noop');
+        expect(fake.createReview).not.toHaveBeenCalled();
+        expect(fake.dismissReview).not.toHaveBeenCalled();
     });
 
-    it('keeps only one approval when duplicate approvals exist for the current head', async () => {
+    it('leaves duplicate approvals untouched instead of churning reviews', async () => {
         const fake = fakeOctokit([
             { id: 1, login: BOT_LOGIN, state: 'APPROVED', commitId: HEAD_SHA },
             { id: 2, login: BOT_LOGIN, state: 'APPROVED', commitId: HEAD_SHA }
         ]);
         await expect(approve(buildReviewParams(fake.octokit))).resolves.toBe('noop');
         expect(fake.createReview).not.toHaveBeenCalled();
-        expect(fake.dismissReview).toHaveBeenCalledOnce();
+        expect(fake.dismissReview).not.toHaveBeenCalled();
     });
 });
 

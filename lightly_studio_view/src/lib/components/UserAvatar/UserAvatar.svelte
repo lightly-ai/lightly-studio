@@ -1,7 +1,7 @@
 <script lang="ts">
     import * as Popover from '$lib/components/ui/popover';
-    import { Button } from '$lib/components/ui/button';
-    import { LogOut, Users } from '@lucide/svelte';
+    import { Button } from '$lib/components';
+    import { KeyRound, LogOut, Users } from '@lucide/svelte';
     import { cn } from '$lib/utils/shadcn';
     import { useLogout } from '$lib/hooks/useLogout/useLogout';
     import { Separator } from '../ui/separator';
@@ -56,13 +56,29 @@
                 </div>
             </div>
             {#if hasMinimumRole(user?.role, 'admin')}
-                <Button variant="ghost" class="w-full justify-start gap-2" href="/workspace/users">
+                <Button
+                    variant="ghost"
+                    buttonProps={{ class: 'w-full justify-start gap-2', href: '/workspace/users' }}
+                >
                     <Users class="size-4" />
                     Users
                 </Button>
+                <Button
+                    variant="ghost"
+                    buttonProps={{
+                        class: 'w-full justify-start gap-2',
+                        href: '/workspace/api-keys'
+                    }}
+                >
+                    <KeyRound class="size-4" />
+                    API keys
+                </Button>
             {/if}
             <Separator />
-            <Button variant="outline" class="w-full justify-start gap-2" onclick={logout}>
+            <Button
+                variant="outline"
+                buttonProps={{ class: 'w-full justify-start gap-2', onclick: logout }}
+            >
                 <LogOut class="size-4" />
                 <span>Sign out</span>
             </Button>

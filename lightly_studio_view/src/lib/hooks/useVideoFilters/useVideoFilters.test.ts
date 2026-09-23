@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { useVideoFilters } from './useVideoFilters';
 import { waitFor } from '@testing-library/svelte';
+import { SortDirection } from '$lib/api/lightly_studio_local';
 
 vi.mock('../useMetadataFilters/useMetadataFilters', () => ({
     createMetadataFilters: vi.fn(() => [])
@@ -191,6 +192,40 @@ describe('useVideoFilters', () => {
 
             const { filterParams } = useVideoFilters();
             expect(get(filterParams)?.filters?.sample_ids).toEqual(['existing']);
+        });
+    });
+
+    describe('videoSortBy and updateSortBy', () => {
+        it('defaults to ascending file_path_abs', () => {
+            const { videoSortBy } = useVideoFilters();
+
+            expect(get(videoSortBy)).toEqual([
+                {
+                    source: 'video',
+                    field_name: 'file_path_abs',
+                    direction: SortDirection.ASC
+                }
+            ]);
+        });
+
+        it('replaces the sort with the provided expression', () => {
+            const { videoSortBy, updateSortBy } = useVideoFilters();
+
+            updateSortBy([
+                { source: 'video', field_name: 'duration_s', direction: SortDirection.DESC }
+            ]);
+
+            expect(get(videoSortBy)).toEqual([
+                { source: 'video', field_name: 'duration_s', direction: SortDirection.DESC }
+            ]);
+        });
+
+        it('clears the sort when given null', () => {
+            const { videoSortBy, updateSortBy } = useVideoFilters();
+
+            updateSortBy(null);
+
+            expect(get(videoSortBy)).toBeNull();
         });
     });
 });

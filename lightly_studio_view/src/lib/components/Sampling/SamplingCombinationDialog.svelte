@@ -6,7 +6,7 @@
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
@@ -16,6 +16,7 @@
     import { useSamplingCombinationDialog } from './useSamplingCombinationDialog/useSamplingCombinationDialog';
     import { useStrategyOptions } from './useSamplingCombinationDialog/useStrategyOptions.svelte';
     import SampleCountInput from '$lib/components/Sampling/SampleCountInput/SampleCountInput.svelte';
+    import { PreselectedTagField } from './PreselectedTagField';
 
     const collectionId = $derived(page.params.collection_id!);
     const isVideoCollection = $derived(
@@ -45,6 +46,7 @@
         updateAbsolute,
         updatePercentage,
         selectionResultTagName,
+        preselectedTagId,
         filteredSampleCount,
         noSamples,
         notEnoughSamples,
@@ -113,6 +115,7 @@
     // strategy is supported since all samples share a single embedding space.
     const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
     const hasDeduplication = $derived($instances.some((i) => i.type === 'deduplication'));
+    const hasSubpartDiversity = $derived($instances.some((i) => i.type === 'subpart_diversity'));
 </script>
 
 <Dialog.Root
@@ -153,6 +156,14 @@
                                 classBalancingDisabledReason={!strategyOptions.hasAnnotationLabels
                                     ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
                                     : undefined}
+                                metadataBalancingDisabledReason={!strategyOptions.hasCategoricalMetadataFields
+                                    ? 'No categorical metadata fields found. Index string or boolean metadata on your samples to enable this strategy.'
+                                    : undefined}
+                                subpartDiversityDisabledReason={isVideoCollection
+                                    ? 'Not available for video collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
+                                    : hasSubpartDiversity
+                                      ? 'Only one subpart diversity strategy can be added per selection.'
+                                      : undefined}
                                 onAdd={handleAddStrategy}
                                 onMenuOpen={handleMenuOpen}
                             />
@@ -167,9 +178,13 @@
                                         tags={$tags}
                                         annotationLabels={strategyOptions.annotationLabels}
                                         annotationSourceOptions={strategyOptions.annotationSourceOptions}
+                                        croppableAnnotationSourceOptions={strategyOptions.croppableAnnotationSourceOptions}
                                         metadataFieldNames={strategyOptions.metadataFieldNames}
+                                        categoricalMetadataFieldNames={strategyOptions.categoricalMetadataFieldNames}
+                                        metadataValuesByKey={strategyOptions.metadataValuesByKey}
                                         isDuplicateDisabled={instance.type === 'diversity' ||
-                                            instance.type === 'deduplication'}
+                                            instance.type === 'deduplication' ||
+                                            instance.type === 'subpart_diversity'}
                                         onRemove={() =>
                                             handleRemoveStrategy(instance.id, instance.type)}
                                         onDuplicate={() =>
@@ -219,6 +234,13 @@
                             />
                         </div>
 
+                        <!-- TODO: Validate the preselected tag against the active filters before allowing submission. -->
+                        <PreselectedTagField
+                            tags={$tags}
+                            value={$preselectedTagId}
+                            onValueChange={(value) => preselectedTagId.set(value)}
+                        />
+
                         {#if $noSamples}
                             <p
                                 class="text-sm text-destructive-text"
@@ -242,7 +264,7 @@
 
                 <Dialog.Footer class="mt-4">
                     <a
-                        href="https://docs.lightly.ai/studio/concepts_and_tools/sampling/"
+                        href="https://docs.lightly.ai/studio/workflows/sampling/"
                         target="_blank"
                         rel="noreferrer"
                         class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"
@@ -252,10 +274,12 @@
                     </a>
                     <Button
                         variant="outline"
-                        type="button"
-                        onclick={handleCloseDialog}
-                        disabled={$isSubmitting}
-                        data-testid="sampling-dialog-cancel"
+                        buttonProps={{
+                            type: 'button',
+                            onclick: handleCloseDialog,
+                            disabled: $isSubmitting,
+                            'data-testid': 'sampling-dialog-cancel'
+                        }}
                     >
                         Cancel
                     </Button>
@@ -265,12 +289,16 @@
                         triggerClass="inline-block"
                     >
                         <Button
-                            type="submit"
-                            disabled={!$isFormValid ||
-                                $isSubmitting ||
-                                $notEnoughSamples ||
-                                $noSamples}
-                            data-testid="sampling-dialog-submit"
+                            variant="default"
+                            buttonProps={{
+                                type: 'submit',
+                                disabled:
+                                    !$isFormValid ||
+                                    $isSubmitting ||
+                                    $notEnoughSamples ||
+                                    $noSamples,
+                                'data-testid': 'sampling-dialog-submit'
+                            }}
                         >
                             {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
                         </Button>

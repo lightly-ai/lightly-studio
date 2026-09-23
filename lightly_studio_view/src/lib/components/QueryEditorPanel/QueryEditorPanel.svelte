@@ -2,7 +2,7 @@
     import type { ComponentProps } from 'svelte';
     import { X } from '@lucide/svelte';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
@@ -37,15 +37,16 @@
                 >Query Filter</Typography
             >
             <Button
+                icon={X}
                 variant="ghost"
-                size="icon"
-                onclick={onClose}
-                aria-label="Close query filter panel"
-                class="h-8 w-8"
-                data-testid="query-editor-close-button"
-            >
-                <X class="size-4" />
-            </Button>
+                ariaLabel="Close query filter panel"
+                buttonProps={{
+                    size: 'icon',
+                    onclick: onClose,
+                    class: 'h-8 w-8',
+                    'data-testid': 'query-editor-close-button'
+                }}
+            />
         </div>
         <Typography
             variant="body2"

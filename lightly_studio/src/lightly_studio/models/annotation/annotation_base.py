@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Index, Relationship, SQLModel
 
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
@@ -46,10 +46,28 @@ class AnnotationType(str, Enum):
     OBJECT_DETECTION = "object_detection"
 
 
+# Annotation types that have a bounding box and can be cropped for embedding.
+CROPPABLE_ANNOTATION_TYPES = [
+    AnnotationType.OBJECT_DETECTION,
+    AnnotationType.SEGMENTATION_MASK,
+]
+
+
 class AnnotationBaseTable(SQLModel, table=True):
     """Base class for all annotation models."""
 
     __tablename__ = "annotation_base"
+    # Composite index on the adjacency sort keys that live on the annotation itself. The
+    # keyset seek walks the parent media in path order and looks up each parent's
+    # annotations here, already ordered by the remaining tiebreakers. See LIG-10067.
+    __table_args__ = (
+        Index(
+            "ix_annotation_base_parent_sample_id_created_at_sample_id",
+            "parent_sample_id",
+            "created_at",
+            "sample_id",
+        ),
+    )
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
@@ -164,6 +182,7 @@ class AnnotationView(BaseModel):
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
     confidence: Optional[float] = None
+    order_value: Optional[float] = None
     created_at: datetime
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
@@ -175,14 +194,26 @@ class AnnotationView(BaseModel):
     tags: list[AnnotationViewTag] = []
 
     @classmethod
-    def from_annotation_table(cls, annotation: "AnnotationBaseTable") -> "AnnotationView":
-        """Convert an AnnotationBaseTable to an AnnotationView."""
+    def from_annotation_table(
+        cls,
+        annotation: "AnnotationBaseTable",
+        order_value: Optional[float] = None,
+    ) -> "AnnotationView":
+        """Convert an AnnotationBaseTable to an AnnotationView.
+
+        Args:
+            annotation: The annotation row to convert.
+            order_value: Primary sort value for the current grid sort, when provided by the
+                resolver. Mutually exclusive with the payload view's ``similarity_score``
+                for the grid overlay.
+        """
         return cls(
             parent_sample_id=annotation.parent_sample_id,
             sample_id=annotation.sample_id,
             annotation_collection_id=annotation.sample.collection_id,
             annotation_type=annotation.annotation_type,
             confidence=annotation.confidence,
+            order_value=order_value,
             created_at=annotation.created_at,
             object_track_id=annotation.object_track_id,
             object_track_number=annotation.object_track.object_track_number

@@ -22,7 +22,7 @@
         children?: Snippet;
     } = $props();
 
-    const collectionId = collection.collection_id!;
+    const collectionId = $derived(collection.collection_id!);
 
     // Get route parameters from page
     const datasetId = $derived(page.params.dataset_id!);

@@ -14,9 +14,16 @@
         type SampleView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById, toVideoEvents, type VideoEvent } from '$lib/utils';
-    import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
-    import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import {
+        getVideoURLById,
+        isWholeVideoClassificationAnnotation,
+        toVideoEvents,
+        type VideoEvent
+    } from '$lib/utils';
+    import VideoSampleMetadata from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
+    import SampleDetailsCaptionSegment from '$lib/components/SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import SampleDetailsClassificationSegment from '$lib/components/SampleDetails/SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
+    import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
     import { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
@@ -27,12 +34,12 @@
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
-    } from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
+    } from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
 
     type VideoDetailsProps = {
         video: VideoView;
@@ -45,18 +52,29 @@
     let videoEl: HTMLVideoElement | null = $state(null);
     let frameRequestId: number | null = $state(null);
 
+    createAnnotationLabelContext();
+
     // Imported events: classification annotations on the video carrying a time span.
     const videoEvents = $derived(toVideoEvents(video.sample.annotations ?? []));
+
+    // Whole-video classification annotations (no time span) shown in the side panel.
+    const videoClassificationAnnotations = $derived(
+        (video.sample.annotations ?? []).filter(isWholeVideoClassificationAnnotation)
+    );
 
     // Reuse the global "Edit annotations" toggle to enable event editing.
     const { isEditingMode } = useGlobalStorage();
 
     // Events live on the video's own collection; labels are shared per dataset.
-    const eventCollectionId = (video.sample as SampleView)?.collection_id ?? datasetId;
-    const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId: eventCollectionId });
-    const { createAnnotation } = useCreateAnnotation({ collectionId: eventCollectionId });
-    const { createLabel } = useCreateLabel({ collectionId: eventCollectionId });
-    const { deleteAnnotation } = useDeleteAnnotation({ collectionId: eventCollectionId });
+    const eventCollectionId = untrack(
+        () => (video.sample as SampleView)?.collection_id ?? datasetId
+    );
+    const { updateAnnotations } = useUpdateAnnotationsMutation({
+        getCollectionId: () => eventCollectionId
+    });
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => eventCollectionId });
+    const { createLabel } = useCreateLabel({ getCollectionId: () => eventCollectionId });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => eventCollectionId });
     const annotationLabels = useAnnotationLabels(() => ({ collectionId: eventCollectionId }));
 
     const {
@@ -136,9 +154,7 @@
         frames: videoFrames,
         loadFrameByPlaybackTime,
         loadFramesFromFrameNumber
-    } = useVideoFrames({
-        video
-    });
+    } = untrack(() => useVideoFrames({ video }));
 
     // Pre-render all frame annotations as dataURLs for efficient playback
     const frameAnnotationMap = $derived(
@@ -194,7 +210,7 @@
     };
 
     // null = waiting for the frame deep-link timestamp; 0 = start of video.
-    let startTimeS = $state<number | null>(frameNumber !== undefined ? null : 0);
+    let startTimeS = $state<number | null>(untrack(() => (frameNumber !== undefined ? null : 0)));
 
     // #key remounts on navigation, so onMount suffices; an $effect could re-fire
     // and stop the play sync loop.
@@ -311,6 +327,14 @@
                 {/if}
                 <VideoSampleMetadata {video} />
                 <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
+                {#if video?.sample?.sample_id}
+                    <SampleDetailsClassificationSegment
+                        collectionId={(video.sample as SampleView).collection_id!}
+                        annotations={videoClassificationAnnotations}
+                        sampleId={video.sample_id}
+                        refetch={onVideoUpdate}
+                    />
+                {/if}
                 {#if video?.sample?.sample_id}
                     <SampleDetailsCaptionSegment
                         refetch={onVideoUpdate}

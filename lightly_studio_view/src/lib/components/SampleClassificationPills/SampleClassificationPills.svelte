@@ -15,31 +15,33 @@
         hasBottomOverlay?: boolean;
         hasRightOverlay?: boolean;
         /**
-         * When provided, overrides the collection filter from `useAnnotationCollectionsFilter`.
-         * Pass `[]` to show all annotations regardless of the active source filter (e.g. in the
-         * annotations grid, where the tile already represents a single annotation).
+         * Shows every annotation regardless of the active source filter, and colors pills by
+         * class. Used where the tile already represents a single annotation or a video, so the
+         * grid's source filter does not apply.
          */
-        selectedCollectionIds?: string[];
+        showAllSources?: boolean;
     }
 
     let {
         sample,
         hasBottomOverlay = false,
         hasRightOverlay = false,
-        selectedCollectionIds: selectedCollectionIdsOverride = undefined
+        showAllSources = false
     }: Props = $props();
 
     let containerWidth = $state(0);
     let pillsWidth = $state(0);
 
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { isSourceVisible, multipleSourcesVisible, collectionIdToName } =
+        useAnnotationCollectionsFilter();
     const { customLabelColorsStore } = useCustomLabelColors();
     const { enforceColoringByClassStore } = useSettings();
 
     const pills = $derived(
         getSampleClassificationPills({
             annotations: sample.annotations,
-            selectedCollectionIds: selectedCollectionIdsOverride ?? $selectedCollectionIds,
+            isSourceVisible: showAllSources ? () => true : $isSourceVisible,
+            multipleSourcesVisible: showAllSources ? false : $multipleSourcesVisible,
             collectionIdToName: $collectionIdToName,
             enforceColoringByClass: $enforceColoringByClassStore
         })

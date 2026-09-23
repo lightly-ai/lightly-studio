@@ -5,6 +5,7 @@
     import {
         isAnnotationsRoute,
         isCaptionsRoute,
+        isPointCloudsRoute,
         isVideoFramesRoute,
         isVideosRoute
     } from '$lib/routes';
@@ -23,7 +24,7 @@
         filteredAnnotations = 0
     }: FooterProps = $props();
 
-    function getItemType(): string {
+    function getItemType(count: number): string {
         if (isAnnotationsRoute(page.route.id)) {
             return 'annotations';
         } else if (isVideoFramesRoute(page.route.id)) {
@@ -32,6 +33,8 @@
             return 'videos';
         } else if (isCaptionsRoute(page.route.id)) {
             return 'captions';
+        } else if (isPointCloudsRoute(page.route.id)) {
+            return count === 1 ? 'MCAP sequence' : 'MCAP sequences';
         } else {
             return 'images';
         }
@@ -41,7 +44,7 @@
         const isAnnotationView = isAnnotationsRoute(page.route.id);
         const total = isAnnotationView ? totalAnnotations : totalSamples;
         const filtered = isAnnotationView ? filteredAnnotations : filteredSamples;
-        const itemType = getItemType();
+        const itemType = getItemType(total);
 
         if (!total) return '';
 

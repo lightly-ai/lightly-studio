@@ -145,6 +145,80 @@ def test_get_evaluation_confusion_matrix__classification(
     }
 
 
+def test_get_evaluation_confusion_matrix__instance_segmentation(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    dataset = create_collection(session=db_session)
+    gt_collection = create_collection(
+        session=db_session,
+        parent_collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    pred_collection = create_collection(
+        session=db_session,
+        parent_collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    evaluation_run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run_1",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            dataset_id=gt_collection.dataset_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+        ),
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id, width=2, height=2)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=dataset.collection_id,
+        label_name="cat",
+    )
+    mask_data = {"x": 0, "y": 0, "width": 2, "height": 2, "segmentation_mask": [0, 4]}
+    gt_annotation = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_data=mask_data,
+        annotation_collection_name=gt_collection.name,
+    )
+    pred_annotation = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_data=mask_data,
+        annotation_collection_name=pred_collection.name,
+    )
+    evaluation_annotation_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=evaluation_run.id,
+                sample_id=image.sample_id,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+            )
+        ],
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{dataset.collection_id}/evaluation/runs/{evaluation_run.id}/confusion-matrix"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "row_labels": ["cat", NO_GROUND_TRUTH_ROW_LABEL],
+        "col_labels": ["cat", NO_PREDICTION_COL_LABEL],
+        "counts": [[1, 0], [0, 0]],
+    }
+
+
 def test_get_evaluation_confusion_matrix__empty_matrix(
     test_client: TestClient, mocker: MockerFixture
 ) -> None:

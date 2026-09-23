@@ -8,6 +8,12 @@ from concurrent.futures import ThreadPoolExecutor
 _executors: dict[str, ThreadPoolExecutor] = {}
 
 
+def get_media_worker_count() -> int:
+    """Return the worker count for parallel media processing."""
+    cpu_count = os.cpu_count() or 1
+    return max(1, min(cpu_count - 1 or 1, 16))
+
+
 def get_media_executor(thread_name_prefix: str) -> ThreadPoolExecutor:
     """Return a shared ``ThreadPoolExecutor`` for CPU-intensive media processing.
 
@@ -22,9 +28,7 @@ def get_media_executor(thread_name_prefix: str) -> ThreadPoolExecutor:
         The cached ``ThreadPoolExecutor`` for the given prefix.
     """
     if thread_name_prefix not in _executors:
-        cpu_count = os.cpu_count() or 1
-        max_workers = max(1, min(cpu_count - 1 or 1, 16))
         _executors[thread_name_prefix] = ThreadPoolExecutor(
-            max_workers=max_workers, thread_name_prefix=thread_name_prefix
+            max_workers=get_media_worker_count(), thread_name_prefix=thread_name_prefix
         )
     return _executors[thread_name_prefix]

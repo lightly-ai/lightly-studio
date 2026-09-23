@@ -1,9 +1,12 @@
 <script lang="ts">
-    import { ExportSamples, SamplingCombinationDialog } from '$lib/components';
-    import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
-    import { SettingsDialog } from '$lib/components/Settings';
-    import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
+    import { onDestroy } from 'svelte';
+    import { useDatasetSplitDialog } from '$lib/components/DatasetSplit/useDatasetSplitDialog';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
+    import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
+    import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
+    import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
+    import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
 
     let {
         isImages = false,
@@ -23,19 +26,67 @@
     const isVideoCollection = $derived(
         collection.sample_type == 'video' || collection.sample_type == 'video_frame'
     );
+
+    const { isDialogOpen: isClassifiersDialogOpen } = useClassifiersMenu();
+    const { datasetSplitCollectionId, closeDatasetSplitDialog } = useDatasetSplitDialog();
+    const { isSamplingDialogOpen } = useSamplingDialog();
+    const { isExportDialogOpen } = useExportDialog();
+    const { isOperatorsDialogOpen } = useOperatorsDialog();
+    const { isSettingsDialogOpen } = useSettingsDialog();
+
+    $effect(() => {
+        if (!hasSelection || $datasetSplitCollectionId !== collection.collection_id) {
+            closeDatasetSplitDialog();
+        }
+    });
+    onDestroy(closeDatasetSplitDialog);
+
+    let hasClassifierFlowLoaded = $state(false);
+    let hasOperatorsMenuLoaded = $state(false);
+
+    $effect(() => {
+        if ($isClassifiersDialogOpen) hasClassifierFlowLoaded = true;
+        if ($isOperatorsDialogOpen) hasOperatorsMenuLoaded = true;
+    });
 </script>
 
-{#if hasClassifier}
-    <ClassifiersMenu />
+<!-- These menus own subsequent dialog state, so keep them mounted after their first open. -->
+{#if hasClassifier && hasClassifierFlowLoaded}
+    {#await import('$lib/components/FewShotClassifier/ClassifiersMenu.svelte') then { default: ClassifiersMenu }}
+        <ClassifiersMenu />
+    {/await}
 {/if}
 
-{#if hasSelection}
-    <SamplingCombinationDialog />
+{#if hasSelection && $isSamplingDialogOpen}
+    {#await import('$lib/components/Sampling/SamplingCombinationDialog.svelte') then { default: SamplingCombinationDialog }}
+        <SamplingCombinationDialog />
+    {/await}
 {/if}
 
-{#if isImageCollection || isVideoCollection}
-    <ExportSamples />
+{#if (isImageCollection || isVideoCollection) && $isExportDialogOpen}
+    {#await import('$lib/components/ExportSamples/ExportSamples.svelte') then { default: ExportSamples }}
+        <ExportSamples />
+    {/await}
 {/if}
 
-<OperatorsMenu />
-<SettingsDialog />
+{#if hasOperatorsMenuLoaded}
+    {#await import('$lib/components/Operator/OperatorsMenu.svelte') then { default: OperatorsMenu }}
+        <OperatorsMenu />
+    {/await}
+{/if}
+
+{#if $isSettingsDialogOpen}
+    {#await import('$lib/components/Settings/SettingsDialog.svelte') then { default: SettingsDialog }}
+        <SettingsDialog />
+    {/await}
+{/if}
+
+{#if hasSelection && $datasetSplitCollectionId === collection.collection_id && (collection.sample_type === 'image' || collection.sample_type === 'video')}
+    {#await import('$lib/components/DatasetSplit/ConnectedDatasetSplitDialog/ConnectedDatasetSplitDialog.svelte') then { default: ConnectedDatasetSplitDialog }}
+        <ConnectedDatasetSplitDialog
+            collectionId={collection.collection_id}
+            sampleType={collection.sample_type}
+            onClose={closeDatasetSplitDialog}
+        />
+    {/await}
+{/if}

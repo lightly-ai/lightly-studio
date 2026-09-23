@@ -87,9 +87,9 @@ def test_server_static_webapp() -> None:
     assert static_file.status_code == HTTP_STATUS_OK
     assert static_file.headers["content-type"] == "image/png"
 
-    static_file = client.get("/_app/env.js")
+    static_file = client.get("/_app/version.json")
     assert static_file.status_code == HTTP_STATUS_OK
-    assert "javascript" in static_file.headers["content-type"]
+    assert "json" in static_file.headers["content-type"]
 
     static_file = client.get("/non-existing-file.png")
     assert static_file.status_code == HTTP_STATUS_NOT_FOUND

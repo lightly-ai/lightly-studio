@@ -52,6 +52,8 @@ export function useSamplingCombinationDialog({
     // A non-null value locks the display to what the user typed, preventing
     // background filteredSampleCount updates (e.g. grid refetches) from overwriting it.
     const userEnteredPercentage = writable<number | null>(null);
+    const selectionResultTagName = writable('');
+    const preselectedTagId = writable<string | undefined>();
 
     const percentageToSelect = derived(
         [nSamplesToSelect, filteredSampleCount, userEnteredPercentage],
@@ -61,8 +63,6 @@ export function useSamplingCombinationDialog({
             return computePercentage($n, $total);
         }
     );
-    const selectionResultTagName = writable('');
-
     function updateAbsolute(count: number) {
         if (!Number.isFinite(count)) {
             nSamplesToSelect.set(null);
@@ -89,6 +89,7 @@ export function useSamplingCombinationDialog({
 
     const noSamples = derived(filteredSampleCount, ($count) => $count === 0);
 
+    // TODO: Subtract preselected samples from the available count when validating the request.
     const notEnoughSamples = derived(
         [filteredSampleCount, nSamplesToSelect],
         ([$count, $n]) => $count > 0 && $n !== null && $n > $count
@@ -126,6 +127,7 @@ export function useSamplingCombinationDialog({
         nSamplesToSelect.set(10);
         userEnteredPercentage.set(null); // let percentage re-derive from count
         selectionResultTagName.set('');
+        preselectedTagId.set(undefined);
     }
 
     async function submitSelection() {
@@ -135,7 +137,8 @@ export function useSamplingCombinationDialog({
             instances: get(instances),
             nSamplesToSelect: get(nSamplesToSelect) ?? 0,
             selectionResultTagName: get(selectionResultTagName),
-            selectionFilter: buildSelectionFilter()
+            selectionFilter: buildSelectionFilter(),
+            preselectedTagId: get(preselectedTagId)
         });
         if (success) resetForm();
     }
@@ -154,6 +157,7 @@ export function useSamplingCombinationDialog({
         updateAbsolute,
         updatePercentage,
         selectionResultTagName,
+        preselectedTagId,
         filteredSampleCount,
         noSamples,
         notEnoughSamples,

@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import * as appState from '$app/state';
-import type { Page } from '@sveltejs/kit';
 import { tick } from 'svelte';
 import '@testing-library/jest-dom';
 
 import { APP_ROUTES } from '$lib/routes';
 import type { PanelType } from '$lib/hooks/useGlobalStorage';
+import {
+    useImageAnnotationCounts,
+    useImageAnnotationCountsBySampleTags,
+    useMetadataDistributionsBySampleTags
+} from '$lib/hooks';
+import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
@@ -82,6 +87,9 @@ vi.mock(
 vi.mock('$lib/components/ConfusionCellFilterItem', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
+vi.mock('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte', async () => ({
+    default: (await import('./DistributionPanelStub.test.svelte')).default
+}));
 
 vi.mock('$lib/hooks/useGlobalStorage');
 vi.mock('$lib/hooks/useHideAnnotations', () => ({
@@ -112,6 +120,11 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters.js', () => ({
     useMetadataFilters: vi.fn(() => ({
         metadataValues: writable({}),
         metadataBounds: writable({}),
+        metadataInfo: writable([
+            { name: 'city', type: 'string' },
+            { name: 'score', type: 'float' }
+        ]),
+        categoricalMetadataValues: writable({}),
         updateMetadataValues: vi.fn()
     })),
     createMetadataFilters: vi.fn(() => undefined)
@@ -132,7 +145,10 @@ vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: vi.fn(() => ({ videoFilter: writable(null) }))
 }));
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
-    useAnnotationCollectionsFilter: vi.fn(() => ({ selectedCollectionIds: writable([]) }))
+    useAnnotationCollectionsFilter: vi.fn(() => ({
+        selectedCollectionIds: writable([]),
+        allSourcesHidden: writable(false)
+    }))
 }));
 vi.mock('$lib/hooks', () => ({
     useSelectionSummary: vi.fn(() => ({
@@ -141,9 +157,28 @@ vi.mock('$lib/hooks', () => ({
     })),
     useImageAnnotationCounts: vi.fn(() => ({ data: undefined })),
     useImageAnnotationCountsQueryKey: ['imageAnnotationCounts'],
-    useNumericMetadataDistribution: vi.fn(() => ({ data: undefined })),
+    useNumericMetadataDistribution: vi.fn(() => ({
+        data: { score: { binEdges: [0, 1], counts: [1] } }
+    })),
+    useCategoricalMetadataDistribution: vi.fn(() => ({
+        data: undefined,
+        isFetching: false,
+        error: null,
+        refetch: vi.fn()
+    })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
-    useTrackSampleInspected: vi.fn()
+    useTrackSampleInspected: vi.fn(),
+    useSeedAnnotationSourceFilter: vi.fn(),
+    useImageAnnotationCountsBySampleTags: vi.fn(() => ({
+        data: undefined,
+        isFetching: false,
+        error: null
+    })),
+    useMetadataDistributionsBySampleTags: vi.fn(() => ({ data: undefined })),
+    useTags: vi.fn(() => ({
+        tags: writable([{ tag_id: 'tag-a', name: 'Reviewed' }]),
+        tagsSelected: writable(new Set())
+    }))
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({
     useSelectAll: vi.fn(() => ({ handleSelectAll: vi.fn() }))
@@ -177,10 +212,7 @@ function setPageRoute(routeId: string | null): void {
             collection_id: 'test-collection-id',
             collection_type: 'image'
         }
-    } as Partial<Page<Record<string, string>, string | null>> as Page<
-        Record<string, string>,
-        string | null
-    >);
+    } as unknown as typeof appState.page);
 }
 
 beforeEach(() => {
@@ -208,6 +240,68 @@ beforeEach(() => {
     } as Partial<ReturnType<typeof useHasEmbeddingsModule.useHasEmbeddings>> as ReturnType<
         typeof useHasEmbeddingsModule.useHasEmbeddings
     >);
+});
+
+describe('distribution comparison query selection', () => {
+    it('enables only the active class or metadata comparison', async () => {
+        const select = async (testId: string) => {
+            await screen.getByTestId(testId).click();
+            // Flush the panel selection before reading reactive query parameters.
+            await tick();
+        };
+        setPageRoute(APP_ROUTES.images);
+        mockActivePanel.set('distribution');
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        await screen.findByTestId('distribution-select-tag');
+        await select('distribution-select-tag');
+
+        await select('distribution-select-classes-all');
+        expect(screen.getByText('Annotation classes')).toBeInTheDocument();
+        expect(
+            vi
+                .mocked(useImageAnnotationCountsBySampleTags)
+                .mock.calls.map(([params]) => params().enabled)
+        ).toEqual([true, false, false, false]);
+
+        for (const [field, type] of [
+            ['city', 'categorical'],
+            ['score', 'numeric']
+        ] as const) {
+            await select(`distribution-select-metadata-${field}`);
+            expect(
+                vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()
+            ).toMatchObject({
+                field: { name: field, type },
+                enabled: true
+            });
+        }
+
+        await select('distribution-select-metadata-undefined');
+        expect(vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()).toMatchObject({
+            field: undefined
+        });
+    });
+});
+
+describe('annotation label pruning', () => {
+    it('waits for the counts refetch before pruning selected labels', async () => {
+        vi.mocked(useImageAnnotationCounts).mockReturnValue({
+            data: [{ label_name: 'cat', total_count: 2, current_count: 1 }],
+            isFetching: true
+        } as unknown as ReturnType<typeof useImageAnnotationCounts>);
+        setPageRoute(APP_ROUTES.images);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        const { setAnnotationCounts, pruneInvalidSelections } =
+            vi.mocked(useAnnotationsFilter).mock.results[0].value;
+        expect(setAnnotationCounts).toHaveBeenCalled();
+        expect(pruneInvalidSelections).not.toHaveBeenCalled();
+    });
 });
 
 const defaultProps = {
@@ -270,6 +364,14 @@ describe('+layout.svelte collection-grid workspace', () => {
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
+    });
+
+    it('does not render the filter panel on point-clouds route', async () => {
+        setPageRoute(APP_ROUTES.pointClouds);
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
     });
 
     it('renders child route content on images route', async () => {

@@ -9,16 +9,23 @@ We welcome contributions of all kinds, including:
 
 After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
-## Development Quickstart
+## Requirements
+- Python **3.9–3.14** (3.9 recommended)
+- Uv version **0.12.6** (pinned exactly, see `required-version` in the root `pyproject.toml`)
+- Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 
+## Development Quickstart
 
 ```bash
 git clone git@github.com:lightly-ai/lightly_studio.git
-cd lightly_studio/lightly_studio
+cd lightly_studio
+make download-example-dataset  # run from the repo root
+cd lightly_studio              # descend into the backend subdirectory (same name as repo root)
 make start
 ```
 
 This will:
+- Download the example dataset into `lightly_studio/datasets` (see [Clone the Repository with Test Data](#clone-the-repository-with-test-data))
 - Install dependencies (uv installs Python dependencies automatically, `npm ci` the frontend ones)
 - Build the frontend and the Python package
 - Start an example script, which serves the app on <http://localhost:8001>
@@ -26,7 +33,7 @@ This will:
 For starting it again, you can skip the build step by just calling `make start-example`.
 
 Backend code lives in the `lightly_studio` subdirectory, frontend code in `lightly_studio_view`.
-To run static checks and unit tests use the following commands
+To run static checks and unit tests, use the following commands:
 
 ```bash
 # Backend
@@ -35,13 +42,37 @@ make static-checks
 make test
 
 # Frontend
-cd lightly_studio_view
+cd ../lightly_studio_view
+make static-checks
+make test
+
+# Embedding server package
+cd ../lightly_studio_serve
 make static-checks
 make test
 ```
 
-When updating the code please follow our coding guidelines in [./ai_guidelines](./ai_guidelines).
-AI coding tools will be able to assist.
+### The uv Workspace
+
+The Python packages are members of one [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
+whose root is the repository root:
+
+- `lightly_studio` - the application, published as `lightly-studio`.
+- `lightly_studio_serve` - the server a customer runs in front of their own embedding model,
+  published as `lightly-studio-serve`. Its dependencies stay limited to an HTTP server, so that it
+  installs next to a customer's own CUDA and torch pins.
+
+They share one `uv.lock` and one `.venv`, both at the repository root, so that the two packages
+cannot resolve the same dependency to different versions, and one set of check commands from
+`make/python.mk`. Running `make static-checks` or `make test` at the root covers every Python
+member. `uv run` in a member directory installs
+that member's dependencies into the shared environment without removing the other's, so switching
+between members costs nothing. An explicit `uv sync` does prune, so the next `uv run` in the other
+member reinstalls what it needs.
+
+When you update the code, follow our coding guidelines in [.agents/skills](./.agents/skills).
+They are [Agent Skills](https://agentskills.io). Skills do not load automatically. Load the
+skill that matches the file you edit. See [AGENTS.md](./AGENTS.md) for the path-to-skill map.
 
 ### End-to-End Testing
 
@@ -76,6 +107,35 @@ cd lightly_studio_view
 npm run test:e2e-videos
 ```
 
+### Running the MCAP Example from S3
+
+The `start-example-mcap-s3` target runs the MCAP sequence-indexing example against a local
+S3 emulator ([Floci](https://github.com/floci-dev/floci)). It uploads your MCAP recording to
+the emulator, then points the example at the resulting `s3://` URI so it reads the file through
+`fsspec` exactly as it would from real S3.
+
+Prerequisites:
+- Docker running locally (for the Floci S3 emulator)
+- The AWS CLI (`aws`) on your `PATH`
+- The `mcap` and `cloud-storage` extras (installed automatically by `uv run --extra` in the target)
+
+Run it from the `lightly_studio` subdirectory, pointing `FLOCI_MCAP_FILES` at your recording:
+
+```bash
+cd lightly_studio
+make start-example-mcap-s3 FLOCI_MCAP_FILES=./datasets/pointcloud_example/perception.mcap
+```
+
+This will:
+- Start the Floci S3 emulator in Docker and create the `lightly-studio` bucket
+- Upload `perception.mcap` to `s3://lightly-studio/recordings/perception.mcap`
+- Build the frontend and Python package
+- Start the example, which reads the MCAP from S3 and serves the app on <http://localhost:8001>
+
+The example reads the topics listed in `COMPONENTS` in
+[example_mcap.py](./lightly_studio/src/lightly_studio/examples/example_mcap.py). Edit that file to
+match the sensor topics in your own recording.
+
 ### Documentation
 
 Documentation is in the [docs](./lightly_studio/docs) folder. To build the documentation, move to the [docs](./lightly_studio/docs) folder and run:
@@ -104,11 +164,8 @@ formatting, see:
 
 ## Development Environment Setup
 
-### Requirements
-- Python **3.9+** (3.10 recommended)
-- Uv version **0.8.17+**
-- Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
-- Access to **Google Cloud Platform** (request permissions from @IgorSusmelj)
+See [Requirements](#requirements) above for the Python, Uv, and Node.js versions needed before
+following the steps below.
 
 ### Clone the Repository with Test Data
 
@@ -124,8 +181,7 @@ This clones the data into `lightly_studio/datasets`, which is where the `EXAMPLE
 
 ### Define Environment Variables
 
-We recommend using the `.env` file to set up environment variables. Start by copying `.env.example`
-file to `.env`:
+Copy `.env.example` to `.env`:
 
 ```shell
 cd lightly_studio
@@ -136,6 +192,64 @@ Now edit the `.env` file:
 
 * Optionally change the `EXAMPLES_*` paths to point to data on your machine. You can leave the
 defaults to use the cloned dataset examples data.
+
+### Mark Your Machine as Internal
+
+Lightly staff should mark their machine once, so that internal usage is filtered out of the
+product metrics:
+
+```shell
+mkdir -p ~/.cache/lightly-studio && touch ~/.cache/lightly-studio/internal
+```
+
+The marker lives in the model cache directory, next to the installation ID, so it survives
+recreating the virtualenv. If you point `LIGHTLY_STUDIO_MODEL_CACHE_DIR` elsewhere, create the file
+there instead, otherwise nothing reads it.
+
+`LIGHTLY_STUDIO_INTERNAL=1`, in `.env` or the environment, does the same for a single run.
+
+### Test with a Private Mundig Development Wheel
+
+Lightly developers with access to the private Artifact Registry can test an unreleased
+`lightly-mundig` wheel without changing `pyproject.toml` or `uv.lock`.
+
+1. Install the authentication helper once and authenticate with Google Cloud:
+
+```bash
+uv tool install keyring --with keyrings.google-artifactregistry-auth
+gcloud auth application-default login
+```
+
+2. Configure the environment variables to use the private index:
+
+```bash
+export UV_INDEX="https://oauth2accesstoken@europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/"
+export UV_KEYRING_PROVIDER=subprocess
+export MUNDIG_DEV_VERSION="<dev-version>"
+```
+
+3. Run tests with the development wheel layered over the public version in the lockfile:
+
+```bash
+cd lightly_studio
+uv run --with "lightly-mundig==$MUNDIG_DEV_VERSION" pytest tests/path/to/test_file.py
+```
+
+For a longer development session, install the wheel directly into the project environment. Set
+`UV_NO_SYNC=1` to prevent `uv run` commands, including those invoked by `make test`, from restoring
+the public version from the lockfile. This does not affect explicit `uv sync` commands:
+
+```bash
+cd lightly_studio
+uv sync --locked --all-groups --all-extras
+uv pip install --reinstall "lightly-mundig==$MUNDIG_DEV_VERSION"
+export UV_NO_SYNC=1
+make test
+```
+
+This workflow is local only. CI uses the public Mundig version pinned in `pyproject.toml`. Publish
+the required Mundig version to PyPI and update the pin in `pyproject.toml` before expecting CI to
+pass.
 
 ### Run Examples
 
@@ -169,9 +283,12 @@ npm run dev
 
 ### Exploring the Makefile
 
-There are three Makefiles: one in `lightly_studio` for the backend, build, e2e and migration
-targets, one in `lightly_studio_view` for the frontend, and one in the repository root that
-delegates to both. Some commonly used commands:
+`lightly_studio` has the backend, build, e2e and migration targets, `lightly_studio_view` the
+frontend ones and `lightly_studio_serve` those for the embedding server package. The one in the
+repository root delegates to all three. `make/python.mk` is never run directly: it holds the
+targets the Python members share, and each includes it rather than copying them.
+
+Some commonly used commands:
 
 Run tests:
 
@@ -187,6 +304,59 @@ make format
 
 Run these from the directory you are working in, or from the root to cover both sides. You can
 explore more available commands directly in the `Makefile`.
+
+### Local cloud storage development
+
+[Floci](https://github.com/floci-io/floci) emulates AWS S3 locally, and [Floci GCP](https://github.com/floci-io/floci-gcp) emulates GCS — no cloud account needed.
+
+#### AWS S3 (Floci)
+
+```bash
+# Start Floci (creates the default S3 bucket)
+make -C lightly_studio start-floci
+
+# Upload MCAP files and list what's available
+make -C lightly_studio setup-floci FLOCI_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make -C lightly_studio list-floci-mcaps
+
+# Stop and remove the container
+make -C lightly_studio stop-floci
+```
+
+Point LightlyStudio at the local S3 bucket before starting the server:
+
+```bash
+AWS_ACCESS_KEY_ID=test \
+AWS_SECRET_ACCESS_KEY=test \
+AWS_DEFAULT_REGION=us-east-1 \
+AWS_ENDPOINT_URL=http://localhost:4566 \
+  lightly-studio ...
+```
+
+#### GCP Cloud Storage (Floci GCP)
+
+```bash
+# Start Floci GCP (creates the default GCS bucket)
+make -C lightly_studio start-floci-gcp
+
+# Upload MCAP files and list what's available
+make -C lightly_studio setup-floci-gcp FLOCI_GCP_MCAP_FILES="~/data/front.mcap ~/data/rear.mcap"
+
+# List uploaded recordings without re-uploading
+make -C lightly_studio list-floci-gcp-mcaps
+
+# Stop and remove the container
+make -C lightly_studio stop-floci-gcp
+```
+
+Point LightlyStudio at the local GCS bucket before starting the server:
+
+```bash
+STORAGE_EMULATOR_HOST=http://localhost:4588 \
+  lightly-studio ...
+```
 
 ### Contributor License Agreement (CLA)
 

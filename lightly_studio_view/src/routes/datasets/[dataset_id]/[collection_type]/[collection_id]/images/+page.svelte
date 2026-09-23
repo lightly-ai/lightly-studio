@@ -6,10 +6,8 @@
 
     const { data } = $props();
 
-    const {
-        sampleSize,
-        globalStorage: { textEmbedding }
-    } = data;
+    const sampleSize = $derived(data.sampleSize);
+    const textEmbedding = $derived(data.globalStorage.textEmbedding);
 
     const collection_id = $derived(page.params.collection_id!);
 

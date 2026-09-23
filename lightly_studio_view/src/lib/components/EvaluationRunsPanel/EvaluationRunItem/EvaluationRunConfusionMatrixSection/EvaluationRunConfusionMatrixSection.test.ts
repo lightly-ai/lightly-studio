@@ -64,7 +64,7 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     } as unknown as typeof ResizeObserver;
 }
 
-const defaultProps = { evaluationRunId: 'run-1' };
+const defaultProps = { evaluationRunId: 'run-1', datasetId: 'ds-1' };
 
 describe('EvaluationRunConfusionMatrixSection', () => {
     beforeEach(() => {

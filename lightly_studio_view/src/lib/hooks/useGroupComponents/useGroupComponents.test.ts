@@ -57,7 +57,7 @@ describe('useGroupComponents Hook', () => {
     });
 
     it('should return groupComponents and refetch', () => {
-        const result = useGroupComponents({ groupId: 'group123' });
+        const result = useGroupComponents({ getGroupId: () => 'group123' });
 
         expect(result.groupComponents).toBeDefined();
         expect(result.refetch).toBeDefined();
@@ -65,7 +65,7 @@ describe('useGroupComponents Hook', () => {
     });
 
     it('should call invalidateQueries when refetch is called', () => {
-        const { refetch } = useGroupComponents({ groupId: 'group123' });
+        const { refetch } = useGroupComponents({ getGroupId: () => 'group123' });
 
         refetch();
 
@@ -77,7 +77,7 @@ describe('useGroupComponents Hook', () => {
     it('should call createQuery with correct options', () => {
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
 
-        useGroupComponents({ groupId: 'group123' });
+        useGroupComponents({ getGroupId: () => 'group123' });
 
         const optionsArg = createQuerySpy.mock.calls[0][0]();
         expect(optionsArg).toEqual(
@@ -88,7 +88,7 @@ describe('useGroupComponents Hook', () => {
     });
 
     it('should return group components data', () => {
-        const { groupComponents } = useGroupComponents({ groupId: 'group123' });
+        const { groupComponents } = useGroupComponents({ getGroupId: () => 'group123' });
 
         const data = groupComponents.data;
         expect(data).toHaveLength(2);
@@ -97,8 +97,8 @@ describe('useGroupComponents Hook', () => {
     });
 
     it('should handle different group IDs', () => {
-        const { refetch: refetch1 } = useGroupComponents({ groupId: 'group1' });
-        const { refetch: refetch2 } = useGroupComponents({ groupId: 'group2' });
+        const { refetch: refetch1 } = useGroupComponents({ getGroupId: () => 'group1' });
+        const { refetch: refetch2 } = useGroupComponents({ getGroupId: () => 'group2' });
 
         refetch1();
         refetch2();

@@ -8,5 +8,7 @@
     const { onReady }: Props = $props();
     const result = useVideo();
 
-    onReady(result);
+    $effect(() => {
+        onReady(result);
+    });
 </script>

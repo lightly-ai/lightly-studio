@@ -1,2 +1,6 @@
 export { createQuerySelection } from './querySelection';
-export { createThumbnailUrlResolver, type ThumbnailUrlResolver } from './thumbnailUrlResolver';
+export {
+    createThumbnailResolver,
+    type Thumbnail,
+    type ThumbnailResolver
+} from './thumbnailUrlResolver';

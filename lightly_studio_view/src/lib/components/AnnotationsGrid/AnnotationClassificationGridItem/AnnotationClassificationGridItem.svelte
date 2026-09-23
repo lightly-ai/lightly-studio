@@ -1,7 +1,10 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import { useSettings } from '$lib/hooks';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
+    import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
     import { getThumbnailUrl, getSampleDimensions } from './getThumbnailData';
     import type { CropWindow } from '../AnnotationItem/renderCropObjectUrl';
 
@@ -33,7 +36,7 @@
 
     // Stable id captured at init — same pattern as AnnotationItem (avoids re-reading
     // the annotation prop during effect cleanup after the grid array shrinks).
-    const annotationId = annotation.annotation.sample_id;
+    const annotationId = untrack(() => annotation.annotation.sample_id);
 
     const thumbnailUrl = $derived(
         getThumbnailUrl({
@@ -46,6 +49,8 @@
     );
 
     const sampleDimensions = $derived(getSampleDimensions(annotation));
+
+    const orderValue = $derived(annotation.annotation.order_value);
 
     // Emit a full-image CropWindow so classification tiles participate in drag-to-search.
     // windowX/Y=0 covers the entire sample — there is no bounding box to crop for classification.
@@ -72,6 +77,8 @@
 >
     <SampleClassificationPills
         sample={{ annotations: [annotation.annotation] }}
-        selectedCollectionIds={[]}
+        hasRightOverlay={hasValueBadge(orderValue)}
+        showAllSources
     />
+    <SampleValueBadge {orderValue} />
 </div>

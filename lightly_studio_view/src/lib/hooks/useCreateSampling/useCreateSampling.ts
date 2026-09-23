@@ -1,8 +1,4 @@
-import {
-    createSampling,
-    computeSimilarityMetadata,
-    computeTypicalityMetadata
-} from '$lib/api/lightly_studio_local/sdk.gen';
+import { createSampling } from '$lib/api/lightly_studio_local/sdk.gen';
 import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
@@ -43,7 +39,8 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
         strategies: SamplingRequest['strategies'],
         samplingFilter: SamplingRequest['filter'],
         n: number,
-        tagName: string
+        tagName: string,
+        metadataComputations: SamplingRequest['metadata_computations'] = []
     ): Promise<boolean> {
         _loadingMessage.set('Creating sampling...');
         const response = await createSampling({
@@ -52,6 +49,7 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
                 n_samples_to_select: n,
                 sampling_result_tag_name: tagName,
                 strategies,
+                metadata_computations: metadataComputations,
                 filter: samplingFilter ?? undefined
             }
         });
@@ -112,26 +110,13 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
             }
 
             if (samplingStrategy === 'typicality') {
-                _loadingMessage.set('Computing typicality metadata...');
-                const typicalityResponse = await computeTypicalityMetadata({
-                    path: { collection_id: collectionId },
-                    body: { embedding_model_name: null, metadata_name: 'typicality' }
-                });
-
-                if (typicalityResponse.error) {
-                    toast.error(
-                        'Failed to compute typicality metadata: ' +
-                            extractError(typicalityResponse.error, 'Unknown error')
-                    );
-                    return false;
-                }
-
                 return await performSampling(
                     collectionId,
                     [{ strategy_name: 'weights', metadata_key: 'typicality' }],
                     samplingFilter,
                     nSamplesToSelect,
-                    samplingResultTagName
+                    samplingResultTagName,
+                    [{ kind: 'typicality', metadata_name: 'typicality' }]
                 );
             }
 
@@ -141,26 +126,13 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
                     return false;
                 }
 
-                _loadingMessage.set('Computing similarity metadata...');
-                const simResponse = await computeSimilarityMetadata({
-                    path: { collection_id: collectionId, query_tag_id: queryTagId },
-                    body: { embedding_model_name: null, metadata_name: 'similarity' }
-                });
-
-                if (simResponse.error) {
-                    toast.error(
-                        'Failed to compute similarity metadata: ' +
-                            extractError(simResponse.error, 'Unknown error')
-                    );
-                    return false;
-                }
-
                 return await performSampling(
                     collectionId,
                     [{ strategy_name: 'weights', metadata_key: 'similarity' }],
                     samplingFilter,
                     nSamplesToSelect,
-                    samplingResultTagName
+                    samplingResultTagName,
+                    [{ kind: 'similarity', metadata_name: 'similarity', query_tag_id: queryTagId }]
                 );
             }
 

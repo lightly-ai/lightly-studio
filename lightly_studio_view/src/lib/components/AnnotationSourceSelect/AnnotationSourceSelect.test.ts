@@ -50,4 +50,23 @@ describe('AnnotationSourceSelect', () => {
 
         expect(onSelect).toHaveBeenCalledWith('predictions-id');
     });
+
+    it('calls onSelect with empty string when deselecting with allowDeselect', async () => {
+        const onSelect = vi.fn();
+        render(AnnotationSourceSelect, {
+            props: {
+                ...defaultProps,
+                onSelect,
+                allowDeselect: true,
+                selectedSource: 'predictions-id'
+            }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), { key: 'Enter' });
+        await fireEvent.pointerUp(
+            await screen.findByTestId('annotation-source-option-predictions')
+        );
+
+        expect(onSelect).toHaveBeenCalledWith('');
+    });
 });

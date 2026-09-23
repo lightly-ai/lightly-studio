@@ -3,19 +3,19 @@ import type { GroupComponentView } from '$lib/api/lightly_studio_local/types.gen
 import { createQuery, useQueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
 
 export const useGroupComponents = ({
-    groupId
+    getGroupId
 }: {
-    groupId: string;
+    getGroupId: () => string;
 }): { groupComponents: CreateQueryResult<GroupComponentView[], Error>; refetch: () => void } => {
-    const readGroupComponents = getGroupComponentsByGroupIdOptions({
-        path: {
-            group_id: groupId
-        }
-    });
     const client = useQueryClient();
-    const groupComponents = createQuery(() => readGroupComponents);
+    const groupComponents = createQuery(() =>
+        getGroupComponentsByGroupIdOptions({ path: { group_id: getGroupId() } })
+    );
     const refetch = () => {
-        client.invalidateQueries({ queryKey: readGroupComponents.queryKey });
+        client.invalidateQueries({
+            queryKey: getGroupComponentsByGroupIdOptions({ path: { group_id: getGroupId() } })
+                .queryKey
+        });
     };
 
     return {

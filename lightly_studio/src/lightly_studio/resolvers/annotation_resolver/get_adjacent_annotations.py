@@ -2,72 +2,94 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
 
-import sqlmodel
-from sqlalchemy import func
-from sqlmodel import Session, col, select
-from sqlmodel.sql.expression import Select, SelectOfScalar
+from sqlmodel import Session
 
+from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluationMetricField
 from lightly_studio.models.adjacents import AdjacentResultView
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.image import ImageTable
-from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import adjacents
-from lightly_studio.resolvers.annotations import annotation_ordering
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers.annotation_resolver import (
+    get_adjacent_annotations_keyset,
+    get_adjacent_annotations_window,
+)
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+
+# Parent sample types whose file path is a plain column on a single table, so the keyset
+# seek can drive an index range scan over it.
+_KEYSET_PARENT_SAMPLE_TYPES = (SampleType.IMAGE, SampleType.VIDEO_FRAME)
 
 
 def get_adjacent_annotations(
     session: Session,
     sample_id: UUID,
     filters: AnnotationsFilter,
+    order_by: OrderByAnnotationEvaluationMetricField | None = None,
 ) -> AdjacentResultView | None:
-    """Get the adjacent annotations for a given annotation ID."""
+    """Get the adjacent annotations for a given annotation ID.
+
+    Uses a keyset (seek) lookup when the annotations' parent kind is known and the default
+    ordering applies, so prev/next and the position/total counts avoid sorting and windowing
+    the whole collection. Everything else falls back to the window-function implementation.
+
+    Args:
+        session: Database session.
+        sample_id: The anchor annotation whose neighbours we want.
+        filters: Annotation filters constraining the set; must scope the collection.
+        order_by: Optional leading sort key applied before the tiebreaker chain.
+
+    Returns:
+        The adjacency result, or ``None`` if the anchor is not in the filtered set.
+
+    Raises:
+        ValueError: If the filters do not scope the collection.
+    """
     if not filters.collection_ids:
         raise ValueError("Collection IDs must be provided in filters.")
 
-    return adjacents.get_sample_adjacent_info(
+    parent_sample_type = _keyset_parent_sample_type(
+        session=session, filters=filters, order_by=order_by
+    )
+    if parent_sample_type is not None:
+        return get_adjacent_annotations_keyset.get_adjacent_annotations_keyset(
+            session=session,
+            sample_id=sample_id,
+            filters=filters,
+            parent_sample_type=parent_sample_type,
+        )
+
+    return get_adjacent_annotations_window.get_adjacent_annotations_window(
         session=session,
         sample_id=sample_id,
-        samples_query=_build_window_query(filters),
+        filters=filters,
+        order_by=order_by,
     )
 
 
-def _build_window_query(filters: AnnotationsFilter) -> Select[Any]:
-    # Start from raw annotation rows so tag filters can join/distinct before windowing.
-    base_rows: SelectOfScalar[AnnotationBaseTable] = select(AnnotationBaseTable)
-    filtered_rows = filters.apply(base_rows).subquery()
+def _keyset_parent_sample_type(
+    session: Session,
+    filters: AnnotationsFilter,
+    order_by: OrderByAnnotationEvaluationMetricField | None,
+) -> SampleType | None:
+    """Return the parent sample type the keyset path can serve, or ``None``.
 
-    # TODO(Jonas, 07/2026): No leading order key here, so next/prev drifts from the grid
-    # whenever the grid sorts by similarity. A leading key added there must be added here.
-    ordering_expression = annotation_ordering.build_order_by(
-        file_path_abs=annotation_ordering.coalesced_file_path_abs_expression(),
-        created_at=filtered_rows.c.created_at,
-        annotation_sample_id=filtered_rows.c.sample_id,
-    )
+    The keyset path seeks on the parent's file path, so it can only serve the default
+    ordering — a custom leading sort key stays on the window path. It also joins exactly one
+    parent table, so it needs a single annotation collection with a supported parent kind.
+    Spanning several collections could mix parent kinds, so those requests keep the window
+    implementation too.
+    """
+    if order_by is not None:
+        return None
+    if filters.collection_ids is None or len(filters.collection_ids) != 1:
+        return None
 
-    # Compute lag/lead/row_number on the already filtered set to avoid tag duplicates.
-    return (
-        select(
-            filtered_rows.c.sample_id.label("sample_id"),
-            func.lag(filtered_rows.c.sample_id)
-            .over(order_by=ordering_expression)
-            .label("previous_sample_id"),
-            func.lead(filtered_rows.c.sample_id)
-            .over(order_by=ordering_expression)
-            .label("next_sample_id"),
-            func.row_number().over(order_by=ordering_expression).label("row_number"),
-        )
-        .select_from(filtered_rows)
-        .outerjoin(ImageTable, col(ImageTable.sample_id) == filtered_rows.c.parent_sample_id)
-        .outerjoin(
-            VideoFrameTable,
-            col(VideoFrameTable.sample_id) == filtered_rows.c.parent_sample_id,
-        )
-        .outerjoin(
-            VideoTable,
-            col(VideoTable.sample_id) == sqlmodel.col(VideoFrameTable.parent_sample_id),
-        )
+    parent_collection = collection_resolver.get_parent_collection_id(
+        session=session, collection_id=filters.collection_ids[0]
     )
+    if parent_collection is None:
+        return None
+    if parent_collection.sample_type not in _KEYSET_PARENT_SAMPLE_TYPES:
+        return None
+    return parent_collection.sample_type

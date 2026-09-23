@@ -13,6 +13,8 @@ class ExportJobTable(SQLModel, table=True):
 
     Attributes:
         export_key: Unique identifier for the export job (primary key).
+        collection_id: Collection the export was prepared for; downloads are
+            rejected unless the requested collection matches.
         export_path: Absolute path to the pre-generated export file or directory.
         created_at: Timestamp when the export job was created.
     """
@@ -20,5 +22,6 @@ class ExportJobTable(SQLModel, table=True):
     __tablename__ = "export_job"
 
     export_key: UUID = Field(default_factory=uuid4, primary_key=True)
+    collection_id: UUID = Field(foreign_key="collection.collection_id", index=True)
     export_path: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

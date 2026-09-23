@@ -26,7 +26,8 @@
         parentSample,
         parentSampleDetails,
         refetch,
-        collectionId
+        collectionId,
+        collectionDatasetId
     }: {
         annotationDetails: AnnotationDetailsWithPayloadView;
         parentSample: SampleProperties;
@@ -34,6 +35,7 @@
         updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
         refetch: () => void;
         collectionId: string;
+        collectionDatasetId: string;
     } = $props();
 
     // Get datasetId from URL params for navigation
@@ -81,7 +83,7 @@
     {handleEscape}
 >
     {#snippet children()}
-        <AnnotationDetailsNavigation />
+        <AnnotationDetailsNavigation {collectionDatasetId} />
     {/snippet}
     {#snippet breadcrumb({ collection: rootCollection })}
         <AnnotationDetailsBreadcrumb {rootCollection} />

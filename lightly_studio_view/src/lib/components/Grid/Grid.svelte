@@ -1,6 +1,6 @@
 <script lang="ts">
     import VirtualGrid from 'svelte-virtual/grid';
-    import type { ComponentProps, Snippet } from 'svelte';
+    import { untrack, type ComponentProps, type Snippet } from 'svelte';
     import type { HTMLAttributes } from 'svelte/elements';
     import { cn } from '$lib/utils';
 
@@ -52,7 +52,7 @@
         gridProps?: Partial<ComponentProps<typeof VirtualGrid>>;
     } = $props();
 
-    let previousScrollResetKey = scrollResetKey;
+    let previousScrollResetKey = $state(untrack(() => scrollResetKey));
     let previousInitialScrollPosition = $state<number | undefined>(undefined);
     let pendingRestoreRaf: number | undefined;
 
@@ -76,7 +76,8 @@
         // visible. Without this, items would be sized for the full viewport width and
         // the last column would partially slide under the scrollbar.
         const scrollView =
-            (viewport.querySelector(`.${GRID_SCROLL_CLASS}`) as HTMLElement | null) ?? viewport;
+            (grid && (viewport.querySelector(`.${GRID_SCROLL_CLASS}`) as HTMLElement | null)) ??
+            viewport;
 
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
@@ -116,12 +117,12 @@
     });
 
     $effect(() => {
-        if (
-            !grid ||
-            cellSize <= 0 ||
-            initialScrollPosition === undefined ||
-            initialScrollPosition === null
-        ) {
+        if (cellSize <= 0 || clientHeight <= 0) {
+            previousInitialScrollPosition = undefined;
+            return;
+        }
+
+        if (!grid || initialScrollPosition === undefined || initialScrollPosition === null) {
             return;
         }
 
@@ -139,31 +140,34 @@
 </script>
 
 <div bind:this={viewport} bind:clientHeight {...viewportProps} class={viewportClassName}>
-    <VirtualGrid
-        bind:this={grid}
-        {...gridProps}
-        class={gridClassName}
-        itemHeight={cellSize}
-        itemWidth={cellSize}
-        height={clientHeight}
-        {itemCount}
-        columnCount={safeColumnCount}
-        overScan={resolvedOverScan}
-        onscroll={resolvedOnScroll}
-    >
-        {#snippet item({ index, style })}
-            {@render gridItem({
-                index,
-                style,
-                width: itemSize,
-                height: itemSize
-            })}
-        {/snippet}
+    <!-- Zero-sized cells can make the virtual grid mount every item and request all thumbnails. -->
+    {#if cellSize > 0 && clientHeight > 0}
+        <VirtualGrid
+            bind:this={grid}
+            {...gridProps}
+            class={gridClassName}
+            itemHeight={cellSize}
+            itemWidth={cellSize}
+            height={clientHeight}
+            {itemCount}
+            columnCount={safeColumnCount}
+            overScan={resolvedOverScan}
+            onscroll={resolvedOnScroll}
+        >
+            {#snippet item({ index, style })}
+                {@render gridItem({
+                    index,
+                    style,
+                    width: itemSize,
+                    height: itemSize
+                })}
+            {/snippet}
 
-        {#snippet footer()}
-            {@render footerItem?.()}
-        {/snippet}
-    </VirtualGrid>
+            {#snippet footer()}
+                {@render footerItem?.()}
+            {/snippet}
+        </VirtualGrid>
+    {/if}
 </div>
 
 <style>

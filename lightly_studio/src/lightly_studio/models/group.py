@@ -10,6 +10,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.collection import ComponentCollectionView
 from lightly_studio.models.image import ImageTable, ImageView
+from lightly_studio.models.mcap import McapTable, McapView
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import FrameView, VideoTable, VideoView
 
@@ -73,7 +74,7 @@ class GroupComponentView(BaseModel):
     """
 
     collection: ComponentCollectionView
-    details: Union[ImageView, VideoView, None] = None
+    details: Union[ImageView, VideoView, McapView, None] = None
 
     @classmethod
     def from_image_table(
@@ -134,4 +135,24 @@ class GroupComponentView(BaseModel):
                 similarity_score=similarity_score,
                 frame=frame,
             ),
+        )
+
+    @classmethod
+    def from_mcap_table(
+        cls,
+        collection: ComponentCollectionView,
+        mcap: "McapTable",
+    ) -> "GroupComponentView":
+        """Create a GroupComponentView from a McapTable.
+
+        Args:
+            mcap: McapTable instance with loaded sample relationship.
+            collection: ComponentCollectionView instance with collection data.
+
+        Returns:
+            GroupComponentView with mcap sample data populated.
+        """
+        return cls(
+            collection=collection,
+            details=McapView.from_mcap_table(mcap=mcap),
         )

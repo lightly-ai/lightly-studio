@@ -64,13 +64,9 @@
         handleCancel: handleClassDialogCancel
     } = useSelectClassDialog();
 
-    const { createLabel } = useCreateLabel({ collectionId });
-    const { createAnnotation } = useCreateAnnotation({
-        collectionId
-    });
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
+    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
 
     const {
@@ -91,9 +87,9 @@
     };
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
-    );
+    const { refetch: refetchRootCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
 
     const BOX_MIN_SIZE_PX = 4;
     const setupDragBehavior = () => {

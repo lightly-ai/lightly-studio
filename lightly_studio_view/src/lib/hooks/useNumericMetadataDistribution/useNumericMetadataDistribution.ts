@@ -25,26 +25,29 @@ export interface NumericMetadataHistogramOptions {
     collectionId: string;
     filter?: ImageFilter;
     binCount?: number;
+    fields?: string[];
 }
 
 export const getNumericMetadataHistogramRequestOptions = ({
     collectionId,
     filter,
-    binCount
+    binCount,
+    fields
 }: NumericMetadataHistogramOptions) => ({
     path: { collection_id: collectionId },
-    ...(filter || binCount
+    ...(filter || binCount || fields
         ? {
               body: {
                   ...(filter ? { filters: filter } : {}),
-                  ...(binCount ? { bin_count: binCount } : {})
+                  ...(binCount ? { bin_count: binCount } : {}),
+                  ...(fields ? { fields } : {})
               }
           }
         : {})
 });
 
 /**
- * Queries the value-distribution histograms of all numeric metadata fields of
+ * Queries the value-distribution histograms of the requested numeric metadata fields of
  * a collection, keyed by metadata name.
  *
  * The bins come from {@link https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/api/routes/api/metadata.py `POST /collections/{id}/metadata/histograms`}: bin edges
@@ -55,7 +58,7 @@ export const getNumericMetadataHistogramRequestOptions = ({
  * filter changes.
  *
  * Accepts a reactive factory function (same pattern as `useImageAnnotationCounts`)
- * so that `collectionId`, `filter`, `binCount`, and `enabled` are re-read inside the
+ * so that `collectionId`, `filter`, `fields`, `binCount`, and `enabled` are re-read inside the
  * TanStack Query reactive context on every change.
  *
  * @param getOptions - Factory returning the query options. Called reactively by
@@ -67,17 +70,19 @@ export const useNumericMetadataDistribution = (
         filter?: ImageFilter;
         /** Number of equal-width bins per histogram (server default: 20). */
         binCount?: number;
+        fields?: string[];
         enabled?: boolean;
     }
 ) =>
     createQuery(() => {
-        const { collectionId, filter, binCount, enabled = true } = getOptions();
+        const { collectionId, filter, binCount, fields, enabled = true } = getOptions();
         // Computed inside the reactive function so a change to collectionId,
-        // filter, or binCount updates the query key and triggers a refetch.
+        // filter, fields, or binCount updates the query key and triggers a refetch.
         const requestOptions = getNumericMetadataHistogramRequestOptions({
             collectionId,
             filter,
-            binCount
+            binCount,
+            fields
         });
         return {
             ...getMetadataHistogramsOptions(requestOptions),

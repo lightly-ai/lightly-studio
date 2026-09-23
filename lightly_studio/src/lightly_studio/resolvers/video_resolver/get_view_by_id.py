@@ -8,6 +8,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable, VideoView
 from lightly_studio.resolvers.video_resolver.get_all_by_collection_id import (
@@ -60,6 +61,14 @@ def get_view_by_id(session: Session, sample_id: UUID) -> VideoView | None:
                 # Ignore type checker error - false positive from TYPE_CHECKING.
                 joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
                 selectinload(SampleTable.captions),
+                # Videos only support classification annotations directly, so there is no need
+                # to join object_detection_details or segmentation_details here.
+                selectinload(SampleTable.annotations).options(
+                    joinedload(AnnotationBaseTable.annotation_label),
+                    selectinload(AnnotationBaseTable.sample).options(
+                        selectinload(SampleTable.tags)
+                    ),
+                ),
             ),
         )
     )

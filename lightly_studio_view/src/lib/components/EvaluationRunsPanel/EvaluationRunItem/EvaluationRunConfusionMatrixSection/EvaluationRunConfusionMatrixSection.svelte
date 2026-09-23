@@ -12,12 +12,12 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     interface Props {
+        datasetId: string;
         evaluationRunId: string;
     }
 
-    const { evaluationRunId }: Props = $props();
+    const { datasetId, evaluationRunId }: Props = $props();
 
-    const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
 
     const { trackEvent } = usePostHog();

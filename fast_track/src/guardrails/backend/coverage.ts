@@ -1,18 +1,10 @@
-import { readdir } from 'node:fs/promises';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
-import { basename, relative, resolve } from 'node:path';
-import type { ChangedFile, Guardrail } from '../context/types';
-import { REPO_ROOT } from './shared';
-import { createCoverageGuardrail } from '../shared/coverage-base';
-import { runLoggedCommand } from '../shared/utils';
+import type { ChangedFile, Guardrail, GuardrailContext, GuardrailOutcome } from '../context/types';
+import { createCoverageGuardrail, type LineCoverage } from '../shared/full-suite-coverage';
+import { BACKEND_MEMBERS, type BackendMember } from './shared';
 
-const LIGHTLY_STUDIO_ABS = resolve(REPO_ROOT, 'lightly_studio');
 const NAME = 'backend/coverage';
-const BACKEND_PREFIX = 'lightly_studio/src/lightly_studio/';
-const COVERAGE_FILE = 'coverage.json';
-const MAX_BUFFER = 10 * 1024 * 1024;
 
-interface CoverageFileData {
+export interface CoverageFileData {
     executed_lines: number[];
     missing_lines: number[];
 }
@@ -22,144 +14,81 @@ interface CoverageData {
 }
 
 export function filterBackendFiles(files: ChangedFile[]): ChangedFile[] {
-    return files.filter(
-        (f) => f.path.startsWith(BACKEND_PREFIX) && f.path.endsWith('.py') && !isExcluded(f.path)
-    );
+    return BACKEND_MEMBERS.flatMap((member) => filterMemberFiles(member, files));
 }
 
-// Returns coverage ratio (0–1) for added lines only, or null if no added lines
-// are executable (auto-pass). Uses coverage.py's per-line executed/missing arrays.
-export function parseCoverageRatio(
-    data: CoverageData,
-    sourcePath: string,
-    addedLines: Set<number>
-): number | null {
-    // coverage.json keys are relative to lightly_studio/; strip the prefix.
-    const key = sourcePath.slice('lightly_studio/'.length);
-    const entry = data.files[key];
-    if (!entry) return null;
-
-    const executableAdded = [...entry.executed_lines, ...entry.missing_lines].filter((line) =>
-        addedLines.has(line)
-    );
-    if (executableAdded.length === 0) return null;
-
-    const coveredAdded = entry.executed_lines.filter((line) => addedLines.has(line));
-    return coveredAdded.length / executableAdded.length;
-}
-
-export const backendCoverageGuardrail: Guardrail = createCoverageGuardrail<CoverageData>({
-    name: NAME,
-
-    filterFiles(files: ChangedFile[]): ChangedFile[] {
-        return filterBackendFiles(files);
-    },
-
-    async findTestFile(sourcePath: string): Promise<string | undefined> {
-        const sourceName = basename(sourcePath, '.py');
-        const testsDir = resolve(LIGHTLY_STUDIO_ABS, 'tests');
-        if (!existsSync(testsDir)) return undefined;
-
-        const prefix = `test_${sourceName}`;
-        const entries = await readdir(testsDir, { recursive: true, withFileTypes: true });
-        const candidates: string[] = [];
-
-        for (const entry of entries) {
-            if (!entry.isFile() || !matchesTestFile(entry.name, prefix)) continue;
-            const fullPath = resolve(entry.parentPath, entry.name);
-            candidates.push(relative(REPO_ROOT, fullPath));
-        }
-
-        if (candidates.length === 0) return undefined;
-        if (candidates.length === 1) return candidates[0];
-
-        return candidates.reduce((best, c) =>
-            subpathOverlap(sourcePath, c) >= subpathOverlap(sourcePath, best) ? c : best
-        );
-    },
-
-    // Runs a single pytest invocation covering all given test files and source paths.
-    // testFiles and sourcePaths are repo-relative; deduplication of testFiles is the
-    // caller's responsibility.
-    async runTests(testFiles: string[], sourcePaths: string[]): Promise<CoverageData | null> {
-        // Pytest runs from lightly_studio/ so strip the leading lightly_studio/ prefix.
-        const testFilesLocal = testFiles.map((f) => f.slice('lightly_studio/'.length));
-        // coverage.py misreads *.py paths (relative or absolute) as module identifiers
-        // and produces no data. Directory paths are matched by filesystem path instead,
-        // so we pass the parent directory of each changed source file.
-        // Deduplicate: multiple files in the same directory share one --cov arg.
-        const covDirs = [
-            ...new Set(
-                sourcePaths.map((p) => {
-                    const rel = p.slice('lightly_studio/'.length);
-                    return rel.substring(0, rel.lastIndexOf('/'));
-                })
-            )
-        ];
-        const covArgs = covDirs.map((d) => `--cov=${d}`);
-        const coveragePath = resolve(LIGHTLY_STUDIO_ABS, COVERAGE_FILE);
-
-        // Remove any stale report so we only ever parse the file produced by this run.
-        if (existsSync(coveragePath)) rmSync(coveragePath);
-
-        try {
-            await runLoggedCommand(
-                NAME,
-                'uv',
-                [
-                    'run',
-                    'pytest',
-                    ...testFilesLocal,
-                    ...covArgs,
-                    `--cov-report=json:${COVERAGE_FILE}`,
-                    '-q',
-                    '--no-header'
-                ],
-                { cwd: LIGHTLY_STUDIO_ABS, maxBuffer: MAX_BUFFER }
-            );
-        } catch (err: unknown) {
-            // pytest exits non-zero when tests fail; coverage.json is still produced.
-            // Re-throw for system-level errors (e.g. uv not on PATH, bad cwd).
-            if (!existsSync(coveragePath)) throw err;
-        }
-
-        if (!existsSync(coveragePath)) return null;
-        return JSON.parse(readFileSync(coveragePath, 'utf-8')) as CoverageData;
-    },
-
-    parseCoverageRatio(
-        data: CoverageData,
-        sourcePath: string,
-        addedLines: Set<number>
-    ): number | null {
-        return parseCoverageRatio(data, sourcePath, addedLines);
+/**
+ * Normalises a coverage.py JSON report into repo-relative per-line coverage. `prefix` is the
+ * member directory pytest ran in, which is what the report's keys are relative to.
+ */
+export function parseBackendReport(raw: string, prefix: string): LineCoverage {
+    const data = JSON.parse(raw) as CoverageData;
+    const coverage: LineCoverage = new Map();
+    for (const [key, entry] of Object.entries(data.files)) {
+        coverage.set(prefix + key, {
+            executable: new Set([...entry.executed_lines, ...entry.missing_lines]),
+            covered: new Set(entry.executed_lines)
+        });
     }
-});
+    return coverage;
+}
 
-function isExcluded(path: string): boolean {
+// One sub-guardrail per member, each reading that member's own report. They share a name: the
+// verdict carries a single backend/coverage entry however many members a pull request touches.
+const MEMBER_GUARDRAILS = BACKEND_MEMBERS.map((member) => ({
+    member,
+    guardrail: createCoverageGuardrail({
+        name: NAME,
+        coverageJsonEnvVar: member.coverageJsonEnvVar,
+        testsPassedEnvVar: member.testsPassedEnvVar,
+        filterFiles: (files) => filterMemberFiles(member, files),
+        parseReport: (raw) => parseBackendReport(raw, member.prefix)
+    })
+}));
+
+export const backendCoverageGuardrail: Guardrail = {
+    name: NAME,
+    required: true,
+
+    async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
+        const files = await ctx.changedFiles();
+        // Only members the pull request touches run, so the summary never carries a
+        // "0 file(s) checked." line for a member that has nothing to say.
+        const active = MEMBER_GUARDRAILS.filter(
+            (entry) => filterMemberFiles(entry.member, files).length > 0
+        );
+
+        if (active.length === 0) {
+            return { status: 'pass', summary: '0 file(s) checked.' };
+        }
+
+        const outcomes = await Promise.all(active.map((entry) => entry.guardrail.run(ctx)));
+        return {
+            status: outcomes.some((outcome) => outcome.status === 'fail') ? 'fail' : 'pass',
+            summary: outcomes.map((outcome) => outcome.summary).join('\n')
+        };
+    }
+};
+
+// `examples/` has no `__init__.py`, so coverage.py's source scan never reaches it.
+// `vendor/` is third-party code we do not hold to a coverage bar.
+const EXCLUDED_DIRS = ['migrations', 'examples', 'vendor'];
+
+function filterMemberFiles(member: BackendMember, files: ChangedFile[]): ChangedFile[] {
+    return files.filter(
+        (f) =>
+            f.path.startsWith(member.srcPrefix) &&
+            f.path.endsWith('.py') &&
+            !isExcludedBackendPath(f.path)
+    );
+}
+
+function isExcludedBackendPath(path: string): boolean {
     const name = path.split('/').at(-1) ?? '';
     return (
-        path.includes('/migrations/') ||
+        EXCLUDED_DIRS.some((dir) => path.includes(`/${dir}/`)) ||
         (name.startsWith('test_') && name.endsWith('.py')) ||
         name === 'conftest.py' ||
         name === '__init__.py'
     );
-}
-
-// Matches test_<sourceName>.py and variants like test_<sourceName>_foo.py or test_<sourceName>__bar.py.
-export function matchesTestFile(name: string, prefix: string): boolean {
-    if (!name.startsWith(prefix) || !name.endsWith('.py')) return false;
-    const afterPrefix = name.slice(prefix.length);
-    return afterPrefix === '.py' || afterPrefix.startsWith('_');
-}
-
-function subpathOverlap(sourcePath: string, testPath: string): number {
-    const sourceDirs = sourcePath.split('/').slice(0, -1).reverse();
-    const testDirs = testPath.split('/').slice(0, -1).reverse();
-    let count = 0;
-    for (let i = 0; i < Math.min(sourceDirs.length, testDirs.length); i++) {
-        if (sourceDirs[i] === testDirs[i]) count++;
-        else break;
-    }
-    return count;
 }

@@ -6,17 +6,13 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    CROPPABLE_ANNOTATION_TYPES,
+    AnnotationBaseTable,
+)
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-
-# Annotation types whose crops are embedded. Both store a bounding box, so both are croppable;
-# classification-style annotations are excluded because they have no box.
-_CROPPABLE_ANNOTATION_TYPES = [
-    AnnotationType.OBJECT_DETECTION,
-    AnnotationType.SEGMENTATION_MASK,
-]
 
 
 def get_unembedded_annotation_ids(
@@ -48,7 +44,7 @@ def get_unembedded_annotation_ids(
         .join(SampleTable, col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id))
         .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
         .where(col(SampleTable.collection_id) == annotation_collection_id)
-        .where(col(AnnotationBaseTable.annotation_type).in_(_CROPPABLE_ANNOTATION_TYPES))
+        .where(col(AnnotationBaseTable.annotation_type).in_(CROPPABLE_ANNOTATION_TYPES))
         .where(col(AnnotationBaseTable.sample_id).notin_(embedded_ids_subquery))
         .order_by(col(ImageTable.file_path_abs))
     ).all()

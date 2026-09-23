@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: null as unknown as Writable<string[]>,
     setSelectedCollectionIds: vi.fn(),
-    seedSelectionIfNeeded: vi.fn(),
     enforceColoringByClassStore: null as unknown as Writable<boolean>
 }));
 
@@ -25,16 +24,17 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', async () => {
-    const { writable } = await import('svelte/store');
+    const { derived, writable } = await import('svelte/store');
     // A real writable backs the store so the controlled checkboxes reflect intermediate
     // state across consecutive toggles.
     mocks.selectedCollectionIds = writable<string[]>([]);
     mocks.setSelectedCollectionIds = vi.fn((ids: string[]) => mocks.selectedCollectionIds.set(ids));
+    const multipleSourcesVisible = derived(mocks.selectedCollectionIds, ($ids) => $ids.length > 1);
     return {
         useAnnotationCollectionsFilter: vi.fn(() => ({
             selectedCollectionIds: mocks.selectedCollectionIds,
             setSelectedCollectionIds: mocks.setSelectedCollectionIds,
-            seedSelectionIfNeeded: mocks.seedSelectionIfNeeded
+            multipleSourcesVisible
         }))
     };
 });
@@ -72,25 +72,6 @@ describe('AnnotationCollectionsMenu', () => {
         render(AnnotationCollectionsMenu, defaultProps);
         expect(screen.queryByText('Annotation Sources')).not.toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-    });
-
-    it('does not seed the annotation source filter when there is only one collection', () => {
-        mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
-        render(AnnotationCollectionsMenu, defaultProps);
-        expect(mocks.seedSelectionIfNeeded).not.toHaveBeenCalled();
-    });
-
-    it('seeds the annotation source filter with all collections when there are two or more', () => {
-        mocks.collections = [
-            { collection_id: 'c1', name: 'Dogs' },
-            { collection_id: 'c2', name: 'Cats' }
-        ];
-        render(AnnotationCollectionsMenu, defaultProps);
-
-        expect(mocks.seedSelectionIfNeeded).toHaveBeenCalledWith('col-1', [
-            { id: 'c1', name: 'Dogs' },
-            { id: 'c2', name: 'Cats' }
-        ]);
     });
 
     it('renders a menu item for each collection when there are two or more', () => {

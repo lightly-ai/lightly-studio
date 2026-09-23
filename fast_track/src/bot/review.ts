@@ -1,7 +1,6 @@
 import type { Octokit } from '../shared/octokit';
 
 const DISMISS_MESSAGE = 'Fast Track checks no longer pass; dismissing the bot approval.';
-const SUPERSEDED_MESSAGE = 'Superseded by a newer Fast Track approval.';
 
 interface ReviewParams {
     octokit: Octokit;
@@ -15,27 +14,21 @@ interface ApproveParams extends ReviewParams {
     headSha: string;
 }
 
-/** Keep exactly one active bot approval, bound to the validated head. */
+/**
+ * Approve only when no bot approval exists yet.
+ */
 export async function approve(params: ApproveParams): Promise<'approved' | 'noop'> {
     const reviews = await listBotApprovals(params);
-    const current = reviews.find((review) => review.commit_id === params.headSha);
+    if (reviews.length > 0) return 'noop';
 
-    if (current === undefined) {
-        await params.octokit.rest.pulls.createReview({
-            owner: params.owner,
-            repo: params.repo,
-            pull_number: params.prNumber,
-            commit_id: params.headSha,
-            event: 'APPROVE'
-        });
-    }
-
-    await dismissReviews(
-        params,
-        reviews.filter((review) => review !== current),
-        SUPERSEDED_MESSAGE
-    );
-    return current === undefined ? 'approved' : 'noop';
+    await params.octokit.rest.pulls.createReview({
+        owner: params.owner,
+        repo: params.repo,
+        pull_number: params.prNumber,
+        commit_id: params.headSha,
+        event: 'APPROVE'
+    });
+    return 'approved';
 }
 
 /** Dismiss only the App's active approvals, never a human review. */

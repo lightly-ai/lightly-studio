@@ -18,7 +18,6 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
     }
     lastCollectionId.set(collection_id);
     const storage = useGlobalStorage();
-    storage.updateCategoricalMetadataValues({});
 
     const { data: metadataInfoData } = await getMetadataInfo({
         path: {

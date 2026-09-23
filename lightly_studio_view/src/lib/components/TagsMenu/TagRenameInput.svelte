@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { tick } from 'svelte';
+    import { tick, untrack } from 'svelte';
     import { Checkbox as CheckboxPrimitive } from '$lib/components/ui/checkbox';
     import { Input } from '$lib/components/ui/input';
     import { Check } from '@lucide/svelte';
     import type { TagView } from '$lib/services/types';
+    import { Button } from '$lib/components';
 
     let {
         tag,
@@ -21,7 +22,7 @@
         onCancel: () => void;
     } = $props();
 
-    let renameValue = $state(tag.name);
+    let renameValue = $state(untrack(() => tag.name));
     let renameInputRef = $state<HTMLInputElement | null>(null);
 
     const trimmedRenameValue = $derived(renameValue.trim());
@@ -76,13 +77,15 @@
             }
         }}
     />
-    <button
-        type="button"
-        class="inline-flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-        data-testid={`save-tag-rename-${tag.tag_id}`}
-        disabled={saveDisabled}
-        onclick={handleSave}
-    >
-        <Check class="size-4" />
-    </button>
+    <Button
+        icon={Check}
+        ariaLabel="Save tag rename"
+        isPending={renamingTagId === tag.tag_id}
+        buttonProps={{
+            class: 'size-7 p-0',
+            'data-testid': `save-tag-rename-${tag.tag_id}`,
+            disabled: saveDisabled,
+            onclick: handleSave
+        }}
+    />
 </div>

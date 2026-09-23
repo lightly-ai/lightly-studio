@@ -1,0 +1,94 @@
+name: Announce Release
+
+# Posts a released changelog section to the Slack channel sales reads.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag of the published release, e.g. v1.2.3.
+        type: string
+        required: true
+      tolerate-failure:
+        description: >-
+          Leave the calling run green when the post fails. Finish Release sets it:
+          by then the release is public, and a Slack outage must not redden it.
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the published release, e.g. v1.2.3.
+        type: string
+        required: true
+      channel:
+        description: >-
+          Channel to post in. Leave empty for the release channel; name a test
+          channel to rehearse. Nothing here stops a second post of the same tag.
+        type: string
+        required: false
+        default: ""
+
+permissions: {}
+
+env:
+  SLACK_CHANNEL: studio-issues-and-feedback
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Where SLACK_ACTION_BOT_TOKEN lives, restricted to `main` like `pypi`.
+    environment: slack
+    permissions:
+      contents: read
+    steps:
+      # Never the released tag: that would run the tagged commit's own release code with
+      # the bot token in the environment.
+      - name: Checkout the release tooling
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Resolve the package
+        id: package
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.github/scripts
+          TAG: ${{ inputs.tag }}
+        run: |
+          python3 -m prepare_release package-config --tag "${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Render the announcement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: ${{ github.workspace }}/.github/scripts
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          CHANGELOG: ${{ steps.package.outputs.changelog }}
+          # Declared on workflow_dispatch only, so it is empty on a workflow_call run.
+          CHANNEL: ${{ inputs.channel || env.SLACK_CHANNEL }}
+        # The changelog is read at the tag; the tooling writes the whole Slack request.
+        run: |
+          set -euo pipefail
+          gh api "repos/${REPO}/contents/${CHANGELOG}?ref=${TAG}" \
+            -H "Accept: application/vnd.github.raw" > "${RUNNER_TEMP}/CHANGELOG.md"
+          release_url="$(gh release view "${TAG}" --repo "${REPO}" --json url --jq .url)"
+          python3 -m prepare_release render-slack-message \
+            --changelog "${RUNNER_TEMP}/CHANGELOG.md" \
+            --tag "${TAG}" \
+            --release-url "${release_url}" \
+            --channel "${CHANNEL}" \
+            --output "${RUNNER_TEMP}/slack-payload.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post the announcement
+        # Undeclared on workflow_dispatch, so it is empty there and a manual re-post
+        # still fails loudly.
+        continue-on-error: ${{ inputs.tolerate-failure == true }}
+        # Pinned by digest: this step sees the bot token. `errors` fails on Slack's `ok: false`.
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_ACTION_BOT_TOKEN }}
+          payload-file-path: ${{ runner.temp }}/slack-payload.json
+          errors: true

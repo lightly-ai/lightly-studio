@@ -13,8 +13,8 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
     };
 });
 
-vi.mock('$lib/hooks/useOrderBy/useOrderBy', () => ({
-    useOrderBy: () => ({
+vi.mock('$lib/hooks/useImageOrderBy/useImageOrderBy', () => ({
+    useImageOrderBy: () => ({
         allSortFields: readable([]),
         selectedDirection: readable('asc'),
         selectedLabel: readable(null),
@@ -43,6 +43,8 @@ const defaultProps = {
     canSelectAll: false,
     isSelectionActive: false,
     isImages: false,
+    isVideos: false,
+    isAnnotations: false,
     hasMediaWithEmbeddings: false,
     collectionDatasetId: 'dataset-1',
     onSelectAll: vi.fn().mockResolvedValue(undefined),
@@ -91,7 +93,7 @@ describe('DatasetGridHeader', () => {
         expect(defaultProps.onSelectAll).not.toHaveBeenCalled();
     });
 
-    it('renders the OrderBy control only for image collections', () => {
+    it('renders the ImageOrderBy control only for image collections', () => {
         const { unmount } = render(DatasetGridHeader, {
             props: { ...defaultProps, isImages: true }
         });

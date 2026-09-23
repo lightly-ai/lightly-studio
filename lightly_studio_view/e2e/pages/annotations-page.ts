@@ -13,11 +13,19 @@ export class AnnotationsPage {
             timeout: 10000
         });
 
-        const menuButton = this.page.getByTestId('navigation-menu-annotations');
+        // A dataset with more than one annotation source titles every entry
+        // "Annotations: <source>", so match the test ID by prefix.
+        const menuButton = this.page
+            .getByTestId('navigation-menu')
+            .locator('[data-testid^="navigation-menu-annotations"]')
+            .first();
         const tag = await menuButton.evaluate((el) => el.tagName);
         await menuButton.click();
         if (tag !== 'A') {
-            await this.page.getByTestId('navigation-dropdown-annotations').click();
+            await this.page
+                .locator('[data-testid^="navigation-dropdown-annotations"]')
+                .first()
+                .click();
         }
         await expect(this.page.getByTestId('annotations-grid')).toBeVisible({
             timeout: 10000

@@ -51,6 +51,34 @@ def test_get_metadata_values_for_key__returns_values_for_requested_key(
     }
 
 
+def test_get_metadata_values_for_key__filters_by_sample_ids(
+    db_session: Session,
+) -> None:
+    """When sample_ids is given, only those samples' values are returned."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    samples = [
+        create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        for i in range(3)
+    ]
+    for i, sample in enumerate(samples):
+        sample["speed"] = float(i)
+
+    result, metadata_type = metadata_resolver.get_metadata_values_for_key(
+        session=db_session,
+        collection_id=collection_id,
+        key="speed",
+        sample_ids=[samples[0].sample_id, samples[2].sample_id],
+    )
+
+    assert metadata_type == "float"
+    assert result == {samples[0].sample_id: 0.0, samples[2].sample_id: 2.0}
+
+
 def test_get_metadata_values_for_key__missing_key(
     db_session: Session,
 ) -> None:
@@ -73,6 +101,58 @@ def test_get_metadata_values_for_key__missing_key(
 
     assert result == {}
     assert metadata_type is None
+
+
+def test_get_metadata_values_for_key__omits_null_value(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    sample = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    ).sample
+    sample["nullable"] = None
+
+    result, metadata_type = metadata_resolver.get_metadata_values_for_key(
+        session=db_session,
+        collection_id=collection.collection_id,
+        key="nullable",
+    )
+
+    assert result == {}
+    assert metadata_type == "null"
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("enabled", True),
+        ("count", 42),
+        ("score", 1.5),
+        ("items", [1, "two"]),
+        ("details", {"nested": "value"}),
+        ("key.with.dots", "literal key"),
+    ],
+)
+def test_get_metadata_values_for_key__preserves_value_types_and_literal_keys(
+    db_session: Session,
+    key: str,
+    value: object,
+) -> None:
+    collection = create_collection(session=db_session)
+    sample = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    ).sample
+    sample[key] = value
+
+    result, _ = metadata_resolver.get_metadata_values_for_key(
+        session=db_session,
+        collection_id=collection.collection_id,
+        key=key,
+    )
+
+    assert result == {sample.sample_id: value}
 
 
 def test_get_metadata_values_for_key__inconsistent_schema_types(

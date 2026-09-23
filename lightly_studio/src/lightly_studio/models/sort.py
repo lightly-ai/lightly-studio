@@ -7,11 +7,8 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
+from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.dataset_query.query_translation import (
-    evaluation_metric_sort_to_order_by,
-    sort_to_order_by,
-)
 from lightly_studio.models.sort_direction import SortDirection
 
 
@@ -19,26 +16,42 @@ class SortFieldSource(str, Enum):
     """Source of the field to sort by."""
 
     image = "image"
+    video = "video"
     metadata = "metadata"
     evaluation_metric = "evaluation_metric"
 
 
-class SortFieldExpr(BaseModel):
-    """A sorting expression for a single field.
+class SortFieldExprBase(BaseModel):
+    """Fields shared by every single-field sorting expression.
+
+    Subclasses narrow ``source`` to the sources their endpoint can reach. A sample
+    table only appears in the FROM clause of queries over that sample type, so a
+    field from the wrong source would be cross-joined instead of rejected.
 
     Attributes:
-        source: The source of the field (e.g., "image" or "metadata").
+        source: The source of the field (e.g., "image", "video" or "metadata").
         field_name: The field to sort by.
         direction: The sort direction, either ascending or descending.
-        is_numeric: Whether the field holds numeric values.  When ``True``,
-            the extracted value is cast to float for correct numeric ordering.
-            Only relevant when ``source`` is ``"metadata"``.
     """
 
-    source: Literal[SortFieldSource.image, SortFieldSource.metadata]
+    source: SortFieldSource
     field_name: str
     direction: SortDirection
-    is_numeric: bool
+
+
+class ImageSortFieldExpr(SortFieldExprBase):
+    """A sorting expression for a single field of an image."""
+
+    source: Literal[SortFieldSource.image, SortFieldSource.metadata]
+
+
+class VideoSortFieldExpr(SortFieldExprBase):
+    """A sorting expression for a single field of a video.
+
+    Evaluation metrics are image-only, so they have no counterpart here.
+    """
+
+    source: Literal[SortFieldSource.video, SortFieldSource.metadata]
 
 
 class EvaluationMetricSortExpr(BaseModel):
@@ -55,17 +68,30 @@ class EvaluationMetricSortExpr(BaseModel):
     evaluation_run_name: str
     metric_name: str
     direction: SortDirection
-    is_numeric: bool = False
 
 
-SortExpr = Annotated[
-    Union[SortFieldExpr, EvaluationMetricSortExpr],
+ImageSortExpr = Annotated[
+    Union[ImageSortFieldExpr, EvaluationMetricSortExpr],
     Field(discriminator="source"),
 ]
 
 
-def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
-    """Translate a SortFieldExpr to an OrderByExpression.
+# Image and video field expressions both allow ``source="metadata"``, so a
+# discriminated union on ``source`` cannot build. Match left to right instead: a
+# metadata expression resolves to ``ImageSortFieldExpr``, which is harmless since
+# both translate through the same ``(source, field_name)`` key.
+# TODO(gabriel, 08/2026): Replace this left-to-right union with a source-discriminated one;
+# tracked in LIG-10605. Safe only while ImageSortFieldExpr and VideoSortFieldExpr stay
+# structurally identical, guarded by
+# tests/models/test_sort.py::test_image_and_video_sort_field_exprs_stay_structurally_identical.
+AdjacentSortExpr = Annotated[
+    Union[ImageSortFieldExpr, VideoSortFieldExpr, EvaluationMetricSortExpr],
+    Field(union_mode="left_to_right"),
+]
+
+
+def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
+    """Translate a single-field sort expression to an OrderByExpression.
 
     Args:
         expr: The sort field expression from the API request.
@@ -73,15 +99,30 @@ def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
     Returns:
         An OrderByExpression ready to be applied to a database query.
     """
-    return sort_to_order_by(
+    return query_translation.sort_to_order_by(
         key=(expr.source, expr.field_name),
         direction=expr.direction,
-        cast_to_float=expr.is_numeric,
     )
 
 
-def sort_expr_to_order_by(expr: SortExpr) -> OrderByExpression:
-    """Translate a SortExpr (image, metadata, or evaluation metric) to an OrderByExpression.
+def image_sort_expr_to_order_by(expr: ImageSortExpr) -> OrderByExpression:
+    """Translate an ImageSortExpr (image, metadata, or evaluation metric) to an OrderByExpression.
+
+    Args:
+        expr: The sort expression from the API request.
+
+    Returns:
+        An OrderByExpression ready to be applied to a database query.
+    """
+    # ImageSortExpr is a subset of AdjacentSortExpr, so the shared translator handles it.
+    return adjacent_sort_expr_to_order_by(expr)
+
+
+def adjacent_sort_expr_to_order_by(expr: AdjacentSortExpr) -> OrderByExpression:
+    """Translate an adjacency sort expression to an OrderByExpression.
+
+    Handles image, video, metadata, and evaluation-metric expressions, so the
+    shared adjacent-samples request can carry the sort of either grid.
 
     Args:
         expr: The sort expression from the API request.
@@ -90,7 +131,7 @@ def sort_expr_to_order_by(expr: SortExpr) -> OrderByExpression:
         An OrderByExpression ready to be applied to a database query.
     """
     if isinstance(expr, EvaluationMetricSortExpr):
-        return evaluation_metric_sort_to_order_by(
+        return query_translation.evaluation_metric_sort_to_order_by(
             evaluation_run_name=expr.evaluation_run_name,
             metric_name=expr.metric_name,
             direction=expr.direction,

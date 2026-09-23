@@ -1,13 +1,16 @@
 import { browser } from '$app/environment';
 import { AUTHENTICATION_SESSION_STORAGE_KEY } from '$lib/constants';
-import { goto } from '$app/navigation';
+import { redirectTo } from '$lib/utils';
 
 /**
  * Hook for handling user logout functionality.
- * Clears the authentication session from sessionStorage, clears the auth cookie, and redirects to the login page.
+ *
+ * Clears the client-side session mirror, then does a full-page navigation to the
+ * backend logout endpoint to delete the HttpOnly cookie and redirect
+ * (to the control plane's logout in WorkOS mode, or the login page otherwise).
  *
  * @returns {object} Object containing the logout function
- * @returns {Function} logout - Function that clears session, cookie and redirects to login
+ * @returns {Function} logout - Clears the session mirror and navigates to backend logout
  *
  * @example
  * const { logout } = useLogout();
@@ -19,14 +22,12 @@ export const useLogout = () => {
     const logout = function () {
         if (!browser) return;
 
-        // Clear session storage
+        // Clear the client-side session mirror.
         sessionStorage.removeItem(AUTHENTICATION_SESSION_STORAGE_KEY);
 
-        // Clear authentication cookie
-        document.cookie = 'token=; path=/; max-age=0';
-
-        // redirect to login page
-        goto('/workspace/login');
+        // Full-page navigation to the backend logout endpoint. It deletes the HttpOnly
+        // `token` cookie and redirects onward.
+        redirectTo('/auth/api/v1/logout');
     };
 
     return {

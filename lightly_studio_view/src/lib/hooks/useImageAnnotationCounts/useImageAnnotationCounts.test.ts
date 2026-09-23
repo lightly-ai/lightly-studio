@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildImageAnnotationCountsRequest } from './useImageAnnotationCounts';
+import {
+    buildImageAnnotationCountsQueryKey,
+    buildImageAnnotationCountsRequest,
+    useImageAnnotationCountsQueryKey
+} from './useImageAnnotationCounts';
 import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_local/types.gen';
 
 describe('buildImageAnnotationCountsRequest', () => {
@@ -25,5 +29,56 @@ describe('buildImageAnnotationCountsRequest', () => {
             expect.objectContaining({ annotation_type: AnnotationType.OBJECT_DETECTION })
         );
         expect(request.body).not.toHaveProperty('count_mode');
+    });
+});
+
+describe('buildImageAnnotationCountsQueryKey', () => {
+    const params = {
+        collectionId: 'col-1',
+        filter: { sample_filter: { tag_ids: ['tag-a'] } },
+        annotationType: AnnotationType.OBJECT_DETECTION,
+        countMode: AnnotationCountMode.SAMPLES
+    };
+
+    it('keeps the annotation-count prefix and every request input in the query key', () => {
+        expect(buildImageAnnotationCountsQueryKey(params)).toEqual([
+            ...useImageAnnotationCountsQueryKey,
+            buildImageAnnotationCountsRequest(params)
+        ]);
+    });
+
+    it('starts with queryKeyOverride when one is given', () => {
+        const queryKeyOverride = [...useImageAnnotationCountsQueryKey, 'distribution'];
+
+        expect(buildImageAnnotationCountsQueryKey({ ...params, queryKeyOverride })).toEqual([
+            ...queryKeyOverride,
+            buildImageAnnotationCountsRequest(params)
+        ]);
+    });
+
+    it('produces a different key when any request input changes', () => {
+        const key = buildImageAnnotationCountsQueryKey(params);
+
+        expect(key).not.toEqual(
+            buildImageAnnotationCountsQueryKey({
+                ...params,
+                filter: { sample_filter: { tag_ids: ['tag-b'] } }
+            })
+        );
+        expect(key).not.toEqual(
+            buildImageAnnotationCountsQueryKey({ ...params, collectionId: 'col-2' })
+        );
+        expect(key).not.toEqual(
+            buildImageAnnotationCountsQueryKey({
+                ...params,
+                annotationType: AnnotationType.CLASSIFICATION
+            })
+        );
+        expect(key).not.toEqual(
+            buildImageAnnotationCountsQueryKey({
+                ...params,
+                countMode: AnnotationCountMode.OBJECTS
+            })
+        );
     });
 });

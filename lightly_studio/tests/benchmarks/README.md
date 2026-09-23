@@ -10,6 +10,8 @@ Manual performance benchmarks for Lightly Studio. Each script is standalone and 
   performance at the database layer.
 - [Deep-copy benchmark](#deep-copy-benchmark) — measure collection deep-copy time and peak
   memory at enterprise scale.
+- [Metadata query benchmark](#metadata-query-benchmark) — measure metadata write and aggregation
+  query performance at BRT scale (json vs jsonb on PostgreSQL).
 - [Delete-dataset benchmark](#delete-dataset-benchmark) — measure dataset delete time and peak
   memory at enterprise scale.
 
@@ -235,6 +237,60 @@ scale `--generate` toward 1M+ for the enterprise target.
 | `--embedding-dim` | 512 | Embedding vector dimensionality (generate mode) |
 | `--batch-size` | 5 000 | Generation batch size |
 | `--seed` | 0 | Random seed for reproducibility |
+
+## Metadata query benchmark
+
+A script that measures the metadata database code paths affected by LIG-10789 (JSON to JSONB on
+PostgreSQL): writing metadata via `metadata_resolver.bulk_update_metadata`, then reading it back
+through the aggregation resolvers the GUI sidebar fires on load, each of which extracts JSON keys
+from every metadata row:
+
+- **write** — bulk insert metadata for every sample.
+- **metadata_info** — `get_metadata_info` (the `/metadata/info` endpoint flagged as slow in
+  LIG-10726).
+- **histograms** — `get_metadata_histograms` (numeric value distributions).
+- **value_counts** — `get_metadata_value_counts` (categorical value counts).
+
+For each phase it reports wall-clock time, throughput, and **peak Python allocation** (via
+`tracemalloc`). To simulate a BRT-scale metadata load, it seeds many samples, each with several
+numeric and several categorical keys.
+
+JSONB only applies to PostgreSQL, so to compare json vs jsonb read times, run the benchmark with
+`--postgres` on this branch (jsonb) and on `main` (json) and compare.
+
+### Running the benchmark
+
+From the `lightly_studio` directory (temporary DuckDB by default):
+
+```bash
+uv run tests/benchmarks/metadata_query_benchmark.py
+```
+
+Against PostgreSQL (where the JSONB change applies):
+
+```bash
+make start-postgres
+uv run tests/benchmarks/metadata_query_benchmark.py --postgres
+make stop-postgres
+```
+
+A quick smoke-test with a smaller dataset:
+
+```bash
+uv run tests/benchmarks/metadata_query_benchmark.py --num-samples 10000
+```
+
+### Key options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--num-samples` | 100 000 | Number of samples to seed with metadata |
+| `--num-numeric-keys` | 8 | Numeric metadata keys per sample |
+| `--num-categorical-keys` | 8 | Categorical metadata keys per sample |
+| `--num-categories` | 10 | Distinct values per categorical key |
+| `--write-batch-size` | 5 000 | Samples written per `bulk_update_metadata` call |
+| `--seed` | 0 | Random seed for reproducibility |
+| `--postgres` | off | Benchmark PostgreSQL instead of the temporary DuckDB |
 
 ## Delete-dataset benchmark
 

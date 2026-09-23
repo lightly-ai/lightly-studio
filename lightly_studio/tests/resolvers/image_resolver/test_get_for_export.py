@@ -86,6 +86,7 @@ def test_get_for_export__with_embedding_region_filter(db_session: Session) -> No
         session=db_session,
         collection_id=collection.collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
 
     image_inside1 = create_image(

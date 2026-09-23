@@ -9,34 +9,37 @@ from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
 
+from lightly_studio.analytics import tracking
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
+    HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
-from lightly_studio.errors import QueryExprError
+from lightly_studio.errors import NotFoundError, QueryExprError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
 
 
-def _log_error_details(
+def _report_error(
+    *,
     exc: Exception,
     status_code: int,
 ) -> None:
-    """Log detailed error information with request context."""
-    # Log the error with different levels based on status code
+    """Log and track error information."""
     logger.error(f"Server Error {status_code}: {exc}")
+    tracking.track_exception(exc)
 
 
-def register_exception_handlers(app: FastAPI) -> None:
+def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     """Register exception handlers for the FastAPI app."""
 
     @app.exception_handler(IntegrityError)
     async def _integrity_error_handler(_request: Request, _exc: IntegrityError) -> JSONResponse:
         """Handle database integrity errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_CONFLICT,
         )
@@ -49,7 +52,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(OperationalError)
     async def _operational_error_handler(_request: Request, _exc: OperationalError) -> JSONResponse:
         """Handle database operational errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
         )
@@ -61,7 +64,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(DataError)
     async def _data_error_handler(_request: Request, _exc: DataError) -> JSONResponse:
         """Handle database data errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_BAD_REQUEST,
         )
@@ -81,7 +84,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         else:
             detail = "Invalid data provided."
 
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_BAD_REQUEST,
         )
@@ -91,9 +94,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(ValueError)
     async def _value_error_handler(_request: Request, _exc: ValueError) -> JSONResponse:
         """Handle value errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
-            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+            status_code=HTTP_STATUS_BAD_REQUEST,
         )
         return JSONResponse(status_code=HTTP_STATUS_BAD_REQUEST, content={"error": str(_exc)})
 
@@ -101,6 +104,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def _request_validation_error_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        _report_error(
+            exc=exc,
+            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
+        )
         body = (await request.body()).decode("utf-8", errors="replace")
         logger.warning(
             "Request validation error on %s?%s | errors=%s | body=%s",
@@ -114,14 +121,38 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={"detail": exc.errors()},
         )
 
+    @app.exception_handler(NotFoundError)
+    async def _not_found_error_handler(_request: Request, _exc: NotFoundError) -> JSONResponse:
+        """Handle not-found errors."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_NOT_FOUND,
+        )
+        return JSONResponse(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            content={"error": str(_exc) or "Resource not found."},
+        )
+
     @app.exception_handler(QueryExprError)
     async def _query_expr_error_handler(_request: Request, _exc: QueryExprError) -> JSONResponse:
         """Handle query expression errors."""
-        _log_error_details(
+        _report_error(
             exc=_exc,
             status_code=HTTP_STATUS_BAD_REQUEST,
         )
         return JSONResponse(
             status_code=HTTP_STATUS_BAD_REQUEST,
             content={"error": str(_exc) or "Invalid query expression."},
+        )
+
+    @app.exception_handler(Exception)
+    async def _unhandled_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
+        """Handle all unhandled exceptions."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+        )
+        return JSONResponse(
+            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
+            content={"error": "Internal server error."},
         )

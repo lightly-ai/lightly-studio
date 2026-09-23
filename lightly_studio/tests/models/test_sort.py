@@ -5,167 +5,261 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
     OrderByEvaluationMetricField,
+    OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.sort import (
     EvaluationMetricSortExpr,
-    SortExpr,
-    SortFieldExpr,
+    ImageSortExpr,
+    ImageSortFieldExpr,
     SortFieldSource,
-    sort_expr_to_order_by,
+    VideoSortFieldExpr,
+    image_sort_expr_to_order_by,
     sort_field_expr_to_order_by,
 )
 from lightly_studio.models.sort_direction import SortDirection
 
-_IMAGE_SORT_FIELD_NAMES = ["file_name", "file_path_abs", "created_at", "width", "height"]
+_IMAGE_SORT_FIELD_TO_COLUMN = {
+    "file_name": ImageSampleField.file_name,
+    "file_path_abs": ImageSampleField.file_path_abs,
+    "created_at": ImageSampleField.created_at,
+    "width": ImageSampleField.width,
+    "height": ImageSampleField.height,
+}
+_VIDEO_SORT_FIELD_TO_COLUMN = {
+    "file_name": VideoSampleField.file_name,
+    "file_path_abs": VideoSampleField.file_path_abs,
+    "created_at": VideoSampleField.created_at,
+    "width": VideoSampleField.width,
+    "height": VideoSampleField.height,
+    "duration_s": VideoSampleField.duration_s,
+    "fps": VideoSampleField.fps,
+}
 
 
-def test_sort_field_expr__valid_directions() -> None:
-    expr_asc = SortFieldExpr(
+def test_image_sort_field_expr__valid_directions() -> None:
+    expr_asc = ImageSortFieldExpr(
         source=SortFieldSource.image,
         field_name="file_name",
         direction=SortDirection.asc,
-        is_numeric=False,
     )
-    expr_desc = SortFieldExpr(
+    expr_desc = ImageSortFieldExpr(
         source=SortFieldSource.image,
         field_name="file_name",
         direction=SortDirection.desc,
-        is_numeric=False,
     )
 
     assert expr_asc.direction == SortDirection.asc
     assert expr_desc.direction == SortDirection.desc
 
 
-def test_sort_field_expr__rejects_invalid_direction() -> None:
+def test_image_sort_field_expr__rejects_invalid_direction() -> None:
     with pytest.raises(ValidationError):
-        SortFieldExpr.model_validate(
+        ImageSortFieldExpr.model_validate(
             {
                 "source": "image",
                 "field_name": "file_name",
                 "direction": "invalid_direction",
-                "is_numeric": False,
             }
         )
 
 
-def test_sort_field_expr_to_order_by__rejects_unknown_field() -> None:
-    expr = SortFieldExpr(
+def test_sort_field_expr_to_order_by__image_rejects_unknown_field() -> None:
+    expr = ImageSortFieldExpr(
         source=SortFieldSource.image,
         field_name="invalid_field",
         direction=SortDirection.asc,
-        is_numeric=False,
     )
     with pytest.raises(QueryExprError):
-        sort_field_expr_to_order_by(expr)
+        sort_field_expr_to_order_by(expr=expr)
 
 
-def test_sort_field_expr_to_order_by__ascending() -> None:
-    expr = SortFieldExpr(
+def test_sort_field_expr_to_order_by__image_ascending() -> None:
+    expr = ImageSortFieldExpr(
         source=SortFieldSource.image,
         field_name="file_name",
         direction=SortDirection.asc,
-        is_numeric=False,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert order_by.ascending is True
 
 
-def test_sort_field_expr_to_order_by__descending() -> None:
-    expr = SortFieldExpr(
+def test_sort_field_expr_to_order_by__image_descending() -> None:
+    expr = ImageSortFieldExpr(
         source=SortFieldSource.image,
         field_name="width",
         direction=SortDirection.desc,
-        is_numeric=False,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert order_by.ascending is False
 
 
-def test_sort_field_expr_to_order_by__all_fields_map() -> None:
-    for field_name in _IMAGE_SORT_FIELD_NAMES:
-        expr = SortFieldExpr(
+def test_sort_field_expr_to_order_by__image_all_fields_map() -> None:
+    for field_name, expected_field in _IMAGE_SORT_FIELD_TO_COLUMN.items():
+        expr = ImageSortFieldExpr(
             source=SortFieldSource.image,
             field_name=field_name,
             direction=SortDirection.asc,
-            is_numeric=False,
         )
-        order_by = sort_field_expr_to_order_by(expr)
-        assert order_by is not None
+        order_by = sort_field_expr_to_order_by(expr=expr)
+        assert isinstance(order_by, OrderByField)
+        assert order_by.field is expected_field
 
 
-def test_sort_field_expr_to_order_by__metadata_ascending() -> None:
-    expr = SortFieldExpr(
+def test_sort_field_expr_to_order_by__image_field_name_not_shared_with_video() -> None:
+    # `duration_s` exists on videos only; the source must select the right registry.
+    expr = ImageSortFieldExpr(
+        source=SortFieldSource.image,
+        field_name="duration_s",
+        direction=SortDirection.asc,
+    )
+    with pytest.raises(QueryExprError):
+        sort_field_expr_to_order_by(expr=expr)
+
+
+def test_image_sort_field_expr__rejects_video_source() -> None:
+    # Image queries do not have `VideoTable` in the FROM clause, so a video field
+    # would be cross-joined rather than sorted by.
+    with pytest.raises(ValidationError):
+        ImageSortFieldExpr.model_validate(
+            {"source": "video", "field_name": "fps", "direction": "asc"}
+        )
+
+
+def test_sort_field_expr_to_order_by__video_all_fields_map() -> None:
+    for field_name, expected_field in _VIDEO_SORT_FIELD_TO_COLUMN.items():
+        expr = VideoSortFieldExpr(
+            source=SortFieldSource.video,
+            field_name=field_name,
+            direction=SortDirection.asc,
+        )
+        order_by = sort_field_expr_to_order_by(expr=expr)
+        assert isinstance(order_by, OrderByField)
+        assert order_by.field is expected_field
+
+
+def test_sort_field_expr_to_order_by__video_metadata_source() -> None:
+    expr = VideoSortFieldExpr(
+        source=SortFieldSource.metadata,
+        field_name="blur_score",
+        direction=SortDirection.asc,
+    )
+    assert isinstance(sort_field_expr_to_order_by(expr=expr), OrderByMetadataField)
+
+
+def test_sort_field_expr_to_order_by__video_rejects_unknown_field() -> None:
+    expr = VideoSortFieldExpr(
+        source=SortFieldSource.video,
+        field_name="invalid_field",
+        direction=SortDirection.asc,
+    )
+    with pytest.raises(QueryExprError):
+        sort_field_expr_to_order_by(expr=expr)
+
+
+def test_video_sort_field_expr__rejects_image_source() -> None:
+    with pytest.raises(ValidationError):
+        VideoSortFieldExpr.model_validate(
+            {"source": "image", "field_name": "width", "direction": "asc"}
+        )
+
+
+def test_video_sort_field_expr__rejects_evaluation_metric_source() -> None:
+    # Evaluation metrics are image-only.
+    with pytest.raises(ValidationError):
+        VideoSortFieldExpr.model_validate(
+            {"source": "evaluation_metric", "field_name": "iou", "direction": "asc"}
+        )
+
+
+def test_image_and_video_sort_field_exprs_stay_structurally_identical() -> None:
+    # AdjacentSortExpr resolves a ``metadata`` source to ImageSortFieldExpr via left-to-right
+    # (LIG-10605). That is only safe while the two models share identical field definitions: a
+    # drift in ``field_name`` or ``direction`` (a new field, a changed type, an added
+    # constraint) would make the same payload validate differently depending on which model
+    # wins. ``source`` is narrowed per model on purpose, so exclude it. FieldInfo has no value
+    # equality, so compare its repr, which reflects the annotation, default, and metadata.
+    image_fields = {
+        name: repr(field)
+        for name, field in ImageSortFieldExpr.model_fields.items()
+        if name != "source"
+    }
+    video_fields = {
+        name: repr(field)
+        for name, field in VideoSortFieldExpr.model_fields.items()
+        if name != "source"
+    }
+    assert image_fields == video_fields
+
+
+def test_sort_field_expr_to_order_by__image_metadata_ascending() -> None:
+    expr = ImageSortFieldExpr(
         source=SortFieldSource.metadata,
         field_name="brightness",
         direction=SortDirection.asc,
-        is_numeric=False,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "brightness"
     assert order_by.ascending is True
-    assert order_by.cast_to_float is False
 
 
-def test_sort_field_expr_to_order_by__metadata_descending() -> None:
-    expr = SortFieldExpr(
+def test_sort_field_expr_to_order_by__image_metadata_descending() -> None:
+    expr = ImageSortFieldExpr(
         source=SortFieldSource.metadata,
         field_name="score",
         direction=SortDirection.desc,
-        is_numeric=False,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "score"
     assert order_by.ascending is False
-    assert order_by.cast_to_float is False
 
 
-def test_sort_field_expr_to_order_by__metadata_arbitrary_field() -> None:
-    expr = SortFieldExpr(
+def test_sort_field_expr_to_order_by__image_metadata_arbitrary_field() -> None:
+    expr = ImageSortFieldExpr(
         source=SortFieldSource.metadata,
         field_name="custom_metric",
         direction=SortDirection.asc,
-        is_numeric=False,
     )
-    order_by = sort_field_expr_to_order_by(expr)
+    order_by = sort_field_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "custom_metric"
 
 
-def test_sort_expr_to_order_by__evaluation_metric_ascending() -> None:
+def test_image_sort_expr_to_order_by__evaluation_metric_ascending() -> None:
     expr = EvaluationMetricSortExpr(
         evaluation_run_name="run1",
         metric_name="score",
         direction=SortDirection.asc,
     )
-    order_by = sort_expr_to_order_by(expr)
+    order_by = image_sort_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByEvaluationMetricField)
     assert order_by.evaluation_run_name == "run1"
     assert order_by.metric_name == "score"
     assert order_by.ascending is True
 
 
-def test_sort_expr_to_order_by__evaluation_metric_descending() -> None:
+def test_image_sort_expr_to_order_by__evaluation_metric_descending() -> None:
     expr = EvaluationMetricSortExpr(
         evaluation_run_name="run1",
         metric_name="precision",
         direction=SortDirection.desc,
     )
-    order_by = sort_expr_to_order_by(expr)
+    order_by = image_sort_expr_to_order_by(expr=expr)
     assert isinstance(order_by, OrderByEvaluationMetricField)
     assert order_by.evaluation_run_name == "run1"
     assert order_by.metric_name == "precision"
     assert order_by.ascending is False
 
 
-def test_sort_expr_discriminated_union__routes_to_evaluation_metric() -> None:
-    adapter: TypeAdapter[SortExpr] = TypeAdapter(SortExpr)
+def test_image_sort_expr_discriminated_union__routes_to_evaluation_metric() -> None:
+    adapter: TypeAdapter[ImageSortExpr] = TypeAdapter(ImageSortExpr)
     expr = adapter.validate_python(
         {
             "source": "evaluation_metric",
@@ -179,15 +273,14 @@ def test_sort_expr_discriminated_union__routes_to_evaluation_metric() -> None:
     assert expr.metric_name == "score"
 
 
-def test_sort_expr_discriminated_union__routes_to_sort_field_expr() -> None:
-    adapter: TypeAdapter[SortExpr] = TypeAdapter(SortExpr)
+def test_image_sort_expr_discriminated_union__routes_to_sort_field_expr() -> None:
+    adapter: TypeAdapter[ImageSortExpr] = TypeAdapter(ImageSortExpr)
     expr = adapter.validate_python(
         {
             "source": "image",
             "field_name": "file_name",
             "direction": "asc",
-            "is_numeric": False,
         }
     )
-    assert isinstance(expr, SortFieldExpr)
+    assert isinstance(expr, ImageSortFieldExpr)
     assert expr.field_name == "file_name"

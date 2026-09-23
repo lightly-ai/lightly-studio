@@ -398,3 +398,20 @@ export const isInViewport = async ({
         );
     }, viewportRect);
 };
+
+// Scroll the container first: virtualized tiles cannot be scrolled into view until mounted.
+export async function scrollDownToGridItem(viewport: Locator, item: Locator): Promise<void> {
+    await expect
+        .poll(
+            async () => {
+                if (await item.count()) return true;
+                await viewport.evaluate((el) => {
+                    el.scrollTop += el.clientHeight / 2;
+                });
+                return false;
+            },
+            { intervals: [100], timeout: 10000 }
+        )
+        .toBe(true);
+    await item.scrollIntoViewIfNeeded();
+}

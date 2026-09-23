@@ -55,3 +55,14 @@ describe('getNumericMetadataHistogramRequestOptions', () => {
         });
     });
 });
+
+it('scopes the request to the selected field and preserves an explicitly empty selection', () => {
+    for (const fields of [['score'], []]) {
+        expect(
+            getNumericMetadataHistogramRequestOptions({ collectionId: 'collection-id', fields })
+        ).toEqual({
+            path: { collection_id: 'collection-id' },
+            body: { fields }
+        });
+    }
+});

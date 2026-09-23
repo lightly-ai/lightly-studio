@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import {
         SampleAnnotationBox,
         SampleAnnotationLabel,
@@ -44,17 +45,17 @@
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { multipleSourcesVisible, collectionIdToName } = useAnnotationCollectionsFilter();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
     const colorLabel = $derived.by(() => {
-        const bySource = colorBySource ?? $selectedCollectionIds.length >= 2;
+        const bySource = colorBySource ?? $multipleSourcesVisible;
         if (!bySource) return label;
         return $collectionIdToName[annotation.annotation_collection_id] ?? label;
     });
 
-    const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
+    const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
 
     const annotationId = $derived(annotation.sample_id);
 
@@ -90,7 +91,7 @@
         segmentationMask ? 0 : ($customLabelColorsStore[colorLabel]?.alpha ?? 1.0) * 0.4
     );
 
-    let boundingBox = $state<BoundingBox>(getBoundingBox(annotation));
+    let boundingBox = $state<BoundingBox>(untrack(() => getBoundingBox(annotation)));
 
     const onResize = (newBbox: BoundingBox) => {
         boundingBox = constraintBox

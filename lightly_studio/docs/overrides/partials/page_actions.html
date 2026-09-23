@@ -1,0 +1,31 @@
+{#-
+  page_actions(modifier): the edit link plus whatever `extra.page_actions`
+  declares in mkdocs.yml. `page.edit_url` only exists once `repo_url` and
+  `edit_uri` resolve for the page, so the list can come out shorter.
+
+  Rendered twice, once from `toc.html` beside the article and once from
+  `main.html` under it, and `custom.css` shows exactly one at any width. Two
+  copies rather than one moved element because the contents list collapses into
+  a drawer below 60em, and page-level links do not belong inside a heading list.
+
+  `modifier` is the BEM modifier for the copy: `aside` or `page`.
+-#}
+{#- `lang` is imported here rather than inherited: `base.html` imports it into
+    its own namespace, which a block overridden in `main.html` does not see. -#}
+{% import "partials/language.html" as lang with context %}
+{% import "partials/links.html" as links with context %}
+{% macro page_actions(modifier) -%}
+  {%- set actions = config.extra.page_actions or [] -%}
+  {%- if page.edit_url or actions -%}
+    <div class="ls-actions ls-actions--{{ modifier }}">
+      {%- if page.edit_url %}
+        <a class="ls-actions__link" href="{{ page.edit_url }}" rel="edit">
+          {{ lang.t("action.edit") }}
+        </a>
+      {%- endif %}
+      {%- for action in actions %}
+        {{ links.smart_link(action.href, action.label, "ls-actions__link") }}
+      {%- endfor %}
+    </div>
+  {%- endif -%}
+{%- endmacro %}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.models.collection import CollectionCreate, CollectionTable
@@ -71,6 +72,13 @@ def create(session: Session, collection: CollectionCreate) -> CollectionTable:
         session.add(db_dataset)
 
     session.add(db_collection)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # A concurrent transaction can insert the same name after the check above, its
+        # row is invisible here until it commits. Roll back so that the session stays
+        # usable, it may be shared with the rest of the process.
+        session.rollback()
+        raise
     session.refresh(db_collection)
     return db_collection

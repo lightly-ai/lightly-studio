@@ -9,6 +9,16 @@ describe('MetadataFilterChips', () => {
     beforeEach(() => {
         storage.updateMetadataBounds({});
         storage.updateMetadataValues({});
+        storage.updateCategoricalMetadataValues({});
+    });
+
+    it('distinguishes literal values from semantic Missing in a chip', () => {
+        storage.updateCategoricalMetadataValues({ city: ['Missing', null, 'Other'] });
+        render(MetadataFilterChips);
+
+        expect(screen.getByTestId('metadata-filter-chip-city')).toHaveTextContent(
+            'Missing (value), Missing (no value), Other (value)'
+        );
     });
 
     it('renders nothing when no filter is narrowed', () => {

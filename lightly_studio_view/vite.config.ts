@@ -16,6 +16,10 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks(id) {
+                    // Keep the preload helper in the base vendor chunk to avoid circular initialization.
+                    if (id.includes('vite/preload-helper')) {
+                        return 'vendor';
+                    }
                     // Split embedding-atlas into its own chunk
                     if (id.includes('node_modules/embedding-atlas')) {
                         return 'vendor-embedding-atlas';
@@ -23,6 +27,12 @@ export default defineConfig({
                     // Split apache-arrow into its own chunk
                     if (id.includes('node_modules/apache-arrow')) {
                         return 'vendor-apache-arrow';
+                    }
+                    // Split monaco-editor into its own chunk so it stays lazy (only the
+                    // dynamically imported QueryEditorPanel pulls it) instead of riding the
+                    // eager `vendor` chunk that posthog-js keeps on every route.
+                    if (id.includes('node_modules/monaco-editor')) {
+                        return 'vendor-monaco';
                     }
                     // Split d3 libraries
                     if (id.includes('node_modules/d3-')) {

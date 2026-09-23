@@ -2,18 +2,33 @@
     import { onDestroy, type Snippet } from 'svelte';
     import * as echarts from 'echarts/core';
     import { BarChart as EchartsBarChart } from 'echarts/charts';
-    import { GridComponent, TooltipComponent } from 'echarts/components';
+    import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption, type BarChartOrientation } from './buildEchartsOption';
-    import type { CategoryCount } from './types';
+    import {
+        buildEchartsOption,
+        GROUPED_GRID_TOP_PX,
+        type BarChartOrientation,
+        type BarChartValueMode
+    } from './buildEchartsOption';
+    import type { CategoryCount, CategoryCountSeries } from './types';
 
-    echarts.use([EchartsBarChart, GridComponent, TooltipComponent, CanvasRenderer]);
+    echarts.use([
+        EchartsBarChart,
+        GridComponent,
+        LegendComponent,
+        TooltipComponent,
+        CanvasRenderer
+    ]);
 
     interface Props {
         /** Categories rendered in the given order. */
         data: CategoryCount[];
+        /** Optional named series rendered as grouped bars on the `data` category axis. */
+        series?: CategoryCountSeries[];
         /** Bar orientation (default 'vertical'). */
         orientation?: BarChartOrientation;
+        /** Whether bars show raw counts or percentages (default 'number'). */
+        valueMode?: BarChartValueMode;
         /**
          * Caps the chart width in px. Vertical bars scroll horizontally once they
          * exceed it; horizontal bars fill it. Defaults to the parent width.
@@ -34,16 +49,21 @@
         onBarClick?: (item: CategoryCount) => void;
         /** Custom content shown when data is empty. Replaces the default message. */
         emptyState?: Snippet;
+        /** Top chart-grid padding in px (default 16). */
+        gridTopPx?: number;
     }
 
     const {
         data,
+        series = [],
         orientation = 'vertical',
+        valueMode = 'number',
         maxWidthPx,
         maxHeightPx,
         totalCount,
         onBarClick,
-        emptyState
+        emptyState,
+        gridTopPx
     }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
@@ -56,7 +76,18 @@
     // panel). This extent sizes the category axis (width when vertical, height
     // when horizontal); the +40/+60px covers the axis gutters.
     const BAR_THICKNESS_PX = 28;
-    const barsExtentPx = $derived(data.length * BAR_THICKNESS_PX + (isHorizontal ? 40 : 60));
+    const DEFAULT_GRID_TOP_PX = 16;
+    const categoryThicknessPx = $derived(Math.max(BAR_THICKNESS_PX, series.length * 14));
+    // For grouped horizontal charts, the legend consumes GROUPED_GRID_TOP_PX of
+    // vertical space that isn't part of the category axis, so include the delta.
+    const groupedLegendHeightPx = $derived(
+        isHorizontal && series.length > 0
+            ? GROUPED_GRID_TOP_PX - (gridTopPx ?? DEFAULT_GRID_TOP_PX)
+            : 0
+    );
+    const barsExtentPx = $derived(
+        data.length * categoryThicknessPx + (isHorizontal ? 40 : 60) + groupedLegendHeightPx
+    );
 
     // Height budget in px: the measured container height, or a fallback so the
     // chart still renders when the parent is unconstrained (standalone/Storybook).
@@ -89,7 +120,7 @@
         instance.on('click', (params: { dataIndex?: number }) => {
             if (typeof params.dataIndex !== 'number') return;
             const item = data[params.dataIndex];
-            if (item) onBarClick?.(item);
+            if (item && item.selectable !== false) onBarClick?.(item);
         });
         const resizeObserver = new ResizeObserver(() => instance.resize());
         resizeObserver.observe(container);
@@ -102,7 +133,16 @@
 
     $effect(() => {
         if (!chart) return;
-        chart.setOption(buildEchartsOption(data, { totalCount, orientation }), true);
+        chart.setOption(
+            buildEchartsOption(data, {
+                totalCount,
+                orientation,
+                series,
+                valueMode,
+                gridTopPx
+            }),
+            true
+        );
     });
 
     onDestroy(() => chart?.dispose());
@@ -113,8 +153,9 @@
         {#if emptyState}
             {@render emptyState()}
         {:else}
-            No data to display.
-            <br />Check the
+            No distribution data to display.
+            <br />Add annotations or metadata to see their distribution.
+            <br />Learn more in the
             <a
                 href="https://docs.lightly.ai/studio/"
                 target="_blank"
@@ -122,8 +163,7 @@
                 class="text-primary underline-offset-4 hover:underline"
             >
                 documentation
-            </a>
-            to learn how to add data.
+            </a>.
         {/if}
     </div>
 {:else}

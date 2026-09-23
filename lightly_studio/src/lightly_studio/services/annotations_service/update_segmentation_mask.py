@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
 
 
 def update_segmentation_mask(
@@ -23,8 +23,13 @@ def update_segmentation_mask(
     Returns:
         The updated AnnotationBaseTable instance.
     """
-    return annotation_resolver.update_segmentation_mask(
+    result = annotation_resolver.update_segmentation_mask(
         session=session,
         annotation_id=annotation_id,
         segmentation_mask=segmentation_mask,
     )
+    evaluation_run_resolver.mark_stale_by_collection_id(
+        session=session,
+        collection_id=result.annotation_collection_id,
+    )
+    return result

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { useVideoPlayback } from './useVideoPlayback.svelte';
 
     interface Props {
@@ -17,8 +18,10 @@
         getRegionEl: () => regionEl,
         getSrc: () => src,
         getStartTimeS: () => startTimeS,
-        initialMuted
+        initialMuted: untrack(() => initialMuted)
     });
 
-    onReady(playback);
+    $effect(() => {
+        onReady(playback);
+    });
 </script>

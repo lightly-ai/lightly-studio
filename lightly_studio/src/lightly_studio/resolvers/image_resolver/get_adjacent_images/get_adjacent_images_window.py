@@ -147,10 +147,12 @@ def _window_order_columns(
 
     if ordering_expression is not None:
         return (
-            ordering_expression + [expr.to_column_element() for expr in order_by] + tiebreaker
+            ordering_expression
+            + [e for expr in order_by for e in expr.to_column_elements()]
+            + tiebreaker
             if order_by
             else [*ordering_expression, *tiebreaker]
         )
     if order_by:
-        return [expr.to_column_element() for expr in order_by] + tiebreaker
+        return [e for expr in order_by for e in expr.to_column_elements()] + tiebreaker
     return col(ImageTable.file_path_abs).asc()

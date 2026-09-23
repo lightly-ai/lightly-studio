@@ -30,19 +30,10 @@ test.describe('Export Captions', () => {
         // Switch to the correct export type
         await page.getByTestId('export-type-select').click();
         await page.getByRole('option', { name: 'Image Captions' }).click();
-        await expect(page.getByTestId('submit-button-captions')).toHaveAttribute(
-            'href',
-            /\/api\/collections\/.*\/export\/captions\?ts=\d+/
-        );
 
-        // Remove target to avoid popup and keep navigation in the same page context
-        await page
-            .getByTestId('submit-button-captions')
-            .evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
-
-        // Click and wait for the download event deterministically
+        // Click and wait for the download triggered via window.open in a popup
         const [download] = await Promise.all([
-            page.waitForEvent('download'),
+            page.context().waitForEvent('download'),
             page.getByTestId('submit-button-captions').click()
         ]);
 

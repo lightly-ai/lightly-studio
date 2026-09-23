@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
-import { writable, type Writable } from 'svelte/store';
+import { writable, get, type Writable } from 'svelte/store';
 import type { FrameView, VideoView } from '$lib/api/lightly_studio_local';
 import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
 import { capturedProps, resetCapturedProps } from './VideoDetails.stub.svelte';
@@ -25,6 +25,12 @@ vi.mock('../VideoSampleMetadata/VideoSampleMetadata.svelte', async () => ({
 }));
 vi.mock(
     '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte',
+    async () => ({
+        default: (await import('./VideoDetails.stub.svelte')).default
+    })
+);
+vi.mock(
+    '../SampleDetails/SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte',
     async () => ({
         default: (await import('./VideoDetails.stub.svelte')).default
     })
@@ -157,5 +163,38 @@ describe('VideoDetails', () => {
 
         // A non-matching frame must not resolve the start time.
         expect(lastStartTimeS()).toBeNull();
+    });
+
+    it('does not reinitialize the frame controller when the same video is re-fetched', () => {
+        const { rerender } = render(VideoDetails, {
+            props: { video, datasetId: 'dataset-1', onVideoUpdate: vi.fn(), frameNumber: undefined }
+        });
+        flushSync();
+
+        // Seed the current frame as if playback has started.
+        flushSync(() =>
+            currentFrame.set({
+                frame_number: 5,
+                frame_timestamp_s: 0.5,
+                sample: {}
+            } as unknown as FrameView)
+        );
+
+        const callsBefore = vi.mocked(useVideoFrames).mock.calls.length;
+
+        // Simulate a same-video refetch: parent produces a new VideoView object with the same sample_id.
+        const refetchedVideo = { ...video } as unknown as VideoView;
+        rerender({
+            video: refetchedVideo,
+            datasetId: 'dataset-1',
+            onVideoUpdate: vi.fn(),
+            frameNumber: undefined
+        });
+        flushSync();
+
+        // The controller must not be recreated on a same-ID prop update.
+        expect(vi.mocked(useVideoFrames).mock.calls.length).toBe(callsBefore);
+        // The current frame must still be set — the overlay stays initialized.
+        expect(get(currentFrame)).toBeDefined();
     });
 });

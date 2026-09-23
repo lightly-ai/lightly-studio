@@ -13,46 +13,69 @@
 </script>
 
 <script lang="ts">
-    import { onDestroy, onMount } from 'svelte';
+    import { onDestroy, onMount, untrack } from 'svelte';
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
-    import { getColorByLabel, rgbaFromBytes } from '$lib/utils';
+    import { getColorByLabel } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
     import {
         acquireMaskRendererWorker,
         releaseMaskRendererWorker
     } from '$lib/workers/maskRendererPool';
+    import {
+        drawBoxesOnContext,
+        transformBoxes,
+        type RenderGeometry,
+        type SourceCrop
+    } from '$lib/workers/maskRendererUtils';
 
-    type InstanceAnnotation = {
+    interface InstanceAnnotation {
         annotation_type: 'segmentation_mask';
         annotation_label_name: string;
         segmentation_mask?: number[] | null;
         object_detection_details?: BoundingBox;
-    };
+        color?: string;
+        opacity?: number;
+    }
 
-    type ObjectDetectionAnnotation = {
+    interface ObjectDetectionAnnotation {
         annotation_type: 'object_detection';
         annotation_label_name: string;
         object_detection_details: BoundingBox;
         segmentation_mask?: undefined;
-    };
+        color?: string;
+        opacity?: number;
+    }
 
     type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
 
-    const {
-        sampleId,
-        width,
-        height,
-        annotations = [],
-        alpha = 0.4,
-        className = ''
-    }: {
+    interface Props {
         sampleId: string;
-        width: number;
-        height: number;
+        sourceWidth: number;
+        sourceHeight: number;
+        outputWidth?: number;
+        outputHeight?: number;
+        objectFit?: 'contain' | 'cover';
+        sourceCrop?: SourceCrop;
         annotations?: AnnotationCanvasAnnotation[];
         alpha?: number;
         className?: string;
-    } = $props();
+    }
+
+    const {
+        sampleId,
+        sourceWidth,
+        sourceHeight,
+        outputWidth,
+        outputHeight,
+        objectFit = 'contain',
+        sourceCrop,
+        annotations = [],
+        alpha = 0.4,
+        className = ''
+    }: Props = $props();
+
+    const canvasWidth = $derived(Math.max(1, Math.round(outputWidth ?? sourceWidth)));
+    const canvasHeight = $derived(Math.max(1, Math.round(outputHeight ?? sourceHeight)));
 
     const { customLabelColorsStore } = useCustomLabelColors();
 
@@ -60,9 +83,11 @@
     let worker: Worker | null = null;
     let workerReady = false;
     let hasOffscreen = false;
-    let resizeObserver: ResizeObserver | null = null;
-    // Shared workers multiplex multiple canvases
-    const canvasId = `${sampleId}-${createCanvasInstanceSuffix()}`;
+    let hasMainThreadContext = false;
+    // Shared workers multiplex multiple canvases. Captured once — never re-derived — so that
+    // setupWorker(), render(), handleWorkerMessage(), and onDestroy() all reference the same ID
+    // even if sampleId changes after the worker has been initialised.
+    const canvasId = `${untrack(() => sampleId)}-${createCanvasInstanceSuffix()}`;
 
     type ColorParser = (color: string) => [number, number, number, number];
 
@@ -102,6 +127,22 @@
 
     type CustomLabelColorMap = Record<string, CustomColor>;
 
+    interface ContextOptions {
+        willReadFrequently?: boolean;
+    }
+
+    const getMainThreadContext = (options?: ContextOptions): CanvasRenderingContext2D | null => {
+        if (!canvasEl || hasOffscreen) {
+            return null;
+        }
+
+        const context = canvasEl.getContext('2d', options) as CanvasRenderingContext2D | null;
+        if (context) {
+            hasMainThreadContext = true;
+        }
+        return context;
+    };
+
     const clampAlpha = (value: number): number => Math.max(0, Math.min(value, 1));
 
     const resolveLabelColor = (
@@ -117,6 +158,23 @@
         const [r, g, b] = rgbaParser(customColor.color);
         const alphaValue = Math.round(clampAlpha(customColor.alpha * colorAlpha) * 255);
         return [r, g, b, alphaValue];
+    };
+
+    const resolveAnnotationColor = (
+        annotation: AnnotationCanvasAnnotation,
+        colorAlpha: number,
+        customLabelColors: CustomLabelColorMap
+    ): [number, number, number, number] => {
+        if (!annotation.color) {
+            return resolveLabelColor(
+                annotation.annotation_label_name || 'label',
+                colorAlpha,
+                customLabelColors
+            );
+        }
+
+        const [r, g, b] = rgbaParser(annotation.color);
+        return [r, g, b, Math.round(clampAlpha(annotation.opacity ?? colorAlpha) * 255)];
     };
 
     const toCloneableRLE = (mask?: ArrayLike<number> | null): number[] => {
@@ -140,13 +198,11 @@
         const boxes: BoxPayload[] = [];
 
         for (const annotation of annotations) {
-            const labelName = annotation.annotation_label_name || 'label';
-
             const rle = toCloneableRLE(annotation.segmentation_mask);
             if (rle.length) {
                 masks.push({
                     rle,
-                    color: resolveLabelColor(labelName, alpha, customLabelColors)
+                    color: resolveAnnotationColor(annotation, alpha, customLabelColors)
                 });
             }
 
@@ -158,7 +214,7 @@
                     y: Math.round(bbox.y),
                     width: Math.round(bbox.width),
                     height: Math.round(bbox.height),
-                    color: resolveLabelColor(labelName, 1, customLabelColors)
+                    color: resolveAnnotationColor(annotation, 1, customLabelColors)
                 });
             }
         }
@@ -166,61 +222,40 @@
         return { masks, boxes };
     };
 
-    const drawBoxes = (
-        ctx: CanvasRenderingContext2D,
-        boxes: BoxPayload[],
-        canvasWidth: number,
-        canvasHeight: number,
-        stroke: number
-    ) => {
-        if (!boxes.length) {
-            return;
-        }
-
-        ctx.save();
-        ctx.lineWidth = stroke;
-        const clamp = (value: number, min: number, max: number) =>
-            Math.min(Math.max(value, min), max);
-
-        for (const box of boxes) {
-            ctx.strokeStyle = rgbaFromBytes(box.color);
-            const x = clamp(box.x, 0, canvasWidth);
-            const y = clamp(box.y, 0, canvasHeight);
-            const wBox = clamp(box.width, 0, canvasWidth - x);
-            const hBox = clamp(box.height, 0, canvasHeight - y);
-
-            if (wBox === 0 || hBox === 0) {
-                continue;
-            }
-
-            ctx.strokeRect(x, y, wBox, hBox);
-        }
-
-        ctx.restore();
-    };
-
     const render = (customLabelColors: CustomLabelColorMap = $customLabelColorsStore) => {
         const payload = buildRenderPayload(customLabelColors);
-        const scaleX = canvasEl && width ? canvasEl.clientWidth / width : 1;
-        const scaleY = canvasEl && height ? canvasEl.clientHeight / height : 1;
+        const geometry: RenderGeometry = {
+            sourceWidth,
+            sourceHeight,
+            outputWidth: canvasWidth,
+            outputHeight: canvasHeight,
+            objectFit,
+            sourceCrop: sourceCrop ? { ...sourceCrop } : undefined
+        };
+
+        // The HTML canvas owns its backing size only until it is transferred. After transfer,
+        // resizing it throws; subsequent OffscreenCanvas sizing happens in the worker.
+        if (canvasEl && !hasOffscreen) {
+            canvasEl.width = canvasWidth;
+            canvasEl.height = canvasHeight;
+        }
 
         if (!workerReady && payload.masks.length === 0) {
             if (!canvasEl) {
                 return;
             }
 
-            const ctx = canvasEl.getContext('2d', { willReadFrequently: true });
+            const ctx = getMainThreadContext({ willReadFrequently: true });
             if (!ctx) {
                 return;
             }
 
-            ctx.clearRect(0, 0, width, height);
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
             if (!payload.boxes.length) {
                 return;
             }
 
-            const scale = Math.max(scaleX, scaleY) || 1;
-            drawBoxes(ctx, payload.boxes, width, height, 2 / scale);
+            drawBoxesOnContext(ctx, transformBoxes(geometry, payload.boxes));
             return;
         }
 
@@ -234,18 +269,14 @@
 
         // Clear fallback canvas path to avoid stale pixels before new draw arrives.
         if (!hasOffscreen && canvasEl) {
-            const ctx = canvasEl.getContext('2d');
-            ctx?.clearRect(0, 0, width, height);
+            const ctx = getMainThreadContext();
+            ctx?.clearRect(0, 0, canvasWidth, canvasHeight);
         }
 
-        // Include current CSS scale so the worker can keep stroke widths consistent.
         worker.postMessage({
             type: 'render',
             canvasId,
-            width,
-            height,
-            scaleX,
-            scaleY,
+            ...geometry,
             ...payload
         });
     };
@@ -271,7 +302,7 @@
             stroke?: number;
         };
 
-        const ctx = canvasEl.getContext('2d', { willReadFrequently: true });
+        const ctx = getMainThreadContext({ willReadFrequently: true });
         if (!ctx) {
             return;
         }
@@ -284,26 +315,7 @@
             return;
         }
 
-        ctx.save();
-        ctx.lineWidth = stroke;
-        const clamp = (value: number, min: number, max: number) =>
-            Math.min(Math.max(value, min), max);
-
-        for (const box of boxes) {
-            ctx.strokeStyle = rgbaFromBytes(box.color);
-            const x = clamp(box.x, 0, w);
-            const y = clamp(box.y, 0, h);
-            const wBox = clamp(box.width, 0, w - x);
-            const hBox = clamp(box.height, 0, h - y);
-
-            if (wBox === 0 || hBox === 0) {
-                continue;
-            }
-
-            ctx.strokeRect(x, y, wBox, hBox);
-        }
-
-        ctx.restore();
+        drawBoxesOnContext(ctx, boxes, stroke);
     };
 
     const setupWorker = () => {
@@ -314,14 +326,17 @@
         worker = acquireMaskRendererWorker();
         worker.addEventListener('message', handleWorkerMessage);
 
-        if (canvasEl.transferControlToOffscreen) {
-            // Preferred path: worker draws directly into the canvas through OffscreenCanvas.
-            const offscreen = canvasEl.transferControlToOffscreen();
-            worker.postMessage({ type: 'init', canvasId, canvas: offscreen }, [offscreen]);
-            hasOffscreen = true;
-        } else {
-            // Fallback path: worker sends pixel buffers back and main thread paints them.
-            hasOffscreen = false;
+        if (canvasEl.transferControlToOffscreen && !hasMainThreadContext) {
+            try {
+                // Preferred path: worker draws directly into the canvas through OffscreenCanvas.
+                const offscreen = canvasEl.transferControlToOffscreen();
+                worker.postMessage({ type: 'init', canvasId, canvas: offscreen }, [offscreen]);
+                hasOffscreen = true;
+            } catch {
+                // A browser may reject transfer if any code acquired a context first. Keep the
+                // canvas main-thread-owned and use worker-produced pixel buffers in that case.
+                hasOffscreen = false;
+            }
         }
 
         workerReady = true;
@@ -329,11 +344,6 @@
 
     onMount(() => {
         rgbaParser = createColorParser();
-
-        if (canvasEl && 'ResizeObserver' in window) {
-            resizeObserver = new ResizeObserver(() => render());
-            resizeObserver.observe(canvasEl);
-        }
     });
 
     onDestroy(() => {
@@ -343,7 +353,6 @@
             releaseMaskRendererWorker(worker);
             worker = null;
         }
-        resizeObserver?.disconnect();
     });
 
     $effect(() => {
@@ -352,7 +361,7 @@
     });
 </script>
 
-<canvas bind:this={canvasEl} {width} {height} class={className}></canvas>
+<canvas bind:this={canvasEl} class={className}></canvas>
 
 <style>
     canvas {

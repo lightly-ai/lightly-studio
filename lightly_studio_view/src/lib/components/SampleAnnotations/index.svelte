@@ -22,16 +22,21 @@
 
     const {
         sample,
-        objectFit = 'contain'
+        objectFit = 'contain',
+        outputWidth = sample.width,
+        outputHeight = sample.height
     }: {
         sample: SampleView;
         objectFit?: SampleImageObjectFit;
+        outputWidth?: number;
+        outputHeight?: number;
     } = $props();
 
     const { isHidden } = useHideAnnotations();
     const { hiddenClassNamesStore } = useAnnotationClassVisibility();
     const { showBoundingBoxesForSegmentationStore, enforceColoringByClassStore } = useSettings();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { isSourceVisible, multipleSourcesVisible, collectionIdToName } =
+        useAnnotationCollectionsFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
     const mapToCanvasAnnotation = (
@@ -68,20 +73,16 @@
 
     const annotationsWithVisuals: AnnotationCanvasAnnotation[] = $derived.by(() => {
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
-        const selectedIds = $selectedCollectionIds;
+        const sourceIsVisible = $isSourceVisible;
         const idToName = $collectionIdToName;
         const hiddenClasses = $hiddenClassNamesStore;
         const colorBySource = resolveEffectiveColorBySource({
-            multipleSourcesVisible: selectedIds.length > 1,
+            multipleSourcesVisible: $multipleSourcesVisible,
             enforceColoringByClass: $enforceColoringByClassStore
         });
 
         return sample.annotations
-            .filter(
-                (annotation) =>
-                    selectedIds.length === 0 ||
-                    selectedIds.includes(annotation.annotation_collection_id)
-            )
+            .filter((annotation) => sourceIsVisible(annotation.annotation_collection_id))
             .filter((annotation) => annotation.annotation_type !== 'classification')
             .filter(
                 (annotation) =>
@@ -119,8 +120,11 @@
     <div data-testid="sample-annotation-item">
         <AnnotationCanvas
             sampleId={sample.sample_id}
-            width={sample.width}
-            height={sample.height}
+            sourceWidth={sample.width}
+            sourceHeight={sample.height}
+            {outputWidth}
+            {outputHeight}
+            {objectFit}
             annotations={annotationsWithVisuals}
             alpha={0.8}
             className={`pointer-events-none absolute inset-0 z-[1] h-full w-full ${objectFitClass}`}

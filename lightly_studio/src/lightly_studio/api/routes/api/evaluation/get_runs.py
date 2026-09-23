@@ -9,7 +9,7 @@ from fastapi import APIRouter, Path
 
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.evaluation_run import EvaluationRunView
-from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver
+from lightly_studio.resolvers import evaluation_run_resolver
 
 get_runs_router = APIRouter()
 
@@ -31,24 +31,7 @@ def get_evaluation_runs(
     Returns:
         List of evaluation runs, each with id, name, and run configuration.
     """
-    runs = evaluation_run_resolver.get_all_by_dataset_id(
+    return evaluation_run_resolver.list_views_by_dataset_id(
         session=session,
         dataset_id=dataset_id,
     )
-    collection_name_by_id = collection_resolver.get_names_by_ids(
-        session=session,
-        collection_ids={run.gt_annotation_collection_id for run in runs}
-        | {run.pred_annotation_collection_id for run in runs},
-    )
-
-    return [
-        EvaluationRunView(
-            id=run.id,
-            name=run.name,
-            evaluation_run_configuration=run.config_json,
-            created_at=run.created_at,
-            gt_annotation_source=collection_name_by_id[run.gt_annotation_collection_id],
-            pred_annotation_source=collection_name_by_id[run.pred_annotation_collection_id],
-        )
-        for run in runs
-    ]

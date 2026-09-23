@@ -7,6 +7,8 @@ class MockImage {
     static instances: MockImage[] = [];
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
+    naturalWidth = 640;
+    naturalHeight = 480;
     src = '';
     constructor() {
         MockImage.instances.push(this);
@@ -27,7 +29,7 @@ describe('PlotHoverPreview', () => {
         render(PlotHoverPreview, {
             props: {
                 sampleId: 'sample-a',
-                resolveThumbnailUrl: () => Promise.resolve('https://example.com/thumb.jpg')
+                resolveThumbnail: () => Promise.resolve({ url: 'https://example.com/thumb.jpg' })
             }
         });
 
@@ -42,11 +44,49 @@ describe('PlotHoverPreview', () => {
         expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 
+    it('positions annotation images and bounding boxes around the padded crop region', async () => {
+        const annotation = {
+            parent_sample_id: 'parent-a',
+            sample_id: 'annotation-a',
+            annotation_collection_id: 'collection-a',
+            annotation_type: 'object_detection' as const,
+            annotation_label: { annotation_label_name: 'car' },
+            created_at: new Date(),
+            object_detection_details: { x: 10, y: 20, width: 30, height: 40 }
+        };
+        const { container } = render(PlotHoverPreview, {
+            props: {
+                sampleId: 'annotation-a',
+                resolveThumbnail: () =>
+                    Promise.resolve({
+                        url: 'https://example.com/full-image.jpg',
+                        annotation
+                    })
+            }
+        });
+
+        await waitFor(() => expect(MockImage.instances).toHaveLength(1));
+        MockImage.instances[0].onload?.();
+
+        const preview = screen.getByTestId('plot-hover-preview');
+        expect(preview).toHaveClass('relative', 'overflow-hidden');
+        await waitFor(() => expect(container.querySelector('.crop')).not.toBeNull());
+        const crop = container.querySelector('.crop');
+        expect(crop).toHaveStyle({ backgroundImage: 'url(https://example.com/full-image.jpg)' });
+        const annotationBox = container.querySelector('.annotation-box');
+        expect(annotationBox).toHaveStyle({
+            left: '40px',
+            top: '32px',
+            width: '48px',
+            height: '64px'
+        });
+    });
+
     it('renders nothing when the thumbnail cannot be resolved', async () => {
         render(PlotHoverPreview, {
             props: {
                 sampleId: 'sample-a',
-                resolveThumbnailUrl: () => Promise.resolve(null)
+                resolveThumbnail: () => Promise.resolve(null)
             }
         });
 

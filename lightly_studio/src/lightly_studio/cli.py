@@ -3,17 +3,79 @@
 from __future__ import annotations
 
 from importlib import metadata
+from pathlib import Path
 
 import click
 
 import lightly_studio
+from lightly_studio.analytics import tracking
+from lightly_studio.analytics.tracking import LaunchSource
 from lightly_studio.database import db_manager
+from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 
 
 @click.group()
 @click.version_option(version=metadata.version("lightly-studio"), prog_name="lightly-studio")
 def main() -> None:
     """LightlyStudio CLI."""
+
+
+@main.command()
+@click.option("--port", default=None, type=int, help="Port to bind the server to.")
+@click.option(
+    "--force-download",
+    is_flag=True,
+    default=False,
+    help="Re-download the demo dataset even if already cached.",
+)
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    default=False,
+    help="Do not open a browser automatically once the GUI server is ready.",
+)
+def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None:
+    """Launch the GUI preloaded with a COCO object detection evaluation demo dataset."""
+    dataset_path = Path(
+        lightly_studio.utils.download_example_dataset(
+            download_dir="dataset_examples",
+            force_redownload=force_download,
+        )
+    )
+    coco_dir = dataset_path / "coco_subset_128_images"
+    images_path = coco_dir / "images"
+    evaluation_config = ObjectDetectionEvaluationConfig(
+        iou_threshold=0.5,
+        classwise=False,
+    )
+
+    db_manager.connect(db_file="quickstart.db", cleanup_existing=True)
+    dataset = lightly_studio.ImageDataset.create()
+    dataset.add_images_from_path(path=images_path)
+    dataset.add_annotations_from_coco(
+        annotations_json=coco_dir / "instances_train2017.json",
+        images_root=images_path,
+        annotation_source="ground_truth",
+    )
+    dataset.add_annotations_from_coco(
+        annotations_json=coco_dir / "predictions_train2017.json",
+        images_root=images_path,
+        annotation_source="predictions",
+    )
+    # Tag a subset of samples to demonstrate tags in the GUI.
+    dataset.query()[:10].add_tag("sample_subset")
+    dataset.evaluate().object_detection(
+        name="od_evaluation",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
+        config=evaluation_config,
+    )
+
+    tracking.track(
+        event=tracking.APP_LAUNCHED,
+        properties={"launch_source": LaunchSource.QUICKSTART.value},
+    )
+    lightly_studio.start_gui(port=port, open_browser=not no_browser)
 
 
 @main.command()
@@ -43,4 +105,8 @@ def gui(
     if db_file is not None and db_url is not None:
         raise click.UsageError("Options '--db-file' and '--db-url' are mutually exclusive.")
     db_manager.connect(db_file=db_file, db_url=db_url, must_exist=True)
+    tracking.track(
+        event=tracking.APP_LAUNCHED,
+        properties={"launch_source": LaunchSource.GUI.value},
+    )
     lightly_studio.start_gui(host=host, port=port)

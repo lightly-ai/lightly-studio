@@ -10,6 +10,8 @@
         similarityDisabledReason?: string;
         metadataWeightingDisabledReason?: string;
         classBalancingDisabledReason?: string;
+        metadataBalancingDisabledReason?: string;
+        subpartDiversityDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
         onMenuOpen?: () => void;
     }
@@ -19,6 +21,8 @@
         similarityDisabledReason,
         metadataWeightingDisabledReason,
         classBalancingDisabledReason,
+        metadataBalancingDisabledReason,
+        subpartDiversityDisabledReason,
         onAdd,
         onMenuOpen
     }: Props = $props();
@@ -36,6 +40,8 @@
         if (type === 'similarity') return similarityDisabledReason;
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;
+        if (type === 'metadata_balancing') return metadataBalancingDisabledReason;
+        if (type === 'subpart_diversity') return subpartDiversityDisabledReason;
         return undefined;
     }
 

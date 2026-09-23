@@ -12,7 +12,7 @@ import { runGuardrails } from './run-guardrails';
 
 // CI entry: runs the guardrails in a PR workflow. Mirrors the local cli.ts but
 // swaps git for the read-only GitHub API; it only judges, and writes the verdict
-// to a file the bot later consumes (design §2.2). Never holds a write token, never acts.
+// to a file the bot later consumes. Never holds a write token, never acts.
 
 // cwd-relative, so it lands at fast_track/verdict.json (the workflow's upload path).
 const VERDICT_PATH = 'verdict.json';
@@ -67,8 +67,7 @@ async function main(env: NodeJS.ProcessEnv): Promise<void> {
         baseRef: routing.baseRef
     });
 
-    // hasPrContext: true — unlike the local CLI, pr-only guardrails run here.
-    const selected = selectGuardrails(guardrails, { hasPrContext: true });
+    const selected = selectGuardrails(guardrails);
     const run = await runGuardrails(guardrailContext, selected);
     const verdict = buildVerdict(run, routing);
 

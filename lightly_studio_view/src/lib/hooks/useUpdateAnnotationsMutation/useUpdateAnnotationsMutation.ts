@@ -3,21 +3,33 @@ import { updateAnnotationsMutation } from '$lib/api/lightly_studio_local/@tansta
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
+import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
+import { useInvalidateEvaluationRunsQueries } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 
-export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: string }) => {
+export const useUpdateAnnotationsMutation = ({
+    getCollectionId
+}: {
+    getCollectionId: () => string;
+}) => {
     const mutation = createMutation(() => updateAnnotationsMutation());
 
     const client = useQueryClient();
     const { trackEvent } = usePostHog();
+    const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
+    const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
 
-    const refetch = () => {
+    const refetch = (collectionId: string) => {
+        invalidateAnnotationGridQueries(collectionId);
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
+        // Annotation mutations can mark evaluation runs as stale, so refresh the runs list.
+        invalidateEvaluationRunsQueries();
     };
 
     const updateAnnotations = (inputs: AnnotationUpdateInput[]) =>
         new Promise<void>((resolve, reject) => {
+            const collectionId = getCollectionId();
             mutation.mutate(
                 {
                     path: {
@@ -27,7 +39,7 @@ export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: s
                 },
                 {
                     onSuccess: () => {
-                        refetch();
+                        refetch(collectionId);
                         const labelInputs = inputs.filter((input) => input.label_name != null);
                         if (inputs.length === 1) {
                             trackEvent('annotation_label_updated', {

@@ -1,10 +1,9 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import Select from '$lib/components/Select/Select.svelte';
-    import { Spinner } from '$lib/components';
+    import { Button } from '$lib/components';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import ObjectDetectionConfigFields from './ObjectDetectionConfigFields.svelte';
     import { useTriggerEvaluation } from './useTriggerEvaluation.svelte';
@@ -182,24 +181,25 @@
                 <Dialog.Footer>
                     <Button
                         variant="outline"
-                        type="button"
-                        onclick={() => onOpenChange(false)}
-                        disabled={isSubmitting}
-                        data-testid="trigger-evaluation-cancel"
+                        buttonProps={{
+                            type: 'button',
+                            onclick: () => onOpenChange(false),
+                            disabled: isSubmitting,
+                            'data-testid': 'trigger-evaluation-cancel'
+                        }}
                     >
                         Cancel
                     </Button>
                     <Button
-                        type="submit"
-                        disabled={!canSubmit}
-                        data-testid="trigger-evaluation-submit"
+                        variant="default"
+                        isPending={isSubmitting}
+                        buttonProps={{
+                            type: 'submit',
+                            disabled: !canSubmit,
+                            'data-testid': 'trigger-evaluation-submit'
+                        }}
                     >
-                        {#if isSubmitting}
-                            <Spinner size="small" />
-                            Evaluating…
-                        {:else}
-                            Start evaluation
-                        {/if}
+                        {isSubmitting ? 'Evaluating…' : 'Start evaluation'}
                     </Button>
                 </Dialog.Footer>
             </form>

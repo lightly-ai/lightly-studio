@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildRequestBody, type ImagesInfiniteParams } from './useImagesInfinite';
-import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
+import type { ImageSortFieldExpr } from '$lib/api/lightly_studio_local';
 import type { QueryClient, CreateInfiniteQueryResult } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
 import { useImagesInfinite } from './useImagesInfinite';
@@ -39,8 +39,8 @@ describe('useImagesInfinite', () => {
 
     describe('sort_by in query key', () => {
         it('includes sort_by in the query key when provided', () => {
-            const sort: SortFieldExpr[] = [
-                { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+            const sort: ImageSortFieldExpr[] = [
+                { source: 'image', field_name: 'score', direction: 'desc' }
             ];
 
             useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: sort }));
@@ -55,11 +55,11 @@ describe('useImagesInfinite', () => {
         });
 
         it('produces different query keys for different sort_by values', () => {
-            const sort1: SortFieldExpr[] = [
-                { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+            const sort1: ImageSortFieldExpr[] = [
+                { source: 'image', field_name: 'score', direction: 'desc' }
             ];
-            const sort2: SortFieldExpr[] = [
-                { source: 'image', field_name: 'filename', direction: 'asc', is_numeric: false }
+            const sort2: ImageSortFieldExpr[] = [
+                { source: 'image', field_name: 'filename', direction: 'asc' }
             ];
 
             useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: sort1 }));
@@ -74,8 +74,8 @@ describe('useImagesInfinite', () => {
 
     describe('sort_by in request body', () => {
         it('passes sort_by to readImages when provided', async () => {
-            const sort: SortFieldExpr[] = [
-                { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+            const sort: ImageSortFieldExpr[] = [
+                { source: 'image', field_name: 'score', direction: 'desc' }
             ];
 
             useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: sort }));

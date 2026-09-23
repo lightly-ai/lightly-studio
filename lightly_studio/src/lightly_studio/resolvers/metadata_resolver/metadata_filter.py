@@ -155,13 +155,18 @@ def apply_metadata_filters(
                 _build_in_condition(metadata_model=metadata_model, metadata_filter=meta_filter)
             )
             continue
-        extract_expr = db_json.json_extract(
-            column=metadata_model.data,
-            field=meta_filter.key,
-            cast_to_float=isinstance(meta_filter.value, (int, float)),
+        # Numbers compare as floats, everything else as text. A bool is an int in
+        # Python, but both databases read it back as "true" or "false", so it is text.
+        is_boolean = isinstance(meta_filter.value, bool)
+        extract = (
+            db_json.json_extract_as_float
+            if isinstance(meta_filter.value, (int, float)) and not is_boolean
+            else db_json.json_extract_as_text
         )
+        value = str(meta_filter.value).lower() if is_boolean else meta_filter.value
+        extract_expr = extract(column=metadata_model.data, field=meta_filter.key)
         compare_op = _OP_MAP[meta_filter.op]
-        condition = compare_op(extract_expr, db_json.json_literal(meta_filter.value))
+        condition = compare_op(extract_expr, value)
         query = query.where(condition)
 
     return query
@@ -171,8 +176,8 @@ def _build_in_condition(
     metadata_model: type[M], metadata_filter: MetadataFilter
 ) -> ColumnElement[bool]:
     """Build an OR predicate for a validated categorical ``in`` filter."""
-    extract_expr = db_json.json_extract_string(
-        column=metadata_model.data, field=metadata_filter.key
+    extract_expr = db_json.json_extract_key_as_text(
+        column=metadata_model.data, key=metadata_filter.key
     )
     values = [
         str(value).lower() if isinstance(value, bool) else value

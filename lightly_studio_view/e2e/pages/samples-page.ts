@@ -24,7 +24,7 @@ export class SamplesPage {
 
     async startEditing() {
         await this.page.getByTestId('header-editing-mode-button').click();
-        await expect(this.page.getByText('Done')).toBeVisible();
+        await expect(this.page.getByText('Finish Editing')).toBeVisible();
     }
 
     async doubleClickFirstSample() {
@@ -256,5 +256,19 @@ export class SamplesPage {
     async doubleClickNthSample(index: number): Promise<void> {
         await this.getSampleByIndex(index).dblclick();
         await this.page.getByTestId('sample-details-loading').waitFor({ state: 'hidden' });
+    }
+
+    getBulkClassificationPicker(field: string) {
+        return this.page.getByRole('combobox', { name: new RegExp(`^${field}`) });
+    }
+
+    getBulkClassificationApplyButton() {
+        return this.page.getByRole('button', { name: 'Add annotation class' });
+    }
+
+    async pickBulkClassificationName(field: string, name: string): Promise<void> {
+        await this.getBulkClassificationPicker(field).click();
+        await this.page.getByTestId('select-list-input').fill(name);
+        await this.page.getByRole('option', { name, exact: true }).click();
     }
 }

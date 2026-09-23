@@ -31,8 +31,6 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos, video_dataset
 from lightly_studio.core.video.add_videos import FrameExtractionContext
-from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
-from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -43,7 +41,7 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
-from tests.helpers_resolvers import create_collection
+from tests.helpers_resolvers import create_collection, create_embedding_model
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_videos
 
 
@@ -64,12 +62,12 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         num_frames=30,
         fps=2,
     )
-    video_sample_ids, frame_sample_ids = add_videos.load_into_collection_from_paths(
+    video_path_to_id, frame_sample_ids = add_videos.load_into_collection_from_paths(
         session=db_session,
         collection_id=collection.collection_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
-    assert len(video_sample_ids) == 2
+    assert len(video_path_to_id) == 2
     assert len(frame_sample_ids) == 60
 
     # Check that video samples are created.
@@ -83,9 +81,11 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert video.file_path_abs == str(second_video_path)
     assert video.frame is not None
     assert video.frame.frame_number == 0
+    assert video_path_to_id[str(second_video_path)] == video.sample_id
     video = videos[1]
     assert video.file_name == "test_video_1.mp4"
     assert video.file_path_abs == str(first_video_path)
+    assert video_path_to_id[str(first_video_path)] == video.sample_id
 
     # Check the correct collection hierarchy was created. There should be one extra collection
     # created with the video frames.
@@ -102,6 +102,30 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         collection_id=collection_hierarchy[1].collection_id,
     ).samples
     assert len(video_frames) == 60
+
+
+def test_load_into_collection_from_paths__normalizes_relative_path(
+    db_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A relative video path is normalized to an absolute file_path_abs, matching images."""
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=2, fps=1)
+    monkeypatch.chdir(tmp_path)
+
+    video_path_to_id, _ = add_videos.load_into_collection_from_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video_paths=["video.mp4"],
+    )
+
+    normalized_path = str(video_path.absolute())
+    assert video_path_to_id.keys() == {normalized_path}
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(videos) == 1
+    assert videos[0].file_path_abs == normalized_path
+    assert video_path_to_id[normalized_path] == videos[0].sample_id
 
 
 def test_load_into_collection_from_paths__records_missing_broken_already_present_outcomes(
@@ -136,7 +160,7 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
 
     # Act
     with caplog.at_level("INFO"):
-        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
             session=db_session,
             collection_id=collection.collection_id,
             video_paths=[
@@ -145,8 +169,10 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
             ],
         )
 
-    # Assert: only the good video is added.
-    assert len(video_sample_ids) == len(good_paths)
+    # Assert: the mapping only contains entries for the newly-created (good) video, correctly
+    # matched to the sample actually created for that path. Already-present, missing, and
+    # broken paths have no entry.
+    assert set(video_path_to_id.keys()) == {str(path) for path in good_paths}
     videos = video_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
@@ -155,6 +181,8 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
         "present0.mp4",
         "present1.mp4",
     }
+    good_video = next(video for video in videos if video.file_name == "good0.mp4")
+    assert video_path_to_id[str(good_paths[0])] == good_video.sample_id
 
     # Assert: the end-of-run summary records the distinct per-outcome counts.
     assert "added=1" in caplog.text
@@ -175,7 +203,7 @@ def test_load_into_collection_from_paths__mid_decode_failure_is_cleaned_up(
     _fail_after_frame_creation(mocker=mocker, failing_file_name=broken_path.name)
 
     with caplog.at_level("INFO"):
-        video_sample_ids, _ = add_videos.load_into_collection_from_paths(
+        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
             session=db_session,
             collection_id=collection.collection_id,
             video_paths=[str(broken_path), str(good_path)],
@@ -185,7 +213,7 @@ def test_load_into_collection_from_paths__mid_decode_failure_is_cleaned_up(
         session=db_session, collection_id=collection.collection_id
     ).samples
     assert [video.file_name for video in videos] == [good_path.name]
-    assert video_sample_ids == [videos[0].sample_id]
+    assert video_path_to_id == {str(good_path): videos[0].sample_id}
     assert "added=1" in caplog.text
     assert "broken=1" in caplog.text
 
@@ -234,6 +262,79 @@ def _fail_after_frame_creation(
         "_create_video_frame_samples",
         side_effect=create_frames_then_maybe_fail,
     )
+
+
+@pytest.mark.parametrize("reported_size", [None, 128 * 2**20, 128 * 2**20 + 1])
+def test_load_into_collection_from_paths__reads_remote_videos(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture, reported_size: int | None
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    local_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=5, fps=5)
+    remote_path = _write_to_memory_filesystem(local_path=local_path, name="video.mp4")
+
+    fs, _ = fsspec.core.url_to_fs(url=remote_path)
+    mocker.patch.object(type(fs), "info", return_value={"size": reported_size})
+    download = mocker.spy(type(fs), "cat_file")
+
+    video_path_to_id, frame_sample_ids = add_videos.load_into_collection_from_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video_paths=[remote_path, remote_path],
+        show_progress=False,
+    )
+
+    assert set(video_path_to_id) == {remote_path}
+    video = video_resolver.get_by_id(session=db_session, sample_id=video_path_to_id[remote_path])
+    assert video is not None
+    assert video.file_path_abs == remote_path
+    assert video.fps == 5
+    assert sorted(frame.frame_number for frame in video.frames) == list(range(5))
+    assert download.call_count == (reported_size == 128 * 2**20)
+    assert len(frame_sample_ids) == 5
+
+
+def test__fetch_video__leaves_local_files_unread(tmp_path: Path, mocker: MockerFixture) -> None:
+    """A local file is decoded straight from disk, so reading it up front is skipped."""
+    local_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=2, fps=1)
+
+    fs, _ = fsspec.core.url_to_fs(url=str(local_path))
+    download = mocker.spy(type(fs), "cat_file")
+
+    fetched = add_videos._fetch_video(video_path=str(local_path))
+
+    assert fetched.error is None
+    assert fetched.content is None
+    download.assert_not_called()
+
+
+def test_load_into_collection_from_paths__continues_after_download_failure(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    local_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=2, fps=1)
+    remote_path = _write_to_memory_filesystem(local_path=local_path, name="broken.mp4")
+    fs, _ = fsspec.core.url_to_fs(url=remote_path)
+    mocker.patch.object(type(fs), "cat_file", side_effect=OSError("Download failed"))
+
+    with caplog.at_level("INFO"):
+        videos, frames = add_videos.load_into_collection_from_paths(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video_paths=[remote_path, str(local_path)],
+            show_progress=False,
+        )
+
+    assert set(videos) == {str(local_path)}
+    assert len(frames) == 2
+    assert "broken=1" in caplog.text
+
+
+def _write_to_memory_filesystem(local_path: Path, name: str) -> str:
+    """Copy a file onto fsspec's in-memory filesystem and return its remote-style path."""
+    memory_path = f"memory://videos/{name}"
+    filesystem, filesystem_path = fsspec.core.url_to_fs(url=memory_path)
+    filesystem.pipe_file(filesystem_path, local_path.read_bytes())
+    return memory_path
 
 
 def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
@@ -309,6 +410,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     video_file.close()
 
 
+@pytest.mark.usefixtures("patch_collection")
 def test__create_video_frame_samples__embed_frames(
     db_session: Session,
     tmp_path: Path,
@@ -342,11 +444,11 @@ def test__create_video_frame_samples__embed_frames(
         sample_type=SampleType.VIDEO_FRAME,
     )
 
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.register_embedding_model(
+    model_id = create_embedding_model(
         session=db_session,
         collection_id=video_frames_collection_id,
-        embedding_generator=RandomEmbeddingGenerator(),
+        embedding_model_name="random_model",
+        embedding_dimension=3,
         set_as_default=True,
     ).embedding_model_id
 
@@ -360,7 +462,6 @@ def test__create_video_frame_samples__embed_frames(
             collection_id=video_frames_collection_id,
             video_sample_id=video_sample_id,
             embed_frames=True,
-            embedding_model_id=model_id,
         ),
         video_container=video_container,
         video_channel=0,

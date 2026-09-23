@@ -4,16 +4,16 @@ import { get, readonly, writable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 
 interface Options {
-    collectionId: string;
-    sampleId: string;
+    getCollectionId: () => string;
+    getSampleId: () => string;
     getTagKind: () => TagView['kind'];
     onRefetch: () => void;
     onTagsRefetch: () => void;
 }
 
 export function useAddTagToSample({
-    collectionId,
-    sampleId,
+    getCollectionId,
+    getSampleId,
     getTagKind,
     onRefetch,
     onTagsRefetch
@@ -26,8 +26,8 @@ export function useAddTagToSample({
         _busy.set(true);
         try {
             const response = await addSampleIdsToTagId({
-                path: { collection_id: collectionId, tag_id: tag.tag_id },
-                body: { sample_ids: [sampleId] }
+                path: { collection_id: getCollectionId(), tag_id: tag.tag_id },
+                body: { sample_ids: [getSampleId()] }
             });
             if (response.error) throw new Error('assign tag failed');
         } catch {
@@ -43,6 +43,7 @@ export function useAddTagToSample({
         const trimmed = name.trim();
         if (!trimmed || get(_busy)) return;
         _busy.set(true);
+        const collectionId = getCollectionId();
         try {
             const response = await createTag({
                 path: { collection_id: collectionId },
@@ -52,7 +53,7 @@ export function useAddTagToSample({
             if (response.data?.tag_id) {
                 const addResponse = await addSampleIdsToTagId({
                     path: { collection_id: collectionId, tag_id: response.data.tag_id },
-                    body: { sample_ids: [sampleId] }
+                    body: { sample_ids: [getSampleId()] }
                 });
                 if (addResponse.error) throw new Error('assign tag failed');
             }

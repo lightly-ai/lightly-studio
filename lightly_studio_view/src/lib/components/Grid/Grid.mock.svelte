@@ -9,9 +9,10 @@
         [key: string]: unknown;
     }
 
-    let { itemCount, gridItem, footerItem }: Props = $props();
+    let { itemCount, gridItem, footerItem, scrollResetKey }: Props = $props();
 </script>
 
+<span data-testid="mock-grid-scroll-reset-key">{scrollResetKey}</span>
 {#each Array.from({ length: itemCount }, (_, i) => i) as index}
     {@render gridItem({ index, style: '', width: 200, height: 150 })}
 {/each}

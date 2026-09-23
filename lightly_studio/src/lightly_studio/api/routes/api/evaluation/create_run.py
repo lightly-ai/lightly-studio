@@ -16,6 +16,7 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
     EvaluationResult,
+    InstanceSegmentationEvaluationConfig,
     ObjectDetectionEvaluationConfig,
     SemanticSegmentationEvaluationConfig,
 )
@@ -68,10 +69,20 @@ class SemanticSegmentationEvaluationRunCreateRequest(_EvaluationRunCreateRequest
     )
 
 
+class InstanceSegmentationEvaluationRunCreateRequest(_EvaluationRunCreateRequestBase):
+    """Request model for triggering an instance-segmentation evaluation run."""
+
+    task_type: Literal[EvaluationTaskType.INSTANCE_SEGMENTATION]
+    config: InstanceSegmentationEvaluationConfig = Field(
+        default_factory=InstanceSegmentationEvaluationConfig
+    )
+
+
 EvaluationRunCreateRequest = Annotated[
     Union[
         ObjectDetectionEvaluationRunCreateRequest,
         ClassificationEvaluationRunCreateRequest,
+        InstanceSegmentationEvaluationRunCreateRequest,
         SemanticSegmentationEvaluationRunCreateRequest,
     ],
     Field(discriminator="task_type"),

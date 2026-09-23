@@ -7,6 +7,7 @@
     } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import { DISTRIBUTION_SORT_LABELS, type DistributionConfig } from '../types';
+    import { ValueModeSelect, type ValueMode } from './ValueModeSelect';
 
     interface Props {
         /** Applied view config (top-N, sort order, orientation). */
@@ -17,10 +18,21 @@
         visibleClassCount: number;
         /** Sum of counts across all classes, for the summary line. Omit to hide the count. */
         totalCount?: number;
+        /** Number of compared sample-tag series; shown instead of a combined count. */
+        seriesCount?: number;
         /** Noun for the total count summary (e.g. 'annotations', 'samples'). */
         valueNoun?: string;
+        /** Singular/plural labels for the distributed categories. */
+        categoryNoun?: string;
+        categoryNounPlural?: string;
+        /** Labels for the active sort mode. */
+        sortLabels?: Record<keyof typeof DISTRIBUTION_SORT_LABELS, string>;
         /** Opens the view-config dialog (top-N and sort order). */
         onConfigure: () => void;
+        /** Current value mode shown in the selector (default 'number'). */
+        valueMode?: ValueMode;
+        /** Switches the chart between raw counts and percentage distributions. */
+        onValueModeChange?: (mode: ValueMode) => void;
         /** Quick action showing all classes; rendered only while a subset is visible. */
         onShowAll?: () => void;
         /** Toggles between vertical and horizontal bar layouts. */
@@ -36,8 +48,14 @@
         classCount,
         visibleClassCount,
         totalCount,
+        seriesCount,
         valueNoun = 'annotations',
+        categoryNoun = 'class',
+        categoryNounPlural = 'classes',
+        sortLabels = DISTRIBUTION_SORT_LABELS,
         onConfigure,
+        valueMode = 'number',
+        onValueModeChange,
         onShowAll,
         onToggleOrientation,
         onExpand,
@@ -45,19 +63,23 @@
     }: Props = $props();
 </script>
 
-<div class="mb-1 flex flex-row items-center gap-2">
-    <div class="mb-2 flex-1 text-xs text-muted-foreground">
+<div class="flex flex-row items-center gap-2">
+    <div class="flex-1 text-xs text-muted-foreground">
         {#if visibleClassCount < classCount}
             {config.mode === 'manual' ? 'Showing' : 'Top'}
-            {visibleClassCount} of {classCount} classes
+            {visibleClassCount} of {classCount}
+            {categoryNounPlural}
         {:else}
             {classCount}
-            {classCount === 1 ? 'class' : 'classes'}
+            {classCount === 1 ? categoryNoun : categoryNounPlural}
         {/if}
-        · sorted by {DISTRIBUTION_SORT_LABELS[config.sortBy].toLowerCase()}
+        · sorted by {sortLabels[config.sortBy].toLowerCase()}
         {#if totalCount !== undefined}
-            · {totalCount.toLocaleString('en-US')}
+            · {valueMode === 'percentage' ? '100% of ' : ''}{totalCount.toLocaleString('en-US')}
             {valueNoun}
+        {/if}
+        {#if seriesCount !== undefined}
+            · {seriesCount} sample {seriesCount === 1 ? 'tag' : 'tags'}
         {/if}
         {#if onShowAll && visibleClassCount < classCount}
             ·
@@ -86,10 +108,17 @@
             }}
         />
     {/if}
+    {#if onValueModeChange}
+        <ValueModeSelect
+            value={valueMode}
+            testId={`${testIdPrefix}-value-mode`}
+            onChange={onValueModeChange}
+        />
+    {/if}
     <Button
         variant="ghost"
         icon={SettingsIcon}
-        ariaLabel="Configure distribution classes"
+        ariaLabel="Configure distribution {categoryNounPlural}"
         buttonProps={{
             size: 'sm',
             class: 'h-8 gap-1',

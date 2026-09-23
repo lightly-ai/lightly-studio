@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import ConfusionMatrix from '../ConfusionMatrix.svelte';
     import type { ConfusionCellSelection, ConfusionMatrix as ConfusionMatrixData } from '../types';
     import ClassSetDialog from '../ClassSetDialog/ClassSetDialog.svelte';
@@ -37,7 +38,7 @@
 
     let config: ClassSetConfig = $state({
         mode: 'topN',
-        n: topN,
+        n: untrack(() => topN),
         sortBy: 'most-confused',
         manualClasses: []
     });

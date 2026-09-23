@@ -1,23 +1,32 @@
 <script lang="ts">
-    import { Maximize2 as Maximize2Icon, X } from '@lucide/svelte';
+    import DistributionPlotContainer from './DistributionPlotContainer/DistributionPlotContainer.svelte';
+    import { untrack } from 'svelte';
+    import { X } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { BarChart, type CategoryCount } from '$lib/components/BarChart';
+    import type { CategoryCountSeries } from '$lib/components/BarChart/types';
     import { Histogram, type HistogramRange } from '$lib/components/Histogram';
-    import { formatFloat, formatInteger } from '$lib/utils';
     import DistributionConfigDialog from './DistributionConfigDialog/DistributionConfigDialog.svelte';
     import ExpandDialog from './ExpandDialog/ExpandDialog.svelte';
     import HistogramExpandDialog from './HistogramExpandDialog/HistogramExpandDialog.svelte';
     import PanelHeader from './PanelHeader/PanelHeader.svelte';
+    import { TagComparisonSelect } from './TagComparisonSelect';
     import { selectVisibleCounts } from './selectVisibleCounts';
+    import { selectCategoricalCounts, selectCategoricalSeries } from './selectCategoricalCounts';
     import {
+        CATEGORICAL_DISTRIBUTION_SORT_LABELS,
         HISTOGRAM_BIN_COUNT_ITEMS,
         type DistributionConfig,
         type DistributionSource,
         type DistributionSourceGroup
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
+    import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
+    import HistogramToolbar from './HistogramToolbar/HistogramToolbar.svelte';
+    import type { ValueMode } from './PanelHeader/ValueModeSelect';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
 
     interface Props {
         /**
@@ -59,6 +68,20 @@
         histogramBinCount?: number;
         /** Called when the user picks a new histogram bin count. */
         onHistogramBinCountChange?: (binCount: number) => void;
+        /** Called when a concrete categorical value or Missing is toggled. */
+        onCategoricalValueToggle?: (groupId: string, value: CategoricalMetadataValue) => void;
+        /** Removes every categorical value selected for the given group. */
+        onCategoricalValuesClear?: (groupId: string) => void;
+        /** Retries a failed categorical distribution request. */
+        onCategoricalRetry?: () => void;
+        /** Sample tags available for an independent class-distribution comparison. */
+        comparisonTagItems?: SelectItem[];
+        /** IDs of the sample tags currently included in the comparison. */
+        selectedComparisonTagIds?: string[];
+        /** Updates the independent comparison selection without changing the grid filter. */
+        onComparisonTagIdsChange?: (ids: string[]) => void;
+        /** Called when the active distribution source or group changes. */
+        onGroupChange?: (sourceId: string, groupId?: string) => void;
     }
 
     const {
@@ -72,7 +95,14 @@
         initialCountMode = AnnotationCountMode.OBJECTS,
         onHistogramRangeSelect,
         histogramBinCount = 20,
-        onHistogramBinCountChange
+        onHistogramBinCountChange,
+        onCategoricalValueToggle,
+        onCategoricalValuesClear,
+        onCategoricalRetry,
+        comparisonTagItems = [],
+        selectedComparisonTagIds = [],
+        onComparisonTagIdsChange,
+        onGroupChange
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -85,12 +115,12 @@
     let selectedGroupId = $state<string | undefined>(undefined);
 
     const groupHasContent = (group: DistributionSourceGroup): boolean =>
-        (group.data?.length ?? 0) > 0 || group.histogram != null;
+        (group.data?.length ?? 0) > 0 || group.histogram != null || group.categorical != null;
 
     const sourceHasContent = (source: DistributionSource): boolean =>
         (source.data?.length ?? 0) > 0 ||
         source.histogram != null ||
-        (source.groups?.some(groupHasContent) ?? false);
+        (source.groups?.length ?? 0) > 0;
 
     // With nothing explicitly selected, land on the first source that actually
     // has something to show. Otherwise an empty leading source (e.g. "All types"
@@ -105,10 +135,118 @@
             activeSource.groups?.find(groupHasContent) ??
             activeSource.groups?.[0]
     );
-    const activeData = $derived<CategoryCount[]>(activeGroup?.data ?? activeSource.data ?? []);
+
+    $effect(() => {
+        onGroupChange?.(activeSource.id, activeGroup?.id);
+    });
+    const activeSingleSeriesData = $derived<CategoryCount[]>(
+        activeGroup?.data ?? activeSource.data ?? []
+    );
+    const activeComparisonData = $derived(
+        activeGroup?.comparisonData ?? activeSource.comparisonData ?? []
+    );
+    const suppliedComparisonSeries = $derived(
+        activeGroup?.comparisonSeries ?? activeSource.comparisonSeries ?? []
+    );
+    const activeSeries = $derived<CategoryCountSeries[]>(
+        suppliedComparisonSeries.length > 0
+            ? suppliedComparisonSeries.filter((series) =>
+                  selectedComparisonTagIds.includes(series.id)
+              )
+            : activeComparisonData
+                  .filter((tag) => selectedComparisonTagIds.includes(tag.sample_tag_id))
+                  .map((tag) => ({
+                      id: tag.sample_tag_id,
+                      label: tag.sample_tag_name,
+                      data: tag.counts.map((item) => ({
+                          label: item.label_name,
+                          count: item.count
+                      })),
+                      totalCount: tag.counts.reduce((sum, item) => sum + item.count, 0)
+                  }))
+    );
     // A group/source carrying bins renders as a histogram instead of a bar
     // chart; the categorical controls (sort, top-N, orientation) don't apply.
     const activeHistogram = $derived(activeGroup?.histogram ?? activeSource.histogram ?? null);
+    const activeHistogramSeries = $derived(
+        (activeGroup?.histogramSeries ?? activeSource.histogramSeries ?? []).filter((series) =>
+            selectedComparisonTagIds.includes(series.id)
+        )
+    );
+    // The comparison request belongs to the source whose series it feeds, so the
+    // loading indicator follows the selected source rather than the panel as a whole.
+    const plotLoading = $derived(
+        Boolean(
+            activeSource.loading ||
+            activeGroup?.loading ||
+            activeSource.comparisonLoading ||
+            activeGroup?.categorical?.loading
+        )
+    );
+    const comparisonError = $derived(activeSource.comparisonError);
+    const activeCategorical = $derived(activeGroup?.categorical ?? null);
+    const comparisonBuckets = $derived(activeCategorical?.comparisonBuckets ?? []);
+    const findComparisonBucket = (id: string | undefined) =>
+        comparisonBuckets.find((candidate) => candidate.id === id);
+    const categoricalData = $derived<CategoryCount[]>(
+        (activeCategorical?.buckets ?? []).map((bucket) => {
+            // When filteredBuckets is defined (query has returned) look up the
+            // filtered count for this bucket. Absent = 0 (filter removed it entirely).
+            const filteredBucket = activeCategorical?.filteredBuckets?.find(
+                (fb) => fb.id === bucket.id
+            );
+            const filteredCount =
+                activeCategorical?.filteredBuckets !== undefined
+                    ? (filteredBucket?.count ?? 0)
+                    : undefined;
+            return {
+                id: bucket.id,
+                label: bucket.label,
+                count: bucket.count,
+                filteredCount,
+                selectable: bucket.kind !== 'other',
+                pinned: bucket.kind !== 'value',
+                selected:
+                    bucket.kind !== 'other' &&
+                    activeCategorical?.selectedValues.some((value) =>
+                        Object.is(value, bucket.value)
+                    )
+            };
+        })
+    );
+    // Build the shared categorical axis; base-view order is preserved so bars
+    // don't jump when tags are toggled.
+    const activeData = $derived.by<CategoryCount[]>(() => {
+        const baseData = activeCategorical ? categoricalData : activeSingleSeriesData;
+        if (activeSeries.length === 0) return baseData;
+        const baseByKey = new Map(baseData.map((item) => [item.id ?? item.label, item]));
+        // Seed totals with every current-view bucket at 0 so keys that no comparison
+        // tag contains are still included in the shared categorical axis.
+        const totals = new Map<string, number>(baseData.map((item) => [item.id ?? item.label, 0]));
+        for (const series of activeSeries) {
+            for (const item of series.data) {
+                const key = item.id ?? item.label;
+                totals.set(key, (totals.get(key) ?? 0) + item.count);
+                // A category only a comparison tag has. The current view holds no
+                // bucket for it, so the value to filter on comes from the tags'
+                // own buckets; without one there is nothing to toggle and the bar
+                // must not offer the click.
+                if (!baseByKey.has(key)) {
+                    const bucket = findComparisonBucket(item.id);
+                    baseByKey.set(key, {
+                        ...item,
+                        selectable: bucket !== undefined && bucket.kind !== 'other'
+                    });
+                }
+            }
+        }
+        // Preserve base-view count so sorting stays stable when tags are toggled.
+        return [...totals.keys()].map((key) => baseByKey.get(key)!);
+    });
+    const displayedData = $derived(activeData);
+    const configurationItems = $derived(
+        displayedData.map((item) => ({ value: item.id ?? item.label, label: item.label }))
+    );
     const activeHistogramRange = $derived(activeGroup?.selectedRange ?? activeSource.selectedRange);
     const handleHistogramRangeSelect = (range: HistogramRange) => {
         const groupId = activeGroup?.id ?? activeSource.id;
@@ -124,12 +262,34 @@
     // vertical bars produce once there are more than a handful of classes.
     let config: DistributionConfig = $state({
         mode: 'topN',
-        n: topN,
+        n: untrack(() => topN),
         sortBy: 'count',
         manualClasses: [],
         orientation: 'horizontal',
-        countMode: initialCountMode
+        countMode: untrack(() => initialCountMode),
+        valueMode: untrack(() => (selectedComparisonTagIds.length > 0 ? 'percentage' : 'number'))
     });
+    const defaultCategoricalConfig: DistributionConfig = {
+        mode: 'topN',
+        n: 20,
+        sortBy: 'count',
+        manualClasses: [],
+        orientation: 'horizontal',
+        countMode: AnnotationCountMode.SAMPLES,
+        valueMode: 'number'
+    };
+    let categoricalConfigs = $state<Record<string, DistributionConfig>>({});
+    let histogramValueModes = $state<Record<string, Record<string, ValueMode>>>({});
+    const categoricalConfig = $derived<DistributionConfig>(
+        activeGroup
+            ? (categoricalConfigs[activeGroup.id] ?? defaultCategoricalConfig)
+            : defaultCategoricalConfig
+    );
+    const activeHistogramId = $derived(activeGroup?.id ?? activeSource.id);
+    const activeHistogramValueMode = $derived<ValueMode>(
+        histogramValueModes[activeSource.id]?.[activeHistogramId] ?? 'number'
+    );
+    let wasComparingTags = $state(false);
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
     let histogramExpandOpen = $state(false);
@@ -144,6 +304,14 @@
     let clientWidth = $state(0);
 
     const activeCountMode = $derived(config.countMode ?? AnnotationCountMode.OBJECTS);
+    const isComparingTags = $derived(
+        activeSource.id === 'classes' && selectedComparisonTagIds.length > 0
+    );
+    $effect(() => {
+        if (isComparingTags === wasComparingTags) return;
+        wasComparingTags = isComparingTags;
+        config = { ...config, valueMode: isComparingTags ? 'percentage' : 'number' };
+    });
     const showTotalCount = $derived(activeCountMode !== AnnotationCountMode.SAMPLES);
 
     const sourceItems = $derived<SelectItem[]>(
@@ -153,16 +321,69 @@
         (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
     );
 
-    const visible = $derived(selectVisibleCounts(activeData, config));
-    const totalCount = $derived(activeData.reduce((sum, item) => sum + item.count, 0));
+    const activeViewConfig = $derived<DistributionConfig>(
+        activeCategorical ? categoricalConfig : config
+    );
+    const visible = $derived(
+        activeCategorical
+            ? selectCategoricalCounts(displayedData, activeViewConfig)
+            : selectVisibleCounts(displayedData, activeViewConfig)
+    );
+    const visibleKeys = $derived(new Set(visible.map((item) => item.id ?? item.label)));
+    const visibleSeries = $derived(
+        activeCategorical
+            ? selectCategoricalSeries(activeSeries, visible, activeViewConfig.mode === 'topN')
+            : activeSeries.map((series) => ({
+                  ...series,
+                  data: series.data.filter((item) => visibleKeys.has(item.id ?? item.label))
+              }))
+    );
+    const totalCount = $derived(displayedData.reduce((sum, item) => sum + item.count, 0));
+
+    const handleCategoricalBarClick = (item: CategoryCount) => {
+        const bucket =
+            activeCategorical?.buckets.find((candidate) => candidate.id === item.id) ??
+            findComparisonBucket(item.id);
+        if (!bucket || bucket.kind === 'other' || !activeGroup) return;
+        onCategoricalValueToggle?.(activeGroup.id, bucket.value);
+    };
+
+    const setCategoricalConfig = (next: DistributionConfig) => {
+        if (!activeGroup) return;
+        categoricalConfigs = {
+            ...categoricalConfigs,
+            [activeGroup.id]: {
+                ...next,
+                countMode: AnnotationCountMode.SAMPLES
+            }
+        };
+    };
+
+    const setHistogramValueMode = (valueMode: ValueMode) => {
+        histogramValueModes = {
+            ...histogramValueModes,
+            [activeSource.id]: {
+                ...histogramValueModes[activeSource.id],
+                [activeHistogramId]: valueMode
+            }
+        };
+    };
 
     function applyConfig(next: DistributionConfig) {
+        if (activeCategorical) {
+            setCategoricalConfig(next);
+            return;
+        }
         if (next.countMode !== config.countMode) {
             onCountModeChange?.(next.countMode ?? AnnotationCountMode.OBJECTS);
         }
         config = next;
     }
 </script>
+
+{#snippet categoricalEmptyState()}
+    <span>No matching samples for this metadata field.</span>
+{/snippet}
 
 <div
     class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4"
@@ -186,24 +407,28 @@
             />
         {/if}
     </div>
-    {#if hasSourceSelector}
+    {#if hasSourceSelector || groupItems.length > 0}
         <!-- Fixed-width labels + flex-1 triggers keep both selects the same
              width, filling the panel row. -->
         <div class="mt-2 flex flex-col gap-2" data-testid="dataset-distribution-source">
-            <div class="flex items-center gap-2">
-                <span class="w-[100px] shrink-0 text-xs text-muted-foreground">Distribution</span>
-                <Select
-                    items={sourceItems}
-                    value={activeSource.id}
-                    size="xs"
-                    class="min-w-0 flex-1"
-                    testId="dataset-distribution-source-select"
-                    onValueChange={(value) => {
-                        selectedSourceId = value;
-                        selectedGroupId = undefined;
-                    }}
-                />
-            </div>
+            {#if hasSourceSelector}
+                <div class="flex items-center gap-2">
+                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground"
+                        >Distribution</span
+                    >
+                    <Select
+                        items={sourceItems}
+                        value={activeSource.id}
+                        size="xs"
+                        class="min-w-0 flex-1"
+                        testId="dataset-distribution-source-select"
+                        onValueChange={(value) => {
+                            selectedSourceId = value;
+                            selectedGroupId = undefined;
+                        }}
+                    />
+                </div>
+            {/if}
 
             {#if groupItems.length > 0}
                 <div class="flex items-center gap-2">
@@ -222,108 +447,208 @@
             {/if}
         </div>
     {/if}
-    {#if activeHistogram}
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <span
-                class="text-xs text-muted-foreground"
-                data-testid="dataset-distribution-histogram-summary"
+    {#if (activeSource.id === 'classes' || activeSource.id === 'metadata') && comparisonTagItems.length > 0 && onComparisonTagIdsChange}
+        <div class="mt-2 flex items-center gap-2">
+            <span class="w-[100px] shrink-0 text-xs text-muted-foreground">Compare by</span>
+            <TagComparisonSelect
+                items={comparisonTagItems}
+                selectedIds={selectedComparisonTagIds}
+                onChange={onComparisonTagIdsChange}
+            />
+        </div>
+        {#if comparisonError}
+            <p
+                class="mt-1 text-xs text-destructive"
+                role="alert"
+                data-testid="dataset-distribution-comparison-error"
             >
-                {formatInteger(histogramTotal)}
-                {valueNoun} · {activeHistogram.counts.length}
-                {activeHistogram.counts.length === 1 ? 'bin' : 'bins'} · {formatFloat(
-                    activeHistogram.binEdges[0]
-                )}–{formatFloat(activeHistogram.binEdges[activeHistogram.binEdges.length - 1])}
-            </span>
-            <div class="flex items-center gap-1">
-                {#if onHistogramBinCountChange}
-                    <Select
-                        items={binCountItems}
-                        value={String(histogramBinCount)}
-                        size="xs"
-                        class="w-24"
-                        testId="dataset-distribution-bin-count"
-                        selectProps={{ 'aria-label': 'Histogram bin count' }}
-                        onValueChange={(value) => onHistogramBinCountChange(Number(value))}
-                    />
-                {/if}
-                <Button
-                    variant="ghost"
-                    icon={Maximize2Icon}
-                    ariaLabel="Expand distribution"
-                    buttonProps={{
-                        size: 'sm',
-                        class: 'h-8 w-8 p-0',
-                        onclick: () => (histogramExpandOpen = true),
-                        'data-testid': 'dataset-distribution-histogram-expand'
-                    }}
+                Could not load the tag comparison. Some selected tags may be missing.
+            </p>
+        {/if}
+    {/if}
+    {#if activeHistogram}
+        <HistogramToolbar
+            histogram={activeHistogram}
+            {histogramTotal}
+            {valueNoun}
+            {histogramBinCount}
+            {binCountItems}
+            {onHistogramBinCountChange}
+            valueMode={activeHistogramValueMode}
+            onValueModeChange={setHistogramValueMode}
+            onExpand={() => (histogramExpandOpen = true)}
+        />
+    {:else if activeCategorical && activeGroup}
+        <MetadataCategoricalFilter
+            buckets={activeCategorical.buckets}
+            selectedValues={activeCategorical.selectedValues}
+            loading={activeCategorical.loading}
+            updating={activeCategorical.updating}
+            error={activeCategorical.error}
+            onRetry={onCategoricalRetry}
+            onToggle={(value) => onCategoricalValueToggle?.(activeGroup.id, value)}
+            onClear={() => onCategoricalValuesClear?.(activeGroup.id)}
+        />
+        {#if categoricalData.length > 0}
+            <div class="mt-2">
+                <PanelHeader
+                    config={categoricalConfig}
+                    classCount={displayedData.length}
+                    visibleClassCount={selectVisibleCounts(displayedData, activeViewConfig).length}
+                    totalCount={activeSeries.length === 0 ? totalCount : undefined}
+                    seriesCount={activeSeries.length || undefined}
+                    {valueNoun}
+                    categoryNoun="value"
+                    categoryNounPlural="values"
+                    sortLabels={CATEGORICAL_DISTRIBUTION_SORT_LABELS}
+                    onConfigure={() => (configDialogOpen = true)}
+                    onShowAll={() =>
+                        setCategoricalConfig({
+                            ...categoricalConfig,
+                            mode: 'topN',
+                            n: displayedData.length
+                        })}
+                    onToggleOrientation={() =>
+                        setCategoricalConfig({
+                            ...categoricalConfig,
+                            orientation:
+                                categoricalConfig.orientation === 'horizontal'
+                                    ? 'vertical'
+                                    : 'horizontal'
+                        })}
+                    valueMode={categoricalConfig.valueMode}
+                    onValueModeChange={(valueMode) =>
+                        setCategoricalConfig({ ...categoricalConfig, valueMode })}
+                    onExpand={() => (expandOpen = true)}
                 />
             </div>
-        </div>
-    {:else if activeData.length > 0}
-        <PanelHeader
-            {config}
-            classCount={activeData.length}
-            visibleClassCount={visible.length}
-            totalCount={showTotalCount ? totalCount : undefined}
-            {valueNoun}
-            onConfigure={() => (configDialogOpen = true)}
-            onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
-            onToggleOrientation={() =>
-                (config = {
-                    ...config,
-                    orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-                })}
-            onExpand={() => (expandOpen = true)}
-        />
-    {/if}
-    <div
-        class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
-        bind:clientHeight={chartHeight}
-        bind:clientWidth
-    >
-        {#if activeHistogram}
-            <Histogram
-                data={activeHistogram}
-                selectedRange={activeHistogramRange}
-                heightPx={chartHeight || 240}
-                showAxes
-                onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
-            />
-        {:else}
-            <BarChart
-                data={visible}
-                orientation={config.orientation}
-                maxHeightPx={chartHeight || undefined}
-                maxWidthPx={clientWidth || undefined}
-                {totalCount}
-                {onBarClick}
-            />
         {/if}
-    </div>
+    {:else if activeData.length > 0}
+        <div class="mt-2">
+            <PanelHeader
+                {config}
+                classCount={activeData.length}
+                visibleClassCount={visible.length}
+                totalCount={showTotalCount && activeSeries.length === 0 ? totalCount : undefined}
+                seriesCount={activeSeries.length || undefined}
+                {valueNoun}
+                valueMode={config.valueMode}
+                onConfigure={() => (configDialogOpen = true)}
+                onValueModeChange={(valueMode) => (config = { ...config, valueMode })}
+                onShowAll={() => (config = { ...config, mode: 'topN', n: activeData.length })}
+                onToggleOrientation={() =>
+                    (config = {
+                        ...config,
+                        orientation: config.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+                    })}
+                onExpand={() => (expandOpen = true)}
+            />
+        </div>
+    {/if}
+    <DistributionPlotContainer loading={plotLoading}>
+        <div
+            class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
+            bind:clientHeight={chartHeight}
+            bind:clientWidth
+        >
+            {#if activeHistogram}
+                <Histogram
+                    data={activeHistogram}
+                    series={activeHistogramSeries}
+                    selectedRange={activeHistogramRange}
+                    heightPx={chartHeight || 240}
+                    showAxes
+                    valueMode={activeHistogramValueMode}
+                    onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
+                />
+            {:else if activeCategorical?.error && activeCategorical.buckets.length === 0}
+                <div class="space-y-2 p-8 text-center text-sm" role="alert">
+                    <p class="text-destructive">Could not load metadata distribution.</p>
+                    {#if onCategoricalRetry}
+                        <Button
+                            variant="secondary"
+                            buttonProps={{
+                                size: 'sm',
+                                class: 'max-sm:min-h-11',
+                                onclick: onCategoricalRetry,
+                                'data-testid': 'metadata-categorical-retry'
+                            }}>Retry</Button
+                        >
+                    {/if}
+                </div>
+            {:else if !plotLoading || activeData.length > 0}
+                {#if activeCategorical}
+                    <ul class="sr-only" aria-label="Categorical metadata value counts">
+                        {#each activeCategorical.buckets as bucket (bucket.id)}
+                            <li>
+                                {bucket.label}: {bucket.count} samples{bucket.kind === 'other'
+                                    ? ', aggregated and not selectable'
+                                    : activeCategorical.selectedValues.some((value) =>
+                                            Object.is(value, bucket.value)
+                                        )
+                                      ? ', selected'
+                                      : ''}
+                            </li>
+                        {/each}
+                    </ul>
+                {/if}
+                <BarChart
+                    data={visible}
+                    orientation={activeViewConfig.orientation}
+                    maxHeightPx={chartHeight || undefined}
+                    maxWidthPx={clientWidth || undefined}
+                    {totalCount}
+                    series={visibleSeries}
+                    valueMode={activeViewConfig.valueMode}
+                    onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
+                    emptyState={activeCategorical ? categoricalEmptyState : undefined}
+                    gridTopPx={4}
+                />
+            {/if}
+        </div>
+    </DistributionPlotContainer>
 </div>
-<DistributionConfigDialog
-    bind:open={configDialogOpen}
-    allClasses={activeData.map((item) => item.label)}
-    {config}
-    onApply={applyConfig}
-/>
-<ExpandDialog
-    bind:open={expandOpen}
-    data={activeData}
-    {config}
-    {valueNoun}
-    onConfigChange={applyConfig}
-    {onBarClick}
-/>
+{#if !activeHistogram}
+    <DistributionConfigDialog
+        bind:open={configDialogOpen}
+        allClasses={displayedData.map((item) => item.label)}
+        items={configurationItems}
+        config={activeViewConfig}
+        showCountMode={!activeCategorical}
+        itemNoun={activeCategorical ? 'value' : 'class'}
+        itemNounPlural={activeCategorical ? 'values' : 'classes'}
+        sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
+        onApply={applyConfig}
+    />
+    <ExpandDialog
+        loading={plotLoading}
+        bind:open={expandOpen}
+        data={displayedData}
+        series={activeSeries}
+        config={activeViewConfig}
+        {valueNoun}
+        categoryNoun={activeCategorical ? 'value' : 'class'}
+        categoryNounPlural={activeCategorical ? 'values' : 'classes'}
+        sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
+        showCountMode={!activeCategorical}
+        aggregateOther={activeCategorical !== null}
+        onConfigChange={applyConfig}
+        onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
+    />
+{/if}
 {#if activeHistogram}
     <HistogramExpandDialog
+        loading={plotLoading}
         bind:open={histogramExpandOpen}
         data={activeHistogram}
+        series={activeHistogramSeries}
         label={activeGroup?.label ?? activeSource.label}
         selectedRange={activeHistogramRange}
         {valueNoun}
         binCount={histogramBinCount}
         onBinCountChange={onHistogramBinCountChange}
+        valueMode={activeHistogramValueMode}
+        onValueModeChange={setHistogramValueMode}
         onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
     />
 {/if}

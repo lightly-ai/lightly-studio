@@ -5,11 +5,19 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
-from lightly_studio.resolvers import annotation_resolver, object_track_resolver
+from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    evaluation_run_resolver,
+    object_track_resolver,
+)
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.update_annotation import AnnotationUpdate
 from tests.helpers_resolvers import (
     AnnotationDetails,
+    create_annotation,
     create_annotation_label,
     create_annotations,
     create_collection,
@@ -102,3 +110,59 @@ def test_update_annotations__updates_label_for_all_track_annotations(
     outside_after = annotation_resolver.get_by_id(db_session, track_b_annotations[0].sample_id)
     assert outside_after is not None
     assert outside_after.annotation_label_id == label_before.annotation_label_id
+
+
+def test_update_annotations__marks_evaluation_run_stale(db_session: Session) -> None:
+    image_collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=image_collection.collection_id)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=image_collection.collection_id,
+        label_name="cat",
+    )
+    pred_collection = collection_resolver.create(
+        session=db_session,
+        collection=CollectionCreate(
+            name="pred",
+            sample_type=SampleType.ANNOTATION,
+            parent_collection_id=image_collection.collection_id,
+        ),
+    )
+    gt_collection = create_collection(
+        session=db_session,
+        sample_type=SampleType.ANNOTATION,
+        parent_collection_id=image_collection.collection_id,
+    )
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=image_collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="pred",
+    )
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            dataset_id=image_collection.dataset_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+    assert run.stale_since is None
+
+    annotations_service.update_annotations(
+        session=db_session,
+        annotation_updates=[
+            AnnotationUpdate(
+                annotation_id=annotation.sample_id,
+                collection_id=pred_collection.collection_id,
+                label_name="dog",
+            ),
+        ],
+    )
+
+    refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+    assert refreshed is not None
+    assert refreshed.stale_since is not None

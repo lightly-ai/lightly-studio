@@ -13,7 +13,7 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define data paths
-input_folder = env.path("EXAMPLES_LIGHTLY_PREDICTIONS", "/path/to/your/dataset/annotations.json")
+input_folder = env.path("EXAMPLES_LIGHTLY_PREDICTIONS")
 
 # Create a DatasetLoader from a path
 dataset = ls.ImageDataset.create()

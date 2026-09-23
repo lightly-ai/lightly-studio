@@ -27,9 +27,9 @@
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { collection: datasetCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
-    );
+    const { collection: datasetCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
@@ -153,8 +153,24 @@
 
 <style>
     :global {
-        @media screen and (max-width: 1300px) {
+        @media screen and (min-width: 1101px) {
+            .menu-trigger > .lucide-menu {
+                display: none;
+            }
+        }
+
+        @media screen and (max-width: 1100px) {
+            .menu-trigger {
+                width: 2.5rem;
+                justify-content: center;
+                padding: 0;
+            }
+
             .nav-button > span {
+                display: none;
+            }
+
+            .menu-trigger > .lucide-chevron-down {
                 display: none;
             }
         }

@@ -6,9 +6,11 @@ from sqlmodel import col
 
 from lightly_studio.core.dataset_query.field import (
     ComparableField,
+    DatetimeField,
     NumericalField,
 )
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
 
 
@@ -37,5 +39,9 @@ class VideoSampleField:
     # `<` at least on durations that are not None.
     duration_s = ComparableField(col(VideoTable.duration_s))
     fps = NumericalField(col(VideoTable.fps))
+
+    # VideoTable has no timestamp columns; the sample row carries them for every
+    # sample type. Video queries always join their sample, so the column is in scope.
+    created_at = DatetimeField(col(SampleTable.created_at))
 
     tags = TagsAccessor()

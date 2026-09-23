@@ -1,17 +1,17 @@
-import { type UpdateCaptionTextData } from '$lib/api/lightly_studio_local';
-import { updateCaptionTextMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { type UpdateCaptionData } from '$lib/api/lightly_studio_local';
+import { updateCaptionMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
 
 export const useCaption = ({ sampleId, onUpdate }: { sampleId: string; onUpdate?: () => void }) => {
-    const captionMutation = createMutation(() => updateCaptionTextMutation());
+    const captionMutation = createMutation(() => updateCaptionMutation());
 
     const mutateCaptionText = async (text: string): Promise<void> => {
         await captionMutation.mutateAsync({
             path: {
                 sample_id: sampleId
-            } as UpdateCaptionTextData['path'],
-            body: text
+            } as UpdateCaptionData['path'],
+            body: { text }
         });
     };
 

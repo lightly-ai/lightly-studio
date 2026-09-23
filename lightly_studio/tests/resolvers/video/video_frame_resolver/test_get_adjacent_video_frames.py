@@ -333,6 +333,7 @@ def test_get_adjacent_video_frames__uses_video_text_embedding(db_session: Sessio
         collection_id=collection.collection_id,
         embedding_model_name="video-text-embedding",
         embedding_dimension=2,
+        set_as_default=True,
     )
 
     video_a = video_helpers.create_video_with_frames(

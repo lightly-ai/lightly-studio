@@ -151,6 +151,13 @@ _SORT_FIELDS: dict[tuple[str, str], Field] = {
     ("image", "created_at"): ImageSampleField.created_at,
     ("image", "width"): ImageSampleField.width,
     ("image", "height"): ImageSampleField.height,
+    ("video", "file_name"): VideoSampleField.file_name,
+    ("video", "file_path_abs"): VideoSampleField.file_path_abs,
+    ("video", "created_at"): VideoSampleField.created_at,
+    ("video", "width"): VideoSampleField.width,
+    ("video", "height"): VideoSampleField.height,
+    ("video", "duration_s"): VideoSampleField.duration_s,
+    ("video", "fps"): VideoSampleField.fps,
 }
 
 
@@ -180,7 +187,6 @@ def _lookup(
 def sort_to_order_by(
     key: tuple[str, str],
     direction: SortDirection,
-    cast_to_float: bool = False,
 ) -> OrderByExpression:
     """Translate a (source, field_name) key and direction to an OrderByExpression.
 
@@ -188,8 +194,6 @@ def sort_to_order_by(
         key: A (source, field_name) tuple identifying the sort field (e.g.,
             ``("image", "width")`` or ``("metadata", "brightness")``).
         direction: Sort direction, either "asc" or "desc".
-        cast_to_float: When True, cast the extracted JSON value to float for
-            correct numeric ordering.  Only used when source is ``"metadata"``.
 
     Returns:
         An OrderByExpression ready to be applied to a database query.
@@ -200,7 +204,7 @@ def sort_to_order_by(
     order_by: OrderByExpression
     source, field_name = key
     if source == "metadata":
-        order_by = OrderByMetadataField(field_name=field_name, cast_to_float=cast_to_float)
+        order_by = OrderByMetadataField(field_name=field_name)
     elif key in _SORT_FIELDS:
         order_by = OrderByField(_SORT_FIELDS[key])
     else:

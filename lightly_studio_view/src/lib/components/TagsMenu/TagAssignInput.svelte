@@ -2,6 +2,7 @@
     import { Input } from '$lib/components/ui/input/index.js';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import type { TagView } from '$lib/services/types';
+    import { Button } from '$lib/components';
 
     interface Props {
         options: TagView[];
@@ -107,25 +108,31 @@
             class="absolute left-0 top-full z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-popover shadow-md"
         >
             {#each filteredOptions as tag (tag.tag_id)}
-                <button
-                    type="button"
-                    class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent disabled:pointer-events-none disabled:opacity-60"
-                    disabled={busy || !hasSelection}
-                    value={tag.name}
-                    onclick={handleOptionClick}
+                <Button
+                    isPending={busy}
+                    buttonProps={{
+                        type: 'button',
+                        class: 'w-full justify-start px-2 py-1.5 text-xs font-normal',
+                        disabled: busy || !hasSelection,
+                        value: tag.name,
+                        onclick: handleOptionClick
+                    }}
                 >
                     {tag.name}
-                </button>
+                </Button>
             {/each}
             {#if trimmedSearchQuery && !hasExactMatch}
-                <button
-                    type="button"
-                    class="flex w-full items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent disabled:pointer-events-none disabled:opacity-60"
-                    disabled={busy || !hasSelection}
-                    onclick={handleCreateClick}
+                <Button
+                    isPending={busy}
+                    buttonProps={{
+                        type: 'button',
+                        class: 'w-full justify-start gap-1 px-2 py-1.5 text-xs font-normal text-muted-foreground',
+                        disabled: busy || !hasSelection,
+                        onclick: handleCreateClick
+                    }}
                 >
                     Create "{trimmedSearchQuery}"
-                </button>
+                </Button>
             {/if}
         </div>
     {/if}

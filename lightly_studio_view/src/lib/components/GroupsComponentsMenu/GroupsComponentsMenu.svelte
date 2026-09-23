@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { useGroupComponents } from '$lib/hooks/useGroupComponents/useGroupComponents';
     import { SampleType, type GroupComponentView } from '$lib/api/lightly_studio_local';
     import { GroupComponents } from '$lib/components/GroupComponents';
@@ -6,6 +7,9 @@
     import GroupComponent from '$lib/components/GroupComponent/GroupComponent.svelte';
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
+    import { usePointCloudNavigation } from './usePointCloudNavigation.svelte';
+
+    const { navigate: navigateToPointCloud } = usePointCloudNavigation();
 
     const {
         groupId,
@@ -19,9 +23,9 @@
         collectionId: string;
     } = $props();
 
-    const { groupComponents } = useGroupComponents({ groupId });
+    const { groupComponents } = useGroupComponents({ getGroupId: () => groupId });
     const components = $derived<GroupComponentView[]>(groupComponents.data ?? []);
-    let selectedComponentId = $state(componentId);
+    let selectedComponentId = $state(untrack(() => componentId));
     const selectedIndex = $derived(
         components.findIndex((c) => c.details?.sample_id === selectedComponentId)
     );
@@ -66,6 +70,12 @@
         if (!componentType) {
             throw new Error('Component type is missing for the selected component');
         }
+        if (componentType === SampleType.MCAP) {
+            if (navigateToPointCloud({ datasetId, collectionId, sampleId: compId, groupId })) {
+                selectedComponentId = compId;
+            }
+            return;
+        }
         selectedComponentId = compId;
         navigateToComponentDetails(compId, componentType);
     };
@@ -75,7 +85,7 @@
     {#snippet renderItem({ index })}
         {@const component = components[index]}
 
-        {#if !component.details}
+        {#if !component.details || component.details.type === SampleType.MCAP}
             <div class="flex h-60 w-60 items-center justify-center rounded bg-gray-700">
                 No details
             </div>

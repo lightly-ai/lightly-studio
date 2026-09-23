@@ -185,7 +185,7 @@ def _setup(config: BenchmarkConfig) -> tuple[list[UUID], UUID]:
         embedding_model = embedding_model_resolver.create(
             session=session,
             embedding_model=EmbeddingModelCreate(
-                collection_id=collection.collection_id,
+                dataset_id=collection.dataset_id,
                 name=DEFAULT_EMBEDDING_MODEL_NAME,
                 embedding_dimension=config.embedding_dim,
             ),
@@ -212,7 +212,7 @@ def _run_insert_benchmark(
     embedding_model_id: UUID,
     embeddings: NDArray[np.float32],
 ) -> PhaseResult:
-    """Insert embeddings via the resolver path, mirroring EmbeddingManager._store_embeddings."""
+    """Insert embeddings via the resolver path, mirroring the embedding storage write path."""
     tracemalloc.start()
     tracemalloc.reset_peak()
     started = time.perf_counter()

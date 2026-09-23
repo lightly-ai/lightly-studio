@@ -1,6 +1,6 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog/index.js';
-    import { Button } from '$lib/components/ui/button/index.js';
+    import { Button } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
 
@@ -77,8 +77,13 @@
         </div>
 
         <Dialog.Footer>
-            <Button variant="outline" onclick={handleCancel}>Cancel</Button>
-            <Button onclick={handleConfirm} disabled={!selectedItem}>Confirm</Button>
+            <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>
+            <Button
+                variant="default"
+                buttonProps={{ onclick: handleConfirm, disabled: !selectedItem }}
+            >
+                Confirm
+            </Button>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>

@@ -2,13 +2,15 @@ import { getAdjacentSamplesOptions } from '$lib/api/lightly_studio_local/@tansta
 import { createQuery, useQueryClient, type QueryClient } from '@tanstack/svelte-query';
 
 import type {
+    AnnotationEvaluationMetricSortExpr,
     AnnotationsFilter,
     ImageFilter,
     SampleType,
     VideoFilter,
-    VideoFrameAdjacentFilter
-} from '$lib/api/lightly_studio_local/types.gen';
-import type { SortExpr } from '../useImagesInfinite/types';
+    VideoFrameAdjacentFilter,
+    VideoSortFieldExpr
+} from '$lib/api/lightly_studio_local';
+import type { ImageSortExpr } from '../useImagesInfinite/types';
 
 export type AdjacentSamplesRequestBody =
     | {
@@ -16,13 +18,14 @@ export type AdjacentSamplesRequestBody =
           collection_id: string;
           filters?: ({ filter_type: 'image' } & ImageFilter) | null;
           text_embedding?: number[];
-          sort_by?: SortExpr[] | null;
+          sort_by?: ImageSortExpr[] | null;
       }
     | {
           sample_type: Extract<SampleType, 'video'>;
           collection_id: string;
           filters?: ({ filter_type: 'video' } & VideoFilter) | null;
           text_embedding?: number[];
+          sort_by?: VideoSortFieldExpr[] | null;
       }
     | {
           sample_type: Extract<SampleType, 'video_frame'>;
@@ -33,6 +36,7 @@ export type AdjacentSamplesRequestBody =
           sample_type: Extract<SampleType, 'annotation'>;
           collection_id: string;
           filters?: ({ filter_type: 'annotations' } & AnnotationsFilter) | null;
+          annotation_sort_by?: AnnotationEvaluationMetricSortExpr;
       };
 
 type AdjacentSamplesParams = {

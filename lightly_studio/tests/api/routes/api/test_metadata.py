@@ -4,6 +4,7 @@ import re
 from unittest.mock import ANY
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -27,7 +28,7 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
     """Test get_metadata_info endpoint."""
     collection_id = uuid4()
     # Create mock metadata objects that will be returned by
-    # get_all_metadata_keys_and_schema.
+    # get_metadata_info.
     mock_metadata = [
         MetadataInfoView(name="key1", type="string"),
         MetadataInfoView(
@@ -40,7 +41,7 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
         MetadataInfoView(name="key3", type="float", min=0.0, max=1.0),
     ]
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
         return_value=mock_metadata,
     )
 
@@ -63,12 +64,31 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
             assert data[i]["histogram"]["counts"] == metadata.histogram.counts
 
 
+def test_get_metadata_info__omits_histograms(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
+        return_value=[MetadataInfoView(name="score", type="float", min=0.0, max=1.0)],
+    )
+    response = test_client.get(f"/api/collections/{collection_id}/metadata/info")
+    assert response.status_code == HTTP_STATUS_OK
+    metadata = response.json()[0]
+    assert metadata["name"] == "score"
+    assert metadata["type"] == "float"
+    assert metadata["min"] == 0.0
+    assert metadata["max"] == 1.0
+    assert metadata.get("histogram") is None
+    assert resolver.call_args.kwargs == {"session": ANY, "collection_id": collection_id}
+
+
 def test_get_metadata_info__empty_response(test_client: TestClient, mocker: MockerFixture) -> None:
     """Test get_metadata_info endpoint with no metadata."""
     collection_id = uuid4()
-    # Mock get_all_metadata_keys_and_schema to return an empty list.
+    # Mock get_metadata_info to return an empty list.
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
         return_value=[],
     )
 
@@ -108,7 +128,7 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
         }
     }
     resolver.assert_called_once_with(
-        session=ANY, collection_id=collection_id, filters=ANY, fields=None
+        session=ANY, collection_id=collection_id, filters=ANY, fields=None, limit=20
     )
     assert resolver.call_args.kwargs["collection_id"] == collection_id
     called_filters = resolver.call_args.kwargs["filters"]
@@ -136,8 +156,38 @@ def test_get_metadata_value_counts__optional_body(
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {}
     resolver.assert_called_once_with(
-        session=ANY, collection_id=collection_id, filters=None, fields=None
+        session=ANY, collection_id=collection_id, filters=None, fields=None, limit=20
     )
+
+
+@pytest.mark.parametrize("limit", [1, 5, 30, None])
+def test_get_metadata_value_counts__limit(
+    test_client: TestClient, mocker: MockerFixture, limit: int | None
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={},
+    )
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"limit": limit, "fields": ["city"]},
+    )
+    assert response.status_code == HTTP_STATUS_OK
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=None, fields=["city"], limit=limit
+    )
+
+
+@pytest.mark.parametrize("limit", [0, -1, 1.5, "invalid"])
+def test_get_metadata_value_counts__invalid_limit(
+    test_client: TestClient, limit: int | float | str
+) -> None:
+    response = test_client.post(
+        f"/api/collections/{uuid4()}/metadata/value-counts", json={"limit": limit}
+    )
+    assert response.status_code == 422
 
 
 def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Select } from '$lib/components/Select';
     import { Switch } from '$lib/components/ui/switch';
@@ -171,10 +171,16 @@
                 </div>
 
                 <Dialog.Footer>
-                    <Button variant="outline" type="button" onclick={() => setOpen(false)}>
+                    <Button
+                        variant="outline"
+                        buttonProps={{ type: 'button', onclick: () => setOpen(false) }}
+                    >
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={dialogState.isSaving}>
+                    <Button
+                        variant="default"
+                        buttonProps={{ type: 'submit', disabled: dialogState.isSaving }}
+                    >
                         {dialogState.isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </Dialog.Footer>

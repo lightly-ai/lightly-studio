@@ -18,6 +18,12 @@
     options:
         members: [ClassificationEvaluationConfig]
 
+## InstanceSegmentationEvaluationConfig
+
+::: lightly_studio.evaluation.image_dataset_evaluate
+    options:
+        members: [InstanceSegmentationEvaluationConfig]
+
 ## SemanticSegmentationEvaluationConfig
 
 ::: lightly_studio.evaluation.image_dataset_evaluate
@@ -29,3 +35,21 @@
 ::: lightly_studio.evaluation.image_dataset_evaluate
     options:
         members: [ImageDatasetEvaluate]
+
+## EvaluationRunView
+
+::: lightly_studio.models.evaluation_run
+    options:
+        members: [EvaluationRunView]
+
+## ConfusionMatrix
+
+::: lightly_studio.models.evaluation_confusion_matrix
+    options:
+        members: [ConfusionMatrix]
+
+## EvaluationMetrics
+
+::: lightly_studio.models.evaluation_metrics
+    options:
+        members: [EvaluationMetrics, ClassMetrics]

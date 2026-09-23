@@ -45,7 +45,7 @@ export function renderComment(params: RenderCommentParams): string {
         for (const guardrail of verdict.guardrails) {
             const icon = guardrail.status === 'pass' ? '✅' : '❌';
             lines.push(
-                `| ${escapeCell(guardrail.name)} | ${icon} | ${escapeCell(guardrail.summary)} |`
+                `| ${formatCell(guardrail.name)} | ${icon} | ${formatCell(guardrail.summary)} |`
             );
         }
     }
@@ -108,6 +108,20 @@ export async function upsertComment(
     return 'updated';
 }
 
-function escapeCell(value: string): string {
-    return value.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+/**
+ * Format a value for a GFM table cell: render newlines as `<br>`, keep pipes
+ * from splitting the cell, and HTML-escape angle brackets so raw linter output
+ * (e.g. `<generic>`) shows instead of being dropped by GitHub's sanitizer.
+ *
+ * Pipes become the `&#124;` entity rather than a `\|` backslash escape: a value
+ * such as `\|` would otherwise turn into `\\|`, which GFM reads as an escaped
+ * backslash followed by an active delimiter and the cell splits.
+ */
+function formatCell(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\|/g, '&#124;')
+        .replace(/\r\n|\r|\n/g, '<br>');
 }

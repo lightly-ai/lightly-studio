@@ -22,6 +22,7 @@ vi.mock('echarts/core', () => ({
 vi.mock('echarts/charts', () => ({ CustomChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
+    LegendComponent: {},
     TooltipComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
@@ -62,6 +63,12 @@ describe('HistogramExpandDialog', () => {
     afterEach(() => {
         document.body.innerHTML = '';
         document.body.style.pointerEvents = '';
+    });
+
+    it('shows the shared spinner while keeping histogram controls available', () => {
+        renderDialog({ loading: true });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+        expect(screen.getByText('Distribution · confidence')).toBeInTheDocument();
     });
 
     it('renders the title with the field label', () => {
@@ -109,5 +116,18 @@ describe('HistogramExpandDialog', () => {
         await user.click(option);
 
         expect(onBinCountChange).toHaveBeenCalledWith(10);
+    });
+
+    it('shows and updates the shared percentage mode', async () => {
+        const onValueModeChange = vi.fn();
+        const user = userEvent.setup();
+        renderDialog({ valueMode: 'percentage', onValueModeChange });
+
+        expect(
+            screen.getByTestId('dataset-distribution-expanded-histogram-summary')
+        ).toHaveTextContent('100% of 100 samples');
+        await user.click(screen.getByTestId('dataset-distribution-expanded-histogram-value-mode'));
+        await user.click(await screen.findByRole('option', { name: 'Number' }));
+        expect(onValueModeChange).toHaveBeenCalledWith('number');
     });
 });

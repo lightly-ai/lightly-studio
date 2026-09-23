@@ -37,7 +37,7 @@ class CreateVideo(CreateSample):
         Raises:
             ValueError: If the video could not be added.
         """
-        video_ids, _ = add_videos.load_into_collection_from_paths(
+        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
             session=session,
             collection_id=collection_id,
             video_paths=[self.path],
@@ -45,9 +45,9 @@ class CreateVideo(CreateSample):
             num_decode_threads=self.num_decode_threads,
             show_progress=False,
         )
-        if len(video_ids) != 1:
+        if len(video_path_to_id) != 1:
             raise ValueError("Failed to create video sample.")
-        return video_ids[0]
+        return next(iter(video_path_to_id.values()))
 
     def sample_type(self) -> SampleType:
         """Return the sample type."""

@@ -8,11 +8,14 @@ import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_loc
 
 const echartsMock = vi.hoisted(() => {
     const zrHandlers: Record<string, (event: { offsetX: number; offsetY: number }) => void> = {};
+    let clickHandler: ((params: { dataIndex?: number }) => void) | undefined;
     const instance = {
         setOption: vi.fn(),
         resize: vi.fn(),
         dispose: vi.fn(),
-        on: vi.fn(),
+        on: vi.fn((event: string, handler: (params: { dataIndex?: number }) => void) => {
+            if (event === 'click') clickHandler = handler;
+        }),
         // 2 bins across a 200px-wide canvas → 100px per bin index.
         convertFromPixel: vi.fn((_finder: unknown, offsetX: number) => offsetX / 100),
         getZr: () => ({
@@ -22,7 +25,12 @@ const echartsMock = vi.hoisted(() => {
             off: vi.fn()
         })
     };
-    return { init: vi.fn(() => instance), instance, zrHandlers };
+    return {
+        init: vi.fn(() => instance),
+        instance,
+        zrHandlers,
+        getClickHandler: () => clickHandler
+    };
 });
 
 vi.mock('echarts/core', () => ({
@@ -32,6 +40,7 @@ vi.mock('echarts/core', () => ({
 vi.mock('echarts/charts', () => ({ BarChart: {}, CustomChart: {} }));
 vi.mock('echarts/components', () => ({
     GridComponent: {},
+    LegendComponent: {},
     TooltipComponent: {}
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
@@ -45,6 +54,24 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 }
 
 const defaultProps = { data: balanced };
+const comparisonData = [
+    {
+        sample_tag_id: 'tag-a',
+        sample_tag_name: 'Reviewed',
+        counts: [
+            { label_name: 'car', count: 2 },
+            { label_name: 'dog', count: 0 }
+        ]
+    },
+    {
+        sample_tag_id: 'tag-b',
+        sample_tag_name: 'Priority',
+        counts: [
+            { label_name: 'car', count: 1 },
+            { label_name: 'dog', count: 5 }
+        ]
+    }
+];
 
 describe('DatasetDistributionPanel', () => {
     beforeAll(() => {
@@ -93,8 +120,10 @@ describe('DatasetDistributionPanel', () => {
         // Horizontal default: categories live on the y-axis.
         const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
             yAxis: { data: string[] };
+            grid: { top: number };
         };
         expect(option.yAxis.data).toEqual(['person', 'dog', 'car']);
+        expect(option.grid.top).toBe(4);
     });
 
     it('applies a new top-N from the config dialog', async () => {
@@ -194,6 +223,355 @@ describe('DatasetDistributionPanel', () => {
         expect(screen.queryByTestId('dataset-distribution-source-select')).not.toBeInTheDocument();
     });
 
+    it('preserves base-view order when tags are selected and keeps tag series independent', async () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        data: [
+                            { label: 'car', count: 10 },
+                            { label: 'dog', count: 5, selected: true }
+                        ],
+                        comparisonData
+                    }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b']
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+            series: {
+                name: string;
+                data: (number | { value: number; itemStyle: { opacity: number } })[];
+            }[];
+        };
+        // Base-view order is preserved: car (10) before dog (5).
+        expect(option.yAxis.data).toEqual(['car', 'dog']);
+        // Series names are preserved; each tag is independent (not merged).
+        expect(option.series).toMatchObject([{ name: 'Reviewed' }, { name: 'Priority' }]);
+        expect(option.series[0].data).toEqual([
+            { value: 100, itemStyle: { opacity: 0.25 } },
+            { value: 0, itemStyle: { opacity: 1 } }
+        ]);
+        expect(screen.getByText(/2 sample tags/)).toBeInTheDocument();
+        expect(screen.queryByText(/annotations/)).not.toBeInTheDocument();
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-expand'));
+        await waitFor(() => expect(screen.getAllByText(/2 sample tags/)).toHaveLength(2));
+    });
+
+    it('defaults tag comparisons to percentage and allows switching to numbers', async () => {
+        const user = userEvent.setup();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        comparisonData
+                    }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b']
+            }
+        });
+
+        const valueMode = screen.getByTestId('dataset-distribution-value-mode');
+        await waitFor(() => expect(valueMode).toHaveTextContent('Percentage'));
+
+        await user.click(valueMode);
+        await user.click(screen.getByRole('option', { name: 'Number' }));
+        await waitFor(() => expect(valueMode).toHaveTextContent('Number'));
+    });
+
+    it('renders comparison data from the selected annotation-type group', async () => {
+        const user = userEvent.setup();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        groupLabel: 'Annotation type',
+                        groups: [
+                            { id: 'all', label: 'All types', data: balanced },
+                            {
+                                id: 'classification',
+                                label: 'Classification',
+                                data: [{ label: 'car', count: 3 }],
+                                comparisonData
+                            }
+                        ]
+                    }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b']
+            }
+        });
+
+        await user.click(screen.getByTestId('dataset-distribution-group-select'));
+        await user.click(screen.getByText('Classification'));
+
+        await waitFor(() => expect(screen.getByText(/2 sample tags/)).toBeInTheDocument());
+    });
+
+    it('renders categorical metadata as grouped tag series on a shared value axis', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'metadata',
+                        label: 'Metadata',
+                        groups: [
+                            {
+                                id: 'city',
+                                label: 'city',
+                                categorical: {
+                                    buckets: [
+                                        {
+                                            id: 'zurich',
+                                            kind: 'value',
+                                            value: 'Zurich',
+                                            label: 'Zurich',
+                                            count: 10
+                                        }
+                                    ],
+                                    selectedValues: []
+                                },
+                                comparisonSeries: [
+                                    {
+                                        id: 'tag-a',
+                                        label: 'Reviewed',
+                                        data: [{ id: 'zurich', label: 'Zurich', count: 4 }]
+                                    },
+                                    {
+                                        id: 'tag-b',
+                                        label: 'Priority',
+                                        data: [{ id: 'missing', label: 'Missing', count: 2 }]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                comparisonTagItems: [
+                    { value: 'tag-a', label: 'Reviewed' },
+                    { value: 'tag-b', label: 'Priority' }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b'],
+                onComparisonTagIdsChange: vi.fn()
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+            series: { name: string }[];
+        };
+        expect(option.yAxis.data).toEqual(['zurich', 'missing']);
+        expect(option.series).toMatchObject([{ name: 'Reviewed' }, { name: 'Priority' }]);
+        expect(screen.getByText('Compare by')).toBeInTheDocument();
+    });
+
+    const comparisonOnlySources = (
+        comparisonBuckets?: {
+            id: string;
+            kind: 'value';
+            value: string;
+            label: string;
+            count: number;
+        }[]
+    ): DistributionSource[] => [
+        {
+            id: 'metadata',
+            label: 'Metadata',
+            groups: [
+                {
+                    id: 'city',
+                    label: 'city',
+                    categorical: {
+                        buckets: [
+                            {
+                                id: 'zurich',
+                                kind: 'value',
+                                value: 'Zurich',
+                                label: 'Zurich',
+                                count: 10
+                            }
+                        ],
+                        ...(comparisonBuckets ? { comparisonBuckets } : {}),
+                        selectedValues: []
+                    },
+                    // 'bern' exists only in the tag, never in the current view.
+                    comparisonSeries: [
+                        {
+                            id: 'tag-a',
+                            label: 'Reviewed',
+                            data: [
+                                { id: 'zurich', label: 'Zurich', count: 4 },
+                                { id: 'bern', label: 'Bern', count: 6 }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ];
+
+    const comparisonProps = {
+        comparisonTagItems: [{ value: 'tag-a', label: 'Reviewed' }],
+        selectedComparisonTagIds: ['tag-a'],
+        onComparisonTagIdsChange: vi.fn()
+    };
+
+    it('toggles a filter for a value only a comparison tag holds', () => {
+        const onCategoricalValueToggle = vi.fn();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: comparisonOnlySources([
+                    { id: 'bern', kind: 'value', value: 'Bern', label: 'Bern', count: 6 }
+                ]),
+                onCategoricalValueToggle,
+                ...comparisonProps
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+        };
+        // Base-view order: Zurich first, Bern (comparison-only) appended.
+        expect(option.yAxis.data).toEqual(['zurich', 'bern']);
+
+        echartsMock.getClickHandler()?.({ dataIndex: 1 });
+        expect(onCategoricalValueToggle).toHaveBeenCalledWith('city', 'Bern');
+    });
+
+    it('leaves a comparison-only bar unclickable when no bucket describes it', () => {
+        const onCategoricalValueToggle = vi.fn();
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: comparisonOnlySources(),
+                onCategoricalValueToggle,
+                ...comparisonProps
+            }
+        });
+
+        // Bern (comparison-only, no bucket) is at index 1 after base-view Zurich.
+        echartsMock.getClickHandler()?.({ dataIndex: 1 });
+        expect(onCategoricalValueToggle).not.toHaveBeenCalled();
+    });
+
+    it('keeps current-view-only buckets in the shared categorical axis', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'metadata',
+                        label: 'Metadata',
+                        groups: [
+                            {
+                                id: 'city',
+                                label: 'city',
+                                categorical: {
+                                    // 'london' has no entry in any comparison tag.
+                                    buckets: [
+                                        {
+                                            id: 'zurich',
+                                            kind: 'value',
+                                            value: 'Zurich',
+                                            label: 'Zurich',
+                                            count: 5
+                                        },
+                                        {
+                                            id: 'london',
+                                            kind: 'value',
+                                            value: 'London',
+                                            label: 'London',
+                                            count: 3
+                                        }
+                                    ],
+                                    selectedValues: []
+                                },
+                                comparisonSeries: [
+                                    {
+                                        id: 'tag-a',
+                                        label: 'Reviewed',
+                                        data: [{ id: 'zurich', label: 'Zurich', count: 4 }]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                ...comparisonProps
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+        };
+        expect(option.yAxis.data).toContain('london');
+    });
+
+    it('reports a failed tag comparison instead of showing fewer tags silently', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: comparisonOnlySources().map((source) => ({
+                    ...source,
+                    comparisonLoading: true,
+                    comparisonError: 'Request failed'
+                })),
+                ...comparisonProps
+            }
+        });
+
+        expect(screen.getByTestId('dataset-distribution-comparison-error')).toBeInTheDocument();
+        expect(screen.getByTestId('distribution-plot-loading')).toBeInTheDocument();
+    });
+
+    it('keeps the chart mounted during refresh and allows closing the panel', async () => {
+        const onClose = vi.fn();
+        const source = { id: 'classes', label: 'Annotation classes', data: balanced };
+        const view = render(DatasetDistributionPanel, { props: { sources: [source], onClose } });
+        const chart = view.container.querySelector('[data-testid=bar-chart]');
+        await view.rerender({ sources: [{ ...source, loading: true }], onClose });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+        expect(screen.getByTestId('bar-chart')).toBe(chart);
+        await fireEvent.click(screen.getByTestId('dataset-distribution-close-button'));
+        expect(onClose).toHaveBeenCalledOnce();
+        await view.rerender({ sources: [source], onClose });
+        expect(screen.queryByTestId('distribution-plot-loading')).not.toBeInTheDocument();
+    });
+
+    it('shows a spinner before the selected histogram has data', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'metadata',
+                        label: 'Metadata',
+                        groups: [{ id: 'width', label: 'Width', loading: true }]
+                    }
+                ]
+            }
+        });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+    });
+
+    it('marks an in-flight tag comparison so an empty chart is not read as no data', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: comparisonOnlySources().map((source) => ({
+                    ...source,
+                    comparisonLoading: true
+                })),
+                ...comparisonProps
+            }
+        });
+
+        expect(screen.getByTestId('distribution-plot-loading')).toBeInTheDocument();
+    });
+
     it('defaults to the first source with content when a leading source is empty', () => {
         const sources: DistributionSource[] = [
             { id: 'all', label: 'All types', data: [], valueNoun: 'annotations' },
@@ -216,6 +594,482 @@ describe('DatasetDistributionPanel', () => {
         expect(screen.getByTestId('histogram')).toBeInTheDocument();
         expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
             '100 samples · 2 bins · 0–1'
+        );
+    });
+
+    it('switches a numerical metadata histogram between numbers and percentages', async () => {
+        const user = userEvent.setup();
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [1, 3] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const valueMode = screen.getByTestId('dataset-distribution-histogram-value-mode');
+        expect(valueMode).toHaveTextContent('Number');
+        await user.click(valueMode);
+        await user.click(await screen.findByRole('option', { name: 'Percentage' }));
+
+        await waitFor(() => {
+            const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+                series: { data: { value: [number, number] }[] }[];
+                yAxis: { max?: number };
+            };
+            expect(option.series[0].data.map((item) => item.value[1])).toEqual([25, 75]);
+            // The axis is left unpinned so it scales to the tallest bin, not to 100%.
+            expect(option.yAxis.max).toBeUndefined();
+        });
+        expect(screen.getByTestId('dataset-distribution-histogram-summary')).toHaveTextContent(
+            '100% of 4 samples'
+        );
+
+        await user.click(screen.getByTestId('dataset-distribution-histogram-expand'));
+        expect(
+            screen.getByTestId('dataset-distribution-expanded-histogram-value-mode')
+        ).toHaveTextContent('Percentage');
+    });
+
+    it('keeps histogram value modes independent for matching group ids across sources', async () => {
+        const user = userEvent.setup();
+        const sources: DistributionSource[] = [
+            {
+                id: 'predictions',
+                label: 'Predictions',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [1, 3] }
+                    }
+                ]
+            },
+            {
+                id: 'annotations',
+                label: 'Annotations',
+                groups: [
+                    {
+                        id: 'confidence',
+                        label: 'confidence',
+                        histogram: { binEdges: [0, 0.5, 1], counts: [2, 2] }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const valueMode = screen.getByTestId('dataset-distribution-histogram-value-mode');
+        await user.click(valueMode);
+        await user.click(await screen.findByRole('option', { name: 'Percentage' }));
+        expect(valueMode).toHaveTextContent('Percentage');
+
+        const sourceSelect = screen.getByTestId('dataset-distribution-source-select');
+        await user.click(sourceSelect);
+        await user.click(await screen.findByRole('option', { name: 'Annotations' }));
+        expect(valueMode).toHaveTextContent('Number');
+
+        await user.click(sourceSelect);
+        await user.click(await screen.findByRole('option', { name: 'Predictions' }));
+        expect(valueMode).toHaveTextContent('Percentage');
+    });
+
+    it('preserves categorical endpoint order and toggles typed buckets but not Other', () => {
+        const onCategoricalValueToggle = vi.fn();
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            selectedValues: ['Missing'],
+                            buckets: [
+                                {
+                                    id: 'literal',
+                                    kind: 'value',
+                                    value: 'Missing',
+                                    label: 'Missing',
+                                    count: 4
+                                },
+                                {
+                                    id: 'missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 3
+                                },
+                                { id: 'other', kind: 'other', label: 'Other', count: 2 }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources, onCategoricalValueToggle } });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[]; axisLabel: { formatter: (key: string) => string } };
+            series: [{ data: { itemStyle: { color: string } }[] }];
+            grid: { top: number };
+        };
+        expect(option.yAxis.data).toEqual(['literal', 'missing', 'other']);
+        expect(option.yAxis.data.map(option.yAxis.axisLabel.formatter)).toEqual([
+            'Missing',
+            'Missing',
+            'Other'
+        ]);
+        expect(option.grid.top).toBe(4);
+        // 'Missing' (value) is selected → accent green; the others are dimmed grey.
+        expect(option.series[0].data[0].itemStyle.color).toBe('rgba(59,217,159,0.85)');
+
+        echartsMock.getClickHandler()?.({ dataIndex: 1 });
+        expect(onCategoricalValueToggle).toHaveBeenCalledWith('city', null);
+        echartsMock.getClickHandler()?.({ dataIndex: 2 });
+        expect(onCategoricalValueToggle).toHaveBeenCalledOnce();
+    });
+
+    it('uses the shared settings to show 5, 30, or all metadata values', async () => {
+        const buckets = Array.from({ length: 35 }, (_, index) => ({
+            id: `value-${index}`,
+            kind: 'value' as const,
+            value: `Value ${index}`,
+            label: `Value ${index}`,
+            count: 35 - index
+        }));
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'metadata',
+                        label: 'Metadata',
+                        groups: [
+                            {
+                                id: 'category',
+                                label: 'category',
+                                categorical: { buckets, selectedValues: [] }
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        expect(screen.getByText(/Top 20 of 35 values/)).toBeInTheDocument();
+        for (const n of [5, 30]) {
+            await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+            await fireEvent.input(screen.getByTestId('distribution-config-top-n'), {
+                target: { value: String(n) }
+            });
+            await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+            // Let the dialog release its pointer lock before reopening it.
+            await waitFor(() => expect(document.body.style.pointerEvents).not.toBe('none'));
+            await waitFor(() =>
+                expect(screen.getByText(new RegExp(`Top ${n} of 35 values`))).toBeInTheDocument()
+            );
+            const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+                yAxis: { data: string[] };
+            };
+            expect(option.yAxis.data).toHaveLength(n + 1);
+            expect(option.yAxis.data.at(-1)).toBe('["other"]');
+        }
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        await fireEvent.click(screen.getByTestId('distribution-config-all'));
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+        await waitFor(() =>
+            expect(screen.getByText(/35 values · sorted by count/)).toBeInTheDocument()
+        );
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[] };
+        };
+        expect(option.yAxis.data).toHaveLength(35);
+        expect(option.yAxis.data).not.toContain('["other"]');
+        await waitFor(() => expect(document.body.style.pointerEvents).not.toBe('none'));
+    });
+
+    it('stores categorical orientation per metadata field', async () => {
+        const user = userEvent.setup();
+        const categorical = (label: string) => ({
+            selectedValues: [],
+            buckets: [{ id: label, kind: 'value' as const, value: label, label, count: 1 }]
+        });
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groupLabel: 'Metadata key',
+                groups: [
+                    { id: 'city', label: 'city', categorical: categorical('Zurich') },
+                    { id: 'weather', label: 'weather', categorical: categorical('rainy') }
+                ]
+            },
+            { id: 'classes', label: 'Classes', data: [] }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const orientationToggle = screen.getByTestId('dataset-distribution-toggle-orientation');
+        await fireEvent.click(orientationToggle);
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+
+        const groupSelect = screen.getByTestId('dataset-distribution-group-select');
+        await user.click(groupSelect);
+        await user.click(await screen.findByRole('option', { name: 'weather' }));
+        expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars');
+
+        await user.click(groupSelect);
+        await user.click(await screen.findByRole('option', { name: 'city' }));
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+    });
+
+    it('configures, reorients, and expands categorical values', async () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: [
+                                {
+                                    id: 'zurich',
+                                    kind: 'value',
+                                    value: 'Zurich',
+                                    label: 'Zurich',
+                                    count: 4
+                                },
+                                {
+                                    id: 'missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 1
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        expect(screen.getByText(/2 values · sorted by count · 5 samples/)).toBeInTheDocument();
+        const orientationToggle = screen.getByTestId('dataset-distribution-toggle-orientation');
+        expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars');
+
+        await fireEvent.click(orientationToggle);
+        await waitFor(() =>
+            expect(
+                (echartsMock.instance.setOption.mock.lastCall?.[0] as { xAxis: { type: string } })
+                    .xAxis.type
+            ).toBe('category')
+        );
+        expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        expect(screen.getByText('Configure values')).toBeInTheDocument();
+        expect(screen.queryByTestId('distribution-config-count-mode')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByText('Cancel'));
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-expand'));
+        expect(screen.getByTestId('dataset-distribution-expanded-configure')).toBeInTheDocument();
+        const expandedOrientationToggle = screen.getByTestId(
+            'dataset-distribution-expanded-toggle-orientation'
+        );
+        expect(expandedOrientationToggle).toHaveAccessibleName('Switch to horizontal bars');
+
+        await fireEvent.click(expandedOrientationToggle);
+        await waitFor(() =>
+            expect(orientationToggle).toHaveAccessibleName('Switch to vertical bars')
+        );
+        await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('switches categorical metadata between numbers and percentages in both views', async () => {
+        const user = userEvent.setup({ pointerEventsCheck: 0 });
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                valueNoun: 'samples',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: [
+                                {
+                                    id: 'zurich',
+                                    kind: 'value',
+                                    value: 'Zurich',
+                                    label: 'Zurich',
+                                    count: 4
+                                },
+                                {
+                                    id: 'bern',
+                                    kind: 'value',
+                                    value: 'Bern',
+                                    label: 'Bern',
+                                    count: 1
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        const valueMode = screen.getByTestId('dataset-distribution-value-mode');
+        expect(valueMode).toHaveTextContent('Number');
+        await user.click(valueMode);
+        await user.click(await screen.findByRole('option', { name: 'Percentage' }));
+
+        await waitFor(() => {
+            const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+                series: { data: { value: number }[] }[];
+                xAxis: { max?: number };
+            };
+            expect(option.series[0].data.map((item) => item.value)).toEqual([80, 20]);
+            // The axis is left unpinned so it scales to the tallest bar, not to 100%.
+            expect(option.xAxis.max).toBeUndefined();
+        });
+        expect(screen.getByText(/100% of 5 samples/)).toBeInTheDocument();
+
+        await user.click(screen.getByTestId('dataset-distribution-expand'));
+        expect(screen.getByTestId('dataset-distribution-expanded-value-mode')).toHaveTextContent(
+            'Percentage'
+        );
+    });
+
+    it('manually configures colliding categorical labels by stable bucket id', async () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'status',
+                        label: 'status',
+                        categorical: {
+                            selectedValues: [],
+                            buckets: [
+                                {
+                                    id: 'literal-missing',
+                                    kind: 'value',
+                                    value: 'Missing',
+                                    label: 'Missing',
+                                    count: 4
+                                },
+                                {
+                                    id: 'semantic-missing',
+                                    kind: 'missing',
+                                    value: null,
+                                    label: 'Missing',
+                                    count: 3
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        await fireEvent.click(screen.getByRole('tab', { name: 'Manual' }));
+        const missingOptions = screen.getAllByText('Missing');
+        expect(missingOptions).toHaveLength(2);
+        await fireEvent.click(missingOptions[1]);
+        await fireEvent.click(screen.getByTestId('distribution-config-apply'));
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            yAxis: { data: string[]; axisLabel: { formatter: (key: string) => string } };
+            series: [{ data: { value: number }[] }];
+        };
+        expect(option.yAxis.data).toEqual(['semantic-missing']);
+        expect(option.yAxis.axisLabel.formatter('semantic-missing')).toBe('Missing');
+        expect(option.series[0].data[0].value).toBe(3);
+    });
+
+    it('shows categorical loading and retryable error states', async () => {
+        const onCategoricalRetry = vi.fn();
+        const source = (state: { loading?: boolean; error?: string }): DistributionSource[] => [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: { buckets: [], selectedValues: ['Zurich'], ...state }
+                    }
+                ]
+            }
+        ];
+        const view = render(DatasetDistributionPanel, {
+            props: { sources: source({ loading: true }), onCategoricalRetry }
+        });
+        expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+
+        await view.rerender({
+            sources: source({ error: 'network failure' }),
+            onCategoricalRetry
+        });
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not load metadata distribution');
+        await fireEvent.click(screen.getByTestId('metadata-categorical-retry'));
+        expect(onCategoricalRetry).toHaveBeenCalledOnce();
+    });
+
+    it('keeps stale categorical bars visible after a refetch error', () => {
+        const sources: DistributionSource[] = [
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groups: [
+                    {
+                        id: 'city',
+                        label: 'city',
+                        categorical: {
+                            buckets: [
+                                {
+                                    id: 'zurich',
+                                    kind: 'value',
+                                    value: 'Zurich',
+                                    label: 'Zurich',
+                                    count: 4
+                                }
+                            ],
+                            selectedValues: [],
+                            error: 'network failure'
+                        }
+                    }
+                ]
+            }
+        ];
+
+        render(DatasetDistributionPanel, { props: { sources } });
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not update');
+        expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+        expect(screen.getByLabelText('Categorical metadata value counts')).toHaveTextContent(
+            'Zurich: 4 samples'
         );
     });
 
@@ -421,6 +1275,26 @@ describe('DatasetDistributionPanel', () => {
         expect(onHistogramRangeSelect).toHaveBeenCalledWith('confidence', { min: 0.5, max: 1 });
     });
 
+    it('shows a group selector when the only source has multiple groups', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        id: 'classes',
+                        label: 'Annotation classes',
+                        groups: [
+                            { id: 'all', label: 'All types', data: balanced },
+                            { id: 'classification', label: 'Classification', data: balanced }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        expect(screen.queryByTestId('dataset-distribution-source-select')).not.toBeInTheDocument();
+        expect(screen.getByTestId('dataset-distribution-group-select')).toBeInTheDocument();
+    });
+
     const histogramSources: DistributionSource[] = [
         {
             id: 'metadata',
@@ -436,6 +1310,53 @@ describe('DatasetDistributionPanel', () => {
             ]
         }
     ];
+
+    it('renders numerical metadata as comparable histogram tag series', () => {
+        const sources: DistributionSource[] = [
+            {
+                ...histogramSources[0],
+                groups: [
+                    {
+                        ...histogramSources[0].groups![0],
+                        histogramSeries: [
+                            {
+                                id: 'tag-a',
+                                label: 'Reviewed',
+                                data: { binEdges: [0, 0.5, 1], counts: [4, 2] }
+                            },
+                            {
+                                id: 'tag-b',
+                                label: 'Priority',
+                                data: { binEdges: [0, 0.5, 1], counts: [1, 5] }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ];
+        render(DatasetDistributionPanel, {
+            props: {
+                sources,
+                comparisonTagItems: [
+                    { value: 'tag-a', label: 'Reviewed' },
+                    { value: 'tag-b', label: 'Priority' }
+                ],
+                selectedComparisonTagIds: ['tag-a', 'tag-b'],
+                onComparisonTagIdsChange: vi.fn()
+            }
+        });
+
+        const option = echartsMock.instance.setOption.mock.lastCall?.[0] as {
+            xAxis: { max: number };
+            series: { name: string; data: { value: [number, number] }[] }[];
+        };
+        expect(option.xAxis.max).toBe(2);
+        expect(option.series).toMatchObject([{ name: 'Reviewed' }, { name: 'Priority' }]);
+        expect(option.series[0].data.map(({ value }) => value)).toEqual([
+            [0.5, 4],
+            [1.5, 2]
+        ]);
+    });
 
     it('shows the bin-count select only when a change handler is provided', () => {
         render(DatasetDistributionPanel, { props: { sources: histogramSources } });

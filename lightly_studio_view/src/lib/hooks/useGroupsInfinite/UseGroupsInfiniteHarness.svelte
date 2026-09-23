@@ -9,5 +9,7 @@
     const { collectionId, onReady }: Props = $props();
     const result = useGroupsInfinite(() => collectionId);
 
-    onReady(result);
+    $effect(() => {
+        onReady(result);
+    });
 </script>

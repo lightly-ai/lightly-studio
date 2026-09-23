@@ -1,32 +1,38 @@
-"""Example of how to register a custom embedding model.
+"""Example of how to register a custom embedder.
 
-This shows how to bypass the model selected by the
-LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE environment variable and use your own
-generator instead. The generator below mimics the built-in MobileCLIP model, but
-you can swap in any implementation of the EmbeddingGenerator protocol.
+This shows how to bypass the built-in embedder and use your own instead. The
+embedder below mimics the built-in MobileCLIP model, but you can swap in any
+implementation of the ``Embedder`` capability interfaces.
 
-Register the model with ls.set_default_embedding_model BEFORE creating a dataset,
-so ingestion uses your generator instead of the environment default.
+An embedder subclasses one interface per input it can embed. This one embeds
+images by path, uploaded images as bytes, image crops and text into one shared
+space, so text queries and query images can be compared against image embeddings.
+Implement ``VideoPathEmbedder`` as well to embed whole videos.
+
+Register the embedder with ls.register_default_embedder BEFORE creating a dataset,
+so ingestion uses it instead of the built-in default.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import UUID
 
 import numpy as np
 import torch
 from environs import Env
-from numpy.typing import NDArray
-from PIL import Image
+from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    TextEmbedder,
+)
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
-from lightly_studio.dataset import file_utils, image_crop_embedding, image_embedding
-from lightly_studio.dataset.embedding_result import EmbeddingResult
+from lightly_studio.dataset import file_utils
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
-from lightly_studio.dataset.image_embedding import EmbeddingContext
-from lightly_studio.models.embedding_model import EmbeddingModelCreate
+from lightly_studio.embed import image_crop_embedding, image_embedding
+from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio.vendor import mobileclip
 
 MODEL_NAME = "mobileclip_s0"
@@ -37,14 +43,19 @@ MAX_BATCH_SIZE: int = 16
 EMBEDDING_DIMENSION: int = 512
 
 
-class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
-    """A custom image embedding model.
+class CustomEmbedder(
+    ImagePathEmbedder,
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    TextEmbedder,
+):
+    """A custom embedder.
 
-    This implements the ls.ImageEmbeddingGenerator protocol. Here it wraps
-    MobileCLIP to keep the example runnable, but the same structure works for any
-    model: implement get_embedding_model_input, embed_text, embed_images,
-    embed_image_crops and embed_pil_images. Implement ls.VideoEmbeddingGenerator as
-    well to override the video model.
+    This subclasses the ``ImagePathEmbedder``, ``ImageBytesEmbedder``,
+    ``ImageCropPathEmbedder`` and ``TextEmbedder`` interfaces. Here it wraps MobileCLIP
+    to keep the example runnable, but the same structure works for any model: subclass
+    the interface for each capability you support and implement its embed method.
+    Subclass only the capabilities your model provides.
     """
 
     def __init__(self) -> None:
@@ -64,55 +75,54 @@ class CustomEmbeddingGenerator(ls.ImageEmbeddingGenerator):
         )
         self._model = self._model.to(self._device)
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
-        self._model_hash = file_utils.get_file_xxhash(model_path)
 
-    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
-        """Describe the model so it can be recorded in the database.
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
+        """Describe the embedding space so it can be recorded in the database.
 
-        The name shows up in the GUI and the hash lets Lightly Studio detect when
-        the same model has been used before.
+        Returns metadata about the embedding space to be stored in the database.
+        The `space_key` field is used to match the same embedding space across
+        multiple LightlyStudio runs.
         """
-        return EmbeddingModelCreate(
-            name="Custom Embedding Model",
-            embedding_model_hash=self._model_hash,
-            embedding_dimension=EMBEDDING_DIMENSION,
-            collection_id=collection_id,
+        return ls.EmbeddingSpaceSpec(
+            space_key="your-company/model-family@version",
+            dimension=EMBEDDING_DIMENSION,
         )
 
-    def embed_text(self, text: str) -> list[float]:
-        """Embed a text query into the same space as the images (for text search)."""
-        tokenized = self._tokenizer([text]).to(self._device)
-        with torch.no_grad():
-            embedding = self._model.encode_text(tokenized)[0]  # type: ignore[operator]
-            embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
-        return embedding_list
-
-    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> EmbeddingResult:
+    def embed_images(self, paths: list[str]) -> ls.EmbeddingResult:
         """Embed a batch of images, returning one row per readable input path."""
         return image_embedding.embed_image_files_batched(
-            filepaths=filepaths,
+            filepaths=paths,
             context=self._embedding_context(),
-            show_progress=show_progress,
+            show_progress=True,
         )
 
-    def embed_image_crops(
-        self, image_crops: list[ls.ImageCrop], show_progress: bool = True
-    ) -> EmbeddingResult:
-        """Embed a batch of image crops (used for annotation embeddings)."""
-        return image_crop_embedding.embed_image_crops_batched(
-            image_crops=image_crops,
-            context=self._embedding_context(),
-            show_progress=show_progress,
-        )
-
-    def embed_pil_images(
-        self, images: list[Image.Image], show_progress: bool = True
-    ) -> NDArray[np.float32]:
-        """Embed a batch of in-memory PIL images."""
-        return image_embedding.embed_pil_images_batched(
+    def embed_image_bytes(self, images: list[bytes]) -> ls.EmbeddingResult:
+        """Embed uploaded images given as encoded bytes (for image search in the GUI)."""
+        return image_embedding.embed_image_bytes_batched(
             images=images,
             context=self._embedding_context(),
-            show_progress=show_progress,
+            show_progress=False,
+        )
+
+    def embed_image_crops(self, crops: list[ls.ImageCrop]) -> ls.EmbeddingResult:
+        """Embed a batch of image crops (used for annotation embeddings)."""
+        return image_crop_embedding.embed_image_crops_batched(
+            image_crops=crops,
+            context=self._embedding_context(),
+            show_progress=True,
+        )
+
+    def embed_text(self, texts: list[str]) -> ls.EmbeddingResult:
+        """Embed text queries into the same space as the images (for text search)."""
+        if not texts:
+            empty = np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
+            return ls.EmbeddingResult(embeddings=empty, kept_indices=[])
+
+        tokenized = self._tokenizer(texts).to(self._device)
+        with torch.no_grad():
+            embeddings = self._model.encode_text(tokenized).cpu().numpy()  # type: ignore[operator]
+        return ls.EmbeddingResult(
+            embeddings=embeddings.astype(np.float32), kept_indices=list(range(len(texts)))
         )
 
     def _embedding_context(self) -> EmbeddingContext:
@@ -146,14 +156,14 @@ env.read_env()
 # Cleanup an existing database
 db_manager.connect(cleanup_existing=True)
 
-# Register the custom model BEFORE creating the dataset. This overrides the model
-# selected by LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE for every collection.
-ls.set_default_embedding_model(CustomEmbeddingGenerator())
+# Register the custom embedder BEFORE creating the dataset. It becomes the default
+# for every capability it implements, so ingestion uses it for every collection.
+ls.register_default_embedder(embedder=CustomEmbedder())
 
 # Define the path to the dataset directory
-dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
+dataset_path = env.path("EXAMPLES_DATASET_PATH")
 
-# Create a Dataset from a path. Images are embedded with the custom model.
+# Create a Dataset from a path. Images are embedded with the custom embedder.
 dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=str(dataset_path))
 

@@ -56,7 +56,7 @@
     }: SampleSlicRectProps = $props();
 
     const labels = useAnnotationLabels(() => ({ collectionId }));
-    const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const {
         open: selectClassDialogOpen,
         requestLabel,
@@ -64,9 +64,9 @@
         handleCancel: handleSelectClassDialogCancel
     } = useSelectClassDialog();
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
-    );
+    const { refetch: refetchRootCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
     const {
         context: annotationLabelContext,
         setAnnotationId,

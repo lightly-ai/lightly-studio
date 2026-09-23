@@ -1,11 +1,12 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
-    import { SampleAnnotationSegmentationRLE } from '$lib/components';
+    import { AnnotationCanvas } from '$lib/components';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationClassVisibility } from '$lib/hooks';
-    import { getColorByLabel } from '$lib/utils';
+    import { getColorByLabel, hexToRgba } from '$lib/utils';
     import type { CropWindow } from './renderCropObjectUrl';
 
     type Props = {
@@ -40,20 +41,22 @@
     const { customLabelColorsStore } = useCustomLabelColors();
     const { isClassHidden } = useAnnotationClassVisibility();
 
-    if (!annotation.object_detection_details && !annotation.segmentation_details) {
+    if (
+        !untrack(() => annotation.object_detection_details) &&
+        !untrack(() => annotation.segmentation_details)
+    ) {
         throw new Error(
             'Unsupported annotation: Only annotations with object_detection_details or segmentation_details are supported. Please check the annotation data.'
         );
     }
 
-    const {
-        width: annotationWidth,
-        height: annotationHeight,
-        x: annotationX,
-        y: annotationY
-    } = getBoundingBox(annotation);
+    const bbox = $derived(getBoundingBox(annotation));
+    const annotationWidth = $derived(bbox.width);
+    const annotationHeight = $derived(bbox.height);
+    const annotationX = $derived(bbox.x);
+    const annotationY = $derived(bbox.y);
 
-    const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
+    const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
     // Calculate values directly without using state
     const scale = $derived(
         Math.min(
@@ -76,30 +79,37 @@
         );
     }
 
-    let labelName = annotation.annotation_label.annotation_label_name;
-    const isAnnotationClassHidden = isClassHidden(labelName);
+    const labelName = $derived(annotation.annotation_label.annotation_label_name);
+    const isAnnotationClassHidden = isClassHidden(untrack(() => labelName));
 
     const colorStroke = $derived.by(
         () => $customLabelColorsStore[labelName]?.color ?? getColorByLabel(labelName, 1).color
     );
     const colorFill = $derived.by(() => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const color = $customLabelColorsStore[labelName]?.color;
-        return getColorByLabel(labelName, 0.4).color;
+        const customColor = $customLabelColorsStore[labelName];
+        return customColor
+            ? hexToRgba(customColor.color, customColor.alpha * 0.4)
+            : getColorByLabel(labelName, 0.4).color;
     });
     const opacity = $derived($customLabelColorsStore[labelName]?.alpha ?? 0.4);
 
-    const isRLESegmentation = !!segmentationMask;
+    const isRLESegmentation = $derived(!!segmentationMask);
 
     // Calculate values for use in template
     const xOffset = $derived(getXOffset());
     const yOffset = $derived(getYOffset());
+    const sourceCrop = $derived({
+        x: annotationX - padding,
+        y: annotationY - padding,
+        width: annotationWidth + padding * 2,
+        height: annotationHeight + padding * 2
+    });
 
     // Captured by value at init: props are lazy getters, and reading `annotation` during
     // effect cleanup would re-evaluate `annotations[index]` in the grid against an
     // already-shrunken array (crash on filter changes). The id is constant per instance —
     // the {#key} wrapper in the grid remounts this component when it changes.
-    const annotationId = annotation.sample_id;
+    const annotationId = untrack(() => annotation.sample_id);
 
     // Report the crop geometry (not a rendered image) upward. The grid turns it into a
     // preview blob only when a drag actually starts, so no canvas work happens per tile.
@@ -131,6 +141,29 @@
         background-repeat: no-repeat;
     `}
     >
+        {#if isRLESegmentation}
+            <div class:invisible={$isHidden || $isAnnotationClassHidden}>
+                <AnnotationCanvas
+                    sampleId={annotation.sample_id}
+                    sourceWidth={sample.width}
+                    sourceHeight={sample.height}
+                    outputWidth={containerWidth}
+                    outputHeight={containerHeight}
+                    objectFit="contain"
+                    {sourceCrop}
+                    annotations={[
+                        {
+                            annotation_type: 'segmentation_mask',
+                            annotation_label_name: labelName,
+                            segmentation_mask: segmentationMask,
+                            color: colorFill,
+                            opacity
+                        }
+                    ]}
+                    className="pointer-events-none absolute inset-0 z-[1]"
+                />
+            </div>
+        {/if}
         <div
             class="annotation-box"
             class:invisible={$isHidden || $isAnnotationClassHidden}
@@ -157,18 +190,6 @@
                         >
                     {/if}
                 </div>
-            {/if}
-            {#if isRLESegmentation}
-                <svg
-                    viewBox={`${annotationX} ${annotationY} ${annotationWidth} ${annotationHeight}`}
-                >
-                    <SampleAnnotationSegmentationRLE
-                        segmentation={segmentationMask}
-                        width={sample.width}
-                        {colorFill}
-                        {opacity}
-                    />
-                </svg>
             {/if}
         </div>
     </div>
