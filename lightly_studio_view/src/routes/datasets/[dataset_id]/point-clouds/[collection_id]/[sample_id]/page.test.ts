@@ -30,6 +30,14 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
         const { rerender } = render(Page, { props: { data: mockPageData } });
         expect(screen.queryByTestId('point-cloud-labeling-workspace')).not.toBeInTheDocument();
 
+    it('renders the route shell but not the workspace when the feature is disabled', () => {
+        render(Page, { props: { data: mockPageData } });
+
+        expect(screen.getByTestId('point-cloud-labeling-route')).toBeInTheDocument();
+        expect(screen.queryByTestId('point-cloud-labeling-workspace')).not.toBeInTheDocument();
+    });
+
+    it('renders the workspace once the feature is enabled', async () => {
         featureFlags.set(['point_cloud_rendering']);
         await rerender({ data: mockPageData });
         await waitFor(() =>
@@ -60,7 +68,38 @@ describe('point-cloud sample page load', () => {
         });
     });
 
-    it('throws when sequence_id is missing', async () => {
-        await expect(loadWith('')).rejects.toThrow('sequence_id');
+    it('leaves optional query values undefined when absent but sequence_id is present', async () => {
+        const result = await load({
+            params: {
+                dataset_id: 'dataset',
+                collection_id: 'collection',
+                sample_id: 'sample'
+            },
+            url: new URL(
+                'http://localhost/datasets/dataset/point-clouds/collection/sample?sequence_id=sequence'
+            )
+        } as Parameters<typeof load>[0]);
+
+        expect(result).toEqual({
+            datasetId: 'dataset',
+            collectionType: undefined,
+            collectionId: 'collection',
+            sampleId: 'sample',
+            sequenceId: 'sequence',
+            groupId: undefined
+        });
+    });
+
+    it('throws when sequence_id is absent', async () => {
+        await expect(
+            load({
+                params: {
+                    dataset_id: 'dataset',
+                    collection_id: 'collection',
+                    sample_id: 'sample'
+                },
+                url: new URL('http://localhost/datasets/dataset/point-clouds/collection/sample')
+            } as Parameters<typeof load>[0])
+        ).rejects.toThrow(/sequence_id/);
     });
 });
