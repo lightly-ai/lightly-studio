@@ -2,6 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
+// The workspace mounts the camera projection strip, which reads the tick details
+// query; stub it so the chrome renders without a live TanStack query client.
+vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
+    useTickDetails: () => ({ tickDetails: { data: undefined } })
+}));
+
 describe('PointCloudLabelingWorkspace', () => {
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
