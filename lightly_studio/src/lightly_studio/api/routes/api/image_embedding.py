@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import logging
-import os
-import shutil
-import tempfile
-from pathlib import Path
-from typing import Annotated
+from typing import IO, Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi import Path as FastAPIPath
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_INTERNAL_SERVER_ERROR
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_INTERNAL_SERVER_ERROR,
+    HTTP_STATUS_PAYLOAD_TOO_LARGE,
+)
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.embed import embed_samples
 
@@ -21,8 +21,13 @@ logger = logging.getLogger(__name__)
 
 image_embedding_router = APIRouter()
 
+# An upload is held in memory to embed it, so a query image larger than this is refused
+# instead of read
+_MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+# An upload larger than this is embedded, but logged, since it uses much memory
+_LARGE_UPLOAD_WARNING_BYTES = 20 * 1024 * 1024
 
-# TODO(Michal, 09/2026): Switch to embedding with image file bytes instead of an uploaded file.
+
 @image_embedding_router.post(
     "/image_embedding/from_file/for_collection/{collection_id}", response_model=list[float]
 )
@@ -41,20 +46,31 @@ def embed_image_from_file(
             "Per-request embedding model override is not supported yet. Collection's "
             "default embedding model is always used."
         )
+    image_bytes = _read_at_most(stream=file.file, max_bytes=_MAX_UPLOAD_BYTES)
+    if image_bytes is None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_PAYLOAD_TOO_LARGE,
+            detail=(
+                f"The uploaded file is larger than {_MAX_UPLOAD_BYTES} bytes. "
+                f"Uploaded file: {file.filename!r}."
+            ),
+        )
+    if len(image_bytes) > _LARGE_UPLOAD_WARNING_BYTES:
+        logger.warning(
+            "The uploaded file %r is %d bytes, which is large for a query image.",
+            file.filename,
+            len(image_bytes),
+        )
     try:
-        suffix = Path(file.filename).suffix if file.filename else ".jpg"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            shutil.copyfileobj(file.file, tmp)
-            tmp_path = tmp.name
-
-        try:
-            return embed_samples.embed_image_for_collection(
-                session=session, collection_id=collection_id, filepath=tmp_path
-            )
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
-
+        return embed_samples.embed_image_for_collection(
+            session=session, collection_id=collection_id, image_bytes=image_bytes
+        )
+    except embed_samples.ImageNotEmbeddedError as exc:
+        # An upload the embedder drops is a broken image, so it is a bad request
+        raise HTTPException(
+            status_code=HTTP_STATUS_BAD_REQUEST,
+            detail=f"{exc} Uploaded file: {file.filename!r}.",
+        ) from None
     except ValueError as exc:
         raise HTTPException(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
@@ -66,3 +82,11 @@ def embed_image_from_file(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
             detail=f"Error processing image: {exc}",
         ) from None
+
+
+def _read_at_most(stream: IO[bytes], max_bytes: int) -> bytes | None:
+    """Read the stream, or return ``None`` if it holds more than ``max_bytes`` bytes."""
+    data = stream.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        return None
+    return data
