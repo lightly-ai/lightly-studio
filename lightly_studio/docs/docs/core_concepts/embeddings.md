@@ -128,6 +128,15 @@ Examples below show how an embedder is built from the image interfaces.
     A capability you do not subclass, such as `TextEmbedder`, leaves its feature
     unavailable — text search, in that case.
 
+!!! info "Image search without `ImageBytesEmbedder`"
+    Image search uploads an image, so it calls `embed_image_bytes`. An embedder that
+    subclasses `ImagePILEmbedder` or `ImagePathEmbedder` but not `ImageBytesEmbedder`
+    still serves image search: LightlyStudio decodes the upload, or writes it to a
+    temporary file, and calls that interface instead. An embedder that looks up
+    vectors by file path, such as the one below, finds no vector for that temporary
+    file. Subclass `ImageBytesEmbedder` to read the bytes yourself, which a model
+    behind a remote server must do.
+
 ### Loading precomputed embeddings
 
 Use this when you already have vectors — from a previous run, an external pipeline,
