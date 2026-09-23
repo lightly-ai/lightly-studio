@@ -80,4 +80,4 @@ export {
 export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
 export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte';
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
-export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails.svelte';
+export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
