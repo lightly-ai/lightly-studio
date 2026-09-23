@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix the `Values` field in the distribution panel using a larger font than the other fields.
+- Python SDK: Fix `dataset.evaluate()` and evaluation recompute loading each annotation again with its own database query, which made evaluation up to 2.7x slower on large datasets.
 
 ### Security
 

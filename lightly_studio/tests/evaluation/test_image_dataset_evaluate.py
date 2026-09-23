@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+import sqlalchemy
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -939,6 +942,67 @@ def test_metrics__run_from_another_dataset_raises(
 
     with pytest.raises(ValueError, match="not found in this dataset"):
         dataset.evaluate().metrics(run_id=run.id)
+
+
+@pytest.mark.parametrize(
+    ("task", "annotation_type", "annotation_data"),
+    [
+        ("object_detection", AnnotationType.OBJECT_DETECTION, {}),
+        (
+            "instance_segmentation",
+            AnnotationType.SEGMENTATION_MASK,
+            {"x": 0, "y": 0, "width": 4, "height": 4, "segmentation_mask": [0, 16]},
+        ),
+        (
+            "semantic_segmentation",
+            AnnotationType.SEGMENTATION_MASK,
+            {"x": 0, "y": 0, "width": 4, "height": 4, "segmentation_mask": [0, 16]},
+        ),
+    ],
+)
+def test_evaluation__does_not_reload_annotations_per_sample(
+    patch_collection: None,  # noqa: ARG001
+    mocker: MockerFixture,
+    task: str,
+    annotation_type: AnnotationType,
+    annotation_data: dict[str, Any],
+) -> None:
+    """Runs a fixed number of SELECT statements, independent of the number of samples."""
+    num_images = 40
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for _ in range(num_images):
+        image = create_image(
+            session=dataset.session, collection_id=dataset.collection_id, width=4, height=4
+        )
+        for collection_name in ("gt", "pred"):
+            create_annotation(
+                session=dataset.session,
+                collection_id=dataset.collection_id,
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=annotation_type,
+                annotation_data=annotation_data,
+                annotation_collection_name=collection_name,
+            )
+
+    listener = mocker.Mock()
+    engine = dataset.session.get_bind()
+    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+    try:
+        getattr(dataset.evaluate(), task)(
+            name="run-1", gt_annotation_source="gt", pred_annotation_source="pred"
+        )
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+
+    select_count = sum(
+        1 for call in listener.call_args_list if call.args[2].lstrip().upper().startswith("SELECT")
+    )
+    assert select_count < num_images
 
 
 def _create_gt_and_pred_collections(session: Session, collection_id: UUID) -> None:

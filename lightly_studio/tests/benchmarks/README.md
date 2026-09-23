@@ -14,6 +14,8 @@ Manual performance benchmarks for Lightly Studio. Each script is standalone and 
   query performance at BRT scale (json vs jsonb on PostgreSQL).
 - [Delete-dataset benchmark](#delete-dataset-benchmark) — measure dataset delete time and peak
   memory at enterprise scale.
+- [Evaluation benchmark](#evaluation-benchmark) — measure object-detection evaluation time and
+  SELECT count.
 
 ## GUI benchmark
 
@@ -343,3 +345,49 @@ LIGHTLY_STUDIO_DATABASE_URL=<postgres-url> \
 | `--embedding-dim` | 512 | Embedding vector dimensionality (generate mode) |
 | `--batch-size` | 5 000 | Generation batch size |
 | `--seed` | 0 | Random seed for reproducibility |
+
+## Evaluation benchmark
+
+A script that measures `dataset.evaluate().object_detection(...)` on a synthetic dataset of images
+with ground-truth boxes and noisy predictions (shifted boxes, some wrong labels, low-confidence
+false positives). It reports the wall-clock time, the throughput, and the number of SELECT
+statements.
+
+Evaluation matches every sample first and then stores the metrics. If a metric commit happens
+before a sample is matched, the commit expires the loaded annotations and each one is loaded again
+with its own SELECT. The SELECT count shows if this happens: it should stay small and grow only
+with the number of query batches, not with the number of annotations.
+
+### Running the benchmark
+
+From the `lightly_studio` directory (temporary DuckDB by default):
+
+```bash
+uv run tests/benchmarks/evaluation_benchmark.py
+```
+
+Against PostgreSQL:
+
+```bash
+make start-postgres
+uv run tests/benchmarks/evaluation_benchmark.py --postgres
+make stop-postgres
+```
+
+A quick smoke-test with a smaller dataset:
+
+```bash
+uv run tests/benchmarks/evaluation_benchmark.py --num-images 1000
+```
+
+### Key options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--num-images` | 10 000 | Number of images to generate |
+| `--num-classes` | 20 | Number of annotation labels |
+| `--gt-per-image` | 8 | Ground-truth boxes per image |
+| `--false-positives-per-image` | 3 | Extra low-confidence predictions per image |
+| `--batch-size` | 5 000 | Images inserted per batch |
+| `--seed` | 0 | Random seed for reproducibility |
+| `--postgres` | off | Benchmark PostgreSQL instead of the temporary DuckDB |
