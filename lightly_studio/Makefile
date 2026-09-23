@@ -80,7 +80,7 @@ ifeq ($(OS),Windows_NT)
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
 	$(MAKE) -C ../lightly_studio_view build
-	@if [ "$(SOURCEMAP)" = "true" ] && [ -n "$(POSTHOG_CLI_VERSION)" ]; then \
+	@if [ -n "$(SOURCEMAP)" ] && [ -n "$(POSTHOG_CLI_VERSION)" ]; then \
 		npx --yes @posthog/cli@$(POSTHOG_CLI_VERSION) sourcemap inject --directory ../lightly_studio_view/build; \
 	fi
 	cp -r ../lightly_studio_view/build/ sourcemaps
