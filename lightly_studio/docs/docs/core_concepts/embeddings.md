@@ -184,16 +184,16 @@ the backend stores, see
 
 Use this when you want a different model than the built-ins. Load your model in
 `__init__` and run it inside the embed methods. Subclass one interface per
-capability. This embedder handles images, image crops, and text, so text queries
-compare against image embeddings. It does not subclass `ImageBytesEmbedder`, so image
-search in the GUI is unavailable. Add `ImageBytesEmbedder` and implement
-`embed_image_bytes` to enable it.
+capability. This embedder handles images by path, uploaded images, image crops, and
+text, so text queries and query images compare against image embeddings.
+`ImageBytesEmbedder` is what enables image search in the GUI.
 
 ```python
 import numpy as np
 from numpy.typing import NDArray
 
 from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     TextEmbedder,
@@ -204,11 +204,18 @@ import lightly_studio as ls
 EMBEDDING_DIMENSION = 512
 
 
-class CustomEmbedder(ImagePathEmbedder, ImageCropPathEmbedder, TextEmbedder):
+class CustomEmbedder(
+    ImagePathEmbedder,
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    TextEmbedder,
+):
     def __init__(self) -> None:
         ...  # Load your model and preprocessing here.
 
     def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec: ...
+
+    def embed_image_bytes(self, images: list[bytes]) -> ls.EmbeddingResult: ...
 
     def embed_image_crops(self, crops: list[ls.ImageCrop]) -> ls.EmbeddingResult: ...
 
@@ -235,7 +242,7 @@ ls.register_default_embedder(embedder=CustomEmbedder())
 ```
 
 For the full runnable version, which wraps MobileCLIP and also implements
-`embed_text` and `embed_image_crops`, see
+`embed_image_bytes`, `embed_image_crops` and `embed_text`, see
 [`example_custom_embedding_model.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embedding_model.py).
 
 !!! note "Text search needs a shared text encoder"
