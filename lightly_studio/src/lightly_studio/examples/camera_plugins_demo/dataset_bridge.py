@@ -79,6 +79,7 @@ class PrelabelRequest:
         score_threshold: Minimum score for a box to be written.
         class_map: Model class name to annotation class name. An empty map keeps every
             class of the model under its own name.
+        device: Device the model runs on.
     """
 
     collection_id: UUID
@@ -87,6 +88,7 @@ class PrelabelRequest:
     annotation_source: str
     score_threshold: float
     class_map: dict[str, str]
+    device: str
 
 
 @dataclass(frozen=True)
@@ -101,6 +103,7 @@ class EvaluationRequest:
         ground_truth_source: Annotation source holding the human annotations.
         evaluation_name: Name of the evaluation run.
         score_threshold: Minimum score for a prediction to be written.
+        device: Device the model runs on.
     """
 
     collection_id: UUID
@@ -110,6 +113,7 @@ class EvaluationRequest:
     ground_truth_source: str
     evaluation_name: str
     score_threshold: float
+    device: str
 
 
 @dataclass(frozen=True)
@@ -234,7 +238,7 @@ def predict_and_evaluate(request: EvaluationRequest, config: TrainedModelEvaluat
         A short summary for the UI.
     """
     collection_id = request.collection_id
-    model = lightly_train.load_model(model=str(request.checkpoint))
+    model = lightly_train.load_model(model=str(request.checkpoint), device=request.device)
     class_names: dict[int, str] = dict(model.classes)
 
     with db_manager.session() as session:
@@ -315,7 +319,7 @@ def prelabel_images(session: Session, request: PrelabelRequest) -> tuple[int, in
         The number of boxes written, the number of images that got boxes, and the
         class names that were used.
     """
-    model = lightly_train.load_model(model=str(request.model))
+    model = lightly_train.load_model(model=str(request.model), device=request.device)
     model_classes: dict[int, str] = dict(model.classes)
     class_names: dict[int, str] = {
         class_id: request.class_map.get(name) or name

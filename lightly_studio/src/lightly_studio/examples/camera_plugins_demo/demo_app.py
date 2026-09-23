@@ -89,6 +89,7 @@ class CameraDemo:
         self.detector = LiveDetector(
             camera=self.camera,
             dispatcher=self.dispatcher,
+            device=resolve_inference_device(),
             auto_capture=self._auto_capture,
         )
 
@@ -198,6 +199,7 @@ class CameraDemo:
             ground_truth_source=state.annotation_source or DEFAULT_ANNOTATION_SOURCE,
             evaluation_name=state.run_name,
             score_threshold=self.settings.default_threshold,
+            device=resolve_inference_device(),
         )
         try:
             state.evaluation = dataset_bridge.predict_and_evaluate(
@@ -301,6 +303,17 @@ def build_demo(settings: DemoSettings, dataset_id: UUID, collection_id: UUID) ->
     )
     demo.trainings.on_completed = demo.on_training_completed
     return demo
+
+
+def resolve_inference_device() -> str:
+    """Return the device that every model of this demo runs inference on.
+
+    Apple's Metal backend aborts the process when two threads submit work at the same
+    time, and the demo does exactly that: the deployed model runs on the camera while an
+    operator loads a second model. The CPU reaches 22 frames per second on a laptop,
+    which is enough for the camera, so MPS is not worth the crash.
+    """
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def resolve_accelerator() -> str:

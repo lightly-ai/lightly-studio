@@ -35,6 +35,19 @@ _BOX_COLORS = [
 ]
 
 
+@dataclass(frozen=True)
+class AutoCaptureSettings:
+    """When to bookmark a frame that the deployed model is unsure about.
+
+    Attributes:
+        threshold: A frame is captured when every box scores below this value.
+        interval_s: Shortest time between two captures.
+    """
+
+    threshold: float = 0.6
+    interval_s: float = 5.0
+
+
 @dataclass
 class DeploymentStatus:
     """State of the model that runs on the camera feed."""
@@ -66,16 +79,18 @@ class LiveDetector:
         self,
         camera: CameraStream,
         dispatcher: DetectionDispatcher,
+        device: str,
         auto_capture: Callable[[Frame], None] | None = None,
-        auto_capture_threshold: float = 0.6,
-        auto_capture_interval_s: float = 5.0,
+        auto_capture_settings: AutoCaptureSettings | None = None,
     ) -> None:
         """Create a detector for a camera, without loading a model yet."""
+        settings = auto_capture_settings or AutoCaptureSettings()
         self._camera = camera
+        self._requested_device = device
         self._dispatcher = dispatcher
         self._auto_capture = auto_capture
-        self._auto_capture_threshold = auto_capture_threshold
-        self._auto_capture_interval_s = auto_capture_interval_s
+        self._auto_capture_threshold = settings.threshold
+        self._auto_capture_interval_s = settings.interval_s
         self._auto_capture_enabled = False
         self._auto_capture_count = 0
         self._last_auto_capture = 0.0
@@ -177,8 +192,7 @@ class LiveDetector:
 
     def _run(self, model: str) -> None:
         try:
-            device = "mps" if torch.backends.mps.is_available() else None
-            loaded = lightly_train.load_model(model=model, device=device)
+            loaded = lightly_train.load_model(model=model, device=self._requested_device)
             self._device = str(next(loaded.parameters()).device)
         except Exception as exc:
             self._error = f"Failed to load model: {exc}"

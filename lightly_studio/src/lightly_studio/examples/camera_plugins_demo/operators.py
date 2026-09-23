@@ -370,6 +370,7 @@ class PrelabelOperator(BaseOperator):
                     ),
                     score_threshold=_as_float(parameters.get(PARAM_THRESHOLD), 0.6),
                     class_map=_as_class_map(parameters.get(PARAM_CLASSES)),
+                    device=demo_app.resolve_inference_device(),
                 ),
             )
         except ValueError as exc:
