@@ -1,10 +1,6 @@
 name: Announce Release
 
-# Posts a released changelog section to the Slack channel sales reads. Called by Finish
-# Release once the release is public, and dispatchable on its own to re-post one.
-#
-# Not `on: release: published`: Finish Release un-drafts with GITHUB_TOKEN, and GitHub
-# creates no run from a GITHUB_TOKEN-triggered event.
+# Posts a released changelog section to the Slack channel sales reads.
 on:
   workflow_call:
     inputs:
@@ -72,10 +68,7 @@ jobs:
           CHANGELOG: ${{ steps.package.outputs.changelog }}
           # Declared on workflow_dispatch only, so it is empty on a workflow_call run.
           CHANNEL: ${{ inputs.channel || env.SLACK_CHANNEL }}
-        # The changelog is read at the tag, not from main, which has moved on since. The
-        # tooling writes the whole `chat.postMessage` request, so the message never passes
-        # through `${{ }}` expansion or shell quoting, and the request shape is covered by
-        # the tooling's tests rather than by this file. Its stdout is the rendered text.
+        # The changelog is read at the tag; the tooling writes the whole Slack request.
         run: |
           set -euo pipefail
           gh api "repos/${REPO}/contents/${CHANGELOG}?ref=${TAG}" \
@@ -92,11 +85,7 @@ jobs:
         # Undeclared on workflow_dispatch, so it is empty there and a manual re-post
         # still fails loudly.
         continue-on-error: ${{ inputs.tolerate-failure == true }}
-        # Pinned by digest: this is the one step that sees the bot token. `errors` is
-        # off by default, and Slack rejects a message with `ok: false` and HTTP 200, so
-        # without it a rejected post reports success. `retries` defaults to 5, which is
-        # the reason for using the action over a bare curl. `payload-file-path` rather
-        # than an inline `payload:`, so nothing expands the rendered changelog.
+        # Pinned by digest: this step sees the bot token. `errors` fails on Slack's `ok: false`.
         uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           method: chat.postMessage
