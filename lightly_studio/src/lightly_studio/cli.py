@@ -79,6 +79,64 @@ def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None
 
 
 @main.command()
+@click.option(
+    "--api-url",
+    default=None,
+    type=str,
+    envvar="LIGHTLY_STUDIO_API_URL",
+    help="Base URL of the enterprise instance, e.g. 'http://10.0.0.5:8100'.",
+)
+@click.option(
+    "--token",
+    default=None,
+    type=str,
+    envvar="LIGHTLY_STUDIO_TOKEN",
+    help="JWT token from the enterprise GUI.",
+)
+@click.option(
+    "--api-key",
+    default=None,
+    type=str,
+    envvar="LIGHTLY_STUDIO_API_KEY",
+    help="API key from the enterprise GUI.",
+)
+def quickstart_enterprise(api_url: str | None, token: str | None, api_key: str | None) -> None:
+    """Seed a remote enterprise instance with a COCO object detection evaluation demo dataset."""
+    data_root = "hf://datasets/lightly-ai/coco_subset_128_images"
+    evaluation_config = ObjectDetectionEvaluationConfig(
+        iou_threshold=0.5,
+        classwise=False,
+    )
+
+    lightly_studio.connect(api_url=api_url, token=token, api_key=api_key)
+    dataset = lightly_studio.ImageDataset.load_or_create(name="example-coco-128")
+    dataset.add_images_from_path(path=f"{data_root}/images")
+    dataset.add_annotations_from_coco(
+        annotations_json=f"{data_root}/instances_train2017.json",
+        images_root=f"{data_root}/images",
+        annotation_source="ground_truth",
+    )
+    dataset.add_annotations_from_coco(
+        annotations_json=f"{data_root}/predictions_train2017.json",
+        images_root=f"{data_root}/images",
+        annotation_source="predictions",
+    )
+    # Tag a subset of samples to demonstrate tags in the GUI.
+    dataset.query()[:10].add_tag("sample_subset")
+    dataset.evaluate().object_detection(
+        name="od_evaluation",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
+        config=evaluation_config,
+    )
+
+    tracking.track(
+        event=tracking.APP_LAUNCHED,
+        properties={"launch_source": LaunchSource.QUICKSTART_ENTERPRISE.value},
+    )
+
+
+@main.command()
 @click.option("--host", default=None, type=str, help="Host to bind the server to.")
 @click.option("--port", default=None, type=int, help="Port to bind the server to.")
 @click.option(
