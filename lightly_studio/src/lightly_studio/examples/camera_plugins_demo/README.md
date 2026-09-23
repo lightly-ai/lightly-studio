@@ -79,6 +79,34 @@ brew install mediamtx ffmpeg
 
 The stream is then at `rtsp://127.0.0.1:8554/cam`.
 
+To serve a folder of videos as one camera each, use the other script:
+
+```bash
+./simulate_rtsp_cameras.sh ~/demo_data/cameras
+```
+
+A file named `pool.mp4` becomes `rtsp://127.0.0.1:8554/pool`. Type another URL in the
+source field of the Camera Station to change camera while the demo runs.
+
+### Example camera feeds
+
+Any video file works. These five scenes come from the example datasets and cover
+different object types:
+
+| Feed | Scene | Classes to label |
+|---|---|---|
+| `pool.mp4` | Fixed camera on a pool, two water polo players | player, ball |
+| `workbench.mp4` | Workshop bench, a person cleans and polishes shoes | shoe, hand, spray can |
+| `documents.mp4` | Desk with identity documents, one after the other | id card, passport |
+| `kitchen.mp4` | Kitchen counter during food preparation | hand, pot, vegetable |
+| `traffic.mp4` | Street scenes from traffic cameras | car, truck, person |
+
+`pool.mp4` is the easiest first demo: the camera does not move, the two classes are
+clear, and 20 labeled frames are enough.
+
+NOTE: `traffic.mp4` is built from single images, so the scene changes every 1.5
+seconds. The other four feeds are continuous video.
+
 ## Demo script
 
 1. Open the Camera Station. The live feed plays.
