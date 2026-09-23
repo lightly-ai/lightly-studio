@@ -71,10 +71,7 @@ class EmbedderRegistry:
     embedder is cached per dataset, because the same space key in two datasets can name
     two backends.
 
-    A registry is shared by the threads that serve requests, so every read and write of
-    its caches holds ``_lock``. An embedder is built outside that lock, under a lock of
-    its own space, so one caller waits instead of opening a second connection that nobody
-    can close, while the other spaces stay available.
+    Caches are guarded by ``_lock``. An embedder is built outside it, under a lock per space.
     """
 
     def __init__(self) -> None:
@@ -198,10 +195,6 @@ class EmbedderRegistry:
     ) -> Embedder | None:
         """Resolve the embedder of a space from a registration, a configuration or a built-in.
 
-        A cache hit is served under ``_lock`` alone. A miss builds under the lock of the
-        space, so a slow server holds up only the callers of that space. The result is
-        then read back from the caches, so a registration made during the build wins.
-
         Args:
             space_key: The space to resolve. None selects the bootstrap space of the
                 capability, and a ``config`` names its own space.
@@ -243,15 +236,7 @@ class EmbedderRegistry:
     def _cached_embedder(
         self, space_key: str, config: EmbedderConfig | None
     ) -> tuple[bool, Embedder | None]:
-        """Read the embedder of a space from the caches, without building one.
-
-        A registration wins over a configuration, which wins over a built-in. The caller
-        holds ``_lock``.
-
-        Returns:
-            Whether a cache answers the lookup, and the embedder it holds. A
-            configuration that failed recently answers with None.
-        """
+        """Get whether the caches answer the lookup, and their embedder. Needs ``_lock``."""
         registered = self._space_key_to_embedder.get(space_key)
         if registered is not None:
             return True, registered
@@ -261,13 +246,7 @@ class EmbedderRegistry:
         return builtin is not None, builtin
 
     def _cached_from_config(self, config: EmbedderConfig) -> tuple[bool, Embedder | None]:
-        """Read the embedder a configuration names from the caches. The caller holds ``_lock``.
-
-        The cache holds the configuration built from, so a changed URL or a rotated key
-        builds again instead of serving the old embedder. A configuration that could not
-        be built is unusable for ``_REMOTE_RETRY_DELAY_SECONDS``, and a changed one is
-        tried at once.
-        """
+        """Get whether the config caches answer the lookup, and their embedder. Needs ``_lock``."""
         key = (config.dataset_id, config.space_key)
         cached = self._config_to_embedder.get(key)
         if cached is not None:
@@ -284,15 +263,7 @@ class EmbedderRegistry:
         return failed_recently, None
 
     def _build_from_config(self, config: EmbedderConfig) -> None:
-        """Build the embedder that a stored configuration names and cache it.
-
-        The embedder is cached before any capability is asked of it, so a dataset reads
-        ``/v1/describe`` once and not once per capability. The caller holds the build lock
-        of the configuration but not ``_lock``, because the connection is slow.
-
-        A server that cannot be used is cached as a failure, which reads like a space with
-        no embedder. Every caller already handles that.
-        """
+        """Build the embedder of a configuration and cache it, or cache the failure."""
         # TODO(Iunir, 09/2026): Close the client of a replaced embedder when the remote
         # embedder gains a teardown hook.
         key = (config.dataset_id, config.space_key)
@@ -313,12 +284,7 @@ class EmbedderRegistry:
             self._config_to_failure.pop(key, None)
 
     def _build_builtin(self, space_key: str) -> None:
-        """Load the built-in embedder of a space and cache it.
-
-        It is cached apart from the registrations, so it still loses to a configuration.
-        The caller holds the build lock of the space but not ``_lock``, because the
-        weights are slow to load.
-        """
+        """Load the built-in embedder of a space and cache it apart from the registrations."""
         embedder = _load_builtin_embedder(space_key=space_key)
         if embedder is None:
             return
@@ -355,10 +321,7 @@ def _capabilities_of(embedder: Embedder) -> set[Capability]:
 
 
 def _build_key(space_key: str, config: EmbedderConfig | None) -> tuple[UUID | None, str]:
-    """Get the key that serializes the builds of one space.
-
-    A configured embedder is built per dataset, a built-in per space.
-    """
+    """Get the build lock key: per dataset for a configuration, per space for a built-in."""
     if config is not None:
         return (config.dataset_id, config.space_key)
     return (None, space_key)
