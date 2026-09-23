@@ -73,11 +73,15 @@ build: clean build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "$(MAKE) -C ../lightly_studio_view build"
+	@powershell -Command "New-Item -ItemType Directory -Path sourcemaps -Force | Out-Null; Copy-Item -Path ..\lightly_studio_view\build\* -Destination sourcemaps\ -Recurse -Force"
+	@powershell -Command "Get-ChildItem -Path ..\lightly_studio_view\build -Filter *.map -Recurse | Remove-Item -Force"
 	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
 	$(MAKE) -C ../lightly_studio_view build
+	cp -r ../lightly_studio_view/build/ sourcemaps
+	find ../lightly_studio_view/build -name '*.map' -delete
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
 	cp ../lightly_studio_view/src/lib/version.json src/lightly_studio/dist_lightly_studio_view_app/version-info.json
 endif
@@ -437,6 +441,7 @@ else
 	rm -rf *.db
 	rm -rf *.db.wal
 	rm -rf dist/*
+	rm -rf sourcemaps
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -exec rm -rf {} +

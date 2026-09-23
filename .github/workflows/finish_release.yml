@@ -58,15 +58,21 @@ jobs:
 
   # Runs the tagged commit's own code, so it must not be able to mint a PyPI
   # credential: no `id-token: write`, and all it hands onwards is the artifact.
+  # For the same reason, PostHog secrets are not injected here — source maps are
+  # uploaded by a separate job that runs no tag-controlled code.
   build:
     needs: precheck
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
+    outputs:
+      needs_node: ${{ steps.package.outputs.needs_node }}
+      version: ${{ steps.version.outputs.version }}
     env:
       TAG: ${{ inputs.tag }}
       PYTHONPATH: ${{ github.workspace }}/.github/scripts
+      SOURCEMAP: "true"
     steps:
       # `refs/tags/` because actions/checkout resolves an unqualified ref as a
       # branch first, and a branch sharing the tag's name would be built in the
@@ -84,6 +90,7 @@ jobs:
           python3 -m prepare_release package-config --tag "${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Assert the tag matches the version it points at
+        id: version
         env:
           PYPROJECT: ${{ steps.package.outputs.pyproject }}
           TAG_PREFIX: ${{ steps.package.outputs.tag_prefix }}
@@ -94,6 +101,7 @@ jobs:
             echo "::error::${TAG} points at a commit whose version is ${version}."
             exit 1
           fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -124,10 +132,6 @@ jobs:
 
       - name: Build the Distributions
         working-directory: ${{ steps.package.outputs.directory }}
-        env:
-          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
-          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
-          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
         run: make build
 
       # Before the upload, so a wheel that fails it never reaches the publish job.
@@ -148,6 +152,42 @@ jobs:
           path: ${{ steps.package.outputs.directory }}/dist
           if-no-files-found: error
           retention-days: 7
+
+      - name: Upload Source Maps
+        if: steps.package.outputs.needs_node == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: sourcemaps
+          path: ${{ steps.package.outputs.directory }}/sourcemaps
+          if-no-files-found: error
+          retention-days: 7
+
+  # Runs no tag-controlled code — just downloads the artifact and calls the
+  # PostHog API. Gated to the default-branch ref so that a workflow_dispatch
+  # from another branch cannot reach this secret-bearing step.
+  upload-sourcemaps:
+    needs: build
+    if: >-
+      needs.build.outputs.needs_node == 'true' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - name: Download Source Maps
+        uses: actions/download-artifact@v8
+        with:
+          name: sourcemaps
+          path: sourcemaps
+
+      - name: Upload Source Maps to PostHog
+        uses: PostHog/upload-source-maps@v1
+        with:
+          api-key: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          project-id: ${{ secrets.POSTHOG_PROJECT_ID }}
+          host: ${{ secrets.POSTHOG_HOST }}
+          directory: sourcemaps
+          release-version: ${{ needs.build.outputs.version }}
 
   publish:
     needs: build

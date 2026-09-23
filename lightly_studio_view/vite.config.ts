@@ -1,43 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
-import posthogRollupPlugin from '@posthog/rollup-plugin';
-import { readFileSync } from 'node:fs';
-
-interface VersionInfo {
-    version: string;
-}
-
-function readVersion(): string {
-    const contents = readFileSync(new URL('./src/lib/version.json', import.meta.url), 'utf8');
-    const versionInfo = JSON.parse(contents) as VersionInfo;
-    return versionInfo.version;
-}
-
-const version = readVersion();
-
-function createPosthogPlugin(): ReturnType<typeof posthogRollupPlugin> | null {
-    const personalApiKey = process.env.POSTHOG_PERSONAL_API_KEY;
-    const projectId = process.env.POSTHOG_PROJECT_ID;
-    const host = process.env.POSTHOG_HOST;
-    if (!personalApiKey || !projectId || !host) return null;
-
-    return posthogRollupPlugin({
-        personalApiKey,
-        projectId,
-        host,
-        sourcemaps: {
-            releaseVersion: version,
-            deleteAfterUpload: true
-        }
-    });
-}
-
-const posthogPlugin = createPosthogPlugin();
 
 export default defineConfig({
-    plugins: [sveltekit(), ...(posthogPlugin ? [posthogPlugin] : [])],
+    plugins: [sveltekit()],
 
     build: {
+        sourcemap: process.env.SOURCEMAP ? 'hidden' : false,
         rollupOptions: {
             output: {
                 manualChunks(id) {
