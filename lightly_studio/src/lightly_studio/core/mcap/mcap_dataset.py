@@ -82,6 +82,14 @@ class McapDataset:
         """
         if not components:
             raise ValueError("components must not be empty.")
+        # The names are checked before anything is written. The resolver that creates the
+        # components also checks them, but only after the collections are committed.
+        duplicate_names = _get_duplicate_names(components=components)
+        if duplicate_names:
+            raise ValueError(
+                "components must not repeat a name. These names are used more than once: "
+                f"{_format_names(names=duplicate_names)}."
+            )
         if name is None:
             name = DEFAULT_DATASET_NAME
 
@@ -183,3 +191,19 @@ class McapDataset:
             f"Dataset '{self.name}' has no group collection. It was not created with "
             "`McapDataset.create`."
         )
+
+
+def _get_duplicate_names(components: Sequence[McapComponentSpec]) -> list[str]:
+    """Return the names that more than one component uses, in the order they appear."""
+    seen: set[str] = set()
+    duplicates: list[str] = []
+    for component in components:
+        if component.name in seen and component.name not in duplicates:
+            duplicates.append(component.name)
+        seen.add(component.name)
+    return duplicates
+
+
+def _format_names(names: Sequence[str]) -> str:
+    """Format names as quoted, comma separated items for an error message."""
+    return ", ".join(f"'{name}'" for name in names)
