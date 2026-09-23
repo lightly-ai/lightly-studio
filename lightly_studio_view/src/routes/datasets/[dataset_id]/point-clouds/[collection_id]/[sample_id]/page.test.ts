@@ -25,12 +25,8 @@ const mockPageData = {
 } as unknown as PageData;
 
 describe('point-clouds/[collection_id]/[sample_id] page', () => {
-    it('renders the workspace only when the feature flag is enabled', async () => {
-        featureFlags.set([]);
-        const { rerender } = render(Page, { props: { data: mockPageData } });
-        expect(screen.queryByTestId('point-cloud-labeling-workspace')).not.toBeInTheDocument();
-
     it('renders the route shell but not the workspace when the feature is disabled', () => {
+        featureFlags.set([]);
         render(Page, { props: { data: mockPageData } });
 
         expect(screen.getByTestId('point-cloud-labeling-route')).toBeInTheDocument();
@@ -39,7 +35,8 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
 
     it('renders the workspace once the feature is enabled', async () => {
         featureFlags.set(['point_cloud_rendering']);
-        await rerender({ data: mockPageData });
+        render(Page, { props: { data: mockPageData } });
+
         await waitFor(() =>
             expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument()
         );
@@ -47,7 +44,7 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
 });
 
 describe('point-cloud sample page load', () => {
-    const loadWith = (search: string) =>
+    const loadWith = (search: string): ReturnType<typeof load> =>
         load({
             params: { dataset_id: 'dataset', collection_id: 'collection', sample_id: 'sample' },
             url: new URL(
@@ -90,16 +87,7 @@ describe('point-cloud sample page load', () => {
         });
     });
 
-    it('throws when sequence_id is absent', async () => {
-        await expect(
-            load({
-                params: {
-                    dataset_id: 'dataset',
-                    collection_id: 'collection',
-                    sample_id: 'sample'
-                },
-                url: new URL('http://localhost/datasets/dataset/point-clouds/collection/sample')
-            } as Parameters<typeof load>[0])
-        ).rejects.toThrow(/sequence_id/);
+    it('raises a 400 when sequence_id is absent', async () => {
+        await expect(loadWith('')).rejects.toMatchObject({ status: 400 });
     });
 });

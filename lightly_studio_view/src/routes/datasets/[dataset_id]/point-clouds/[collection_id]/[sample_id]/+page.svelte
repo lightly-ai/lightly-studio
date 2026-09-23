@@ -3,7 +3,7 @@
     import { page } from '$app/state';
     import { useFeatureFlags } from '$lib/hooks';
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
-    import { getTickNumberFromHash } from './tickNumber';
+    import { getTickNumberFromHash } from './getTickNumberFromHash';
 
     // The backend only reports this once LIGHTLY_STUDIO_POINT_CLOUD_ENABLED is set, so
     // this one string keeps the route (and the entry point in GroupsComponentsMenu) in sync with
