@@ -213,8 +213,6 @@ class ImageBytesEmbedder(Embedder):
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        # TODO(Michal, 09/2026): Currently unused. The interactive path creates a temp
-        # file and uses ImagePathEmbedder.
 
 
 class VideoBytesEmbedder(Embedder):

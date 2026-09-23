@@ -1,3 +1,4 @@
+import io
 import time
 from pathlib import Path
 
@@ -187,6 +188,64 @@ def test_embed_image_files_batched__propagates_preprocess_error(tmp_path: Path) 
         )
 
 
+def test_embed_image_bytes_batched__empty_input_returns_empty_result() -> None:
+    result = image_embedding.embed_image_bytes_batched(
+        images=[],
+        context=EmbeddingContext(
+            embedding_dimension=4,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.cpu().numpy(),
+        ),
+        show_progress=False,
+    )
+
+    assert result.embeddings.shape == (0, 4)
+    assert result.kept_indices == []
+
+
+def test_embed_image_bytes_batched__preserves_input_order() -> None:
+    widths = [5, 6, 7]
+
+    result = image_embedding.embed_image_bytes_batched(
+        images=_encode_images(widths=widths),
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
+        ),
+        show_progress=False,
+    )
+
+    assert result.embeddings.shape == (3, 1)
+    assert result.kept_indices == [0, 1, 2]
+    assert result.embeddings[:, 0].tolist() == [float(width) for width in widths]
+
+
+def test_embed_image_bytes_batched__skips_undecodable_bytes() -> None:
+    widths = [5, 6]
+    valid_images = _encode_images(widths=widths)
+    images = [valid_images[0], b"not a valid image", valid_images[1]]
+
+    result = image_embedding.embed_image_bytes_batched(
+        images=images,
+        context=EmbeddingContext(
+            embedding_dimension=1,
+            max_batch_size=2,
+            device=torch.device("cpu"),
+            preprocess=lambda image: torch.tensor([float(image.size[0])]),
+            encode_batch=lambda images_tensor: images_tensor.numpy().astype(np.float32),
+        ),
+        show_progress=False,
+    )
+
+    assert result.kept_indices == [0, 2]
+    assert result.embeddings[:, 0].tolist() == [float(width) for width in widths]
+
+
 def test_embed_pil_images_batched__empty_input_returns_empty_result() -> None:
     result = image_embedding.embed_pil_images_batched(
         images=[],
@@ -223,6 +282,16 @@ def test_embed_pil_images_batched__preserves_input_order() -> None:
     assert result.embeddings.shape == (3, 1)
     assert result.embeddings[:, 0].tolist() == [float(width) for width in widths]
     assert result.kept_indices == [0, 1, 2]
+
+
+def _encode_images(widths: list[int]) -> list[bytes]:
+    """Encode one PNG per width and return their bytes, in order."""
+    images = []
+    for width in widths:
+        buffer = io.BytesIO()
+        Image.new("RGB", (width, 10), color=(255, 0, 0)).save(buffer, format="PNG")
+        images.append(buffer.getvalue())
+    return images
 
 
 def _write_images(tmp_path: Path, widths: list[int]) -> list[str]:
