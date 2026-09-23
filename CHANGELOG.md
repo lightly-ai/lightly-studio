@@ -9,7 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+- Redesign the embedding plot selection tools as visible, sticky Pan, Rectangle, and Lasso buttons in the GUI.
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Combine typicality and similarity computation and sampling into one backend request that continues if the frontend disconnects.
+- Fix the `Values` field in the distribution panel using a larger font than the other fields.
+- Fix undoing an annotation deletion restoring it to the default source instead of its original one.
+
+### Security
+
+## \[1.1.2\] - 2026-09-21
+
+### Added
+
+- Choose how many categorical metadata values to show in distribution plots.
 - Python SDK: Read aggregate evaluation metrics (per-class and micro-averaged precision, recall, and F1, plus classification accuracy) with `dataset.evaluate().metrics(run_id)`.
+- Python SDK: Evaluate instance-segmentation predictions with `dataset.evaluate().instance_segmentation(...)`, matching predicted masks to ground truth by mask IoU and storing per-image and per-mask metrics.
 - Add an optional preselected tag selector to the sampling dialog.
 
 ### Changed
@@ -18,10 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show loading spinners in distribution plots in the GUI. 
 - Preselected samples are now part of the sampling result.
 - Move each docs page into a folder named for its nav section. The old URLs redirect.
-
-### Deprecated
-
-### Removed
+- Speed up video embedding by decoding videos in parallel, overlapping decoding with the model forward (up to about 2.4× faster when embedding many videos).
+- Register a custom embedder with `register_default_embedder` and the capability interfaces from `lightly_studio_serve.embedder`, replacing `set_default_embedding_model` and the `EmbeddingGenerator` protocols.
 
 ### Fixed
 
@@ -29,9 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `hf://` directory ingest reporting every file as missing.
 - Fix the distribution panel and annotation class counts not updating when a filter changes.
 - Speed up the initial page load in the GUI by up to ~3.5 seconds by no longer loading the query editor on every page.
-- Fix undoing an annotation deletion restoring it to the default source instead of its original one.
-
-### Security
+- Grid thumbnails no longer start a native image drag when the pointer moves slightly during a click, so quick selection clicks are not lost.
 
 ## \[1.1.1\] - 2026-09-14
 
