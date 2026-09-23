@@ -7,12 +7,7 @@ import { writable, type Writable } from 'svelte/store';
  * @returns A writable store that automatically syncs with sessionStorage
  */
 type JsonSerializable =
-    | string
-    | number
-    | boolean
-    | null
-    | JsonSerializable[]
-    | { [key: string]: JsonSerializable };
+    string | number | boolean | null | JsonSerializable[] | { [key: string]: JsonSerializable };
 export function useSessionStorage<T extends JsonSerializable>(
     key: string,
     initialValue: T

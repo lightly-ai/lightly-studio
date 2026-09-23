@@ -37,14 +37,12 @@ export function mapRunsToAnnotationSortFields(
     runs: EvaluationRunAnnotationMetricsInfoView[]
 ): AnnotationSortField[] {
     return runs.flatMap((run) =>
-        run.metrics.map(
-            (metric): AnnotationSortField => ({
-                source: 'annotation_evaluation_metric',
-                evaluation_run_id: run.run_id,
-                metric_name: metric.metric_name,
-                label: formatEvaluationMetricLabel(run.run_name, metric.metric_name)
-            })
-        )
+        run.metrics.map((metric): AnnotationSortField => ({
+            source: 'annotation_evaluation_metric',
+            evaluation_run_id: run.run_id,
+            metric_name: metric.metric_name,
+            label: formatEvaluationMetricLabel(run.run_name, metric.metric_name)
+        }))
     );
 }
 

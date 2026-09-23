@@ -23,8 +23,7 @@ const patchStringToken = (
 ): monaco.languages.IMonarchLanguage => {
     const patched = structuredClone(config);
     const tokenizer = (patched as Record<string, unknown>).tokenizer as
-        | Record<string, Array<{ regex: RegExp; action: { token: string } }>>
-        | undefined;
+        Record<string, Array<{ regex: RegExp; action: { token: string } }>> | undefined;
     const rules = tokenizer?.initial;
     if (rules) {
         for (const rule of rules) {

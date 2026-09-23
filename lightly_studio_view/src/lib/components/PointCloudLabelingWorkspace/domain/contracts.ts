@@ -101,8 +101,7 @@ export interface CameraCalibration {
 
 /** An image URI or an adapter-owned decoded resource reference. */
 export type CameraImage =
-    | Readonly<{ kind: 'uri'; uri: string }>
-    | Readonly<{ kind: 'decoded'; resourceId: string }>;
+    Readonly<{ kind: 'uri'; uri: string }> | Readonly<{ kind: 'decoded'; resourceId: string }>;
 
 /** A camera image and optional calibration available near a point-cloud frame. */
 export interface CameraFrame {
@@ -183,25 +182,12 @@ export interface AnnotationTrack {
 
 /** Tools available to the interaction state machine. */
 export type WorkspaceTool =
-    | 'select'
-    | 'create-cuboid'
-    | 'translate'
-    | 'rotate'
-    | 'resize'
-    | 'pan'
-    | 'orbit';
+    'select' | 'create-cuboid' | 'translate' | 'rotate' | 'resize' | 'pan' | 'orbit';
 /** Main scene and orthographic camera modes. */
 export type CameraMode = 'perspective' | 'top' | 'side' | 'front';
 /** Handles that can be hovered or manipulated on a cuboid. */
 export type CuboidHandle =
-    | 'center'
-    | 'rotate-z'
-    | 'min-x'
-    | 'max-x'
-    | 'min-y'
-    | 'max-y'
-    | 'min-z'
-    | 'max-z';
+    'center' | 'rotate-z' | 'min-x' | 'max-x' | 'min-y' | 'max-y' | 'min-z' | 'max-z';
 
 export interface AnnotationSelection {
     /** Ordered IDs; the last ID is the primary annotation for inspector and transforms. */

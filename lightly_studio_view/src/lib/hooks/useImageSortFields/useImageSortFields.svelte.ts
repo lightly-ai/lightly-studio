@@ -45,14 +45,12 @@ export function formatEvaluationMetricLabel(evaluationRunName: string, metricNam
 
 function mapRunsToEvalFields(runs: EvaluationRunMetricsInfoView[]): EvalSortField[] {
     return runs.flatMap((run) =>
-        run.metrics.map(
-            (metric): EvalSortField => ({
-                source: 'evaluation_metric',
-                evaluation_run_name: run.run_name,
-                metric_name: metric.metric_name,
-                label: formatEvaluationMetricLabel(run.run_name, metric.metric_name)
-            })
-        )
+        run.metrics.map((metric): EvalSortField => ({
+            source: 'evaluation_metric',
+            evaluation_run_name: run.run_name,
+            metric_name: metric.metric_name,
+            label: formatEvaluationMetricLabel(run.run_name, metric.metric_name)
+        }))
     );
 }
 
@@ -65,13 +63,11 @@ export function useImageSortFields({
     const metadataSortFields = derived(metadataInfo, ($metadataInfo) =>
         ($metadataInfo ?? [])
             .filter((info) => ['integer', 'float', 'string', 'boolean'].includes(info.type))
-            .map(
-                (info): ColumnSortField => ({
-                    source: 'metadata' as ImageSortFieldExpr['source'],
-                    value: info.name,
-                    label: `metadata.${info.name}`
-                })
-            )
+            .map((info): ColumnSortField => ({
+                source: 'metadata' as ImageSortFieldExpr['source'],
+                value: info.name,
+                label: `metadata.${info.name}`
+            }))
     );
 
     // In TanStack v6, query results are reactive objects, not Svelte stores.

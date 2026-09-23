@@ -115,11 +115,7 @@ export type TextEmbedding = {
 };
 
 export type PanelType =
-    | 'none'
-    | 'embeddingPlot'
-    | 'evaluationRuns'
-    | 'queryEditor'
-    | 'distribution';
+    'none' | 'embeddingPlot' | 'evaluationRuns' | 'queryEditor' | 'distribution';
 
 const activePanel = writable<PanelType>('none');
 const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');

@@ -41,8 +41,7 @@ export interface QueryParseError {
 }
 
 export type QueryExprTranslationResult =
-    | { status: 'ok'; queryExpr: QueryExpr }
-    | { status: 'error'; errors: QueryParseError[] };
+    { status: 'ok'; queryExpr: QueryExpr } | { status: 'error'; errors: QueryParseError[] };
 
 type QueryScope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
 
