@@ -214,53 +214,54 @@ class EmbedderRegistry:
                 space_key = self._bootstrap_spaces.get(capability)
             if space_key is None:
                 return None
-            hit, embedder = self._cached_embedder(space_key=space_key, config=config)
-            if hit:
+            embedder = self._cached_embedder(space_key=space_key, config=config)
+            if embedder is not None:
                 return embedder
+            if config is not None and self._failed_recently(config=config):
+                return None
             build_lock = self._build_locks.setdefault(
                 _build_key(space_key=space_key, config=config), threading.Lock()
             )
         with build_lock:
             with self._lock:
-                hit, embedder = self._cached_embedder(space_key=space_key, config=config)
-                if hit:
+                embedder = self._cached_embedder(space_key=space_key, config=config)
+                if embedder is not None:
                     return embedder
+                if config is not None and self._failed_recently(config=config):
+                    return None
             if config is not None:
                 self._build_from_config(config=config)
             else:
                 self._build_builtin(space_key=space_key)
         with self._lock:
-            _, embedder = self._cached_embedder(space_key=space_key, config=config)
-            return embedder
+            return self._cached_embedder(space_key=space_key, config=config)
 
-    def _cached_embedder(
-        self, space_key: str, config: EmbedderConfig | None
-    ) -> tuple[bool, Embedder | None]:
-        """Get whether the caches answer the lookup, and their embedder. Needs ``_lock``."""
+    def _cached_embedder(self, space_key: str, config: EmbedderConfig | None) -> Embedder | None:
+        """Get the embedder the caches hold for the space, or None. Needs ``_lock``.
+
+        A configuration is served only by the embedder built from that same configuration,
+        so a changed URL or a rotated key misses.
+        """
         registered = self._space_key_to_embedder.get(space_key)
         if registered is not None:
-            return True, registered
-        if config is not None:
-            return self._cached_from_config(config=config)
-        builtin = self._space_key_to_builtin.get(space_key)
-        return builtin is not None, builtin
+            return registered
+        if config is None:
+            return self._space_key_to_builtin.get(space_key)
+        cached = self._config_to_embedder.get((config.dataset_id, config.space_key))
+        if cached is None:
+            return None
+        cached_config, cached_embedder = cached
+        return cached_embedder if cached_config == config else None
 
-    def _cached_from_config(self, config: EmbedderConfig) -> tuple[bool, Embedder | None]:
-        """Get whether the config caches answer the lookup, and their embedder. Needs ``_lock``."""
-        key = (config.dataset_id, config.space_key)
-        cached = self._config_to_embedder.get(key)
-        if cached is not None:
-            cached_config, cached_embedder = cached
-            if cached_config == config:
-                return True, cached_embedder
-        failure = self._config_to_failure.get(key)
+    def _failed_recently(self, config: EmbedderConfig) -> bool:
+        """Get whether the configuration failed inside the retry window. Needs ``_lock``."""
+        failure = self._config_to_failure.get((config.dataset_id, config.space_key))
         if failure is None:
-            return False, None
+            return False
         failed_config, failed_at = failure
-        failed_recently = (
-            failed_config == config and time.monotonic() - failed_at < _REMOTE_RETRY_DELAY_SECONDS
-        )
-        return failed_recently, None
+        if failed_config != config:
+            return False
+        return time.monotonic() - failed_at < _REMOTE_RETRY_DELAY_SECONDS
 
     def _build_from_config(self, config: EmbedderConfig) -> None:
         """Build the embedder of a configuration and cache it, or cache the failure."""
