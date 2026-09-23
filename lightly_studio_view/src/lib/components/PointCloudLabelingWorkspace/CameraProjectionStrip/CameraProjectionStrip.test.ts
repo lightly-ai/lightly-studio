@@ -8,7 +8,7 @@ import CameraProjectionStrip from './CameraProjectionStrip.svelte';
 // Mock the hook's source module so the barrel (`$lib/hooks`) re-exports the stub,
 // letting each test drive the query result without a live TanStack query.
 const tickDetailsResult: { data: TickDetailView | undefined } = { data: undefined };
-vi.mock('$lib/hooks/useTickDetails/useTickDetails.svelte', () => ({
+vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails: tickDetailsResult })
 }));
 
