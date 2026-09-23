@@ -31,3 +31,14 @@ unlabeled data to a trained and evaluated model.
 
     Distill a large embedding model into a small one with LightlyTrain, then visualize and curate its embeddings — find clusters and outliers, and select a diverse subset.
 </div>
+
+## Video
+
+<div class="grid cards wide" markdown>
+
+-   **[Explore EPIC-KITCHENS-100 Video Clips in LightlyStudio](epic-kitchens-100.md)**
+
+    [![Explore EPIC-KITCHENS-100 Video Clips in LightlyStudio](https://cdn.prod.website-files.com/62cd5ce03261cb3e98188470/69b01574349707d3b4f67b82_00_selection.gif)](epic-kitchens-100.md)
+
+    Cut egocentric kitchen videos into action clips, load them with captions and metadata, and explore them with the embedding plot, text search, and diversity selection.
+</div>
