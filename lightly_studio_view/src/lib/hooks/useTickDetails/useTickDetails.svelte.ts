@@ -2,15 +2,21 @@ import { getTickDetailsOptions } from '$lib/api/lightly_studio_local/@tanstack/s
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
 
+interface UseTickDetailsParams {
+    getDatasetId: () => string;
+    getSequenceId: () => string;
+    getSeqNumber: () => number;
+}
+
+interface UseTickDetailsReturn {
+    tickDetails: CreateQueryResult<TickDetailView, Error>;
+}
+
 export const useTickDetails = ({
     getDatasetId,
     getSequenceId,
     getSeqNumber
-}: {
-    getDatasetId: () => string;
-    getSequenceId: () => string;
-    getSeqNumber: () => number;
-}): { tickDetails: CreateQueryResult<TickDetailView, Error> } => {
+}: UseTickDetailsParams): UseTickDetailsReturn => {
     const tickDetails = createQuery(() => {
         const datasetId = getDatasetId();
         const sequenceId = getSequenceId();

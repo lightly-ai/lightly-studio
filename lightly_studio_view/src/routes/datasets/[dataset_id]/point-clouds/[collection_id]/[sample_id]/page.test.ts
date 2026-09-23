@@ -12,7 +12,10 @@ vi.mock('$lib/hooks', () => ({
         featureFlags: readonly(featureFlags),
         ready,
         error: writable(null)
-    })
+    }),
+    // The lazily-loaded workspace mounts the camera projection strip, which reads
+    // the tick details query; stub it so no live query runs during the route test.
+    useTickDetails: () => ({ tickDetails: { data: undefined } })
 }));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
