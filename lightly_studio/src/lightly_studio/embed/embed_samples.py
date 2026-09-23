@@ -377,6 +377,7 @@ def _embed_image_bytes(embedder: Embedder, image_bytes: bytes) -> EmbeddingResul
     Raises:
         ImageNotEmbeddedError: If the embedder needs a decoded image or a file and the
             bytes do not decode.
+        TypeError: If the embedder embeds no images.
     """
     if isinstance(embedder, ImageBytesEmbedder):
         return embedder.embed_image_bytes(images=[image_bytes])
@@ -390,7 +391,8 @@ def _embed_image_bytes(embedder: Embedder, image_bytes: bytes) -> EmbeddingResul
     if isinstance(embedder, ImagePILEmbedder):
         return embedder.embed_images_pil(images=[image.convert("RGB")])
 
-    assert isinstance(embedder, ImagePathEmbedder)
+    if not isinstance(embedder, ImagePathEmbedder):
+        raise TypeError(f"The embedder {type(embedder).__name__} embeds no images.")
     suffix = "" if image.format is None else f".{image.format.lower()}"
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / f"image{suffix}"
