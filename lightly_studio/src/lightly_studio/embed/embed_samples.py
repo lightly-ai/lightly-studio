@@ -391,7 +391,7 @@ def _embed_image_bytes(embedder: Embedder, image_bytes: bytes) -> EmbeddingResul
         return embedder.embed_images_pil(images=[image.convert("RGB")])
 
     assert isinstance(embedder, ImagePathEmbedder)
-    # The suffix comes from the decoded format, as the upload's file name is not known here.
+    # The upload has no file name, so the suffix comes from the decoded format
     suffix = "" if image.format is None else f".{image.format.lower()}"
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / f"image{suffix}"
