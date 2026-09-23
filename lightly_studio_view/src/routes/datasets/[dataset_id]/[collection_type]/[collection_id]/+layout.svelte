@@ -402,6 +402,17 @@
         enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
     }));
 
+    const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
+        collectionId,
+        filter: buildVideoAnnotationCountsFilter({
+            metadataFilters,
+            annotationFilter: $annotationFilterStore,
+            videoBoundsValues: $videoBoundsValues,
+            sampleIds: plotFilterVideoSampleIds
+        }),
+        enabled: isVideos
+    }));
+
     const videoFrameCountsCollectionId = $derived(
         isVideoFrameAnnotations ? (parentCollection?.collectionId ?? collectionId) : collectionId
     );
@@ -418,15 +429,7 @@
             });
         }
         if (isVideos) {
-            return useVideoAnnotationCounts({
-                collectionId,
-                filter: buildVideoAnnotationCountsFilter({
-                    metadataFilters,
-                    annotationFilter: $annotationFilterStore,
-                    videoBoundsValues: $videoBoundsValues,
-                    sampleIds: plotFilterVideoSampleIds
-                })
-            });
+            return videoAnnotationCountsQuery;
         }
         return imageAnnotationCountsQuery;
     });

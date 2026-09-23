@@ -58,6 +58,11 @@
          */
         initialCountMode?: AnnotationCountMode;
         /**
+         * Shows the count mode select in the config and expand dialogs. Set to
+         * false when the host supports only `initialCountMode`. Default: true.
+         */
+        showCountMode?: boolean;
+        /**
          * Called when a histogram range is selected (single-bin click or
          * press-drag-release across bins), with the group id (e.g. the
          * metadata key) and the spanned value interval — lets the host narrow
@@ -93,6 +98,7 @@
         onBarClick,
         onCountModeChange,
         initialCountMode = AnnotationCountMode.OBJECTS,
+        showCountMode = true,
         onHistogramRangeSelect,
         histogramBinCount = 20,
         onHistogramBinCountChange,
@@ -614,7 +620,7 @@
         allClasses={displayedData.map((item) => item.label)}
         items={configurationItems}
         config={activeViewConfig}
-        showCountMode={!activeCategorical}
+        showCountMode={showCountMode && !activeCategorical}
         itemNoun={activeCategorical ? 'value' : 'class'}
         itemNounPlural={activeCategorical ? 'values' : 'classes'}
         sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
@@ -630,7 +636,7 @@
         categoryNoun={activeCategorical ? 'value' : 'class'}
         categoryNounPlural={activeCategorical ? 'values' : 'classes'}
         sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
-        showCountMode={!activeCategorical}
+        showCountMode={showCountMode && !activeCategorical}
         aggregateOther={activeCategorical !== null}
         onConfigChange={applyConfig}
         onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
