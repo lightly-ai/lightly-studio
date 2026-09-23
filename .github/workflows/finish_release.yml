@@ -29,6 +29,7 @@ concurrency:
 env:
   # The frontend build needs more heap than the default, same as the test workflows.
   NODE_OPTIONS: --max-old-space-size=4096
+  POSTHOG_CLI_VERSION: "0.18.4"
 
 jobs:
   # Its own job ahead of the build, so a tag that was never drafted or is
@@ -180,14 +181,20 @@ jobs:
           name: sourcemaps
           path: sourcemaps
 
+      - name: Install PostHog CLI
+        run: npm install -g @posthog/cli@${{ env.POSTHOG_CLI_VERSION }}
+
       - name: Upload Source Maps to PostHog
-        uses: PostHog/upload-source-maps@v1
-        with:
-          api-key: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
-          project-id: ${{ secrets.POSTHOG_PROJECT_ID }}
-          host: ${{ secrets.POSTHOG_HOST }}
-          directory: sourcemaps
-          release-version: ${{ needs.build.outputs.version }}
+        env:
+          POSTHOG_CLI_TOKEN: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          POSTHOG_CLI_ENV_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          posthog-cli \
+            --host "${{ secrets.POSTHOG_HOST }}" \
+            sourcemap upload \
+            --directory sourcemaps \
+            --version "${{ needs.build.outputs.version }}"
 
   publish:
     needs: build
