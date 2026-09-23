@@ -5,10 +5,12 @@
     import ToolRail from './ToolRail/ToolRail.svelte';
     import SceneViewport from './SceneViewport/SceneViewport.svelte';
     import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
-    import AnnotationPanel from './AnnotationPanel/AnnotationPanel.svelte';
+    import PointCloudRightSidePanel from './PointCloudRightSidePanel';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
+    import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -35,8 +37,42 @@
 
     let { sampleId, sourcePath = [], status = 'empty', onExit, onRetry }: Props = $props();
 
+    let selectedCuboidId = $state<string | null>(null);
+
+    // Placeholder ruler until browser-side MCAP frame loading lands (child issues of LIG-10657).
+    const placeholderTicks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
+        seq_number: index,
+        timestamp_ns: null
+    }));
+
+    // Local transport state until real frame playback lands with MCAP loading.
+    let currentTick = $state(0);
+    let isPlaying = $state(false);
+
+    const goToPreviousFrame = () => {
+        if (currentTick > 0) currentTick -= 1;
+    };
+    const goToNextFrame = () => {
+        if (currentTick < placeholderTicks.length - 1) currentTick += 1;
+    };
+    const togglePlayback = () => {
+        isPlaying = !isPlaying;
+    };
+
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
+
+    // Channel data lands with browser-side MCAP loading (later child issues of LIG-10657); until
+    // then the filter bar renders empty but its selection state is already owned here.
+    let lidarChannels = $state<ChannelSummaryView[]>([]);
+    let cameraChannels = $state<ChannelSummaryView[]>([]);
+    let selectedLidarChannels = $state<number[]>([]);
+    let selectedCameraChannels = $state<number[]>([]);
+
+    const toggleChannel = (selected: number[], channelId: number): number[] =>
+        selected.includes(channelId)
+            ? selected.filter((id) => id !== channelId)
+            : [...selected, channelId];
 
     const handleFullscreenChange = () => {
         isFullscreen = document.fullscreenElement === containerEl;
@@ -69,7 +105,16 @@
         onToggleFullscreen={toggleFullscreen}
         {onExit}
     />
-    <WorkspaceFilterBar />
+    <WorkspaceFilterBar
+        {lidarChannels}
+        {cameraChannels}
+        {selectedLidarChannels}
+        {selectedCameraChannels}
+        onToggleLidarChannel={(channelId) =>
+            (selectedLidarChannels = toggleChannel(selectedLidarChannels, channelId))}
+        onToggleCameraChannel={(channelId) =>
+            (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
+    />
     <div class="flex min-h-0 flex-1">
         {#if status === 'unsupported' || status === 'error'}
             <WorkspaceStatusPanel {status} {onRetry} {onExit} />
@@ -113,7 +158,14 @@
                             </div>
                         </PaneResizer>
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline />
+                            <FrameTimeline
+                                ticks={placeholderTicks}
+                                {currentTick}
+                                {isPlaying}
+                                onPreviousFrame={goToPreviousFrame}
+                                onNextFrame={goToNextFrame}
+                                onPlayToggle={togglePlayback}
+                            />
                         </Pane>
                     </PaneGroup>
                 </Pane>
@@ -129,7 +181,7 @@
                     </div>
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <AnnotationPanel />
+                    <PointCloudRightSidePanel bind:selectedCuboidId />
                 </Pane>
             </PaneGroup>
         {/if}

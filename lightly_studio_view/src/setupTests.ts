@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom';
+import { configure } from '@testing-library/dom';
 import { vi } from 'vitest';
+
+// `waitFor`/`findBy*` default to a 1s timeout, independent of vitest's testTimeout.
+// Heavy tests (e.g. the point-cloud workspace lazy-loading a Three.js module ~1s)
+// blow past 1s under a loaded machine. Widen it so async assertions stay stable.
+configure({ asyncUtilTimeout: 5000 });
 
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
