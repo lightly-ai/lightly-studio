@@ -4,8 +4,7 @@
     import SourceGroupSelector from '../SourceGroupSelector/SourceGroupSelector.svelte';
     import HistogramToolbar from '../HistogramToolbar/HistogramToolbar.svelte';
     import PanelHeader from '../PanelHeader/PanelHeader.svelte';
-    import { MetadataCategoricalFilter } from '../MetadataCategoricalFilter';
-    import { CategoricalStatusBanner } from '../CategoricalStatusBanner';
+    import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
     import { CATEGORICAL_DISTRIBUTION_SORT_LABELS } from '../types';
     import type { useDistributionPanel } from '../useDistributionPanel.svelte';
 
@@ -81,16 +80,12 @@
         buckets={panel.activeCategorical.buckets}
         selectedValues={panel.activeCategorical.selectedValues}
         loading={panel.activeCategorical.loading}
+        updating={panel.activeCategorical.updating}
+        error={panel.activeCategorical.error}
+        onRetry={onCategoricalRetry}
         onToggle={panel.handleCategoricalFilterToggle}
         onClear={panel.handleCategoricalFilterClear}
     />
-    {#if panel.activeCategorical.loading || panel.activeCategorical.error}
-        <CategoricalStatusBanner
-            loading={panel.activeCategorical.loading}
-            error={panel.activeCategorical.error}
-            onRetry={onCategoricalRetry}
-        />
-    {/if}
     {#if panel.categoricalData.length > 0}
         <div class="mt-2">
             <PanelHeader

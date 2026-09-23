@@ -35,6 +35,37 @@ describe('MetadataCategoricalFilter', () => {
         expect(trigger.querySelector(':scope > svg')).toBeInTheDocument();
     });
 
+    it('keeps retained selections usable during updates and offers retry after errors', async () => {
+        const onToggle = vi.fn();
+        const onRetry = vi.fn();
+        render(MetadataCategoricalFilter, {
+            props: {
+                ...defaultProps,
+                fieldLabel: 'City',
+                buckets: [{ id: 'basel', kind: 'value', value: 'Basel', label: 'Basel', count: 1 }],
+                selectedValues: ['Zurich'],
+                updating: true,
+                error: 'Request failed',
+                onRetry,
+                onToggle
+            }
+        });
+
+        expect(screen.getByText('Updating…')).toBeVisible();
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'Could not update metadata distribution.'
+        );
+        await fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+        expect(onRetry).toHaveBeenCalledOnce();
+        await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
+        const retained = screen.getByRole('checkbox', {
+            name: 'Select value Zurich, count unavailable'
+        });
+        await fireEvent.click(retained);
+        expect(onToggle).toHaveBeenCalledWith('Zurich');
+        expect(screen.getByText('Not in current results')).toBeVisible();
+    });
+
     it('keeps literal Missing and semantic Missing distinct and disables Other', async () => {
         const onToggle = vi.fn();
         render(MetadataCategoricalFilter, {
@@ -89,7 +120,7 @@ describe('MetadataCategoricalFilter', () => {
 
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
         expect(screen.queryByLabelText('Search values')).not.toBeInTheDocument();
-        expect(screen.getByText('Not in top 20')).toBeVisible();
+        expect(screen.getByText('Not in current results')).toBeVisible();
         await fireEvent.click(
             screen.getByRole('checkbox', {
                 name: 'Select value stale, count unavailable'
@@ -136,6 +167,6 @@ describe('MetadataCategoricalFilter', () => {
 
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
         expect(screen.queryByLabelText('Search values')).not.toBeInTheDocument();
-        expect(screen.getByText('Not in top 20')).toBeVisible();
+        expect(screen.getByText('Not in current results')).toBeVisible();
     });
 });
