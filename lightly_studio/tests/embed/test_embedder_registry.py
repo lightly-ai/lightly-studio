@@ -418,6 +418,27 @@ class TestEmbedderRegistry:
         thread.join(timeout=5)
         assert not blocked
 
+    @pytest.mark.parametrize("build_fails", [False, True])
+    def test_get_text_embedder__registration_during_build_wins(
+        self, mocker: MockerFixture, build_fails: bool
+    ) -> None:
+        registry = EmbedderRegistry()
+        registered = _FakeTextImageEmbedder(space_key="space-a")
+
+        def _build_while_registering(config: EmbedderConfig) -> Embedder:  # noqa: ARG001
+            registry.register(embedder=registered)
+            if build_fails:
+                raise RemoteEmbedderUnreachableError("down")
+            return _FakeTextImageEmbedder(space_key="space-a")
+
+        mocker.patch.object(embedder_config, "build_remote", side_effect=_build_while_registering)
+
+        embedder = registry.get_text_embedder(
+            config=_config(space_key="space-a", url="http://first.test")
+        )
+
+        assert embedder is registered
+
     def test_get_image_path_embedder__explicit_key_has_no_fallback(
         self, mocker: MockerFixture
     ) -> None:

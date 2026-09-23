@@ -199,7 +199,8 @@ class EmbedderRegistry:
         """Resolve the embedder of a space from a registration, a configuration or a built-in.
 
         A cache hit is served under ``_lock`` alone. A miss builds under the lock of the
-        space, so a slow server holds up only the callers of that space.
+        space, so a slow server holds up only the callers of that space. The result is
+        then read back from the caches, so a registration made during the build wins.
 
         Args:
             space_key: The space to resolve. None selects the bootstrap space of the
@@ -232,8 +233,12 @@ class EmbedderRegistry:
                 if hit:
                     return embedder
             if config is not None:
-                return self._build_from_config(config=config)
-            return self._build_builtin(space_key=space_key)
+                self._build_from_config(config=config)
+            else:
+                self._build_builtin(space_key=space_key)
+        with self._lock:
+            _, embedder = self._cached_embedder(space_key=space_key, config=config)
+            return embedder
 
     def _cached_embedder(
         self, space_key: str, config: EmbedderConfig | None
@@ -278,16 +283,15 @@ class EmbedderRegistry:
         )
         return failed_recently, None
 
-    def _build_from_config(self, config: EmbedderConfig) -> Embedder | None:
+    def _build_from_config(self, config: EmbedderConfig) -> None:
         """Build the embedder that a stored configuration names and cache it.
 
         The embedder is cached before any capability is asked of it, so a dataset reads
         ``/v1/describe`` once and not once per capability. The caller holds the build lock
         of the configuration but not ``_lock``, because the connection is slow.
 
-        Returns:
-            The embedder of the configuration, or None if the server cannot be used. That
-            reads like a space with no embedder, which every caller already handles.
+        A server that cannot be used is cached as a failure, which reads like a space with
+        no embedder. Every caller already handles that.
         """
         # TODO(Iunir, 09/2026): Close the client of a replaced embedder when the remote
         # embedder gains a teardown hook.
@@ -303,13 +307,12 @@ class EmbedderRegistry:
             )
             with self._lock:
                 self._config_to_failure[key] = (config, time.monotonic())
-            return None
+            return
         with self._lock:
             self._config_to_embedder[key] = (config, embedder)
             self._config_to_failure.pop(key, None)
-        return embedder
 
-    def _build_builtin(self, space_key: str) -> Embedder | None:
+    def _build_builtin(self, space_key: str) -> None:
         """Load the built-in embedder of a space and cache it.
 
         It is cached apart from the registrations, so it still loses to a configuration.
@@ -318,10 +321,9 @@ class EmbedderRegistry:
         """
         embedder = _load_builtin_embedder(space_key=space_key)
         if embedder is None:
-            return None
+            return
         with self._lock:
             self._space_key_to_builtin[space_key] = embedder
-        return embedder
 
     def _set_bootstrap_defaults(
         self,
