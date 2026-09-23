@@ -29,7 +29,7 @@ COMPONENTS = [
         name="front",
         mcap_data_type=ls.McapDataType.VIDEO_FRAME,
         topic="/Main/compressed_video",
-        camera_info_topic="//Main/camera_info",
+        camera_info_topic="/Main/camera_info",
     ),
     ls.McapComponentSpec(
         name="mast_left_side",

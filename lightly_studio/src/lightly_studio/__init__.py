@@ -15,14 +15,9 @@ from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.mcap.create_mcap import CreateMcap
-from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
-from lightly_studio.core.mcap.component import McapComponent, McapComponentSpec
-from lightly_studio.core.mcap.group_dataset import McapGroupDataset
+from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
-from lightly_studio.core.mcap.recording import Recording
-from lightly_studio.core.mcap.sequence import McapSequence, McapSequenceEntry
 from lightly_studio.models.mcap_group_component_definition import McapDataType
-from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.core.video.create_video import CreateVideo
 from lightly_studio.core.start_gui import (
     start_gui,
@@ -43,22 +38,15 @@ __all__ = [
     "AnnotationType",
     "CreateImage",
     "CreateMcap",
-    "CreateSensorCalibration",
     "CreateVideo",
     "EmbeddingResult",
     "EmbeddingSpaceSpec",
     "GroupDataset",
     "ImageCrop",
     "ImageDataset",
-    "McapComponent",
     "McapComponentSpec",
     "McapDataType",
     "McapDataset",
-    "McapGroupDataset",
-    "McapSequence",
-    "McapSequenceEntry",
-    "Recording",
-    "RecordingFormat",
     "SampleType",
     "VideoDataset",
     "VideoFrameDataset",

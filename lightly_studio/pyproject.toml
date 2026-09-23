@@ -63,6 +63,10 @@ dependencies = [
     "posthog>=6.9,<7.0",
     "lightly-studio-serve>=0.1.0,<0.2.0",
     "httpx>=0.27.2",
+    # MCAP recordings: the core reader plus the message decoder for the
+    # schema encoding we read (CDR/ros2msg).
+    "mcap>=1.2.0,<2.0",
+    "mcap-ros2-support>=0.5.0,<0.6",
 ]
 
 [tool.uv.sources]
@@ -76,12 +80,6 @@ cloud-storage = [
     "s3fs>=2023.1.0",
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
-]
-mcap = [
-    # MCAP robotics recordings: the core reader plus the message decoder for the
-    # schema encoding we read (CDR/ros2msg).
-    "mcap>=1.2.0,<2.0",
-    "mcap-ros2-support>=0.5.0,<0.6",
 ]
 
 [dependency-groups]
