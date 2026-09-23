@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     selectHistogramRange,
+    selectVideoDistributionBaseFilter,
     toCategoryCounts,
     toggleCategoricalValue,
     withoutCategoricalValues
@@ -57,5 +58,29 @@ describe('withoutCategoricalValues', () => {
 
         expect(withoutCategoricalValues(values, 'city')).toEqual({ weather: ['sunny'] });
         expect(values).toEqual({ city: ['Zurich'], weather: ['sunny'] });
+    });
+});
+
+describe('selectVideoDistributionBaseFilter', () => {
+    it('keeps the tags and sample ids and drops the other filters', () => {
+        expect(
+            selectVideoDistributionBaseFilter({
+                filter_type: 'video',
+                width: { min: 100 },
+                frame_annotation_filter: { annotation_label_ids: ['label-1'] },
+                sample_filter: {
+                    sample_ids: ['video-1'],
+                    tag_ids: ['tag-1'],
+                    metadata_filters: [{ key: 'score', op: '>=', value: 1 }]
+                }
+            })
+        ).toEqual({
+            filter_type: 'video',
+            sample_filter: { sample_ids: ['video-1'], tag_ids: ['tag-1'] }
+        });
+    });
+
+    it('returns an empty video filter when there is no scope', () => {
+        expect(selectVideoDistributionBaseFilter(null)).toEqual({ filter_type: 'video' });
     });
 });

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `quickstart-enterprise` CLI command to seed a remote enterprise instance with a demo dataset.
 - Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
 - Python SDK: Embed search queries on a remote embedding server with `register_remote_embedder`.
+- Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 
 ### Changed
 
