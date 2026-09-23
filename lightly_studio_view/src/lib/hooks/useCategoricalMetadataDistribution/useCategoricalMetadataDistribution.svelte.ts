@@ -1,5 +1,8 @@
 import { createQuery } from '@tanstack/svelte-query';
-import type { ImageFilter, MetadataValueCountsView } from '$lib/api/lightly_studio_local';
+import type {
+    MetadataValueCountsRequest,
+    MetadataValueCountsView
+} from '$lib/api/lightly_studio_local';
 import { getMetadataValueCountsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { getMetadataValueCounts } from '$lib/api/lightly_studio_local/sdk.gen';
 import { MISSING_CATEGORICAL_VALUE, OTHER_CATEGORICAL_VALUE } from '$lib/services/types';
@@ -55,9 +58,12 @@ export const selectCategoricalDistributions = (
         })
     );
 
+/** An image or video filter, tagged with its `filter_type`. */
+type MetadataValueCountsFilter = NonNullable<MetadataValueCountsRequest['filters']>;
+
 export interface CategoricalMetadataDistributionOptions {
     collectionId: string;
-    filter?: ImageFilter;
+    filter?: MetadataValueCountsFilter;
     fields?: string[];
 }
 

@@ -16,7 +16,10 @@ from lightly_studio.models.metadata import (
     MetadataValueCountsView,
     MetadataValueCountView,
 )
+from lightly_studio.models.range import FloatRange
 from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
+from lightly_studio.resolvers.image_filter import FilterDimensions
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
     create_collection,
     create_tag,
@@ -101,6 +104,41 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
     assert data == []
 
 
+def test_get_metadata_histograms__video_filter(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_histograms",
+        return_value={"score": HistogramView(bin_edges=[0.0, 1.0], counts=[3])},
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/histograms",
+        json={
+            "filters": {"filter_type": "video", "duration_s": {"min": 1.0, "max": 5.0}},
+            "fields": ["score"],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"score": {"bin_edges": [0.0, 1.0], "counts": [3]}}
+    called_filters = resolver.call_args.kwargs["filters"]
+    assert isinstance(called_filters, VideoFilter)
+    assert called_filters.duration_s == FloatRange(min=1.0, max=5.0)
+
+
+def test_get_metadata_histograms__missing_filter_type_returns_422(
+    test_client: TestClient,
+) -> None:
+    response = test_client.post(
+        f"/api/collections/{uuid4()}/metadata/histograms",
+        json={"filters": {"sample_filter": {"tag_ids": []}}},
+    )
+
+    assert response.status_code == 422
+
+
 def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixture) -> None:
     collection_id = uuid4()
     resolver = mocker.patch(
@@ -113,7 +151,8 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
         },
     )
     filters = {
-        "sample_filter": {"metadata_filters": [{"key": "country", "op": "==", "value": "CH"}]}
+        "filter_type": "image",
+        "sample_filter": {"metadata_filters": [{"key": "country", "op": "==", "value": "CH"}]},
     }
 
     response = test_client.post(
@@ -139,6 +178,27 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
             "metadata_filters": [{"key": "country", "op": "==", "value": "CH"}],
         },
     }
+
+
+def test_get_metadata_value_counts__video_filter(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={},
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"filters": {"filter_type": "video", "width": {"min": 100}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    called_filters = resolver.call_args.kwargs["filters"]
+    assert isinstance(called_filters, VideoFilter)
+    assert called_filters.width == FilterDimensions(min=100)
 
 
 def test_get_metadata_value_counts__optional_body(
@@ -203,12 +263,14 @@ def test_metadata_filter__invalid_in_value_returns_422(test_client: TestClient) 
         f"/api/collections/{collection_id}/metadata/value-counts",
         json={
             "filters": {
-                "sample_filter": {"metadata_filters": [{"key": "city", "op": "in", "value": []}]}
+                "filter_type": "image",
+                "sample_filter": {"metadata_filters": [{"key": "city", "op": "in", "value": []}]},
             }
         },
     )
 
     assert response.status_code == 422
+    assert response.json()["detail"][0]["type"] == "metadata_in_value"
 
 
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`
