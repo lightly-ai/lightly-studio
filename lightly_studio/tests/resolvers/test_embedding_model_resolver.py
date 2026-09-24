@@ -289,6 +289,36 @@ def test_set_api_key__clears_key(db_session: Session) -> None:
     assert updated.api_key is None
 
 
+def test_set_remote_embedder(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    embedding_model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    embedding_model_resolver.set_remote_embedder(
+        session=db_session,
+        embedding_model_id=embedding_model.embedding_model_id,
+        url="http://embedder.test",
+        api_key="secret",
+    )
+
+    stored = embedding_model_resolver.get_by_id(
+        session=db_session, embedding_model_id=embedding_model.embedding_model_id
+    )
+    assert stored is not None
+    assert stored.remote_embedder_url == "http://embedder.test"
+    assert stored.api_key == "secret"
+
+
+def test_set_remote_embedder__unknown_model_raises(db_session: Session) -> None:
+    unknown_id = uuid4()
+
+    with pytest.raises(ValueError, match=f"Embedding model with id {unknown_id} not found."):
+        embedding_model_resolver.set_remote_embedder(
+            session=db_session, embedding_model_id=unknown_id, url="http://x.test", api_key=None
+        )
+
+
 def test_set_api_key__unknown_model_raises(db_session: Session) -> None:
     unknown_id = uuid4()
 
@@ -296,3 +326,23 @@ def test_set_api_key__unknown_model_raises(db_session: Session) -> None:
         embedding_model_resolver.set_api_key(
             session=db_session, embedding_model_id=unknown_id, api_key="secret"
         )
+
+
+def test_get_all_by_dataset_id(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    other_collection = create_collection(session=db_session, collection_name="other")
+    create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_model_name="b"
+    )
+    create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_model_name="a"
+    )
+    create_embedding_model(
+        session=db_session, collection_id=other_collection.collection_id, embedding_model_name="c"
+    )
+
+    embedding_models = embedding_model_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=collection.dataset_id
+    )
+
+    assert [embedding_model.name for embedding_model in embedding_models] == ["a", "b"]
