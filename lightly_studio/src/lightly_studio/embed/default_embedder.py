@@ -13,6 +13,11 @@ from sqlmodel import Session
 from lightly_studio.embed import embedder_config, embedder_registry
 from lightly_studio.embed.embedder_config import EmbedderConfig
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.errors import (
+    MissingCapabilityError,
+    NoDefaultEmbeddingModelError,
+    RemoteEmbedderUnavailableError,
+)
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -23,42 +28,6 @@ from lightly_studio.resolvers import (
 logger = logging.getLogger(__name__)
 
 _EmbedderT = TypeVar("_EmbedderT", bound=Embedder)
-
-
-class NoDefaultEmbeddingModelError(ValueError):
-    """Raised when a query targets a collection with no default embedding model."""
-
-
-class MissingCapabilityError(ValueError):
-    """Raised when no embedder of the default embedding space has the queried capability.
-
-    Attributes:
-        space_key: The default embedding space of the collection.
-    """
-
-    def __init__(self, space_key: str) -> None:
-        """Create the error for the embedding space ``space_key``."""
-        super().__init__(
-            f"No embedder resolves for the collection's default embedding space {space_key!r}."
-        )
-        self.space_key = space_key
-
-
-class RemoteEmbedderUnavailableError(ValueError):
-    """Raised when the embedding server of the default embedding space cannot be used.
-
-    The server is unreachable, rejects the token, or fails the identity check.
-
-    Attributes:
-        space_key: The default embedding space of the collection.
-    """
-
-    def __init__(self, space_key: str, url: str) -> None:
-        """Create the error for the server at ``url`` that serves ``space_key``."""
-        super().__init__(
-            f"The embedding server at {url!r} for the embedding space {space_key!r} cannot be used."
-        )
-        self.space_key = space_key
 
 
 def resolve_default_embedder(
