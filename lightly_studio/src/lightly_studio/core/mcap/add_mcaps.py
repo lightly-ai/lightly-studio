@@ -11,20 +11,27 @@ tick.
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, NamedTuple
 from uuid import UUID
 
+from lightly_studio.core.file_outcome_report import (
+    AlreadyPresentInputFileError,
+    BrokenInputFileError,
+    FileOutcomeReport,
+)
 from lightly_studio.core.mcap import dataset_schema, matching
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
+from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequenceEntry
 from lightly_studio.core.mcap.type_definitions import CameraIntrinsics, FrameLocator
+from lightly_studio.database import db_manager
 from lightly_studio.models.mcap import McapCreate
-from lightly_studio.resolvers import group_resolver, mcap_resolver
+from lightly_studio.resolvers import group_resolver, mcap_resolver, recording_resolver
 
 if TYPE_CHECKING:
     from lightly_studio.core.mcap.component import McapComponent
@@ -32,8 +39,78 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+MCAP_EXTENSIONS = {".mcap"}
+"""The file extensions an MCAP recording is discovered by."""
+
 DEFAULT_MAX_PAIRING_DIFF_NS = 50_000_000
 """The largest time difference that still pairs a component with an sync tick."""
+
+
+def index_recordings(
+    dataset: McapDataset,
+    mcap_paths: Iterable[str],
+    sync_component: str,
+    components: Sequence[McapComponentSpec],
+    max_pairing_diff_ns: int = DEFAULT_MAX_PAIRING_DIFF_NS,
+) -> list[UUID]:
+    """Index several recordings into a dataset, one sequence each.
+
+    A recording whose URI is already in the dataset is skipped, including a path that
+    appears twice in `mcap_paths`. A recording that cannot be read is reported and the
+    others are still indexed.
+
+    Args:
+        dataset: The dataset to index into.
+        mcap_paths: The paths or URIs of the `.mcap` files.
+        sync_component: The name of the component whose messages are the ticks.
+        components: The specs the recordings are read through. They must be the
+            components the dataset was created with. Topics are not stored, so they are
+            passed on every call.
+        max_pairing_diff_ns: The largest time difference that still pairs a component
+            with an anchor tick.
+
+    Returns:
+        The sample ID of the sequence of every recording that was indexed, in the order
+        the recordings were read in. A recording that failed or was already present has
+        no entry.
+
+    Raises:
+        ValueError: If `components` names other components than the dataset has, or if
+            `sync_component` is not one of them.
+        AllInputFilesFailedError: If at least one recording was attempted and every
+            attempted recording failed.
+    """
+    dataset_schema.check_components_match(
+        session=dataset.group_dataset.session,
+        group_collection_id=dataset.group_dataset.collection_id,
+        components=components,
+        dataset_name=dataset.name,
+    )
+    report = FileOutcomeReport()
+    sequence_sample_ids: list[UUID] = []
+    # The set starts with URIs already in the dataset and grows with URIs seen in this
+    # call, so both already-present and in-run duplicate paths are skipped.
+    seen_or_existing_uris = _existing_uris(dataset=dataset)
+    for mcap_path in mcap_paths:
+        with report.track(mcap_path):
+            if mcap_path in seen_or_existing_uris:
+                raise AlreadyPresentInputFileError()
+            seen_or_existing_uris.add(mcap_path)
+            try:
+                sequence_sample_ids.append(
+                    index_recording(
+                        dataset=dataset,
+                        mcap_path=mcap_path,
+                        sync_component=sync_component,
+                        components=components,
+                        max_pairing_diff_ns=max_pairing_diff_ns,
+                    )
+                )
+            except McapAccessError as exc:
+                raise BrokenInputFileError(f"Cannot index '{mcap_path}': {exc}") from exc
+    report.raise_if_all_failed()
+    report.log_summary()
+    return sequence_sample_ids
 
 
 def index_recording(
@@ -294,3 +371,11 @@ def _mcap_components(
         component.name: dataset.group_dataset.get_component(name=component.name)
         for component in components
     }
+
+
+def _existing_uris(dataset: McapDataset) -> set[str]:
+    """Return the URIs of recordings already indexed into the dataset."""
+    recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    return {recording.uri for recording in recordings}
