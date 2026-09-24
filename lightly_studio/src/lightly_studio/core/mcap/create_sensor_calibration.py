@@ -19,7 +19,7 @@ class CreateSensorCalibration:
 
     ```python
     intrinsics = reader.get_intrinsic(topic="/front/camera_info")
-    calibration = ls.CreateSensorCalibration.from_camera_intrinsics(
+    calibration = CreateSensorCalibration.from_camera_intrinsics(
         collection_id=front.collection_id, intrinsics=intrinsics
     )
     ```
