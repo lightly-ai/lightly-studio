@@ -91,6 +91,28 @@ def test_index_recording__sequence_uses_capture_timestamp(
     ]
 
 
+def test_index_recording__falls_back_to_log_time_when_capture_clocks_differ(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    mcap_path = helpers.write_mcap(
+        tmp_path / "bad_camera_stamp.mcap", video_stamp_offset_ns=10_000_000_000
+    )
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    sequence_sample_id = add_mcaps.index_recording(
+        dataset=dataset,
+        mcap_path=str(mcap_path),
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    )
+
+    links = _get_sample_links(sequence_sample_id=sequence_sample_id)
+    assert [link.timestamp_ns for link in links] == list(helpers.LIDAR_LOG_TIMES_NS)
+    assert [link.seq_number for link in links] == [0, 1]
+
+
 def test_index_recording__pairs_the_closest_frame(
     patch_collection: None,  # noqa: ARG001
     mcap_path: Path,
@@ -137,6 +159,11 @@ def test_index_recording__drops_unpaired_ticks(
     )
 
     assert _get_sample_links(sequence_sample_id=sequence_sample_id) == []
+    # The channel is a property of the topic, so it is filled even with no paired ticks.
+    front = dataset.group_dataset.get_component(name=VIDEO_COMPONENT)
+    pcl_front = dataset.group_dataset.get_component(name=POINT_CLOUD_COMPONENT)
+    assert front.channel_id is not None
+    assert pcl_front.channel_id is not None
 
 
 def test_index_recording__fills_the_component_definitions(

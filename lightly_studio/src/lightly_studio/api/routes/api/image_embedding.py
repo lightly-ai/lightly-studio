@@ -16,6 +16,8 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.embed import embed_samples
+from lightly_studio.embed.errors import QueryEmbedderError
+from lightly_studio.embed.remote.errors import RemoteEmbedderError
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,9 @@ def embed_image_from_file(
             status_code=HTTP_STATUS_BAD_REQUEST,
             detail=f"{exc} Uploaded file: {file.filename!r}.",
         ) from None
+    # The app exception handlers map these
+    except (QueryEmbedderError, RemoteEmbedderError):
+        raise
     except ValueError as exc:
         raise HTTPException(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
