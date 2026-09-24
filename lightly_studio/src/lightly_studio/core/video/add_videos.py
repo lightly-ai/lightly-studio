@@ -44,7 +44,8 @@ from lightly_studio.core.file_outcome_report import (
     InputFileError,
     MissingInputFileError,
 )
-from lightly_studio.dataset import remote_storage
+from lightly_studio.dataset import remote_storage, video_quality
+from lightly_studio.dataset.video_quality import VideoQualityAccumulator
 from lightly_studio.embed import embed_samples
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
@@ -97,6 +98,8 @@ class FrameExtractionContext:
     collection_id: UUID
     video_sample_id: UUID
     embed_frames: bool = False
+    quality_accumulator: VideoQualityAccumulator | None = None
+    """Fed every decoded frame when quality scoring is enabled."""
 
 
 @dataclass
@@ -111,6 +114,7 @@ class VideoLoadContext:
     target_fps: float | None
     embed_frames: bool
     extract_frames: bool = True
+    compute_quality: bool = False
 
 
 @dataclass
@@ -142,6 +146,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     target_fps: float | None = None,
     embed_frames: bool = False,
     extract_frames: bool = True,
+    compute_quality: bool = False,
 ) -> tuple[dict[str, UUID], list[UUID]]:
     """Load video samples from file paths into the dataset using PyAV.
 
@@ -162,6 +167,8 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         extract_frames: If True, decode and persist a child sample per (subsampled) frame.
             If False, only the video sample and its header metadata are stored; the whole
             decode pass is skipped. Use for screening paths that never read frame rows.
+        compute_quality: If True, score blur, lighting, motion, and camera shake from the
+            same decode pass and store the result as video sample metadata.
 
     Returns:
         A tuple containing:
@@ -206,6 +213,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         target_fps=target_fps,
         embed_frames=effective_embed_frames,
         extract_frames=extract_frames,
+        compute_quality=compute_quality,
     )
 
     paths_to_load: list[str] = []
@@ -350,6 +358,12 @@ def _load_single_video(
                 collection_id=context.video_frames_collection_id,
                 video_sample_id=video_sample_ids[0],
                 embed_frames=context.embed_frames,
+                quality_accumulator=_create_quality_accumulator(
+                    compute_quality=context.compute_quality,
+                    video_path=video_path,
+                    duration_s=video_duration,
+                    fps=framerate,
+                ),
             )
             try:
                 frame_sample_ids = _create_video_frame_samples(
@@ -369,6 +383,11 @@ def _load_single_video(
                 )
                 raise BrokenInputFileError() from e
 
+            _store_quality_scores(
+                session=context.session,
+                video_sample_id=video_sample_ids[0],
+                accumulator=extraction_context.quality_accumulator,
+            )
             return video_sample_ids[0], frame_sample_ids
         finally:
             # Always release the native FFmpeg container once it has been opened, even
@@ -571,7 +590,7 @@ def _create_video_frame_samples(
     # opens it.
     _configure_stream_threading(video_stream=video_stream, num_decode_threads=num_decode_threads)
 
-    if not context.embed_frames:
+    if not context.embed_frames and context.quality_accumulator is None:
         timing = _read_frame_timing_from_packets(
             video_container=video_container, video_stream=video_stream
         )
@@ -775,11 +794,6 @@ def _decode_video_frame_samples(
 
     # Decode all frames, persisting only the subset selected by the target fps.
     for decoded_index, frame in enumerate(video_container.decode(video_stream)):
-        if not _should_keep_frame(
-            decoded_index=decoded_index, target_fps=target_fps, original_fps=original_fps
-        ):
-            continue
-
         # Get the presentation timestamp in seconds from the frame
         # Convert frame.pts from time base units to seconds
         if frame.pts is not None and time_base is not None:
@@ -787,6 +801,16 @@ def _decode_video_frame_samples(
         else:
             # Fallback to frame.time if pts or time_base is not available
             frame_timestamp_s = frame.time if frame.time is not None else -1.0
+
+        # Quality scoring sees every decoded frame, not just the persisted subset:
+        # camera shake is measured on consecutive frames, which subsampling breaks.
+        if context.quality_accumulator is not None:
+            context.quality_accumulator.add_frame(timestamp_s=frame_timestamp_s, frame=frame)
+
+        if not _should_keep_frame(
+            decoded_index=decoded_index, target_fps=target_fps, original_fps=original_fps
+        ):
+            continue
 
         sample = VideoFrameCreate(
             frame_number=decoded_index,
@@ -843,6 +867,52 @@ def _flush_frame_batch(
         )
 
     return created_sample_ids
+
+
+def _create_quality_accumulator(
+    compute_quality: bool,
+    video_path: str,
+    duration_s: float | None,
+    fps: float,
+) -> VideoQualityAccumulator | None:
+    """Build a quality accumulator for a video, or None when it cannot be scored.
+
+    Args:
+        compute_quality: Whether quality scoring was requested.
+        video_path: Path of the video, used for logging only.
+        duration_s: Video duration in seconds, or None when the header omits it.
+        fps: Source frame rate, 0 when unknown.
+
+    Returns:
+        The accumulator, or None when scoring is disabled or the duration is unusable.
+    """
+    if not compute_quality:
+        return None
+    if duration_s is None or duration_s <= 0.0:
+        logger.warning(
+            f"Skipping quality scoring for '{video_path}': the video reports no usable duration."
+        )
+        return None
+    return VideoQualityAccumulator(duration_s=duration_s, fps=fps)
+
+
+def _store_quality_scores(
+    session: Session,
+    video_sample_id: UUID,
+    accumulator: VideoQualityAccumulator | None,
+) -> None:
+    """Write the accumulated quality scores as metadata on the video sample."""
+    if accumulator is None:
+        return
+    scores = accumulator.finalize()
+    if scores is None:
+        logger.warning(f"No frames collected for quality scoring of video '{video_sample_id}'.")
+        return
+    video_quality.set_video_quality_metadata(
+        session=session,
+        video_sample_id=video_sample_id,
+        scores=scores,
+    )
 
 
 def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: int | None) -> None:

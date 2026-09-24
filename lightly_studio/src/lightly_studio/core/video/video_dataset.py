@@ -126,6 +126,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         target_fps: float | None = None,
         limit: int | None = None,
         extract_frames: bool = True,
+        compute_quality: bool = False,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
 
@@ -146,6 +147,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             extract_frames: If True, decode and persist a child sample per (subsampled)
                 frame. If False, only the video sample and its header metadata are stored
                 and the decode pass is skipped. target_fps is then irrelevant.
+            compute_quality: If True, score blur, lighting, motion, and camera shake from
+                the decode pass that extracts the frames and store them as metadata. This
+                avoids the extra read that `compute_quality_scores` needs.
         """
         if target_fps is not None and target_fps <= 0:
             raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
@@ -165,6 +169,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             target_fps=target_fps,
             embed_frames=embed_frames,
             extract_frames=extract_frames,
+            compute_quality=compute_quality,
         )
         created_sample_ids = list(video_path_to_id.values())
 
@@ -275,12 +280,12 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         num_frames: int | None = None,
         max_edge: int | None = None,
     ) -> int:
-        """Score blur, lighting, and motion for videos and store as metadata.
+        """Score blur, lighting, motion, and camera shake for videos and store as metadata.
 
         Samples a few frames per video, computes classical CV quality signals, and
         writes aggregates under metadata keys such as ``blur_score``,
-        ``lighting_score``, and ``motion_score``. Use metadata filters in the GUI
-        or Python query API to screen low-quality videos.
+        ``lighting_score``, ``motion_score``, and ``shake_score``. Use metadata
+        filters in the GUI or Python query API to screen low-quality videos.
 
         Args:
             num_frames: Number of uniformly spaced frames to sample per video.

@@ -96,7 +96,7 @@ def score_caption_segments(
         intervals=intervals,
     )
     caption_matrix = np.asarray(caption_embeddings, dtype=np.float32)
-    return _cosine_similarities(
+    return cosine_similarities(
         segment_embeddings=segment_embeddings,
         caption_embeddings=caption_matrix,
     )
@@ -145,7 +145,7 @@ def score_caption_segment_frames(
         segment_count=len(intervals),
         top_k=top_k,
     )
-    mean_pooled_scores = _cosine_similarities(
+    mean_pooled_scores = cosine_similarities(
         segment_embeddings=frame_embeddings.mean(axis=1),
         caption_embeddings=caption_matrix,
     )
@@ -232,7 +232,7 @@ def set_video_caption_frame_score_aggregates(
     )
 
 
-def _cosine_similarities(
+def cosine_similarities(
     segment_embeddings: NDArray[np.float32],
     caption_embeddings: NDArray[np.float32],
 ) -> list[float]:
