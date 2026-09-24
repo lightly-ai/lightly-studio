@@ -43,13 +43,10 @@ class CreateMcap(CreateSample):
         Returns:
             The sample to add to an MCAP component collection.
         """
-        # TODO(Horatiu, 09/2026): Use the capture time from the message header once the
-        # reader reports it. The log time is the time the message reached the recorder,
-        # which is close to, but not the same as, the time the sensor captured it.
         return cls(
             channel_id=locator.channel_id,
             log_time_ns=locator.log_time_ns,
-            capture_timestamp_ns=locator.log_time_ns,
+            capture_timestamp_ns=locator.capture_timestamp_ns,
             keyframe_log_time_ns=locator.keyframe_log_time_ns,
         )
 
