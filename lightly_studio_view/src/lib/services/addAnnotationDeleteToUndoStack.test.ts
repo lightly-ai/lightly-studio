@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { addAnnotationDeleteToUndoStack } from './addAnnotationDeleteToUndoStack';
 import type {
+    AnnotationCollectionView,
     AnnotationLabelTable,
     AnnotationView,
     CreateAnnotationResponse
@@ -12,6 +13,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
         sample_id: 'annotation-123',
         parent_sample_id: 'sample-456',
         collection_id: 'collection-789',
+        annotation_collection_id: 'source-collection-abc',
         annotation_type: 'object_detection',
         annotation_label: {
             annotation_label_name: 'car'
@@ -36,6 +38,17 @@ describe('addAnnotationDeleteToUndoStack', () => {
         }
     ];
 
+    const mockSources: AnnotationCollectionView[] = [
+        {
+            collection_id: 'source-collection-abc',
+            name: 'my-model-predictions'
+        } as AnnotationCollectionView,
+        {
+            collection_id: 'source-collection-other',
+            name: 'ground-truth'
+        } as AnnotationCollectionView
+    ];
+
     it('should add a reversible action to undo stack', () => {
         const addReversibleAction = vi.fn();
         const createAnnotation = vi.fn().mockResolvedValue({} as CreateAnnotationResponse);
@@ -44,6 +57,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
         addAnnotationDeleteToUndoStack({
             annotation: mockAnnotation,
             labels: mockLabels,
+            sources: mockSources,
             addReversibleAction,
             createAnnotation,
             refetch
@@ -64,6 +78,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
         addAnnotationDeleteToUndoStack({
             annotation: mockAnnotation,
             labels: mockLabels,
+            sources: mockSources,
             addReversibleAction,
             createAnnotation,
             refetch
@@ -76,6 +91,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
             parent_sample_id: 'sample-456',
             annotation_type: 'object_detection',
             annotation_label_id: 'label-id-car',
+            annotation_collection_name: 'my-model-predictions',
             x: 10,
             y: 20,
             width: 100,
@@ -100,6 +116,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
         addAnnotationDeleteToUndoStack({
             annotation: annotationWithUnknownLabel,
             labels: mockLabels,
+            sources: mockSources,
             addReversibleAction,
             createAnnotation,
             refetch
@@ -122,6 +139,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
         addAnnotationDeleteToUndoStack({
             annotation: mockAnnotation,
             labels: labelsWithoutId,
+            sources: mockSources,
             addReversibleAction,
             createAnnotation,
             refetch
@@ -151,6 +169,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
         addAnnotationDeleteToUndoStack({
             annotation: segmentationAnnotation,
             labels: mockLabels,
+            sources: mockSources,
             addReversibleAction,
             createAnnotation,
             refetch
@@ -163,6 +182,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
             parent_sample_id: 'sample-456',
             annotation_type: 'segmentation_mask',
             annotation_label_id: 'label-id-car',
+            annotation_collection_name: 'my-model-predictions',
             x: 15,
             y: 25,
             width: 200,
