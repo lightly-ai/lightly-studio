@@ -10,11 +10,14 @@ from lightly_studio.models.mcap import McapTable
 
 
 class TickView(BaseModel):
-    """One group in a sequence, identified by its position and anchor timestamp."""
+    """One group in a sequence, identified by its position and capture timestamp."""
 
     seq_number: int = Field(description="Zero-based position of the tick in the sequence.")
     timestamp_ns: int | None = Field(
-        description="Anchor log time of the tick, in nanoseconds. `None` if not set at index time."
+        description=(
+            "Capture time of the tick's sync component, in nanoseconds. "
+            "`None` if not set at index time."
+        )
     )
 
 
@@ -59,7 +62,9 @@ class TickDetailView(BaseModel):
 
     recording_id: UUID = Field(description="The recording this tick belongs to.")
     seq_number: int = Field(description="Zero-based position of the tick in the sequence.")
-    timestamp_ns: int | None = Field(description="Anchor log time of the tick, in nanoseconds.")
+    timestamp_ns: int | None = Field(
+        description="Capture time of the tick's sync component, in nanoseconds."
+    )
     channels: dict[str, TickChannelView] = Field(
         description="MCAP locators keyed by component name, e.g. `front` or `pcl_front`."
     )
