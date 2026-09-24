@@ -38,7 +38,10 @@ class FrameLocator:
 
     Attributes:
         channel_id: The id of the channel the message belongs to.
-        log_time_ns: The time the message was logged, in nanoseconds.
+        log_time_ns: The time the message was logged, in nanoseconds. Used to seek
+            the payload in the file.
+        capture_timestamp_ns: The sensor capture time from `header.stamp` or
+            `timestamp`, in nanoseconds.
         topic: The topic the message was logged on.
         keyframe_log_time_ns: For video, the log time of the latest keyframe at or
             before this frame, which is where decoding has to start. `None` for topics
@@ -48,6 +51,7 @@ class FrameLocator:
 
     channel_id: int
     log_time_ns: int
+    capture_timestamp_ns: int
     topic: str
     keyframe_log_time_ns: int | None = None
     schema_name: str | None = None
