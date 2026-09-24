@@ -407,6 +407,33 @@ class TestEmbedderRegistry:
         assert first is None
         assert second is remote
 
+    def test_is_remote_unavailable__after_failure(self, mocker: MockerFixture) -> None:
+        registry = EmbedderRegistry()
+        mocker.patch.object(
+            embedder_config, "build_remote", side_effect=RemoteEmbedderUnreachableError("down")
+        )
+        config = _config(space_key="space-a", url="http://first.test")
+
+        assert registry.is_remote_unavailable(config=config) is False
+        registry.get_text_embedder(config=config)
+
+        assert registry.is_remote_unavailable(config=config) is True
+
+    def test_is_remote_unavailable__after_success(self, mocker: MockerFixture) -> None:
+        registry = EmbedderRegistry()
+        remote = _FakeImageEmbedder(space_key="space-a")
+        mocker.patch.object(embedder_config, "build_remote", return_value=remote)
+        config = _config(space_key="space-a", url="http://first.test")
+
+        # The server is usable, but it cannot embed text
+        assert registry.get_text_embedder(config=config) is None
+        assert registry.is_remote_unavailable(config=config) is False
+
+    def test_is_remote_unavailable__without_url(self) -> None:
+        registry = EmbedderRegistry()
+
+        assert registry.is_remote_unavailable(config=_config(space_key="space-a")) is False
+
     def test_get_text_embedder__slow_build_leaves_other_spaces_available(
         self, mocker: MockerFixture
     ) -> None:

@@ -184,6 +184,17 @@ class EmbedderRegistry:
         )
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
+    def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
+        """Get whether the embedding server of the configuration failed inside the retry window.
+
+        A getter returns None both for a space without the capability and for a server that
+        could not be used. This tells the two apart.
+        """
+        if config.url is None:
+            return False
+        with self._lock:
+            return self._failed_recently(config=config)
+
     def preload_builtin_embedders(self) -> None:
         """Load and cache the built-in bootstrap embedders.
 
