@@ -40,7 +40,7 @@ class McapSequence:
     ]
     sequence.add_samples(
         entries=[
-            ls.McapSequenceEntry(
+            McapSequenceEntry(
                 sample_id=group_sample.sample_id,
                 seq_number=index,
                 timestamp_ns=sweep.log_time_ns,
