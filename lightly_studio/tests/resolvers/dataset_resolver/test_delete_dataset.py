@@ -8,6 +8,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
@@ -34,6 +35,7 @@ from lightly_studio.resolvers import (
     export_job_resolver,
     mcap_group_sequence_resolver,
     metadata_resolver,
+    object_track_resolver,
     recording_resolver,
     sample_embedding_resolver,
     sample_resolver,
@@ -76,6 +78,33 @@ def test_delete_dataset__empty_collection(db_session: Session) -> None:
 
     # Assert - collection deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+
+
+def test_delete_dataset__with_parent_object_track(db_session: Session) -> None:
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    parent_id, child_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(object_track_number=1, dataset_id=dataset.dataset_id),
+            ObjectTrackCreate(
+                object_track_number=2,
+                dataset_id=dataset.dataset_id,
+                parent_object_track_id=None,
+            ),
+        ],
+    )
+    child = object_track_resolver.get_by_id(session=db_session, object_track_id=child_id)
+    assert child is not None
+    child.parent_object_track_id = parent_id
+    db_session.add(child)
+    db_session.commit()
+
+    dataset_resolver.delete_dataset(session=db_session, dataset_id=dataset.dataset_id)
+
+    assert not object_track_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
 
 
 def test_delete_dataset__with_recordings(db_session: Session) -> None:

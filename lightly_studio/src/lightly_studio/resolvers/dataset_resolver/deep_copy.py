@@ -32,6 +32,7 @@ from sqlmodel import Session, SQLModel, col, select
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -147,6 +148,7 @@ def deep_copy(
     _copy_annotations(session=session, now=now)
     _copy_annotation_details(session=session, detail_table=ObjectDetectionAnnotationTable)
     _copy_annotation_details(session=session, detail_table=SegmentationAnnotationTable)
+    _copy_annotation_details(session=session, detail_table=Cuboid3DAnnotationTable)
     _copy_annotation_details(session=session, detail_table=TemporalSpanTable)
 
     _copy_sample_embeddings(session=session)
@@ -713,7 +715,7 @@ def _copy_annotations(session: Session, now: datetime) -> None:
 
 
 def _copy_annotation_details(session: Session, detail_table: type[SQLModel]) -> None:
-    """Copy an annotation detail table (object detection / segmentation), remapping sample_id."""
+    """Copy an annotation detail table, remapping sample_id."""
     src = _table(detail_table).alias("src")
     map_sample = _map(_MAP_SAMPLE)
     from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"])
