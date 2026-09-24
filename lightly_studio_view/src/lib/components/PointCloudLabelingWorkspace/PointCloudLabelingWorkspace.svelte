@@ -30,6 +30,8 @@
         datasetId: string;
         /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
         sequenceId: string;
+        /** 1-based tick to open on (from the route hash); defaults to the first frame. */
+        tickNumber?: number;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
         /** Overridable for tests/stories; production always starts at `empty` today. */
@@ -42,6 +44,7 @@
         sampleId,
         datasetId,
         sequenceId,
+        tickNumber = 1,
         sourcePath = [],
         status,
         onExit = () => undefined,
@@ -51,6 +54,8 @@
     const workspace = createPointCloudWorkspaceContext(() => ({
         datasetId,
         sequenceId,
+        // The hash tick is 1-based; the transport tracks 0-based seq numbers.
+        initialTick: tickNumber - 1,
         statusOverride: status
     }));
 

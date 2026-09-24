@@ -71,6 +71,15 @@ describe('PointCloudWorkspace', () => {
         expect(workspace.cameraChannels[0].group_component_name).toBe('front');
     });
 
+    it('starts on the initial tick when one is given', () => {
+        const workspace = new PointCloudWorkspace(() => ({
+            datasetId: 'dataset-1',
+            sequenceId: 'seq-1',
+            initialTick: 3
+        }));
+        expect(workspace.currentTick).toBe(3);
+    });
+
     it('advances and rewinds within bounds, clamped at both ends', () => {
         const workspace = createWorkspace();
         expect(workspace.currentTick).toBe(0);
