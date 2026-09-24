@@ -7,6 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path, Query
 
+from lightly_studio.api.routes.api import query_embedding_errors
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
 )
@@ -38,6 +39,8 @@ def embed_text(
         text_embeddings = embed_samples.embed_text_for_collection(
             session=session, collection_id=collection_id, text=query_text
         )
+    except query_embedding_errors.QUERY_EMBEDDER_ERRORS as exc:
+        raise query_embedding_errors.to_http_exception(exc=exc, input_kind="text") from None
     except ValueError as exc:
         raise HTTPException(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
