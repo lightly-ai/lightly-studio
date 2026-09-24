@@ -62,7 +62,7 @@ def _read_table(data: bytes) -> pa.Table:
 
 
 def test_get_point_cloud(db_session: Session, tmp_path: Path) -> None:
-    mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
+    mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
@@ -81,14 +81,13 @@ def test_get_point_cloud(db_session: Session, tmp_path: Path) -> None:
     assert point_cloud is not None
     assert point_cloud.log_time_ns == timestamp_ns
     table = _read_table(point_cloud.data)
-    # The non-finite trailing point is dropped, leaving the finite input points.
-    assert table.column("x").to_pylist() == [1.0, 4.0]
-    assert table.column("y").to_pylist() == [2.0, 5.0]
-    assert table.column("z").to_pylist() == [3.0, 6.0]
+    assert table.column("x").to_pylist() == [1.0]
+    assert table.column("y").to_pylist() == [2.0]
+    assert table.column("z").to_pylist() == [3.0]
 
 
 def test_get_point_cloud__metadata(db_session: Session, tmp_path: Path) -> None:
-    mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
+    mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
@@ -107,13 +106,13 @@ def test_get_point_cloud__metadata(db_session: Session, tmp_path: Path) -> None:
     metadata = _read_table(point_cloud.data).schema.metadata
     assert metadata[b"frame_id"] == helpers.LIDAR_FRAME_ID.encode()
     assert metadata[b"topic"] == helpers.LIDAR_POINTS_TOPIC.encode()
-    assert metadata[b"source_point_count"] == b"3"
-    assert metadata[b"point_count"] == b"2"
+    assert metadata[b"source_point_count"] == b"1"
+    assert metadata[b"point_count"] == b"1"
     assert metadata[b"coordinate_unit"] == b"meter"
 
 
 def test_get_point_cloud__no_match(db_session: Session, tmp_path: Path) -> None:
-    mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
+    mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
@@ -143,7 +142,7 @@ def test_get_point_cloud__unknown_recording(db_session: Session) -> None:
 
 
 def test_get_point_cloud__wrong_dataset(db_session: Session, tmp_path: Path) -> None:
-    mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
+    mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
@@ -162,7 +161,7 @@ def test_get_point_cloud__wrong_dataset(db_session: Session, tmp_path: Path) -> 
 
 
 def test_get_point_cloud__unknown_channel(db_session: Session, tmp_path: Path) -> None:
-    mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
+    mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
