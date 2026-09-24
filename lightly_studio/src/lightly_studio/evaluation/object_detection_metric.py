@@ -207,6 +207,7 @@ def create_and_persist_metrics_per_sample(
         data: Prepared evaluation data (selected samples and per-sample annotations).
         match_sample: Returns the matching result for one sample, given its id.
     """
+    # Match all samples before persisting, since each commit expires the loaded annotations
     sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
     annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
 
@@ -227,28 +228,16 @@ def create_and_persist_metrics_per_sample(
                 matching_result=matching_result,
             )
         )
-        if len(sample_metrics_to_persist) >= METRIC_BATCH_SIZE:
-            evaluation_sample_metric_resolver.create_many(
-                session=session,
-                records=sample_metrics_to_persist,
-            )
-            sample_metrics_to_persist.clear()
-        if len(annotation_metrics_to_persist) >= METRIC_BATCH_SIZE:
-            evaluation_annotation_metric_resolver.create_many(
-                session=session,
-                records=annotation_metrics_to_persist,
-            )
-            annotation_metrics_to_persist.clear()
 
-    if sample_metrics_to_persist:
+    for batch_start in range(0, len(sample_metrics_to_persist), METRIC_BATCH_SIZE):
         evaluation_sample_metric_resolver.create_many(
             session=session,
-            records=sample_metrics_to_persist,
+            records=sample_metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
         )
-    if annotation_metrics_to_persist:
+    for batch_start in range(0, len(annotation_metrics_to_persist), METRIC_BATCH_SIZE):
         evaluation_annotation_metric_resolver.create_many(
             session=session,
-            records=annotation_metrics_to_persist,
+            records=annotation_metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
         )
 
 

@@ -40,6 +40,7 @@ def create_and_persist_semantic_segmentation_metrics_per_sample(
     )
     image_by_sample_id = {image.sample_id: image for image in images}
 
+    # Score all samples before persisting, since each commit expires the loaded annotations
     metrics_to_persist: list[EvaluationSampleMetricCreate] = []
     for sample_id in data.selected_sample_ids:
         image = image_by_sample_id.get(sample_id)
@@ -72,17 +73,10 @@ def create_and_persist_semantic_segmentation_metrics_per_sample(
             )
         )
 
-        if len(metrics_to_persist) >= METRIC_BATCH_SIZE:
-            evaluation_sample_metric_resolver.create_many(
-                session=session,
-                records=metrics_to_persist,
-            )
-            metrics_to_persist.clear()
-
-    if metrics_to_persist:
+    for batch_start in range(0, len(metrics_to_persist), METRIC_BATCH_SIZE):
         evaluation_sample_metric_resolver.create_many(
             session=session,
-            records=metrics_to_persist,
+            records=metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
         )
 
 
