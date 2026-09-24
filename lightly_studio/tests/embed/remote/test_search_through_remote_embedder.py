@@ -80,6 +80,26 @@ def test_text_search(
     assert ranked_file_names[0] == "red.png"
 
 
+def test_image_search(
+    dataset: ImageDataset,
+    query_embedder: ColorQueryEmbedder,
+    image_paths: dict[str, Path],
+    client: TestClient,
+) -> None:
+    embedding_response = client.post(
+        f"/api/image_embedding/from_file/for_collection/{dataset.collection_id}",
+        files={"file": ("query.png", image_paths["green"].read_bytes(), "image/png")},
+    )
+
+    assert embedding_response.status_code == HTTP_STATUS_OK
+    # Without the server, the route falls back to the local path embedder.
+    assert query_embedder.call_count == 1
+    ranked_file_names = _ranked_file_names(
+        client=client, collection_id=dataset.collection_id, embedding=embedding_response.json()
+    )
+    assert ranked_file_names[0] == "green.png"
+
+
 def _ranked_file_names(
     client: TestClient, collection_id: UUID, embedding: list[float]
 ) -> list[str]:
