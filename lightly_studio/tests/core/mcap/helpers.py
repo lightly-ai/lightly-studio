@@ -6,6 +6,7 @@ compiled schemas.
 
 from __future__ import annotations
 
+import struct
 from pathlib import Path
 from typing import Any
 
@@ -441,11 +442,14 @@ def _point_cloud_message(stamp_ns: int) -> dict[str, Any]:
         "header": {"stamp": _time(stamp_ns), "frame_id": LIDAR_FRAME_ID},
         "height": 1,
         "width": 1,
-        "fields": [{"name": "x", "offset": 0, "datatype": 7, "count": 1}],
+        "fields": [
+            {"name": name, "offset": index * 4, "datatype": 7, "count": 1}
+            for index, name in enumerate(("x", "y", "z"))
+        ],
         "is_bigendian": False,
-        "point_step": 4,
-        "row_step": 4,
-        "data": b"\x00\x00\x00\x00",
+        "point_step": 12,
+        "row_step": 12,
+        "data": struct.pack("<fff", 1.0, 2.0, 3.0),
         "is_dense": True,
     }
 
