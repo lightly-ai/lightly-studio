@@ -81,6 +81,9 @@ SYNC_COMPONENT = "pcl_front_left"
 # The largest time difference that still pairs a component with a tick of the sync component.
 MAX_PAIRING_DIFF_NS = 50_000_000
 
+# The Foxglove SceneUpdate topic stored in annotation MCAPs.
+SCENE_UPDATE_TOPIC = "/scene_update"
+
 # How many groups to print at the end.
 PREVIEW_COUNT = 10
 
@@ -97,6 +100,8 @@ dataset.add_mcaps_from_path(
     sync_component=SYNC_COMPONENT,
     components=COMPONENTS,
     max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    add_labels=True,
+    topic=SCENE_UPDATE_TOPIC,
 )
 
 group_dataset = dataset.group_dataset

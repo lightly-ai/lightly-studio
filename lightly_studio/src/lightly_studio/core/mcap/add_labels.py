@@ -15,7 +15,12 @@ from uuid import UUID
 
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.core.mcap import scene_update
+from lightly_studio.core.file_outcome_report import (
+    BrokenInputFileError,
+    FileOutcomeReport,
+    MissingInputFileError,
+)
+from lightly_studio.core.mcap import annotation_mcap, scene_update
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.sequence import McapSequence, McapSequenceEntry
@@ -145,6 +150,71 @@ def write_sequence_labels(
             collection_name=annotation_source,
         )
     session.commit()
+
+
+def add_labels_from_annotation_mcaps(
+    dataset: McapDataset,
+    topic: str,
+    suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
+    annotation_source: str = DEFAULT_ANNOTATION_SOURCE,
+) -> None:
+    """Read cuboids from each sequence's annotation MCAP and store them on tick groups.
+
+    A recording with no annotation MCAP is skipped. An unreadable annotation MCAP is
+    reported and the other sequences still run. Missing annotation MCAPs are normal and
+    do not fail the run.
+
+    Args:
+        dataset: The dataset whose sequences receive annotations.
+        topic: The SceneUpdate topic in the annotation MCAP.
+        suffix: Inserted before `.mcap` to form the annotation MCAP URI.
+        annotation_source: Name of the annotation source that stores the cuboids.
+    """
+    report = FileOutcomeReport()
+    for sequence in dataset.get_sequences():
+        recording = dataset.get_recording(recording_id=sequence.recording_id)
+        annotation_mcap_path = annotation_mcap.annotation_mcap_uri(
+            recording_uri=recording.uri, suffix=suffix
+        )
+        with report.track(annotation_mcap_path):
+            _add_labels_for_sequence(
+                dataset=dataset,
+                sequence=sequence,
+                annotation_mcap_uri=annotation_mcap_path,
+                topic=topic,
+                annotation_source=annotation_source,
+            )
+    report.log_summary()
+
+
+def _add_labels_for_sequence(
+    dataset: McapDataset,
+    sequence: McapSequence,
+    annotation_mcap_uri: str,
+    topic: str,
+    annotation_source: str,
+) -> None:
+    """Persist cuboids on one sequence from its annotation MCAP.
+
+    Raises:
+        MissingInputFileError: If the annotation MCAP is not present.
+        BrokenInputFileError: If the annotation MCAP cannot be read.
+    """
+    if not annotation_mcap.annotation_mcap_exists(uri=annotation_mcap_uri):
+        raise MissingInputFileError(f"No annotation MCAP at '{annotation_mcap_uri}'.")
+    try:
+        messages = read_scene_updates(annotation_mcap_uri=annotation_mcap_uri, topic=topic)
+        write_sequence_labels(
+            dataset=dataset,
+            sequence=sequence,
+            annotation_mcap_uri=annotation_mcap_uri,
+            messages=messages,
+            annotation_source=annotation_source,
+        )
+    except (McapAccessError, ValueError) as error:
+        raise BrokenInputFileError(
+            f"Cannot add annotations from '{annotation_mcap_uri}': {error}"
+        ) from error
 
 
 def _match_one_message(

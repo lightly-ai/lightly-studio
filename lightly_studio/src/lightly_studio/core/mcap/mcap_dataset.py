@@ -11,6 +11,7 @@ from typing_extensions import Self
 
 from lightly_studio.core import dataset
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME
+from lightly_studio.core.mcap import add_labels as add_labels_module
 from lightly_studio.core.mcap import add_mcaps, annotation_mcap, dataset_schema
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.group_dataset import McapGroupDataset
@@ -196,13 +197,17 @@ class McapDataset:
             self._group_dataset = McapGroupDataset(collection=self._group_collection())
         return self._group_dataset
 
-    def add_mcaps_from_path(
+    def add_mcaps_from_path(  # noqa: PLR0913
         self,
         path: PathLike,
         sync_component: str,
         components: Sequence[McapComponentSpec],
         max_pairing_diff_ns: int = add_mcaps.DEFAULT_MAX_PAIRING_DIFF_NS,
         limit: int | None = None,
+        add_labels: bool = False,
+        topic: str | None = None,
+        suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
+        annotation_source: str = add_labels_module.DEFAULT_ANNOTATION_SOURCE,
     ) -> None:
         """Index every `.mcap` recording under a path into the dataset.
 
@@ -224,7 +229,8 @@ class McapDataset:
 
         A recording that is already indexed is skipped. A recording that cannot be read
         is reported and the others are still indexed. Files named `*_labeled.mcap` are
-        annotation MCAPs, not recordings, and are not indexed.
+        annotation MCAPs, not recordings, and are not indexed. Pass `add_labels=True`
+        to attach cuboids from those annotation MCAPs after indexing.
 
         Args:
             path: A folder of `.mcap` files, a single file, or a glob. It can also be a
@@ -236,14 +242,22 @@ class McapDataset:
             max_pairing_diff_ns: The largest time difference that still pairs a
                 component with an anchor tick.
             limit: Maximum number of recordings to index. By default, all are indexed.
+            add_labels: If True, attach cuboids from `*_labeled.mcap` annotation
+                MCAPs after indexing.
+            topic: The SceneUpdate topic in annotation MCAPs. Required when `add_labels`
+                is True.
+            suffix: Inserted before `.mcap` to identify annotation MCAPs.
+            annotation_source: Name of the annotation source that stores the cuboids.
 
         Raises:
             ValueError: If `components` names other components than the dataset has, if
                 `sync_component` is not one of them, or if `limit` is not None and not
-                greater than 0.
+                greater than 0; or if `add_labels` is True and `topic` is not provided.
             AllInputFilesFailedError: If every recording under the path failed.
         """
         fsspec_lister.validate_limit(limit)
+        if add_labels and topic is None:
+            raise ValueError("topic is required when add_labels is True.")
         # Configure clients before discovery creates and caches a filesystem.
         remote_storage.configure_connections(paths=[str(path)])
         discovered_paths = fsspec_lister.iter_files_from_path(
@@ -254,6 +268,7 @@ class McapDataset:
         mcap_paths = _recording_paths(
             discovered_paths=discovered_paths,
             limit=limit,
+            suffix=suffix,
         )
         logger.info("Found %d MCAP recordings to index in %s.", len(mcap_paths), path)
 
@@ -263,6 +278,37 @@ class McapDataset:
             sync_component=sync_component,
             components=components,
             max_pairing_diff_ns=max_pairing_diff_ns,
+        )
+        if add_labels:
+            assert topic is not None
+            self.add_labels_from_annotation_mcaps(
+                topic=topic,
+                suffix=suffix,
+                annotation_source=annotation_source,
+            )
+
+    def add_labels_from_annotation_mcaps(
+        self,
+        topic: str,
+        suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
+        annotation_source: str = add_labels_module.DEFAULT_ANNOTATION_SOURCE,
+    ) -> None:
+        """Attach 3D cuboids from annotation `*_labeled.mcap` files to existing sequences.
+
+        Each recording URI is rewritten with `suffix` before the `.mcap` extension.
+        A missing annotation MCAP is skipped. Cuboids are stored on the tick group that
+        shares `SceneEntity.timestamp` with `sample_sequence_link.timestamp_ns`.
+
+        Args:
+            topic: The SceneUpdate topic in the annotation MCAP.
+            suffix: Inserted before `.mcap` to form the annotation MCAP URI.
+            annotation_source: Name of the annotation source that stores the cuboids.
+        """
+        add_labels_module.add_labels_from_annotation_mcaps(
+            dataset=self,
+            topic=topic,
+            suffix=suffix,
+            annotation_source=annotation_source,
         )
 
     def get_sequences(self) -> list[McapSequence]:
@@ -364,10 +410,16 @@ class McapDataset:
         )
 
 
-def _recording_paths(discovered_paths: Iterable[str], limit: int | None) -> list[str]:
+def _recording_paths(
+    discovered_paths: Iterable[str],
+    limit: int | None,
+    suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
+) -> list[str]:
     """Filter annotation MCAPs before lazily applying the recording limit."""
     recordings = (
-        path for path in discovered_paths if not annotation_mcap.is_annotation_mcap(uri=path)
+        path
+        for path in discovered_paths
+        if not annotation_mcap.is_annotation_mcap(uri=path, suffix=suffix)
     )
     return list(recordings if limit is None else islice(recordings, limit))
 
