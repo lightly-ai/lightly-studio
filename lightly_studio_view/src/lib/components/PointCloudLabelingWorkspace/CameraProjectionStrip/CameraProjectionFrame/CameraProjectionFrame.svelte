@@ -30,15 +30,17 @@
 </script>
 
 <figure
-    class="flex h-full min-w-40 shrink-0 flex-col overflow-hidden rounded-md border bg-muted/30"
+    class="flex aspect-square h-full shrink-0 flex-col overflow-hidden rounded-md border bg-muted/30"
 >
     {#if frameUrl !== failedFrameUrl}
-        <img
-            src={frameUrl}
-            alt={label}
-            class="min-h-0 flex-1 object-cover"
-            onerror={() => (failedFrameUrl = frameUrl)}
-        />
+        <a href={frameUrl} target="_blank" rel="noopener noreferrer" class="flex min-h-0 flex-1">
+            <img
+                src={frameUrl}
+                alt={label}
+                class="min-h-0 flex-1 object-cover"
+                onerror={() => (failedFrameUrl = frameUrl)}
+            />
+        </a>
     {:else}
         <div class="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">
             <Camera class="size-5" aria-hidden="true" />

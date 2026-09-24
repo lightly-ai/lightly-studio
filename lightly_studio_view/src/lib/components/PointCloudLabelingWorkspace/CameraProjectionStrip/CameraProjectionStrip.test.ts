@@ -16,17 +16,10 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
 // (see CameraProjectionFrame.test.ts / getCameraFrameUrl.test.ts).
 const TEST_BASE_URL = 'http://api.test';
 
-const cameraChannels = [
-    { channel_id: 1, group_component_name: 'front', group_component_index: 0 },
-    { channel_id: 2, group_component_name: 'rear', group_component_index: 1 },
-    { channel_id: 3, group_component_name: 'side', group_component_index: 2 }
-];
-
 const defaultProps = {
     datasetId: 'dataset-1',
     sequenceId: 'sequence-1',
-    seqNumber: 0,
-    cameraChannels
+    seqNumber: 0
 };
 
 const tickDetails: TickDetailView = {
@@ -34,21 +27,20 @@ const tickDetails: TickDetailView = {
     seq_number: 0,
     timestamp_ns: 1000,
     channels: {
-        // Video channel: keyframe timestamp is preferred over the log time.
+        // Video channel with a keyframe locator: renders, seeking to the keyframe.
         front: {
             channel_id: 1,
             group_component_name: 'front',
             log_time_ns: '2000',
             keyframe_log_time_ns: '1500'
         },
-        // Non-video channel: falls back to the log time.
+        // Non-video channel has no keyframe locator, so its tile is skipped.
         rear: {
             channel_id: 2,
             group_component_name: 'rear',
             log_time_ns: '3000',
             keyframe_log_time_ns: null
         }
-        // `side` has no locator, so its tile is skipped.
     }
 };
 
@@ -71,29 +63,24 @@ describe('CameraProjectionStrip', () => {
         render(CameraProjectionStrip, { props: defaultProps });
 
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
-        expect(screen.getByText('Cameras & projections')).toBeInTheDocument();
+        expect(screen.getByText('Cameras')).toBeInTheDocument();
     });
 
-    it('renders a frame only for channels that have a locator for the tick', () => {
+    it('renders a frame only for channels that have a keyframe locator for the tick', () => {
         tickDetailsResult.data = tickDetails;
         render(CameraProjectionStrip, { props: defaultProps });
 
         expect(screen.getByRole('img', { name: 'front' })).toBeInTheDocument();
-        expect(screen.getByRole('img', { name: 'rear' })).toBeInTheDocument();
-        expect(screen.queryByRole('img', { name: 'side' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('img', { name: 'rear' })).not.toBeInTheDocument();
     });
 
-    it('seeks video frames by keyframe timestamp and other frames by log time', () => {
+    it('seeks frames by their keyframe timestamp', () => {
         tickDetailsResult.data = tickDetails;
         render(CameraProjectionStrip, { props: defaultProps });
 
         expect(screen.getByRole('img', { name: 'front' })).toHaveAttribute(
             'src',
             `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=1&keyframe_timestamp_ns=1500`
-        );
-        expect(screen.getByRole('img', { name: 'rear' })).toHaveAttribute(
-            'src',
-            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=2&keyframe_timestamp_ns=3000`
         );
     });
 
