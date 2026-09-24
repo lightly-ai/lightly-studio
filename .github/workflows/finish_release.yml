@@ -59,8 +59,10 @@ jobs:
 
   # Runs the tagged commit's own code, so it must not be able to mint a PyPI
   # credential: no `id-token: write`, and all it hands onwards is the artifact.
-  # For the same reason, PostHog secrets are not injected here — source maps are
-  # uploaded by a separate job that runs no tag-controlled code.
+  # PostHog upload secrets are not injected here — source maps are uploaded by a
+  # separate job that runs no tag-controlled code. The inject-only credentials
+  # are needed at build time (to embed the project reference into JS files) but
+  # do not grant upload access.
   build:
     needs: precheck
     runs-on: ubuntu-latest
@@ -74,6 +76,9 @@ jobs:
       TAG: ${{ inputs.tag }}
       PYTHONPATH: ${{ github.workspace }}/.github/scripts
       SOURCEMAP: "true"
+      POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
+      POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+      POSTHOG_CLI_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
     steps:
       # `refs/tags/` because actions/checkout resolves an unqualified ref as a
       # branch first, and a branch sharing the tag's name would be built in the
@@ -133,6 +138,8 @@ jobs:
 
       - name: Build the Distributions
         working-directory: ${{ steps.package.outputs.directory }}
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: make build
 
       # Before the upload, so a wheel that fails it never reaches the publish job.
@@ -189,12 +196,12 @@ jobs:
           POSTHOG_CLI_TOKEN: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
           POSTHOG_CLI_ENV_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
         run: |
-          set -euo pipefail
           posthog-cli \
             --host "${{ secrets.POSTHOG_HOST }}" \
             sourcemap upload \
             --directory sourcemaps \
-            --version "${{ needs.build.outputs.version }}"
+            --version "${{ needs.build.outputs.version }}" \
+          || echo "::warning::PostHog sourcemap upload failed; release continues without uploaded source maps."
 
   publish:
     needs: build

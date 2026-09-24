@@ -80,8 +80,12 @@ ifeq ($(OS),Windows_NT)
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
 	$(MAKE) -C ../lightly_studio_view build
-	@if [ -n "$(SOURCEMAP)" ] && [ -n "$(POSTHOG_CLI_VERSION)" ]; then \
-		npx --yes @posthog/cli@$(POSTHOG_CLI_VERSION) sourcemap inject --directory ../lightly_studio_view/build; \
+	@if [ -n "$(SOURCEMAP)" ] && [ -n "$(POSTHOG_CLI_VERSION)" ] && [ -n "$(RELEASE_VERSION)" ] && [ -n "$(POSTHOG_HOST)" ]; then \
+		npx --yes @posthog/cli@$(POSTHOG_CLI_VERSION) \
+			--host "$(POSTHOG_HOST)" \
+			sourcemap inject --directory ../lightly_studio_view/build \
+			--release-version "$(RELEASE_VERSION)" \
+		|| echo "::warning::PostHog sourcemap inject failed; release continues without injection."; \
 	fi
 	cp -r ../lightly_studio_view/build/ sourcemaps
 	find ../lightly_studio_view/build -name '*.map' -delete
