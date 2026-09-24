@@ -119,7 +119,7 @@ Pass `--api-key`, or set `LIGHTLY_STUDIO_SERVE_API_KEY`, for a server that expec
 
 ## Connect the server to LightlyStudio
 
-LightlyStudio embeds search queries on the server once you point a dataset at it. The
+LightlyStudio embeds search queries on the server when you point a dataset at it. The
 dataset must already hold embeddings in the space that the server produces:
 
 ```python

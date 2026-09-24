@@ -5,15 +5,15 @@ The example has two parts:
 1. A server. ``lightly_studio_serve.serve`` serves ``ColorServerEmbedder`` in a
    subprocess. In production this runs on the machine that holds the model.
 2. LightlyStudio. The dataset fills the embedding space at ingestion with
-   ``ColorPathEmbedder``, then ``ls.register_remote_embedder`` points the space at the
+   ``ColorPathEmbedder``. Then ``ls.register_remote_embedder`` points the space at the
    server. Text and image search in the GUI then embed the query on the server.
 
 Both embedders map an image to its mean color, so the example runs on CPU and downloads
-no model. Search for "red", "green", "blue" or "white", or paste an image.
+no model. Search for text that names "red", "green", "blue" or "white", or paste an image.
 
-The local embedder embeds only image paths. An embedder registered in this process
-for the space serves its own capabilities first, so a local ``TextEmbedder`` would
-answer text search instead of the server.
+The local embedder embeds only image paths. A local embedder for the space serves its
+own capabilities first. Thus a local ``TextEmbedder`` answers text search, not the
+server.
 """
 
 from __future__ import annotations
@@ -69,8 +69,8 @@ class ColorServerEmbedder(TextEmbedder, ImageBytesEmbedder):
         return ls.EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=EMBEDDING_DIMENSION)
 
     def embed_text(self, texts: list[str]) -> ls.EmbeddingResult:
-        """Embed each color name, and skip text that names no known color."""
-        return _result(rows=[COLOR_VECTORS.get(text.strip().lower()) for text in texts])
+        """Embed each text as the sum of the colors it names."""
+        return _result(rows=[_text_color(text=text) for text in texts])
 
     def embed_image_bytes(self, images: list[bytes]) -> ls.EmbeddingResult:
         """Embed each uploaded image as its mean color."""
@@ -86,7 +86,7 @@ def main() -> None:
     # Part 1: start the server.
     server = multiprocessing.Process(target=_serve, kwargs={"api_key": api_key}, daemon=True)
     server.start()
-    _wait_for_server(api_key=api_key)
+    _wait_for_server(server=server, api_key=api_key)
 
     # Part 2: fill the embedding space at ingestion, then point it at the server.
     db_manager.connect(cleanup_existing=True)
@@ -102,9 +102,14 @@ def _serve(api_key: str) -> None:
     lightly_studio_serve.serve(embedder=ColorServerEmbedder(), port=SERVER_PORT, api_key=api_key)
 
 
-def _wait_for_server(api_key: str) -> None:
+def _wait_for_server(server: multiprocessing.Process, api_key: str) -> None:
     deadline = time.monotonic() + SERVER_STARTUP_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
+        if not server.is_alive():
+            raise RuntimeError(
+                f"The embedding server stopped with exit code {server.exitcode}. "
+                f"Make sure that port {SERVER_PORT} is free."
+            )
         try:
             httpx.get(
                 f"{SERVER_URL}{protocol.DESCRIBE_PATH}",
@@ -121,12 +126,18 @@ def _mean_color(image: Image.Image) -> list[float]:
     return [float(value) for value in pixels.mean(axis=(0, 1))]
 
 
-def _result(rows: list[list[float] | None]) -> ls.EmbeddingResult:
-    kept_indices = [index for index, row in enumerate(rows) if row is not None]
-    embeddings: NDArray[np.float32] = np.array(
-        [rows[index] for index in kept_indices], dtype=np.float32
-    ).reshape(len(kept_indices), EMBEDDING_DIMENSION)
-    return ls.EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+def _text_color(text: str) -> list[float]:
+    vectors = [COLOR_VECTORS[word] for word in text.lower().split() if word in COLOR_VECTORS]
+    if not vectors:
+        return COLOR_VECTORS["white"]
+    return [float(value) for value in np.sum(vectors, axis=0)]
+
+
+def _result(rows: list[list[float]]) -> ls.EmbeddingResult:
+    embeddings: NDArray[np.float32] = np.array(rows, dtype=np.float32).reshape(
+        len(rows), EMBEDDING_DIMENSION
+    )
+    return ls.EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(rows))))
 
 
 # The guard keeps the server subprocess from running `main` again on import.

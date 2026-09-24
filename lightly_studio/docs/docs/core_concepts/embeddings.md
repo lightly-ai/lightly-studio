@@ -260,9 +260,9 @@ For the full runnable version, which wraps MobileCLIP and also implements
 
 ### Serving an embedder from a remote server
 
-Use this when the model should not run inside LightlyStudio: the weights must stay on
-your machine, or the model needs its own GPU or its own dependency pins. Search then sends
-each query to your server, which embeds it and returns the vector.
+Use a remote server when the model must not run in LightlyStudio. For example, the
+weights must stay on your machine, or the model needs its own GPU or dependency versions.
+Search then sends each query to your server, which embeds it and returns the vector.
 
 **1. Serve the model.** Write an embedder with the capability interfaces above and serve
 it with `lightly_studio_serve.serve`. Implement `TextEmbedder` for text search and
@@ -275,7 +275,7 @@ serve(MyEmbedder(), api_key="your-secret-key")
 ```
 
 `serve` binds `127.0.0.1:8080` by default. Any address that is not loopback needs TLS,
-because the API key travels with each request. See the
+because each request contains the API key. See the
 [`lightly_studio_serve` README](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio_serve/README.md)
 for TLS and limits.
 
@@ -302,24 +302,25 @@ ls.register_remote_embedder(
 ls.start_gui()
 ```
 
-The dataset stores the server, so text and image search embed queries on it from the next
-query on, also after you reopen the dataset.
+The dataset stores the server URL. Text and image search then use the server, also after
+you open the dataset again.
 
 For a full runnable version, which starts a small server that runs on CPU, see
 [`example_remote_embedder.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_remote_embedder.py).
 
 !!! warning "Limits"
-    - The server must produce an embedding space, with the same dimension, that the
-      dataset already holds.
-    - An embedder registered in the same process for that space still serves the
-      capabilities it implements. Register only ingestion capabilities locally if search
+    - The server must produce the embedding space that the dataset already holds, with
+      the same dimension.
+    - If you register a local embedder for that space, it still serves the capabilities
+      that it implements. Register only ingestion capabilities locally if search
       must go to the server.
-    - A server that does not implement `ImageBytesEmbedder` leaves the space without
-      image search.
+    - If the server does not implement `ImageBytesEmbedder`, image search is not
+      available.
     - The server embeds search queries only. Ingestion still runs locally.
     - The dataset stores the URL and the API key in plain text.
 
-If the server cannot be reached, rejects the key, or produces another embedding space,
 `register_remote_embedder` raises a `RemoteEmbedderError`
-(from `lightly_studio.embed.remote.errors`) and stores nothing. If the
+(from `lightly_studio.embed.remote.errors`) in these cases: it cannot connect to the
+server, the server rejects the key, or the server produces a different embedding space.
+Then it stores nothing. If the
 server fails later, search in the GUI shows an error.
