@@ -150,7 +150,6 @@
                                 {datasetId}
                                 {sequenceId}
                                 seqNumber={workspace.currentTick}
-                                {cameraChannels}
                             />
                         </Pane>
                         <PaneResizer

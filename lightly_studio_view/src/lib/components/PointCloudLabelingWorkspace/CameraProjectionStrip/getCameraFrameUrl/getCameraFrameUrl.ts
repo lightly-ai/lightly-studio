@@ -4,7 +4,8 @@ interface CameraFrameUrlParams {
     datasetId: string;
     recordingId: string;
     channelId: number;
-    timestampNs: number;
+    /** Nanosecond seek time, kept as a string to preserve full precision. */
+    timestampNs: string;
 }
 
 /**
