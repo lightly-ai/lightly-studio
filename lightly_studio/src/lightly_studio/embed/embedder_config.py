@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 import httpx
-from lightly_studio_serve.embedder import Embedder
+from lightly_studio_serve.embedder import Embedder, ImageBytesEmbedder
 from lightly_studio_serve.types import EmbeddingSpaceSpec
 
 from lightly_studio.embed.remote import connection
@@ -46,6 +46,19 @@ class EmbedderConfig:
     dimension: int
     url: str | None = None
     api_key: str | None = field(default=None, repr=False)
+
+
+@dataclass(frozen=True)
+class RemoteDescription:
+    """What a remote embedding server advertises.
+
+    Attributes:
+        spec: The embedding space that the server produces.
+        embeds_images: Whether the server embeds images, which image search needs.
+    """
+
+    spec: EmbeddingSpaceSpec
+    embeds_images: bool
 
 
 def from_embedding_model(embedding_model: EmbeddingModelTable) -> EmbedderConfig:
@@ -88,22 +101,27 @@ def build_remote(config: EmbedderConfig) -> Embedder:
     return embedder
 
 
-def describe_remote(url: str, api_key: str | None) -> EmbeddingSpaceSpec:
-    """Read the embedding space that the server at ``url`` produces.
+def describe_remote(url: str, api_key: str | None) -> RemoteDescription:
+    """Read what the server at ``url`` advertises.
 
     Args:
         url: The base URL of the embedding server.
         api_key: The bearer token of the server, or None if the server needs none.
 
     Returns:
-        The embedding space that the server advertises in ``/v1/describe``.
+        The embedding space and the capabilities that the server advertises in
+        ``/v1/describe``.
 
     Raises:
         RemoteEmbedderError: For the same causes as ``build_remote``, except a space mismatch.
     """
     client = _build_client(url=url)
     try:
-        return _connect(client=client, url=url, api_key=api_key).embedding_space_spec()
+        embedder = _connect(client=client, url=url, api_key=api_key)
+        return RemoteDescription(
+            spec=embedder.embedding_space_spec(),
+            embeds_images=isinstance(embedder, ImageBytesEmbedder),
+        )
     finally:
         client.close()
 

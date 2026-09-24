@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Set
 from typing import Any
 from uuid import UUID
@@ -15,6 +16,8 @@ from lightly_studio.embed.embedder_config import EmbedderConfig
 from lightly_studio.embed.remote.errors import RemoteEmbedderConfigError
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import embedding_model_resolver
+
+logger = logging.getLogger(__name__)
 
 
 def register_default_embedder(
@@ -73,7 +76,8 @@ def register_remote_embedder(dataset: Dataset[Any], url: str, api_key: str | Non
             embedding space that the dataset does not hold with the same dimension.
             Nothing is stored then.
     """
-    spec = embedder_config.describe_remote(url=url, api_key=api_key)
+    description = embedder_config.describe_remote(url=url, api_key=api_key)
+    spec = description.spec
     embedding_model = _get_embedding_model(
         session=dataset.session, dataset_id=dataset.dataset_id, space_key=spec.space_key
     )
@@ -91,6 +95,13 @@ def register_remote_embedder(dataset: Dataset[Any], url: str, api_key: str | Non
         url=url,
         api_key=api_key,
     )
+    if not description.embeds_images:
+        logger.warning(
+            "The embedding server at %s embeds no images, so image search in space %r is "
+            "unavailable.",
+            url,
+            spec.space_key,
+        )
 
 
 def _get_embedding_model(session: Session, dataset_id: UUID, space_key: str) -> EmbeddingModelTable:

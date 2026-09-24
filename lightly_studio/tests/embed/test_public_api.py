@@ -60,6 +60,17 @@ class _ServerEmbedder(TextEmbedder, ImageBytesEmbedder):
         return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(count)))
 
 
+class _TextServerEmbedder(TextEmbedder):
+    """Server-side embedder that embeds text only."""
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(space_key="fixed_model", dimension=_EMBEDDING_DIMENSION)
+
+    def embed_text(self, texts: list[str]) -> EmbeddingResult:
+        embeddings = np.zeros((len(texts), _EMBEDDING_DIMENSION), dtype=np.float32)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(texts))))
+
+
 def test_register_default_embedder(mocker: MockerFixture) -> None:
     registry = mocker.MagicMock(spec=EmbedderRegistry)
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
@@ -129,6 +140,22 @@ def test_register_remote_embedder(tmp_path: Path, mocker: MockerFixture) -> None
     )
     assert text_embedding == [2.0] * _EMBEDDING_DIMENSION
     assert image_embedding == [2.0] * _EMBEDDING_DIMENSION
+
+
+@pytest.mark.usefixtures("patch_collection")
+def test_register_remote_embedder__text_only_server(
+    tmp_path: Path, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    dataset = _create_dataset(tmp_path=tmp_path)
+    _serve(embedder=_TextServerEmbedder(), mocker=mocker)
+
+    lightly_studio.register_remote_embedder(dataset=dataset, url="http://embedder.test")
+
+    assert "embeds no images, so image search in space 'fixed_model'" in caplog.text
+    (embedding_model,) = embedding_model_resolver.get_all_by_dataset_id(
+        session=dataset.session, dataset_id=dataset.dataset_id
+    )
+    assert embedding_model.remote_embedder_url == "http://embedder.test"
 
 
 @pytest.mark.usefixtures("patch_collection")

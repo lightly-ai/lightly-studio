@@ -11,7 +11,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 
 from lightly_studio.embed import embedder_config
-from lightly_studio.embed.embedder_config import EmbedderConfig
+from lightly_studio.embed.embedder_config import EmbedderConfig, RemoteDescription
 from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.errors import RemoteEmbedderConfigError
 from lightly_studio.models.embedding_model import EmbeddingModelTable
@@ -129,10 +129,12 @@ def test_describe_remote(mocker: MockerFixture) -> None:
     serving = _serving(embedder=_ServerEmbedder(), mocker=mocker)
 
     with serving:
-        spec = embedder_config.describe_remote(url=URL, api_key=None)
+        description = embedder_config.describe_remote(url=URL, api_key=None)
 
         assert serving.is_closed
-    assert spec == EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION)
+    assert description == RemoteDescription(
+        spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION), embeds_images=False
+    )
 
 
 def test_describe_remote__unreachable_url() -> None:
