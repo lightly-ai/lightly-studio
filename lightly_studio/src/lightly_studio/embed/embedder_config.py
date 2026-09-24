@@ -91,6 +91,13 @@ def build_remote(config: EmbedderConfig) -> Embedder:
 def describe_remote(url: str, api_key: str | None) -> EmbeddingSpaceSpec:
     """Read the embedding space that the server at ``url`` produces.
 
+    Args:
+        url: The base URL of the embedding server.
+        api_key: The bearer token of the server, or None if the server needs none.
+
+    Returns:
+        The embedding space that the server advertises in ``/v1/describe``.
+
     Raises:
         RemoteEmbedderError: For the same causes as ``build_remote``, except a space mismatch.
     """
@@ -106,6 +113,10 @@ def check_identity(spec: EmbeddingSpaceSpec, config: EmbedderConfig) -> None:
 
     A mismatch reads like an unreachable server to the caller, which serves the space
     without an embedder instead of failing a request that nobody can answer.
+
+    Args:
+        spec: The embedding space that the server produces.
+        config: The stored configuration that the server must match.
 
     Raises:
         RemoteEmbedderConfigError: If the space key or the dimension of the server differs
