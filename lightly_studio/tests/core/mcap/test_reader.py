@@ -216,6 +216,65 @@ class TestMcapFileReader:
         assert locators[0].log_time_ns == helpers.VIDEO_LOG_TIMES_NS[0]
         assert locators[1] is None
 
+    def test_get_frame_locators__sync_uses_capture_timestamp(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(tmp_path / "offset.mcap", lidar_stamp_offset_ns=-50_000_000)
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC, helpers.LIDAR_POINTS_TOPIC])
+            lidar_locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+            video_locators = reader.get_frame_locators(
+                helpers.CAMERA_VIDEO_TOPIC,
+                sync_timestamps=[locator.capture_timestamp_ns for locator in lidar_locators],
+                sync_rule=matching.closest(max_diff_ns=1),
+            )
+
+        assert [locator.capture_timestamp_ns for locator in lidar_locators] == [
+            helpers.LIDAR_LOG_TIMES_NS[0] - 50_000_000,
+            helpers.LIDAR_LOG_TIMES_NS[1] - 50_000_000,
+        ]
+        assert [locator.log_time_ns for locator in lidar_locators] == list(
+            helpers.LIDAR_LOG_TIMES_NS
+        )
+        assert video_locators[0] is not None
+        assert video_locators[1] is not None
+        assert video_locators[0].log_time_ns == helpers.VIDEO_LOG_TIMES_NS[0]
+        assert video_locators[1].log_time_ns == helpers.VIDEO_LOG_TIMES_NS[2]
+
+    def test_get_frame_locators__sync_misses_when_capture_clocks_differ(
+        self, tmp_path: Path
+    ) -> None:
+        path = helpers.write_mcap(tmp_path / "offset.mcap", video_stamp_offset_ns=10_000_000_000)
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC, helpers.LIDAR_POINTS_TOPIC])
+            lidar_locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+            video_locators = reader.get_frame_locators(
+                helpers.CAMERA_VIDEO_TOPIC,
+                sync_timestamps=[locator.capture_timestamp_ns for locator in lidar_locators],
+                sync_rule=matching.closest(max_diff_ns=50_000_000),
+            )
+
+        assert video_locators[0] is None
+        assert video_locators[1] is None
+
+    def test_get_frame_locators__falls_back_to_log_time(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(tmp_path / "offset.mcap", video_stamp_offset_ns=10_000_000_000)
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC, helpers.LIDAR_POINTS_TOPIC])
+            lidar_locators = reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)
+            video_locators = reader.get_frame_locators(
+                helpers.CAMERA_VIDEO_TOPIC,
+                sync_timestamps=[locator.capture_timestamp_ns for locator in lidar_locators],
+                sync_rule=matching.closest(max_diff_ns=50_000_000),
+                fallback_timestamps=[locator.log_time_ns for locator in lidar_locators],
+            )
+
+        assert video_locators[0] is not None
+        assert video_locators[1] is not None
+        assert video_locators[0].log_time_ns == helpers.VIDEO_LOG_TIMES_NS[0]
+        assert video_locators[1].log_time_ns == helpers.VIDEO_LOG_TIMES_NS[2]
+
     def test_get_frame_locators__sync_timestamps_empty(self, reader: McapFileReader) -> None:
         reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
 
