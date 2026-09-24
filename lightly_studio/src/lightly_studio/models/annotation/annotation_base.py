@@ -11,6 +11,11 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Index, Relationship, SQLModel
 
+from lightly_studio.models.annotation.cuboid_3d import (
+    Cuboid3DAnnotationTable,
+    Cuboid3DAnnotationView,
+    Cuboid3DCreate,
+)
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
     ObjectDetectionAnnotationView,
@@ -44,6 +49,7 @@ class AnnotationType(str, Enum):
     CLASSIFICATION = "classification"
     SEGMENTATION_MASK = "segmentation_mask"
     OBJECT_DETECTION = "object_detection"
+    CUBOID_3D = "cuboid_3d"
 
 
 # Annotation types that have a bounding box and can be cropped for embedding.
@@ -107,6 +113,12 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
+    # Details about 3D cuboids.
+    cuboid_3d_details: Mapped[Optional["Cuboid3DAnnotationTable"]] = Relationship(
+        back_populates="annotation_base",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+
     # Details about segmentation.
     segmentation_details: Mapped[Optional["SegmentationAnnotationTable"]] = Relationship(
         back_populates="annotation_base",
@@ -159,6 +171,9 @@ class AnnotationCreate(ABC, SQLModel):
     start_time_s: Optional[float] = None
     end_time_s: Optional[float] = None
 
+    # Optional properties for cuboid_3d.
+    cuboid_3d: Optional[Cuboid3DCreate] = None
+
 
 class AnnotationView(BaseModel):
     """Response model for bounding box annotation."""
@@ -186,6 +201,7 @@ class AnnotationView(BaseModel):
     created_at: datetime
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
+    cuboid_3d_details: Optional[Cuboid3DAnnotationView] = None
     segmentation_details: Optional[SegmentationAnnotationView] = None
     temporal_span_details: Optional[TemporalSpanView] = None
     object_track_id: Optional[UUID] = None
@@ -235,6 +251,22 @@ class AnnotationView(BaseModel):
                 height=annotation.object_detection_details.height,
             )
             if annotation.object_detection_details
+            else None,
+            cuboid_3d_details=Cuboid3DAnnotationView(
+                frame_id=annotation.cuboid_3d_details.frame_id,
+                px=annotation.cuboid_3d_details.px,
+                py=annotation.cuboid_3d_details.py,
+                pz=annotation.cuboid_3d_details.pz,
+                qx=annotation.cuboid_3d_details.qx,
+                qy=annotation.cuboid_3d_details.qy,
+                qz=annotation.cuboid_3d_details.qz,
+                qw=annotation.cuboid_3d_details.qw,
+                sx=annotation.cuboid_3d_details.sx,
+                sy=annotation.cuboid_3d_details.sy,
+                sz=annotation.cuboid_3d_details.sz,
+                interpolated=annotation.cuboid_3d_details.interpolated,
+            )
+            if annotation.cuboid_3d_details
             else None,
             segmentation_details=SegmentationAnnotationView(
                 width=annotation.segmentation_details.width,
