@@ -11,12 +11,15 @@ from sqlalchemy.exc import DataError, IntegrityError, OperationalError
 
 from lightly_studio.analytics import tracking
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_GATEWAY,
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
+from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
+from lightly_studio.embed.remote.errors import RemoteEmbedderError
 from lightly_studio.errors import NotFoundError, QueryExprError
 
 # Set up logger for error handling
@@ -144,6 +147,27 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             status_code=HTTP_STATUS_BAD_REQUEST,
             content={"error": str(_exc) or "Invalid query expression."},
         )
+
+    @app.exception_handler(QueryEmbedderError)
+    async def _query_embedder_error_handler(
+        _request: Request, _exc: QueryEmbedderError
+    ) -> JSONResponse:
+        """Handle a query that the embedding space of a collection cannot answer."""
+        status_code = (
+            HTTP_STATUS_BAD_GATEWAY
+            if isinstance(_exc, RemoteEmbedderUnavailableError)
+            else HTTP_STATUS_CONFLICT
+        )
+        _report_error(exc=_exc, status_code=status_code)
+        return JSONResponse(status_code=status_code, content={"error": str(_exc)})
+
+    @app.exception_handler(RemoteEmbedderError)
+    async def _remote_embedder_error_handler(
+        _request: Request, _exc: RemoteEmbedderError
+    ) -> JSONResponse:
+        """Handle a remote embedding server that failed to give embeddings."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_BAD_GATEWAY)
+        return JSONResponse(status_code=HTTP_STATUS_BAD_GATEWAY, content={"error": str(_exc)})
 
     @app.exception_handler(Exception)
     async def _unhandled_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:

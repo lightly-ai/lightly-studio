@@ -18,6 +18,7 @@ from lightly_studio.embed.errors import (
     NoDefaultEmbeddingModelError,
     RemoteEmbedderUnavailableError,
 )
+from lightly_studio.embed.remote.errors import RemoteEmbedderUnreachableError
 from tests import helpers_resolvers
 
 
@@ -64,7 +65,7 @@ def test_embed_text__missing_capability(
     mocker.patch.object(
         embed_samples,
         "embed_text_for_collection",
-        side_effect=MissingCapabilityError(space_key="my-space"),
+        side_effect=MissingCapabilityError(space_key="my-space", query_kind="text"),
     )
 
     response = test_client.get(
@@ -73,7 +74,7 @@ def test_embed_text__missing_capability(
 
     assert response.status_code == HTTP_STATUS_CONFLICT
     assert (
-        response.json()["detail"]
+        response.json()["error"]
         == "The embedding space 'my-space' of this collection cannot embed text."
     )
 
@@ -93,7 +94,7 @@ def test_embed_text__no_default_model(
     )
 
     assert response.status_code == HTTP_STATUS_CONFLICT
-    assert response.json()["detail"] == "The collection has no default embedding model."
+    assert response.json()["error"] == "The collection has no default embedding model."
 
 
 def test_embed_text__remote_unavailable(
@@ -113,10 +114,28 @@ def test_embed_text__remote_unavailable(
     )
 
     assert response.status_code == HTTP_STATUS_BAD_GATEWAY
-    assert response.json()["detail"] == (
+    assert response.json()["error"] == (
         "The embedding server at 'http://embedder.test' for the embedding space 'my-space' "
         "cannot be used."
     )
+
+
+def test_embed_text__remote_embedding_fails(
+    db_session: Session, mocker: MockerFixture, test_client: TestClient
+) -> None:
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    mocker.patch.object(
+        embed_samples,
+        "embed_text_for_collection",
+        side_effect=RemoteEmbedderUnreachableError("The embedding server gave no answer."),
+    )
+
+    response = test_client.get(
+        f"/api/text_embedding/for_collection/{collection_id!s}", params={"query_text": "sample"}
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
+    assert response.json()["error"] == "The embedding server gave no answer."
 
 
 def test_embed_text__value_error(
