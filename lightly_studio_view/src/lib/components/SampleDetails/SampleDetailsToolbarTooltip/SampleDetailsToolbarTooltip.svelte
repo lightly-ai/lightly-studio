@@ -57,6 +57,12 @@
         visible = false;
     }
 
+    // Only keyboard focus opens the tooltip; a click focuses the button too, and would otherwise
+    // reopen the tooltip that pointerdown just closed.
+    function showOnFocus(event: FocusEvent) {
+        if ((event.target as HTMLElement).matches(':focus-visible')) show();
+    }
+
     // While open, follow the trigger on scroll and resize, and describe the focusable control
     // inside the trigger with the tooltip so screen readers announce the shortcut.
     $effect(() => {
@@ -80,7 +86,7 @@
     onpointerenter={show}
     onpointerleave={hide}
     onpointerdown={hide}
-    onfocusin={show}
+    onfocusin={showOnFocus}
     onfocusout={hide}
 >
     {@render children()}
