@@ -23,20 +23,19 @@ env:
   UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 jobs:
-  # Matrix jobs skip every step when `e2e-success-<name>-<file-hash>` is cached,
-  # so the hash has to cover every input the run depends on.
-  prepare-caches:
-    name: Build Cache and Skip Steps
+  # Success markers are keyed by `<file-hash>`, so the hash has to cover every input the run
+  # depends on. `e2e-success-all-<file-hash>` skips the whole run, `e2e-success-<name>-<file-hash>`
+  # skips one matrix job.
+  check-success:
+    name: Check E2E Success Cache
     runs-on: ubuntu-latest
-    # Recent runs: 3.5min median, 10min worst.
-    timeout-minutes: 15
+    timeout-minutes: 5
     outputs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
+      skip: ${{ steps.cache-success-all.outputs.cache-hit == 'true' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
-        with:
-          submodules: recursive
 
       - name: Compute cache key file hash
         id: file-hash
@@ -70,6 +69,27 @@ jobs:
             'uv.lock'
           ) }}" >> $GITHUB_OUTPUT
 
+      - name: Check e2e success cache for all matrix jobs
+        id: cache-success-all
+        uses: actions/cache@v6
+        with:
+          lookup-only: true
+          path: .e2e-success-all
+          key: e2e-success-all-${{ steps.file-hash.outputs.hash }}
+
+  prepare-caches:
+    name: Build Cache and Skip Steps
+    runs-on: ubuntu-latest
+    # Recent runs: 3.5min median, 10min worst.
+    timeout-minutes: 15
+    needs: check-success
+    if: needs.check-success.outputs.skip != 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
       - name: Cache build
         id: cache-build
         uses: actions/cache@v6
@@ -78,7 +98,7 @@ jobs:
           path: &cache-build-path |
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: python-build-${{ steps.file-hash.outputs.hash }}
+          key: python-build-${{ needs.check-success.outputs.file-hash }}
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
@@ -170,7 +190,9 @@ jobs:
     runs-on: ubuntu-latest
     # Recent runs: 5.7min median, 9.2min worst.
     timeout-minutes: 20
-    needs: prepare-caches
+    needs:
+      - check-success
+      - prepare-caches
     strategy:
       fail-fast: false
       matrix:
@@ -291,7 +313,7 @@ jobs:
         with:
           lookup-only: true
           path: ${{ matrix.success_marker }}
-          key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
+          key: ${{ matrix.success_key }}-${{ needs.check-success.outputs.file-hash }}
 
       ### Restore caches ###
 
@@ -302,7 +324,7 @@ jobs:
         with:
           fail-on-cache-miss: true
           path: *cache-build-path
-          key: python-build-${{ needs.prepare-caches.outputs.file-hash }}
+          key: python-build-${{ needs.check-success.outputs.file-hash }}
 
       - name: Cache Playwright browsers
         if: steps.cache-success.outputs.cache-hit != 'true'
@@ -462,7 +484,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ${{ matrix.success_marker }}
-          key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
+          key: ${{ matrix.success_key }}-${{ needs.check-success.outputs.file-hash }}
 
       ### Cleanup steps ###
       - name: Show server logs after failure
@@ -511,12 +533,26 @@ jobs:
     name: End2End Success Check
     runs-on: ubuntu-latest
     needs:
+      - check-success
       - prepare-caches
       - end-to-end
     if: always()
     steps:
       - name: Check failure
-        if: needs.end-to-end.result != 'success'
+        if: >-
+          ${{ !(needs.check-success.result == 'success' && needs.check-success.outputs.skip == 'true')
+          && needs.end-to-end.result != 'success' }}
         run: |
           echo "❌ End-to-End tests did not complete successfully."
           exit 1
+
+      - name: Create e2e success marker for all matrix jobs
+        if: needs.end-to-end.result == 'success'
+        run: touch .e2e-success-all
+
+      - name: Save e2e success marker for all matrix jobs
+        if: needs.end-to-end.result == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: .e2e-success-all
+          key: e2e-success-all-${{ needs.check-success.outputs.file-hash }}
