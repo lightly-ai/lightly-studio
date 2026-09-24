@@ -23,6 +23,12 @@ See the [Embeddings page](../core_concepts/embeddings.md) for more details.
     options:
         members: [register_default_embedder]
 
+## register_remote_embedder
+
+::: lightly_studio.embed.public_api
+    options:
+        members: [register_remote_embedder]
+
 ## Capability interfaces
 
 An embedder subclasses `Embedder` through one interface per input it can embed.
