@@ -25,7 +25,7 @@ from lightly_studio.core.start_gui import (
     stop_gui_background,
 )
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
-from lightly_studio.embed.public_api import register_default_embedder
+from lightly_studio.embed.public_api import register_default_embedder, register_remote_embedder
 from lightly_studio.models.collection import SampleType
 from lightly_studio.enterprise import connect
 from lightly_studio.core.lightly_train_helpers.generate_train_script import lt_train_script
@@ -54,6 +54,7 @@ __all__ = [
     "connect",
     "lt_train_script",
     "register_default_embedder",
+    "register_remote_embedder",
     "start_gui",
     "start_gui_background",
     "stop_gui_background",
