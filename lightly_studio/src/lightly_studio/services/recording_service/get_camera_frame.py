@@ -12,7 +12,7 @@ from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.type_definitions import DecodedMessage
 from lightly_studio.resolvers import recording_resolver
-from lightly_studio.services.recording_service.reader_cache import get_cached_reader
+from lightly_studio.services.recording_service import reader_cache
 
 
 @dataclass(frozen=True)
@@ -57,7 +57,7 @@ class CameraFrame:
         if message_type != "CompressedVideo":
             raise McapAccessError(f"Unsupported camera message schema: '{schema}'.")
         data = compressed_video.from_decoded_message(
-            message.decoded_message, width=width, height=height, quality=quality
+            decoded_message=message.decoded_message, width=width, height=height, quality=quality
         )
         return cls(data=data, media_type="image/jpeg", log_time_ns=message.log_time_ns)
 
@@ -106,10 +106,12 @@ def get_camera_frame(  # noqa: PLR0913
     if recording is None or recording.dataset_id != dataset_id:
         return None
 
-    reader = get_cached_reader(recording.uri)
+    reader = reader_cache.get_cached_reader(uri=recording.uri)
     nearest = reader.get_decoded_message_at(
         channel_id=channel_id, timestamp_ns=keyframe_timestamp_ns
     )
     if nearest is None:
         return None
-    return CameraFrame.from_decoded_message(nearest, width=width, height=height, quality=quality)
+    return CameraFrame.from_decoded_message(
+        message=nearest, width=width, height=height, quality=quality
+    )
