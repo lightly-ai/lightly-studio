@@ -29,7 +29,7 @@ from lightly_studio_serve.embedder import (
 
 from lightly_studio.embed import embedder_config
 from lightly_studio.embed.embedder_config import EmbedderConfig
-from lightly_studio.embed.remote.errors import RemoteEmbedderError
+from lightly_studio.embed.remote.errors import RemoteEmbedderCapabilityError, RemoteEmbedderError
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,8 @@ class EmbedderRegistry:
         self._space_key_to_embedder: dict[str, Embedder] = {}
         self._space_key_to_builtin: dict[str, Embedder] = {}
         self._config_to_embedder: dict[tuple[UUID, str], tuple[EmbedderConfig, Embedder]] = {}
-        self._config_to_failure: dict[tuple[UUID, str], tuple[EmbedderConfig, float]] = {}
+        # The flag is False for a server that answers but serves no usable capability
+        self._config_to_failure: dict[tuple[UUID, str], tuple[EmbedderConfig, float, bool]] = {}
         self._bootstrap_spaces = dict(_INITIAL_BOOTSTRAP_SPACES)
         self._build_locks: dict[tuple[UUID | None, str], threading.Lock] = {}
         self._lock = threading.Lock()
@@ -184,6 +185,17 @@ class EmbedderRegistry:
         )
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
+    def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
+        """Get whether the embedding server of the configuration failed inside the retry window.
+
+        The getters return None for an unusable server and for a space without the capability.
+        This tells the two apart.
+        """
+        with self._lock:
+            if not self._failed_recently(config=config):
+                return False
+            return self._config_to_failure[(config.dataset_id, config.space_key)][2]
+
     def preload_builtin_embedders(self) -> None:
         """Load and cache the built-in bootstrap embedders.
 
@@ -269,7 +281,7 @@ class EmbedderRegistry:
         failure = self._config_to_failure.get((config.dataset_id, config.space_key))
         if failure is None:
             return False
-        failed_config, failed_at = failure
+        failed_config, failed_at, _ = failure
         if failed_config != config:
             return False
         return time.monotonic() - failed_at < _REMOTE_RETRY_DELAY_SECONDS
@@ -281,7 +293,7 @@ class EmbedderRegistry:
         key = (config.dataset_id, config.space_key)
         try:
             embedder = embedder_config.build_remote(config=config)
-        except RemoteEmbedderError:
+        except RemoteEmbedderError as error:
             logger.warning(
                 "Cannot use the embedding server at %s for space %r.",
                 config.url,
@@ -289,7 +301,11 @@ class EmbedderRegistry:
                 exc_info=True,
             )
             with self._lock:
-                self._config_to_failure[key] = (config, time.monotonic())
+                self._config_to_failure[key] = (
+                    config,
+                    time.monotonic(),
+                    not isinstance(error, RemoteEmbedderCapabilityError),
+                )
             return
         with self._lock:
             self._config_to_embedder[key] = (config, embedder)

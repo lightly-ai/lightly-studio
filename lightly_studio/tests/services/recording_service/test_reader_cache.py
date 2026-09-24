@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.services.recording_service import reader_cache

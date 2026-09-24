@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `quickstart-enterprise` CLI command to seed a remote enterprise instance with a demo dataset.
 - Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
 - Python SDK: Embed search queries on a remote embedding server with `register_remote_embedder`.
 
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Combine typicality and similarity computation and sampling into one backend request that continues if the frontend disconnects.
 - Fix the `Values` field in the distribution panel using a larger font than the other fields.
+- Return 409 instead of 500 for text and image search on a collection whose embedding space cannot embed the query, and 502 when its embedding server cannot be used.
 
 ### Security
 
