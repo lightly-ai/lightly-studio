@@ -3,7 +3,7 @@ export type ToolMode = 'pan' | 'rectangle' | 'lasso';
 type ShortcutKey = 'Shift' | 'Meta';
 
 // A modifier the user holds while dragging to select without switching tools.
-export interface ToolShortcut {
+interface ToolShortcut {
     keys: readonly ShortcutKey[];
     action: string;
 }

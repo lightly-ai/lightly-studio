@@ -19,6 +19,7 @@
         position?: 'right' | 'top';
         children: Snippet;
     } = $props();
+    const tooltipId = $props.id();
     let visible = $state(false);
     let triggerRect = $state<DOMRect | null>(null);
     let triggerElement: HTMLElement;
@@ -43,10 +44,33 @@
         return `left: ${rect.right + OFFSET}px; top: ${rect.top + rect.height / 2}px; transform: translate(0, -50%);`;
     }
 
-    function show() {
+    const updateRect = () => {
         triggerRect = triggerElement.getBoundingClientRect();
+    };
+
+    function show() {
+        updateRect();
         visible = true;
     }
+
+    function hide() {
+        visible = false;
+    }
+
+    // While open, follow the trigger on scroll and resize, and describe the focusable control
+    // inside the trigger with the tooltip so screen readers announce the shortcut.
+    $effect(() => {
+        if (!visible) return;
+        const control = triggerElement.querySelector<HTMLElement>('button, [tabindex]');
+        control?.setAttribute('aria-describedby', tooltipId);
+        window.addEventListener('resize', updateRect);
+        window.addEventListener('scroll', updateRect, true);
+        return () => {
+            control?.removeAttribute('aria-describedby');
+            window.removeEventListener('resize', updateRect);
+            window.removeEventListener('scroll', updateRect, true);
+        };
+    });
 </script>
 
 <div
@@ -54,13 +78,21 @@
     role="region"
     bind:this={triggerElement}
     onpointerenter={show}
-    onpointerleave={() => (visible = false)}
-    onpointerdown={() => (visible = false)}
+    onpointerleave={hide}
+    onpointerdown={hide}
+    onfocusin={show}
+    onfocusout={hide}
 >
     {@render children()}
 
     {#if visible && triggerRect}
-        <div use:portal class="pointer-events-none fixed z-50" style={positionStyle(triggerRect)}>
+        <div
+            use:portal
+            id={tooltipId}
+            role="tooltip"
+            class="pointer-events-none fixed z-50"
+            style={positionStyle(triggerRect)}
+        >
             <div
                 class="
           flex

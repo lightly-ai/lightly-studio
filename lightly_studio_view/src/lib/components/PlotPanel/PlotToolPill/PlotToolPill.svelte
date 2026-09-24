@@ -2,7 +2,7 @@
     import { untrack, type Component } from 'svelte';
     import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
-    import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
+    import { SampleDetailsToolbarTooltip } from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip';
     import { Hand, Lasso, SquareDashed, type IconProps } from '@lucide/svelte';
     import {
         SELECTION_TOOLS,
