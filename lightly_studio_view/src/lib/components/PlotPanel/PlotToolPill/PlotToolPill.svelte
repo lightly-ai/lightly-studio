@@ -2,11 +2,12 @@
     import { untrack, type Component } from 'svelte';
     import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
-    import { Tooltip } from '$lib/components/ui/tooltip';
+    import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
     import { Hand, Lasso, SquareDashed, type IconProps } from '@lucide/svelte';
     import {
         SELECTION_TOOLS,
         createSelectionToolController,
+        formatShortcutKeys,
         type SelectionToolController,
         type ToolMode
     } from './selectionTool';
@@ -28,6 +29,8 @@
         rectangle: SquareDashed,
         lasso: Lasso
     };
+
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
     // `activeTool` is the user's choice and the pill's source of truth; the controller re-asserts
     // it whenever the library resets to "none" after a selection, keeping the tool sticky.
@@ -58,7 +61,13 @@
     data-testid="plot-tool-pill"
 >
     {#each SELECTION_TOOLS as tool (tool.mode)}
-        <Tooltip content={tool.label} position="top">
+        <SampleDetailsToolbarTooltip
+            label={tool.label}
+            shortcut={tool.shortcut && formatShortcutKeys(tool.shortcut.keys, isMac)}
+            action={tool.shortcut?.action}
+            verb="Hold"
+            position="top"
+        >
             <Button
                 icon={TOOL_ICONS[tool.mode]}
                 ariaLabel={tool.label}
@@ -73,6 +82,6 @@
                     )
                 }}
             />
-        </Tooltip>
+        </SampleDetailsToolbarTooltip>
     {/each}
 </div>

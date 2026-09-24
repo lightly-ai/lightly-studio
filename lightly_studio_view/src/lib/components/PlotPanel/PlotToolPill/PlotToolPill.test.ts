@@ -66,4 +66,26 @@ describe('PlotToolPill.svelte', () => {
         // The pill still shows: the container arrives one tick after the plot mounts.
         expect(screen.getByTestId('plot-tool-pill')).toBeInTheDocument();
     });
+
+    it('shows the drag shortcut when hovering a selection tool', async () => {
+        const user = userEvent.setup();
+        const { container } = buildPlotContainer();
+        render(PlotToolPill, { props: { plotContainer: container, activeTool: 'pan' } });
+
+        await user.hover(screen.getByTestId('plot-tool-lasso'));
+
+        expect(screen.getByText('Lasso select')).toBeInTheDocument();
+        expect(screen.getByText(/to drag a lasso/)).toBeInTheDocument();
+    });
+
+    it('shows no shortcut for pan', async () => {
+        const user = userEvent.setup();
+        const { container } = buildPlotContainer();
+        render(PlotToolPill, { props: { plotContainer: container, activeTool: 'pan' } });
+
+        await user.hover(screen.getByTestId('plot-tool-pan'));
+
+        expect(screen.getByText('Pan')).toBeInTheDocument();
+        expect(screen.queryByText(/Hold/)).not.toBeInTheDocument();
+    });
 });
