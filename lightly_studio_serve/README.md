@@ -132,6 +132,4 @@ ls.register_remote_embedder(
 
 See the
 [LightlyStudio embeddings guide](https://docs.lightly.ai/studio/core_concepts/embeddings/#serving-an-embedder-from-a-remote-server)
-for the full flow and its limits, and
-[`example_remote_embedder.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_remote_embedder.py)
-for a runnable example.
+for the full flow, its limits and a runnable example.

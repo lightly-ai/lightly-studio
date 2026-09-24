@@ -296,9 +296,7 @@ ls.register_default_embedder(embedder=MyIngestionEmbedder())
 dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path="my_images/")
 
-ls.register_remote_embedder(
-    dataset=dataset, url="http://127.0.0.1:8080", api_key="your-secret-key"
-)
+ls.register_remote_embedder(dataset=dataset, url="http://127.0.0.1:8080", api_key="your-secret-key")
 ls.start_gui()
 ```
 
@@ -319,8 +317,7 @@ For a full runnable version, which starts a small server that runs on CPU, see
     - The server embeds search queries only. Ingestion still runs locally.
     - The dataset stores the URL and the API key in plain text.
 
-`register_remote_embedder` raises a `RemoteEmbedderError`
-(from `lightly_studio.embed.remote.errors`) in these cases: it cannot connect to the
-server, the server rejects the key, or the server produces a different embedding space.
-Then it stores nothing. If the
+`register_remote_embedder` raises a `RemoteEmbedderError` and stores nothing in these
+cases: it cannot connect to the server, the server rejects the key, or the server
+produces a different embedding space. The error is in `lightly_studio.embed.remote.errors`. If the
 server fails later, search in the GUI shows an error.

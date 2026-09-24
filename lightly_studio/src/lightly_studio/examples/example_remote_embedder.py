@@ -10,10 +10,6 @@ The example has two parts:
 
 Both embedders map an image to its mean color, so the example runs on CPU and downloads
 no model. Search for text that names "red", "green", "blue" or "white", or paste an image.
-
-The local embedder embeds only image paths. A local embedder for the space serves its
-own capabilities first. Thus a local ``TextEmbedder`` answers text search, not the
-server.
 """
 
 from __future__ import annotations
@@ -29,7 +25,6 @@ import numpy as np
 from environs import Env
 from lightly_studio_serve import protocol
 from lightly_studio_serve.embedder import ImageBytesEmbedder, ImagePathEmbedder, TextEmbedder
-from numpy.typing import NDArray
 from PIL import Image
 
 import lightly_studio as ls
@@ -69,7 +64,7 @@ class ColorServerEmbedder(TextEmbedder, ImageBytesEmbedder):
         return ls.EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=EMBEDDING_DIMENSION)
 
     def embed_text(self, texts: list[str]) -> ls.EmbeddingResult:
-        """Embed each text as the sum of the colors it names."""
+        """Embed each text as the first color it names, or as white."""
         return _result(rows=[_text_color(text=text) for text in texts])
 
     def embed_image_bytes(self, images: list[bytes]) -> ls.EmbeddingResult:
@@ -94,7 +89,6 @@ def main() -> None:
     dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=env.path("EXAMPLES_DATASET_PATH"))
     ls.register_remote_embedder(dataset=dataset, url=SERVER_URL, api_key=api_key)
-
     ls.start_gui()
 
 
@@ -106,10 +100,7 @@ def _wait_for_server(server: multiprocessing.Process, api_key: str) -> None:
     deadline = time.monotonic() + SERVER_STARTUP_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         if not server.is_alive():
-            raise RuntimeError(
-                f"The embedding server stopped with exit code {server.exitcode}. "
-                f"Make sure that port {SERVER_PORT} is free."
-            )
+            raise RuntimeError(f"The embedding server stopped with exit code {server.exitcode}.")
         try:
             httpx.get(
                 f"{SERVER_URL}{protocol.DESCRIBE_PATH}",
@@ -127,16 +118,12 @@ def _mean_color(image: Image.Image) -> list[float]:
 
 
 def _text_color(text: str) -> list[float]:
-    vectors = [COLOR_VECTORS[word] for word in text.lower().split() if word in COLOR_VECTORS]
-    if not vectors:
-        return COLOR_VECTORS["white"]
-    return [float(value) for value in np.sum(vectors, axis=0)]
+    colors = [word for word in text.lower().split() if word in COLOR_VECTORS]
+    return COLOR_VECTORS[colors[0]] if colors else COLOR_VECTORS["white"]
 
 
 def _result(rows: list[list[float]]) -> ls.EmbeddingResult:
-    embeddings: NDArray[np.float32] = np.array(rows, dtype=np.float32).reshape(
-        len(rows), EMBEDDING_DIMENSION
-    )
+    embeddings = np.array(rows, dtype=np.float32).reshape(len(rows), EMBEDDING_DIMENSION)
     return ls.EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(rows))))
 
 
