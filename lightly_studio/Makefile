@@ -310,7 +310,7 @@ start-example:
 start-example-mcap-s3: setup-floci build
 	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
 	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
-		uv run --extra mcap --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Demo targets for the camera-frame endpoint.
 # Uploads the MCAP to the local Floci S3 emulator and starts the API server so
@@ -331,7 +331,7 @@ demo-mcap-server: setup-floci mock-webapp-dist
 	@uv run python src/lightly_studio/scripts/demo_mcap_seed.py \
 		"$(DEMO_MCAP_DB)" "$(FLOCI_MCAP_S3_URI)" "$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
 	@echo "Starting server on http://$(DEMO_MCAP_HOST):$(DEMO_MCAP_PORT) — Ctrl-C to stop"
-	@$(FLOCI_ENV) uv run --extra mcap --extra cloud-storage python -c "\
+	@$(FLOCI_ENV) uv run --extra cloud-storage python -c "\
 import uvicorn; \
 from lightly_studio.database import db_manager; \
 db_manager.connect(db_file='$(DEMO_MCAP_DB)'); \
@@ -340,7 +340,7 @@ uvicorn.run(app, host='$(DEMO_MCAP_HOST)', port=$(DEMO_MCAP_PORT))"
 
 .PHONY: demo-mcap-urls
 demo-mcap-urls:
-	@uv run --extra mcap python src/lightly_studio/scripts/demo_mcap_urls.py \
+	@uv run python src/lightly_studio/scripts/demo_mcap_urls.py \
 		"$(firstword $(FLOCI_MCAP_FILES))" "$(DEMO_MCAP_HOST)" "$(DEMO_MCAP_PORT)" \
 		"$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
 

@@ -2,7 +2,7 @@ r"""Prints camera-frame URLs for every video channel in an MCAP file.
 
 Usage::
 
-    uv run --extra mcap python src/lightly_studio/scripts/demo_mcap_urls.py \
+    uv run python src/lightly_studio/scripts/demo_mcap_urls.py \
         <mcap_path> <host> <port> <dataset_id> <recording_id>
 """
 
