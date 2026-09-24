@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from lightly_studio.core.mcap import matching
 
 CANDIDATES_NS = [100, 200, 400]
@@ -58,3 +60,59 @@ def test_match_all__no_queries() -> None:
 
 def test_match_all__no_candidates() -> None:
     assert matching.match_all(queries_ns=[100, 200], candidates_ns=[]) == [None, None]
+
+
+def test_match_all_with_fallback__uses_primary_when_it_hits() -> None:
+    matched = matching.match_all_with_fallback(
+        primary_queries_ns=[100, 300],
+        primary_candidates_ns=[300, 100],
+        fallback_queries_ns=[1_000, 1_300],
+        fallback_candidates_ns=[1_300, 1_000],
+        match=matching.closest(max_diff_ns=20),
+    )
+    assert matched.indices == [1, 0]
+    assert matched.n_fallback == 0
+
+
+def test_match_all_with_fallback__fills_misses_from_fallback() -> None:
+    matched = matching.match_all_with_fallback(
+        primary_queries_ns=[100, 9_000],
+        primary_candidates_ns=[100, 300],
+        fallback_queries_ns=[1_000, 1_300],
+        fallback_candidates_ns=[1_000, 1_300],
+        match=matching.closest(max_diff_ns=20),
+    )
+    assert matched.indices == [0, 1]
+    assert matched.n_fallback == 1
+
+
+def test_match_all_with_fallback__miss_on_both_clocks() -> None:
+    matched = matching.match_all_with_fallback(
+        primary_queries_ns=[100, 9_000],
+        primary_candidates_ns=[100, 300],
+        fallback_queries_ns=[1_000, 9_000],
+        fallback_candidates_ns=[1_000, 1_300],
+        match=matching.closest(max_diff_ns=20),
+    )
+    assert matched.indices == [0, None]
+    assert matched.n_fallback == 0
+
+
+def test_match_all_with_fallback__query_length_mismatch() -> None:
+    with pytest.raises(ValueError, match="query lists"):
+        matching.match_all_with_fallback(
+            primary_queries_ns=[100],
+            primary_candidates_ns=[100],
+            fallback_queries_ns=[100, 200],
+            fallback_candidates_ns=[100],
+        )
+
+
+def test_match_all_with_fallback__candidate_length_mismatch() -> None:
+    with pytest.raises(ValueError, match="candidate lists"):
+        matching.match_all_with_fallback(
+            primary_queries_ns=[100],
+            primary_candidates_ns=[100],
+            fallback_queries_ns=[100],
+            fallback_candidates_ns=[100, 200],
+        )
