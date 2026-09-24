@@ -167,7 +167,10 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
     ) -> JSONResponse:
         """Handle a remote embedding server that failed to give embeddings."""
         _report_error(exc=_exc, status_code=HTTP_STATUS_BAD_GATEWAY)
-        return JSONResponse(status_code=HTTP_STATUS_BAD_GATEWAY, content={"error": str(_exc)})
+        return JSONResponse(
+            status_code=HTTP_STATUS_BAD_GATEWAY,
+            content={"error": "The embedding server did not give embeddings."},
+        )
 
     @app.exception_handler(Exception)
     async def _unhandled_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:

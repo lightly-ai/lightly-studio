@@ -179,85 +179,47 @@ def test_embed_image_from_file__model_override_not_supported(test_client: TestCl
         )
 
 
-def test_embed_image_from_file__missing_capability(
-    db_session: Session, mocker: MockerFixture, test_client: TestClient
-) -> None:
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
-    mocker.patch.object(
-        embed_samples,
-        "embed_image_for_collection",
-        side_effect=MissingCapabilityError(space_key="my-space", query_kind="images"),
-    )
-
-    response = test_client.post(
-        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
-        files={"file": ("test_image.jpg", b"fake image content", "image/jpeg")},
-    )
-
-    assert response.status_code == HTTP_STATUS_CONFLICT
-    assert (
-        response.json()["error"]
-        == "The embedding space 'my-space' of this collection cannot embed images."
-    )
-
-
-def test_embed_image_from_file__no_default_model(
-    db_session: Session, mocker: MockerFixture, test_client: TestClient
-) -> None:
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
-    mocker.patch.object(
-        embed_samples,
-        "embed_image_for_collection",
-        side_effect=NoDefaultEmbeddingModelError("The collection has no default embedding model."),
-    )
-
-    response = test_client.post(
-        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
-        files={"file": ("test_image.jpg", b"fake image content", "image/jpeg")},
-    )
-
-    assert response.status_code == HTTP_STATUS_CONFLICT
-    assert response.json()["error"] == "The collection has no default embedding model."
-
-
-def test_embed_image_from_file__remote_unavailable(
-    db_session: Session, mocker: MockerFixture, test_client: TestClient
-) -> None:
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
-    mocker.patch.object(
-        embed_samples,
-        "embed_image_for_collection",
-        side_effect=RemoteEmbedderUnavailableError(
-            space_key="my-space", url="http://embedder.test"
+@pytest.mark.parametrize(
+    ("error", "status_code", "message"),
+    [
+        (
+            MissingCapabilityError(space_key="my-space", query_kind="images"),
+            HTTP_STATUS_CONFLICT,
+            "The embedding space 'my-space' of this collection cannot embed images.",
         ),
-    )
-
-    response = test_client.post(
-        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
-        files={"file": ("test_image.jpg", b"fake image content", "image/jpeg")},
-    )
-
-    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
-    assert response.json()["error"] == (
-        "The embedding server at 'http://embedder.test' for the embedding space 'my-space' "
-        "cannot be used."
-    )
-
-
-def test_embed_image_from_file__remote_embedding_fails(
-    db_session: Session, mocker: MockerFixture, test_client: TestClient
+        (
+            NoDefaultEmbeddingModelError("No default model."),
+            HTTP_STATUS_CONFLICT,
+            "No default model.",
+        ),
+        (
+            RemoteEmbedderUnavailableError(space_key="my-space", url="http://embedder.test"),
+            HTTP_STATUS_BAD_GATEWAY,
+            "The embedding server at 'http://embedder.test' for the embedding space 'my-space' "
+            "cannot be used.",
+        ),
+        # The upstream detail stays out of the answer
+        (
+            RemoteEmbedderUnreachableError("Traceback from the server."),
+            HTTP_STATUS_BAD_GATEWAY,
+            "The embedding server did not give embeddings.",
+        ),
+    ],
+)
+def test_embed_image_from_file__embedder_error(
+    mocker: MockerFixture,
+    test_client: TestClient,
+    error: Exception,
+    status_code: int,
+    message: str,
 ) -> None:
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
-    mocker.patch.object(
-        embed_samples,
-        "embed_image_for_collection",
-        side_effect=RemoteEmbedderUnreachableError("The embedding server gave no answer."),
-    )
+    collection_id = uuid4()
+    mocker.patch.object(embed_samples, "embed_image_for_collection", side_effect=error)
 
     response = test_client.post(
         f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
         files={"file": ("test_image.jpg", b"fake image content", "image/jpeg")},
     )
 
-    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
-    assert response.json()["error"] == "The embedding server gave no answer."
+    assert response.status_code == status_code
+    assert response.json()["error"] == message
