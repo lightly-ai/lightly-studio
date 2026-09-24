@@ -14,8 +14,8 @@
         recordingId: string;
         /** MCAP channel to render. */
         channelId: number;
-        /** Frame timestamp in nanoseconds. */
-        timestampNs: number;
+        /** Frame timestamp in nanoseconds, as a string to preserve full precision. */
+        timestampNs: string;
         /** Studio slot name shown as the caption, e.g. `front`. */
         label: string;
     }

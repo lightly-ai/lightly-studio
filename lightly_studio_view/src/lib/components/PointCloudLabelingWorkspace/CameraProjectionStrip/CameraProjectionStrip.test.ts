@@ -35,9 +35,19 @@ const tickDetails: TickDetailView = {
     timestamp_ns: 1000,
     channels: {
         // Video channel: keyframe timestamp is preferred over the log time.
-        front: { channel_id: 1, log_time_ns: 2000, keyframe_log_time_ns: 1500 },
+        front: {
+            channel_id: 1,
+            group_component_name: 'front',
+            log_time_ns: '2000',
+            keyframe_log_time_ns: '1500'
+        },
         // Non-video channel: falls back to the log time.
-        rear: { channel_id: 2, log_time_ns: 3000, keyframe_log_time_ns: null }
+        rear: {
+            channel_id: 2,
+            group_component_name: 'rear',
+            log_time_ns: '3000',
+            keyframe_log_time_ns: null
+        }
         // `side` has no locator, so its tile is skipped.
     }
 };
