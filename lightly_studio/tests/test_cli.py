@@ -322,7 +322,7 @@ def test_quickstart_enterprise__partially_seeded(mocker: MockerFixture) -> None:
         cli=cli.main,
         args=["quickstart-enterprise", "--api-url", "http://10.0.0.5:8100", "--token", "my-token"],
     )
-    assert result.exit_code != 0
+    assert result.exit_code == 1
     assert "partially seeded" in result.output
     mock_dataset.add_images_from_path.assert_not_called()
     mock_dataset.add_annotations_from_coco.assert_not_called()
