@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Redesign the embedding plot selection tools as visible, sticky Pan, Rectangle, and Lasso buttons in the GUI.
+- Show the Rectangle and Lasso drag shortcuts in the embedding plot tool tooltips.
 
 ### Deprecated
 

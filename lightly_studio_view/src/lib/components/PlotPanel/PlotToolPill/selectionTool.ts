@@ -1,17 +1,45 @@
 export type ToolMode = 'pan' | 'rectangle' | 'lasso';
 
+type ShortcutKey = 'Shift' | 'Meta';
+
+// A modifier the user holds while dragging to select without switching tools.
+interface ToolShortcut {
+    keys: readonly ShortcutKey[];
+    action: string;
+}
+
 export interface ToolDescriptor {
     mode: ToolMode;
     label: string;
+    shortcut?: ToolShortcut;
 }
 
 // The pill's three tools, in display order. Icons are mapped in the component so this
 // module stays free of Svelte and can be unit-tested as plain logic.
+// The shortcuts are embedding-atlas's own; they mirror the titles of its hidden buttons.
 export const SELECTION_TOOLS: readonly ToolDescriptor[] = [
     { mode: 'pan', label: 'Pan' },
-    { mode: 'rectangle', label: 'Rectangle select' },
-    { mode: 'lasso', label: 'Lasso select' }
+    {
+        mode: 'rectangle',
+        label: 'Rectangle select',
+        shortcut: { keys: ['Shift'], action: 'drag a rectangle' }
+    },
+    {
+        mode: 'lasso',
+        label: 'Lasso select',
+        shortcut: { keys: ['Shift', 'Meta'], action: 'drag a lasso' }
+    }
 ];
+
+// Meta is the Command key on macOS and the Windows key elsewhere.
+export function formatShortcutKeys(keys: readonly ShortcutKey[], isMac: boolean): string {
+    return keys
+        .map((key) => {
+            if (key === 'Meta') return isMac ? '⌘' : 'Win';
+            return key;
+        })
+        .join(' + ');
+}
 
 // embedding-atlas marks the armed tool button with an inline `background: color-mix(...)`.
 export function isButtonArmed(button: Element | null): boolean {
