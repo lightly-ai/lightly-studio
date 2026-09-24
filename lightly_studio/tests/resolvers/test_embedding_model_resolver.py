@@ -289,6 +289,15 @@ def test_set_api_key__clears_key(db_session: Session) -> None:
     assert updated.api_key is None
 
 
+def test_set_api_key__unknown_model_raises(db_session: Session) -> None:
+    unknown_id = uuid4()
+
+    with pytest.raises(ValueError, match=f"Embedding model with id {unknown_id} not found."):
+        embedding_model_resolver.set_api_key(
+            session=db_session, embedding_model_id=unknown_id, api_key="secret"
+        )
+
+
 def test_set_remote_embedder(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     embedding_model = create_embedding_model(
@@ -316,15 +325,6 @@ def test_set_remote_embedder__unknown_model_raises(db_session: Session) -> None:
     with pytest.raises(ValueError, match=f"Embedding model with id {unknown_id} not found."):
         embedding_model_resolver.set_remote_embedder(
             session=db_session, embedding_model_id=unknown_id, url="http://x.test", api_key=None
-        )
-
-
-def test_set_api_key__unknown_model_raises(db_session: Session) -> None:
-    unknown_id = uuid4()
-
-    with pytest.raises(ValueError, match=f"Embedding model with id {unknown_id} not found."):
-        embedding_model_resolver.set_api_key(
-            session=db_session, embedding_model_id=unknown_id, api_key="secret"
         )
 
 
