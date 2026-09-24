@@ -20,6 +20,17 @@ def test_from_decoded_message__foxglove_timestamp() -> None:
     assert capture_time.from_decoded_message(message) == 2_000_000_100
 
 
+def test_from_decoded_message__protobuf_timestamp() -> None:
+    message = {"timestamp": {"seconds": 2, "nanos": 100}}
+
+    assert capture_time.from_decoded_message(message) == 2_000_000_100
+
+
 def test_from_decoded_message__missing() -> None:
     with pytest.raises(McapAccessError, match="header stamp or timestamp"):
         capture_time.from_decoded_message(SimpleNamespace(frame_id="odom"))
+
+
+def test_from_decoded_message__not_a_number() -> None:
+    with pytest.raises(McapAccessError, match="not a number"):
+        capture_time.from_decoded_message({"timestamp": {"sec": "invalid"}})

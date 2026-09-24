@@ -332,14 +332,15 @@ def write_mcap_with_undecodable_camera_info(path: Path) -> Path:
     return path
 
 
-def write_mcap_with_malformed_json_video(path: Path) -> Path:
+def write_mcap_with_malformed_json_video(path: Path, payload: bytes = b"not valid json") -> Path:
     """Writes an MCAP whose video topic is JSON-encoded with malformed payloads.
 
     The schema name marks the topic as video, and its encoding has a decoder, but
-    the payloads are not valid JSON, so no keyframe can be detected.
+    the payloads are not valid video messages.
 
     Args:
         path: The path to write the file to.
+        payload: The payload of each video message. The default is not valid JSON.
 
     Returns:
         The path of the written file.
@@ -358,7 +359,7 @@ def write_mcap_with_malformed_json_video(path: Path) -> Path:
                 channel_id=channel_id,
                 log_time=log_time_ns,
                 publish_time=log_time_ns,
-                data=b"not valid json",
+                data=payload,
             )
         writer.finish()
     return path
