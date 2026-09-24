@@ -19,10 +19,7 @@
      * beneath it and the frame timeline at the bottom. Annotations stay in a resizable right pane,
      * and the tool rail floats over the viewport rather than taking a column of its own.
      *
-     * This issue only delivers the route and composed placeholders: browser-side MCAP frame
-     * loading, the Three.js scene, and persistence land in later child issues of LIG-10657. Until
-     * then `status` defaults to `empty` so the chrome (breadcrumb, filters, resizable panels,
-     * fullscreen, timeline) is fully in place and testable ahead of real data.
+     * Loads all lidar payloads for the active tick and renders them in the 3D scene.
      */
     interface Props {
         sampleId: string;
@@ -34,7 +31,7 @@
         tickNumber?: number;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
-        /** Overridable for tests/stories; production always starts at `empty` today. */
+        /** Optional status override for tests and stories. */
         status?: 'unsupported' | 'empty' | 'error';
         onExit?: () => void;
         onRetry?: () => void;
@@ -58,7 +55,6 @@
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
-
     let selectedCuboidId = $state<string | null>(null);
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
@@ -132,10 +128,25 @@
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
                             <ToolRail />
-                            {#if workspace.status === 'empty' || workspace.status === 'loading'}
-                                <WorkspaceStatusPanel status={workspace.status} {onExit} />
+                            {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
+                                <WorkspaceStatusPanel
+                                    status="error"
+                                    onRetry={workspace.retry}
+                                    {onExit}
+                                />
+                            {:else if workspace.status === 'empty'}
+                                <WorkspaceStatusPanel status="empty" {onExit} />
+                            {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
+                                <WorkspaceStatusPanel status="loading" {onExit} />
+                            {:else if workspace.cloudPointFrame.data}
+                                <SceneViewport
+                                    batch={workspace.cloudPointFrame.data.batch}
+                                    colorMode={workspace.cloudPointFrame.data.batch.colors
+                                        ? 'rgb'
+                                        : 'intensity'}
+                                />
                             {:else}
-                                <SceneViewport />
+                                <WorkspaceStatusPanel status="empty" {onExit} />
                             {/if}
                         </Pane>
                         <PaneResizer

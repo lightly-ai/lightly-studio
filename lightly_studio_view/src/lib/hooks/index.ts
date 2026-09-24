@@ -81,3 +81,4 @@ export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotat
 export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte';
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
+export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';

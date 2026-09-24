@@ -6,6 +6,7 @@ compiled schemas.
 
 from __future__ import annotations
 
+import struct
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,11 @@ IMAGE_HEIGHT = 480
 # The log times of the compressed-image frames, one every 100 ms.
 IMAGE_LOG_TIMES_NS = (1_000_000_000, 1_100_000_000, 1_200_000_000)
 IMAGE_FORMAT = "jpeg"
+
+# The finite points of the xyz point cloud, in metres. A trailing point with a
+# non-finite coordinate is appended by `_xyz_point_cloud_message` to exercise
+# invalid-point filtering.
+POINT_CLOUD_XYZ_POINTS = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0))
 
 _HEADER_MSGDEF = """
 ================================================================================
@@ -212,6 +218,32 @@ def write_mcap_with_compressed_image(path: Path) -> Path:
             message=_compressed_image_message(log_time_ns),
             log_time=log_time_ns,
         )
+    writer.finish()
+    return path
+
+
+def write_mcap_with_point_cloud(path: Path) -> Path:
+    """Writes an MCAP with a lidar topic carrying an xyz PointCloud2 message.
+
+    The message holds the finite points in `POINT_CLOUD_XYZ_POINTS` followed by one
+    point with a non-finite x coordinate, so readers must drop the invalid point.
+
+    Args:
+        path: The path to write the file to.
+
+    Returns:
+        The path of the written file.
+    """
+    writer = Writer(output=str(path))
+    point_cloud_schema = writer.register_msgdef(
+        datatype="sensor_msgs/msg/PointCloud2", msgdef_text=_POINT_CLOUD_MSGDEF
+    )
+    writer.write_message(
+        topic=LIDAR_POINTS_TOPIC,
+        schema=point_cloud_schema,
+        message=_xyz_point_cloud_message(),
+        log_time=LIDAR_LOG_TIMES_NS[0],
+    )
     writer.finish()
     return path
 
@@ -442,6 +474,26 @@ def _point_cloud_message(stamp_ns: int) -> dict[str, Any]:
         "row_step": 4,
         "data": b"\x00\x00\x00\x00",
         "is_dense": True,
+    }
+
+
+def _xyz_point_cloud_message() -> dict[str, Any]:
+    points = (*POINT_CLOUD_XYZ_POINTS, (float("nan"), 0.0, 0.0))
+    data = b"".join(struct.pack("<fff", x, y, z) for x, y, z in points)
+    return {
+        "header": {"stamp": _time(LIDAR_LOG_TIMES_NS[0]), "frame_id": LIDAR_FRAME_ID},
+        "height": 1,
+        "width": len(points),
+        "fields": [
+            {"name": "x", "offset": 0, "datatype": 7, "count": 1},
+            {"name": "y", "offset": 4, "datatype": 7, "count": 1},
+            {"name": "z", "offset": 8, "datatype": 7, "count": 1},
+        ],
+        "is_bigendian": False,
+        "point_step": 12,
+        "row_step": 12 * len(points),
+        "data": data,
+        "is_dense": False,
     }
 
 

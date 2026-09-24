@@ -56,8 +56,9 @@
         const currentBatch = batch;
         const mode = colorMode;
         const range = intensityRange;
+        const currentColors = currentBatch.colors;
         untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range);
+            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentColors);
             invalidate();
         });
     });

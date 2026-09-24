@@ -28,25 +28,55 @@ COMPONENTS = [
     ls.McapComponentSpec(
         name="front",
         mcap_data_type=ls.McapDataType.VIDEO_FRAME,
-        topic="/Main/compressed_video",
-        camera_info_topic="/Main/camera_info",
+        topic="/hal/perception/Main/compressed_video",
+        camera_info_topic="/hal/perception/Main/camera_info",
+    ),
+    ls.McapComponentSpec(
+        name="mast_left_rear",
+        mcap_data_type=ls.McapDataType.VIDEO_FRAME,
+        topic="/hal/perception/MastLeftRear/compressed_video",
+        camera_info_topic="/hal/perception/MastLeftRear/camera_info",
     ),
     ls.McapComponentSpec(
         name="mast_left_side",
         mcap_data_type=ls.McapDataType.VIDEO_FRAME,
-        topic="/MastLeftSide/compressed_video",
-        camera_info_topic="/MastLeftSide/camera_info",
+        topic="/hal/perception/MastLeftSide/compressed_video",
+        camera_info_topic="/hal/perception/MastLeftSide/camera_info",
     ),
     ls.McapComponentSpec(
-        name="pcl_front",
+        name="mast_right_rear",
+        mcap_data_type=ls.McapDataType.VIDEO_FRAME,
+        topic="/hal/perception/MastRightRear/compressed_video",
+        camera_info_topic="/hal/perception/MastRightRear/camera_info",
+    ),
+    ls.McapComponentSpec(
+        name="mast_right_side",
+        mcap_data_type=ls.McapDataType.VIDEO_FRAME,
+        topic="/hal/perception/MastRightSide/compressed_video",
+        camera_info_topic="/hal/perception/MastRightSide/camera_info",
+    ),
+    ls.McapComponentSpec(
+        name="pcl_front_left",
         mcap_data_type=ls.McapDataType.POINT_CLOUD,
-        topic="/lidar_front_left/self_filtered",
+        topic="/livox/lidar_front_left/self_filtered",
         frame_id="lidar_front_left",
+    ),
+    ls.McapComponentSpec(
+        name="pcl_rear_left",
+        mcap_data_type=ls.McapDataType.POINT_CLOUD,
+        topic="/livox/lidar_rear_left/self_filtered",
+        frame_id="lidar_rear_left",
+    ),
+    ls.McapComponentSpec(
+        name="pcl_rear_right",
+        mcap_data_type=ls.McapDataType.POINT_CLOUD,
+        topic="/livox/lidar_rear_right/self_filtered",
+        frame_id="lidar_rear_right",
     ),
 ]
 
 # The component whose messages are the ticks of a sequence, usually the slowest sensor.
-SYNC_COMPONENT = "pcl_front"
+SYNC_COMPONENT = "pcl_front_left"
 
 # The largest time difference that still pairs a component with a tick of the sync component.
 MAX_PAIRING_DIFF_NS = 50_000_000

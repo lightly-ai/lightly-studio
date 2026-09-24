@@ -2,26 +2,17 @@
 
 from __future__ import annotations
 
-import os
-import threading
-from collections import OrderedDict
 from dataclasses import dataclass
 from uuid import UUID
 
-import fsspec.utils
 from sqlmodel import Session
 
 from lightly_studio.core.mcap import compressed_video
 from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY
 from lightly_studio.core.mcap.errors import McapAccessError
-from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
 from lightly_studio.core.mcap.type_definitions import DecodedMessage
 from lightly_studio.resolvers import recording_resolver
-
-# Readers are thread-local because iter_decoded_messages seeks the underlying stream.
-_thread_local = threading.local()
-_READER_CACHE_SIZE = 4
-_REMOTE_PROTOCOLS = {"s3", "gs", "gcs"}
+from lightly_studio.services.recording_service.reader_cache import get_cached_reader
 
 
 @dataclass(frozen=True)
@@ -37,42 +28,6 @@ class CameraFrame:
     data: bytes
     media_type: str
     log_time_ns: int
-
-
-def _get_cached_reader(uri: str) -> McapFileReader:
-    """Returns a thread-local cached reader for a recording URI.
-
-    Keeps up to `_READER_CACHE_SIZE` readers open per thread, evicting the least recently
-    used on overflow. Remote S3 URIs include the endpoint from the environment when set,
-    so local S3 emulators (e.g. Floci/LocalStack) work without extra configuration.
-
-    The readers are opened for random access, because serving one frame reads only the
-    summary and the chunk that holds it.
-    """
-    if not hasattr(_thread_local, "reader_cache"):
-        _thread_local.reader_cache = OrderedDict()
-    cache: OrderedDict[str, McapFileReader] = _thread_local.reader_cache
-    if uri in cache:
-        cache.move_to_end(uri)
-        return cache[uri]
-    protocol = fsspec.utils.get_protocol(uri)
-    storage_options: dict[str, object] | None = None
-    if protocol in _REMOTE_PROTOCOLS:
-        # Build S3-compatible options.  If AWS_ENDPOINT_URL is set in the environment
-        # (e.g. for a local Floci/LocalStack emulator), pass it via client_kwargs so
-        # s3fs receives it correctly.  Do NOT pass cache_type here — older s3fs versions
-        # forward unknown kwargs to the boto3 client constructor, causing a TypeError.
-        endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
-        if endpoint_url:
-            storage_options = {"client_kwargs": {"endpoint_url": endpoint_url}}
-    # A frame is a few reads spread over the file, so a small read cache keeps opening
-    # a remote recording fast. A large one would fetch tens of megabytes per read.
-    reader = McapFileReader(uri, storage_options=storage_options, read_pattern=ReadPattern.RANDOM)
-    cache[uri] = reader
-    while len(cache) > _READER_CACHE_SIZE:
-        _, evicted = cache.popitem(last=False)
-        evicted.close()
-    return reader
 
 
 def get_camera_frame(  # noqa: PLR0913
@@ -119,7 +74,7 @@ def get_camera_frame(  # noqa: PLR0913
     if recording is None or recording.dataset_id != dataset_id:
         return None
 
-    reader = _get_cached_reader(recording.uri)
+    reader = get_cached_reader(recording.uri)
     nearest = reader.get_decoded_message_at(
         channel_id=channel_id, timestamp_ns=keyframe_timestamp_ns
     )

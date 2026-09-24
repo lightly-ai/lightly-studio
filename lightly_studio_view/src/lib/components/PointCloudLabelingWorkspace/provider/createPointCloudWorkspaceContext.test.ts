@@ -11,6 +11,16 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
         refetch: vi.fn()
     })
 }));
+vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
+    useTickDetails: () => ({
+        tickDetails: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+    })
+}));
+vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
+    useCloudPointFrame: () => ({
+        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+    })
+}));
 
 const renderProvider = () => {
     let result:

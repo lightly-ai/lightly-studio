@@ -16,7 +16,7 @@
             batch: { control: false },
             colorMode: {
                 control: 'select',
-                options: ['none', 'intensity', 'height']
+                options: ['none', 'intensity', 'height', 'rgb']
             },
             pointSize: { control: { type: 'range', min: 1, max: 10, step: 0.5 } },
             intensityRange: { control: false }
