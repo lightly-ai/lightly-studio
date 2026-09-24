@@ -28,8 +28,13 @@ class TickChannelView(BaseModel):
     """MCAP seek locator for one component of a tick."""
 
     channel_id: int = Field(description="The MCAP channel id, unique within the recording.")
-    log_time_ns: int = Field(description="Log time of the message, in nanoseconds.")
-    keyframe_log_time_ns: int | None = Field(
+    group_component_name: str = Field(
+        description="Component name of the channel, e.g. `front` or `pcl_front`."
+    )
+    # Nanosecond log times exceed 2**53, so they are serialized as strings to survive a
+    # round-trip through a JavaScript `number` (see McapGroupSequence.keyframe_log_time_ns).
+    log_time_ns: str = Field(description="Log time of the message, in nanoseconds.")
+    keyframe_log_time_ns: str | None = Field(
         default=None,
         description=(
             "Log time of the keyframe to seek to before decoding. `None` for non-video channels."
@@ -37,12 +42,15 @@ class TickChannelView(BaseModel):
     )
 
     @classmethod
-    def from_mcap_table(cls, mcap: McapTable) -> TickChannelView:
-        """Build from a McapTable row."""
+    def from_mcap_table(cls, mcap: McapTable, group_component_name: str) -> TickChannelView:
+        """Build from a McapTable row and its component name."""
         return cls(
             channel_id=mcap.channel_id,
-            log_time_ns=mcap.log_time_ns,
-            keyframe_log_time_ns=mcap.keyframe_log_time_ns,
+            group_component_name=group_component_name,
+            log_time_ns=str(mcap.log_time_ns),
+            keyframe_log_time_ns=(
+                None if mcap.keyframe_log_time_ns is None else str(mcap.keyframe_log_time_ns)
+            ),
         )
 
 

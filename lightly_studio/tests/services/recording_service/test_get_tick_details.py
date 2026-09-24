@@ -57,10 +57,12 @@ def test_get_tick_details(db_session: Session) -> None:
     assert result.timestamp_ns == 1_000
     assert set(result.channels.keys()) == {"front", "pcl_front"}
     assert result.channels["front"].channel_id == 3
-    assert result.channels["front"].log_time_ns == 1_000
-    assert result.channels["front"].keyframe_log_time_ns == 1_000
+    assert result.channels["front"].group_component_name == "front"
+    assert result.channels["front"].log_time_ns == "1000"
+    assert result.channels["front"].keyframe_log_time_ns == "1000"
     assert result.channels["pcl_front"].channel_id == 7
-    assert result.channels["pcl_front"].log_time_ns == 1_001
+    assert result.channels["pcl_front"].group_component_name == "pcl_front"
+    assert result.channels["pcl_front"].log_time_ns == "1001"
     assert result.channels["pcl_front"].keyframe_log_time_ns is None
 
 
