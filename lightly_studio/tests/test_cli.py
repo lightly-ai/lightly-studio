@@ -244,6 +244,7 @@ def test_quickstart__second_run_without_force_download_does_not_duplicate_or_cra
 def test_quickstart_enterprise(mocker: MockerFixture, mock_track: MagicMock) -> None:
     mock_connect = mocker.patch.object(lightly_studio, attribute="connect")
     mock_dataset = mocker.MagicMock()
+    mock_dataset.query.return_value.to_list.return_value = []
     mocker.patch.object(
         lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
     )
@@ -269,6 +270,7 @@ def test_quickstart_enterprise__with_api_key(
     monkeypatch.delenv("LIGHTLY_STUDIO_TOKEN", raising=False)
     mock_connect = mocker.patch.object(lightly_studio, attribute="connect")
     mock_dataset = mocker.MagicMock()
+    mock_dataset.query.return_value.to_list.return_value = []
     mocker.patch.object(
         lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
     )
@@ -281,6 +283,24 @@ def test_quickstart_enterprise__with_api_key(
     mock_connect.assert_called_once_with(
         api_url="http://10.0.0.5:8100", token=None, api_key="my-key"
     )
+
+
+def test_quickstart_enterprise__already_seeded(mocker: MockerFixture) -> None:
+    mocker.patch.object(lightly_studio, attribute="connect")
+    mock_dataset = mocker.MagicMock()
+    mock_dataset.query.return_value.to_list.return_value = [mocker.MagicMock()]
+    mocker.patch.object(
+        lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        cli=cli.main,
+        args=["quickstart-enterprise", "--api-url", "http://10.0.0.5:8100", "--token", "my-token"],
+    )
+    assert result.exit_code == 0
+    assert "already seeded" in result.output
+    mock_dataset.add_images_from_path.assert_not_called()
+    mock_dataset.add_annotations_from_coco.assert_not_called()
 
 
 def _mock_quickstart_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:

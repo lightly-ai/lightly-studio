@@ -110,6 +110,9 @@ def quickstart_enterprise(api_url: str | None, token: str | None, api_key: str |
 
     lightly_studio.connect(api_url=api_url, token=token, api_key=api_key)
     dataset = lightly_studio.ImageDataset.load_or_create(name="example-coco-128")
+    if dataset.query().to_list():
+        click.echo("Dataset 'example-coco-128' is already seeded, skipping.")
+        return
     dataset.add_images_from_path(path=f"{data_root}/images")
     dataset.add_annotations_from_coco(
         annotations_json=f"{data_root}/instances_train2017.json",
