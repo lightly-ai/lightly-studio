@@ -9,8 +9,7 @@
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
-    import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
-    import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -28,58 +27,50 @@
     interface Props {
         sampleId: string;
         /** Dataset the labeled point-cloud sequence belongs to. */
-        datasetId?: string;
+        datasetId: string;
         /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
-        sequenceId?: string;
+        sequenceId: string;
+        /** 1-based tick to open on (from the route hash); defaults to the first frame. */
+        tickNumber?: number;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
         /** Overridable for tests/stories; production always starts at `empty` today. */
         status?: 'unsupported' | 'empty' | 'error';
-        onExit: () => void;
+        onExit?: () => void;
         onRetry?: () => void;
     }
 
     let {
         sampleId,
-        datasetId = '',
-        sequenceId = '',
+        datasetId,
+        sequenceId,
+        tickNumber = 1,
         sourcePath = [],
-        status = 'empty',
-        onExit,
+        status,
+        onExit = () => undefined,
         onRetry
     }: Props = $props();
 
-    let selectedCuboidId = $state<string | null>(null);
-
-    // Placeholder ruler until browser-side MCAP frame loading lands (child issues of LIG-10657).
-    const placeholderTicks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
-        seq_number: index,
-        timestamp_ns: null
+    const workspace = createPointCloudWorkspaceContext(() => ({
+        datasetId,
+        sequenceId,
+        // The hash tick is 1-based; the transport tracks 0-based seq numbers.
+        initialTick: tickNumber - 1,
+        statusOverride: status
     }));
 
-    // Local transport state until real frame playback lands with MCAP loading.
-    let currentTick = $state(0);
-    let isPlaying = $state(false);
-
-    const goToPreviousFrame = () => {
-        if (currentTick > 0) currentTick -= 1;
-    };
-    const goToNextFrame = () => {
-        if (currentTick < placeholderTicks.length - 1) currentTick += 1;
-    };
-    const togglePlayback = () => {
-        isPlaying = !isPlaying;
-    };
+    let selectedCuboidId = $state<string | null>(null);
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
 
     // Channel data lands with browser-side MCAP loading (later child issues of LIG-10657); until
     // then the filter bar renders empty but its selection state is already owned here.
-    let lidarChannels = $state<ChannelSummaryView[]>([]);
-    let cameraChannels = $state<ChannelSummaryView[]>([]);
     let selectedLidarChannels = $state<number[]>([]);
     let selectedCameraChannels = $state<number[]>([]);
+
+    const lidarChannels = $derived(workspace.lidarChannels);
+    const cameraChannels = $derived(workspace.cameraChannels);
 
     const toggleChannel = (selected: number[], channelId: number): number[] =>
         selected.includes(channelId)
@@ -128,8 +119,12 @@
             (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
     />
     <div class="flex min-h-0 flex-1">
-        {#if status === 'unsupported' || status === 'error'}
-            <WorkspaceStatusPanel {status} {onRetry} {onExit} />
+        {#if workspace.status === 'unsupported' || workspace.status === 'error'}
+            <WorkspaceStatusPanel
+                status={workspace.status}
+                onRetry={onRetry ?? workspace.retry}
+                {onExit}
+            />
         {:else}
             <PaneGroup direction="horizontal" class="min-h-0 flex-1">
                 <Pane defaultSize={78} minSize={50} class="flex min-h-0 flex-col">
@@ -137,8 +132,8 @@
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
                             <ToolRail />
-                            {#if status === 'empty'}
-                                <WorkspaceStatusPanel status="empty" {onExit} />
+                            {#if workspace.status === 'empty' || workspace.status === 'loading'}
+                                <WorkspaceStatusPanel status={workspace.status} {onExit} />
                             {:else}
                                 <SceneViewport />
                             {/if}
@@ -159,7 +154,7 @@
                             <CameraProjectionStrip
                                 {datasetId}
                                 {sequenceId}
-                                seqNumber={currentTick}
+                                seqNumber={workspace.currentTick}
                                 {cameraChannels}
                             />
                         </Pane>
@@ -176,12 +171,12 @@
                         </PaneResizer>
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
                             <FrameTimeline
-                                ticks={placeholderTicks}
-                                {currentTick}
-                                {isPlaying}
-                                onPreviousFrame={goToPreviousFrame}
-                                onNextFrame={goToNextFrame}
-                                onPlayToggle={togglePlayback}
+                                ticks={workspace.ticks}
+                                currentTick={workspace.currentTick}
+                                isPlaying={workspace.isPlaying}
+                                onPreviousFrame={workspace.goToPreviousFrame}
+                                onNextFrame={workspace.goToNextFrame}
+                                onPlayToggle={workspace.togglePlayback}
                             />
                         </Pane>
                     </PaneGroup>

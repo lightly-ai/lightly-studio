@@ -79,6 +79,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@lightly-ai/slic": "0.3.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.9",

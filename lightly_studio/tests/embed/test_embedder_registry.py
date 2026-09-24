@@ -246,6 +246,32 @@ class TestEmbedderRegistry:
         assert embedder is registered
         build_remote.assert_not_called()
 
+    def test_get_text_embedder__config_serves_capability_registration_lacks(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        registered = _FakeImageEmbedder(space_key="space-a")
+        registry.register(embedder=registered)
+        remote = _FakeTextImageEmbedder(space_key="space-a")
+        mocker.patch.object(embedder_config, "build_remote", return_value=remote)
+        config = _config(space_key="space-a", url="http://first.test")
+
+        assert registry.get_text_embedder(config=config) is remote
+        assert registry.get_image_path_embedder(config=config) is registered
+
+    def test_get_text_embedder__registration_lacking_capability_without_config(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"))
+        build_remote = mocker.patch.object(embedder_config, "build_remote")
+        load_builtin = mocker.patch.object(embedder_registry, "_load_builtin_embedder")
+
+        assert registry.get_text_embedder(space_key="space-a") is None
+        assert registry.get_text_embedder(config=_config(space_key="space-a")) is None
+        build_remote.assert_not_called()
+        load_builtin.assert_not_called()
+
     def test_get_text_embedder__config_wins_over_loaded_builtin(
         self, mocker: MockerFixture
     ) -> None:

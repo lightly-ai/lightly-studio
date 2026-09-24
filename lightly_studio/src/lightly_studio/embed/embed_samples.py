@@ -349,8 +349,8 @@ def _get_query_image_embedder(
     Args:
         registry: The registry the embedder is resolved from.
         space_key: The embedding space to resolve, or None for the registry default.
-        config: The stored configuration of the space, used when no embedder is registered
-            for it. Its URL also disables the path step.
+        config: The stored configuration of the space, used only when no embedder
+            registered for it implements the capability. Its URL also disables the path step.
 
     Returns:
         The space's image embedder, or None if the space has no embedder for an upload.

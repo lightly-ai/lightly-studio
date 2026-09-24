@@ -67,7 +67,8 @@ class EmbedderRegistry:
     for preselected capabilities. Bootstraps are updated when a custom embedder is registered.
 
     Calling a getter with the stored ``config`` of a space adds a third source, and the
-    three rank: a registration wins over a configuration, which wins over a built-in.
+    three rank per capability: a registration wins for the capabilities it implements,
+    a configuration wins over a built-in.
     A registration is process-global and keyed on the space alone, while a configured
     embedder is cached per dataset, because the same space key in two datasets can name
     two backends.
@@ -200,8 +201,8 @@ class EmbedderRegistry:
             space_key: The space to resolve. None selects the bootstrap space of the
                 capability, and a ``config`` names its own space.
             capability: The capability the caller needs. It selects the bootstrap space.
-            config: The stored configuration of the space, used only when no embedder is
-                registered for it.
+            config: The stored configuration of the space, used only when no embedder
+                registered for it implements the capability.
 
         Returns:
             The embedder of the space, or None if no source has one.
@@ -215,7 +216,9 @@ class EmbedderRegistry:
                 space_key = self._bootstrap_spaces.get(capability)
             if space_key is None:
                 return None
-            embedder = self._cached_embedder(space_key=space_key, config=config)
+            embedder = self._cached_embedder(
+                space_key=space_key, capability=capability, config=config
+            )
             if embedder is not None:
                 return embedder
             if config is not None and self._failed_recently(config=config):
@@ -225,7 +228,9 @@ class EmbedderRegistry:
             )
         with build_lock:
             with self._lock:
-                embedder = self._cached_embedder(space_key=space_key, config=config)
+                embedder = self._cached_embedder(
+                    space_key=space_key, capability=capability, config=config
+                )
                 if embedder is not None:
                     return embedder
                 if config is not None and self._failed_recently(config=config):
@@ -235,16 +240,21 @@ class EmbedderRegistry:
             else:
                 self._build_builtin(space_key=space_key)
         with self._lock:
-            return self._cached_embedder(space_key=space_key, config=config)
+            return self._cached_embedder(space_key=space_key, capability=capability, config=config)
 
-    def _cached_embedder(self, space_key: str, config: EmbedderConfig | None) -> Embedder | None:
+    def _cached_embedder(
+        self, space_key: str, capability: Capability, config: EmbedderConfig | None
+    ) -> Embedder | None:
         """Get the embedder the caches hold for the space, or None. Needs ``_lock``.
 
-        A configuration is served only by the embedder built from that same configuration,
+        A registration that lacks the capability gives way to a configuration. A
+        configuration is served only by the embedder built from that same configuration,
         so a changed URL or a rotated key misses.
         """
         registered = self._space_key_to_embedder.get(space_key)
-        if registered is not None:
+        if registered is not None and (
+            config is None or isinstance(registered, _CAPABILITY_TO_TYPE[capability])
+        ):
             return registered
         if config is None:
             return self._space_key_to_builtin.get(space_key)
