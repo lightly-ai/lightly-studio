@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import av
 import cv2
 import numpy as np
 import pytest
@@ -119,6 +120,12 @@ def test_score_video_quality__and_store_metadata(db_session: Session, tmp_path: 
     assert metadata_resolver.get_value_for_sample(
         session=db_session, sample_id=video.sample_id, key=video_quality.MOTION_SCORE_KEY
     ) == pytest.approx(scores.motion_score)
+    assert metadata_resolver.get_value_for_sample(
+        session=db_session, sample_id=video.sample_id, key=video_quality.SHAKE_SCORE_KEY
+    ) == pytest.approx(scores.shake_score)
+    assert metadata_resolver.get_value_for_sample(
+        session=db_session, sample_id=video.sample_id, key=video_quality.STROBE_SCORE_KEY
+    ) == pytest.approx(scores.strobe_score)
 
 
 def test_compute_and_store_quality_metadata(db_session: Session, tmp_path: Path) -> None:
@@ -163,6 +170,79 @@ def test_score_video_quality__invalid_args() -> None:
         video_quality.score_video_quality("unused.mp4", max_edge=0)
 
 
+def _textured_frame(size: int = 128, seed: int = 0) -> NDArray[np.uint8]:
+    """Non-periodic textured grayscale frame suitable for feature tracking."""
+    rng = np.random.default_rng(seed)
+    noise = rng.integers(0, 256, size=(size, size), dtype=np.uint8)
+    # Soften slightly so corners are stable under small rolls.
+    return cv2.GaussianBlur(noise, (3, 3), 0)
+
+
+def test_camera_shake_score__static_pan_and_jitter() -> None:
+    base = _textured_frame()
+    static_frames = [base for _ in range(8)]
+    # Steady horizontal pan: constant shift each step → near-zero acceleration.
+    pan_frames = [np.roll(base, shift=8 * i, axis=1) for i in range(8)]
+    # Oscillating shifts: handheld-like jitter → high acceleration.
+    jitter_shifts = [0, 12, -10, 14, -12, 10, -8, 11]
+    jitter_frames = [np.roll(base, shift=s, axis=1) for s in jitter_shifts]
+
+    static_score = video_quality.camera_shake_score(static_frames)
+    pan_score = video_quality.camera_shake_score(pan_frames)
+    jitter_score = video_quality.camera_shake_score(jitter_frames)
+
+    assert static_score == pytest.approx(0.0, abs=0.5)
+    assert pan_score < 1.0
+    assert jitter_score > pan_score * 5
+    assert jitter_score > video_quality.DEFAULT_SHAKE_SCORE_HIGH_MIN
+
+
+def test_camera_shake_score__too_few_frames() -> None:
+    assert video_quality.camera_shake_score([_textured_frame(), _textured_frame()]) == 0.0
+
+
+def test_camera_shake_score_from_bursts__uses_max() -> None:
+    base = _textured_frame()
+    steady = [np.roll(base, shift=4 * i, axis=1) for i in range(6)]
+    jitter_shifts = [0, 15, -12, 14, -11, 13]
+    jitter = [np.roll(base, shift=s, axis=1) for s in jitter_shifts]
+    score = video_quality.camera_shake_score_from_bursts([steady, jitter])
+    assert score == pytest.approx(video_quality.camera_shake_score(jitter))
+
+
+def test_strobe_metrics__static_frames() -> None:
+    metrics = video_quality.strobe_metrics([_uniform_frame(100) for _ in range(4)])
+
+    assert metrics.score == 0.0
+    assert metrics.brightness_change_mean == 0.0
+
+
+def test_strobe_metrics__steady_brightness_change_is_not_strobing() -> None:
+    metrics = video_quality.strobe_metrics([_uniform_frame(value) for value in (100, 120, 140)])
+
+    assert metrics.score == 0.0
+    assert metrics.brightness_change_mean == pytest.approx(20.0 / 255.0)
+
+
+def test_strobe_metrics__alternating_brightness() -> None:
+    metrics = video_quality.strobe_metrics(
+        [_uniform_frame(value) for value in (100, 120, 100, 120)]
+    )
+
+    assert metrics.score == pytest.approx(20.0 / 255.0)
+    assert metrics.brightness_change_mean == pytest.approx(20.0 / 255.0)
+
+
+def test_strobe_metrics_from_bursts__keeps_values_from_worst_burst() -> None:
+    strobing = [_uniform_frame(value) for value in (100, 140, 100, 140)]
+    steady_change = [_uniform_frame(value) for value in (0, 100, 200)]
+
+    metrics = video_quality.strobe_metrics_from_bursts([steady_change, strobing])
+
+    assert metrics.score == pytest.approx(40.0 / 255.0)
+    assert metrics.brightness_change_mean == pytest.approx(40.0 / 255.0)
+
+
 def test_scores_to_metadata_keys() -> None:
     scores = video_quality.VideoQualityScores(
         blur_score=1.0,
@@ -171,6 +251,9 @@ def test_scores_to_metadata_keys() -> None:
         overexposure_ratio=0.2,
         lighting_score=0.3,
         motion_score=4.0,
+        shake_score=5.0,
+        strobe_score=0.1,
+        strobe_brightness_change_mean=0.2,
     )
     meta = video_quality.scores_to_metadata(scores)
     assert set(meta) == {
@@ -180,4 +263,150 @@ def test_scores_to_metadata_keys() -> None:
         video_quality.OVEREXPOSURE_RATIO_KEY,
         video_quality.LIGHTING_SCORE_KEY,
         video_quality.MOTION_SCORE_KEY,
+        video_quality.SHAKE_SCORE_KEY,
+        video_quality.STROBE_SCORE_KEY,
+        video_quality.STROBE_BRIGHTNESS_CHANGE_MEAN_KEY,
     }
+
+
+def _av_frame(gray: NDArray[np.uint8]) -> av.VideoFrame:
+    """Wrap a grayscale array in an AV frame, as the decoder would hand it over."""
+    rgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+    return av.VideoFrame.from_ndarray(rgb, format="rgb24")
+
+
+def _uniform_frame(value: int, size: int = 64) -> NDArray[np.uint8]:
+    return np.full((size, size), value, dtype=np.uint8)
+
+
+class TestVideoQualityAccumulator:
+    def test_init__invalid_duration(self) -> None:
+        with pytest.raises(ValueError, match="duration_s"):
+            video_quality.VideoQualityAccumulator(duration_s=0.0, fps=10.0)
+
+    def test_init__invalid_sampling(self) -> None:
+        with pytest.raises(ValueError, match="num_frames"):
+            video_quality.VideoQualityAccumulator(duration_s=1.0, fps=10.0, num_frames=0)
+
+    def test_finalize__no_frames(self) -> None:
+        accumulator = video_quality.VideoQualityAccumulator(duration_s=10.0, fps=1.0)
+        assert accumulator.finalize() is None
+
+    def test_add_frame__collects_uniformly_spaced_targets(self) -> None:
+        # 10 frames one second apart; 5 uniform targets land on 0s, 2s, 4s, 6s and 8s.
+        accumulator = video_quality.VideoQualityAccumulator(
+            duration_s=10.0,
+            fps=1.0,
+            num_frames=5,
+            max_edge=64,
+            shake_sampling=video_quality.ShakeSamplingConfig(num_bursts=1, frames_per_burst=3),
+        )
+        for index in range(10):
+            accumulator.add_frame(
+                timestamp_s=float(index),
+                frame=_av_frame(_uniform_frame(value=index * 20)),
+            )
+
+        scores = accumulator.finalize()
+        assert scores is not None
+        # Mean of the frames at the target timestamps: 0, 40, 80, 120 and 160.
+        assert scores.brightness_mean == pytest.approx(80.0, abs=1.0)
+
+    def test_add_frame__repeats_frame_when_fewer_frames_than_targets(self) -> None:
+        # A single frame satisfies every target, matching seek-based sampling.
+        accumulator = video_quality.VideoQualityAccumulator(
+            duration_s=10.0,
+            fps=1.0,
+            num_frames=4,
+            max_edge=64,
+            shake_sampling=video_quality.ShakeSamplingConfig(num_bursts=1, frames_per_burst=3),
+        )
+        accumulator.add_frame(timestamp_s=9.0, frame=_av_frame(_uniform_frame(value=100)))
+
+        scores = accumulator.finalize()
+        assert scores is not None
+        assert scores.brightness_mean == pytest.approx(100.0, abs=1.0)
+        # Repeated identical frames mean no motion.
+        assert scores.motion_score == pytest.approx(0.0)
+
+    def test_add_frame__burst_scores_shake_from_consecutive_frames(self) -> None:
+        base = _textured_frame(size=64)
+        jitter_shifts = [0, 12, -10, 14, -12, 10]
+        accumulator = video_quality.VideoQualityAccumulator(
+            duration_s=6.0,
+            fps=1.0,
+            num_frames=2,
+            max_edge=64,
+            shake_sampling=video_quality.ShakeSamplingConfig(
+                num_bursts=1, frames_per_burst=len(jitter_shifts)
+            ),
+        )
+        for index, shift in enumerate(jitter_shifts):
+            accumulator.add_frame(
+                timestamp_s=float(index),
+                frame=_av_frame(np.roll(base, shift=shift, axis=1)),
+            )
+
+        scores = accumulator.finalize()
+        assert scores is not None
+        assert scores.shake_score > video_quality.DEFAULT_SHAKE_SCORE_HIGH_MIN
+
+    def test_add_frame__static_video_is_not_shaky(self) -> None:
+        base = _textured_frame(size=64)
+        accumulator = video_quality.VideoQualityAccumulator(
+            duration_s=6.0,
+            fps=1.0,
+            num_frames=2,
+            max_edge=64,
+            shake_sampling=video_quality.ShakeSamplingConfig(num_bursts=1, frames_per_burst=6),
+        )
+        for index in range(6):
+            accumulator.add_frame(timestamp_s=float(index), frame=_av_frame(base))
+
+        scores = accumulator.finalize()
+        assert scores is not None
+        assert scores.shake_score == pytest.approx(0.0, abs=0.5)
+
+    def test_add_frame__burst_scores_strobing_from_consecutive_frames(self) -> None:
+        values = [100, 120, 100, 120, 100, 120]
+        accumulator = video_quality.VideoQualityAccumulator(
+            duration_s=6.0,
+            fps=1.0,
+            num_frames=2,
+            max_edge=64,
+            shake_sampling=video_quality.ShakeSamplingConfig(
+                num_bursts=1, frames_per_burst=len(values)
+            ),
+        )
+        for index, value in enumerate(values):
+            accumulator.add_frame(
+                timestamp_s=float(index),
+                frame=_av_frame(_uniform_frame(value=value)),
+            )
+
+        scores = accumulator.finalize()
+
+        assert scores is not None
+        assert scores.strobe_score == pytest.approx(20.0 / 255.0)
+        assert scores.strobe_brightness_change_mean == pytest.approx(20.0 / 255.0)
+
+    def test_finalize__keeps_partial_trailing_burst(self) -> None:
+        base = _textured_frame(size=64)
+        jitter_shifts = [0, 12, -10, 14]
+        accumulator = video_quality.VideoQualityAccumulator(
+            duration_s=4.0,
+            fps=1.0,
+            num_frames=2,
+            max_edge=64,
+            # The video ends before the burst is full.
+            shake_sampling=video_quality.ShakeSamplingConfig(num_bursts=1, frames_per_burst=10),
+        )
+        for index, shift in enumerate(jitter_shifts):
+            accumulator.add_frame(
+                timestamp_s=float(index),
+                frame=_av_frame(np.roll(base, shift=shift, axis=1)),
+            )
+
+        scores = accumulator.finalize()
+        assert scores is not None
+        assert scores.shake_score > 0.0
