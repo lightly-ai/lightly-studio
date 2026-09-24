@@ -6,12 +6,13 @@ the remote server.
 
 from __future__ import annotations
 
+import io
 import threading
 from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
-from lightly_studio_serve.embedder import ImagePathEmbedder, TextEmbedder
+from lightly_studio_serve.embedder import ImageBytesEmbedder, ImagePathEmbedder, TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from PIL import Image
 
@@ -36,8 +37,8 @@ class ColorImagePathEmbedder(ImagePathEmbedder):
         return _result(rows=[_mean_color(image=Image.open(path)) for path in paths])
 
 
-class ColorQueryEmbedder(TextEmbedder):
-    """Embeds a color name for search, and counts the embed calls.
+class ColorQueryEmbedder(TextEmbedder, ImageBytesEmbedder):
+    """Embeds a color name or an image file for search, and counts the embed calls.
 
     A server calls the embedder from more than one thread, so a lock guards the count.
     A text that is not a color name is skipped.
@@ -49,7 +50,7 @@ class ColorQueryEmbedder(TextEmbedder):
 
     @property
     def call_count(self) -> int:
-        """The number of embed calls so far."""
+        """The number of embed calls so far, text and image together."""
         with self._lock:
             return self._call_count
 
@@ -59,6 +60,10 @@ class ColorQueryEmbedder(TextEmbedder):
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         self._count()
         return _result(rows=[_color_name_vector(text=text) for text in texts])
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        self._count()
+        return _result(rows=[_mean_color(image=Image.open(io.BytesIO(image))) for image in images])
 
     def _count(self) -> None:
         with self._lock:
