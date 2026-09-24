@@ -14,6 +14,7 @@ from uuid import UUID
 
 import httpx
 from lightly_studio_serve.embedder import Embedder
+from lightly_studio_serve.types import EmbeddingSpaceSpec
 
 from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
@@ -77,31 +78,76 @@ def build_remote(config: EmbedderConfig) -> Embedder:
         raise RemoteEmbedderConfigError(
             f"The configuration of space {config.space_key!r} names no embedding server."
         )
-    _check_url(url=config.url, space_key=config.space_key)
+    client = _build_client(url=config.url)
     try:
-        client = connection.build_client(url=config.url)
-    except httpx.InvalidURL as error:
-        raise RemoteEmbedderConfigError(
-            f"The embedding server URL {config.url!r} of space {config.space_key!r} does not parse."
-        ) from error
-    try:
-        embedder = RemoteEmbedder.connect(client=client, api_key=config.api_key)
-        _check_identity(embedder=embedder, config=config)
-    except ValueError as error:
-        # `url_policy` refuses an address outside the policy with a `ValueError`, which says
-        # nothing to a caller that branches on the errors of this package.
-        client.close()
-        raise RemoteEmbedderConfigError(
-            f"The embedding server URL {config.url!r} of space {config.space_key!r} is refused: "
-            f"{error}"
-        ) from error
+        embedder = _connect(client=client, url=config.url, api_key=config.api_key)
+        check_identity(spec=embedder.embedding_space_spec(), config=config)
     except Exception:
         client.close()
         raise
     return embedder
 
 
-def _check_url(url: str, space_key: str) -> None:
+def describe_remote(url: str, api_key: str | None) -> EmbeddingSpaceSpec:
+    """Read the embedding space that the server at ``url`` produces.
+
+    Raises:
+        RemoteEmbedderError: For the same causes as ``build_remote``, except a space mismatch.
+    """
+    client = _build_client(url=url)
+    try:
+        return _connect(client=client, url=url, api_key=api_key).embedding_space_spec()
+    finally:
+        client.close()
+
+
+def check_identity(spec: EmbeddingSpaceSpec, config: EmbedderConfig) -> None:
+    """Refuse a server that produces another space than the stored one.
+
+    A mismatch reads like an unreachable server to the caller, which serves the space
+    without an embedder instead of failing a request that nobody can answer.
+
+    Raises:
+        RemoteEmbedderConfigError: If the space key or the dimension of the server differs
+            from the stored one.
+    """
+    if spec.space_key != config.space_key or spec.dimension != config.dimension:
+        raise RemoteEmbedderConfigError(
+            f"The embedding server at {config.url!r} produces {spec.space_key!r} with dimension "
+            f"{spec.dimension}. The configuration names {config.space_key!r} with dimension "
+            f"{config.dimension}."
+        )
+
+
+def _build_client(url: str) -> httpx.Client:
+    """Open a client against ``url``.
+
+    Raises:
+        RemoteEmbedderConfigError: If the URL does not parse, or is not one that a request
+            can reach.
+    """
+    _check_url(url=url)
+    try:
+        return connection.build_client(url=url)
+    except httpx.InvalidURL as error:
+        raise RemoteEmbedderConfigError(
+            f"The embedding server URL {url!r} does not parse."
+        ) from error
+
+
+def _connect(client: httpx.Client, url: str, api_key: str | None) -> Embedder:
+    """Read ``/v1/describe`` over ``client`` and build the embedder that answers."""
+    try:
+        return RemoteEmbedder.connect(client=client, api_key=api_key)
+    except ValueError as error:
+        # `url_policy` refuses an address outside the policy with a `ValueError`, which says
+        # nothing to a caller that branches on the errors of this package.
+        raise RemoteEmbedderConfigError(
+            f"The embedding server URL {url!r} is refused: {error}"
+        ) from error
+
+
+def _check_url(url: str) -> None:
     """Refuse a URL that builds a client but reaches no server.
 
     Raises:
@@ -118,25 +164,5 @@ def _check_url(url: str, space_key: str) -> None:
         scheme, host = "", None
     if scheme not in _URL_SCHEMES or not host:
         raise RemoteEmbedderConfigError(
-            f"The embedding server URL {url!r} of space {space_key!r} is not an http or https "
-            f"address with a host."
-        )
-
-
-def _check_identity(embedder: Embedder, config: EmbedderConfig) -> None:
-    """Refuse a server that produces another space than the stored one.
-
-    A mismatch reads like an unreachable server to the caller, which serves the space
-    without an embedder instead of failing a request that nobody can answer.
-
-    Raises:
-        RemoteEmbedderConfigError: If the space key or the dimension of the server differs
-            from the stored one.
-    """
-    spec = embedder.embedding_space_spec()
-    if spec.space_key != config.space_key or spec.dimension != config.dimension:
-        raise RemoteEmbedderConfigError(
-            f"The embedding server at {config.url!r} produces {spec.space_key!r} with dimension "
-            f"{spec.dimension}. The configuration names {config.space_key!r} with dimension "
-            f"{config.dimension}."
+            f"The embedding server URL {url!r} is not an http or https address with a host."
         )

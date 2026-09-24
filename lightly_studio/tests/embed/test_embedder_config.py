@@ -94,6 +94,35 @@ def test_build_remote__dimension_mismatch(mocker: MockerFixture) -> None:
         assert serving.is_closed
 
 
+def test_describe_remote(mocker: MockerFixture) -> None:
+    serving = _serving(embedder=_ServerEmbedder(), mocker=mocker)
+
+    with serving:
+        spec = embedder_config.describe_remote(url=URL, api_key=None)
+
+        assert serving.is_closed
+    assert spec == EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION)
+
+
+def test_describe_remote__unreachable_url() -> None:
+    with pytest.raises(RemoteEmbedderConfigError, match=r"is not an http or https address"):
+        embedder_config.describe_remote(url="embedder.test", api_key=None)
+
+
+def test_check_identity() -> None:
+    embedder_config.check_identity(
+        spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION), config=_config()
+    )
+
+
+def test_check_identity__dimension_mismatch() -> None:
+    with pytest.raises(RemoteEmbedderConfigError, match=r"dimension 3"):
+        embedder_config.check_identity(
+            spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION + 1),
+            config=_config(),
+        )
+
+
 def test_build_remote__no_url() -> None:
     config = EmbedderConfig(
         dataset_id=uuid.uuid4(), space_key=SPACE_KEY, dimension=DIMENSION, url=None
