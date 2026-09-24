@@ -19,20 +19,7 @@
 <div class="absolute bottom-11 flex w-full justify-center">
     <div
         data-testid="slic-tool-popup"
-        class="
-      pointer-events-auto
-      flex
-      w-[280px]
-      max-w-full
-      select-none
-      flex-col
-      items-stretch
-      gap-2
-      rounded-lg
-      bg-muted
-      p-2
-      shadow-md
-    "
+        class="pointer-events-auto flex w-[280px] max-w-full select-none flex-col items-stretch gap-2 rounded-lg bg-muted p-2 shadow-md"
     >
         <div class="text-left">
             <h3 class="text-sm font-semibold text-foreground">AI-Assisted labeling</h3>
@@ -44,6 +31,7 @@
             <div class="grid grid-cols-3 gap-1">
                 {#each orderedLevels as level}
                     <Button
+                        aria-pressed={sampleDetailsToolbarContext.slic.level === level}
                         variant={sampleDetailsToolbarContext.slic.level === level
                             ? 'default'
                             : 'outline'}
@@ -63,10 +51,12 @@
                     >Could not compute superpixels. Try another size or reopen the tool.</span
                 >
             {:else}
-                <span class="font-medium text-foreground">
+                <span role="status" class="font-medium text-foreground">
                     {sampleDetailsToolbarContext.slic.status === 'computing'
                         ? 'Computing…'
-                        : 'Ready'}
+                        : sampleDetailsToolbarContext.slic.status === 'ready'
+                          ? 'Ready'
+                          : 'Not started'}
                 </span>
             {/if}
         </div>

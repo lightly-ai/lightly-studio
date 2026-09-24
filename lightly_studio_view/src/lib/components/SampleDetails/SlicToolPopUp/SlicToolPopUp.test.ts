@@ -14,12 +14,21 @@ describe('SLIC controls', () => {
     it('lets the user choose the superpixel size', async () => {
         const view = render(SlicToolPopUp);
         await fireEvent.click(view.getByRole('button', { name: 'Fine' }));
+        expect(view.getByRole('button', { name: 'Medium' })).toHaveAttribute(
+            'aria-pressed',
+            'true'
+        );
         expect(setSlicLevel).toHaveBeenCalledWith('fine');
     });
 
-    it('explains how to recover from computation failure', () => {
-        context.slic.status = 'error';
+    it.each([
+        ['idle', 'Not started'],
+        ['computing', 'Computing…'],
+        ['ready', 'Ready'],
+        ['error', 'Could not compute superpixels']
+    ])('displays %s status', (status, label) => {
+        context.slic.status = status;
         const view = render(SlicToolPopUp);
-        expect(view.getByRole('alert')).toHaveTextContent('Could not compute superpixels');
+        expect(view.getByRole(status === 'error' ? 'alert' : 'status')).toHaveTextContent(label);
     });
 });
