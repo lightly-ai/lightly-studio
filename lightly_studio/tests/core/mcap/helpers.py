@@ -137,11 +137,13 @@ float64 w
 )
 
 
-def write_mcap(path: Path) -> Path:
+def write_mcap(path: Path, lidar_stamp_offset_ns: int = 0) -> Path:
     """Writes an indexed MCAP file with a camera, a lidar, and static transforms.
 
     Args:
         path: The path to write the file to.
+        lidar_stamp_offset_ns: Added to each lidar log time to form `header.stamp`.
+            Zero keeps the stamp equal to the log time.
 
     Returns:
         The path of the written file.
@@ -183,7 +185,7 @@ def write_mcap(path: Path) -> Path:
         writer.write_message(
             topic=LIDAR_POINTS_TOPIC,
             schema=point_cloud_schema,
-            message=_point_cloud_message(),
+            message=_point_cloud_message(stamp_ns=log_time_ns + lidar_stamp_offset_ns),
             log_time=log_time_ns,
         )
     writer.finish()
@@ -330,14 +332,15 @@ def write_mcap_with_undecodable_camera_info(path: Path) -> Path:
     return path
 
 
-def write_mcap_with_malformed_json_video(path: Path) -> Path:
+def write_mcap_with_malformed_json_video(path: Path, payload: bytes = b"not valid json") -> Path:
     """Writes an MCAP whose video topic is JSON-encoded with malformed payloads.
 
     The schema name marks the topic as video, and its encoding has a decoder, but
-    the payloads are not valid JSON, so no keyframe can be detected.
+    the payloads are not valid video messages.
 
     Args:
         path: The path to write the file to.
+        payload: The payload of each video message. The default is not valid JSON.
 
     Returns:
         The path of the written file.
@@ -356,7 +359,7 @@ def write_mcap_with_malformed_json_video(path: Path) -> Path:
                 channel_id=channel_id,
                 log_time=log_time_ns,
                 publish_time=log_time_ns,
-                data=b"not valid json",
+                data=payload,
             )
         writer.finish()
     return path
@@ -428,9 +431,9 @@ def _camera_info_message() -> dict[str, Any]:
     }
 
 
-def _point_cloud_message() -> dict[str, Any]:
+def _point_cloud_message(stamp_ns: int) -> dict[str, Any]:
     return {
-        "header": {"stamp": _time(LIDAR_LOG_TIMES_NS[0]), "frame_id": LIDAR_FRAME_ID},
+        "header": {"stamp": _time(stamp_ns), "frame_id": LIDAR_FRAME_ID},
         "height": 1,
         "width": 1,
         "fields": [{"name": "x", "offset": 0, "datatype": 7, "count": 1}],

@@ -23,6 +23,12 @@ See the [Embeddings page](../core_concepts/embeddings.md) for more details.
     options:
         members: [register_default_embedder]
 
+## register_remote_embedder
+
+::: lightly_studio.embed.public_api
+    options:
+        members: [register_remote_embedder]
+
 ## Capability interfaces
 
 An embedder subclasses `Embedder` through one interface per input it can embed.
@@ -64,14 +70,14 @@ Subclass only the capabilities your model provides.
     options:
         members: [TextEmbedder]
 
-<!-- TODO(Michal, 09/2026): Document ImageBytesEmbedder and VideoBytesEmbedder once LightlyStudio
-calls these capabilities.
-
 ### ImageBytesEmbedder
 
 ::: lightly_studio_serve.embedder
     options:
         members: [ImageBytesEmbedder]
+
+<!-- TODO(Michal, 09/2026): Document VideoBytesEmbedder once LightlyStudio calls this
+capability.
 
 ### VideoBytesEmbedder
 

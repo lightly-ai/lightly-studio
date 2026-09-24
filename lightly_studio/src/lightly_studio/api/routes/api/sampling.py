@@ -19,7 +19,7 @@ from lightly_studio.sampling.sampling_config import (
     Strategy,
 )
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
-from lightly_studio.services import sampling_service
+from lightly_studio.services import sampling_metadata, sampling_service
 
 sampling_router = APIRouter()
 
@@ -35,6 +35,7 @@ class SamplingRequest(BaseModel):
     n_samples_to_select: int = Field(gt=0, description="Number of samples to select")
     sampling_result_tag_name: str = Field(min_length=1, description="Name for the result tag")
     strategies: list[Strategy]
+    metadata_computations: list[sampling_metadata.MetadataComputation] = Field(default_factory=list)
     filter: CollectionFilter | None = None
     preselected_tag_id: UUID | None = Field(
         default=None,
@@ -126,5 +127,8 @@ def create_sampling(
         strategies=request.strategies,
         preselected_tag_name=preselected_tag_name,
     )
-    # Perform sampling via database.
+    # Keep preparation and selection in one request so closing the browser cannot skip selection.
+    sampling_metadata.compute_metadata(
+        session=session, collection=collection, computations=request.metadata_computations
+    )
     sampling_via_database(session=session, config=config, input_sample_ids=input_sample_ids)

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
+- Python SDK: Embed search queries on a remote embedding server with `register_remote_embedder`.
+
 ### Changed
 
 - Redesign the embedding plot selection tools as visible, sticky Pan, Rectangle, and Lasso buttons in the GUI.
@@ -19,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Combine typicality and similarity computation and sampling into one backend request that continues if the frontend disconnects.
+- Fix the `Values` field in the distribution panel using a larger font than the other fields.
 - Python SDK: Fix an error when recomputing an instance-segmentation evaluation run.
 
 ### Security

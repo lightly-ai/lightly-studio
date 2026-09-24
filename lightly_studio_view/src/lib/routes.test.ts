@@ -140,27 +140,33 @@ describe('routes', () => {
 
         it('should generate correct point-cloud labeling route', () => {
             const testSampleId = '456';
-            expect(
-                routeHelpers.toPointCloudLabeling({
-                    sampleId: testSampleId,
-                    datasetId: testDatasetId,
-                    collectionId: testCollectionId
-                })
-            ).toBe(`/datasets/${testDatasetId}/point-clouds/${testCollectionId}/${testSampleId}`);
-        });
-
-        it('should generate correct point-cloud labeling route with collection type and group id', () => {
-            const testSampleId = '456';
+            const testSequenceId = 'seq-789';
             expect(
                 routeHelpers.toPointCloudLabeling({
                     sampleId: testSampleId,
                     datasetId: testDatasetId,
                     collectionId: testCollectionId,
+                    sequenceId: testSequenceId
+                })
+            ).toBe(
+                `/datasets/${testDatasetId}/point-clouds/${testCollectionId}/${testSampleId}?sequence_id=${testSequenceId}`
+            );
+        });
+
+        it('should generate correct point-cloud labeling route with collection type and group id', () => {
+            const testSampleId = '456';
+            const testSequenceId = 'seq-789';
+            expect(
+                routeHelpers.toPointCloudLabeling({
+                    sampleId: testSampleId,
+                    datasetId: testDatasetId,
+                    collectionId: testCollectionId,
+                    sequenceId: testSequenceId,
                     collectionType: testCollectionType,
                     groupId: 'group-1'
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/point-clouds/${testCollectionId}/${testSampleId}?collection_type=${testCollectionType}&group_id=group-1`
+                `/datasets/${testDatasetId}/point-clouds/${testCollectionId}/${testSampleId}?sequence_id=${testSequenceId}&collection_type=${testCollectionType}&group_id=group-1`
             );
         });
     });

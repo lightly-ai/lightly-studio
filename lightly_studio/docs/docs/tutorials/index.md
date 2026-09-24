@@ -30,4 +30,10 @@ unlabeled data to a trained and evaluated model.
     [![Explore LightlyTrain Embeddings in LightlyStudio](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov3-tiny-after-distill.png)](lightlytrain-embeddings.md)
 
     Distill a large embedding model into a small one with LightlyTrain, then visualize and curate its embeddings — find clusters and outliers, and select a diverse subset.
+
+-   **[Explore and Annotate Images with Embeddings](imagenette-image-embeddings.md)**
+
+    [![Explore and Annotate Images with Embeddings](https://storage.googleapis.com/lightly-public/studio/docs/embedding_plot_v1.0.4.png)](imagenette-image-embeddings.md)
+
+    Explore Imagenette in the embedding plot, use the lasso and legend to inspect groups of similar images, and annotate them group by group.
 </div>

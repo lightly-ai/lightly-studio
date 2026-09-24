@@ -2,10 +2,28 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
+// The workspace mounts the camera projection strip, which reads the tick details
+// query; stub it so the chrome renders without a live TanStack query client.
+vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
+    useTickDetails: () => ({ tickDetails: { data: undefined } })
+}));
+
+vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
+    useMcapSequenceSummary: () => ({
+        summary: { data: undefined, isLoading: false, isError: false },
+        refetch: vi.fn()
+    })
+}));
+
 describe('PointCloudLabelingWorkspace', () => {
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', onExit: vi.fn() }
+            props: {
+                sampleId: 'sample-1',
+                datasetId: 'dataset-1',
+                sequenceId: 'sequence-1',
+                onExit: vi.fn()
+            }
         });
 
         expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument();
@@ -14,7 +32,7 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-annotation-panel')).toBeInTheDocument();
+        expect(screen.getByTestId('point-cloud-right-side-panel')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
             'empty'
@@ -26,6 +44,8 @@ describe('PointCloudLabelingWorkspace', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
                 sampleId: 'sample-1',
+                datasetId: 'dataset-1',
+                sequenceId: 'sequence-1',
                 sourcePath: [
                     { label: 'Home', href: '/datasets/d1/mcap/d1' },
                     { label: 'Recordings', href: '/datasets/d1/mcap/c1' },
@@ -43,7 +63,12 @@ describe('PointCloudLabelingWorkspace', () => {
 
     it('falls back to the sample id when no source path is given', () => {
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', onExit: vi.fn() }
+            props: {
+                sampleId: 'sample-1',
+                datasetId: 'dataset-1',
+                sequenceId: 'sequence-1',
+                onExit: vi.fn()
+            }
         });
 
         expect(screen.queryByTestId('workspace-breadcrumb')).not.toBeInTheDocument();
@@ -52,7 +77,13 @@ describe('PointCloudLabelingWorkspace', () => {
 
     it('shows the unsupported state and does not render the panel layout', () => {
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', status: 'unsupported', onExit: vi.fn() }
+            props: {
+                sampleId: 'sample-1',
+                datasetId: 'dataset-1',
+                sequenceId: 'sequence-1',
+                status: 'unsupported',
+                onExit: vi.fn()
+            }
         });
 
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
@@ -60,13 +91,20 @@ describe('PointCloudLabelingWorkspace', () => {
             'unsupported'
         );
         expect(screen.queryByTestId('workspace-projection-strip')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('workspace-annotation-panel')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('point-cloud-right-side-panel')).not.toBeInTheDocument();
     });
 
     it('shows a recoverable error state with a retry action', async () => {
         const onRetry = vi.fn();
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', status: 'error', onExit: vi.fn(), onRetry }
+            props: {
+                sampleId: 'sample-1',
+                datasetId: 'dataset-1',
+                sequenceId: 'sequence-1',
+                status: 'error',
+                onExit: vi.fn(),
+                onRetry
+            }
         });
 
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
@@ -80,7 +118,12 @@ describe('PointCloudLabelingWorkspace', () => {
     it('calls onExit when the close button is clicked', () => {
         const onExit = vi.fn();
         render(PointCloudLabelingWorkspace, {
-            props: { sampleId: 'sample-1', onExit }
+            props: {
+                sampleId: 'sample-1',
+                datasetId: 'dataset-1',
+                sequenceId: 'sequence-1',
+                onExit
+            }
         });
 
         screen.getByRole('button', { name: /close labeling workspace/i }).click();
