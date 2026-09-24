@@ -22,7 +22,7 @@ describe('getCameraFrameUrl', () => {
         datasetId: 'dataset-1',
         recordingId: 'recording-1',
         channelId: 3,
-        timestampNs: 1234567890
+        timestampNs: '1234567890'
     };
 
     it("builds the camera-frame URL from the client's base URL and route template", () => {

@@ -12,7 +12,7 @@ const defaultProps = {
     datasetId: 'dataset-1',
     recordingId: 'recording-1',
     channelId: 3,
-    timestampNs: 2000,
+    timestampNs: '2000',
     label: 'front'
 };
 
