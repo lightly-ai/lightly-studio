@@ -119,3 +119,57 @@ class StaticTransform:
     translation: tuple[float, float, float]
     rotation: tuple[float, float, float, float]
     log_time_ns: int
+
+
+@dataclass(frozen=True)
+class CuboidLabel:
+    """A 9-DoF cuboid decoded from one SceneEntity in a SceneUpdate.
+
+    Attributes:
+        timestamp_ns: The lidar sweep time of the frame, in nanoseconds.
+        frame_id: The coordinate frame the pose is expressed in, e.g. `odom`.
+        class_name: The annotation class, e.g. `truck_bed`.
+        track_id: The vendor track id of this box.
+        parent_track_id: The vendor track id of the parent truck, or `None`.
+        interpolated: Whether the box was interpolated between keyframes.
+        position: The cuboid centre as (x, y, z) in metres.
+        rotation: The orientation as a quaternion (x, y, z, w).
+        size: The full extents as (length, width, height) in metres.
+    """
+
+    timestamp_ns: int
+    frame_id: str
+    class_name: str
+    track_id: int
+    parent_track_id: int | None
+    interpolated: bool
+    position: tuple[float, float, float]
+    rotation: tuple[float, float, float, float]
+    size: tuple[float, float, float]
+
+
+@dataclass(frozen=True)
+class FrameTags:
+    """Frame-level tags carried on the metadata-only `id=frame` SceneEntity.
+
+    Attributes:
+        timestamp_ns: The lidar sweep time of the frame, in nanoseconds.
+        tags: Tag names present on the frame, e.g. `lidar_dropout`.
+        note: Free-text note, typically for `ambiguous_object`. `None` if omitted.
+    """
+
+    timestamp_ns: int
+    tags: tuple[str, ...]
+    note: str | None = None
+
+
+@dataclass(frozen=True)
+class SceneUpdateLabels:
+    """The cuboids and optional frame tags decoded from one SceneUpdate message.
+
+    An empty `cuboids` tuple and no `frame_tags` is a valid empty scene. The
+    payload then has no entity timestamp; the caller uses the message log time.
+    """
+
+    cuboids: tuple[CuboidLabel, ...]
+    frame_tags: FrameTags | None = None
