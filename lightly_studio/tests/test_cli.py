@@ -241,7 +241,10 @@ def test_quickstart__second_run_without_force_download_does_not_duplicate_or_cra
     assert len(ground_truth.annotations) == 3
 
 
-def test_quickstart_enterprise(mocker: MockerFixture, mock_track: MagicMock) -> None:
+def test_quickstart_enterprise(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, mock_track: MagicMock
+) -> None:
+    monkeypatch.delenv("LIGHTLY_STUDIO_API_KEY", raising=False)
     mock_connect = mocker.patch.object(lightly_studio, attribute="connect")
     mock_dataset = mocker.MagicMock()
     mock_dataset.query.return_value.to_list.return_value = []
