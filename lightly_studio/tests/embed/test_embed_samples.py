@@ -23,7 +23,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
-from lightly_studio.embed import embed_samples, embedder_registry
+from lightly_studio.embed import default_embedder, embed_samples, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.collection import SampleType
@@ -354,7 +354,7 @@ def test_embed_image_for_collection__path_only_embedder_with_url_raises(
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     spy_temp_dir = mocker.spy(tempfile, "TemporaryDirectory")
 
-    with pytest.raises(ValueError, match="No embedder resolves for"):
+    with pytest.raises(default_embedder.RemoteEmbedderUnavailableError):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,

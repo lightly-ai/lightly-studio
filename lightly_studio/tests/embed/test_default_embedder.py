@@ -12,10 +12,11 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.embed import default_embedder, embedder_registry
+from lightly_studio.embed import default_embedder, embedder_config, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.embed.remote import connection
+from lightly_studio.embed.remote.errors import RemoteEmbedderUnreachableError
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     embedding_model_resolver,
@@ -218,7 +219,9 @@ def test_resolve_query_embedder__no_default_model_raises(
     registry.register(embedder=RandomEmbedder(dimension=3))
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
-    with pytest.raises(ValueError, match=r"no default embedding model"):
+    with pytest.raises(
+        default_embedder.NoDefaultEmbeddingModelError, match=r"no default embedding model"
+    ):
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
@@ -246,11 +249,68 @@ def test_resolve_query_embedder__no_embedder_for_space_raises(
         set_as_default=True,
     )
 
-    with pytest.raises(ValueError, match=r"No embedder resolves for"):
+    with pytest.raises(default_embedder.MissingCapabilityError) as exc_info:
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        )
+    assert exc_info.value.space_key == "random_model"
+
+
+def test_resolve_query_embedder__remote_space_without_capability_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="acme/model@v1",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    model.remote_embedder_url = "http://embedder.test"
+    db_session.add(model)
+    db_session.commit()
+    client = TestClient(server.create_app(embedder=_ServerTextEmbedder()), follow_redirects=False)
+    mocker.patch.object(connection, "build_client", return_value=client)
+
+    # The server is usable, but it embeds only text
+    with pytest.raises(default_embedder.MissingCapabilityError):
+        default_embedder.resolve_query_embedder(
+            session=db_session,
+            collection_id=collection.collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        )
+
+
+def test_resolve_query_embedder__unusable_remote_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="acme/model@v1",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    model.remote_embedder_url = "http://embedder.test"
+    db_session.add(model)
+    db_session.commit()
+    mocker.patch.object(
+        embedder_config, "build_remote", side_effect=RemoteEmbedderUnreachableError("down")
+    )
+
+    with pytest.raises(
+        default_embedder.RemoteEmbedderUnavailableError, match=r"http://embedder.test"
+    ):
+        default_embedder.resolve_query_embedder(
+            session=db_session,
+            collection_id=collection.collection_id,
+            get_embedder_fn=EmbedderRegistry.get_text_embedder,
         )
 
 

@@ -79,8 +79,9 @@ def embed_image_for_collection(
     Raises:
         ImageNotEmbeddedError: If the image bytes do not decode, or the embedder returns no
             embedding for them.
-        ValueError: If the collection has no default embedding model, or no registered
-            embedder matches that model's space.
+        NoDefaultEmbeddingModelError: If the collection has no default embedding model.
+        MissingCapabilityError: If no embedder of that model's space embeds images.
+        RemoteEmbedderUnavailableError: If the embedding server of the space cannot be used.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,
@@ -107,9 +108,10 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
         The embedding as a list of floats.
 
     Raises:
-        ValueError: If the collection has no default embedding model, no registered
-            embedder matches that model's space, or the embedder produced no embedding
-            for the text.
+        NoDefaultEmbeddingModelError: If the collection has no default embedding model.
+        MissingCapabilityError: If no embedder of that model's space embeds text.
+        RemoteEmbedderUnavailableError: If the embedding server of the space cannot be used.
+        ValueError: If the embedder produced no embedding for the text.
     """
     embedder = default_embedder.resolve_query_embedder(
         session=session,

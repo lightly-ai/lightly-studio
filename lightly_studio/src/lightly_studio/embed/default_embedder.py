@@ -25,6 +25,42 @@ logger = logging.getLogger(__name__)
 _EmbedderT = TypeVar("_EmbedderT", bound=Embedder)
 
 
+class NoDefaultEmbeddingModelError(ValueError):
+    """Raised when a query targets a collection with no default embedding model."""
+
+
+class MissingCapabilityError(ValueError):
+    """Raised when no embedder of the default embedding space has the queried capability.
+
+    Attributes:
+        space_key: The default embedding space of the collection.
+    """
+
+    def __init__(self, space_key: str) -> None:
+        """Create the error for the embedding space ``space_key``."""
+        super().__init__(
+            f"No embedder resolves for the collection's default embedding space {space_key!r}."
+        )
+        self.space_key = space_key
+
+
+class RemoteEmbedderUnavailableError(ValueError):
+    """Raised when the embedding server of the default embedding space cannot be used.
+
+    The server is unreachable, rejects the token, or fails the identity check.
+
+    Attributes:
+        space_key: The default embedding space of the collection.
+    """
+
+    def __init__(self, space_key: str, url: str) -> None:
+        """Create the error for the server at ``url`` that serves ``space_key``."""
+        super().__init__(
+            f"The embedding server at {url!r} for the embedding space {space_key!r} cannot be used."
+        )
+        self.space_key = space_key
+
+
 def resolve_default_embedder(
     session: Session,
     collection_id: UUID,
@@ -105,23 +141,27 @@ def resolve_query_embedder(
         The embedder for the collection's default embedding space.
 
     Raises:
-        ValueError: If the collection has no default embedding model, no embedder resolves
-            for that model's space, or the embedder's dimension does not match the space's
-            stored dimension (a wrongly registered embedder).
+        NoDefaultEmbeddingModelError: If the collection has no default embedding model.
+        RemoteEmbedderUnavailableError: If the embedding server of the space cannot be used.
+        MissingCapabilityError: If no embedder of the space has the needed capability.
+        ValueError: If the embedder's dimension does not match the space's stored dimension
+            (a wrongly registered embedder).
     """
     default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection_id
     )
     if default_model is None:
-        raise ValueError("The collection has no default embedding model.")
+        raise NoDefaultEmbeddingModelError("The collection has no default embedding model.")
 
     embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
-    if embedder is None:
-        raise ValueError(
-            f"No embedder resolves for the collection's default embedding space "
-            f"{default_model.name!r}."
-        )
-    return embedder
+    if embedder is not None:
+        return embedder
+    config = embedder_config.from_embedding_model(embedding_model=default_model)
+    if config.url is not None and embedder_registry.get_registry().is_remote_unavailable(
+        config=config
+    ):
+        raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=config.url)
+    raise MissingCapabilityError(space_key=default_model.name)
 
 
 def _embedder_for_model(
