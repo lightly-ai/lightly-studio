@@ -8,6 +8,7 @@ import sqlalchemy
 from sqlmodel import Session, col, delete, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -62,6 +63,11 @@ def delete_annotation(
     session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id) == annotation.sample_id
+        )
+    )
+    session.exec(
+        delete(Cuboid3DAnnotationTable).where(
+            col(Cuboid3DAnnotationTable.sample_id) == annotation.sample_id
         )
     )
     session.exec(
