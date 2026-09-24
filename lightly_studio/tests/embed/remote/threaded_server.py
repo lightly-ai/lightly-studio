@@ -29,6 +29,10 @@ def serve(embedder: Embedder, api_key: str | None = None) -> Iterator[str]:
     The socket is bound before uvicorn starts, so another process cannot claim the port
     in between.
 
+    Args:
+        embedder: The embedder to serve.
+        api_key: The bearer token the server requires, or `None` for no authentication.
+
     Raises:
         TimeoutError: If the server does not answer within the startup timeout.
     """
