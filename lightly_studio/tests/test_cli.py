@@ -292,6 +292,9 @@ def test_quickstart_enterprise__already_seeded(mocker: MockerFixture) -> None:
     mocker.patch.object(lightly_studio, attribute="connect")
     mock_dataset = mocker.MagicMock()
     mock_dataset.query.return_value.to_list.return_value = [mocker.MagicMock()]
+    mock_run = mocker.MagicMock()
+    mock_run.name = "od_evaluation"
+    mock_dataset.evaluate.return_value.list_runs.return_value = [mock_run]
     mocker.patch.object(
         lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
     )
@@ -302,6 +305,25 @@ def test_quickstart_enterprise__already_seeded(mocker: MockerFixture) -> None:
     )
     assert result.exit_code == 0
     assert "already seeded" in result.output
+    mock_dataset.add_images_from_path.assert_not_called()
+    mock_dataset.add_annotations_from_coco.assert_not_called()
+
+
+def test_quickstart_enterprise__partially_seeded(mocker: MockerFixture) -> None:
+    mocker.patch.object(lightly_studio, attribute="connect")
+    mock_dataset = mocker.MagicMock()
+    mock_dataset.query.return_value.to_list.return_value = [mocker.MagicMock()]
+    mock_dataset.evaluate.return_value.list_runs.return_value = []
+    mocker.patch.object(
+        lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        cli=cli.main,
+        args=["quickstart-enterprise", "--api-url", "http://10.0.0.5:8100", "--token", "my-token"],
+    )
+    assert result.exit_code != 0
+    assert "partially seeded" in result.output
     mock_dataset.add_images_from_path.assert_not_called()
     mock_dataset.add_annotations_from_coco.assert_not_called()
 

@@ -110,9 +110,15 @@ def quickstart_enterprise(api_url: str | None, token: str | None, api_key: str |
 
     lightly_studio.connect(api_url=api_url, token=token, api_key=api_key)
     dataset = lightly_studio.ImageDataset.load_or_create(name="example-coco-128")
-    if dataset.query().to_list():
+    has_samples = bool(dataset.query().to_list())
+    if has_samples and _has_evaluation(dataset=dataset, name="od_evaluation"):
         click.echo("Dataset 'example-coco-128' is already seeded, skipping.")
         return
+    if has_samples:
+        raise click.ClickException(
+            "Dataset 'example-coco-128' is partially seeded from an earlier failed run. "
+            "Delete it in the GUI and run the command again."
+        )
     dataset.add_images_from_path(path=f"{data_root}/images")
     dataset.add_annotations_from_coco(
         annotations_json=f"{data_root}/instances_train2017.json",
@@ -171,3 +177,7 @@ def gui(
         properties={"launch_source": LaunchSource.GUI.value},
     )
     lightly_studio.start_gui(host=host, port=port)
+
+
+def _has_evaluation(dataset: lightly_studio.ImageDataset, name: str) -> bool:
+    return any(run.name == name for run in dataset.evaluate().list_runs())
