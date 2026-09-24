@@ -18,6 +18,7 @@ from numpy.typing import NDArray
 
 from lightly_studio.core.mcap import (
     camera_info,
+    capture_time,
     decoding,
     matching,
     topic_kind,
@@ -72,8 +73,8 @@ class McapFileReader:
     """Reads frame locators and calibration out of an indexed MCAP file.
 
     The reader returns where data is, not the data itself: it never returns decoded
-    video frames or point clouds. Message payloads are only read internally, to detect
-    video keyframes and to read calibration.
+    video frames or point clouds. Message payloads are only read internally, to read
+    capture timestamps, detect video keyframes, and read calibration.
 
     The file is opened through fsspec, so it can live in local storage or in remote
     object storage. Reading an indexed file only fetches the summary and the chunks a
@@ -170,6 +171,10 @@ class McapFileReader:
         only once, because a chunk holds the messages of every topic in a time span.
         Calling this again for a topic replaces its cached locators.
 
+        Each locator stores the MCAP log time, to seek the payload, and the capture
+        timestamp from the message header. A message that cannot be decoded, or that
+        has no header stamp, is skipped.
+
         Args:
             topics: The topics to locate the messages of. A repeated topic is read once.
             start_time_ns: If given, messages logged before this time are skipped.
@@ -191,18 +196,15 @@ class McapFileReader:
         for schema, channel, message in self._reader.iter_messages(
             topics=unique_topics, start_time=start_time_ns, end_time=end_time_ns
         ):
-            if channel.topic in video_topics and self._is_keyframe(
-                schema=schema, channel=channel, message=message
-            ):
-                keyframe_log_time_ns_by_topic[channel.topic] = message.log_time
-            locators_by_topic[channel.topic].append(
-                _frame_locator(
-                    schema=schema,
-                    channel=channel,
-                    message=message,
-                    keyframe_log_time_ns=keyframe_log_time_ns_by_topic.get(channel.topic),
-                )
+            locator = self._locator_for_message(
+                schema=schema,
+                channel=channel,
+                message=message,
+                video_topics=video_topics,
+                keyframe_log_time_ns_by_topic=keyframe_log_time_ns_by_topic,
             )
+            if locator is not None:
+                locators_by_topic[channel.topic].append(locator)
         self._locators_by_topic.update(locators_by_topic)
 
     @overload
@@ -362,33 +364,53 @@ class McapFileReader:
             )
         return self._locators_by_topic[topic]
 
-    def _is_keyframe(self, schema: Schema | None, channel: Channel, message: Message) -> bool:
-        """Returns whether a video message holds a keyframe.
-
-        Only this message is decoded, so that a pass over several topics does not pay
-        for decoding the payloads of the topics that are not video.
-
-        Args:
-            schema: The schema of the channel.
-            channel: The channel the message belongs to.
-            message: The message to look at.
-
-        Returns:
-            Whether the message holds a keyframe. `False` if it cannot be decoded.
-        """
-        decoder = self._decoder_for(schema=schema, channel=channel)
-        if decoder is None:
-            return False
+    def _locator_for_message(
+        self,
+        schema: Schema | None,
+        channel: Channel,
+        message: Message,
+        video_topics: set[str],
+        keyframe_log_time_ns_by_topic: dict[str, int | None],
+    ) -> FrameLocator | None:
+        """Builds a locator from a message, or `None` if its capture time cannot be read."""
+        decoded_message = self._decoded_payload(schema=schema, channel=channel, message=message)
+        if decoded_message is None:
+            return None
         try:
-            decoded_message = decoder(message.data)
-        except Exception:
+            capture_timestamp_ns = capture_time.from_decoded_message(decoded_message)
+        except McapAccessError:
             logger.warning(
-                "Cannot decode a message of topic '%s' in '%s'. It carries no keyframe time.",
+                "Cannot read the capture timestamp of a message of topic '%s' in '%s'.",
                 channel.topic,
                 self.path,
             )
-            return False
-        return video_keyframe.is_keyframe_message(decoded_message)
+            return None
+        if channel.topic in video_topics and video_keyframe.is_keyframe_message(decoded_message):
+            keyframe_log_time_ns_by_topic[channel.topic] = message.log_time
+        return _frame_locator(
+            schema=schema,
+            channel=channel,
+            message=message,
+            capture_timestamp_ns=capture_timestamp_ns,
+            keyframe_log_time_ns=keyframe_log_time_ns_by_topic.get(channel.topic),
+        )
+
+    def _decoded_payload(
+        self, schema: Schema | None, channel: Channel, message: Message
+    ) -> Any | None:
+        """Decodes a message payload, or `None` if it cannot be decoded."""
+        decoder = self._decoder_for(schema=schema, channel=channel)
+        if decoder is None:
+            return None
+        try:
+            return decoder(message.data)
+        except Exception:
+            logger.warning(
+                "Cannot decode a message of topic '%s' in '%s'. It is skipped.",
+                channel.topic,
+                self.path,
+            )
+            return None
 
     def _decoder_for(
         self, schema: Schema | None, channel: Channel
@@ -408,8 +430,7 @@ class McapFileReader:
                 break
         if decoder is None:
             logger.warning(
-                "Cannot decode the messages of topic '%s' in '%s'. Its frame locators "
-                "carry no keyframe times.",
+                "Cannot decode the messages of topic '%s' in '%s'. Its messages are skipped.",
                 channel.topic,
                 self.path,
             )
@@ -583,12 +604,14 @@ def _frame_locator(
     schema: Schema | None,
     channel: Channel,
     message: Message,
+    capture_timestamp_ns: int,
     keyframe_log_time_ns: int | None = None,
 ) -> FrameLocator:
     """Points at a message without carrying its payload."""
     return FrameLocator(
         channel_id=message.channel_id,
         log_time_ns=message.log_time,
+        capture_timestamp_ns=capture_timestamp_ns,
         topic=channel.topic,
         keyframe_log_time_ns=keyframe_log_time_ns,
         schema_name=None if schema is None else schema.name,
