@@ -58,7 +58,9 @@ def register_remote_embedder(dataset: Dataset[Any], url: str, api_key: str | Non
     The server must produce an embedding space that the dataset already holds embeddings
     in, such as one filled by an embedder registered with ``register_default_embedder``.
     Text and image search in that space then embed the query on the server, starting with
-    the next query. The dataset stores ``url`` and ``api_key`` in plain text.
+    the next query. An embedder registered in this process for the same space still serves
+    the capabilities it implements. A server that embeds no images leaves the space without
+    image search. The dataset stores ``url`` and ``api_key`` in plain text.
 
     Args:
         dataset: The dataset whose embedding space the server produces.
