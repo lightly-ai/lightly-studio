@@ -21,7 +21,10 @@ from lightly_studio.embed import embedder_config, embedder_registry
 from lightly_studio.embed.embedder_config import EmbedderConfig
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
-from lightly_studio.embed.remote.errors import RemoteEmbedderUnreachableError
+from lightly_studio.embed.remote.errors import (
+    RemoteEmbedderCapabilityError,
+    RemoteEmbedderUnreachableError,
+)
 
 
 class _FakeTextImageEmbedder(TextEmbedder, ImagePathEmbedder):
@@ -533,6 +536,20 @@ class TestEmbedderRegistry:
         config = _config(space_key="space-a", url="http://first.test")
 
         # The server is usable, but it cannot embed text
+        assert registry.get_text_embedder(config=config) is None
+        assert registry.is_remote_unavailable(config=config) is False
+
+    def test_is_remote_unavailable__server_without_usable_capability(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        mocker.patch.object(
+            embedder_config,
+            "build_remote",
+            side_effect=RemoteEmbedderCapabilityError("no usable capability"),
+        )
+        config = _config(space_key="space-a", url="http://first.test")
+
         assert registry.get_text_embedder(config=config) is None
         assert registry.is_remote_unavailable(config=config) is False
 
