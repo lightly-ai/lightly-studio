@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
+from itertools import islice
 from uuid import UUID
 
 from typing_extensions import Self
 
 from lightly_studio.core import dataset
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME
-from lightly_studio.core.mcap import add_mcaps, dataset_schema
+from lightly_studio.core.mcap import add_mcaps, annotation_mcap, dataset_schema
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.group_dataset import McapGroupDataset
 from lightly_studio.core.mcap.recording import Recording
@@ -222,7 +223,8 @@ class McapDataset:
         components the dataset was created with.
 
         A recording that is already indexed is skipped. A recording that cannot be read
-        is reported and the others are still indexed.
+        is reported and the others are still indexed. Files named `*_labeled.mcap` are
+        annotation MCAPs, not recordings, and are not indexed.
 
         Args:
             path: A folder of `.mcap` files, a single file, or a glob. It can also be a
@@ -244,12 +246,16 @@ class McapDataset:
         fsspec_lister.validate_limit(limit)
         # Configure clients before discovery creates and caches a filesystem.
         remote_storage.configure_connections(paths=[str(path)])
-        mcap_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=add_mcaps.MCAP_EXTENSIONS, limit=limit
-            )
+        discovered_paths = fsspec_lister.iter_files_from_path(
+            path=str(path),
+            allowed_extensions=add_mcaps.MCAP_EXTENSIONS,
+            limit=None,
         )
-        logger.info(f"Found {len(mcap_paths)} MCAP recordings in {path}.")
+        mcap_paths = _recording_paths(
+            discovered_paths=discovered_paths,
+            limit=limit,
+        )
+        logger.info("Found %d MCAP recordings to index in %s.", len(mcap_paths), path)
 
         add_mcaps.index_recordings(
             dataset=self,
@@ -356,6 +362,14 @@ class McapDataset:
             f"Dataset '{self.name}' has no group collection. It was not created with "
             "`McapDataset.create`."
         )
+
+
+def _recording_paths(discovered_paths: Iterable[str], limit: int | None) -> list[str]:
+    """Filter annotation MCAPs before lazily applying the recording limit."""
+    recordings = (
+        path for path in discovered_paths if not annotation_mcap.is_annotation_mcap(uri=path)
+    )
+    return list(recordings if limit is None else islice(recordings, limit))
 
 
 def _get_duplicate_names(components: Sequence[McapComponentSpec]) -> list[str]:
