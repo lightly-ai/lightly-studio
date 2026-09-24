@@ -3,32 +3,28 @@
 from __future__ import annotations
 
 
-class NoDefaultEmbeddingModelError(ValueError):
+class QueryEmbedderError(ValueError):
+    """Raised when no embedder can answer a query for a collection."""
+
+
+class NoDefaultEmbeddingModelError(QueryEmbedderError):
     """Raised when a query targets a collection with no default embedding model."""
 
 
-class MissingCapabilityError(ValueError):
-    """Raised when no embedder of the default embedding space has the queried capability.
+class MissingCapabilityError(QueryEmbedderError):
+    """Raised when no embedder of the default embedding space has the queried capability."""
 
-    Attributes:
-        space_key: The default embedding space of the collection.
-    """
-
-    def __init__(self, space_key: str) -> None:
-        """Create the error for the embedding space ``space_key``."""
+    def __init__(self, space_key: str, query_kind: str) -> None:
+        """Create the error for a space that cannot embed ``query_kind``, such as "text"."""
         super().__init__(
-            f"No embedder resolves for the collection's default embedding space {space_key!r}."
+            f"The embedding space {space_key!r} of this collection cannot embed {query_kind}."
         )
-        self.space_key = space_key
 
 
-class RemoteEmbedderUnavailableError(ValueError):
+class RemoteEmbedderUnavailableError(QueryEmbedderError):
     """Raised when the embedding server of the default embedding space cannot be used.
 
     The server is unreachable, rejects the token, or fails the identity check.
-
-    Attributes:
-        space_key: The default embedding space of the collection.
     """
 
     def __init__(self, space_key: str, url: str) -> None:
@@ -36,4 +32,3 @@ class RemoteEmbedderUnavailableError(ValueError):
         super().__init__(
             f"The embedding server at {url!r} for the embedding space {space_key!r} cannot be used."
         )
-        self.space_key = space_key

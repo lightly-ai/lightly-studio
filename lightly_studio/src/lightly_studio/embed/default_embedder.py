@@ -92,6 +92,7 @@ def resolve_query_embedder(
     get_embedder_fn: Callable[
         [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
     ],
+    query_kind: str,
 ) -> _EmbedderT:
     """Resolve the embedder for an interactive query, without mutating the collection.
 
@@ -105,6 +106,7 @@ def resolve_query_embedder(
         collection_id: The collection whose default embedding model is used.
         get_embedder_fn: The typed getter of the needed capability, as described in
             ``resolve_default_embedder``.
+        query_kind: What the query embeds, such as "text" or "images". Used in errors.
 
     Returns:
         The embedder for the collection's default embedding space.
@@ -130,7 +132,7 @@ def resolve_query_embedder(
         config=config
     ):
         raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=config.url)
-    raise MissingCapabilityError(space_key=default_model.name)
+    raise MissingCapabilityError(space_key=default_model.name, query_kind=query_kind)
 
 
 def _embedder_for_model(

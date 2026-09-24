@@ -87,6 +87,7 @@ def embed_image_for_collection(
         session=session,
         collection_id=collection_id,
         get_embedder_fn=_get_query_image_embedder,
+        query_kind="images",
     )
     embedding: list[float] = _embed_image_bytes(embedder=embedder, image_bytes=image_bytes).tolist()
     return embedding
@@ -117,6 +118,7 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
         session=session,
         collection_id=collection_id,
         get_embedder_fn=EmbedderRegistry.get_text_embedder,
+        query_kind="text",
     )
     result = embedder.embed_text(texts=[text])
     if result.kept_indices != [0]:

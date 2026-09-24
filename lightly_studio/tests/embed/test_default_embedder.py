@@ -206,6 +206,7 @@ def test_resolve_query_embedder__uses_existing_default(
         session=db_session,
         collection_id=collection.collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        query_kind="images",
     )
 
     assert result is embedder
@@ -229,6 +230,7 @@ def test_resolve_query_embedder__no_default_model_raises(
             session=db_session,
             collection_id=collection.collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+            query_kind="images",
         )
     # The query path never bootstraps a default model.
     linked = collection_embedding_model_resolver.get_all_by_collection_id(
@@ -252,13 +254,16 @@ def test_resolve_query_embedder__no_embedder_for_space_raises(
         set_as_default=True,
     )
 
-    with pytest.raises(MissingCapabilityError) as exc_info:
+    with pytest.raises(
+        MissingCapabilityError,
+        match=r"The embedding space 'random_model' of this collection cannot embed images.",
+    ):
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+            query_kind="images",
         )
-    assert exc_info.value.space_key == "random_model"
 
 
 def test_resolve_query_embedder__remote_space_without_capability_raises(
@@ -285,6 +290,7 @@ def test_resolve_query_embedder__remote_space_without_capability_raises(
             session=db_session,
             collection_id=collection.collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+            query_kind="images",
         )
 
 
@@ -312,6 +318,7 @@ def test_resolve_query_embedder__unusable_remote_raises(
             session=db_session,
             collection_id=collection.collection_id,
             get_embedder_fn=EmbedderRegistry.get_text_embedder,
+            query_kind="text",
         )
 
 
@@ -336,6 +343,7 @@ def test_resolve_query_embedder__dimension_mismatch_raises(
             session=db_session,
             collection_id=collection.collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+            query_kind="images",
         )
 
 
@@ -362,6 +370,7 @@ def test_resolve_query_embedder__builds_remote_from_stored_config(
         session=db_session,
         collection_id=collection.collection_id,
         get_embedder_fn=EmbedderRegistry.get_text_embedder,
+        query_kind="text",
     )
 
     assert embedder.embed_text(texts=["a query"]).embeddings.shape == (1, 2)
