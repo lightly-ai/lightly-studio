@@ -54,6 +54,10 @@ export default defineConfig({
         {
             name: 'distribution',
             testDir: './e2e/distribution'
+        },
+        {
+            name: 'remote-embedder',
+            testDir: './e2e/remote-embedder'
         }
     ],
 
