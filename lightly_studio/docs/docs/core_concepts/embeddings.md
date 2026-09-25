@@ -285,6 +285,9 @@ for TLS and limits.
 LIGHTLY_STUDIO_SERVE_API_KEY=your-secret-key lightly-studio-serve conformance http://127.0.0.1:8080
 ```
 
+See the [Serving API](../api/embeddings.md#serving) for `serve`, `create_app`, the protocol
+and the conformance command.
+
 **3. Connect a dataset.** Fill the embedding space at ingestion, with
 `ls.register_default_embedder` or with precomputed embeddings. Then point the space at the
 server:
