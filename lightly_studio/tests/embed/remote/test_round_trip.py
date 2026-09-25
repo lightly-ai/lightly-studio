@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-import socket
-import threading
-import time
 from collections.abc import Iterator, Sequence
 
-import httpx
 import numpy as np
 import pytest
-import uvicorn
-from lightly_studio_serve import protocol, server
 from lightly_studio_serve.embedder import ImageBytesEmbedder, TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
 from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
+from tests.embed.remote import threaded_server
 from tests.embed.remote.helpers import DIMENSION, SPACE_KEY
 
 # The vector that the server answers for each input. A table keeps the assertions
@@ -33,14 +28,6 @@ IMAGE_VECTORS = {
 # An input that the tables above do not hold, so the embedder skips it and keeps the rest
 # of the batch.
 UNKNOWN_TEXT = "an unknown text"
-
-_HOST = "127.0.0.1"
-
-# The wait for the server to answer its first request. Generous for a loopback server, so
-# that a loaded machine running the suite under xdist does not make this test flaky.
-_STARTUP_TIMEOUT_SECONDS = 10.0
-_POLL_INTERVAL_SECONDS = 0.02
-_POLL_TIMEOUT_SECONDS = 1.0
 
 
 class TableEmbedder(TextEmbedder, ImageBytesEmbedder):
@@ -65,31 +52,10 @@ def server_url() -> Iterator[str]:
     """Serve `TableEmbedder` over a real socket and answer with its address.
 
     One server serves every test of this module on a worker, so the suite pays the startup
-    once per worker rather than once per test. The fixture binds the socket before it
-    starts uvicorn, so another worker cannot claim the selected port in between.
+    once per worker rather than once per test.
     """
-    listener = socket.socket()
-    listener.bind((_HOST, 0))
-    listener.listen()
-    port = int(listener.getsockname()[1])
-    app = server.create_app(embedder=TableEmbedder())
-    uvicorn_server = uvicorn.Server(uvicorn.Config(app=app, log_level="warning"))
-    thread = threading.Thread(
-        target=uvicorn_server.run,
-        kwargs={"sockets": [listener]},
-        daemon=True,
-    )
-    thread.start()
-    # A startup that fails still has to stop the server, or its thread serves on through
-    # every later module of this worker.
-    try:
-        url = f"http://{_HOST}:{port}"
-        _wait_until_ready(url=url)
+    with threaded_server.serve(embedder=TableEmbedder()) as url:
         yield url
-    finally:
-        uvicorn_server.should_exit = True
-        thread.join(timeout=_STARTUP_TIMEOUT_SECONDS)
-        listener.close()
 
 
 @pytest.fixture(scope="module")
@@ -149,25 +115,3 @@ def _result(rows: Sequence[list[float] | None]) -> EmbeddingResult:
     kept_rows = [row for row in rows if row is not None]
     embeddings = np.array(kept_rows, dtype=np.float32).reshape(len(kept_indices), DIMENSION)
     return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
-
-
-def _wait_until_ready(url: str) -> None:
-    """Poll `/v1/describe` until the server answers, then fail with what went wrong."""
-    deadline = time.monotonic() + _STARTUP_TIMEOUT_SECONDS
-    last_problem = "it was never reached"
-    while time.monotonic() < deadline:
-        try:
-            response = httpx.get(
-                url=f"{url}{protocol.DESCRIBE_PATH}", timeout=_POLL_TIMEOUT_SECONDS
-            )
-        except httpx.HTTPError as error:
-            last_problem = f"{type(error).__name__}: {error}"
-        else:
-            if response.status_code == httpx.codes.OK:
-                return
-            last_problem = f"it answered {response.status_code}"
-        time.sleep(_POLL_INTERVAL_SECONDS)
-    pytest.fail(
-        f"The embedding server at {url} did not serve {protocol.DESCRIBE_PATH} within "
-        f"{_STARTUP_TIMEOUT_SECONDS} seconds: {last_problem}."
-    )

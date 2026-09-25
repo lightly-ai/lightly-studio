@@ -188,12 +188,9 @@ class EmbedderRegistry:
     def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
         """Get whether the embedding server of the configuration failed inside the retry window.
 
-        A getter returns None both for a space without the capability and for a server that
-        could not be used. This tells the two apart. A server that answers but serves no
-        capability that LightlyStudio can use counts as a space without the capability.
+        The getters return None for an unusable server and for a space without the capability.
+        This tells the two apart.
         """
-        if config.url is None:
-            return False
         with self._lock:
             if not self._failed_recently(config=config):
                 return False
