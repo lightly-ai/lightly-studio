@@ -274,8 +274,8 @@ from lightly_studio_serve import serve
 serve(MyEmbedder(), api_key="your-secret-key")
 ```
 
-`serve` binds `127.0.0.1:8080` by default. Any address that is not loopback needs TLS,
-because each request contains the API key. See the
+`serve` binds `127.0.0.1:8080` by default. Use TLS for any other address, because each
+request carries the API key; `serve` and LightlyStudio warn about plain HTTP. See the
 [`lightly_studio_serve` README](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio_serve/README.md)
 for TLS and limits.
 
@@ -300,24 +300,20 @@ ls.register_remote_embedder(dataset=dataset, url="http://127.0.0.1:8080", api_ke
 ls.start_gui()
 ```
 
-The dataset stores the server URL. Text and image search then use the server, also after
-you open the dataset again.
+The dataset stores the URL and the API key in plain text, so search uses the server also
+after you open the dataset again.
 
 For a full runnable version, which starts a small server that runs on CPU, see
 [`example_remote_embedder.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_remote_embedder.py).
 
 !!! warning "Limits"
-    - The server must produce the embedding space that the dataset already holds, with
-      the same dimension.
-    - If you register a local embedder for that space, it still serves the capabilities
-      that it implements. Register only ingestion capabilities locally if search
-      must go to the server.
-    - If the server does not implement `ImageBytesEmbedder`, image search is not
-      available.
+    - A local embedder registered for the same space still serves the capabilities it
+      implements. Register only ingestion capabilities locally so search goes to the server.
+    - Without `ImageBytesEmbedder` on the server, image search is not available.
     - The server embeds search queries only. Ingestion still runs locally.
-    - The dataset stores the URL and the API key in plain text.
 
-`register_remote_embedder` raises a `RemoteEmbedderError` and stores nothing in these
-cases: it cannot connect to the server, the server rejects the key, or the server
-produces a different embedding space. The error is in `lightly_studio.embed.remote.errors`. If the
-server fails later, search in the GUI shows an error.
+`register_remote_embedder` raises a `RemoteEmbedderError` from
+`lightly_studio.embed.remote.errors` and stores nothing if the URL is malformed or
+refused, the server cannot be reached or rejects the key, or the dataset holds no
+embeddings in the server's space with the same dimension. If the server fails later,
+search in the GUI shows an error message.

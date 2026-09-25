@@ -125,11 +125,8 @@ dataset must already hold embeddings in the space that the server produces:
 ```python
 import lightly_studio as ls
 
-ls.register_remote_embedder(
-    dataset=dataset, url="http://127.0.0.1:8080", api_key="the-key-you-paste-into-lightlystudio"
-)
+ls.register_remote_embedder(dataset=dataset, url="http://127.0.0.1:8080", api_key="your-secret-key")
 ```
 
-See the
-[LightlyStudio embeddings guide](https://docs.lightly.ai/studio/core_concepts/embeddings/#serving-an-embedder-from-a-remote-server)
+See the [LightlyStudio embeddings guide](https://docs.lightly.ai/studio/core_concepts/embeddings/#serving-an-embedder-from-a-remote-server)
 for the full flow, its limits and a runnable example.

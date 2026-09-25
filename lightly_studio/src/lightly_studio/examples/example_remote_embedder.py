@@ -1,15 +1,9 @@
 """Example of search through an embedder on a remote server.
 
-The example has two parts:
-
-1. A server. ``lightly_studio_serve.serve`` serves ``ColorServerEmbedder`` in a
-   subprocess. In production this runs on the machine that holds the model.
-2. LightlyStudio. The dataset fills the embedding space at ingestion with
-   ``ColorPathEmbedder``. Then ``ls.register_remote_embedder`` points the space at the
-   server. Text and image search in the GUI then embed the query on the server.
-
-Both embedders map an image to its mean color, so the example runs on CPU and downloads
-no model. Search for text that names "red", "green", "blue" or "white", or paste an image.
+A subprocess serves ``ColorServerEmbedder`` with ``lightly_studio_serve.serve``. The dataset
+fills the space at ingestion with ``ColorPathEmbedder``, then ``ls.register_remote_embedder``
+points search at the server. Both map an image to its mean color, so no model is downloaded.
+Search for "red", "green", "blue" or "white", or paste an image.
 """
 
 from __future__ import annotations
@@ -78,12 +72,10 @@ def main() -> None:
     env.read_env()
     api_key = secrets.token_urlsafe()
 
-    # Part 1: start the server.
     server = multiprocessing.Process(target=_serve, kwargs={"api_key": api_key}, daemon=True)
     server.start()
     _wait_for_server(server=server, api_key=api_key)
 
-    # Part 2: fill the embedding space at ingestion, then point it at the server.
     db_manager.connect(cleanup_existing=True)
     ls.register_default_embedder(embedder=ColorPathEmbedder())
     dataset = ls.ImageDataset.create()
@@ -103,7 +95,7 @@ def _wait_for_server(server: multiprocessing.Process, api_key: str) -> None:
             raise RuntimeError(f"The embedding server stopped with exit code {server.exitcode}.")
         try:
             httpx.get(
-                f"{SERVER_URL}{protocol.DESCRIBE_PATH}",
+                url=f"{SERVER_URL}{protocol.DESCRIBE_PATH}",
                 headers={"Authorization": f"Bearer {api_key}"},
             ).raise_for_status()
             return
