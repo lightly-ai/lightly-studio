@@ -62,6 +62,8 @@ def register_remote_embedder(dataset: Dataset[Any], url: str, api_key: str | Non
     the capabilities it implements. A server that embeds no images leaves the space without
     image search. The dataset stores ``url`` and ``api_key`` in plain text.
 
+    See ``examples/example_remote_embedder.py`` for a runnable example.
+
     Args:
         dataset: The dataset whose embedding space the server produces.
         url: The base URL of a server that ``lightly_studio_serve.serve`` runs, or of
