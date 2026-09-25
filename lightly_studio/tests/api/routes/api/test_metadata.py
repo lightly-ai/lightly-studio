@@ -9,7 +9,12 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.metadata import (
     HistogramView,
     MetadataInfoView,
@@ -105,9 +110,11 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
 
 
 def test_get_metadata_histograms__video_filter(
-    test_client: TestClient, mocker: MockerFixture
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
 ) -> None:
-    collection_id = uuid4()
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
     resolver = mocker.patch(
         "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_histograms",
         return_value={"score": HistogramView(bin_edges=[0.0, 1.0], counts=[3])},
@@ -128,6 +135,24 @@ def test_get_metadata_histograms__video_filter(
     assert called_filters.duration_s == FloatRange(min=1.0, max=5.0)
 
 
+def test_get_metadata_histograms__video_filter_on_image_collection_returns_400(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_histograms",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/histograms",
+        json={"filters": {"filter_type": "video"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {"error": "Invalid filter type for image collection."}
+    resolver.assert_not_called()
+
+
 def test_get_metadata_histograms__missing_filter_type_returns_422(
     test_client: TestClient,
 ) -> None:
@@ -139,8 +164,10 @@ def test_get_metadata_histograms__missing_filter_type_returns_422(
     assert response.status_code == 422
 
 
-def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixture) -> None:
-    collection_id = uuid4()
+def test_get_metadata_value_counts(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
     resolver = mocker.patch(
         "lightly_studio.api.routes.api.metadata."
         "metadata_value_counts_resolver.get_metadata_value_counts",
@@ -181,9 +208,11 @@ def test_get_metadata_value_counts(test_client: TestClient, mocker: MockerFixtur
 
 
 def test_get_metadata_value_counts__video_filter(
-    test_client: TestClient, mocker: MockerFixture
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
 ) -> None:
-    collection_id = uuid4()
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
     resolver = mocker.patch(
         "lightly_studio.api.routes.api.metadata."
         "metadata_value_counts_resolver.get_metadata_value_counts",
@@ -199,6 +228,27 @@ def test_get_metadata_value_counts__video_filter(
     called_filters = resolver.call_args.kwargs["filters"]
     assert isinstance(called_filters, VideoFilter)
     assert called_filters.width == FilterDimensions(min=100)
+
+
+def test_get_metadata_value_counts__image_filter_on_video_collection_returns_400(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"filters": {"filter_type": "image"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {"error": "Invalid filter type for video collection."}
+    resolver.assert_not_called()
 
 
 def test_get_metadata_value_counts__optional_body(

@@ -7,26 +7,29 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.errors import TagNotFoundError
+from lightly_studio.errors import NotFoundError, TagNotFoundError
 from lightly_studio.metadata import compute_similarity, compute_typicality
-from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.metadata import (
     HistogramView,
     MetadataInfoView,
     MetadataValueCountsView,
 )
-from lightly_studio.resolvers import collection_embedding_model_resolver
+from lightly_studio.resolvers import collection_embedding_model_resolver, collection_resolver
 from lightly_studio.resolvers.grid_filter import CollectionFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import (
     categorical_value_counts as metadata_value_counts_resolver,
 )
 from lightly_studio.resolvers.metadata_resolver.sample import (
     get_metadata_info as metadata_info_resolver,
 )
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
 
@@ -85,6 +88,8 @@ def get_metadata_histograms(
     Returns:
         Mapping of metadata key to its histogram.
     """
+    if request is not None:
+        _validate_filter_type(session=session, collection_id=collection_id, filters=request.filters)
     return metadata_info_resolver.get_metadata_histograms(
         session=session,
         collection_id=collection_id,
@@ -136,6 +141,7 @@ def get_metadata_value_counts(
     Returns:
         Mapping of categorical metadata key to its value counts.
     """
+    _validate_filter_type(session=session, collection_id=collection_id, filters=request.filters)
     return metadata_value_counts_resolver.get_metadata_value_counts(
         session=session,
         collection_id=collection_id,
@@ -262,3 +268,22 @@ def compute_similarity_metadata(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Query tag {query_tag_id} not found",
         ) from e
+
+
+def _validate_filter_type(
+    session: Session, collection_id: UUID, filters: CollectionFilter | None
+) -> None:
+    """Raise if ``filters`` is for a different sample type than the collection.
+
+    A filter for the wrong sample type matches no samples, so the distributions would be empty.
+    """
+    if filters is None:
+        return
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise NotFoundError(f"Collection with ID {collection_id} not found.")
+    if collection.sample_type == SampleType.IMAGE and isinstance(filters, ImageFilter):
+        return
+    if collection.sample_type == SampleType.VIDEO and isinstance(filters, VideoFilter):
+        return
+    raise ValueError(f"Invalid filter type for {collection.sample_type.value} collection.")
