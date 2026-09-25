@@ -1,3 +1,4 @@
+import type { VideoFilter } from '$lib/api/lightly_studio_local';
 import type { CategoryCount } from '$lib/components/BarChart';
 import type {
     CategoricalMetadataValue,
@@ -76,4 +77,26 @@ export function withoutCategoricalValues(
     const next = { ...values };
     delete next[metadataKey];
     return next;
+}
+
+/**
+ * Keeps only the scope of the video grid filter: its tags and sample ids. The
+ * distribution totals use this filter, so the bar heights stay stable while the
+ * other sidebar filters change.
+ */
+export function selectVideoDistributionBaseFilter(
+    filter: VideoFilter | null | undefined
+): VideoFilter & { filter_type: 'video' } {
+    const sampleIds = filter?.sample_filter?.sample_ids ?? [];
+    const tagIds = filter?.sample_filter?.tag_ids ?? [];
+    if (sampleIds.length === 0 && tagIds.length === 0) {
+        return { filter_type: 'video' };
+    }
+    return {
+        filter_type: 'video',
+        sample_filter: {
+            ...(sampleIds.length > 0 ? { sample_ids: sampleIds } : {}),
+            ...(tagIds.length > 0 ? { tag_ids: tagIds } : {})
+        }
+    };
 }

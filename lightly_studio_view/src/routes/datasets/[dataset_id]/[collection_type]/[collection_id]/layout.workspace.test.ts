@@ -13,7 +13,8 @@ import {
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
 import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-import { SampleType } from '$lib/api/lightly_studio_local';
+import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
+import { AnnotationType, SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
 
@@ -283,6 +284,30 @@ describe('distribution comparison query selection', () => {
         expect(vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()).toMatchObject({
             field: undefined
         });
+    });
+});
+
+describe('video distribution panel', () => {
+    it('opens the video panel with one count query per annotation type', async () => {
+        setPageRoute(APP_ROUTES.videos);
+        mockActivePanel.set('distribution');
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+
+        expect(await screen.findByText('Annotation classes')).toBeInTheDocument();
+        // The first query feeds the labels filter. The panel adds one query per group.
+        expect(
+            vi
+                .mocked(useVideoAnnotationCounts)
+                .mock.calls.map(([getParams]) => getParams().annotationType)
+        ).toEqual([
+            undefined,
+            undefined,
+            AnnotationType.CLASSIFICATION,
+            AnnotationType.OBJECT_DETECTION,
+            AnnotationType.SEGMENTATION_MASK
+        ]);
+        expect(useImageAnnotationCountsBySampleTags).not.toHaveBeenCalled();
     });
 });
 
@@ -577,6 +602,15 @@ describe('SidePanelTabs availability', () => {
         await tick();
 
         expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
+    });
+
+    it('is present on videos route without embeddings', async () => {
+        setPageRoute(APP_ROUTES.videos);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
     });
 
     it('is absent on a collection-grid route without embeddings', async () => {
