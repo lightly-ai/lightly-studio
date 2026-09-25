@@ -1,5 +1,7 @@
 """Object track model."""
 
+from __future__ import annotations
+
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict
@@ -24,6 +26,14 @@ class ObjectTrackTable(SQLModel, table=True):
     # The dataset the object track belongs to.
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
 
+    # Vendor track id from the source annotations, unique per sequence not per dataset.
+    source_track_id: int | None = None
+
+    # Parent track for nested boxes, e.g. a truck cabin or bed.
+    parent_object_track_id: UUID | None = Field(
+        default=None, foreign_key="object_track.object_track_id", index=True
+    )
+
 
 class ObjectTrackView(BaseModel):
     """API response model for an object track."""
@@ -33,6 +43,8 @@ class ObjectTrackView(BaseModel):
     object_track_id: UUID
     object_track_number: int
     dataset_id: UUID
+    source_track_id: int | None = None
+    parent_object_track_id: UUID | None = None
 
 
 class ObjectTrackCreate(SQLModel):
@@ -40,6 +52,8 @@ class ObjectTrackCreate(SQLModel):
 
     object_track_number: int
     dataset_id: UUID
+    source_track_id: int | None = None
+    parent_object_track_id: UUID | None = None
 
 
 class ObjectTrackWithCountView(BaseModel):
