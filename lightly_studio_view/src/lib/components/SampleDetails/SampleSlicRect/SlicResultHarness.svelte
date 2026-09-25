@@ -1,10 +1,11 @@
 <script lang="ts">
     import { useSlicResult } from './useSlicResult.svelte';
-    let {
-        imageUrl,
-        level = 'medium',
-        color = 'blue'
-    }: ReturnType<Parameters<typeof useSlicResult>[0]> = $props();
+    interface Props {
+        imageUrl: string;
+        level?: ReturnType<Parameters<typeof useSlicResult>[0]>['level'];
+        color?: string;
+    }
+    let { imageUrl, level = 'medium', color = 'blue' }: Props = $props();
     const slic = useSlicResult(() => ({ imageUrl, level, color }));
 </script>
 

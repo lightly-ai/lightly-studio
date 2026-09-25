@@ -7,11 +7,7 @@ vi.mock('$lib/utils/slic', () => ({
 }));
 
 it('shows loading status without boundaries while computation is pending', () => {
-    const view = render(SlicResultHarness, {
-        imageUrl: 'image.png',
-        level: 'medium',
-        color: 'blue'
-    });
+    const view = render(SlicResultHarness, { imageUrl: 'image.png' });
     expect(view.getByRole('status')).toHaveTextContent('computing');
     expect(view.queryByRole('img')).not.toBeInTheDocument();
 });
