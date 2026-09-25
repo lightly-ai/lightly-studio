@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import numpy as np
@@ -24,6 +25,17 @@ from lightly_studio.services.recording_service.point_cloud_types import (
     PointCloudLayout,
     PointCloudPayload,
 )
+
+
+@dataclass(frozen=True)
+class _FrameMetadata:
+    """Frame-level metadata attached to a serialized point cloud."""
+
+    channel_id: int
+    topic: str
+    log_time_ns: int
+    frame_id: str
+    source_point_count: int
 
 
 def serialize_point_cloud(
@@ -57,15 +69,14 @@ def serialize_point_cloud(
             value=point_cloud_value.get_value(value=message, name="header"), name="frame_id"
         )
     )
-    schema = _build_schema(
-        columns=columns,
+    metadata = _FrameMetadata(
         channel_id=channel_id,
         topic=topic,
         log_time_ns=log_time_ns,
         frame_id=frame_id,
         source_point_count=layout.width * layout.height,
-        xyz_valid=xyz[valid],
     )
+    schema = _build_schema(columns=columns, metadata=metadata, xyz_valid=xyz[valid])
     return _serialize_table(columns=columns, schema=schema, log_time_ns=log_time_ns)
 
 
@@ -95,9 +106,7 @@ def _read_message_layout(
     return layout, data, fields
 
 
-def _validate_layout(
-    width: int, height: int, point_step: int, row_step: int, data: bytes
-) -> None:
+def _validate_layout(width: int, height: int, point_step: int, row_step: int, data: bytes) -> None:
     """Reject dimensions that cannot form a valid strided view over the data."""
     fits_points = row_step >= width * point_step
     fits_rows = len(data) >= row_step * height
@@ -117,9 +126,7 @@ def _read_xyz(
 ) -> NDArray[np.float32]:
     """Stack the x, y, and z fields into an (N, 3) float32 array."""
     points = [
-        read_point_cloud_field.read_point_cloud_field(
-            data=data, field=fields[name], layout=layout
-        )
+        read_point_cloud_field.read_point_cloud_field(data=data, field=fields[name], layout=layout)
         for name in ("x", "y", "z")
     ]
     return np.column_stack(points).astype(np.float32)
@@ -152,26 +159,22 @@ def _build_columns(
     )
     if colors is not None:
         for index, name in enumerate(("r", "g", "b")):
-            columns[name] = pa.array(_srgb_to_linear(channel=colors[valid, index]), type=pa.float32())
+            columns[name] = pa.array(
+                _srgb_to_linear(channel=colors[valid, index]), type=pa.float32()
+            )
     return columns
 
 
 def _srgb_to_linear(channel: NDArray[Any]) -> NDArray[np.float32]:
     """Convert an sRGB 0-255 color channel to linear RGB per the renderer contract."""
     srgb = channel.astype(np.float32) / 255.0
-    linear = np.where(
-        srgb <= SRGB_LINEAR_THRESHOLD, srgb / 12.92, ((srgb + 0.055) / 1.055) ** 2.4
-    )
+    linear = np.where(srgb <= SRGB_LINEAR_THRESHOLD, srgb / 12.92, ((srgb + 0.055) / 1.055) ** 2.4)
     return linear.astype(np.float32)
 
 
 def _build_schema(
     columns: Mapping[str, pa.Array],
-    channel_id: int,
-    topic: str,
-    log_time_ns: int,
-    frame_id: str,
-    source_point_count: int,
+    metadata: _FrameMetadata,
     xyz_valid: NDArray[np.float32],
 ) -> pa.Schema:
     """Build the Arrow schema with frame metadata and finite-point bounds."""
@@ -183,11 +186,11 @@ def _build_schema(
     return pa.schema(
         [pa.field(name, pa.float32(), nullable=False) for name in columns],
         metadata={
-            "channel_id": str(channel_id).encode(),
-            "topic": topic.encode(),
-            "log_time_ns": str(log_time_ns).encode(),
-            "frame_id": frame_id.encode(),
-            "source_point_count": str(source_point_count).encode(),
+            "channel_id": str(metadata.channel_id).encode(),
+            "topic": metadata.topic.encode(),
+            "log_time_ns": str(metadata.log_time_ns).encode(),
+            "frame_id": metadata.frame_id.encode(),
+            "source_point_count": str(metadata.source_point_count).encode(),
             "point_count": str(len(xyz_valid)).encode(),
             "bounds": json.dumps(bounds, separators=(",", ":")).encode(),
             "coordinate_unit": b"meter",
