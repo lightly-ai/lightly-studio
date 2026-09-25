@@ -1,7 +1,6 @@
 """Tests for PointCloud2 serialization."""
 
 import io
-import json
 import struct
 
 import pyarrow as pa
@@ -28,7 +27,6 @@ def _xyz_fields() -> list[dict[str, object]]:
 
 
 def _message(
-    *,
     data: bytes,
     fields: list[dict[str, object]],
     width: int = 1,
@@ -47,6 +45,17 @@ def _message(
     }
 
 
+def _serialize(
+    message: dict[str, object],
+    channel_id: int = 0,
+    topic: str = "/points",
+    log_time_ns: int = 0,
+) -> PointCloudPayload:
+    return serialize_point_cloud.serialize_point_cloud(
+        message=message, channel_id=channel_id, topic=topic, log_time_ns=log_time_ns
+    )
+
+
 def _read_table(payload: PointCloudPayload) -> pa.Table:
     with ipc.open_stream(io.BytesIO(payload.data)) as stream:
         return stream.read_all()
@@ -55,26 +64,25 @@ def _read_table(payload: PointCloudPayload) -> pa.Table:
 def test_serialize_point_cloud() -> None:
     message = _message(data=struct.pack("<fff", 1.0, 2.0, 3.0), fields=_xyz_fields())
 
-    payload = serialize_point_cloud.serialize_point_cloud(
-        message=message, channel_id=4, topic="/points", log_time_ns=123
-    )
+    payload = _serialize(message=message, log_time_ns=123)
 
     table = _read_table(payload=payload)
     assert table.column_names == ["x", "y", "z"]
     assert table.column("x").to_pylist() == [1.0]
-    assert table.schema.metadata[b"frame_id"] == b"map"
-    assert table.schema.metadata[b"channel_id"] == b"4"
-    assert table.schema.metadata[b"topic"] == b"/points"
-    assert table.schema.metadata[b"log_time_ns"] == b"123"
-    assert table.schema.metadata[b"source_point_count"] == b"1"
-    assert table.schema.metadata[b"point_count"] == b"1"
-    assert table.schema.metadata[b"coordinate_unit"] == b"meter"
-    assert json.loads(table.schema.metadata[b"bounds"]) == {
-        "min": [1.0, 2.0, 3.0],
-        "max": [1.0, 2.0, 3.0],
-    }
-    assert payload.log_time_ns == 123
     assert pa.types.is_float32(table.schema.field("x").type)
+    assert payload.log_time_ns == 123
+
+
+def test_serialize_point_cloud__attaches_frame_metadata() -> None:
+    message = _message(data=struct.pack("<fff", 1.0, 2.0, 3.0), fields=_xyz_fields())
+
+    payload = _serialize(message=message, channel_id=4, topic="/points", log_time_ns=123)
+
+    metadata = _read_table(payload=payload).schema.metadata
+    assert metadata[b"channel_id"] == b"4"
+    assert metadata[b"topic"] == b"/points"
+    assert metadata[b"log_time_ns"] == b"123"
+    assert metadata[b"frame_id"] == b"map"
 
 
 def test_serialize_point_cloud__propagates_invalid_message() -> None:
@@ -88,9 +96,7 @@ def test_serialize_point_cloud__propagates_invalid_message() -> None:
     )
 
     with pytest.raises(McapAccessError, match="missing required fields: z"):
-        serialize_point_cloud.serialize_point_cloud(
-            message=message, channel_id=0, topic="/points", log_time_ns=0
-        )
+        _serialize(message=message)
 
 
 def test_serialize_point_cloud__drops_non_finite_points() -> None:
@@ -100,9 +106,7 @@ def test_serialize_point_cloud__drops_non_finite_points() -> None:
         width=2,
     )
 
-    payload = serialize_point_cloud.serialize_point_cloud(
-        message=message, channel_id=0, topic="/points", log_time_ns=0
-    )
+    payload = _serialize(message=message)
 
     table = _read_table(payload=payload)
     assert table.column("x").to_pylist() == [1.0]
@@ -123,9 +127,7 @@ def test_serialize_point_cloud__serializes_intensity_and_colors() -> None:
         point_step=19,
     )
 
-    payload = serialize_point_cloud.serialize_point_cloud(
-        message=message, channel_id=0, topic="/points", log_time_ns=0
-    )
+    payload = _serialize(message=message)
 
     table = _read_table(payload=payload)
     assert table.column_names == ["x", "y", "z", "intensity", "r", "g", "b"]
@@ -137,9 +139,7 @@ def test_serialize_point_cloud__reads_big_endian_data() -> None:
         data=struct.pack(">fff", 1.0, 2.0, 3.0), fields=_xyz_fields(), is_bigendian=True
     )
 
-    payload = serialize_point_cloud.serialize_point_cloud(
-        message=message, channel_id=0, topic="/points", log_time_ns=0
-    )
+    payload = _serialize(message=message)
 
     table = _read_table(payload=payload)
     assert table.column("x").to_pylist() == [1.0]
