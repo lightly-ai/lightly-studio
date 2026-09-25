@@ -25,6 +25,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -32,7 +33,8 @@ import fsspec
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image, ImageOps
-from sqlmodel import Session
+from sqlalchemy.orm.attributes import flag_modified
+from sqlmodel import Session, col, select
 from tqdm import tqdm
 
 from lightly_studio.core.file_outcome_report import (
@@ -41,6 +43,7 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcomeReport,
 )
 from lightly_studio.dataset import remote_storage
+from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.utils import batching, parallelize
 
@@ -51,6 +54,18 @@ logger = logging.getLogger(__name__)
 IMAGE_QUALITY_METRICS_VERSION = 1
 # Integer metadata key that records the version the sample's metrics were computed with.
 IMAGE_QUALITY_VERSION_KEY = "image_quality_version"
+# Every key this module writes; cleared together when an image can no longer be read.
+_QUALITY_KEYS = (
+    "brightness",
+    "contrast",
+    "sharpness",
+    "entropy",
+    "red_mean",
+    "green_mean",
+    "blue_mean",
+    "aspect_ratio",
+    IMAGE_QUALITY_VERSION_KEY,
+)
 # Decoding releases the GIL, so a few threads overlap on local files without oversubscribing.
 DEFAULT_LOCAL_WORKERS = 4
 # Metric dicts are small; one write per this many images keeps commits infrequent.
@@ -71,6 +86,7 @@ def compute_image_quality_metadata(
     decode. Images are processed by a bounded thread pool and written in batches, so
     memory stays bounded for large collections. A missing or undecodable image gets no
     metric values, so it never looks like a dark or blurry image; the outcome is logged.
+    Values from an earlier successful run are removed for such an image.
 
     Args:
         session:
@@ -217,16 +233,44 @@ def _compute_one(image_input: _ImageInput) -> _ImageResult:
 def _write_batch(
     session: Session, results: Iterable[_ImageResult], report: FileOutcomeReport
 ) -> None:
-    """Record every outcome and write the metrics of the readable images in one call."""
+    """Record every outcome, write the metrics of the readable images, clear the others."""
     sample_metadata: list[tuple[UUID, Mapping[str, Any]]] = []
+    failed_sample_ids: list[UUID] = []
     for result in results:
         report.record(path=result.path, outcome=result.outcome)
         if result.metrics is None:
+            failed_sample_ids.append(result.sample_id)
             continue
         metadata: dict[str, float | int] = dict(result.metrics)
         metadata[IMAGE_QUALITY_VERSION_KEY] = IMAGE_QUALITY_METRICS_VERSION
         sample_metadata.append((result.sample_id, metadata))
+    _clear_quality_metadata(session=session, sample_ids=failed_sample_ids)
     metadata_resolver.bulk_update_metadata(session=session, sample_metadata=sample_metadata)
+
+
+def _clear_quality_metadata(session: Session, sample_ids: list[UUID]) -> None:
+    """Remove the quality values and version marker of images that could not be read.
+
+    Without this, an image that was computed once and later went missing or broken would
+    keep its old values and version, and later runs without ``overwrite`` would skip it.
+    """
+    if not sample_ids:
+        return
+    for batch in batching.batched(items=sample_ids):
+        rows = session.exec(
+            select(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(batch))
+        ).all()
+        for row in rows:
+            if not any(key in row.data for key in _QUALITY_KEYS):
+                continue
+            for key in _QUALITY_KEYS:
+                row.data.pop(key, None)
+                row.metadata_schema.pop(key, None)
+            row.updated_at = datetime.now(timezone.utc)
+            flag_modified(row, "data")
+            flag_modified(row, "metadata_schema")
+            session.add(row)
+    session.commit()
 
 
 def _normalize_image(image: Image.Image) -> Image.Image:

@@ -98,6 +98,58 @@ def test_compute_image_quality_metadata__missing_and_broken_get_no_values(
     assert "computed=1, already_present=0, missing=1, broken=1" in caplog.text
 
 
+def test_compute_image_quality_metadata__overwrite_clears_values_of_failed_images(
+    db_session: Session, tmp_path: Path
+) -> None:
+    collection = create_collection(session=db_session)
+    missing_path = tmp_path / "missing.png"
+    broken_path = tmp_path / "broken.png"
+    kept_path = tmp_path / "kept.png"
+    for path in (missing_path, broken_path, kept_path):
+        Image.new("RGB", (8, 8), color=(50, 50, 50)).save(path)
+    create_images(
+        db_session,
+        collection.collection_id,
+        [ImageStub(path=str(p)) for p in (missing_path, broken_path, kept_path)],
+    )
+    metadata_resolver.bulk_update_metadata(
+        session=db_session,
+        sample_metadata=[
+            (s.sample_id, {"user_tag": "keep"}) for s in DatasetQuery(collection, db_session)
+        ],
+    )
+    compute_image_quality.compute_image_quality_metadata(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+    # The files change after a successful run: one is removed, one is corrupted.
+    missing_path.unlink()
+    broken_path.write_bytes(b"not an image")
+    compute_image_quality.compute_image_quality_metadata(
+        session=db_session, collection_id=collection.collection_id, overwrite=True
+    )
+
+    samples = {s.file_name: s for s in DatasetQuery(collection, db_session)}
+    for file_name in ("missing.png", "broken.png"):
+        metadata = samples[file_name].metadata
+        for key in compute_image_quality._QUALITY_KEYS:
+            assert metadata[key] is None, (file_name, key)
+        # Metadata that this module did not write is left alone.
+        assert metadata["user_tag"] == "keep"
+    assert samples["kept.png"].metadata["brightness"] == 50.0
+    assert samples["kept.png"].metadata["image_quality_version"] == 1
+
+
+def test_compute_image_quality_metadata__quality_keys_match_metrics() -> None:
+    metrics = compute_image_quality.compute_image_quality_metrics(
+        image=Image.new("RGB", (4, 4), color=(1, 2, 3))
+    )
+    assert set(compute_image_quality._QUALITY_KEYS) == {
+        *metrics,
+        compute_image_quality.IMAGE_QUALITY_VERSION_KEY,
+    }
+
+
 def test_compute_image_quality_metadata__resumes_and_overwrites(
     db_session: Session, tmp_path: Path, mocker: MockerFixture
 ) -> None:
