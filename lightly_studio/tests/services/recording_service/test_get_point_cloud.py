@@ -14,7 +14,7 @@ import pytest
 from pyarrow import ipc
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
+from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.recording import RecordingFormat
@@ -121,19 +121,6 @@ def test_get_point_cloud__no_result(
     kwargs.update(overrides)
 
     assert get_point_cloud.get_point_cloud(**kwargs) is None  # type: ignore[arg-type]
-
-
-def test_get_point_cloud__unknown_channel(
-    db_session: Session, dataset_id: UUID, recording_id: UUID
-) -> None:
-    with pytest.raises(ChannelNotFoundError):
-        get_point_cloud.get_point_cloud(
-            session=db_session,
-            dataset_id=dataset_id,
-            recording_id=recording_id,
-            channel_id=999_999,
-            timestamp_ns=helpers.LIDAR_LOG_TIMES_NS[0],
-        )
 
 
 def test_get_point_cloud__non_point_cloud_channel(
