@@ -84,6 +84,35 @@ def test_deep_copy__empty_collection(db_session: Session) -> None:
     assert copied.parent_collection_id is None
 
 
+def test_deep_copy__with_parent_object_track(db_session: Session) -> None:
+    original = create_collection(session=db_session, collection_name="original")
+    parent_id, child_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(object_track_number=1, dataset_id=original.dataset_id),
+            ObjectTrackCreate(object_track_number=2, dataset_id=original.dataset_id),
+        ],
+    )
+    child = object_track_resolver.get_by_id(session=db_session, object_track_id=child_id)
+    assert child is not None
+    child.parent_object_track_id = parent_id
+    db_session.add(child)
+    db_session.commit()
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=copied.dataset_id,
+    )
+    copied_by_number = {track.object_track_number: track for track in copied_tracks}
+    assert copied_by_number[2].parent_object_track_id == copied_by_number[1].object_track_id
+
+
 def test_deep_copy__with_recordings(db_session: Session) -> None:
     # Arrange
     original = create_collection(session=db_session, collection_name="original")
