@@ -71,7 +71,7 @@ def test_get_frame_locators__sync_timestamps(reader: McapFileReader) -> None:
     topic = _require_env(VIDEO_TOPIC_ENV_VAR)
     reader.load_data_for_topics([topic])
     locators = reader.get_frame_locators(topic)
-    timestamps_ns = [locator.log_time_ns for locator in locators[:5]]
+    timestamps_ns = [locator.capture_timestamp_ns for locator in locators[:5]]
 
     matched = reader.get_frame_locators(topic, sync_timestamps=timestamps_ns)
 

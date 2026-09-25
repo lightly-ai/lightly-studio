@@ -3,6 +3,7 @@ import {
     SELECTION_TOOLS,
     createSelectionToolController,
     findToolButtons,
+    formatShortcutKeys,
     isButtonArmed,
     toolButtonToToggle,
     type ToolMode
@@ -44,6 +45,16 @@ describe('SELECTION_TOOLS', () => {
     it('lists pan, rectangle and lassoButton in order', () => {
         expect(SELECTION_TOOLS.map((tool) => tool.mode)).toEqual(['pan', 'rectangle', 'lasso']);
         expect(SELECTION_TOOLS.every((tool) => tool.label.length > 0)).toBe(true);
+    });
+});
+
+describe('formatShortcutKeys', () => {
+    it('shows Meta as the Command key on macOS', () => {
+        expect(formatShortcutKeys(['Shift', 'Meta'], true)).toBe('Shift + ⌘');
+    });
+
+    it('shows Meta as the Windows key elsewhere', () => {
+        expect(formatShortcutKeys(['Shift', 'Meta'], false)).toBe('Shift + Win');
     });
 });
 
