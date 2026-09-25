@@ -51,7 +51,7 @@ def serve(embedder: Embedder, api_key: str | None = None) -> Iterator[str]:
     # A startup that fails still has to stop the server, or its thread serves on.
     try:
         url = f"http://{_HOST}:{port}"
-        _wait_until_ready(url=url, api_key=api_key)
+        wait_until_ready(url=url, api_key=api_key)
         yield url
     finally:
         uvicorn_server.should_exit = True
@@ -59,8 +59,12 @@ def serve(embedder: Embedder, api_key: str | None = None) -> Iterator[str]:
         listener.close()
 
 
-def _wait_until_ready(url: str, api_key: str | None = None) -> None:
+def wait_until_ready(url: str, api_key: str | None = None) -> None:
     """Poll `/v1/describe` until the server answers.
+
+    Args:
+        url: The address of the server.
+        api_key: The bearer token the server requires, or `None` for no authentication.
 
     Raises:
         TimeoutError: If the server does not answer within the startup timeout, with what
