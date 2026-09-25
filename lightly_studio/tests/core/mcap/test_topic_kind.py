@@ -19,6 +19,8 @@ from lightly_studio.core.mcap.topic_kind import TopicKind
         ("foxglove.CameraCalibration", TopicKind.CAMERA_INFO),
         ("tf2_msgs/msg/TFMessage", TopicKind.TRANSFORM),
         ("foxglove.FrameTransforms", TopicKind.TRANSFORM),
+        ("foxglove.SceneUpdate", TopicKind.SCENE_UPDATE),
+        ("foxglove_msgs/msg/SceneUpdate", TopicKind.SCENE_UPDATE),
         ("sensor_msgs/msg/Imu", TopicKind.OTHER),
         ("", TopicKind.OTHER),
     ],
