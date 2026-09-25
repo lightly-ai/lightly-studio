@@ -39,7 +39,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-MCAP_EXTENSIONS = {".mcap"}
+MCAP_EXTENSION = ".mcap"
+MCAP_EXTENSIONS = {MCAP_EXTENSION}
 """The file extensions an MCAP recording is discovered by."""
 
 DEFAULT_MAX_PAIRING_DIFF_NS = 50_000_000
