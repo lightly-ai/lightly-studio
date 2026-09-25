@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import numpy as np
@@ -15,7 +16,7 @@ from lightly_studio.services.recording_service.point_cloud_types import (
 
 
 def read_point_cloud_colors(
-    data: bytes, fields: dict[str, object], layout: PointCloudLayout
+    data: bytes, fields: Mapping[str, object], layout: PointCloudLayout
 ) -> NDArray[Any] | None:
     """Read separate RGB fields or the common packed rgb/rgba PointCloud2 field."""
     if all(name in fields for name in ("r", "g", "b")):

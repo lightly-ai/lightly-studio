@@ -13,10 +13,9 @@ def test_read_point_cloud_colors__packed_rgb() -> None:
     layout = PointCloudLayout(width=1, height=1, point_step=4, row_step=4, endian="<")
     data = np.array([0x00112233], dtype="<u4").tobytes()
 
-    result = read_point_cloud_colors.read_point_cloud_colors(
-        data, {"rgb": field}, layout
-    )
+    result = read_point_cloud_colors.read_point_cloud_colors(data, {"rgb": field}, layout)
 
+    assert result is not None
     np.testing.assert_array_equal(result, np.array([[0x11, 0x22, 0x33]], dtype=np.uint32))
 
 
@@ -29,6 +28,7 @@ def test_read_point_cloud_colors__separate_channels() -> None:
 
     result = read_point_cloud_colors.read_point_cloud_colors(b"\x11\x22\x33", fields, layout)
 
+    assert result is not None
     np.testing.assert_array_equal(result, np.array([[0x11, 0x22, 0x33]], dtype=np.uint8))
 
 
