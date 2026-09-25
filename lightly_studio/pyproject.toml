@@ -173,11 +173,6 @@ follow_imports = "skip"
 # function from `tests/helpers.py`.
 python_files = "tests/*.py tests/**/*.py"
 
-[tool.coverage.run]
-omit = [
-    "src/lightly_studio/services/recording_service/serialize_point_cloud.py",
-]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
