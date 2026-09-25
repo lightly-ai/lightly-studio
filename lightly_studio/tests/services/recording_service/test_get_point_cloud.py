@@ -101,6 +101,7 @@ def test_get_point_cloud(
     [
         {"timestamp_ns": helpers.LIDAR_LOG_TIMES_NS[0] - 1},
         {"dataset_id": uuid4()},
+        {"recording_id": uuid4()},
     ],
 )
 def test_get_point_cloud__no_result(
@@ -120,18 +121,6 @@ def test_get_point_cloud__no_result(
     kwargs.update(overrides)
 
     assert get_point_cloud.get_point_cloud(**kwargs) is None  # type: ignore[arg-type]
-
-
-def test_get_point_cloud__unknown_recording(db_session: Session) -> None:
-    point_cloud = get_point_cloud.get_point_cloud(
-        session=db_session,
-        dataset_id=uuid4(),
-        recording_id=uuid4(),
-        channel_id=0,
-        timestamp_ns=0,
-    )
-
-    assert point_cloud is None
 
 
 def test_get_point_cloud__unknown_channel(
