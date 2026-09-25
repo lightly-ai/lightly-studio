@@ -72,7 +72,7 @@ describe('getThumbnailUrl', () => {
             cachedCollectionVersion: 'v2'
         });
         expect(url).toBe(
-            'https://example.com/images/sample/img-1?v=v2&quality=high&max_width=200&max_height=150'
+            'https://example.com/images/sample/img-1?v=v2&quality=high&max_width=256&max_height=192'
         );
         vi.unstubAllGlobals();
     });
@@ -87,7 +87,7 @@ describe('getThumbnailUrl', () => {
             cachedCollectionVersion: 'v2'
         });
         expect(url).toBe(
-            'https://example.com/frames/frame-1?quality=high&max_width=200&max_height=150'
+            'https://example.com/frames/frame-1?quality=high&max_width=256&max_height=192'
         );
         vi.unstubAllGlobals();
     });
