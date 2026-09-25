@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+import functools
 import io
 import threading
 from collections import OrderedDict
@@ -15,15 +15,16 @@ import av
 import fsspec
 from av.container import InputContainer
 from av.video.frame import VideoFrame
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel
 
+from lightly_studio.api.routes import media_job
+from lightly_studio.api.routes.api import status
 from lightly_studio.database import db_manager
 from lightly_studio.models.settings import GridViewThumbnailQualityType
 from lightly_studio.resolvers import video_frame_resolver
-from lightly_studio.utils import executor
 
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 
@@ -163,12 +164,14 @@ def _resize_frame(
 
 @frames_router.get("/{sample_id}")
 async def stream_frame(
+    request: Request,
     sample_id: UUID,
     transform_query: Annotated[FrameTransformQuery, Depends(FrameTransformQuery)],
 ) -> Response:
     """Serve a single video frame as PNG/JPEG.
 
     Args:
+        request: The incoming request, used to detect a client disconnect.
         sample_id: The UUID of the video frame sample.
         transform_query: Transport-level query parameters for frame encoding.
     """
@@ -195,17 +198,23 @@ async def stream_frame(
 
     # Run CPU-intensive video processing in thread pool to avoid blocking event loop
     try:
-        buffer, media_type = await asyncio.get_running_loop().run_in_executor(
-            executor.get_media_executor("video_frame"),
-            _process_video_frame,
-            video_path,
-            frame_number,
-            frame_timestamp_pts,
-            rotation_deg,
-            transform,
+        result = await media_job.run_media_job(
+            request=request,
+            thread_name_prefix="video_frame",
+            job=functools.partial(
+                _process_video_frame,
+                video_path=video_path,
+                frame_number=frame_number,
+                frame_timestamp_pts=frame_timestamp_pts,
+                rotation_deg=rotation_deg,
+                transform=transform,
+            ),
         )
     except (ValueError, av.FFmpegError) as exc:
         raise HTTPException(400, str(exc)) from exc
+    if result is None:
+        return Response(status_code=status.HTTP_STATUS_CLIENT_CLOSED_REQUEST)
+    buffer, media_type = result
 
     return Response(
         content=buffer,
