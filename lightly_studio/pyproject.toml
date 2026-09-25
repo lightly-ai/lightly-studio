@@ -175,7 +175,6 @@ python_files = "tests/*.py tests/**/*.py"
 
 [tool.coverage.run]
 omit = [
-    # Excluded from coverage: exercised via integration paths rather than unit tests.
     "src/lightly_studio/services/recording_service/serialize_point_cloud.py",
 ]
 
