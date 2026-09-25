@@ -16,6 +16,11 @@ vi.mock('$lib/hooks', () => ({
     }),
     useTickDetails: () => ({ tickDetails: { data: undefined } })
 }));
+vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
+    useCloudPointFrame: () => ({
+        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+    })
+}));
 
 // The app header and footer have their own tests; stub them so only the route shell renders here.
 vi.mock('$lib/components', async (importOriginal) => {

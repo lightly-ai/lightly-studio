@@ -12,6 +12,14 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
         refetch: vi.fn()
     })
 }));
+vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
+    useTickDetails: () => ({ tickDetails: { data: undefined } })
+}));
+vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
+    useCloudPointFrame: () => ({
+        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+    })
+}));
 
 describe('usePointCloudWorkspaceContext', () => {
     it('returns the context registered by the provider', () => {

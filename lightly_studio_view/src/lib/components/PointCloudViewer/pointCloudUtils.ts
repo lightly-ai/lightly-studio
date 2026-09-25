@@ -2,7 +2,7 @@ import { Box3, BufferAttribute, Vector3 } from 'three';
 import { turboInto } from './colormap';
 
 /** Determines how points are colored. */
-export type ColorMode = 'none' | 'intensity' | 'height';
+export type ColorMode = 'none' | 'intensity' | 'height' | 'rgb';
 
 /** Camera position and orbit target computed from point cloud bounds. */
 interface CameraPlacement {
@@ -26,8 +26,13 @@ export function buildColorBuffer(
     count: number,
     colorMode: ColorMode,
     colors: Float32Array,
-    intensityRange?: [number, number]
+    intensityRange?: [number, number],
+    pointColors?: Float32Array
 ): void {
+    if (colorMode === 'rgb' && pointColors) {
+        colors.set(pointColors.subarray(0, count * 3), 0);
+        return;
+    }
     if (colorMode === 'none') {
         for (let i = 0; i < count; i++) {
             colors[i * 3] = 0.5;
