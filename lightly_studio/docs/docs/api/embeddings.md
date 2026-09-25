@@ -133,7 +133,7 @@ capability.
 
 ### Protocol
 
-Any server that speaks the protocol works, in any language. LightlyStudio calls these endpoints.
+Any server that speaks the protocol works, in any language. Version 1 has these endpoints.
 `lightly_studio_serve.protocol` holds the paths and the request and response models.
 
 | Endpoint | Body |
@@ -141,9 +141,10 @@ Any server that speaks the protocol works, in any language. LightlyStudio calls 
 | `GET /v1/describe` | Response: `DescribeResponse`. The space key, dimension, capabilities and limits. |
 | `POST /v1/embed/texts` | Request: `EmbedTextsRequest`. Response: `EmbeddingsResponse`. |
 | `POST /v1/embed/images/bytes` | Request: multipart, one `files` part per image. Response: `EmbeddingsResponse`. |
+| `POST /v1/embed/videos/bytes` | Request: multipart, one `files` part per video. Response: `EmbeddingsResponse`. |
 
-A server mounts only the embed endpoints of the capabilities it reports. Each request
-carries `Authorization: Bearer <api_key>`.
+A server mounts only the embed endpoints of the capabilities it reports. If the server has an
+API key, each request must carry `Authorization: Bearer <api_key>`.
 
 ### Conformance check
 
@@ -157,7 +158,7 @@ reports.
 | Argument | Description |
 | --- | --- |
 | `url` | The address of the server, for example `http://127.0.0.1:8080`. |
-| `--api-key` | The bearer token. Default: the `LIGHTLY_STUDIO_SERVE_API_KEY` variable. Use the variable, so that the shell history does not keep the key. |
+| `--api-key` | The bearer token. Default: the `LIGHTLY_STUDIO_SERVE_API_KEY` variable. |
 | `--probe-timeout` | The seconds one probe can take. Default: 60. |
 
 | Exit code | Meaning |
