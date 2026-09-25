@@ -62,9 +62,8 @@
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
 
-    // Channel data lands with browser-side MCAP loading (later child issues of LIG-10657); until
-    // then the filter bar renders empty but its selection state is already owned here.
-    let selectedLidarChannels = $state<number[]>([]);
+    // The lidar selection lives in the workspace context because it drives which point clouds
+    // load; the camera selection does not filter anything yet, so it stays local.
     let selectedCameraChannels = $state<number[]>([]);
 
     const lidarChannels = $derived(workspace.lidarChannels);
@@ -110,10 +109,9 @@
     <WorkspaceFilterBar
         {lidarChannels}
         {cameraChannels}
-        {selectedLidarChannels}
+        selectedLidarChannels={workspace.selectedLidarChannels}
         {selectedCameraChannels}
-        onToggleLidarChannel={(channelId) =>
-            (selectedLidarChannels = toggleChannel(selectedLidarChannels, channelId))}
+        onToggleLidarChannel={(channelId) => workspace.toggleLidarChannel(channelId)}
         onToggleCameraChannel={(channelId) =>
             (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
     />

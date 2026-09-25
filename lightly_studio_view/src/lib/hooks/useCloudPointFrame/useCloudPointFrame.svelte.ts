@@ -22,15 +22,20 @@ interface CloudPointFrameParams {
     datasetId: string;
     recordingId: string;
     channels: CloudPointChannelLocator[];
+    /**
+     * Frame to express every channel's points in, so that several lidars align. The backend
+     * maps each cloud with the recording's static transforms. Omit to keep each sensor frame.
+     */
+    targetFrameId?: string;
 }
 
 export const useCloudPointFrame = (
     getParams: () => CloudPointFrameParams
 ): { query: CreateQueryResult<CloudPointFrame, Error> } => {
     const query = createQuery(() => {
-        const { datasetId, recordingId, channels } = getParams();
+        const { datasetId, recordingId, channels, targetFrameId } = getParams();
         return {
-            queryKey: ['cloud-point-frame', datasetId, recordingId, channels],
+            queryKey: ['cloud-point-frame', datasetId, recordingId, channels, targetFrameId],
             enabled: Boolean(datasetId && recordingId && channels.length),
             queryFn: async ({ signal }): Promise<CloudPointFrame> => {
                 const frames = await Promise.all(
@@ -42,10 +47,12 @@ export const useCloudPointFrame = (
                             `${baseUrl}/datasets/${encodeURIComponent(datasetId)}` +
                                 `/recordings/${encodeURIComponent(recordingId)}/point-cloud`
                         );
-                        url.search = new URLSearchParams({
+                        const search = new URLSearchParams({
                             channel_id: String(channelId),
                             timestamp_ns: timestampNs
-                        }).toString();
+                        });
+                        if (targetFrameId) search.set('target_frame_id', targetFrameId);
+                        url.search = search.toString();
                         const response = await fetch(url, { signal });
                         if (!response.ok) {
                             throw new Error(`Could not load point cloud (${response.status}).`);

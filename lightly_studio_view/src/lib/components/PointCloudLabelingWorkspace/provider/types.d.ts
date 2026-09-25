@@ -18,9 +18,11 @@ export interface PointCloudWorkspaceContext {
     readonly status: WorkspaceStatus;
     readonly lidarChannels: ChannelSummaryView[];
     readonly cameraChannels: ChannelSummaryView[];
+    /** `channel_id`s of the lidar channels rendered in the scene; all of them by default. */
+    readonly selectedLidarChannels: number[];
     /** Details for the active tick, used to resolve channel payloads. */
     readonly tickDetails: ReturnType<typeof useTickDetails>['tickDetails'];
-    /** Combined point cloud for all lidar channels in the active tick. */
+    /** Combined point cloud for the selected lidar channels in the active tick. */
     readonly cloudPointFrame: ReturnType<typeof useCloudPointFrame>['query'];
     readonly ticks: TickView[];
     readonly currentTick: number;
@@ -28,6 +30,8 @@ export interface PointCloudWorkspaceContext {
     goToPreviousFrame: () => void;
     goToNextFrame: () => void;
     togglePlayback: () => void;
+    /** Shows or hides a lidar channel in the scene by its `channel_id`. */
+    toggleLidarChannel: (channelId: number) => void;
     /** Re-fetch the sequence summary after a recoverable error. */
     retry: () => void;
 }

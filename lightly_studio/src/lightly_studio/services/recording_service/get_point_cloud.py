@@ -15,6 +15,7 @@ from pyarrow import ipc
 from sqlmodel import Session
 
 from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
+from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.resolvers import recording_resolver
 from lightly_studio.services.recording_service.reader_cache import get_cached_reader
@@ -53,14 +54,35 @@ class _PointCloudLayout:
     endian: Literal[">", "<"]
 
 
-def get_point_cloud(
+def get_point_cloud(  # noqa: PLR0913
     session: Session,
     dataset_id: UUID,
     recording_id: UUID,
     channel_id: int,
     timestamp_ns: int,
+    target_frame_id: str | None = None,
 ) -> PointCloudPayload | None:
-    """Return one decoded point-cloud message as an Arrow IPC stream."""
+    """Return one decoded point-cloud message as an Arrow IPC stream.
+
+    Args:
+        session: The database session.
+        dataset_id: The dataset the recording belongs to.
+        recording_id: The recording to read.
+        channel_id: The point-cloud channel to read.
+        timestamp_ns: The exact MCAP log time of the message.
+        target_frame_id: The coordinate frame to express the points in, e.g. the frame
+            of a reference lidar. The points are mapped from the frame in the message
+            header with the static transforms of the recording, so that the point clouds
+            of several lidars align. `None` keeps the points in the sensor frame.
+
+    Returns:
+        The serialized points, or `None` if the recording or the message is not found.
+
+    Raises:
+        ChannelNotFoundError: If the channel is not in the recording.
+        McapAccessError: If the channel does not carry point clouds, or if no static
+            transform connects the sensor frame to `target_frame_id`.
+    """
     recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
     if recording is None or recording.dataset_id != dataset_id:
         return None
@@ -73,18 +95,54 @@ def get_point_cloud(
     message = reader.get_decoded_message_at(channel_id=channel_id, timestamp_ns=timestamp_ns)
     if message is None:
         return None
+    source_frame_id = str(_value(_value(message.decoded_message, "header"), "frame_id"))
+    transform = _transform_to_target_frame(
+        reader=reader, source_frame_id=source_frame_id, target_frame_id=target_frame_id
+    )
     return _serialize_point_cloud(
         message=message.decoded_message,
         channel_id=channel_id,
         topic=topic.name,
         log_time_ns=message.log_time_ns,
+        transform=transform,
+        frame_id=target_frame_id or source_frame_id,
     )
 
 
-def _serialize_point_cloud(
-    message: object, channel_id: int, topic: str, log_time_ns: int
+def _transform_to_target_frame(
+    reader: McapFileReader, source_frame_id: str, target_frame_id: str | None
+) -> NDArray[np.float64] | None:
+    """Return the static transform from the sensor frame to the target frame.
+
+    Returns `None` if the points stay in the sensor frame, so a recording without
+    static transforms can still serve points in their own frame.
+    """
+    if target_frame_id is None or target_frame_id == source_frame_id:
+        return None
+    return reader.get_static_transform(
+        parent_frame_id=target_frame_id, child_frame_id=source_frame_id
+    )
+
+
+def _serialize_point_cloud(  # noqa: PLR0913
+    message: object,
+    channel_id: int,
+    topic: str,
+    log_time_ns: int,
+    transform: NDArray[np.float64] | None,
+    frame_id: str,
 ) -> PointCloudPayload:
-    """Decode PointCloud2 fields and serialize point rows with frame metadata."""
+    """Decode PointCloud2 fields and serialize point rows with frame metadata.
+
+    Args:
+        message: The decoded PointCloud2 message.
+        channel_id: The channel the message was read from.
+        topic: The topic the message was read from.
+        log_time_ns: The MCAP log time of the message.
+        transform: The 4x4 homogeneous transform to apply to the points, or `None` to
+            keep them in the sensor frame.
+        frame_id: The coordinate frame the served points are in.
+    """
     width = int(_value(message, "width"))
     height = int(_value(message, "height"))
     point_step = int(_value(message, "point_step"))
@@ -105,7 +163,10 @@ def _serialize_point_cloud(
         name: _read_field(data, fields[name], layout) for name in ("x", "y", "z")
     }
     source_point_count = width * height
-    xyz = np.column_stack((points["x"], points["y"], points["z"])).astype(np.float32)
+    xyz = np.column_stack((points["x"], points["y"], points["z"])).astype(np.float64)
+    if transform is not None:
+        xyz = xyz @ transform[:3, :3].T + transform[:3, 3]
+    xyz = xyz.astype(np.float32)
     valid = np.isfinite(xyz).all(axis=1)
     columns: dict[str, pa.Array] = {
         name: pa.array(xyz[valid, index], type=pa.float32())
@@ -133,7 +194,6 @@ def _serialize_point_cloud(
         if len(xyz_valid) == 0
         else {"min": xyz_valid.min(axis=0).tolist(), "max": xyz_valid.max(axis=0).tolist()}
     )
-    frame_id = str(_value(_value(message, "header"), "frame_id"))
     schema = pa.schema(
         [pa.field(name, pa.float32(), nullable=False) for name in columns],
         metadata={

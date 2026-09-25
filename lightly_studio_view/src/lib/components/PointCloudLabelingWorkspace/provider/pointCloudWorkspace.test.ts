@@ -3,7 +3,7 @@ import { PointCloudWorkspace } from './pointCloudWorkspace.svelte';
 
 // The workspace wraps useMcapSequenceSummary; stub it so the class can be built without a live
 // TanStack query client. `summaryState` is mutable so each test drives the derived status/channels.
-const { summaryState, refetch, tickRefetch, cloudRefetch } = vi.hoisted(() => ({
+const { summaryState, refetch, tickRefetch, cloudRefetch, cloudParams } = vi.hoisted(() => ({
     summaryState: { data: undefined, isLoading: false, isError: false } as {
         data: unknown;
         isLoading: boolean;
@@ -11,7 +11,9 @@ const { summaryState, refetch, tickRefetch, cloudRefetch } = vi.hoisted(() => ({
     },
     refetch: vi.fn(),
     tickRefetch: vi.fn(),
-    cloudRefetch: vi.fn()
+    cloudRefetch: vi.fn(),
+    // The latest params getter the workspace handed to useCloudPointFrame.
+    cloudParams: { get: undefined as undefined | (() => { targetFrameId?: string }) }
 }));
 
 vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
@@ -23,9 +25,12 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     })
 }));
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
-    useCloudPointFrame: () => ({
-        query: { data: undefined, isLoading: false, isError: false, refetch: cloudRefetch }
-    })
+    useCloudPointFrame: (getParams: () => { targetFrameId?: string }) => {
+        cloudParams.get = getParams;
+        return {
+            query: { data: undefined, isLoading: false, isError: false, refetch: cloudRefetch }
+        };
+    }
 }));
 
 const summaryWithChannels = {
@@ -81,6 +86,47 @@ describe('PointCloudWorkspace', () => {
         const workspace = createWorkspace();
         expect(workspace.lidarChannels).toHaveLength(1);
         expect(workspace.cameraChannels[0].group_component_name).toBe('front');
+    });
+
+    it('shows every lidar channel by default and toggles them individually', () => {
+        summaryState.data = {
+            ...summaryWithChannels,
+            lidar_channels: [
+                { channel_id: 1, group_component_name: 'lidar_left', group_component_index: 0 },
+                { channel_id: 3, group_component_name: 'lidar_right', group_component_index: 1 }
+            ]
+        };
+        const workspace = createWorkspace();
+        expect(workspace.selectedLidarChannels).toEqual([1, 3]);
+
+        workspace.toggleLidarChannel(1);
+        expect(workspace.selectedLidarChannels).toEqual([3]);
+
+        workspace.toggleLidarChannel(1);
+        expect(workspace.selectedLidarChannels).toEqual([3, 1]);
+    });
+
+    it('aligns the point clouds in the frame of the first lidar', () => {
+        summaryState.data = {
+            ...summaryWithChannels,
+            lidar_channels: [
+                {
+                    channel_id: 1,
+                    group_component_name: 'lidar_left',
+                    group_component_index: 0,
+                    frame_id: 'livox_front_left'
+                },
+                {
+                    channel_id: 3,
+                    group_component_name: 'lidar_right',
+                    group_component_index: 1,
+                    frame_id: 'livox_rear_left'
+                }
+            ]
+        };
+        const workspace = createWorkspace();
+        workspace.toggleLidarChannel(1);
+        expect(cloudParams.get?.().targetFrameId).toBe('livox_front_left');
     });
 
     it('starts on the initial tick when one is given', () => {

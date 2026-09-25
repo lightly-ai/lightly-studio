@@ -60,19 +60,19 @@ COMPONENTS = [
         name="pcl_front_left",
         mcap_data_type=ls.McapDataType.POINT_CLOUD,
         topic="/livox/lidar_front_left/self_filtered",
-        frame_id="lidar_front_left",
+        frame_id="livox_front_left",
     ),
     ls.McapComponentSpec(
         name="pcl_rear_left",
         mcap_data_type=ls.McapDataType.POINT_CLOUD,
         topic="/livox/lidar_rear_left/self_filtered",
-        frame_id="lidar_rear_left",
+        frame_id="livox_rear_left",
     ),
     ls.McapComponentSpec(
         name="pcl_rear_right",
         mcap_data_type=ls.McapDataType.POINT_CLOUD,
         topic="/livox/lidar_rear_right/self_filtered",
-        frame_id="lidar_rear_right",
+        frame_id="livox_rear_right",
     ),
 ]
 

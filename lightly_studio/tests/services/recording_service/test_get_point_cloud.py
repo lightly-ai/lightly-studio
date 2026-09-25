@@ -112,6 +112,80 @@ def test_get_point_cloud__metadata(db_session: Session, tmp_path: Path) -> None:
     assert metadata[b"coordinate_unit"] == b"meter"
 
 
+def test_get_point_cloud__target_frame(db_session: Session, tmp_path: Path) -> None:
+    mcap_path = helpers.write_mcap_with_point_cloud(
+        tmp_path / "recording.mcap", with_static_transforms=True
+    )
+    collection = collection_resolver.create(
+        db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
+    )
+    recording_id = _create_recording(db_session, collection, mcap_path)
+    channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
+
+    point_cloud = get_point_cloud(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        recording_id=recording_id,
+        channel_id=channel_id,
+        timestamp_ns=helpers.LIDAR_LOG_TIMES_NS[0],
+        target_frame_id=helpers.BASE_FRAME_ID,
+    )
+
+    assert point_cloud is not None
+    table = _read_table(point_cloud.data)
+    # The lidar is mounted at (0, 1, 2) in the base frame, without rotation.
+    assert table.column("x").to_pylist() == [1.0, 4.0]
+    assert table.column("y").to_pylist() == [3.0, 6.0]
+    assert table.column("z").to_pylist() == [5.0, 8.0]
+    assert table.schema.metadata[b"frame_id"] == helpers.BASE_FRAME_ID.encode()
+
+
+def test_get_point_cloud__target_frame_is_sensor_frame(db_session: Session, tmp_path: Path) -> None:
+    # The file has no static transforms, which the sensor frame does not need.
+    mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
+    collection = collection_resolver.create(
+        db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
+    )
+    recording_id = _create_recording(db_session, collection, mcap_path)
+    channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
+
+    point_cloud = get_point_cloud(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        recording_id=recording_id,
+        channel_id=channel_id,
+        timestamp_ns=helpers.LIDAR_LOG_TIMES_NS[0],
+        target_frame_id=helpers.LIDAR_FRAME_ID,
+    )
+
+    assert point_cloud is not None
+    table = _read_table(point_cloud.data)
+    assert table.column("x").to_pylist() == [1.0, 4.0]
+    assert table.column("y").to_pylist() == [2.0, 5.0]
+    assert table.column("z").to_pylist() == [3.0, 6.0]
+
+
+def test_get_point_cloud__unknown_target_frame(db_session: Session, tmp_path: Path) -> None:
+    mcap_path = helpers.write_mcap_with_point_cloud(
+        tmp_path / "recording.mcap", with_static_transforms=True
+    )
+    collection = collection_resolver.create(
+        db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
+    )
+    recording_id = _create_recording(db_session, collection, mcap_path)
+    channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
+
+    with pytest.raises(McapAccessError, match="No static transform connects"):
+        get_point_cloud(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            recording_id=recording_id,
+            channel_id=channel_id,
+            timestamp_ns=helpers.LIDAR_LOG_TIMES_NS[0],
+            target_frame_id="map",
+        )
+
+
 def test_get_point_cloud__no_match(db_session: Session, tmp_path: Path) -> None:
     mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
     collection = collection_resolver.create(

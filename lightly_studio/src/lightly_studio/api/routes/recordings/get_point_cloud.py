@@ -26,6 +26,14 @@ class PointCloudQuery(BaseModel):
         ge=0,
         description="Exact MCAP log time in nanoseconds from the tick's channel locator.",
     )
+    target_frame_id: str | None = Query(
+        default=None,
+        description=(
+            "The coordinate frame to express the points in, e.g. the frame of a reference "
+            "lidar, so that the point clouds of several lidars align. The points are mapped "
+            "with the recording's static transforms. Omit to keep the sensor frame."
+        ),
+    )
 
 
 @get_point_cloud_router.get("/point-cloud")
@@ -43,6 +51,7 @@ def get_point_cloud(
             recording_id=recording_id,
             channel_id=point_cloud_query.channel_id,
             timestamp_ns=point_cloud_query.timestamp_ns,
+            target_frame_id=point_cloud_query.target_frame_id,
         )
     except ChannelNotFoundError as exc:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(exc)) from exc

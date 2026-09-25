@@ -49,6 +49,12 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     });
 
     readonly lidarChannels = $derived.by(() => this.#summary.data?.lidar_channels ?? []);
+
+    // `null` until the user picks channels, so every lidar channel is shown by default.
+    #pickedLidarChannels = $state<number[] | null>(null);
+    readonly selectedLidarChannels = $derived.by(
+        () => this.#pickedLidarChannels ?? this.lidarChannels.map((channel) => channel.channel_id)
+    );
     readonly cameraChannels = $derived.by(() => this.#summary.data?.camera_channels ?? []);
 
     constructor(getInputs: GetInputs) {
@@ -68,7 +74,8 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         const channels = $derived.by(() => {
             const details = tickDetails.data;
             if (!details) return [];
-            return (summary.data?.lidar_channels ?? []).flatMap((channel) => {
+            return this.lidarChannels.flatMap((channel) => {
+                if (!this.selectedLidarChannels.includes(channel.channel_id)) return [];
                 const locator = details.channels[channel.group_component_name];
                 return locator
                     ? [{ channelId: locator.channel_id, timestampNs: String(locator.log_time_ns) }]
@@ -78,7 +85,10 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         const { query } = useCloudPointFrame(() => ({
             datasetId: getInputs().datasetId,
             recordingId: tickDetails.data?.recording_id ?? '',
-            channels
+            channels,
+            // The first lidar is the reference frame, like the prototype; it does not follow the
+            // selection, so toggling channels does not move the scene.
+            targetFrameId: this.lidarChannels[0]?.frame_id ?? undefined
         }));
         this.tickDetails = tickDetails;
         this.cloudPointFrame = query;
@@ -95,6 +105,13 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
 
     get sequenceId(): string {
         return this.#getInputs().sequenceId;
+    }
+
+    toggleLidarChannel(channelId: number): void {
+        const selected = this.selectedLidarChannels;
+        this.#pickedLidarChannels = selected.includes(channelId)
+            ? selected.filter((id) => id !== channelId)
+            : [...selected, channelId];
     }
 
     goToPreviousFrame(): void {

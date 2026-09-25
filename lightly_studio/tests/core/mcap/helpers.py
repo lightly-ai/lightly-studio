@@ -226,7 +226,7 @@ def write_mcap_with_compressed_image(path: Path) -> Path:
     return path
 
 
-def write_mcap_with_point_cloud(path: Path) -> Path:
+def write_mcap_with_point_cloud(path: Path, with_static_transforms: bool = False) -> Path:
     """Writes an MCAP with a lidar topic carrying an xyz PointCloud2 message.
 
     The message holds the finite points in `POINT_CLOUD_XYZ_POINTS` followed by one
@@ -234,6 +234,8 @@ def write_mcap_with_point_cloud(path: Path) -> Path:
 
     Args:
         path: The path to write the file to.
+        with_static_transforms: Whether to also write the static transforms of
+            `write_mcap`, which mount the lidar at (0, 1, 2) in the base frame.
 
     Returns:
         The path of the written file.
@@ -242,6 +244,16 @@ def write_mcap_with_point_cloud(path: Path) -> Path:
     point_cloud_schema = writer.register_msgdef(
         datatype="sensor_msgs/msg/PointCloud2", msgdef_text=_POINT_CLOUD_MSGDEF
     )
+    if with_static_transforms:
+        tf_schema = writer.register_msgdef(
+            datatype="tf2_msgs/msg/TFMessage", msgdef_text=_TF_MESSAGE_MSGDEF
+        )
+        writer.write_message(
+            topic=STATIC_TRANSFORM_TOPIC,
+            schema=tf_schema,
+            message=_static_transforms_message(),
+            log_time=STATIC_TRANSFORM_LOG_TIME_NS,
+        )
     writer.write_message(
         topic=LIDAR_POINTS_TOPIC,
         schema=point_cloud_schema,
