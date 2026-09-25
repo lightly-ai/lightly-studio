@@ -12,6 +12,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.embed import embed_samples
+from lightly_studio.embed.errors import QueryEmbedderError
 
 text_embedding_router = APIRouter()
 
@@ -38,6 +39,9 @@ def embed_text(
         text_embeddings = embed_samples.embed_text_for_collection(
             session=session, collection_id=collection_id, text=query_text
         )
+    # The app exception handlers map these
+    except QueryEmbedderError:
+        raise
     except ValueError as exc:
         raise HTTPException(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,

@@ -47,6 +47,7 @@ class LaunchSource(str, Enum):
     """The entry point that started the app."""
 
     QUICKSTART = "quickstart"
+    QUICKSTART_ENTERPRISE = "quickstart_enterprise"
     GUI = "gui"
 
 
