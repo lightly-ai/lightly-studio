@@ -20,6 +20,7 @@ from lightly_studio.models.metadata import (
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 # Number of bins used for numeric metadata histograms.
 _HISTOGRAM_BIN_COUNT = 20
@@ -77,7 +78,7 @@ def get_metadata_info(
 def get_metadata_histograms(
     session: Session,
     collection_id: UUID,
-    filters: ImageFilter | None = None,
+    filters: ImageFilter | VideoFilter | None = None,
     bin_count: int = _HISTOGRAM_BIN_COUNT,
     fields: list[str] | None = None,
 ) -> dict[str, HistogramView]:
@@ -183,7 +184,7 @@ def _compute_histogram(  # noqa: PLR0913
     collection_id: UUID,
     metadata_key: str,
     stats: _NumericMetadataStats,
-    filters: ImageFilter | None = None,
+    filters: ImageFilter | VideoFilter | None = None,
     bin_count: int = _HISTOGRAM_BIN_COUNT,
 ) -> HistogramView:
     """Compute a value-distribution histogram entirely in SQL.
@@ -252,7 +253,7 @@ def _compute_histogram(  # noqa: PLR0913
         )
         .group_by(bucket_expr)
     )
-    query = metadata_helpers.apply_image_filters(
+    query = metadata_helpers.apply_collection_filter(
         query=query, collection_id=collection_id, filters=filters
     )
 
@@ -270,7 +271,7 @@ def _count_metadata_values(
     session: Session,
     collection_id: UUID,
     metadata_key: str,
-    filters: ImageFilter | None,
+    filters: ImageFilter | VideoFilter | None,
 ) -> int:
     """Count non-null values for a metadata key under the given filters."""
     json_not_null_expr = db_json.json_extract_key_as_text(
@@ -288,7 +289,7 @@ def _count_metadata_values(
             json_not_null_expr,
         )
     )
-    query = metadata_helpers.apply_image_filters(
+    query = metadata_helpers.apply_collection_filter(
         query=query, collection_id=collection_id, filters=filters
     )
     return int(session.exec(query).one())

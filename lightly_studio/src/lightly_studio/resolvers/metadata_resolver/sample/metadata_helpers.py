@@ -7,10 +7,10 @@ from uuid import UUID
 import sqlmodel
 from sqlmodel import Session
 
-from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.type_definitions import QueryType
 
 
@@ -33,8 +33,8 @@ def get_merged_schema(session: Session, collection_id: UUID) -> dict[str, str]:
 
 
 def without_metadata_key_filter(
-    filters: ImageFilter | None, metadata_key: str
-) -> ImageFilter | None:
+    filters: ImageFilter | VideoFilter | None, metadata_key: str
+) -> ImageFilter | VideoFilter | None:
     """Return a copy of ``filters`` without the metadata filters for ``metadata_key``."""
     if (
         filters is None
@@ -54,18 +54,13 @@ def without_metadata_key_filter(
     return updated
 
 
-def apply_image_filters(
+def apply_collection_filter(
     query: QueryType,
     collection_id: UUID,
-    filters: ImageFilter | None,
+    filters: ImageFilter | VideoFilter | None,
 ) -> QueryType:
     """Restrict a query to samples matching ``filters``."""
     if filters is None:
         return query
-    filtered_sample_ids = (
-        sqlmodel.select(ImageTable.sample_id)
-        .join(ImageTable.sample)
-        .where(SampleTable.collection_id == collection_id)
-    )
-    filtered_sample_ids = filters.apply(filtered_sample_ids)
+    filtered_sample_ids = filters.build_sample_ids_query(collection_id=collection_id)
     return query.where(sqlmodel.col(SampleTable.sample_id).in_(filtered_sample_ids))

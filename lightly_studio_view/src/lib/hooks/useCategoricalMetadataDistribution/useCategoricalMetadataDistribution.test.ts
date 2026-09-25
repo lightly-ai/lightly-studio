@@ -102,11 +102,11 @@ describe('getCategoricalMetadataDistributionRequestOptions', () => {
         expect(
             getCategoricalMetadataDistributionRequestOptions({
                 collectionId: 'collection-id',
-                filter: { width: { min: 100 } }
+                filter: { filter_type: 'image', width: { min: 100 } }
             })
         ).toEqual({
             path: { collection_id: 'collection-id' },
-            body: { limit: null, filters: { width: { min: 100 } } }
+            body: { limit: null, filters: { filter_type: 'image', width: { min: 100 } } }
         });
     });
 });
@@ -114,7 +114,10 @@ describe('getCategoricalMetadataDistributionRequestOptions', () => {
 describe('categorical field selection', () => {
     it('preserves selected fields and filters, including an empty field selection', () => {
         for (const fields of [['city'], ['city', 'weather'], []]) {
-            for (const filter of [undefined, { width: { min: 100 } }]) {
+            for (const filter of [
+                undefined,
+                { filter_type: 'image' as const, width: { min: 100 } }
+            ]) {
                 expect(
                     getCategoricalMetadataDistributionRequestOptions({
                         collectionId: 'collection-id',
@@ -173,7 +176,7 @@ describe('useCategoricalMetadataDistribution', () => {
         useCategoricalMetadataDistribution(() => ({
             collectionId: 'collection-id',
             fields: ['city'],
-            filter: { width: { min: 100 } }
+            filter: { filter_type: 'image', width: { min: 100 } }
         }));
         const options = createQueryMock.mock.calls[0][0]();
         const signal = new AbortController().signal;
@@ -182,7 +185,11 @@ describe('useCategoricalMetadataDistribution', () => {
         await expect(options.queryFn({ signal })).resolves.toEqual(data);
         expect(getMetadataValueCounts).toHaveBeenCalledWith({
             path: { collection_id: 'collection-id' },
-            body: { limit: null, fields: ['city'], filters: { width: { min: 100 } } },
+            body: {
+                limit: null,
+                fields: ['city'],
+                filters: { filter_type: 'image', width: { min: 100 } }
+            },
             signal,
             throwOnError: true
         });

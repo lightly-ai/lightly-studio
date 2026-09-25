@@ -19,3 +19,9 @@ GridFilter = Annotated[
     Union[ImageFilter, VideoFilter, VideoFrameFilter, AnnotationsFilter],
     Field(discriminator="filter_type"),
 ]
+
+# A filter for the samples of a root collection.
+CollectionFilter = Annotated[
+    Union[ImageFilter, VideoFilter],
+    Field(discriminator="filter_type"),
+]

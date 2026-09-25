@@ -1,5 +1,5 @@
 import { createQuery } from '@tanstack/svelte-query';
-import type { HistogramView, ImageFilter } from '$lib/api/lightly_studio_local';
+import type { HistogramView, MetadataHistogramsRequest } from '$lib/api/lightly_studio_local';
 import { getMetadataHistogramsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { getMetadataHistograms } from '$lib/api/lightly_studio_local/sdk.gen';
 import type { HistogramData } from '$lib/components/Histogram';
@@ -21,9 +21,12 @@ export const selectDistributions = (
         ])
     );
 
+/** An image or video filter, tagged with its `filter_type`. */
+type MetadataHistogramsFilter = NonNullable<MetadataHistogramsRequest['filters']>;
+
 export interface NumericMetadataHistogramOptions {
     collectionId: string;
-    filter?: ImageFilter;
+    filter?: MetadataHistogramsFilter;
     binCount?: number;
     fields?: string[];
 }
@@ -53,7 +56,7 @@ export const getNumericMetadataHistogramRequestOptions = ({
  * The bins come from {@link https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/api/routes/api/metadata.py `POST /collections/{id}/metadata/histograms`}: bin edges
  * span the full collection so the axis stays stable, while the counts respect
  * the given filters (each key's own metadata filter is excluded server-side,
- * faceted-search style). Pass the same `ImageFilter` that drives the grid so
+ * faceted-search style). Pass the same filter that drives the grid so
  * the histograms track the active view; the query refetches whenever the
  * filter changes.
  *
@@ -67,7 +70,7 @@ export const getNumericMetadataHistogramRequestOptions = ({
 export const useNumericMetadataDistribution = (
     getOptions: () => {
         collectionId: string;
-        filter?: ImageFilter;
+        filter?: MetadataHistogramsFilter;
         /** Number of equal-width bins per histogram (server default: 20). */
         binCount?: number;
         fields?: string[];

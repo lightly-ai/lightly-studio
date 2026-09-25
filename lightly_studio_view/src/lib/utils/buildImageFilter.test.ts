@@ -24,6 +24,7 @@ describe('buildImageFilter', () => {
         });
 
         expect(result).toEqual({
+            filter_type: 'image',
             width: { min: 10, max: 20 },
             height: { min: 30, max: 40 }
         });
@@ -38,6 +39,7 @@ describe('buildImageFilter', () => {
         });
 
         expect(result).toEqual({
+            filter_type: 'image',
             sample_filter: {
                 annotations_filter: {
                     annotation_label_ids: ['a', 'b']
@@ -55,6 +57,7 @@ describe('buildImageFilter', () => {
         });
 
         expect(result).toEqual({
+            filter_type: 'image',
             sample_filter: {
                 metadata_filters: metadataFilters
             }
@@ -63,7 +66,7 @@ describe('buildImageFilter', () => {
 
     test('adds tagIds to sample_filter', () => {
         const result = buildImageFilter({ ...baseArgs, tagIds: ['t1', 't2'] });
-        expect(result).toEqual({ sample_filter: { tag_ids: ['t1', 't2'] } });
+        expect(result).toEqual({ filter_type: 'image', sample_filter: { tag_ids: ['t1', 't2'] } });
     });
 
     test('ignores empty tagIds', () => {
@@ -74,13 +77,16 @@ describe('buildImageFilter', () => {
     test('adds confusionCell to sample_filter', () => {
         const confusionCell = { predicted: 'a', actual: 'b' } as never;
         const result = buildImageFilter({ ...baseArgs, confusionCell });
-        expect(result).toEqual({ sample_filter: { confusion_cell: confusionCell } });
+        expect(result).toEqual({
+            filter_type: 'image',
+            sample_filter: { confusion_cell: confusionCell }
+        });
     });
 
     test('adds queryExpr to sample_filter', () => {
         const queryExpr = { field: 'foo' } as never;
         const result = buildImageFilter({ ...baseArgs, queryExpr });
-        expect(result).toEqual({ sample_filter: { query_expr: queryExpr } });
+        expect(result).toEqual({ filter_type: 'image', sample_filter: { query_expr: queryExpr } });
     });
 
     test('merges dimensions, annotationFilter and metadataFilters', () => {
@@ -100,6 +106,7 @@ describe('buildImageFilter', () => {
         });
 
         expect(result).toEqual({
+            filter_type: 'image',
             width: { min: 1, max: 2 },
             height: { min: 3, max: 4 },
             sample_filter: {

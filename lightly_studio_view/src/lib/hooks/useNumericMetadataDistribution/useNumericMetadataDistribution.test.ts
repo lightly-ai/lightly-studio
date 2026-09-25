@@ -41,7 +41,7 @@ describe('getNumericMetadataHistogramRequestOptions', () => {
     });
 
     it('keeps the filter and bin count in the same request body', () => {
-        const filter = { width: { min: 200, max: 800 } };
+        const filter = { filter_type: 'video' as const, duration_s: { min: 1, max: 5 } };
 
         expect(
             getNumericMetadataHistogramRequestOptions({
