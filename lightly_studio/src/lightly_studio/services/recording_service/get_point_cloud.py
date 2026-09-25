@@ -9,9 +9,8 @@ from sqlmodel import Session
 from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
 from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.resolvers import recording_resolver
-from lightly_studio.services.recording_service import serialize_point_cloud
+from lightly_studio.services.recording_service import reader_cache, serialize_point_cloud
 from lightly_studio.services.recording_service.point_cloud_types import PointCloudPayload
-from lightly_studio.services.recording_service.reader_cache import get_cached_reader
 
 
 def get_point_cloud(
@@ -21,11 +20,28 @@ def get_point_cloud(
     channel_id: int,
     timestamp_ns: int,
 ) -> PointCloudPayload | None:
-    """Return one decoded point-cloud message as an Arrow IPC stream."""
+    """Return one decoded point-cloud message as an Arrow IPC stream.
+
+    Args:
+        session: Database session used to resolve the recording.
+        dataset_id: Dataset the recording must belong to.
+        recording_id: Recording to read the point cloud from.
+        channel_id: Channel that carries the point-cloud messages.
+        timestamp_ns: Log time of the message to read, in nanoseconds.
+
+    Returns:
+        The decoded point-cloud payload, or ``None`` when the recording is
+        unknown, does not belong to ``dataset_id``, or has no message at
+        ``timestamp_ns``.
+
+    Raises:
+        ChannelNotFoundError: If ``channel_id`` is not present in the recording.
+        McapAccessError: If ``channel_id`` does not carry a point cloud.
+    """
     recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
     if recording is None or recording.dataset_id != dataset_id:
         return None
-    reader = get_cached_reader(recording.uri)
+    reader = reader_cache.get_cached_reader(uri=recording.uri)
     topic = next((topic for topic in reader.get_topics() if topic.channel_id == channel_id), None)
     if topic is None:
         raise ChannelNotFoundError(f"Channel {channel_id} was not found.")
