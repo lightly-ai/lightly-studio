@@ -264,9 +264,9 @@ Use a remote server when the model must not run in LightlyStudio. For example, t
 weights must stay on your machine, or the model needs its own GPU or dependency versions.
 Search then sends each query to your server, which embeds it and returns the vector.
 
-**1. Serve the model.** Write an embedder with the capability interfaces above and serve
-it with `lightly_studio_serve.serve`. Implement `TextEmbedder` for text search and
-`ImageBytesEmbedder` for image search.
+**1. Serve the model.** The easiest way is `lightly_studio_serve.serve`: implement
+`TextEmbedder` for text search and `ImageBytesEmbedder` for image search, then serve it.
+You can also write your own server, in any language, that speaks the same protocol.
 
 ```python
 from lightly_studio_serve import serve
