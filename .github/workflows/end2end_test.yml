@@ -51,6 +51,7 @@ jobs:
             'lightly_studio/src/**/*',
             'lightly_studio/tests/embed/remote/color_embedder.py',
             'lightly_studio/tests/embed/remote/threaded_server.py',
+            'lightly_studio_serve/pyproject.toml',
             'lightly_studio_serve/src/**/*',
             'lightly_studio_view/.nvmrc',
             'lightly_studio_view/Makefile',
