@@ -53,8 +53,11 @@ Generated output is written to `src/lib/components/QueryEditor/language/generate
 
 ### Configure local environment
 
-Please copy the [.env.example](./.env.example) to a new file named `.env.local` and adjust the variables as needed.
-We need it because we when we start application in dev mode it will be running on different port than the backend API server.
+Copy [.env.example](./.env.example) to a new file named `.env.development.local` and adjust the variables as needed.
+In dev mode, the app runs on a different port than the backend API server, so it needs the backend URLs.
+Only `npm run dev` reads this file. `npm run build` uses the relative URLs from `.env`, so the built GUI
+works on any port that the backend uses. Do not put these URLs in `.env.local`: Vite also reads that
+file for the build.
 
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
