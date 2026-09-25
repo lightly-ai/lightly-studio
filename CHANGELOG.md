@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix undoing an annotation deletion restoring it to the default source instead of its original one.
 - Return 409 instead of 500 for text and image search on a collection whose embedding space cannot embed the query, and 502 when its embedding server cannot be used.
 - Python SDK: Keep the image embeddings stored before an embedder failure, and embed only the images without an embedding when the images are added again with `embed=True`.
+- Fix 503 'Exceeded concurrency limit' errors and failed video loading when resizing the grid or changing thumbnail quality.
 
 
 ### Security
