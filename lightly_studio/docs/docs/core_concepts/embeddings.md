@@ -309,7 +309,7 @@ For a full runnable version, which starts a small server that runs on CPU, see
 !!! warning "Limits"
     - A local embedder registered for the same space still serves the capabilities it
       implements. Register only ingestion capabilities locally so search goes to the server.
-    - Without `ImageBytesEmbedder` on the server, image search is not available.
+    - Without `ImageBytesEmbedder` on the server or locally, image search is not available.
     - The server embeds search queries only. Ingestion still runs locally.
 
 `register_remote_embedder` raises a `RemoteEmbedderError` from
