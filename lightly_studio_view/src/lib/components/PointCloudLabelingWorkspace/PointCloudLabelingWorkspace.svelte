@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Pane, PaneGroup, PaneResizer } from 'paneforge';
+    import { Pane, PaneGroup } from 'paneforge';
+    import { Separator } from '$lib/components';
     import WorkspaceHeader from './WorkspaceHeader/WorkspaceHeader.svelte';
     import WorkspaceFilterBar from './WorkspaceFilterBar/WorkspaceFilterBar.svelte';
     import ToolRail from './ToolRail/ToolRail.svelte';
@@ -8,6 +9,7 @@
     import PointCloudRightSidePanel from './PointCloudRightSidePanel';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
+    import WorkspacePaneResizer from './WorkspacePaneResizer/WorkspacePaneResizer.svelte';
     import type { WorkspaceCrumb } from './types';
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
 
@@ -98,7 +100,7 @@
 
 <div
     bind:this={containerEl}
-    class="flex h-full min-h-0 w-full min-w-0 flex-col bg-background"
+    class="flex h-full min-h-0 w-full min-w-0 flex-col gap-4 rounded-[1vw] bg-card p-4"
     data-testid="point-cloud-labeling-workspace"
 >
     <WorkspaceHeader
@@ -108,6 +110,7 @@
         onToggleFullscreen={toggleFullscreen}
         {onExit}
     />
+    <Separator class="shrink-0 bg-border-hard" />
     <WorkspaceFilterBar
         {lidarChannels}
         {cameraChannels}
@@ -130,7 +133,11 @@
                 <Pane defaultSize={78} minSize={50} class="flex min-h-0 flex-col">
                     <PaneGroup direction="vertical" class="min-h-0 flex-1">
                         <!-- The point cloud dominates: full width of the working column. -->
-                        <Pane defaultSize={62} minSize={30} class="relative min-h-0">
+                        <Pane
+                            defaultSize={62}
+                            minSize={30}
+                            class="relative min-h-0 overflow-hidden rounded-lg border border-border-hard bg-background"
+                        >
                             <ToolRail />
                             {#if workspace.status === 'empty' || workspace.status === 'loading'}
                                 <WorkspaceStatusPanel status={workspace.status} {onExit} />
@@ -138,17 +145,7 @@
                                 <SceneViewport />
                             {/if}
                         </Pane>
-                        <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"
-                        >
-                            <div
-                                class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                            >
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                            </div>
-                        </PaneResizer>
+                        <WorkspacePaneResizer direction="vertical" />
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
                         <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
                             <CameraProjectionStrip
@@ -157,17 +154,7 @@
                                 seqNumber={workspace.currentTick}
                             />
                         </Pane>
-                        <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"
-                        >
-                            <div
-                                class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                            >
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                            </div>
-                        </PaneResizer>
+                        <WorkspacePaneResizer direction="vertical" />
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
                             <FrameTimeline
                                 ticks={workspace.ticks}
@@ -180,17 +167,7 @@
                         </Pane>
                     </PaneGroup>
                 </Pane>
-                <PaneResizer
-                    class="group relative flex w-2 cursor-col-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"
-                >
-                    <div
-                        class="flex flex-col gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                    >
-                        <span class="size-1 rounded-full bg-muted-foreground"></span>
-                        <span class="size-1 rounded-full bg-muted-foreground"></span>
-                        <span class="size-1 rounded-full bg-muted-foreground"></span>
-                    </div>
-                </PaneResizer>
+                <WorkspacePaneResizer direction="horizontal" />
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
                     <PointCloudRightSidePanel bind:selectedCuboidId />
                 </Pane>

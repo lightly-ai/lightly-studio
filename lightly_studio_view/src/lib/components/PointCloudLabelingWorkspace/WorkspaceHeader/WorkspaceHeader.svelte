@@ -28,10 +28,7 @@
     };
 </script>
 
-<header
-    class="flex h-11 shrink-0 items-center justify-between gap-3 border-b bg-background px-3"
-    data-testid="workspace-header"
->
+<header class="flex shrink-0 items-center justify-between gap-3" data-testid="workspace-header">
     {#if sourcePath.length > 0}
         <Breadcrumb data-testid="workspace-breadcrumb">
             <BreadcrumbList>

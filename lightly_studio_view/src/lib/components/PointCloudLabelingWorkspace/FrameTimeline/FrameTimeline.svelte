@@ -56,7 +56,7 @@
 </script>
 
 <div
-    class="flex h-full min-h-0 flex-col border-t bg-background"
+    class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border-hard bg-background"
     data-testid="workspace-frame-timeline"
 >
     <TimelineTransport

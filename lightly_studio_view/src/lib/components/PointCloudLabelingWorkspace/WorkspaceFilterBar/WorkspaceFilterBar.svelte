@@ -32,10 +32,7 @@
     }: Props = $props();
 </script>
 
-<div
-    class="flex shrink-0 items-center gap-4 border-b bg-background px-4 py-2"
-    data-testid="workspace-filter-bar"
->
+<div class="flex shrink-0 items-center gap-4" data-testid="workspace-filter-bar">
     <WorkspaceChannelSelect
         label="Lidar"
         channels={lidarChannels}

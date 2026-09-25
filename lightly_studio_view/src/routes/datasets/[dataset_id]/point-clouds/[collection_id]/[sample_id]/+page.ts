@@ -1,4 +1,6 @@
 import { error } from '@sveltejs/kit';
+import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { fetchCollection } from '$lib/utils';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params, url }) => {
@@ -13,6 +15,9 @@ export const load: PageLoad = async ({ params, url }) => {
         collectionId: params.collection_id,
         sampleId: params.sample_id,
         sequenceId,
-        groupId: url.searchParams.get('group_id') ?? undefined
+        groupId: url.searchParams.get('group_id') ?? undefined,
+        // The app header shown on this route reads both from the page data, like the collection layout.
+        collection: await fetchCollection(params.collection_id),
+        globalStorage: useGlobalStorage()
     };
 };

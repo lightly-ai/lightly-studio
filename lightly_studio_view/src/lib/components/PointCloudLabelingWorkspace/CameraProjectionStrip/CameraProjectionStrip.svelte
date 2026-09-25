@@ -31,7 +31,7 @@
 </script>
 
 <div
-    class="flex h-full min-h-0 flex-col border-t bg-background"
+    class="flex h-full min-h-0 flex-col rounded-lg border border-border-hard bg-background"
     data-testid="workspace-projection-strip"
 >
     <div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">

@@ -17,11 +17,30 @@ vi.mock('$lib/hooks', () => ({
     useTickDetails: () => ({ tickDetails: { data: undefined } })
 }));
 
+// The app header and footer have their own tests; stub them so only the route shell renders here.
+vi.mock('$lib/components', async (importOriginal) => {
+    const { default: Stub } = await import('./PageStub.test.svelte');
+    return { ...(await importOriginal<object>()), Header: Stub, Footer: Stub };
+});
+vi.mock('$lib/components/Header/MenuDialogHost.svelte', async () => ({
+    default: (await import('./PageStub.test.svelte')).default
+}));
+
+const collection = { collection_id: 'collection', name: 'Recordings', sample_type: 'mcap' };
+const globalStorage = { sampleSize: 'globalStorage' };
+
+vi.mock('$lib/utils', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    fetchCollection: vi.fn(async () => collection)
+}));
+vi.mock('$lib/hooks/useGlobalStorage', () => ({ useGlobalStorage: () => globalStorage }));
+
 const mockPageData = {
     datasetId: 'dataset-1',
     collectionId: 'collection-1',
     sampleId: 'sample-1',
-    sequenceId: 'sequence-1'
+    sequenceId: 'sequence-1',
+    collection
 } as unknown as PageData;
 
 describe('point-clouds/[collection_id]/[sample_id] page', () => {
@@ -61,7 +80,9 @@ describe('point-cloud sample page load', () => {
             collectionId: 'collection',
             sampleId: 'sample',
             sequenceId: 'sequence',
-            groupId: 'group'
+            groupId: 'group',
+            collection,
+            globalStorage
         });
     });
 
@@ -83,7 +104,9 @@ describe('point-cloud sample page load', () => {
             collectionId: 'collection',
             sampleId: 'sample',
             sequenceId: 'sequence',
-            groupId: undefined
+            groupId: undefined,
+            collection,
+            globalStorage
         });
     });
 
