@@ -25,6 +25,7 @@ def get_all_by_collection_id_and_parent_sample_ids(
     without triggering N+1 queries:
     - OBJECT_DETECTION: object_detection_details
     - SEGMENTATION_MASK: segmentation_details
+    - CUBOID_3D: cuboid_3d_details
     - CLASSIFICATION: no extra load (label_id is on AnnotationBaseTable itself)
 
     Args:
@@ -54,5 +55,7 @@ def get_all_by_collection_id_and_parent_sample_ids(
         statement = statement.options(joinedload(AnnotationBaseTable.object_detection_details))
     elif annotation_type == AnnotationType.SEGMENTATION_MASK:
         statement = statement.options(joinedload(AnnotationBaseTable.segmentation_details))
+    elif annotation_type == AnnotationType.CUBOID_3D:
+        statement = statement.options(joinedload(AnnotationBaseTable.cuboid_3d_details))
 
     return list(session.exec(statement).all())
