@@ -49,6 +49,9 @@ jobs:
             'lightly_studio/e2e-tests/**/*',
             'lightly_studio/pyproject.toml',
             'lightly_studio/src/**/*',
+            'lightly_studio/tests/embed/remote/color_embedder.py',
+            'lightly_studio/tests/embed/remote/threaded_server.py',
+            'lightly_studio_serve/src/**/*',
             'lightly_studio_view/.nvmrc',
             'lightly_studio_view/Makefile',
             'lightly_studio_view/e2e/**/*',
@@ -279,7 +282,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    steps:
+    steps: &end-to-end-steps
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
@@ -507,16 +510,44 @@ jobs:
         run: |
           kill ${{ env.SERVER_PID }} || true
 
+  # Runs after merge and on manual dispatch, not on pull requests.
+  end-to-end-after-merge:
+    name: End2End Test (${{ matrix.name }})
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: prepare-caches
+    env:
+      # The index script imports the test embedders from `lightly_studio/tests`.
+      PYTHONPATH: .
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Remote Embedder
+            index_script: index_remote_embedder.py
+            playwright_project: remote-embedder
+            shard: "1/1"
+            success_marker: .e2e-success-remote-embedder
+            success_key: e2e-success-remote-embedder
+            artifact_name: Playwright Report (Remote Embedder)
+            postgres: false
+    steps: *end-to-end-steps
+
   success-check:
     name: End2End Success Check
     runs-on: ubuntu-latest
     needs:
       - prepare-caches
       - end-to-end
+      - end-to-end-after-merge
     if: always()
     steps:
       - name: Check failure
-        if: needs.end-to-end.result != 'success'
+        if: >-
+          needs.end-to-end.result != 'success' ||
+          (needs.end-to-end-after-merge.result != 'success' &&
+          needs.end-to-end-after-merge.result != 'skipped')
         run: |
           echo "❌ End-to-End tests did not complete successfully."
           exit 1
