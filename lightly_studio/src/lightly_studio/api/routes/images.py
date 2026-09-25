@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-import asyncio
+import functools
 import io
 import os
-from collections.abc import Generator
 
 import fsspec
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from lightly_studio.api.routes import media_job
 from lightly_studio.api.routes.api import status
 from lightly_studio.database import db_manager
 from lightly_studio.models import image
 from lightly_studio.models.settings import GridViewThumbnailQualityType
-from lightly_studio.utils.executor import get_media_executor
 
 app_router = APIRouter()
 
@@ -25,21 +23,23 @@ JPEG_QUALITY = 75
 
 @app_router.get("/sample/{sample_id}")
 async def serve_image_by_sample_id(
+    request: Request,
     sample_id: str,
     quality: GridViewThumbnailQualityType = GridViewThumbnailQualityType.RAW,
     max_width: int | None = Query(default=None, ge=1, le=4096),
     max_height: int | None = Query(default=None, ge=1, le=4096),
-) -> StreamingResponse:
+) -> Response:
     """Serve an image by sample ID.
 
     Args:
+        request: The incoming request, used to detect a client disconnect.
         sample_id: The ID of the sample.
         quality: Thumbnail quality mode. Use 'high' for compressed JPEG output.
         max_width: Maximum width in pixels for high quality mode.
         max_height: Maximum height in pixels for high quality mode.
 
     Returns:
-        StreamingResponse with the image data.
+        Response with the image data.
 
     Raises:
         HTTPException: If the sample is not found or the file is not accessible.
@@ -57,21 +57,23 @@ async def serve_image_by_sample_id(
         file_path = sample_record.file_path_abs
 
     try:
-        content, content_type = await asyncio.get_running_loop().run_in_executor(
-            get_media_executor("image_thumbnail"),
-            _read_and_transform_image,
-            file_path,
-            quality,
-            max_width,
-            max_height,
+        result = await media_job.run_media_job(
+            request=request,
+            thread_name_prefix="image_thumbnail",
+            job=functools.partial(
+                _read_and_transform_image,
+                file_path=file_path,
+                quality=quality,
+                max_width=max_width,
+                max_height=max_height,
+            ),
         )
+        if result is None:
+            return Response(status_code=status.HTTP_STATUS_CLIENT_CLOSED_REQUEST)
+        content, content_type = result
 
-        # Create a streaming response.
-        def generate() -> Generator[bytes, None, None]:
-            yield content
-
-        return StreamingResponse(
-            generate(),
+        return Response(
+            content=content,
             media_type=content_type,
             headers={
                 # Cache for 1 hour
