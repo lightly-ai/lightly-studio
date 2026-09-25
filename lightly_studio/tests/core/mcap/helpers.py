@@ -6,6 +6,7 @@ compiled schemas.
 
 from __future__ import annotations
 
+import struct
 from pathlib import Path
 from typing import Any
 
@@ -137,12 +138,14 @@ float64 w
 )
 
 
-def write_mcap(path: Path, lidar_stamp_offset_ns: int = 0) -> Path:
+def write_mcap(path: Path, lidar_stamp_offset_ns: int = 0, video_stamp_offset_ns: int = 0) -> Path:
     """Writes an indexed MCAP file with a camera, a lidar, and static transforms.
 
     Args:
         path: The path to write the file to.
         lidar_stamp_offset_ns: Added to each lidar log time to form `header.stamp`.
+            Zero keeps the stamp equal to the log time.
+        video_stamp_offset_ns: Added to each video log time to form `timestamp`.
             Zero keeps the stamp equal to the log time.
 
     Returns:
@@ -178,7 +181,9 @@ def write_mcap(path: Path, lidar_stamp_offset_ns: int = 0) -> Path:
         writer.write_message(
             topic=CAMERA_VIDEO_TOPIC,
             schema=video_schema,
-            message=_compressed_video_message(log_time_ns=log_time_ns),
+            message=_compressed_video_message(
+                log_time_ns=log_time_ns, stamp_ns=log_time_ns + video_stamp_offset_ns
+            ),
             log_time=log_time_ns,
         )
     for log_time_ns in LIDAR_LOG_TIMES_NS:
@@ -399,10 +404,11 @@ def _compressed_image_message(log_time_ns: int) -> dict[str, Any]:
     }
 
 
-def _compressed_video_message(log_time_ns: int) -> dict[str, Any]:
+def _compressed_video_message(log_time_ns: int, stamp_ns: int | None = None) -> dict[str, Any]:
     is_keyframe = log_time_ns in VIDEO_KEYFRAME_LOG_TIMES_NS
+    timestamp_ns = log_time_ns if stamp_ns is None else stamp_ns
     return {
-        "timestamp": _time(log_time_ns),
+        "timestamp": _time(timestamp_ns),
         "frame_id": CAMERA_FRAME_ID,
         "data": h265_keyframe() if is_keyframe else h265_delta_frame(),
         "format": "h265",
@@ -436,11 +442,14 @@ def _point_cloud_message(stamp_ns: int) -> dict[str, Any]:
         "header": {"stamp": _time(stamp_ns), "frame_id": LIDAR_FRAME_ID},
         "height": 1,
         "width": 1,
-        "fields": [{"name": "x", "offset": 0, "datatype": 7, "count": 1}],
+        "fields": [
+            {"name": name, "offset": index * 4, "datatype": 7, "count": 1}
+            for index, name in enumerate(("x", "y", "z"))
+        ],
         "is_bigendian": False,
-        "point_step": 4,
-        "row_step": 4,
-        "data": b"\x00\x00\x00\x00",
+        "point_step": 12,
+        "row_step": 12,
+        "data": struct.pack("<fff", 1.0, 2.0, 3.0),
         "is_dense": True,
     }
 

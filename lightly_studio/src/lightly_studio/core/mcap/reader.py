@@ -209,12 +209,20 @@ class McapFileReader:
 
     @overload
     def get_frame_locators(
-        self, topic: str, sync_timestamps: None = None, sync_rule: MatchFunction | None = None
+        self,
+        topic: str,
+        sync_timestamps: None = None,
+        sync_rule: MatchFunction | None = None,
+        fallback_timestamps: None = None,
     ) -> list[FrameLocator]: ...
 
     @overload
     def get_frame_locators(
-        self, topic: str, sync_timestamps: Sequence[int], sync_rule: MatchFunction | None = None
+        self,
+        topic: str,
+        sync_timestamps: Sequence[int],
+        sync_rule: MatchFunction | None = None,
+        fallback_timestamps: Sequence[int] | None = None,
     ) -> list[FrameLocator | None]: ...
 
     def get_frame_locators(
@@ -222,6 +230,7 @@ class McapFileReader:
         topic: str,
         sync_timestamps: Sequence[int] | None = None,
         sync_rule: MatchFunction | None = None,
+        fallback_timestamps: Sequence[int] | None = None,
     ) -> list[FrameLocator] | list[FrameLocator | None]:
         """Returns the frame locators cached for a topic.
 
@@ -229,11 +238,15 @@ class McapFileReader:
             topic: The topic to return the locators of. Its data must already be
                 loaded, with `load_data_for_topics`.
             sync_timestamps: If given, one locator is returned per query timestamp,
-                matched against the topic's locators. Omit to return every locator of
-                the topic, in ascending log time order.
+                matched against the capture timestamps of the topic's locators. Omit to
+                return every locator of the topic, in ascending log time order.
             sync_rule: Decides which locator matches a query timestamp. Only used
                 together with `sync_timestamps`. Defaults to the locator closest in
-                time.
+                capture time.
+            fallback_timestamps: If given with `sync_timestamps`, a capture miss is
+                retried against the locators' log times. Same length as
+                `sync_timestamps`. Use the query log times here when capture clocks
+                do not overlap, e.g. a camera timestamp on a device clock.
 
         Returns:
             The locators of the topic. With `sync_timestamps`, one entry per query
@@ -242,16 +255,21 @@ class McapFileReader:
 
         Raises:
             DataNotLoadedError: If `load_data_for_topics` was not called for the topic.
+            ValueError: If `fallback_timestamps` is given without `sync_timestamps`, or
+                the two lists have different lengths.
         """
         locators = self._require_loaded_locators(topic)
         if sync_timestamps is None:
+            if fallback_timestamps is not None:
+                raise ValueError("fallback_timestamps requires sync_timestamps.")
             return list(locators)
-        indices = matching.match_all(
+        return _sync_locators(
+            locators=locators,
             queries_ns=sync_timestamps,
-            candidates_ns=[locator.log_time_ns for locator in locators],
+            fallback_queries_ns=fallback_timestamps,
             match=sync_rule,
+            topic=topic,
         )
-        return [None if index is None else locators[index] for index in indices]
 
     def get_intrinsic(self, topic: str) -> CameraIntrinsics:
         """Returns the camera intrinsics recorded on a camera info topic.
@@ -616,3 +634,37 @@ def _frame_locator(
         keyframe_log_time_ns=keyframe_log_time_ns,
         schema_name=None if schema is None else schema.name,
     )
+
+
+def _sync_locators(
+    locators: Sequence[FrameLocator],
+    queries_ns: Sequence[int],
+    fallback_queries_ns: Sequence[int] | None,
+    match: MatchFunction | None,
+    topic: str,
+) -> list[FrameLocator | None]:
+    """Pair queries to locators by capture time, then by log time for misses."""
+    if fallback_queries_ns is None:
+        ordered = sorted(locators, key=lambda locator: locator.capture_timestamp_ns)
+        indices = matching.match_all(
+            queries_ns=queries_ns,
+            candidates_ns=[locator.capture_timestamp_ns for locator in ordered],
+            match=match,
+        )
+        return [None if index is None else ordered[index] for index in indices]
+
+    matched = matching.match_all_with_fallback(
+        primary_queries_ns=queries_ns,
+        primary_candidates_ns=[locator.capture_timestamp_ns for locator in locators],
+        fallback_queries_ns=fallback_queries_ns,
+        fallback_candidates_ns=[locator.log_time_ns for locator in locators],
+        match=match,
+    )
+    if matched.n_fallback:
+        logger.warning(
+            "Paired %d of %d messages of topic '%s' by log time; capture timestamps did not match.",
+            matched.n_fallback,
+            len(queries_ns),
+            topic,
+        )
+    return [None if index is None else locators[index] for index in matched.indices]

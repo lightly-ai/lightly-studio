@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from uuid import UUID
 
 import numpy as np
 import pytest
@@ -271,16 +272,7 @@ def test_resolve_query_embedder__remote_space_without_capability_raises(
 ) -> None:
     collection = create_collection(session=db_session)
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
-    model = create_embedding_model(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_name="acme/model@v1",
-        embedding_dimension=2,
-        set_as_default=True,
-    )
-    model.remote_embedder_url = "http://embedder.test"
-    db_session.add(model)
-    db_session.commit()
+    _create_remote_default_model(session=db_session, collection_id=collection.collection_id)
     client = TestClient(server.create_app(embedder=_ServerTextEmbedder()), follow_redirects=False)
     mocker.patch.object(connection, "build_client", return_value=client)
 
@@ -299,16 +291,7 @@ def test_resolve_query_embedder__unusable_remote_raises(
 ) -> None:
     collection = create_collection(session=db_session)
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
-    model = create_embedding_model(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_name="acme/model@v1",
-        embedding_dimension=2,
-        set_as_default=True,
-    )
-    model.remote_embedder_url = "http://embedder.test"
-    db_session.add(model)
-    db_session.commit()
+    _create_remote_default_model(session=db_session, collection_id=collection.collection_id)
     mocker.patch.object(
         embedder_config, "build_remote", side_effect=RemoteEmbedderUnreachableError("down")
     )
@@ -353,16 +336,7 @@ def test_resolve_query_embedder__builds_remote_from_stored_config(
     collection = create_collection(session=db_session)
     # Nothing is registered: the embedder is built from the configuration of the row.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
-    model = create_embedding_model(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_name="acme/model@v1",
-        embedding_dimension=2,
-        set_as_default=True,
-    )
-    model.remote_embedder_url = "http://embedder.test"
-    db_session.add(model)
-    db_session.commit()
+    _create_remote_default_model(session=db_session, collection_id=collection.collection_id)
     client = TestClient(server.create_app(embedder=_ServerTextEmbedder()), follow_redirects=False)
     mocker.patch.object(connection, "build_client", return_value=client)
 
@@ -374,3 +348,16 @@ def test_resolve_query_embedder__builds_remote_from_stored_config(
     )
 
     assert embedder.embed_text(texts=["a query"]).embeddings.shape == (1, 2)
+
+
+def _create_remote_default_model(session: Session, collection_id: UUID) -> None:
+    model = create_embedding_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_name="acme/model@v1",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    model.remote_embedder_url = "http://embedder.test"
+    session.add(model)
+    session.commit()
