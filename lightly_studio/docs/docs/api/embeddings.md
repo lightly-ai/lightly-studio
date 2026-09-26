@@ -106,3 +106,63 @@ capability.
 ::: lightly_studio_serve.types
     options:
         members: [ImageCrop]
+
+## Serving
+
+`lightly_studio_serve` serves an embedder over HTTP, so that
+[`register_remote_embedder`](#register_remote_embedder) can connect a dataset to it. See
+[Serving an embedder from a remote server](../core_concepts/embeddings.md#serving-an-embedder-from-a-remote-server).
+
+### serve
+
+::: lightly_studio_serve.server
+    options:
+        members: [serve]
+
+### create_app
+
+::: lightly_studio_serve.server
+    options:
+        members: [create_app]
+
+### ServerLimits
+
+::: lightly_studio_serve.protocol
+    options:
+        members: [ServerLimits]
+
+### Protocol
+
+Any server that speaks the protocol works, in any language. Version 1 has these endpoints.
+`lightly_studio_serve.protocol` holds the paths and the request and response models.
+
+| Endpoint | Body |
+| --- | --- |
+| `GET /v1/describe` | Response: `DescribeResponse`. The space key, dimension, capabilities and limits. |
+| `POST /v1/embed/texts` | Request: `EmbedTextsRequest`. Response: `EmbeddingsResponse`. |
+| `POST /v1/embed/images/bytes` | Request: multipart, one `files` part per image. Response: `EmbeddingsResponse`. |
+| `POST /v1/embed/videos/bytes` | Request: multipart, one `files` part per video. Response: `EmbeddingsResponse`. |
+
+A server mounts only the embed endpoints of the capabilities it reports. If the server has an
+API key, each request must carry `Authorization: Bearer <api_key>`.
+
+### Conformance check
+
+```bash
+lightly-studio-serve conformance <url> [--api-key KEY] [--probe-timeout SECONDS]
+```
+
+The command reads `/v1/describe`, then sends one probe to each capability that the server
+reports.
+
+| Argument | Description |
+| --- | --- |
+| `url` | The address of the server, for example `http://127.0.0.1:8080`. |
+| `--api-key` | The bearer token. Default: the `LIGHTLY_STUDIO_SERVE_API_KEY` variable. |
+| `--probe-timeout` | The seconds one probe can take. Default: 60. |
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | The server passes. |
+| `1` | The server fails, or the URL is not valid. |
+| `2` | The arguments are not valid. |
