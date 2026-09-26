@@ -8,6 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
+    InstanceSegmentationEvaluationConfig,
     ObjectDetectionEvaluationConfig,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -150,3 +151,47 @@ def test_recompute_evaluation_run__classification(db_session: Session) -> None:
     run_after = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id)
     assert run_after is not None
     assert run_after.stale_since is None
+
+
+def test_recompute_evaluation_run__instance_segmentation(db_session: Session) -> None:
+    # The GT and prediction masks cover the whole 1920x1080 image, so they match as one TP.
+    root = helpers.create_dataset_with_annotations(
+        db_session,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_data={
+            "x": 0,
+            "y": 0,
+            "width": 1920,
+            "height": 1080,
+            "segmentation_mask": [0, 1920 * 1080],
+        },
+    )
+
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=InstanceSegmentationEvaluationConfig(),
+        name="run-1",
+    )
+    run_id = result.evaluation_run_id
+
+    run = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id)
+    assert run is not None
+    recomputed = evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+
+    assert recomputed.evaluation_run_id == run_id
+    assert recomputed.sample_count == result.sample_count
+    run_after = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id)
+    assert run_after is not None
+    assert run_after.stale_since is None
+    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session, evaluation_run_id=run_id
+    )
+    assert {metric.metric_name: metric.value for metric in sample_metrics} == {
+        "tp": 1.0,
+        "fp": 0.0,
+        "fn": 0.0,
+    }

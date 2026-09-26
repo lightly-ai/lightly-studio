@@ -8,6 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.evaluation import (
     classification_metric,
+    instance_segmentation_metric,
     object_detection_metric,
     semantic_segmentation_metric,
     validators,
@@ -16,6 +17,7 @@ from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
     EvaluationResult,
+    InstanceSegmentationEvaluationConfig,
     ObjectDetectionEvaluationConfig,
     SemanticSegmentationEvaluationConfig,
 )
@@ -118,6 +120,14 @@ def _persist_metrics(session: Session, run: EvaluationRunTable, data: Evaluation
         classification_metric.create_and_persist_classification_metrics_per_sample(
             session=session,
             data=data,
+        )
+    elif run.task_type == EvaluationTaskType.INSTANCE_SEGMENTATION:
+        instance_config = InstanceSegmentationEvaluationConfig.model_validate(run.config_json)
+        instance_segmentation_metric.create_and_persist_instance_segmentation_metrics_per_sample(
+            session=session,
+            data=data,
+            iou_threshold=instance_config.iou_threshold,
+            classwise=instance_config.classwise,
         )
     elif run.task_type == EvaluationTaskType.SEMANTIC_SEGMENTATION:
         SemanticSegmentationEvaluationConfig.model_validate(run.config_json)
