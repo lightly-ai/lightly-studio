@@ -36,7 +36,7 @@
             class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
         >
             <Segment title={`Selected images: ${selectedCount}`}>
-                <div class="flex flex-col space-y-4">
+                <div class="flex flex-col space-y-4 px-1">
                     <NamePickerField
                         label="Annotation source"
                         placeholder="Select an annotation source"
