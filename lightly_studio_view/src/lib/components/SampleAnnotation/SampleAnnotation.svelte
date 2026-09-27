@@ -171,5 +171,16 @@
                 opacity={boundingBoxOpacity}
             />
         {/if}
+    {:else if segmentationMask}
+        <!--Keep the mask selectable when its bounding box is hidden.-->
+        <rect
+            x={boundingBox.x}
+            y={boundingBox.y}
+            width={boundingBox.width}
+            height={boundingBox.height}
+            fill="transparent"
+            pointer-events="all"
+            data-testid="annotation_hit_area"
+        />
     {/if}
 </g>
