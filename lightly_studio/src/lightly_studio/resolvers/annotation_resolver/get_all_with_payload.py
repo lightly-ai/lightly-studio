@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import and_
 from sqlalchemy.orm import aliased, joinedload, load_only
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
@@ -210,7 +211,7 @@ def _build_base_query(
             )
         )
 
-    if sample_type in (SampleType.VIDEO_FRAME, SampleType.VIDEO):
+    if sample_type == SampleType.VIDEO_FRAME:
         return (
             select(AnnotationBaseTable, VideoFrameTable)
             .join(
@@ -218,17 +219,52 @@ def _build_base_query(
                 col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
             )
             .join(VideoFrameTable.video)
-            .options(
-                load_only(VideoFrameTable.sample_id),  # type: ignore[arg-type]
-                joinedload(VideoFrameTable.video).load_only(
-                    VideoTable.height,  # type: ignore[arg-type]
-                    VideoTable.width,  # type: ignore[arg-type]
-                    VideoTable.file_path_abs,  # type: ignore[arg-type]
+            .options(*_video_frame_load_options())
+        )
+
+    if sample_type == SampleType.VIDEO:
+        # An annotation on a whole video gets the first frame of the video as its payload.
+        # The grid shows this frame as the thumbnail.
+        first_frame_subquery = (
+            select(
+                VideoFrameTable.parent_sample_id,
+                func.min(VideoFrameTable.frame_number).label("min_frame_number"),
+            )
+            .group_by(col(VideoFrameTable.parent_sample_id))
+            .subquery()
+        )
+        return (
+            select(AnnotationBaseTable, VideoFrameTable)
+            .join(
+                first_frame_subquery,
+                first_frame_subquery.c.parent_sample_id
+                == col(AnnotationBaseTable.parent_sample_id),
+            )
+            .join(
+                VideoFrameTable,
+                and_(
+                    col(VideoFrameTable.parent_sample_id)
+                    == col(AnnotationBaseTable.parent_sample_id),
+                    col(VideoFrameTable.frame_number) == first_frame_subquery.c.min_frame_number,
                 ),
             )
+            .join(VideoFrameTable.video)
+            .options(*_video_frame_load_options())
         )
 
     raise NotImplementedError(f"Unsupported sample type: {sample_type}")
+
+
+def _video_frame_load_options() -> tuple[Any, ...]:
+    """Load only the frame and video columns that the payload needs."""
+    return (
+        load_only(VideoFrameTable.sample_id),  # type: ignore[arg-type]
+        joinedload(VideoFrameTable.video).load_only(
+            VideoTable.height,  # type: ignore[arg-type]
+            VideoTable.width,  # type: ignore[arg-type]
+            VideoTable.file_path_abs,  # type: ignore[arg-type]
+        ),
+    )
 
 
 def _serialize_annotation_payload(

@@ -12,6 +12,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationDetailsWithPayloadView,
     AnnotationView,
     ImageAnnotationDetailsView,
+    VideoAnnotationDetailsView,
     VideoFrameAnnotationDetailsView,
 )
 from lightly_studio.models.collection import SampleType
@@ -43,10 +44,10 @@ def get_by_id_with_payload(
 
     parent_sample_type = parent_collection.sample_type
 
-    if parent_sample_type in SampleType.VIDEO_FRAME:
-        return _get_video_frame_annotation_by_id(
-            session=session, sample_id=sample_id, parent_sample_type=parent_sample_type
-        )
+    if parent_sample_type == SampleType.VIDEO_FRAME:
+        return _get_video_frame_annotation_by_id(session=session, sample_id=sample_id)
+    if parent_sample_type == SampleType.VIDEO:
+        return _get_video_annotation_by_id(session=session, sample_id=sample_id)
     if parent_sample_type == SampleType.IMAGE:
         return _get_image_annotation_by_id(session=session, sample_id=sample_id)
 
@@ -93,7 +94,7 @@ def _get_image_annotation_by_id(
 
 
 def _get_video_frame_annotation_by_id(
-    session: Session, sample_id: UUID, parent_sample_type: SampleType
+    session: Session, sample_id: UUID
 ) -> AnnotationDetailsWithPayloadView | None:
     base_query = (
         select(AnnotationBaseTable, VideoFrameTable)
@@ -125,9 +126,38 @@ def _get_video_frame_annotation_by_id(
     (annotation, payload) = row
 
     return AnnotationDetailsWithPayloadView(
-        parent_sample_type=parent_sample_type,
+        parent_sample_type=SampleType.VIDEO_FRAME,
         annotation=AnnotationView.from_annotation_table(annotation=annotation),
         parent_sample_data=VideoFrameAnnotationDetailsView.from_video_frame_table(
             video_frame=payload
+        ),
+    )
+
+
+def _get_video_annotation_by_id(
+    session: Session, sample_id: UUID
+) -> AnnotationDetailsWithPayloadView | None:
+    row = session.exec(
+        select(AnnotationBaseTable, VideoTable)
+        .join(VideoTable, col(VideoTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
+        .where(col(AnnotationBaseTable.sample_id) == sample_id)
+    ).one_or_none()
+
+    if row is None:
+        return None
+
+    (annotation, video) = row
+    first_frame_sample_id = session.exec(
+        select(VideoFrameTable.sample_id)
+        .where(col(VideoFrameTable.parent_sample_id) == video.sample_id)
+        .order_by(col(VideoFrameTable.frame_number))
+        .limit(1)
+    ).first()
+
+    return AnnotationDetailsWithPayloadView(
+        parent_sample_type=SampleType.VIDEO,
+        annotation=AnnotationView.from_annotation_table(annotation=annotation),
+        parent_sample_data=VideoAnnotationDetailsView.from_video_table(
+            video=video, first_frame_sample_id=first_frame_sample_id
         ),
     )

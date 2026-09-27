@@ -23,7 +23,7 @@ from lightly_studio.models.annotation.segmentation import (
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.temporal_span import TemporalSpanTable, TemporalSpanView
-from lightly_studio.models.video import VideoFrameTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
@@ -390,6 +390,40 @@ class VideoFrameAnnotationDetailsView(BaseModel):
         )
 
 
+class VideoAnnotationDetailsView(BaseModel):
+    """Response model for the details of an annotation on a whole video.
+
+    Attributes:
+        first_frame_sample_id: Sample ID of the first frame of the video, used as the
+            preview image. ``None`` if the video has no frames.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    sample_id: UUID
+    file_name: str
+    file_path_abs: str
+    width: int
+    height: int
+    first_frame_sample_id: Optional[UUID] = None
+    sample: SampleAnnotationDetailsView
+
+    @classmethod
+    def from_video_table(
+        cls, video: VideoTable, first_frame_sample_id: Optional[UUID]
+    ) -> "VideoAnnotationDetailsView":
+        """Convert video table to video annotation details view."""
+        return VideoAnnotationDetailsView(
+            sample_id=video.sample_id,
+            file_name=video.file_name,
+            file_path_abs=video.file_path_abs,
+            width=video.width,
+            height=video.height,
+            first_frame_sample_id=first_frame_sample_id,
+            sample=SampleAnnotationDetailsView.from_sample_table(video.sample),
+        )
+
+
 class AnnotationDetailsWithPayloadView(BaseModel):
     """Response model for annotation details with payload."""
 
@@ -397,4 +431,6 @@ class AnnotationDetailsWithPayloadView(BaseModel):
 
     parent_sample_type: SampleType
     annotation: AnnotationView
-    parent_sample_data: Union[ImageAnnotationDetailsView, VideoFrameAnnotationDetailsView]
+    parent_sample_data: Union[
+        ImageAnnotationDetailsView, VideoFrameAnnotationDetailsView, VideoAnnotationDetailsView
+    ]

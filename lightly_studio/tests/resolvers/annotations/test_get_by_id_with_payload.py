@@ -6,7 +6,9 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
+    AnnotationType,
     ImageAnnotationDetailsView,
+    VideoAnnotationDetailsView,
     VideoFrameAnnotationDetailsView,
 )
 from lightly_studio.models.collection import SampleType
@@ -102,6 +104,42 @@ def test_get_all_with_payload__with_video_frame(db_session: Session) -> None:
     assert isinstance(annotation_with_payload.parent_sample_data, VideoFrameAnnotationDetailsView)
     assert annotation_with_payload.parent_sample_data.video.file_path_abs == "/path/to/sample1.mp4"
     assert annotation_with_payload.parent_sample_type == SampleType.VIDEO_FRAME
+
+
+def test_get_by_id_with_payload__with_video(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_frame_data = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/sample1.mp4"),
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="jumping",
+    )
+    annotation = create_annotation(
+        session=db_session,
+        sample_id=video_frame_data.video_sample_id,
+        annotation_label_id=label.annotation_label_id,
+        collection_id=collection.collection_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+
+    annotation_with_payload = annotation_resolver.get_by_id_with_payload(
+        session=db_session,
+        sample_id=annotation.sample_id,
+    )
+
+    assert annotation_with_payload is not None
+    assert annotation_with_payload.parent_sample_type == SampleType.VIDEO
+    assert annotation_with_payload.annotation.sample_id == annotation.sample_id
+    video_details = annotation_with_payload.parent_sample_data
+    assert isinstance(video_details, VideoAnnotationDetailsView)
+    assert video_details.sample_id == video_frame_data.video_sample_id
+    assert video_details.file_path_abs == "/path/to/sample1.mp4"
+    assert video_details.first_frame_sample_id == video_frame_data.frame_sample_ids[0]
+    assert video_details.sample.collection_id == collection.collection_id
 
 
 def test_get_all_with_payload__with_no_parent_collection(db_session: Session) -> None:
