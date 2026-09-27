@@ -14,11 +14,14 @@
 
     const collectionId = page.params.collection_id!;
     const { videoFilter } = useVideoFilters();
+    // The video filter store keeps the last filter of the videos grid. A frame collection
+    // exports all videos of its parent, because frame filters do not apply to whole videos.
+    const isFrameCollection = page.data?.collection?.sample_type === 'video_frame';
 
     const { isLoading, errorMessage, handleDownload } = useExportDownload(async () => {
         const response = await exportCollectionYoutubeVisPrepare({
             path: { collection_id: collectionId },
-            body: { video_filter: $videoFilter }
+            body: { video_filter: isFrameCollection ? null : $videoFilter }
         });
         if (response.error) throw new Error(JSON.stringify(response.error));
         const exportKey = response.data?.export_key;

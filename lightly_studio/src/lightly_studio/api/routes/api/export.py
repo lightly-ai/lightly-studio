@@ -129,14 +129,18 @@ def export_collection_youtube_vis_prepare(
     session: SessionDep,
     body: ExportYoutubeVisPrepareBody,
 ) -> ExportKeyResponse:
-    """Generate the YouTube-VIS export and persist its path."""
-    if collection.sample_type != SampleType.VIDEO:
-        raise ValueError("YouTube-VIS export is only supported for video collections.")
+    """Generate the YouTube-VIS export and persist its path.
 
-    dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
+    A frame collection exports the videos of its parent video collection.
+    """
+    video_collection = _get_youtube_vis_video_collection(collection=collection)
+
+    dataset_query = DatasetQuery(
+        dataset=video_collection, session=session, sample_class=VideoSample
+    )
     if body.video_filter is not None:
         dataset_query.filter_by_sample_ids(
-            body.video_filter.build_sample_ids_query(collection.collection_id)
+            body.video_filter.build_sample_ids_query(video_collection.collection_id)
         )
 
     temp_dir = PathlibPath(tempfile.mkdtemp())
@@ -147,6 +151,7 @@ def export_collection_youtube_vis_prepare(
             samples=dataset_query,
             output_json=output_path,
         )
+        # The download route looks up the job by the requested collection, not the video one.
         export = export_job_resolver.create(
             session=session, collection_id=collection.collection_id, export_path=str(output_path)
         )
@@ -412,3 +417,17 @@ def _media_type_for_path(path: PathlibPath) -> str:
     if path.suffix == ".txt":
         return "text/plain"
     return "application/octet-stream"
+
+
+def _get_youtube_vis_video_collection(collection: CollectionTable) -> CollectionTable:
+    """Get the video collection that a YouTube-VIS export reads from."""
+    if collection.sample_type == SampleType.VIDEO:
+        return collection
+    parent = collection.parent
+    if (
+        collection.sample_type == SampleType.VIDEO_FRAME
+        and parent is not None
+        and parent.sample_type == SampleType.VIDEO
+    ):
+        return parent
+    raise ValueError("YouTube-VIS export is only supported for video and frame collections.")

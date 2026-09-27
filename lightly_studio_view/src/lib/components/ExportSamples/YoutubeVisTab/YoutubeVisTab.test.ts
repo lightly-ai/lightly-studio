@@ -5,7 +5,10 @@ import type { VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
 import YoutubeVisTab from './YoutubeVisTab.svelte';
 import { useVideoFilters } from '$lib/hooks';
 
-const pageMock = vi.hoisted(() => ({ params: { collection_id: 'test-collection' } }));
+const pageMock = vi.hoisted(() => ({
+    params: { collection_id: 'test-collection' },
+    data: {} as { collection?: { sample_type: string } }
+}));
 vi.mock('$app/state', () => ({ page: pageMock }));
 
 const mocks = vi.hoisted(() => ({
@@ -33,6 +36,7 @@ describe('YoutubeVisTab', () => {
     beforeEach(() => {
         mocks.exportCollectionYoutubeVisPrepare.mockReset();
         mocks.triggerDownload.mockReset();
+        pageMock.data = {};
         vi.mocked(useVideoFilters).mockReturnValue({
             videoFilter: writable(null),
             filterParams: writable(null),
@@ -88,6 +92,31 @@ describe('YoutubeVisTab', () => {
             expect(mocks.exportCollectionYoutubeVisPrepare).toHaveBeenCalledWith({
                 path: { collection_id: 'test-collection' },
                 body: { video_filter: activeFilter }
+            });
+        });
+    });
+
+    it('does not pass the video filter for a frame collection', async () => {
+        mocks.exportCollectionYoutubeVisPrepare.mockResolvedValue({
+            data: { export_key: 'key789' }
+        });
+        pageMock.data = { collection: { sample_type: 'video_frame' } };
+        vi.mocked(useVideoFilters).mockReturnValueOnce({
+            videoFilter: writable({ filter_type: 'video', width: { min: 100 } }),
+            filterParams: writable(null),
+            updateFilterParams: vi.fn(),
+            updateSampleIds: vi.fn(),
+            videoSortBy: writable(null),
+            updateSortBy: vi.fn()
+        });
+        render(YoutubeVisTab);
+        await fireEvent.click(
+            screen.getByTestId('submit-button-youtube-vis-instance-segmentations')
+        );
+        await waitFor(() => {
+            expect(mocks.exportCollectionYoutubeVisPrepare).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection' },
+                body: { video_filter: null }
             });
         });
     });
