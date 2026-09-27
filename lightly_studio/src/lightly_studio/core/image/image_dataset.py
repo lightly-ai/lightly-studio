@@ -33,6 +33,7 @@ from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_samples
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
+from lightly_studio.metadata import compute_image_quality
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
@@ -126,6 +127,55 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         if sample is None:
             raise IndexError(f"No sample found for sample_id: {sample_id}")
         return ImageSample(inner=sample)
+
+    def compute_image_quality_metadata(
+        self,
+        overwrite: bool = False,
+        max_workers: int | None = None,
+    ) -> None:
+        """Computes per-image quality metrics from pixels and stores them as float metadata.
+
+        Stores ``brightness``, ``contrast``, ``sharpness``, ``entropy``, ``red_mean``,
+        ``green_mean``, ``blue_mean`` and ``aspect_ratio`` for every image, plus the
+        integer ``image_quality_version`` the values were computed with. The Metadata page
+        of the docs defines every metric. The metrics describe pixels and are not a good/bad
+        classifier: compare them between the images of one dataset rather than applying
+        one threshold to every dataset.
+
+        Each image is decoded once through the same fsspec path as ingest, by a bounded
+        thread pool, and the values are written in batches. A missing or undecodable
+        image gets no values, so it never looks like a dark or blurry image.
+
+        Args:
+            overwrite:
+                If False, images that already carry metrics of the current version are
+                skipped, so an interrupted run resumes. If True, every image is recomputed.
+            max_workers:
+                Number of images decoded concurrently. Defaults to 4 for local files and
+                to ``LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS`` when any file is remote.
+
+        Raises:
+            AllInputFilesFailedError: If at least one image was attempted and none could
+                be read.
+
+        Example:
+            ```python
+            dataset.compute_image_quality_metadata()
+            # Tag the 100 least sharp images of this dataset.
+            dataset.query().sampling().metadata_weighting(
+                n_samples_to_select=100,
+                sampling_result_tag_name="least_sharp",
+                metadata_key="sharpness",
+                strength=-1,
+            )
+            ```
+        """
+        compute_image_quality.compute_image_quality_metadata(
+            session=self.session,
+            collection_id=self.collection_id,
+            overwrite=overwrite,
+            max_workers=max_workers,
+        )
 
     def add_images_from_path(
         self,
