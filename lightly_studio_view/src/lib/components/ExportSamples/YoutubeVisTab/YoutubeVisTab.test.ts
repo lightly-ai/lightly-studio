@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
-import type { VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
+import type { VideoFilter, VideoFrameFilter } from '$lib/api/lightly_studio_local/types.gen';
 import YoutubeVisTab from './YoutubeVisTab.svelte';
-import { useVideoFilters } from '$lib/hooks';
+import { useFramesFilter, useVideoFilters } from '$lib/hooks';
 
 const pageMock = vi.hoisted(() => ({
     params: { collection_id: 'test-collection' },
@@ -21,6 +21,7 @@ vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => ({
 }));
 
 vi.mock('$lib/hooks', () => ({
+    useFramesFilter: vi.fn(),
     useVideoFilters: vi.fn()
 }));
 
@@ -44,6 +45,12 @@ describe('YoutubeVisTab', () => {
             updateSampleIds: vi.fn(),
             videoSortBy: writable(null),
             updateSortBy: vi.fn()
+        });
+        vi.mocked(useFramesFilter).mockReturnValue({
+            frameFilter: writable(null),
+            filterParams: writable(null),
+            updateFilterParams: vi.fn(),
+            updateSampleIds: vi.fn()
         });
     });
 
@@ -96,27 +103,32 @@ describe('YoutubeVisTab', () => {
         });
     });
 
-    it('does not pass the video filter for a frame collection', async () => {
+    it('passes the frame filter for a frame collection', async () => {
         mocks.exportCollectionYoutubeVisPrepare.mockResolvedValue({
             data: { export_key: 'key789' }
         });
         pageMock.data = { collection: { sample_type: 'video_frame' } };
-        vi.mocked(useVideoFilters).mockReturnValueOnce({
-            videoFilter: writable({ filter_type: 'video', width: { min: 100 } }),
+        const frameFilter: VideoFrameFilter = {
+            filter_type: 'video_frame',
+            sample_filter: { sample_ids: ['frame-1'] }
+        };
+        vi.mocked(useFramesFilter).mockReturnValueOnce({
+            frameFilter: writable(frameFilter),
             filterParams: writable(null),
             updateFilterParams: vi.fn(),
-            updateSampleIds: vi.fn(),
-            videoSortBy: writable(null),
-            updateSortBy: vi.fn()
+            updateSampleIds: vi.fn()
         });
         render(YoutubeVisTab);
+        expect(
+            screen.getByText(/all frames of each video that has a matching frame/)
+        ).toBeInTheDocument();
         await fireEvent.click(
             screen.getByTestId('submit-button-youtube-vis-instance-segmentations')
         );
         await waitFor(() => {
             expect(mocks.exportCollectionYoutubeVisPrepare).toHaveBeenCalledWith({
                 path: { collection_id: 'test-collection' },
-                body: { video_filter: null }
+                body: { video_frame_filter: frameFilter }
             });
         });
     });
