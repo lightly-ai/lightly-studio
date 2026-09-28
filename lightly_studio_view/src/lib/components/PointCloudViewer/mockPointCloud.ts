@@ -1,4 +1,4 @@
-import type { PointBatch } from './pointCloudBuffer';
+import type { PointBatch } from './types';
 
 /**
  * Generate points on the 6 faces of a solid cube centered at the given offset.

@@ -25,6 +25,7 @@
     } from '../distributionHandlers';
     import {
         buildMetadataDistributionSource,
+        selectCategoricalFetchState,
         selectCategoricalMetadataKeys,
         selectComparisonSampleTags,
         selectNumericMetadataKeys
@@ -354,6 +355,12 @@
         enabled: true
     }));
     const metadataTagDistributions = $derived(metadataTagDistributionsQuery.data ?? []);
+    const categoricalFetchState = $derived(
+        selectCategoricalFetchState(
+            [categoricalMetadataQuery, categoricalMetadataFilteredQuery],
+            activeMetadataField?.type === 'categorical' ? activeMetadataField.name : undefined
+        )
+    );
     const metadataDistributionSource = $derived(
         buildMetadataDistributionSource({
             histograms: metadataDistributions,
@@ -365,20 +372,8 @@
             selectedValues: $categoricalMetadataValues,
             tagDistributions: metadataTagDistributions,
             numericLoading: metadataHistogramsQuery.isFetching,
-            categoricalLoading:
-                (categoricalMetadataQuery.isFetching &&
-                    (categoricalMetadataQuery.isLoading ||
-                        categoricalMetadataQuery.isPlaceholderData)) ||
-                (categoricalMetadataFilteredQuery.isFetching &&
-                    (categoricalMetadataFilteredQuery.isLoading ||
-                        categoricalMetadataFilteredQuery.isPlaceholderData)),
-            categoricalUpdating:
-                (categoricalMetadataQuery.isFetching &&
-                    !categoricalMetadataQuery.isLoading &&
-                    !categoricalMetadataQuery.isPlaceholderData) ||
-                (categoricalMetadataFilteredQuery.isFetching &&
-                    !categoricalMetadataFilteredQuery.isLoading &&
-                    !categoricalMetadataFilteredQuery.isPlaceholderData),
+            categoricalLoading: categoricalFetchState.loading,
+            categoricalUpdating: categoricalFetchState.updating,
             categoricalError: categoricalMetadataQuery.error?.message,
             comparisonLoading: metadataTagDistributionsQuery.isFetching,
             comparisonError: metadataTagDistributionsQuery.error?.message
