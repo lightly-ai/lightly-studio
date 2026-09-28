@@ -6,9 +6,11 @@ type Bounds = NonNullable<CloudPointFrame['bounds']>;
 function axisExtrema(
     boxes: Bounds[],
     edge: 'min' | 'max',
-    reduce: (...values: number[]) => number
+    reduce: (a: number, b: number) => number
 ): Bounds['min'] {
-    return [0, 1, 2].map((axis) => reduce(...boxes.map((box) => box[edge][axis]))) as Bounds['min'];
+    return [0, 1, 2].map((axis) =>
+        boxes.reduce((acc, box) => reduce(acc, box[edge][axis]), boxes[0][edge][axis])
+    ) as Bounds['min'];
 }
 
 /**
