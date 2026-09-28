@@ -36,6 +36,7 @@ from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
     collection_resolver,
     image_resolver,
     tag_resolver,
@@ -819,11 +820,23 @@ def _generate_embeddings_image(
 ) -> None:
     """Generate and store embeddings for samples.
 
+    Existing samples that have no embedding of the collection's default model are embedded
+    too, so a rerun completes an embedding that failed before.
+
     Args:
         session: Database session for resolver operations.
         collection_id: The ID of the collection to associate with the embedding model.
         sample_ids: List of sample IDs to generate embeddings for.
     """
+    default_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if default_model_id is not None:
+        unembedded_sample_ids = image_resolver.get_unembedded_sample_ids(
+            session=session, collection_id=collection_id, embedding_model_id=default_model_id
+        )
+        sample_ids = list(dict.fromkeys([*sample_ids, *unembedded_sample_ids]))
+
     if not sample_ids:
         return
 
