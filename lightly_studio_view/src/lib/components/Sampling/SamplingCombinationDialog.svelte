@@ -162,7 +162,7 @@
                                 subpartDiversityDisabledReason={isVideoCollection
                                     ? 'Not available for video collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
                                     : !strategyOptions.hasCroppableAnnotationSources
-                                      ? 'No annotation sources found. Add object detection or segmentation annotations to enable this strategy.'
+                                      ? 'No object detection or segmentation annotation sources found. Add object detection or segmentation annotations to enable this strategy.'
                                       : hasSubpartDiversity
                                         ? 'Only one subpart diversity strategy can be added per selection.'
                                         : undefined}
