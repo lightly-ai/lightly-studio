@@ -1,4 +1,4 @@
-import type { PointBatch } from '$lib/components/PointCloudViewer';
+import type { PointBatch } from '$lib/components/PointCloudViewer/types';
 
 /** A 3D vector as an `[x, y, z]` tuple. */
 export type Vec3 = [number, number, number];
