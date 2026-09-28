@@ -24,7 +24,7 @@
         updating,
         onRemove,
         onOpenChange,
-        children
+        children: content
     }: Props = $props();
 </script>
 
@@ -39,7 +39,7 @@
         {onOpenChange}
     >
         {#snippet children()}
-            {@render children()}
+            {@render content()}
         {/snippet}
     </MetadataCategoricalFilterList>
 {:else}
@@ -53,7 +53,7 @@
         {onOpenChange}
     >
         {#snippet children()}
-            {@render children()}
+            {@render content()}
         {/snippet}
     </MetadataCategoricalFilterDropdown>
 {/if}
