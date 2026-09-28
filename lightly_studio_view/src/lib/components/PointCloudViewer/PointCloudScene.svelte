@@ -37,7 +37,7 @@
         canvas.addEventListener('contextmenu', suppress);
 
         // Alt held: switch to screen-space panning (includes Z-axis movement).
-        // Default: ground-plane panning (matches Foxglove behaviour).
+        // Default: ground-plane panning.
         function onKeyDown(e: KeyboardEvent) {
             if (e.key === 'Alt' && controlsRef) controlsRef.screenSpacePanning = true;
         }
