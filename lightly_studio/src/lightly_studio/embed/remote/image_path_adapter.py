@@ -7,6 +7,7 @@ image-bytes route.
 
 from __future__ import annotations
 
+import functools
 import logging
 from collections.abc import Iterable, Iterator, Sequence
 
@@ -33,7 +34,7 @@ class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
         A file that cannot be read, or that is larger than one request, is not embedded.
         """
         images = parallelize.thread_imap_lazy(
-            function=_read,
+            function=functools.partial(_read, max_bytes=self._limits.max_request_bytes),
             iterable=paths,
             max_workers=executor.get_media_worker_count(),
         )
@@ -72,21 +73,24 @@ class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
                 continue
             if len(image) + batching.ITEM_ENVELOPE_BYTES > self._limits.max_request_bytes:
                 logger.warning(
-                    "Cannot embed the image %s. It has %d bytes, and the embedding server "
-                    "accepts a request of at most %d bytes.",
+                    "Cannot embed the image %s. It is larger than one request to the "
+                    "embedding server can be (%d bytes).",
                     path,
-                    len(image),
                     self._limits.max_request_bytes,
                 )
                 continue
             yield index, image
 
 
-def _read(path: str) -> bytes | None:
-    """Read the bytes of a file, or None if the file cannot be read."""
+def _read(path: str, max_bytes: int) -> bytes | None:
+    """Read the bytes of a file, or None if the file cannot be read.
+
+    Read at most one byte more than ``max_bytes``. That byte shows that the file is too
+    large for one request, and a large file does not fill the memory.
+    """
     try:
         with fsspec.open(urlpath=path, mode="rb") as file:
-            data: bytes = file.read()
+            data: bytes = file.read(max_bytes + 1)
     except OSError as error:
         logger.warning("Cannot read the image %s: %s", path, error)
         return None
