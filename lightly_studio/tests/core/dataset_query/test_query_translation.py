@@ -9,6 +9,7 @@ import pytest
 from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
@@ -113,6 +114,17 @@ def test_to_match_expression__datetime_gt() -> None:
     assert "2024-01-15" in sql
 
 
+def test_to_match_expression__datetime_video() -> None:
+    expr = DatetimeExpr(
+        field=FieldRef(table="video", name="created_at"),
+        operator=OrdinalComparisonOperator.LT,
+        value=datetime(2024, 1, 15, tzinfo=timezone.utc),
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr))
+    assert "sample.created_at <" in sql
+    assert "2024-01-15" in sql
+
+
 def test_to_match_expression__datetime_unknown_field() -> None:
     expr = DatetimeExpr(
         field=FieldRef(table="image", name="updated_at"),
@@ -143,29 +155,19 @@ def test_to_match_expression__ordinal_float_unknown_field() -> None:
         query_translation.to_match_expression(expr)
 
 
-def test_to_match_expression__equality_float_eq() -> None:
-    expr = EqualityFloatExpr(
+def test_to_match_expression__ordinal_float_duration_gt() -> None:
+    expr = OrdinalFloatExpr(
         field=FieldRef(table="video", name="duration_s"),
-        operator=EqualityComparisonOperator.EQ,
+        operator=OrdinalComparisonOperator.GT,
         value=10.5,
     )
     sql = _to_sql(query_translation.to_match_expression(expr))
-    assert "video.duration_s = 10.5" in sql
-
-
-def test_to_match_expression__equality_float_neq() -> None:
-    expr = EqualityFloatExpr(
-        field=FieldRef(table="video", name="duration_s"),
-        operator=EqualityComparisonOperator.NEQ,
-        value=0,
-    )
-    sql = _to_sql(query_translation.to_match_expression(expr))
-    assert "video.duration_s != 0" in sql
+    assert "video.duration_s > 10.5" in sql
 
 
 def test_to_match_expression__equality_float_unknown_field() -> None:
     expr = EqualityFloatExpr(
-        field=FieldRef(table="image", name="size_mb"),
+        field=FieldRef(table="video", name="duration_s"),
         operator=EqualityComparisonOperator.EQ,
         value=1.0,
     )
@@ -301,6 +303,46 @@ def test_to_match_expression__segmentation_mask_confidence() -> None:
     )
     sql = _to_sql(query_translation.to_match_expression(expr))
     assert "annotation_base.confidence <= 0.5" in sql
+
+
+def test_to_match_expression__object_detection_match_video() -> None:
+    expr = ObjectDetectionMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="object_detection", name="class_name"),
+            operator=EqualityComparisonOperator.EQ,
+            value="car",
+        )
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.VIDEO))
+    assert "annotation_type = 'object_detection'" in sql
+    assert "annotation_label_name = 'car'" in sql
+    assert "video_frame_1.parent_sample_id" in sql
+
+
+def test_to_match_expression__and_video() -> None:
+    """Annotation expressions nested in boolean expressions keep the video sample type."""
+    expr = AndExpr(
+        children=[
+            OrdinalFloatExpr(
+                field=FieldRef(table="video", name="fps"),
+                operator=OrdinalComparisonOperator.GTE,
+                value=25.0,
+            ),
+            NotExpr(
+                child=ClassificationMatchExpr(
+                    subexpr=StringExpr(
+                        field=FieldRef(table="classification", name="class_name"),
+                        operator=EqualityComparisonOperator.EQ,
+                        value="night",
+                    )
+                )
+            ),
+        ]
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.VIDEO))
+    assert "video.fps >= 25.0" in sql
+    assert "annotation_type = 'classification'" in sql
+    assert "video_frame_1.parent_sample_id" in sql
 
 
 def test_to_match_expression__and() -> None:

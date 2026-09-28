@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redesign the embedding plot selection tools as visible, sticky Pan, Rectangle, and Lasso buttons in the GUI.
 - Show the Rectangle and Lasso drag shortcuts in the embedding plot tool tooltips.
 - Show categorical metadata filters in the image sidebar with an optional field picker and expanded value lists.
+- Python SDK: `VideoSampleField.duration_s` supports the `<`, `<=`, `>` and `>=` operators.
 
 ### Deprecated
 
