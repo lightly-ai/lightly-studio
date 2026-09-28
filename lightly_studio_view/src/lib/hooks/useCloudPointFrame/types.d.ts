@@ -1,7 +1,15 @@
-import type { PointBatch } from '$lib/components/PointCloudViewer';
+import type { PointBatch } from '$lib/components/PointCloudViewer/types';
 
 /** A 3D vector as an `[x, y, z]` tuple. */
 export type Vec3 = [number, number, number];
+
+/** Locates a single point-cloud frame within a channel. */
+export interface CloudPointChannelLocator {
+    /** Identifier of the channel to load the frame from. */
+    channelId: number;
+    /** Capture time of the frame, in nanoseconds (string to preserve precision). */
+    timestampNs: string;
+}
 
 /** A parsed point-cloud frame with its batch data, metadata, and source channels. */
 export interface CloudPointFrame {

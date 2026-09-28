@@ -42,6 +42,26 @@ describe('mergeCloudPointFrames', () => {
         });
     });
 
+    it('copies only the active points of padded batches', () => {
+        const padded = makeFrame({
+            batch: {
+                positions: new Float32Array([1, 2, 3, 0, 0, 0]),
+                intensities: new Float32Array([0.5, 0]),
+                colors: new Float32Array([0.1, 0.2, 0.3, 0, 0, 0]),
+                count: 1
+            }
+        });
+
+        const result = mergeCloudPointFrames([padded]);
+
+        expect(result.batch).toEqual({
+            positions: new Float32Array([1, 2, 3]),
+            intensities: new Float32Array([0.5]),
+            colors: new Float32Array([0.1, 0.2, 0.3]),
+            count: 1
+        });
+    });
+
     it('drops colors when any frame lacks them', () => {
         const withColors = makeFrame();
         const withoutColors = makeFrame({
@@ -81,6 +101,27 @@ describe('mergeCloudPointFrames', () => {
             { channelId: 1, timestampNs: '100', frameId: 'a' },
             { channelId: 2, timestampNs: '200', frameId: 'b' }
         ]);
+    });
+
+    it('returns null bounds when a frame with points lacks bounds', () => {
+        const withBounds = makeFrame({ bounds: { min: [0, 0, 0], max: [2, 2, 2] } });
+        const withoutBounds = makeFrame({ bounds: null });
+
+        const result = mergeCloudPointFrames([withBounds, withoutBounds]);
+
+        expect(result.bounds).toBeNull();
+    });
+
+    it('ignores empty frames without bounds when merging', () => {
+        const withBounds = makeFrame({ bounds: { min: [0, 0, 0], max: [2, 2, 2] } });
+        const empty = makeFrame({
+            batch: { positions: new Float32Array(), intensities: new Float32Array(), count: 0 },
+            bounds: null
+        });
+
+        const result = mergeCloudPointFrames([withBounds, empty]);
+
+        expect(result.bounds).toEqual({ min: [0, 0, 0], max: [2, 2, 2] });
     });
 
     it('takes channel id and timestamp from the first frame', () => {
