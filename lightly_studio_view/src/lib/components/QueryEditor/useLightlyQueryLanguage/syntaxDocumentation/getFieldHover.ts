@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor';
 import { detectScopeAt } from '../../language/detectScopeAt';
 import { findFieldInScope } from '../../language/lightly-query-schema';
+import { getModelRootScope } from '../modelRootScope';
 import { buildFieldHover } from './buildFieldHover';
 import { getWordRange } from './getWordRange';
 
@@ -17,7 +18,7 @@ export function getFieldHover(
         lineNumber: position.lineNumber,
         column: word.startColumn
     });
-    const scope = detectScopeAt(text, offset);
+    const scope = detectScopeAt(text, offset, getModelRootScope(model));
     const field = findFieldInScope(scope, word.word);
     if (!field) return null;
 

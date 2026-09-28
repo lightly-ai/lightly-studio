@@ -39,9 +39,21 @@ interface StringLiteral extends Expression {
   value: string;
 }
 
-entry Query:
-  (expression=Sample<true>) |
-    (isVideo?='video:' expression=Sample<false>);
+interface Query {
+  expression: Expression;
+}
+
+// The editor parses a query with the rule for the grid that it filters:
+// `ImageQuery` or `VideoQuery`. Langium builds only the rules that the entry rule
+// reaches. The `video:` keyword keeps the two alternatives unambiguous.
+entry Query returns Query:
+  ImageQuery | 'video:' VideoQuery;
+
+ImageQuery returns Query:
+  expression=Sample<true>;
+
+VideoQuery returns Query:
+  expression=Sample<false>;
 
 Sample<isImage> returns Expression:
   SampleOr<isImage>;
@@ -62,7 +74,6 @@ SampleUnary<isImage> returns Expression:
 SampleComparison<isImage> returns ComparisonExpression:
   SampleIntFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
    | SampleOrdinalFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
-   | SampleEqualityFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=') right=NumericLiteral
    | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral
    | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
 
@@ -73,15 +84,13 @@ SampleIntFieldReference<isImage> returns FieldReference:
 SampleOrdinalFloatFieldReference<isImage> returns FieldReference:
   (<!isImage> {FieldReference} member=VideoOrdinalFloatFieldName);
 
-SampleEqualityFloatFieldReference<isImage> returns FieldReference:
-  (<!isImage> {FieldReference} member=VideoEqualityFloatFieldName);
-
 SampleStringFieldReference<isImage> returns FieldReference:
   (<isImage> {FieldReference} member=ImageStringFieldName)
     | (<!isImage> {FieldReference} member=VideoStringFieldName);
 
 SampleDateTimeFieldReference<isImage> returns FieldReference:
-  (<isImage> {FieldReference} member=ImageDateTimeFieldName);
+  (<isImage> {FieldReference} member=ImageDateTimeFieldName)
+    | (<!isImage> {FieldReference} member=VideoDateTimeFieldName);
 
 ObjectDetection returns Expression:
   ObjectDetectionOr;
@@ -194,8 +203,8 @@ VideoIntFieldName returns string:
 VideoOrdinalFloatFieldName returns string:
   ORDINAL_FLOAT_FIELD_NAME;
 
-VideoEqualityFloatFieldName returns string:
-  EQUALITY_FLOAT_FIELD_NAME;
+VideoDateTimeFieldName returns string:
+  DATE_TIME_FIELD_NAME;
 
 VideoStringFieldName returns string:
   STRING_FIELD_NAME;
@@ -248,8 +257,7 @@ terminal OBJECT_DETECTION_FUNCTION returns string: /\bobject_detection\b/;
 terminal CLASSIFICATION_FUNCTION returns string: /\bclassification\b/;
 terminal SEGMENTATION_MASK_FUNCTION returns string: /\bsegmentation_mask\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
-terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
-terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
+terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\b(duration_s|fps)\b/;
 terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
 terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
 

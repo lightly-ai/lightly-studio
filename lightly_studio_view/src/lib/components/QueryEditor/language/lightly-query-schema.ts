@@ -2,7 +2,7 @@
  *
  * The Langium grammar in `lightly-query.langium` accepts unqualified field
  * names. Their meaning depends on the surrounding scope:
- *  - top-level: image fields, or video fields when the query starts with `video:`
+ *  - top-level: image fields on the images grid, video fields on the videos grid
  *  - inside `object_detection(...)`: object detection fields
  *  - inside `classification(...)`: classification fields
  *  - inside `segmentation_mask(...)`: segmentation mask fields
@@ -37,28 +37,30 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     video: {
         scope: 'video',
         title: 'Video',
-        description: 'Video scope. Reached by prefixing the query with `video:`.',
+        description: 'Top-level video scope. Unqualified field names refer to video fields.',
         fields: [
             { name: 'width', type: 'int', description: 'Video frame width in pixels.' },
             { name: 'height', type: 'int', description: 'Video frame height in pixels.' },
-            {
-                name: 'fps',
-                type: 'float',
-                description: 'Frames per second. Equality only (`=`, `!=`).'
-            },
+            { name: 'fps', type: 'float', description: 'Frames per second.' },
             { name: 'duration_s', type: 'float', description: 'Duration in seconds.' },
             { name: 'file_name', type: 'string', description: 'Video file name.' },
             {
                 name: 'file_path_abs',
                 type: 'string',
                 description: 'Absolute path to the video on disk.'
+            },
+            {
+                name: 'created_at',
+                type: 'datetime',
+                description: 'When the video was created (ISO-8601 string).'
             }
         ]
     },
     object_detection: {
         scope: 'object_detection',
         title: 'ObjectDetection',
-        description: 'Detected object inside an image. Used inside `object_detection(...)`.',
+        description:
+            'Detected object inside an image or video frame. Used inside `object_detection(...)`.',
         fields: [
             {
                 name: 'class_name',
@@ -84,7 +86,8 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     classification: {
         scope: 'classification',
         title: 'Classification',
-        description: 'Classification annotation on an image. Used inside `classification(...)`.',
+        description:
+            'Classification annotation on an image, video, or video frame. Used inside `classification(...)`.',
         fields: [
             {
                 name: 'class_name',
@@ -107,7 +110,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
         scope: 'segmentation_mask',
         title: 'SegmentationMask',
         description:
-            'Segmentation mask annotation on an image. Used inside `segmentation_mask(...)`.',
+            'Segmentation mask annotation on an image or video frame. Used inside `segmentation_mask(...)`.',
         fields: [
             {
                 name: 'class_name',
@@ -142,24 +145,19 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
         description: 'The set of tags attached to the current sample. Use with `IN`.'
     },
     {
-        name: 'video:',
-        description:
-            'Switch the top-level scope from image to video. Must appear at the start of the query.',
-        insertText: 'video:'
-    },
-    {
         name: 'object_detection',
-        description: 'Filter on detections inside an image.',
+        description: 'Filter on detections. On videos, it also matches the frames.',
         insertText: 'object_detection(${1:class_name = "..."})'
     },
     {
         name: 'classification',
-        description: 'Filter on the image classification annotation.',
+        description: 'Filter on classification annotations. On videos, it also matches the frames.',
         insertText: 'classification(${1:class_name = "..."})'
     },
     {
         name: 'segmentation_mask',
-        description: 'Filter on segmentation mask annotations inside an image.',
+        description:
+            'Filter on segmentation mask annotations. On videos, it also matches the frames.',
         insertText: 'segmentation_mask(${1:class_name = "..."})'
     }
 ];

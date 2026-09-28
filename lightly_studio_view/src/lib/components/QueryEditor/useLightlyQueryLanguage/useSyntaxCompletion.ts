@@ -11,6 +11,7 @@ import {
     lspToMonacoCompletion,
     syncLangiumDocument
 } from './completionAdapter';
+import { getModelRootScope } from './modelRootScope';
 
 let cachedServices: LightlyQueryServicesBundle | null = null;
 const registeredCompletionLanguages = new Set<string>();
@@ -25,9 +26,8 @@ function completionLabel(item: monaco.languages.CompletionItem): string {
     return typeof item.label === 'string' ? item.label : item.label.label;
 }
 
-// Keep parsing support for leading `video:` queries, but do not advertise the
-// prefix in autocomplete for now. Filtering here ensures it is removed no
-// matter whether it comes from Langium's LSP completions or our schema fallback.
+// The entry rule accepts a leading `video:` so that the grammar builds the
+// video rules. Users never type it, so the LSP suggestion is removed.
 function shouldShowSuggestion(item: monaco.languages.CompletionItem): boolean {
     return completionLabel(item) !== 'video:';
 }
@@ -61,7 +61,11 @@ async function getCompletions(
         position: { line: lineNumber - 1, character: column - 1 }
     });
 
-    const scope = detectScopeAt(model.getValue(), model.getOffsetAt(position));
+    const scope = detectScopeAt(
+        model.getValue(),
+        model.getOffsetAt(position),
+        getModelRootScope(model)
+    );
 
     const lspSuggestions = (result?.items ?? [])
         .map((item) => lspToMonacoCompletion(item, fallbackRange, scope))

@@ -1,13 +1,13 @@
-import type { Scope } from './types';
+import type { RootScope, Scope } from './types';
 
 /** Resolve the query scope at `offset` within `text`.
  *
  * The parser here is lightweight: it scans only the prefix up to `offset`,
  * tracks scope-changing function calls and parentheses, ignores parentheses
- * that appear inside string literals, and then resolves top-level video scope
- * by checking for a leading `video:` prefix.
+ * that appear inside string literals. Outside of any function call, the scope
+ * is `rootScope`.
  */
-export function detectScopeAt(text: string, offset: number): Scope {
+export function detectScopeAt(text: string, offset: number, rootScope: RootScope): Scope {
     const upTo = text.slice(0, offset).replace(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, '""');
     type Frame = Scope | 'paren';
     const stack: Frame[] = [];
@@ -37,6 +37,5 @@ export function detectScopeAt(text: string, offset: number): Scope {
             return frame;
         }
     }
-    if (/^\s*video:/i.test(text)) return 'video';
-    return 'image';
+    return rootScope;
 }

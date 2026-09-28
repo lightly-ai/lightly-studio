@@ -61,6 +61,24 @@ describe('getFieldHover', () => {
         });
     });
 
+    it('returns video-scope field hover at top level of a video model', async () => {
+        const { getFieldHover } = await import('./getFieldHover');
+        const { setModelRootScope } = await import('../modelRootScope');
+        const model = makeSyntaxDocModel({
+            text: 'fps > 25',
+            wordAtPosition: { word: 'fps', startColumn: 1, endColumn: 4 },
+            includeGetValue: true,
+            includeGetOffsetAt: true
+        });
+        setModelRootScope(model as never, 'video');
+        const hover = getFieldHover(model as never, { lineNumber: 1, column: 2 } as never);
+
+        expect(hover?.contents).toEqual([
+            { value: '```\nVideo.fps: float\n```' },
+            { value: 'Frames per second.' }
+        ]);
+    });
+
     it('returns null when no field documentation is available', async () => {
         const { getFieldHover } = await import('./getFieldHover');
         const model = makeSyntaxDocModel({
