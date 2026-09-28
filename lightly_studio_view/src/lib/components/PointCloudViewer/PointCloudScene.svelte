@@ -23,14 +23,18 @@
     let { batch, colorMode = 'none', pointSize = 2, intensityRange }: Props = $props();
 
     const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
-    const { invalidate } = useThrelte();
+    const { invalidate, renderer } = useThrelte();
     let cameraRef: THREE.PerspectiveCamera | undefined = $state();
     let controlsRef: ThreeOrbitControls | undefined = $state();
     const pointCloudBuffer = createPointCloudBuffer();
     let hasFitted = false;
 
     $effect(() => {
+        const canvas = renderer.domElement;
+        const suppress = (e: Event) => e.preventDefault();
+        canvas.addEventListener('contextmenu', suppress);
         return () => {
+            canvas.removeEventListener('contextmenu', suppress);
             pointCloudBuffer.dispose();
         };
     });
@@ -66,7 +70,14 @@
 <T.Color attach="background" args={[BACKGROUND_COLOR]} />
 
 <T.PerspectiveCamera bind:ref={cameraRef} makeDefault fov={60} near={0.1} far={10000}>
-    <OrbitControls bind:ref={controlsRef} enableDamping />
+    <OrbitControls
+        bind:ref={controlsRef}
+        enableDamping
+        panSpeed={3}
+        rotateSpeed={2}
+        mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
+        touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
+    />
 </T.PerspectiveCamera>
 
 <T.AmbientLight intensity={1} />
