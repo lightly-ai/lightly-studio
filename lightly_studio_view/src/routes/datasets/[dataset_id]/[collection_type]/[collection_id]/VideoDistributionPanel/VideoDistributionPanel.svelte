@@ -2,28 +2,12 @@
     import DatasetDistributionPanel from '$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import type { CategoryCount } from '$lib/components/BarChart';
-    import { AnnotationCountMode, type VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
-    import {
-        buildVideoFilter,
-        useAnnotationCollectionsFilter,
-        useCategoricalMetadataDistribution,
-        useMetadataFilters,
-        useNumericMetadataDistribution,
-        useVideoFilters
-    } from '$lib/hooks';
+    import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
+    import { useAnnotationCollectionsFilter, useVideoFilters } from '$lib/hooks';
     import { buildDistributionSources } from '../distributionSources';
-    import {
-        selectHistogramRange,
-        toggleCategoricalValue,
-        withoutCategoricalValues
-    } from '../distributionHandlers';
-    import {
-        buildMetadataDistributionSource,
-        selectCategoricalFetchState,
-        selectCategoricalMetadataKeys,
-        selectNumericMetadataKeys
-    } from '../metadataDistributionSource';
+    import { buildVideoDistributionFilters } from './videoDistributionFilters';
     import { useVideoClassDistributionSource } from './useVideoClassDistributionSource.svelte';
+    import { useVideoMetadataDistributionSource } from './useVideoMetadataDistributionSource.svelte';
 
     interface Props {
         collectionId: string;
@@ -46,152 +30,36 @@
         histogramBinCount = $bindable()
     }: Props = $props();
 
-    const {
-        metadataValues,
-        metadataBounds,
-        metadataInfo,
-        categoricalMetadataValues,
-        updateMetadataValues,
-        updateCategoricalMetadataValues
-    } = useMetadataFilters();
     const { allSourcesHidden } = useAnnotationCollectionsFilter();
-    const { videoFilter, filterParams } = useVideoFilters();
-
-    // The metadata requests take image or video filters, so they need the filter type.
-    const withFilterType = (value: VideoFilter | null) =>
-        value ? { ...value, filter_type: 'video' as const } : undefined;
-    // The filter of the videos grid, with every sidebar filter applied.
-    const filter = $derived(withFilterType($videoFilter));
-    // Only the tags and sample ids of the grid, so the totals stay stable.
-    const baseFilter = $derived(
-        withFilterType(
-            buildVideoFilter(
-                $filterParams && {
-                    collection_id: $filterParams.collection_id,
-                    filters: {
-                        sample_ids: $filterParams.filters?.sample_ids,
-                        tag_ids: $filterParams.filters?.tag_ids
-                    }
-                }
-            )
-        )
-    );
+    const { filterParams } = useVideoFilters();
+    const filters = $derived(buildVideoDistributionFilters($filterParams));
 
     let activeDistributionSourceId = $state<string | undefined>(undefined);
     let activeDistributionGroupId = $state<string | undefined>(undefined);
 
     const classDistribution = useVideoClassDistributionSource(() => ({
         collectionId,
-        filter,
+        filter: filters.filter,
         selectedClassNames,
         allSourcesHidden: $allSourcesHidden,
         active: activeDistributionSourceId !== 'metadata'
     }));
-
-    const numericMetadataKeys = $derived(selectNumericMetadataKeys($metadataInfo));
-    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
-    const activeMetadataField = $derived.by<
-        { name: string; type: 'numeric' | 'categorical' } | undefined
-    >(() => {
-        if (activeDistributionSourceId !== 'metadata' || activeDistributionGroupId === undefined) {
-            return undefined;
-        }
-        if (categoricalMetadataKeys.includes(activeDistributionGroupId)) {
-            return { name: activeDistributionGroupId, type: 'categorical' };
-        }
-        if (numericMetadataKeys.includes(activeDistributionGroupId)) {
-            return { name: activeDistributionGroupId, type: 'numeric' };
-        }
-        return undefined;
-    });
-
-    // Bin edges and counts both span the grid scope (baseFilter), so the bars stay
-    // stable while the user changes the sidebar filters.
-    const metadataHistogramsQuery = useNumericMetadataDistribution(() => ({
+    const metadataDistribution = useVideoMetadataDistributionSource(() => ({
         collectionId,
-        filter: baseFilter,
-        binCount: histogramBinCount,
-        fields: activeMetadataField?.type === 'numeric' ? [activeMetadataField.name] : undefined,
-        enabled: activeMetadataField?.type === 'numeric'
+        filter: filters.filter,
+        baseFilter: filters.baseFilter,
+        histogramBinCount,
+        activeSourceId: activeDistributionSourceId,
+        activeGroupId: activeDistributionGroupId
     }));
-
-    const categoricalFields = $derived(
-        activeMetadataField?.type === 'categorical' ? [activeMetadataField.name] : undefined
-    );
-    const categoricalMetadataQuery = useCategoricalMetadataDistribution(() => ({
-        collectionId,
-        filter: baseFilter,
-        fields: categoricalFields,
-        enabled: activeMetadataField?.type === 'categorical'
-    }));
-    // The same counts with every sidebar filter applied, for the coloured foreground bars.
-    const categoricalMetadataFilteredQuery = useCategoricalMetadataDistribution(() => ({
-        collectionId,
-        filter,
-        fields: categoricalFields,
-        enabled: activeMetadataField?.type === 'categorical'
-    }));
-
-    const categoricalFetchState = $derived(
-        selectCategoricalFetchState(
-            [categoricalMetadataQuery, categoricalMetadataFilteredQuery],
-            activeMetadataField?.type === 'categorical' ? activeMetadataField.name : undefined
-        )
-    );
-    const metadataDistributionSource = $derived(
-        buildMetadataDistributionSource({
-            histograms: metadataHistogramsQuery.data ?? {},
-            numericKeys: numericMetadataKeys,
-            categoricalKeys: categoricalMetadataKeys,
-            categorical: categoricalMetadataQuery.data ?? {},
-            // Keep undefined while loading, so the panel waits for the filtered bars.
-            filteredCategorical: categoricalMetadataFilteredQuery.data,
-            selectedRanges: $metadataValues,
-            selectedValues: $categoricalMetadataValues,
-            tagDistributions: [],
-            numericLoading: metadataHistogramsQuery.isFetching,
-            categoricalLoading: categoricalFetchState.loading,
-            categoricalUpdating: categoricalFetchState.updating,
-            // The filtered query draws the foreground bars, so its failure must show too.
-            categoricalError: (
-                categoricalMetadataQuery.error ?? categoricalMetadataFilteredQuery.error
-            )?.message
-        })
-    );
 
     const distributionSources = $derived<DistributionSource[]>(
         buildDistributionSources({
             classSource: classDistribution.source,
-            metadataSource: metadataDistributionSource,
+            metadataSource: metadataDistribution.source,
             hasAnnotationClasses
         })
     );
-
-    const handleHistogramRangeSelect = (
-        metadataKey: string,
-        range: { min: number; max: number }
-    ) => {
-        const bound = $metadataBounds[metadataKey];
-        if (!bound) return;
-        updateMetadataValues({
-            ...$metadataValues,
-            [metadataKey]: selectHistogramRange({
-                bound,
-                current: $metadataValues[metadataKey],
-                range
-            })
-        });
-    };
-
-    const handleCategoricalValueToggle = (metadataKey: string, value: string | boolean | null) => {
-        updateCategoricalMetadataValues({
-            ...$categoricalMetadataValues,
-            [metadataKey]: toggleCategoricalValue(
-                $categoricalMetadataValues[metadataKey] ?? [],
-                value
-            )
-        });
-    };
 </script>
 
 <!-- Video counts support only the samples count mode, so the panel hides the count mode select. -->
@@ -201,16 +69,10 @@
     showCountMode={false}
     {onClose}
     onBarClick={onClassBarClick}
-    onHistogramRangeSelect={handleHistogramRangeSelect}
-    onCategoricalValueToggle={handleCategoricalValueToggle}
-    onCategoricalValuesClear={(metadataKey) =>
-        updateCategoricalMetadataValues(
-            withoutCategoricalValues($categoricalMetadataValues, metadataKey)
-        )}
-    onCategoricalRetry={() => {
-        categoricalMetadataQuery.refetch();
-        categoricalMetadataFilteredQuery.refetch();
-    }}
+    onHistogramRangeSelect={metadataDistribution.onHistogramRangeSelect}
+    onCategoricalValueToggle={metadataDistribution.onCategoricalValueToggle}
+    onCategoricalValuesClear={metadataDistribution.onCategoricalValuesClear}
+    onCategoricalRetry={metadataDistribution.onCategoricalRetry}
     {histogramBinCount}
     onHistogramBinCountChange={(binCount) => (histogramBinCount = binCount)}
     onGroupChange={(sourceId, groupId) => {
