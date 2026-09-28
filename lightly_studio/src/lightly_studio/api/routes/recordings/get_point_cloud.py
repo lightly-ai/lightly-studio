@@ -22,9 +22,12 @@ class PointCloudQuery(BaseModel):
     """Query parameters selecting one point-cloud message."""
 
     channel_id: int = Query(description="The point-cloud channel to read.")
-    timestamp_ns: int = Query(
-        ge=0,
-        description="Exact MCAP log time in nanoseconds from the tick's channel locator.",
+    timestamp_ns: str = Query(
+        pattern=r"^\d+$",
+        description=(
+            "Exact MCAP log time in nanoseconds from the tick's channel locator. "
+            "Sent as a string so the client can keep the 64-bit value exact."
+        ),
     )
 
 
@@ -42,7 +45,7 @@ def get_point_cloud(
             dataset_id=dataset_id,
             recording_id=recording_id,
             channel_id=point_cloud_query.channel_id,
-            timestamp_ns=point_cloud_query.timestamp_ns,
+            timestamp_ns=int(point_cloud_query.timestamp_ns),
         )
     except ChannelNotFoundError as exc:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(exc)) from exc
