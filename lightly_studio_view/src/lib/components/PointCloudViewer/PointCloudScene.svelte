@@ -7,7 +7,7 @@
     import { fitCameraToBounds } from './pointCloudCamera';
     import { createPointCloudBuffer } from './pointCloudBuffer';
     import type { ColorMode } from './pointCloudUtils';
-    import type { PointBatch } from './pointCloudBuffer';
+    import type { PointBatch } from './types';
 
     interface Props {
         /** Current point cloud batch with positions, intensities, and count. */
