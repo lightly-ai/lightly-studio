@@ -26,6 +26,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -106,6 +107,7 @@ def delete_dataset(
     # 1. Tables that reference annotation_base.
     _delete_object_detection_annotations(session=session, dataset_id=dataset_id)
     _delete_segmentation_annotations(session=session, dataset_id=dataset_id)
+    _delete_cuboid_3d_annotations(session=session, dataset_id=dataset_id)
     _delete_temporal_spans(session=session, dataset_id=dataset_id)
     _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
     _delete_evaluation_annotation_metrics(session=session, dataset_id=dataset_id)
@@ -250,6 +252,16 @@ def _delete_segmentation_annotations(session: Session, dataset_id: UUID) -> None
     session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_cuboid_3d_annotations(session: Session, dataset_id: UUID) -> None:
+    """Delete cuboid 3D annotation details for the dataset's samples."""
+    session.exec(
+        delete(Cuboid3DAnnotationTable).where(
+            col(Cuboid3DAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
