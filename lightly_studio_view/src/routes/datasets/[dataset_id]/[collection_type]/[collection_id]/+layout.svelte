@@ -735,7 +735,7 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid && (isImages || supportsDistribution || hasMediaWithEmbeddings)}
+            {#if isCollectionGrid && (supportsDistribution || hasMediaWithEmbeddings)}
                 <div data-testid="side-panel-tabs" class="contents">
                     <SidePanelTabs
                         {collectionId}

@@ -10,6 +10,8 @@ interface UseVideoClassDistributionSourceParams {
     selectedClassNames: string[];
     /** True when every annotation source is unchecked. */
     allSourcesHidden: boolean;
+    /** False while the panel shows another source, so the counts do not refetch for it. */
+    active: boolean;
 }
 
 // One count query per group. The "All types" group counts every annotation type.
@@ -43,8 +45,8 @@ export function useVideoClassDistributionSource(
         id,
         label,
         query: useVideoAnnotationCounts(() => {
-            const { collectionId, filter, allSourcesHidden } = getParams();
-            return { collectionId, filter, annotationType, enabled: !allSourcesHidden };
+            const { collectionId, filter, allSourcesHidden, active } = getParams();
+            return { collectionId, filter, annotationType, enabled: active && !allSourcesHidden };
         })
     }));
 

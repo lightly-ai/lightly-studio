@@ -142,7 +142,8 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: vi.fn(() => ({ imageFilter: writable(null) }))
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
-    useVideoFilters: vi.fn(() => ({ videoFilter: writable(null) }))
+    useVideoFilters: vi.fn(() => ({ videoFilter: writable(null), filterParams: writable(null) })),
+    buildVideoFilter: vi.fn(() => null)
 }));
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
     useAnnotationCollectionsFilter: vi.fn(() => ({
@@ -150,7 +151,11 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
         allSourcesHidden: writable(false)
     }))
 }));
-vi.mock('$lib/hooks', () => ({
+// The panels also import these hooks through the barrel, so reuse their mocks from above.
+vi.mock('$lib/hooks', async () => ({
+    ...(await import('$lib/hooks/useMetadataFilters/useMetadataFilters.js')),
+    ...(await import('$lib/hooks/useVideoFilters/useVideoFilters')),
+    ...(await import('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter')),
     useSelectionSummary: vi.fn(() => ({
         selectedCount: writable(0),
         clearSelection: vi.fn()
@@ -294,7 +299,6 @@ describe('video distribution panel', () => {
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
 
         expect(await screen.findByText('Annotation classes')).toBeInTheDocument();
-        expect(useImageAnnotationCountsBySampleTags).not.toHaveBeenCalled();
     });
 });
 

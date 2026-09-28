@@ -18,20 +18,22 @@ const classificationCounts = [count('road', 3)];
 const detectionCounts = [count('car', 4)];
 
 const mockCounts = (countsByType: Map<AnnotationType | undefined, unknown[]>) => {
-    vi.mocked(useVideoAnnotationCounts).mockImplementation(
-        (getParams) =>
-            ({
-                data: countsByType.get(getParams().annotationType),
-                isFetching: false
-            }) as unknown as ReturnType<typeof useVideoAnnotationCounts>
-    );
+    // A disabled query never fetches, so it has no data.
+    vi.mocked(useVideoAnnotationCounts).mockImplementation((getParams) => {
+        const { annotationType, enabled } = getParams();
+        return {
+            data: enabled ? countsByType.get(annotationType) : undefined,
+            isFetching: false
+        } as unknown as ReturnType<typeof useVideoAnnotationCounts>;
+    });
 };
 
 const defaultParams = {
     collectionId: 'collection-1',
     filter: undefined,
     selectedClassNames: ['car'],
-    allSourcesHidden: false
+    allSourcesHidden: false,
+    active: true
 };
 
 const renderHook = (params: Partial<typeof defaultParams> = {}) =>
@@ -84,6 +86,12 @@ describe('useVideoClassDistributionSource', () => {
         const { source } = renderHook({ allSourcesHidden: true });
 
         expect(source.groups).toBeUndefined();
+        expect(source.data).toEqual([]);
+    });
+
+    it('does not fetch counts while another source is shown', () => {
+        const { source } = renderHook({ active: false });
+
         expect(source.data).toEqual([]);
     });
 });

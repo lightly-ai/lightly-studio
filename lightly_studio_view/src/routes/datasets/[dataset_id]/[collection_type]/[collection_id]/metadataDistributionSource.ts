@@ -44,6 +44,27 @@ export const selectComparisonSampleTags = (
         .filter(({ value }) => selectedIds.includes(value))
         .map(({ value, label }) => ({ id: value, label }));
 
+interface CategoricalQueryState {
+    isFetching: boolean;
+    data: Record<string, unknown> | undefined;
+}
+
+/**
+ * Splits the fetch state of the categorical queries of one field. The panel waits while a
+ * query has nothing to show for the field ("loading"), for example on the first load or after
+ * a field switch. When the old bars are still for this field, for example after a filter
+ * change, they stay on screen ("updating").
+ */
+export const selectCategoricalFetchState = (
+    queries: CategoricalQueryState[],
+    field: string | undefined
+): { loading: boolean; updating: boolean } => {
+    if (field === undefined) return { loading: false, updating: false };
+    const fetching = queries.filter((query) => query.isFetching);
+    const loading = fetching.some((query) => query.data?.[field] === undefined);
+    return { loading, updating: !loading && fetching.length > 0 };
+};
+
 interface MetadataDistributionSourceParams {
     /** Numeric distributions for the current view, keyed by metadata key. */
     histograms: Record<string, HistogramData>;

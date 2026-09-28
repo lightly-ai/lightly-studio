@@ -2,20 +2,24 @@
     import DatasetDistributionPanel from '$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import type { CategoryCount } from '$lib/components/BarChart';
-    import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
-    import { useCategoricalMetadataDistribution, useNumericMetadataDistribution } from '$lib/hooks';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { AnnotationCountMode, type VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
+    import {
+        buildVideoFilter,
+        useAnnotationCollectionsFilter,
+        useCategoricalMetadataDistribution,
+        useMetadataFilters,
+        useNumericMetadataDistribution,
+        useVideoFilters
+    } from '$lib/hooks';
     import { buildDistributionSources } from '../distributionSources';
     import {
         selectHistogramRange,
-        selectVideoDistributionBaseFilter,
         toggleCategoricalValue,
         withoutCategoricalValues
     } from '../distributionHandlers';
     import {
         buildMetadataDistributionSource,
+        selectCategoricalFetchState,
         selectCategoricalMetadataKeys,
         selectNumericMetadataKeys
     } from '../metadataDistributionSource';
@@ -51,14 +55,27 @@
         updateCategoricalMetadataValues
     } = useMetadataFilters();
     const { allSourcesHidden } = useAnnotationCollectionsFilter();
-    const { videoFilter } = useVideoFilters();
+    const { videoFilter, filterParams } = useVideoFilters();
 
+    // The metadata requests take image or video filters, so they need the filter type.
+    const withFilterType = (value: VideoFilter | null) =>
+        value ? { ...value, filter_type: 'video' as const } : undefined;
     // The filter of the videos grid, with every sidebar filter applied.
-    const filter = $derived(
-        $videoFilter ? { ...$videoFilter, filter_type: 'video' as const } : undefined
-    );
+    const filter = $derived(withFilterType($videoFilter));
     // Only the tags and sample ids of the grid, so the totals stay stable.
-    const baseFilter = $derived(selectVideoDistributionBaseFilter($videoFilter));
+    const baseFilter = $derived(
+        withFilterType(
+            buildVideoFilter(
+                $filterParams && {
+                    collection_id: $filterParams.collection_id,
+                    filters: {
+                        sample_ids: $filterParams.filters?.sample_ids,
+                        tag_ids: $filterParams.filters?.tag_ids
+                    }
+                }
+            )
+        )
+    );
 
     let activeDistributionSourceId = $state<string | undefined>(undefined);
     let activeDistributionGroupId = $state<string | undefined>(undefined);
@@ -67,7 +84,8 @@
         collectionId,
         filter,
         selectedClassNames,
-        allSourcesHidden: $allSourcesHidden
+        allSourcesHidden: $allSourcesHidden,
+        active: activeDistributionSourceId !== 'metadata'
     }));
 
     const numericMetadataKeys = $derived(selectNumericMetadataKeys($metadataInfo));
@@ -114,6 +132,12 @@
         enabled: activeMetadataField?.type === 'categorical'
     }));
 
+    const categoricalFetchState = $derived(
+        selectCategoricalFetchState(
+            [categoricalMetadataQuery, categoricalMetadataFilteredQuery],
+            activeMetadataField?.type === 'categorical' ? activeMetadataField.name : undefined
+        )
+    );
     const metadataDistributionSource = $derived(
         buildMetadataDistributionSource({
             histograms: metadataHistogramsQuery.data ?? {},
@@ -126,8 +150,8 @@
             selectedValues: $categoricalMetadataValues,
             tagDistributions: [],
             numericLoading: metadataHistogramsQuery.isFetching,
-            categoricalLoading:
-                categoricalMetadataQuery.isFetching || categoricalMetadataFilteredQuery.isFetching,
+            categoricalLoading: categoricalFetchState.loading,
+            categoricalUpdating: categoricalFetchState.updating,
             // The filtered query draws the foreground bars, so its failure must show too.
             categoricalError: (
                 categoricalMetadataQuery.error ?? categoricalMetadataFilteredQuery.error
