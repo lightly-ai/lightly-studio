@@ -31,10 +31,26 @@
 
     $effect(() => {
         const canvas = renderer.domElement;
+
+        // Suppress browser context menu so right-drag rotate works uninterrupted.
         const suppress = (e: Event) => e.preventDefault();
         canvas.addEventListener('contextmenu', suppress);
+
+        // Alt held: switch to screen-space panning (includes Z-axis movement).
+        // Default: ground-plane panning (matches Foxglove behaviour).
+        function onKeyDown(e: KeyboardEvent) {
+            if (e.key === 'Alt' && controlsRef) controlsRef.screenSpacePanning = true;
+        }
+        function onKeyUp(e: KeyboardEvent) {
+            if (e.key === 'Alt' && controlsRef) controlsRef.screenSpacePanning = false;
+        }
+        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('keyup', onKeyUp);
+
         return () => {
             canvas.removeEventListener('contextmenu', suppress);
+            window.removeEventListener('keydown', onKeyDown);
+            window.removeEventListener('keyup', onKeyUp);
             pointCloudBuffer.dispose();
         };
     });
@@ -69,13 +85,23 @@
 
 <T.Color attach="background" args={[BACKGROUND_COLOR]} />
 
-<T.PerspectiveCamera bind:ref={cameraRef} makeDefault fov={60} near={0.1} far={10000}>
+<T.PerspectiveCamera
+    bind:ref={cameraRef}
+    makeDefault
+    fov={60}
+    near={0.1}
+    far={10000}
+    up={[0, 0, 1]}
+>
     <OrbitControls
         bind:ref={controlsRef}
         enableDamping
-        panSpeed={3}
-        rotateSpeed={2}
-        mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
+        screenSpacePanning={false}
+        mouseButtons={{
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE
+        }}
         touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
     />
 </T.PerspectiveCamera>
