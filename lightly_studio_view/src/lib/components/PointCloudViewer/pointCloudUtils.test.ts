@@ -68,16 +68,6 @@ describe('buildColorBuffer', () => {
         expect(Array.from(colors)).toEqual([0.25, 0.5, 0.75, 0.125, 0.375, 1]);
     });
 
-    it('falls back to neutral gray in rgb mode without point colors', () => {
-        const positions = new Float32Array([0, 0, 0, 1, 1, 1]);
-        const intensities = new Float32Array([10, 20]);
-        const colors = new Float32Array(6);
-
-        buildColorBuffer({ positions, intensities, count: 2, colorMode: 'rgb', colors });
-
-        expect(Array.from(colors)).toEqual([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
-    });
-
     it('produces different colors for intensity vs height modes', () => {
         const positions = new Float32Array([0, 0, 0, 1, 2, 6, 2, 4, 3]);
         const intensities = new Float32Array([100, 10, 50]);

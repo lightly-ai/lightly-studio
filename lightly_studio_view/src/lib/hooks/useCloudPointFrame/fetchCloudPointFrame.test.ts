@@ -43,27 +43,23 @@ describe('fetchCloudPointFrame', () => {
         expect(result).toBe(parsed);
     });
 
-    it('throws when the response is not ok', async () => {
+    it('throws without parsing when the response is not ok or has no data', async () => {
         vi.mocked(getPointCloud).mockResolvedValue({
             data: undefined,
             response: { ok: false, status: 404 } as Response
         } as Awaited<ReturnType<typeof getPointCloud>>);
-
         await expect(fetchCloudPointFrame(defaultArgs)).rejects.toThrow(
             'Could not load point cloud (404).'
         );
-        expect(parseCloudPointFrame).not.toHaveBeenCalled();
-    });
 
-    it('throws when the response has no data', async () => {
         vi.mocked(getPointCloud).mockResolvedValue({
             data: undefined,
             response: { ok: true, status: 200 } as Response
         } as Awaited<ReturnType<typeof getPointCloud>>);
-
         await expect(fetchCloudPointFrame(defaultArgs)).rejects.toThrow(
             'Could not load point cloud (200).'
         );
+
         expect(parseCloudPointFrame).not.toHaveBeenCalled();
     });
 });
