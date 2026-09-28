@@ -103,6 +103,27 @@ describe('mergeCloudPointFrames', () => {
         ]);
     });
 
+    it('returns null bounds when a frame with points lacks bounds', () => {
+        const withBounds = makeFrame({ bounds: { min: [0, 0, 0], max: [2, 2, 2] } });
+        const withoutBounds = makeFrame({ bounds: null });
+
+        const result = mergeCloudPointFrames([withBounds, withoutBounds]);
+
+        expect(result.bounds).toBeNull();
+    });
+
+    it('ignores empty frames without bounds when merging', () => {
+        const withBounds = makeFrame({ bounds: { min: [0, 0, 0], max: [2, 2, 2] } });
+        const empty = makeFrame({
+            batch: { positions: new Float32Array(), intensities: new Float32Array(), count: 0 },
+            bounds: null
+        });
+
+        const result = mergeCloudPointFrames([withBounds, empty]);
+
+        expect(result.bounds).toEqual({ min: [0, 0, 0], max: [2, 2, 2] });
+    });
+
     it('takes channel id and timestamp from the first frame', () => {
         const first = makeFrame({ channelId: 9, timestampNs: '111' });
         const second = makeFrame({ channelId: 3, timestampNs: '222' });
