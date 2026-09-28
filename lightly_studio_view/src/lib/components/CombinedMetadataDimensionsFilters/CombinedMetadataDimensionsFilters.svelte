@@ -76,7 +76,14 @@
         Object.keys($metadataBounds).filter((key) => {
             const bound = $metadataBounds[key];
             const value = $metadataValues[key];
-            return bound && value;
+            return (
+                bound &&
+                value &&
+                typeof bound.min === 'number' &&
+                typeof bound.max === 'number' &&
+                typeof value.min === 'number' &&
+                typeof value.max === 'number'
+            );
         })
     );
     const handleMetadataValueCommit = (metadataKey: string, newValues: number[]): void => {

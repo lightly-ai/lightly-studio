@@ -16,7 +16,8 @@
         hook.chips.filter(
             (chip) =>
                 chip.kind === 'numeric' ||
-                (chip.active && (!isImageCollection || !categoricalKeys.includes(chip.key)))
+                !isImageCollection ||
+                (chip.active && !categoricalKeys.includes(chip.key))
         )
     );
 </script>
