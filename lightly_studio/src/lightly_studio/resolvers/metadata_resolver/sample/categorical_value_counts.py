@@ -20,6 +20,7 @@ from lightly_studio.models.metadata import (
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 DEFAULT_VALUE_COUNT_LIMIT = 20
 
@@ -51,7 +52,7 @@ class _GroupedValueCounts:
 def get_metadata_value_counts(
     session: Session,
     collection_id: UUID,
-    filters: ImageFilter | None = None,
+    filters: ImageFilter | VideoFilter | None = None,
     fields: list[str] | None = None,
     limit: int | None = DEFAULT_VALUE_COUNT_LIMIT,
 ) -> dict[str, MetadataValueCountsView]:
@@ -67,7 +68,7 @@ def get_metadata_value_counts(
     Args:
         session: The database session.
         collection_id: The collection whose sample metadata is aggregated.
-        filters: Optional image filters restricting the counted samples.
+        filters: Optional image or video filters restricting the counted samples.
         fields: Categorical fields to count. Pass only the fields that will be
             rendered (e.g. on a bar chart) to avoid running DB queries for
             fields whose results would never be used. All categorical fields
@@ -130,7 +131,7 @@ def _get_top_value_counts(
     session: Session,
     collection_id: UUID,
     value_expr: ColumnElement[str],
-    filters: ImageFilter | None,
+    filters: ImageFilter | VideoFilter | None,
     limit: int | None,
 ) -> _GroupedValueCounts:
     """Return top concrete groups plus totals from the complete grouped result."""
@@ -146,7 +147,7 @@ def _get_top_value_counts(
         .where(SampleTable.collection_id == collection_id)
         .group_by(value_expr)
     )
-    query = metadata_helpers.apply_image_filters(
+    query = metadata_helpers.apply_collection_filter(
         query=query, collection_id=collection_id, filters=filters
     )
     grouped = query.subquery()
