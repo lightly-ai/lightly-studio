@@ -7,6 +7,8 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreate,
+    AnnotationType,
     ImageAnnotationView,
     VideoFrameAnnotationView,
 )
@@ -179,13 +181,13 @@ def test_get_all_with_payload__with_video_frame(db_session: Session) -> None:
         session=db_session,
         sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
-        collection_id=collection.collection_id,
+        collection_id=video_frame_data.video_frames_collection_id,
     )
     create_annotation(
         session=db_session,
         sample_id=video_frame_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=collection.collection_id,
+        collection_id=video_frame_data.video_frames_collection_id,
     )
 
     annotations_page = annotation_resolver.get_all_with_payload(
@@ -197,7 +199,7 @@ def test_get_all_with_payload__with_video_frame(db_session: Session) -> None:
     assert len(annotations_page.annotations) == 2
 
     assert isinstance(annotations_page.annotations[0].parent_sample_data, VideoFrameAnnotationView)
-    assert annotations_page.annotations[0].parent_sample_type == SampleType.VIDEO
+    assert annotations_page.annotations[0].parent_sample_type == SampleType.VIDEO_FRAME
     assert (
         annotations_page.annotations[0].parent_sample_data.video.file_path_abs
         == "/path/to/sample1.mp4"
@@ -208,7 +210,7 @@ def test_get_all_with_payload__with_video_frame(db_session: Session) -> None:
     )
 
     assert isinstance(annotations_page.annotations[1].parent_sample_data, VideoFrameAnnotationView)
-    assert annotations_page.annotations[0].parent_sample_type == SampleType.VIDEO
+    assert annotations_page.annotations[1].parent_sample_type == SampleType.VIDEO_FRAME
     assert (
         annotations_page.annotations[1].parent_sample_data.video.file_path_abs
         == "/path/to/sample1.mp4"
@@ -217,6 +219,51 @@ def test_get_all_with_payload__with_video_frame(db_session: Session) -> None:
         annotations_page.annotations[1].parent_sample_data.sample_id
         == video_frame_data.frame_sample_ids[1]
     )
+
+
+def test_get_all_with_payload__with_video(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_frame_data = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/sample1.mp4"),
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="jumping",
+    )
+    annotation_ids = annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                parent_sample_id=video_frame_data.video_sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+                start_time_s=0.5,
+                end_time_s=1.0,
+            )
+        ],
+    )
+    annotation = annotation_resolver.get_by_id(session=db_session, annotation_id=annotation_ids[0])
+    assert annotation is not None
+
+    annotations_page = annotation_resolver.get_all_with_payload(
+        session=db_session,
+        collection_id=annotation.sample.collection_id,
+    )
+
+    assert annotations_page.total_count == 1
+    (annotation_with_payload,) = annotations_page.annotations
+    assert annotation_with_payload.annotation.sample_id == annotation_ids[0]
+    assert annotation_with_payload.parent_sample_type == SampleType.VIDEO
+    # The payload of an annotation on a whole video is the first frame of the video.
+    assert isinstance(annotation_with_payload.parent_sample_data, VideoFrameAnnotationView)
+    assert (
+        annotation_with_payload.parent_sample_data.sample_id == video_frame_data.frame_sample_ids[0]
+    )
+    assert annotation_with_payload.parent_sample_data.video.file_path_abs == "/path/to/sample1.mp4"
 
 
 def test_get_all_with_payload__orders_by_text_embedding_similarity(
