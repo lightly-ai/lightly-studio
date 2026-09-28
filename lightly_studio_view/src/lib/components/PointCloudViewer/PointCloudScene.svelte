@@ -44,13 +44,18 @@
         function onKeyUp(e: KeyboardEvent) {
             if (e.key === 'Alt' && controlsRef) controlsRef.screenSpacePanning = false;
         }
+        function onBlur() {
+            if (controlsRef) controlsRef.screenSpacePanning = false;
+        }
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp);
+        window.addEventListener('blur', onBlur);
 
         return () => {
             canvas.removeEventListener('contextmenu', suppress);
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
+            window.removeEventListener('blur', onBlur);
             pointCloudBuffer.dispose();
         };
     });
