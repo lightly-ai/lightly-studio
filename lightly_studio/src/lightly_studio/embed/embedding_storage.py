@@ -27,8 +27,9 @@ def store_embeddings(
 ) -> None:
     """Store embeddings in the database.
 
-    Insertion is batched to reduce peak memory. All batches are committed together
-    so a failure leaves no partially embedded dataset behind.
+    Insertion is batched to reduce peak memory. All batches of one call are committed
+    together. A caller that embeds in chunks calls this once per chunk, so a failure
+    keeps the chunks stored before it.
 
     Raises:
         ValueError: If the embeddings fail validation. See `_validate_and_coerce_embeddings`.

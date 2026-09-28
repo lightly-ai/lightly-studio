@@ -43,6 +43,10 @@ from tests.embed.remote.helpers import (
 )
 
 
+class _ExtraRoute(RemoteEmbedder):
+    """A route that no server advertises, to test ``with_route``."""
+
+
 class TestRemoteEmbedder:
     def test_connect__text_only(self) -> None:
         with _test_client(server.create_app(embedder=FakeTextEmbedder())) as client:
@@ -75,6 +79,18 @@ class TestRemoteEmbedder:
             second = RemoteEmbedder.connect(client=client)
 
         assert type(first) is type(second)
+
+    def test_with_route(self) -> None:
+        with _test_client(server.create_app(embedder=FakeTextImageEmbedder())) as client:
+            remote = RemoteEmbedder.connect(client=client)
+
+        routed = remote.with_route(route=_ExtraRoute)
+
+        assert isinstance(routed, TextEmbedder)
+        assert isinstance(routed, ImageBytesEmbedder)
+        assert isinstance(routed, _ExtraRoute)
+        assert type(routed).__name__ == "RemoteTextImageBytesExtraEmbedder"
+        assert routed.embedding_space_spec() == remote.embedding_space_spec()
 
     def test_connect__text_and_video_bytes(self) -> None:
         with _test_client(server.create_app(embedder=FakeTextVideoEmbedder())) as client:

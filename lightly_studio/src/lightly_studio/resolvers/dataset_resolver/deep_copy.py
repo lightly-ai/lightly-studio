@@ -429,13 +429,17 @@ def _copy_tags(session: Session, now: datetime) -> None:
 
 
 def _copy_object_tracks(session: Session, new_dataset_id: UUID) -> None:
-    """Copy object tracks, remapping dataset_id."""
+    """Copy object tracks, remapping dataset_id and parent_object_track_id."""
     src = _table(ObjectTrackTable).alias("src")
     map_track = _map(_MAP_OBJECT_TRACK)
-    from_clause = src.join(map_track, map_track.c.old_id == src.c["object_track_id"])
+    map_parent_track = _map(_MAP_OBJECT_TRACK, alias="map_parent_track")
+    from_clause = src.join(map_track, map_track.c.old_id == src.c["object_track_id"]).outerjoin(
+        map_parent_track, map_parent_track.c.old_id == src.c["parent_object_track_id"]
+    )
     overrides = {
         "object_track_id": map_track.c.new_id,
         "dataset_id": literal(new_dataset_id),
+        "parent_object_track_id": map_parent_track.c.new_id,
     }
     _copy_table(
         session=session,

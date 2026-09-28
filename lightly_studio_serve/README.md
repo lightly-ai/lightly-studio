@@ -36,7 +36,7 @@ class MyEmbedder(TextEmbedder, ImageBytesEmbedder):
         ...
 
 
-serve(MyEmbedder(), api_key="the-key-you-paste-into-lightlystudio")
+serve(MyEmbedder(), api_key="your-secret-key")
 ```
 
 `serve` binds `127.0.0.1:8080` by default, where the requests stay on the machine. TLS is
@@ -51,7 +51,7 @@ serve(
     MyEmbedder(),
     host="0.0.0.0",
     port=8080,
-    api_key="the-key-you-paste-into-lightlystudio",
+    api_key="your-secret-key",
     ssl_certfile="cert.pem",
     ssl_keyfile="key.pem",
 )
