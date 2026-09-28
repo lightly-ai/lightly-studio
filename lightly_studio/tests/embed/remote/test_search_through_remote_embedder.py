@@ -6,6 +6,7 @@ each search has to embed its query on the server.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from uuid import UUID
@@ -15,6 +16,7 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from lightly_studio_serve.embedder import ImageBytesEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from pytest_mock import MockerFixture
 
 import lightly_studio
 from lightly_studio import ImageDataset
@@ -63,6 +65,11 @@ def server_url(query_embedder: ColorQueryEmbedder) -> Iterator[str]:
 @pytest.fixture
 def image_paths(tmp_path: Path) -> dict[str, Path]:
     return color_embedder.write_color_images(directory=tmp_path)
+
+
+@pytest.fixture
+def no_retry_wait(mocker: MockerFixture) -> None:
+    mocker.patch.object(time, "sleep")
 
 
 @pytest.fixture
@@ -143,6 +150,7 @@ def test_register_remote_embedder__wrong_api_key(
     assert embedding_model.api_key is None
 
 
+@pytest.mark.usefixtures("no_retry_wait")
 @pytest.mark.parametrize("query_kind", ["text", "image"])
 @pytest.mark.parametrize("queries_before_stop", [0, 1])
 def test_search__server_stopped(
