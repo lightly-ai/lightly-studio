@@ -7,7 +7,7 @@ type NonEmptyFrames = [CloudPointFrame, ...CloudPointFrame[]];
 
 export function mergeCloudPointFrames(frames: NonEmptyFrames): CloudPointFrame {
     const batch = mergeBatches(frames.map((frame) => frame.batch));
-    const bounds = mergeBounds(frames.map((frame) => frame.bounds));
+    const bounds = mergeFrameBounds(frames);
     const first = frames[0];
     return {
         batch,
@@ -18,6 +18,17 @@ export function mergeCloudPointFrames(frames: NonEmptyFrames): CloudPointFrame {
         bounds,
         channels: frames.flatMap((frame) => frame.channels)
     };
+}
+
+/**
+ * Merges the bounds of the frames that carry points. Returns `null` when any
+ * such frame lacks bounds, so the result never claims a box that excludes some
+ * of the merged points.
+ */
+function mergeFrameBounds(frames: NonEmptyFrames): CloudPointFrame['bounds'] {
+    const contributing = frames.filter((frame) => frame.batch.count > 0);
+    if (contributing.some((frame) => frame.bounds === null)) return null;
+    return mergeBounds(contributing.map((frame) => frame.bounds));
 }
 
 /** Concatenates the active points of several batches into one packed batch. */

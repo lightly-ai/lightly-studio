@@ -51,6 +51,44 @@ describe('parseCloudPointFrame', () => {
         });
     });
 
+    it('rejects data with null coordinate values', async () => {
+        vi.mocked(tableFromIPC).mockResolvedValue({
+            getChild: (name: string) => {
+                const values: Record<string, Float32Array> = {
+                    x: new Float32Array([1]),
+                    y: new Float32Array([2]),
+                    z: new Float32Array([3])
+                };
+                return values[name] ? { toArray: () => values[name], nullCount: 1 } : null;
+            }
+        } as unknown as Table);
+
+        await expect(
+            parseCloudPointFrame(new ArrayBuffer(0), { channelId: 7, timestampNs: '10' })
+        ).rejects.toThrow('Point-cloud Arrow data must not contain null x, y, or z values.');
+    });
+
+    it('falls back to the packed count for malformed source_point_count', async () => {
+        vi.mocked(tableFromIPC).mockResolvedValue({
+            schema: { metadata: new Map([['source_point_count', 'unknown']]) },
+            getChild: (name: string) => {
+                const values: Record<string, Float32Array> = {
+                    x: new Float32Array([1]),
+                    y: new Float32Array([2]),
+                    z: new Float32Array([3])
+                };
+                return values[name] ? { toArray: () => values[name] } : null;
+            }
+        } as unknown as Table);
+
+        const result = await parseCloudPointFrame(new ArrayBuffer(0), {
+            channelId: 7,
+            timestampNs: '10'
+        });
+
+        expect(result.sourcePointCount).toBe(1);
+    });
+
     it('rejects data without all coordinate columns', async () => {
         vi.mocked(tableFromIPC).mockResolvedValue({
             getChild: (name: string) => (name === 'x' ? { toArray: () => [1] } : null)
