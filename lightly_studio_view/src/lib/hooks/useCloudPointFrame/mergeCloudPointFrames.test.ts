@@ -42,6 +42,26 @@ describe('mergeCloudPointFrames', () => {
         });
     });
 
+    it('copies only the active points of padded batches', () => {
+        const padded = makeFrame({
+            batch: {
+                positions: new Float32Array([1, 2, 3, 0, 0, 0]),
+                intensities: new Float32Array([0.5, 0]),
+                colors: new Float32Array([0.1, 0.2, 0.3, 0, 0, 0]),
+                count: 1
+            }
+        });
+
+        const result = mergeCloudPointFrames([padded]);
+
+        expect(result.batch).toEqual({
+            positions: new Float32Array([1, 2, 3]),
+            intensities: new Float32Array([0.5]),
+            colors: new Float32Array([0.1, 0.2, 0.3]),
+            count: 1
+        });
+    });
+
     it('drops colors when any frame lacks them', () => {
         const withColors = makeFrame();
         const withoutColors = makeFrame({
