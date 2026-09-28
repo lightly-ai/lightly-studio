@@ -1,6 +1,6 @@
 import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
 import { AnnotationType, type VideoFilter } from '$lib/api/lightly_studio_local';
-import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
+import { useVideoAnnotationCounts } from '$lib/hooks';
 import { toCategoryCounts } from '../distributionHandlers';
 
 interface UseVideoClassDistributionSourceParams {

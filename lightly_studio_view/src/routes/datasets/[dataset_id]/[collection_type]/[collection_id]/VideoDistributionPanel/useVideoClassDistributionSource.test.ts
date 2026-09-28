@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnnotationType } from '$lib/api/lightly_studio_local';
-import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
+import { useVideoAnnotationCounts } from '$lib/hooks';
 import { useVideoClassDistributionSource } from './useVideoClassDistributionSource.svelte';
 
-vi.mock('$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js', () => ({
+vi.mock('$lib/hooks', () => ({
     useVideoAnnotationCounts: vi.fn()
 }));
 

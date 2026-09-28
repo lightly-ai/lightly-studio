@@ -82,6 +82,7 @@ describe('useVideoMetadataDistributionSource', () => {
     it('fetches the shown categorical key with the base and the full filter', () => {
         const hook = renderHook();
 
+        expect(hook.source?.valueNoun).toBe('videos');
         expect(groupById(hook, 'weather')?.categorical).toMatchObject({
             buckets: [{ count: 3 }],
             filteredBuckets: [{ count: 1 }],

@@ -113,6 +113,7 @@ export function useVideoMetadataDistributionSource(
             selectedRanges: ranges.current,
             selectedValues: values.current,
             tagDistributions: [],
+            valueNoun: 'videos',
             numericLoading: histogramsQuery.isFetching,
             categoricalLoading: categoricalFetchState.loading,
             categoricalUpdating: categoricalFetchState.updating,

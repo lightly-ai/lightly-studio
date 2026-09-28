@@ -86,6 +86,8 @@ interface MetadataDistributionSourceParams {
     selectedValues: Record<string, CategoricalMetadataValue[] | undefined>;
     /** Per-tag distributions backing the comparison series. */
     tagDistributions: SampleTagMetadataDistributions[];
+    /** What the counts count, for the panel header and chart summaries. Default: samples. */
+    valueNoun?: string;
     /** Whether the current view's categorical request is in flight. */
     categoricalLoading?: boolean;
     categoricalUpdating?: boolean;
@@ -116,7 +118,7 @@ export function buildMetadataDistributionSource(
         id: 'metadata',
         label: 'Metadata',
         groupLabel: 'Metadata key',
-        valueNoun: 'samples',
+        valueNoun: params.valueNoun ?? 'samples',
         comparisonLoading: params.comparisonLoading,
         comparisonError: params.comparisonError,
         groups: [

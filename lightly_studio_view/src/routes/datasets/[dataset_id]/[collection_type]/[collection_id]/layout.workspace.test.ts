@@ -156,6 +156,7 @@ vi.mock('$lib/hooks', async () => ({
     ...(await import('$lib/hooks/useMetadataFilters/useMetadataFilters.js')),
     ...(await import('$lib/hooks/useVideoFilters/useVideoFilters')),
     ...(await import('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter')),
+    ...(await import('$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js')),
     useSelectionSummary: vi.fn(() => ({
         selectedCount: writable(0),
         clearSelection: vi.fn()

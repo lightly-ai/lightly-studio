@@ -68,6 +68,7 @@ export {
 } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 export { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 export { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+export { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount';
 export { useVideoOrderBy } from '$lib/hooks/useVideoOrderBy/useVideoOrderBy';
 export { useVideoSortFields } from '$lib/hooks/useVideoSortFields/useVideoSortFields';
 export {
