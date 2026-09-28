@@ -99,6 +99,7 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { validate as validateUUID } from 'uuid';
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
@@ -779,6 +780,13 @@
 
     const numericMetadataKeys = $derived(selectNumericMetadataKeys($metadataInfo));
     const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
+    const sidebarCategoricalQuery = useCategoricalMetadataDistribution(() => ({
+        collectionId,
+        filter: imageAnnotationCountsFilter,
+        fields: categoricalMetadataKeys,
+        enabled: isImages && validateUUID(collectionId) && categoricalMetadataKeys.length > 0
+    }));
+    const sidebarCategoricalDistributions = $derived(sidebarCategoricalQuery.data ?? {});
     const activeMetadataField = $derived.by<
         { name: string; type: 'numeric' | 'categorical' } | undefined
     >(() => {
@@ -903,9 +911,14 @@
         const next = exists
             ? selected.filter((candidate) => !Object.is(candidate, value))
             : [...selected, value];
-        updateCategoricalMetadataValues({
-            ...$categoricalMetadataValues,
-            [metadataKey]: next
+        const nextValues = { ...$categoricalMetadataValues };
+        if (next.length === 0) delete nextValues[metadataKey];
+        else nextValues[metadataKey] = next;
+        updateCategoricalMetadataValues(nextValues);
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: metadataKey,
+            action: exists ? 'value_disabled' : 'value_enabled'
         });
     };
 
@@ -913,6 +926,11 @@
         const next = { ...$categoricalMetadataValues };
         delete next[metadataKey];
         updateCategoricalMetadataValues(next);
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: metadataKey,
+            action: 'values_cleared'
+        });
     };
 
     const distributionSources = $derived<DistributionSource[]>(
@@ -1020,6 +1038,18 @@
                                     <CombinedMetadataDimensionsFilters
                                         {isVideos}
                                         {isVideoFrames}
+                                        isImageCollection={isImages}
+                                        categoricalKeys={categoricalMetadataKeys}
+                                        categoricalDistributions={sidebarCategoricalDistributions}
+                                        categoricalLoading={sidebarCategoricalQuery.isFetching &&
+                                            (sidebarCategoricalQuery.isLoading ||
+                                                sidebarCategoricalQuery.isPlaceholderData)}
+                                        categoricalUpdating={sidebarCategoricalQuery.isFetching &&
+                                            !sidebarCategoricalQuery.isLoading}
+                                        categoricalError={sidebarCategoricalQuery.error?.message}
+                                        onCategoricalRetry={() => sidebarCategoricalQuery.refetch()}
+                                        onCategoricalValueToggle={handleCategoricalValueToggle}
+                                        onCategoricalValuesClear={clearCategoricalValues}
                                         onFilterChanged={handleCombinedMetadataFilterChanged}
                                     />
                                 {/key}

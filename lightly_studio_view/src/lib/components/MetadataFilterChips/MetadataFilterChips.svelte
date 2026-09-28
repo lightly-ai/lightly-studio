@@ -10,12 +10,13 @@
     const { collectionId }: Props = $props();
 
     const hook = $derived.by(() => useMetadataFilterChips(collectionId));
+    const numericChips = $derived(hook.chips.filter((chip) => chip.kind === 'numeric'));
 </script>
 
-{#if hook.chips.length > 0}
+{#if numericChips.length > 0}
     <Segment title="Metadata filters">
         <div class="space-y-2">
-            {#each hook.chips as chip (chip.key)}
+            {#each numericChips as chip (chip.key)}
                 <FilterChip
                     testId="metadata-filter-chip-{chip.key}"
                     checked={chip.active}
@@ -28,9 +29,7 @@
                 >
                     {#snippet subtitle()}
                         <div class="truncate text-xs text-muted-foreground">
-                            {#if chip.kind === 'categorical'}
-                                {hook.formatCategoricalValues(chip.values)}
-                            {:else if chip.range}
+                            {#if chip.range}
                                 {hook.formatValue(chip.key, chip.range.min)} – {hook.formatValue(
                                     chip.key,
                                     chip.range.max
