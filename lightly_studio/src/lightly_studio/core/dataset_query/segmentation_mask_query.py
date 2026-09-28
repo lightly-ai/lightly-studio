@@ -67,9 +67,11 @@ class SegmentationMaskQuery(MatchExpression):
 
     def get(self) -> ColumnElement[bool]:
         """Get the segmentation mask match expression."""
-        return SampleTable.annotations.any(
-            and_(
-                col(AnnotationBaseTable.annotation_type) == AnnotationType.SEGMENTATION_MASK,
-                self.criterion.get(),
-            )
+        return SampleTable.annotations.any(self.get_annotation_criterion())
+
+    def get_annotation_criterion(self) -> ColumnElement[bool]:
+        """Get the condition that a single annotation must fulfil to match."""
+        return and_(
+            col(AnnotationBaseTable.annotation_type) == AnnotationType.SEGMENTATION_MASK,
+            self.criterion.get(),
         )

@@ -47,9 +47,11 @@ class ClassificationQuery(MatchExpression):
 
     def get(self) -> ColumnElement[bool]:
         """Get the classification match expression."""
-        return SampleTable.annotations.any(
-            and_(
-                col(AnnotationBaseTable.annotation_type) == AnnotationType.CLASSIFICATION,
-                self.criterion.get(),
-            )
+        return SampleTable.annotations.any(self.get_annotation_criterion())
+
+    def get_annotation_criterion(self) -> ColumnElement[bool]:
+        """Get the condition that a single annotation must fulfil to match."""
+        return and_(
+            col(AnnotationBaseTable.annotation_type) == AnnotationType.CLASSIFICATION,
+            self.criterion.get(),
         )

@@ -8,6 +8,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import metadata_resolver, video_resolver
 from tests.helpers_resolvers import (
@@ -196,6 +197,165 @@ def test_get_all_videos__with_width_filter(test_client: TestClient, db_session: 
 
     assert result["total_count"] == 1
     assert data[0]["file_path_abs"].endswith("sample1.mp4")
+
+
+def test_get_all_videos__query_expr_duration_and_fps(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+    create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[
+            VideoStub(path="/path/to/short.mp4", duration_s=5.0, fps=30.0),
+            VideoStub(path="/path/to/long_slow.mp4", duration_s=20.0, fps=10.0),
+            VideoStub(path="/path/to/long_fast.mp4", duration_s=20.0, fps=30.0),
+            VideoStub(path="/path/to/unknown_duration.mp4", duration_s=None, fps=30.0),
+        ],
+    )
+
+    query_expr = {
+        "match_expr": {
+            "type": "and",
+            "children": [
+                {
+                    "type": "ordinal_float_expr",
+                    "field": {"table": "video", "name": "duration_s"},
+                    "operator": ">",
+                    "value": 10.0,
+                },
+                {
+                    "type": "ordinal_float_expr",
+                    "field": {"table": "video", "name": "fps"},
+                    "operator": ">=",
+                    "value": 25.0,
+                },
+            ],
+        },
+    }
+    response = test_client.post(
+        f"/api/collections/{collection_id}/video/",
+        params={"offset": 0, "limit": 10},
+        json={"filter": {"sample_filter": {"query_expr": query_expr}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 1
+    assert [sample["file_name"] for sample in result["data"]] == ["long_fast.mp4"]
+
+
+def test_get_all_videos__query_expr_frame_annotation(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+    video_with_car = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/car.mp4", duration_s=1.0, fps=3.0),
+    )
+    video_with_airplane = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/airplane.mp4", duration_s=1.0, fps=3.0),
+    )
+    car_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    airplane_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="airplane"
+    )
+    # The car is only on the last frame, so the first frame joined by the video list
+    # query has no annotation.
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_with_car.frame_sample_ids[2],
+                annotation_label_id=car_label.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=video_with_airplane.frame_sample_ids[0],
+                annotation_label_id=airplane_label.annotation_label_id,
+            ),
+        ],
+    )
+
+    query_expr = {
+        "match_expr": {
+            "type": "object_detection_match_expr",
+            "subexpr": {
+                "type": "string_expr",
+                "field": {"table": "object_detection", "name": "class_name"},
+                "operator": "==",
+                "value": "car",
+            },
+        },
+    }
+    response = test_client.post(
+        f"/api/collections/{collection_id}/video/",
+        params={"offset": 0, "limit": 10},
+        json={"filter": {"sample_filter": {"query_expr": query_expr}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 1
+    assert UUID(result["data"][0]["sample_id"]) == video_with_car.video_sample_id
+
+
+def test_get_all_videos__query_expr_video_annotation(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[
+            VideoStub(path="/path/to/day.mp4"),
+            VideoStub(path="/path/to/night.mp4"),
+        ],
+    )
+    night_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="night"
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=video_ids[1],
+                annotation_label_id=night_label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+            ),
+        ],
+    )
+
+    query_expr = {
+        "match_expr": {
+            "type": "classification_match_expr",
+            "subexpr": {
+                "type": "string_expr",
+                "field": {"table": "classification", "name": "class_name"},
+                "operator": "==",
+                "value": "night",
+            },
+        },
+    }
+    response = test_client.post(
+        f"/api/collections/{collection_id}/video/",
+        params={"offset": 0, "limit": 10},
+        json={"filter": {"sample_filter": {"query_expr": query_expr}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 1
+    assert UUID(result["data"][0]["sample_id"]) == video_ids[1]
 
 
 def test_get_video_sample_ids(test_client: TestClient, db_session: Session) -> None:

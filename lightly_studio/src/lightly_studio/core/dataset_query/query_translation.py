@@ -33,8 +33,13 @@ from lightly_studio.core.dataset_query.segmentation_mask_query import (
     SegmentationMaskField,
     SegmentationMaskQuery,
 )
+from lightly_studio.core.dataset_query.video_frame_annotation_query import (
+    AnnotationQuery,
+    VideoFrameAnnotationQuery,
+)
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
@@ -116,18 +121,20 @@ _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
 
 _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
     ("image", "created_at"): ImageSampleField.created_at,
+    ("video", "created_at"): VideoSampleField.created_at,
 }
 
 _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
 }
 
-# Annotation confidence is stored in a nullable column, but still supports
+# Annotation confidence and video duration are stored in nullable columns, but still support
 # ordinal numeric comparisons in the query language.
 _ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("classification", "confidence"): ClassificationField.confidence,
     ("object_detection", "confidence"): ObjectDetectionField.confidence,
     ("segmentation_mask", "confidence"): SegmentationMaskField.confidence,
+    ("video", "duration_s"): VideoSampleField.duration_s,
 }
 # We can merge ordinal fields with nullable, as NULL values fail any comparison in SQL, so it just
 # works as expected.
@@ -136,9 +143,9 @@ _ALL_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     **_ORDINAL_NULLABLE_FLOAT_FIELDS,
 }
 
-_EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
-    ("video", "duration_s"): VideoSampleField.duration_s,
-}
+# TODO(Nauryzbay, 09/2026): No field uses equality float comparisons. Remove EqualityFloatExpr
+# from the query expression model.
+_EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {}
 
 _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
     ("image", "tags"): ImageSampleField.tags,
@@ -238,8 +245,20 @@ def evaluation_metric_sort_to_order_by(
     return order_by
 
 
-def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C901
-    """Translate a validated query-language expression to a dataset-query expression."""
+def to_match_expression(  # noqa: PLR0911 C901
+    expr: MatchExpr,
+    sample_type: SampleType = SampleType.IMAGE,
+) -> MatchExpression:
+    """Translate a validated query-language expression to a dataset-query expression.
+
+    Args:
+        expr: The query-language expression to translate.
+        sample_type: The type of the samples that the expression filters. For videos,
+            annotation expressions also match the annotations of the video frames.
+
+    Returns:
+        The dataset-query expression.
+    """
     if isinstance(expr, StringExpr):
         return _apply_equality_operator(
             field=_lookup(mapping=_STRING_FIELDS, field=expr.field, type_="string"),
@@ -278,18 +297,39 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery(to_match_expression(expr=expr.subexpr))
+        return _to_sample_annotation_query(
+            annotation_query=ClassificationQuery(to_match_expression(expr=expr.subexpr)),
+            sample_type=sample_type,
+        )
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery(to_match_expression(expr=expr.subexpr))
+        return _to_sample_annotation_query(
+            annotation_query=ObjectDetectionQuery(to_match_expression(expr=expr.subexpr)),
+            sample_type=sample_type,
+        )
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery(to_match_expression(expr=expr.subexpr))
+        return _to_sample_annotation_query(
+            annotation_query=SegmentationMaskQuery(to_match_expression(expr=expr.subexpr)),
+            sample_type=sample_type,
+        )
     if isinstance(expr, AndExpr):
-        return AND(*(to_match_expression(expr=child) for child in expr.children))
+        return AND(
+            *(to_match_expression(expr=child, sample_type=sample_type) for child in expr.children)
+        )
     if isinstance(expr, OrExpr):
-        return OR(*(to_match_expression(expr=child) for child in expr.children))
+        return OR(
+            *(to_match_expression(expr=child, sample_type=sample_type) for child in expr.children)
+        )
     if isinstance(expr, NotExpr):
-        return NOT(to_match_expression(expr=expr.child))
+        return NOT(to_match_expression(expr=expr.child, sample_type=sample_type))
     assert_never(expr)
+
+
+def _to_sample_annotation_query(
+    annotation_query: AnnotationQuery, sample_type: SampleType
+) -> MatchExpression:
+    if sample_type is SampleType.VIDEO:
+        return VideoFrameAnnotationQuery(annotation_query=annotation_query)
+    return annotation_query
 
 
 def _apply_equality_operator(
