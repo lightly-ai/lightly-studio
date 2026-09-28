@@ -38,3 +38,39 @@ def test_create_many(db_session: Session) -> None:
     assert track2 is not None
     assert track2.object_track_number == 20
     assert track2.dataset_id == collection.dataset_id
+
+
+def test_create_many__source_and_parent_track(db_session: Session) -> None:
+    """Test persisting source_track_id and parent_object_track_id."""
+    collection = create_collection(session=db_session)
+
+    parent_ids = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                object_track_number=1,
+                dataset_id=collection.dataset_id,
+                source_track_id=42,
+            )
+        ],
+    )
+    child_ids = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                object_track_number=2,
+                dataset_id=collection.dataset_id,
+                source_track_id=43,
+                parent_object_track_id=parent_ids[0],
+            )
+        ],
+    )
+
+    parent = object_track_resolver.get_by_id(session=db_session, object_track_id=parent_ids[0])
+    child = object_track_resolver.get_by_id(session=db_session, object_track_id=child_ids[0])
+    assert parent is not None
+    assert parent.source_track_id == 42
+    assert parent.parent_object_track_id is None
+    assert child is not None
+    assert child.source_track_id == 43
+    assert child.parent_object_track_id == parent_ids[0]

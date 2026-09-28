@@ -17,6 +17,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
@@ -41,6 +42,7 @@ from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     collection_resolver,
     embedding_model_resolver,
+    group_resolver,
     image_resolver,
     mcap_resolver,
     sample_embedding_resolver,
@@ -65,6 +67,57 @@ def create_collection(
             name=collection_name,
             parent_collection_id=parent_collection_id,
             sample_type=sample_type,
+        ),
+    )
+
+
+def create_groups(session: Session, count: int = 1) -> tuple[UUID, list[UUID]]:
+    """Creates a group collection with image-backed groups."""
+    group_collection = create_collection(session=session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=session,
+        parent_collection_id=group_collection.collection_id,
+        components=[("front", SampleType.IMAGE)],
+    )
+    images = create_images(
+        db_session=session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub(path=f"front_{index}.jpg") for index in range(count)],
+    )
+    group_ids = group_resolver.create_many(
+        session=session,
+        collection_id=group_collection.collection_id,
+        groups=[{image.sample_id} for image in images],
+    )
+    return group_collection.collection_id, group_ids
+
+
+def cuboid_create(
+    parent_sample_id: UUID,
+    annotation_label_id: UUID,
+    object_track_id: UUID | None = None,
+    px: float = 1.0,
+    sx: float = 2.0,
+) -> AnnotationCreate:
+    """Creates a cuboid annotation input for resolver tests."""
+    return AnnotationCreate(
+        annotation_label_id=annotation_label_id,
+        annotation_type=AnnotationType.CUBOID_3D,
+        parent_sample_id=parent_sample_id,
+        object_track_id=object_track_id,
+        cuboid_3d=Cuboid3DCreate(
+            frame_id="odom",
+            px=px,
+            py=0.0,
+            pz=0.5,
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            sx=sx,
+            sy=1.0,
+            sz=1.5,
+            interpolated=False,
         ),
     )
 

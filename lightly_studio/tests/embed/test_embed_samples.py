@@ -25,6 +25,7 @@ from sqlmodel import Session, select
 
 from lightly_studio.embed import embed_samples, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.errors import MissingCapabilityError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -254,7 +255,7 @@ def test_embed_image_for_collection__no_embedder_for_space_raises(
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
-    with pytest.raises(ValueError, match="No embedder resolves for"):
+    with pytest.raises(MissingCapabilityError, match="cannot embed images"):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
@@ -354,7 +355,7 @@ def test_embed_image_for_collection__path_only_embedder_with_url_raises(
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     spy_temp_dir = mocker.spy(tempfile, "TemporaryDirectory")
 
-    with pytest.raises(ValueError, match="No embedder resolves for"):
+    with pytest.raises(RemoteEmbedderUnavailableError):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
@@ -447,7 +448,7 @@ def test_embed_text_for_collection__no_embedder_for_space_raises(
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
-    with pytest.raises(ValueError, match="No embedder resolves for"):
+    with pytest.raises(MissingCapabilityError, match="cannot embed text"):
         embed_samples.embed_text_for_collection(
             session=db_session, collection_id=collection.collection_id, text="a red car"
         )

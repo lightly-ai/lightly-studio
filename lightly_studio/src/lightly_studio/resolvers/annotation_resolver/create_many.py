@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -36,7 +37,8 @@ def create_many(
     """Create multiple annotations in bulk with their respective type-specific details.
 
     Creates base annotations and their associated type-specific details (object detection,
-    or segmentation) in the annotation collection child of the provided parent collection.
+    segmentation, or cuboid) in the annotation collection child of the provided parent
+    collection.
 
     It is responsibility of the caller to ensure that all parent samples belong to the same
     collection with ID `parent_collection_id`. This function does not perform this check for
@@ -56,6 +58,7 @@ def create_many(
     base_annotations = []
     object_detection_annotations = []
     segmentation_annotations = []
+    cuboid_annotations = []
     temporal_spans = []
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=session,
@@ -82,6 +85,7 @@ def create_many(
         # Set other relationship details to None
         db_base_annotation.segmentation_details = None
         db_base_annotation.object_detection_details = None
+        db_base_annotation.cuboid_3d_details = None
 
         base_annotations.append(db_base_annotation)
 
@@ -118,6 +122,11 @@ def create_many(
             )
             segmentation_annotations.append(db_segmentation_mask)
 
+        elif annotation_type == AnnotationType.CUBOID_3D:
+            cuboid = _cuboid_details(annotation=annotation_create)
+            cuboid.sample_id = base_annotations[i].sample_id
+            cuboid_annotations.append(cuboid)
+
         temporal_span = _validate_optional_temporal_span(
             annotation=annotation_create, annotation_type=annotation_type
         )
@@ -134,6 +143,7 @@ def create_many(
     # Bulk save object detection annotations
     session.bulk_save_objects(object_detection_annotations)
     session.bulk_save_objects(segmentation_annotations)
+    session.bulk_save_objects(cuboid_annotations)
     session.bulk_save_objects(temporal_spans)
 
     # Bulk add annotation collection coverage entries.
@@ -182,3 +192,23 @@ def _validate_optional_temporal_span(
         raise ValueError(f"start_time_s must be less than end_time_s for {kind}.")
 
     return (start_time_s, end_time_s)
+
+
+def _cuboid_details(annotation: AnnotationCreate) -> Cuboid3DAnnotationTable:
+    cuboid = annotation.cuboid_3d
+    if cuboid is None:
+        raise ValueError("cuboid_3d is required for cuboid_3d annotations.")
+    return Cuboid3DAnnotationTable(
+        frame_id=cuboid.frame_id,
+        px=cuboid.px,
+        py=cuboid.py,
+        pz=cuboid.pz,
+        qx=cuboid.qx,
+        qy=cuboid.qy,
+        qz=cuboid.qz,
+        qw=cuboid.qw,
+        sx=cuboid.sx,
+        sy=cuboid.sy,
+        sz=cuboid.sz,
+        interpolated=cuboid.interpolated,
+    )

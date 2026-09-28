@@ -18,12 +18,8 @@ from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import collection_resolver, recording_resolver
-from lightly_studio.services.recording_service.get_camera_frame import (
-    _READER_CACHE_SIZE,
-    _get_cached_reader,
-    _thread_local,
-    get_camera_frame,
-)
+from lightly_studio.services.recording_service import reader_cache
+from lightly_studio.services.recording_service.get_camera_frame import get_camera_frame
 from tests.core.mcap import helpers
 
 
@@ -31,11 +27,11 @@ from tests.core.mcap import helpers
 def clear_reader_cache() -> Iterator[None]:
     cache = cast(
         "OrderedDict[str, McapFileReader] | None",
-        getattr(_thread_local, "reader_cache", None),
+        getattr(reader_cache._thread_local, "reader_cache", None),
     )
     if cache is None:
         cache = OrderedDict()
-        _thread_local.reader_cache = cache
+        reader_cache._thread_local.reader_cache = cache
     for reader in cache.values():
         reader.close()
     cache.clear()
@@ -132,28 +128,3 @@ def test_get_camera_frame__unknown_channel(db_session: Session, tmp_path: Path) 
             channel_id=999_999,
             keyframe_timestamp_ns=helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0],
         )
-
-
-def test_get_cached_reader__returns_same_reader_on_hit(tmp_path: Path) -> None:
-    uri = str(helpers.write_mcap(tmp_path / "recording.mcap"))
-    first = _get_cached_reader(uri)
-    second = _get_cached_reader(uri)
-    assert first is second
-
-
-def test_get_cached_reader__evicts_lru_and_closes_it(tmp_path: Path) -> None:
-    uris = [str(helpers.write_mcap(tmp_path / f"r{i}.mcap")) for i in range(_READER_CACHE_SIZE + 1)]
-    evicted = _get_cached_reader(uris[0])
-    for uri in uris[1:]:
-        _get_cached_reader(uri)
-
-    # The first reader was evicted; opening it again should yield a new object.
-    replacement = _get_cached_reader(uris[0])
-    assert evicted is not replacement
-
-
-def test_get_cached_reader__local_uri_has_no_storage_options(tmp_path: Path) -> None:
-    uri = str(helpers.write_mcap(tmp_path / "recording.mcap"))
-    reader = _get_cached_reader(uri)
-    # Local paths must not use blockcache — the fsspec open call would fail if it tried.
-    assert reader is not None

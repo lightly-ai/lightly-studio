@@ -193,10 +193,15 @@ def index_recording(
 
 
 class _LoadedRecording(NamedTuple):
-    """The locators of every component, paired to the sync component, plus camera intrinsics."""
+    """The locators of every component, paired to the sync component, plus camera intrinsics.
+
+    `channel_ids` comes from the file summary, so a component still has a channel even
+    when pairing finds no tick for it.
+    """
 
     locators: dict[str, list[FrameLocator | None]]
     intrinsics: dict[str, CameraIntrinsics]
+    channel_ids: dict[str, int]
 
 
 def _get_sync_component(
@@ -225,23 +230,24 @@ def _read_recording(
 ) -> _LoadedRecording:
     """Pair every component to the sync_component, and read the intrinsics of the cameras.
 
-    The topics are read in a single pass, because a chunk holds the messages of every
-    topic in a time span and reading them one at a time fetches the shared chunks again
-    for each of them.
+    Pairing uses capture timestamps first, then log times when the capture clocks do
+    not overlap. The topics are read in a single pass, because a chunk holds the
+    messages of every topic in a time span and reading them one at a time fetches the
+    shared chunks again for each of them.
     """
     with McapFileReader(mcap_path) as reader:
         reader.load_data_for_topics(_topics_to_load(components=components))
         sync_locators = reader.get_frame_locators(sync_component.topic)
-        anchor_timestamps_ns = [locator.log_time_ns for locator in sync_locators]
 
         locators: dict[str, list[FrameLocator | None]] = {sync_component.name: list(sync_locators)}
         for component in components:
             if component.name == sync_component.name:
                 continue
-            locators[component.name] = reader.get_frame_locators(
-                component.topic,
-                sync_timestamps=anchor_timestamps_ns,
-                sync_rule=matching.closest(max_diff_ns=max_pairing_diff_ns),
+            locators[component.name] = _pair_to_sync(
+                reader=reader,
+                topic=component.topic,
+                sync_locators=sync_locators,
+                max_pairing_diff_ns=max_pairing_diff_ns,
             )
 
         intrinsics = {
@@ -249,7 +255,33 @@ def _read_recording(
             for component in components
             if component.camera_info_topic is not None
         }
-    return _LoadedRecording(locators=locators, intrinsics=intrinsics)
+        channel_ids = _channel_ids_by_component(reader=reader, components=components)
+    return _LoadedRecording(locators=locators, intrinsics=intrinsics, channel_ids=channel_ids)
+
+
+def _pair_to_sync(
+    reader: McapFileReader,
+    topic: str,
+    sync_locators: Sequence[FrameLocator],
+    max_pairing_diff_ns: int,
+) -> list[FrameLocator | None]:
+    """Pair a topic to the sync component by capture time, then by log time for misses."""
+    return reader.get_frame_locators(
+        topic,
+        sync_timestamps=[locator.capture_timestamp_ns for locator in sync_locators],
+        sync_rule=matching.closest(max_diff_ns=max_pairing_diff_ns),
+        fallback_timestamps=[locator.log_time_ns for locator in sync_locators],
+    )
+
+
+def _channel_ids_by_component(
+    reader: McapFileReader, components: Sequence[McapComponentSpec]
+) -> dict[str, int]:
+    """Return the MCAP channel of each component's topic in the file."""
+    channel_id_by_topic: dict[str, int] = {}
+    for topic_info in reader.get_topics():
+        channel_id_by_topic.setdefault(topic_info.name, topic_info.channel_id)
+    return {component.name: channel_id_by_topic[component.topic] for component in components}
 
 
 def _topics_to_load(components: Sequence[McapComponentSpec]) -> list[str]:
@@ -307,16 +339,14 @@ def _fill_mcap_definitions(
 ) -> None:
     """Fill the channel and the frame of every component from the recording.
 
-    Only the first recording that is indexed fills them, so all recordings of a dataset
-    keep one schema.
+    The channel comes from the topic in the file, even when pairing finds no tick for
+    that component. Only the first recording that is indexed fills them, so all
+    recordings of a dataset keep one schema.
     """
     for component in components:
-        first_locator = next(
-            (locator for locator in loaded.locators[component.name] if locator is not None), None
-        )
         intrinsics = loaded.intrinsics.get(component.name)
         mcap_components[component.name].update_mcap_definition(
-            channel_id=first_locator.channel_id if first_locator is not None else None,
+            channel_id=loaded.channel_ids[component.name],
             frame_id=intrinsics.frame_id if intrinsics is not None else component.frame_id,
         )
 

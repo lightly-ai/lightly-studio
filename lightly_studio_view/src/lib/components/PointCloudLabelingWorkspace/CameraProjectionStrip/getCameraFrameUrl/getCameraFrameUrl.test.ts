@@ -2,9 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { client } from '$lib/api/lightly_studio_local/client.gen';
 import { getCameraFrameUrl } from './getCameraFrameUrl';
 
-// Pin the client's base URL so the assertions don't depend on the value baked into
-// the generated client at build time (that value comes from PUBLIC_LIGHTLY_STUDIO_API_URL
-// and is `undefined` when the env var is unset, which breaks a hardcoded expectation).
+// Pin the client's base URL so the assertions don't depend on the value the client reads
+// from PUBLIC_LIGHTLY_STUDIO_API_URL at runtime.
 const TEST_BASE_URL = 'http://api.test';
 
 describe('getCameraFrameUrl', () => {

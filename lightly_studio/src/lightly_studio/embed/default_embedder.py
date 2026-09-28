@@ -13,6 +13,11 @@ from sqlmodel import Session
 from lightly_studio.embed import embedder_config, embedder_registry
 from lightly_studio.embed.embedder_config import EmbedderConfig
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.errors import (
+    MissingCapabilityError,
+    NoDefaultEmbeddingModelError,
+    RemoteEmbedderUnavailableError,
+)
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -87,6 +92,7 @@ def resolve_query_embedder(
     get_embedder_fn: Callable[
         [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
     ],
+    query_kind: str,
 ) -> _EmbedderT:
     """Resolve the embedder for an interactive query, without mutating the collection.
 
@@ -100,28 +106,33 @@ def resolve_query_embedder(
         collection_id: The collection whose default embedding model is used.
         get_embedder_fn: The typed getter of the needed capability, as described in
             ``resolve_default_embedder``.
+        query_kind: What the query embeds, such as "text" or "images". Used in errors.
 
     Returns:
         The embedder for the collection's default embedding space.
 
     Raises:
-        ValueError: If the collection has no default embedding model, no embedder resolves
-            for that model's space, or the embedder's dimension does not match the space's
-            stored dimension (a wrongly registered embedder).
+        NoDefaultEmbeddingModelError: If the collection has no default embedding model.
+        RemoteEmbedderUnavailableError: If the embedding server of the space cannot be used.
+        MissingCapabilityError: If no embedder of the space has the needed capability.
+        ValueError: If the embedder's dimension does not match the space's stored dimension
+            (a wrongly registered embedder).
     """
     default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection_id
     )
     if default_model is None:
-        raise ValueError("The collection has no default embedding model.")
+        raise NoDefaultEmbeddingModelError("The collection has no default embedding model.")
 
     embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
-    if embedder is None:
-        raise ValueError(
-            f"No embedder resolves for the collection's default embedding space "
-            f"{default_model.name!r}."
-        )
-    return embedder
+    if embedder is not None:
+        return embedder
+    config = embedder_config.from_embedding_model(embedding_model=default_model)
+    if config.url is not None and embedder_registry.get_registry().is_remote_unavailable(
+        config=config
+    ):
+        raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=config.url)
+    raise MissingCapabilityError(space_key=default_model.name, query_kind=query_kind)
 
 
 def _embedder_for_model(
