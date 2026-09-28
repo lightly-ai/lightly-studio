@@ -51,6 +51,18 @@ def compose_remote_embedder_class(
     return _composed_class(bases=tuple(capability_to_base[capability] for capability in routable))
 
 
+def composed_class(bases: Sequence[type[Embedder]]) -> type[Embedder]:
+    """Build the class that carries exactly ``bases``, or give the class built before.
+
+    Args:
+        bases: The route classes to compose, in a fixed order.
+
+    Returns:
+        A class that ``isinstance`` reports as each of ``bases``.
+    """
+    return _composed_class(bases=tuple(bases))
+
+
 @functools.cache
 def _composed_class(bases: tuple[type[Embedder], ...]) -> type[Embedder]:
     """Build and cache the class that carries exactly ``bases``.
