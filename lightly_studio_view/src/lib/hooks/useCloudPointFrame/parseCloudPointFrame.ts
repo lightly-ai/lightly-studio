@@ -85,7 +85,6 @@ function buildFrame(
     source: CloudPointFrameSource
 ): CloudPointFrame {
     const metadata = table.schema.metadata;
-    const boundsText = readMetadata(metadata, 'bounds');
     const timestampNs = readMetadata(metadata, 'log_time_ns') ?? source.timestampNs;
     const frameId = readMetadata(metadata, 'frame_id') ?? '';
     return {
@@ -94,9 +93,30 @@ function buildFrame(
         timestampNs,
         frameId,
         sourcePointCount: readSourcePointCount(metadata, batch.count),
-        bounds: boundsText ? JSON.parse(boundsText) : null,
+        bounds: readBounds(metadata),
         channels: [{ channelId: source.channelId, timestampNs, frameId }]
     };
+}
+
+/** Reads and validates point-cloud bounds metadata. */
+function readBounds(
+    metadata: Map<string, string | Uint8Array> | undefined
+): CloudPointFrame['bounds'] {
+    const text = readMetadata(metadata, 'bounds');
+    if (text === undefined) return null;
+    const value: unknown = JSON.parse(text);
+    if (!isBounds(value)) throw new Error('Point-cloud bounds metadata is invalid.');
+    return value;
+}
+
+function isBounds(value: unknown): value is NonNullable<CloudPointFrame['bounds']> {
+    if (typeof value !== 'object' || value === null) return false;
+    const bounds = value as Record<string, unknown>;
+    return isVec3(bounds.min) && isVec3(bounds.max);
+}
+
+function isVec3(value: unknown): value is [number, number, number] {
+    return Array.isArray(value) && value.length === 3 && value.every(Number.isFinite);
 }
 
 /**

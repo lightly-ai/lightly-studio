@@ -60,6 +60,14 @@ describe('fetchCloudPointFrame', () => {
             'Could not load point cloud (200).'
         );
 
+        vi.mocked(getPointCloud).mockResolvedValue({
+            data: new ArrayBuffer(0),
+            response: { ok: true, status: 200 } as Response
+        } as Awaited<ReturnType<typeof getPointCloud>>);
+        await expect(fetchCloudPointFrame(defaultArgs)).rejects.toThrow(
+            'Could not load point cloud (200).'
+        );
+
         expect(parseCloudPointFrame).not.toHaveBeenCalled();
     });
 });
