@@ -142,7 +142,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             path: Path to the folder containing the images to add.
             allowed_extensions: An iterable container of allowed image file
                 extensions.
-            embed: If True, generate embeddings for the newly added images.
+            embed: If True, generate embeddings for the newly added images. Existing images
+                without an embedding of the default embedding model are also embedded.
             tag_depth: Defines the tagging behavior based on directory depth.
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=N` (N >= 1): Creates a tag for each of the first `N`
@@ -351,7 +352,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_path: Path to the folder containing the images.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -403,7 +405,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             data_yaml: Path to the YOLO data.yaml file.
             input_split: The split to load (e.g., 'train', 'val', 'test').
                 If None, all available splits will be loaded and assigned a corresponding tag.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -512,7 +515,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 'InstanceSegmentation').
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -601,7 +605,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             class_id_to_name: Mapping from class IDs to class names.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -662,7 +667,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_rel_path: Relative path to images folder from label folder.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -719,7 +725,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_path: Path to the folder containing the images.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
