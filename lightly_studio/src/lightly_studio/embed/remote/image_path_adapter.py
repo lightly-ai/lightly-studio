@@ -63,7 +63,7 @@ class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
 
 def _read(path: str) -> bytes:
     """Read the bytes of a file."""
-    with fsspec.open(path, "rb") as file:
+    with fsspec.open(urlpath=path, mode="rb") as file:
         data: bytes = file.read()
     return data
 
