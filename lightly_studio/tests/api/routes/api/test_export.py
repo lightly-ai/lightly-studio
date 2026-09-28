@@ -898,6 +898,87 @@ def test_export_collection_youtube_vis_prepare(
     }
 
 
+def test_export_collection_youtube_vis_prepare__frame_collection(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_with_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_001.mp4", width=3, height=2, duration_s=2.0, fps=1.0),
+    )
+    frames_collection_id = video_with_frames.video_frames_collection_id
+
+    response = test_client.post(
+        f"/api/collections/{frames_collection_id}/export/youtube-vis/prepare",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = response.json()["export_key"]
+    download = test_client.get(
+        f"/api/collections/{frames_collection_id}/export/download/{export_key}"
+    )
+    assert download.status_code == HTTP_STATUS_OK
+    content = json.loads(download.content)
+    assert [video["file_names"] for video in content["videos"]] == [
+        ["video_001.mp4/00000.jpg", "video_001.mp4/00001.jpg"]
+    ]
+
+
+def test_export_collection_youtube_vis_prepare__video_frame_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # A frame of video_a matches the filter, so the export contains all frames of video_a.
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_a = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_a.mp4", width=3, height=2, duration_s=2.0, fps=1.0),
+    )
+    create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_b.mp4", width=3, height=2, duration_s=2.0, fps=1.0),
+    )
+    frames_collection_id = video_a.video_frames_collection_id
+
+    response = test_client.post(
+        f"/api/collections/{frames_collection_id}/export/youtube-vis/prepare",
+        json={
+            "video_frame_filter": {
+                "filter_type": "video_frame",
+                "sample_filter": {"sample_ids": [str(video_a.frame_sample_ids[1])]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_key = UUID(response.json()["export_key"])
+    export_job = db_session.get(ExportJobTable, export_key)
+    assert export_job is not None
+    content = json.loads(Path(export_job.export_path).read_text())
+    assert [video["file_names"] for video in content["videos"]] == [
+        ["video_a.mp4/00000.jpg", "video_a.mp4/00001.jpg"]
+    ]
+
+
+def test_export_collection_youtube_vis_prepare__video_frame_filter_on_video_collection(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis/prepare",
+        json={"video_frame_filter": {"filter_type": "video_frame"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+
 def test_export_collection_youtube_vis_prepare__wrong_collection_type(
     db_session: Session,
     test_client: TestClient,

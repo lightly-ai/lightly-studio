@@ -14,7 +14,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlmodel import Field, Session
+from sqlmodel import Field, Session, col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
@@ -24,8 +25,10 @@ from lightly_studio.errors import NotFoundError
 from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
+from lightly_studio.models.video import VideoFrameTable
 from lightly_studio.resolvers import collection_resolver, export_job_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
@@ -51,6 +54,13 @@ class ExportYoutubeVisPrepareBody(BaseModel):
     """Request body for the YouTube-VIS prepare endpoint."""
 
     video_filter: VideoFilter | None = None
+    video_frame_filter: VideoFrameFilter | None = Field(
+        None,
+        description=(
+            "Filter of a frame collection. The export contains the full videos "
+            "that have at least one matching frame."
+        ),
+    )
 
 
 class ExportAnnotationsPrepareBody(BaseModel):
@@ -129,15 +139,20 @@ def export_collection_youtube_vis_prepare(
     session: SessionDep,
     body: ExportYoutubeVisPrepareBody,
 ) -> ExportKeyResponse:
-    """Generate the YouTube-VIS export and persist its path."""
-    if collection.sample_type != SampleType.VIDEO:
-        raise ValueError("YouTube-VIS export is only supported for video collections.")
+    """Generate the YouTube-VIS export and persist its path.
 
-    dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
-    if body.video_filter is not None:
-        dataset_query.filter_by_sample_ids(
-            body.video_filter.build_sample_ids_query(collection.collection_id)
-        )
+    A frame collection exports the videos of its parent video collection.
+    """
+    video_collection = _get_youtube_vis_video_collection(collection=collection)
+
+    dataset_query = DatasetQuery(
+        dataset=video_collection, session=session, sample_class=VideoSample
+    )
+    video_ids_query = _build_youtube_vis_video_ids_query(
+        collection=collection, video_collection=video_collection, body=body
+    )
+    if video_ids_query is not None:
+        dataset_query.filter_by_sample_ids(video_ids_query)
 
     temp_dir = PathlibPath(tempfile.mkdtemp())
     output_path = temp_dir / "youtube_vis_segmentation_mask_export.json"
@@ -147,6 +162,7 @@ def export_collection_youtube_vis_prepare(
             samples=dataset_query,
             output_json=output_path,
         )
+        # The download route looks up the job by the requested collection, not the video one.
         export = export_job_resolver.create(
             session=session, collection_id=collection.collection_id, export_path=str(output_path)
         )
@@ -412,3 +428,43 @@ def _media_type_for_path(path: PathlibPath) -> str:
     if path.suffix == ".txt":
         return "text/plain"
     return "application/octet-stream"
+
+
+def _get_youtube_vis_video_collection(collection: CollectionTable) -> CollectionTable:
+    """Get the video collection that a YouTube-VIS export reads from."""
+    if collection.sample_type == SampleType.VIDEO:
+        return collection
+    parent = collection.parent
+    if (
+        collection.sample_type == SampleType.VIDEO_FRAME
+        and parent is not None
+        and parent.sample_type == SampleType.VIDEO
+    ):
+        return parent
+    raise ValueError("YouTube-VIS export is only supported for video and frame collections.")
+
+
+def _build_youtube_vis_video_ids_query(
+    collection: CollectionTable,
+    video_collection: CollectionTable,
+    body: ExportYoutubeVisPrepareBody,
+) -> SelectOfScalar[UUID] | None:
+    """Build the query of the video ids that a YouTube-VIS export contains.
+
+    Returns None if the export contains all videos of the video collection.
+    """
+    if body.video_frame_filter is None:
+        if body.video_filter is None:
+            return None
+        return body.video_filter.build_sample_ids_query(video_collection.collection_id)
+    if collection.sample_type != SampleType.VIDEO_FRAME or body.video_filter is not None:
+        raise ValueError(
+            "The video frame filter is only supported for frame collections "
+            "and cannot be used together with the video filter."
+        )
+    frame_ids_query = body.video_frame_filter.build_sample_ids_query(collection.collection_id)
+    return (
+        select(VideoFrameTable.parent_sample_id)
+        .where(col(VideoFrameTable.sample_id).in_(frame_ids_query))
+        .distinct()
+    )

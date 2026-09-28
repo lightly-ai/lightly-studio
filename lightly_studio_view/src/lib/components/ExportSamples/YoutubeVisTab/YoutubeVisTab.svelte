@@ -4,7 +4,7 @@
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import { useExportDownload, triggerDownload } from '../useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
-    import { useVideoFilters } from '$lib/hooks';
+    import { useFramesFilter, useVideoFilters } from '$lib/hooks';
 
     interface Props {
         onDownloadClick?: () => void;
@@ -14,11 +14,17 @@
 
     const collectionId = page.params.collection_id!;
     const { videoFilter } = useVideoFilters();
+    const { frameFilter } = useFramesFilter();
+    // YouTube-VIS contains full videos. A frame collection exports the full videos that
+    // have at least one frame that matches the frames grid filter.
+    const isFrameCollection = page.data?.collection?.sample_type === 'video_frame';
 
     const { isLoading, errorMessage, handleDownload } = useExportDownload(async () => {
         const response = await exportCollectionYoutubeVisPrepare({
             path: { collection_id: collectionId },
-            body: { video_filter: $videoFilter }
+            body: isFrameCollection
+                ? { video_frame_filter: $frameFilter }
+                : { video_filter: $videoFilter }
         });
         if (response.error) throw new Error(JSON.stringify(response.error));
         const exportKey = response.data?.export_key;
@@ -32,6 +38,9 @@
 <div class="pt-2">
     <p class="text-sm text-muted-foreground">
         The video segmentation masks will be exported in YouTube-VIS format.
+        {#if isFrameCollection}
+            The export contains all frames of each video that has a matching frame.
+        {/if}
     </p>
     <ExportDownloadButton
         isLoading={$isLoading}
