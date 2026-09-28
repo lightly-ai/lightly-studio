@@ -13,6 +13,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
 from lightly_studio.embed.remote import connection, image_path_adapter
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
+from lightly_studio.embed.remote.transport import RemoteTransport
 from tests.embed.remote import threaded_server
 from tests.embed.remote.helpers import DIMENSION, SPACE_KEY, FakeImageEmbedder, FakeServer
 
@@ -25,6 +26,13 @@ class ChunkedFile(io.BytesIO):
 
     def read(self, size: int | None = -1) -> bytes:
         return super().read(3 if size is None or size < 0 else min(size, 3))
+
+
+class CustomRemoteEmbedder(RemoteEmbedder, ImageBytesEmbedder):
+    """A remote embedder that a caller writes by hand, and not ``connect``."""
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        raise NotImplementedError
 
 
 class LengthEmbedder(ImageBytesEmbedder):
@@ -140,6 +148,17 @@ def test_with_image_path__local_embedder() -> None:
 def test_with_image_path__remote_without_image_bytes() -> None:
     with FakeServer(capabilities=["text"]).client() as client:
         embedder = RemoteEmbedder.connect(client=client)
+
+    assert image_path_adapter.with_image_path(embedder=embedder) is embedder
+
+
+def test_with_image_path__custom_remote_subclass() -> None:
+    with FakeServer(capabilities=["image_bytes"]).client() as client:
+        embedder = CustomRemoteEmbedder(
+            transport=RemoteTransport(client=client),
+            spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION),
+            limits=LIMITS,
+        )
 
     assert image_path_adapter.with_image_path(embedder=embedder) is embedder
 

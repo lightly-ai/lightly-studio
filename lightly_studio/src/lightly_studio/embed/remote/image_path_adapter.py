@@ -22,7 +22,7 @@ from lightly_studio_serve.embedder import (
 )
 from lightly_studio_serve.types import EmbeddingResult
 
-from lightly_studio.embed.remote import batching
+from lightly_studio.embed.remote import batching, composition
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
 from lightly_studio.utils import executor, parallelize
 
@@ -96,10 +96,12 @@ def with_image_path(embedder: Embedder) -> Embedder:
 
     Returns:
         A new embedder of the same server that also embeds images by path, if ``embedder``
-        is a remote embedder that embeds image bytes and not image paths. Else ``embedder``.
+        is a remote embedder that ``RemoteEmbedder.connect`` built, and that embeds image
+        bytes and not image paths. Else ``embedder``.
     """
     if (
         not isinstance(embedder, RemoteEmbedder)
+        or not composition.is_composed(cls=type(embedder))
         or not isinstance(embedder, ImageBytesEmbedder)
         or isinstance(embedder, ImagePathEmbedder)
     ):
