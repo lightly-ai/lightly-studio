@@ -2,7 +2,7 @@ import { Box3, BufferAttribute, Vector3 } from 'three';
 import { turboInto } from './colormap';
 
 /** Determines how points are colored. */
-export type ColorMode = 'none' | 'intensity' | 'height';
+export type ColorMode = 'none' | 'intensity' | 'height' | 'rgb';
 
 /** Camera position and orbit target computed from point cloud bounds. */
 interface CameraPlacement {
@@ -16,9 +16,10 @@ interface CameraPlacement {
  * @param positions - Flat positions [x0,y0,z0, x1,y1,z1, ...].
  * @param intensities - Per-point intensity values.
  * @param count - Number of active points.
- * @param colorMode - "none", "intensity", or "height".
+ * @param colorMode - "none", "intensity", "height", or "rgb".
  * @param colors - Pre-allocated output buffer (must be >= count * 3).
  * @param intensityRange - Optional [min, max] override for intensity normalization.
+ * @param pointColors - Per-point linear RGB values used when colorMode is "rgb".
  */
 export function buildColorBuffer(
     positions: Float32Array,
@@ -26,9 +27,15 @@ export function buildColorBuffer(
     count: number,
     colorMode: ColorMode,
     colors: Float32Array,
-    intensityRange?: [number, number]
+    intensityRange?: [number, number],
+    pointColors?: Float32Array
 ): void {
-    if (colorMode === 'none') {
+    if (colorMode === 'rgb' && pointColors) {
+        colors.set(pointColors.subarray(0, count * 3), 0);
+        return;
+    }
+
+    if (colorMode === 'none' || colorMode === 'rgb') {
         for (let i = 0; i < count; i++) {
             colors[i * 3] = 0.5;
             colors[i * 3 + 1] = 0.5;
