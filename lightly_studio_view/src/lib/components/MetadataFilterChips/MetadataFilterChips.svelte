@@ -5,18 +5,26 @@
 
     interface Props {
         collectionId?: string;
+        isImageCollection?: boolean;
+        categoricalKeys?: string[];
     }
 
-    const { collectionId }: Props = $props();
+    const { collectionId, isImageCollection = false, categoricalKeys = [] }: Props = $props();
 
     const hook = $derived.by(() => useMetadataFilterChips(collectionId));
-    const numericChips = $derived(hook.chips.filter((chip) => chip.kind === 'numeric'));
+    const visibleChips = $derived(
+        hook.chips.filter(
+            (chip) =>
+                chip.kind === 'numeric' ||
+                (chip.active && (!isImageCollection || !categoricalKeys.includes(chip.key)))
+        )
+    );
 </script>
 
-{#if numericChips.length > 0}
+{#if visibleChips.length > 0}
     <Segment title="Metadata filters">
         <div class="space-y-2">
-            {#each numericChips as chip (chip.key)}
+            {#each visibleChips as chip (chip.key)}
                 <FilterChip
                     testId="metadata-filter-chip-{chip.key}"
                     checked={chip.active}
@@ -29,7 +37,9 @@
                 >
                     {#snippet subtitle()}
                         <div class="truncate text-xs text-muted-foreground">
-                            {#if chip.range}
+                            {#if chip.kind === 'categorical'}
+                                {hook.formatCategoricalValues(chip.values)}
+                            {:else if chip.range}
                                 {hook.formatValue(chip.key, chip.range.min)} – {hook.formatValue(
                                     chip.key,
                                     chip.range.max

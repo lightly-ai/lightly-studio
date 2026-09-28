@@ -12,12 +12,14 @@ describe('MetadataFilterChips', () => {
         storage.updateCategoricalMetadataValues({});
     });
 
-    it('does not render categorical filters as chips', () => {
+    it('shows categorical filters as clearable fallback chips', () => {
         storage.updateCategoricalMetadataValues({ city: ['Missing', null, 'Other'] });
         render(MetadataFilterChips);
 
-        expect(screen.queryByTestId('metadata-filter-chip-city')).not.toBeInTheDocument();
-        expect(screen.queryByText('Metadata filters')).not.toBeInTheDocument();
+        expect(screen.getByTestId('metadata-filter-chip-city')).toHaveTextContent(
+            'Missing (value), Missing (no value), Other (value)'
+        );
+        expect(screen.getByLabelText('Clear city')).toBeInTheDocument();
     });
 
     it('renders nothing when no filter is narrowed', () => {

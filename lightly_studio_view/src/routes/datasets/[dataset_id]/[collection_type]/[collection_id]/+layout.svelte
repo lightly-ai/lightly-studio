@@ -99,7 +99,6 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
-    import { validate as validateUUID } from 'uuid';
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
@@ -780,13 +779,6 @@
 
     const numericMetadataKeys = $derived(selectNumericMetadataKeys($metadataInfo));
     const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
-    const sidebarCategoricalQuery = useCategoricalMetadataDistribution(() => ({
-        collectionId,
-        filter: imageAnnotationCountsFilter,
-        fields: categoricalMetadataKeys,
-        enabled: isImages && validateUUID(collectionId) && categoricalMetadataKeys.length > 0
-    }));
-    const sidebarCategoricalDistributions = $derived(sidebarCategoricalQuery.data ?? {});
     const activeMetadataField = $derived.by<
         { name: string; type: 'numeric' | 'categorical' } | undefined
     >(() => {
@@ -1034,20 +1026,17 @@
 
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
-                                    <MetadataFilterChips {collectionId} />
+                                    <MetadataFilterChips
+                                        {collectionId}
+                                        isImageCollection={isImages}
+                                        categoricalKeys={categoricalMetadataKeys}
+                                    />
                                     <CombinedMetadataDimensionsFilters
                                         {isVideos}
                                         {isVideoFrames}
                                         isImageCollection={isImages}
+                                        categoricalFilter={imageAnnotationCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
-                                        categoricalDistributions={sidebarCategoricalDistributions}
-                                        categoricalLoading={sidebarCategoricalQuery.isFetching &&
-                                            (sidebarCategoricalQuery.isLoading ||
-                                                sidebarCategoricalQuery.isPlaceholderData)}
-                                        categoricalUpdating={sidebarCategoricalQuery.isFetching &&
-                                            !sidebarCategoricalQuery.isLoading}
-                                        categoricalError={sidebarCategoricalQuery.error?.message}
-                                        onCategoricalRetry={() => sidebarCategoricalQuery.refetch()}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesClear={clearCategoricalValues}
                                         onFilterChanged={handleCombinedMetadataFilterChanged}

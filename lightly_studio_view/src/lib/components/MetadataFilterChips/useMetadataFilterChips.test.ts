@@ -173,7 +173,13 @@ describe('useMetadataFilterChips', () => {
 
     it('leaves categorical selections to the sidebar instead of rendering chips', () => {
         storage.updateCategoricalMetadataValues({ location_type: ['city', 'rural'] });
-        render(MetadataFilterChips);
+        render(MetadataFilterChips, {
+            props: {
+                collectionId: 'col-1',
+                isImageCollection: true,
+                categoricalKeys: ['location_type']
+            }
+        });
 
         expect(screen.queryByTestId('metadata-filter-chip-location_type')).not.toBeInTheDocument();
         expect(get(storage.categoricalMetadataValues).location_type).toEqual(['city', 'rural']);

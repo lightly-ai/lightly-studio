@@ -1,21 +1,18 @@
 <script lang="ts">
-    import { ChevronDown } from '@lucide/svelte';
     import { page } from '$app/state';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Button } from '$lib/components/ui/button';
-    import * as Popover from '$lib/components/ui/popover';
     import { Slider } from '$lib/components/ui/slider/index.js';
-    import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
+    import CategoricalMetadataFilters from '$lib/components/CategoricalMetadataFilters/CategoricalMetadataFilters.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution';
+    import type { ImageFilter } from '$lib/api/lightly_studio_local';
     import type { CategoricalMetadataValue, MetadataValues } from '$lib/services/types';
     import { formatInteger } from '$lib/utils';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
     import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
 
-    const collectionId = page.params.collection_id;
+    const collectionId = page.params.collection_id!;
 
     interface Props {
         /** Whether the collection contains videos; shows video field filters instead of dimension filters. */
@@ -25,14 +22,10 @@
         /** Called when any filter range changes, with the field name and new min/max values. */
         onFilterChanged?: (fieldName: string, min: number, max: number) => void;
         isImageCollection?: boolean;
+        categoricalFilter?: ImageFilter;
         categoricalKeys?: string[];
-        categoricalDistributions?: Record<string, CategoricalMetadataBucket[]>;
-        categoricalLoading?: boolean;
-        categoricalUpdating?: boolean;
-        categoricalError?: string;
-        onCategoricalRetry?: () => void;
-        onCategoricalValueToggle?: (field: string, value: CategoricalMetadataValue) => void;
-        onCategoricalValuesClear?: (field: string) => void;
+        onCategoricalValueToggle: (field: string, value: CategoricalMetadataValue) => void;
+        onCategoricalValuesClear: (field: string) => void;
     }
 
     const {
@@ -40,12 +33,8 @@
         isVideoFrames = false,
         onFilterChanged,
         isImageCollection = false,
+        categoricalFilter,
         categoricalKeys = [],
-        categoricalDistributions = {},
-        categoricalLoading = false,
-        categoricalUpdating = false,
-        categoricalError,
-        onCategoricalRetry,
         onCategoricalValueToggle,
         onCategoricalValuesClear
     }: Props = $props();
@@ -80,22 +69,9 @@
     };
 
     // Metadata filters logic
-    const {
-        metadataBounds,
-        metadataValues,
-        updateMetadataValues,
-        categoricalMetadataValues,
-        updateCategoricalMetadataValues
-    } = useMetadataFilters(collectionId);
+    const { metadataBounds, metadataValues, updateMetadataValues } =
+        useMetadataFilters(collectionId);
 
-    let addedCategoricalFields = $state<string[]>([]);
-    let fieldPickerOpen = $state(false);
-
-    const activeCategoricalFields = $derived(
-        isImageCollection
-            ? categoricalKeys.filter((key) => $categoricalMetadataValues[key]?.length)
-            : []
-    );
     const numericalMetadata = $derived.by(() =>
         Object.keys($metadataBounds).filter((key) => {
             const bound = $metadataBounds[key];
@@ -103,29 +79,6 @@
             return bound && value;
         })
     );
-    const visibleCategoricalFields = $derived([
-        ...new Set([...addedCategoricalFields, ...activeCategoricalFields])
-    ]);
-    const availableCategoricalFields = $derived(
-        categoricalKeys
-            .filter((key) => !visibleCategoricalFields.includes(key))
-            .sort((a, b) => a.localeCompare(b))
-    );
-
-    const addCategoricalField = (metadataKey: string): void => {
-        addedCategoricalFields = [...addedCategoricalFields, metadataKey];
-        fieldPickerOpen = false;
-    };
-
-    const removeCategoricalField = (metadataKey: string): void => {
-        if ($categoricalMetadataValues[metadataKey]?.length) {
-            const nextValues = { ...$categoricalMetadataValues };
-            delete nextValues[metadataKey];
-            updateCategoricalMetadataValues(nextValues);
-        }
-        addedCategoricalFields = addedCategoricalFields.filter((key) => key !== metadataKey);
-    };
-
     const handleMetadataValueCommit = (metadataKey: string, newValues: number[]): void => {
         const currentValues: MetadataValues = { ...$metadataValues };
         currentValues[metadataKey] = { min: newValues[0], max: newValues[1] };
@@ -193,50 +146,13 @@
         {/if}
 
         {#if isImageCollection && categoricalKeys.length > 0}
-            <Popover.Root bind:open={fieldPickerOpen}>
-                <Popover.Trigger>
-                    {#snippet child({ props })}
-                        <Button
-                            {...props}
-                            variant="outline"
-                            size="sm"
-                            class="h-8 w-full justify-between px-3 text-xs font-normal"
-                            disabled={availableCategoricalFields.length === 0}
-                        >
-                            Add categorical metadata field
-                            <ChevronDown class="size-4 opacity-50" />
-                        </Button>
-                    {/snippet}
-                </Popover.Trigger>
-                <Popover.Content class="max-h-64 w-64 overflow-y-auto p-1" align="start">
-                    {#each availableCategoricalFields as metadataKey (metadataKey)}
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            class="w-full justify-start text-xs"
-                            onclick={() => addCategoricalField(metadataKey)}
-                        >
-                            {metadataKey}
-                        </Button>
-                    {/each}
-                </Popover.Content>
-            </Popover.Root>
-
-            {#each visibleCategoricalFields as metadataKey (metadataKey)}
-                <MetadataCategoricalFilter
-                    layout="list"
-                    fieldLabel={metadataKey}
-                    buckets={categoricalDistributions[metadataKey] ?? []}
-                    selectedValues={$categoricalMetadataValues[metadataKey] ?? []}
-                    loading={categoricalLoading}
-                    updating={categoricalUpdating}
-                    error={categoricalError}
-                    onRetry={onCategoricalRetry}
-                    onToggle={(value) => onCategoricalValueToggle?.(metadataKey, value)}
-                    onClear={() => onCategoricalValuesClear?.(metadataKey)}
-                    onRemove={() => removeCategoricalField(metadataKey)}
-                />
-            {/each}
+            <CategoricalMetadataFilters
+                {collectionId}
+                filter={categoricalFilter}
+                {categoricalKeys}
+                onValueToggle={onCategoricalValueToggle}
+                onValuesClear={onCategoricalValuesClear}
+            />
         {/if}
     </div>
 </Segment>
