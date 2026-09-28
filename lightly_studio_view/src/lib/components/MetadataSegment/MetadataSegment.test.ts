@@ -4,7 +4,7 @@ import MetadataSegment from './MetadataSegment.svelte';
 
 describe('MetadataSegment', () => {
     it('renders all categories initially and filters metadata by category selection', async () => {
-        render(MetadataSegment, {
+        const { rerender } = render(MetadataSegment, {
             props: {
                 metadata_dict: {
                     data: {
@@ -23,5 +23,19 @@ describe('MetadataSegment', () => {
 
         expect(screen.getByTestId('sample-metadata-metadata_location')).toBeVisible();
         expect(screen.queryByTestId('sample-metadata-metadata_weather')).toBeNull();
+
+        await rerender({
+            metadata_dict: {
+                data: {
+                    location: 'Bern',
+                    weather: 'Rain',
+                    season: 'Spring'
+                }
+            }
+        });
+
+        expect(screen.getByTestId('sample-metadata-metadata_location')).toHaveTextContent('Bern');
+        expect(screen.queryByTestId('sample-metadata-metadata_weather')).toBeNull();
+        expect(screen.getByTestId('sample-metadata-metadata_season')).toHaveTextContent('Spring');
     });
 });
