@@ -27,6 +27,9 @@ from lightly_studio.resolvers.image_resolver.get_sample_ids_by_paths import (
     get_sample_ids_by_paths,
 )
 from lightly_studio.resolvers.image_resolver.get_samples_excluding import get_samples_excluding
+from lightly_studio.resolvers.image_resolver.get_unembedded_sample_ids import (
+    get_unembedded_sample_ids,
+)
 
 __all__ = [
     "ImageExportPreload",
@@ -44,4 +47,5 @@ __all__ = [
     "get_sample_ids",
     "get_sample_ids_by_paths",
     "get_samples_excluding",
+    "get_unembedded_sample_ids",
 ]
