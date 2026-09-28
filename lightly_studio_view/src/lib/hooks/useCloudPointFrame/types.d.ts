@@ -1,4 +1,7 @@
-import type { PointBatch } from '$lib/components/PointCloudViewer';
+import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+
+/** A 3D vector as an `[x, y, z]` tuple. */
+export type Vec3 = [number, number, number];
 
 /** A parsed point-cloud frame with its batch data, metadata, and source channels. */
 export interface CloudPointFrame {
@@ -13,7 +16,7 @@ export interface CloudPointFrame {
     /** Number of points in the original source before any processing. */
     sourcePointCount: number;
     /** Axis-aligned bounding box of the points, or `null` when unavailable. */
-    bounds: { min: [number, number, number]; max: [number, number, number] } | null;
+    bounds: { min: Vec3; max: Vec3 } | null;
     /** The source channels that were merged into this frame. */
     channels: Array<{ channelId: number; timestampNs: string; frameId: string }>;
 }
