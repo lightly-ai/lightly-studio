@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import logging
 from collections.abc import Iterator
 from pathlib import Path
@@ -17,6 +18,13 @@ from tests.embed.remote.helpers import DIMENSION, SPACE_KEY
 
 # Small limits, so that a test batch fills more than one request.
 LIMITS = ServerLimits(max_batch_size=2, max_request_bytes=1024)
+
+
+class ChunkedFile(io.BytesIO):
+    """Gives at most 3 bytes for each read, the way an HTTP stream can."""
+
+    def read(self, size: int | None = -1) -> bytes:
+        return super().read(3 if size is None or size < 0 else min(size, 3))
 
 
 class LengthEmbedder(ImageBytesEmbedder):
@@ -113,6 +121,18 @@ class TestImagePathRoute:
         assert result.kept_indices == []
         assert result.embeddings.shape == (0, DIMENSION)
         assert server_embedder.batches == []
+
+
+def test_read_at_most() -> None:
+    data = image_path_adapter._read_at_most(file=ChunkedFile(b"abcdefgh"), max_bytes=100)
+
+    assert data == b"abcdefgh"
+
+
+def test_read_at_most__stops_at_the_limit() -> None:
+    data = image_path_adapter._read_at_most(file=ChunkedFile(b"abcdefgh"), max_bytes=5)
+
+    assert data == b"abcde"
 
 
 def _write(path: Path, data: bytes) -> str:

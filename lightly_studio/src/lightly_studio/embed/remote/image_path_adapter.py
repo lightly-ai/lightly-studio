@@ -10,6 +10,7 @@ from __future__ import annotations
 import functools
 import logging
 from collections.abc import Iterable, Iterator, Sequence
+from typing import IO
 
 import fsspec
 import numpy as np
@@ -90,11 +91,27 @@ def _read(path: str, max_bytes: int) -> bytes | None:
     """
     try:
         with fsspec.open(urlpath=path, mode="rb") as file:
-            data: bytes = file.read(max_bytes + 1)
+            return _read_at_most(file=file, max_bytes=max_bytes + 1)
     except OSError as error:
         logger.warning("Cannot read the image %s: %s", path, error)
         return None
-    return data
+
+
+def _read_at_most(file: IO[bytes], max_bytes: int) -> bytes:
+    """Read until the end of the file or until ``max_bytes`` bytes.
+
+    One read can give fewer bytes than it asks for before the end, for example from an
+    HTTP stream.
+    """
+    chunks: list[bytes] = []
+    remaining = max_bytes
+    while remaining > 0:
+        chunk = file.read(remaining)
+        if not chunk:
+            break
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
 
 
 def _image_size(item: tuple[int, bytes]) -> int:
