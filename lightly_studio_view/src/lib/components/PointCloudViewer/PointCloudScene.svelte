@@ -7,12 +7,12 @@
     import { fitCameraToBounds } from './pointCloudCamera';
     import { createPointCloudBuffer } from './pointCloudBuffer';
     import type { ColorMode } from './pointCloudUtils';
-    import type { PointBatch } from './pointCloudBuffer';
+    import type { PointBatch } from './types';
 
     interface Props {
         /** Current point cloud batch with positions, intensities, and count. */
         batch: PointBatch;
-        /** How points are colored: by height, intensity, or neutral gray. */
+        /** How points are colored: by height, intensity, per-point rgb, or neutral gray. */
         colorMode?: ColorMode;
         /** Screen-space point size in pixels. */
         pointSize?: number;
@@ -56,8 +56,9 @@
         const currentBatch = batch;
         const mode = colorMode;
         const range = intensityRange;
+        const currentColors = currentBatch.colors;
         untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range);
+            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentColors);
             invalidate();
         });
     });
