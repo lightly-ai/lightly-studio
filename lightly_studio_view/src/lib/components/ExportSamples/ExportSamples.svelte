@@ -53,6 +53,14 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
     let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
+
+    const handleExportTriggered = (success: boolean) =>
+        tracking.trackExportTriggered({
+            exportType,
+            tagNameToExport: null,
+            sampleCount: $filteredSampleCount,
+            success
+        });
 </script>
 
 <Dialog.Root
@@ -104,6 +112,7 @@
                         <SamplesTab
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
+                            onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
 
@@ -117,6 +126,7 @@
                             sampleType={supportsVideoClassifications ? 'video' : 'image'}
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
+                            onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
 
@@ -130,6 +140,7 @@
                             sampleType="image"
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
+                            onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
 
@@ -143,6 +154,7 @@
                             sampleType="image"
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
+                            onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
 
@@ -156,6 +168,7 @@
                             sampleType="image"
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
+                            onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
 
@@ -169,6 +182,7 @@
                             sampleType="image"
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
+                            onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
 
@@ -176,6 +190,7 @@
                         <CaptionsTab
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
+                            onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
 
@@ -184,6 +199,7 @@
                             <YoutubeVisTab
                                 onDownloadClick={() =>
                                     tracking.handleAnnotationDownloadClick(exportType)}
+                                onExportTriggered={handleExportTriggered}
                             />
                         </Tabs.Content>
                     {/if}

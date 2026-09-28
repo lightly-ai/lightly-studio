@@ -45,6 +45,18 @@ describe('useExportDownload', () => {
         expect(get(isLoading)).toBe(false);
     });
 
+    it('returns true when prepare resolves', async () => {
+        const prepare = vi.fn().mockResolvedValue(undefined);
+        const { handleDownload } = useExportDownload(prepare);
+        expect(await handleDownload()).toBe(true);
+    });
+
+    it('returns false when prepare throws', async () => {
+        const prepare = vi.fn().mockRejectedValue(new Error('API error'));
+        const { handleDownload } = useExportDownload(prepare);
+        expect(await handleDownload()).toBe(false);
+    });
+
     it('sets errorMessage when prepare throws', async () => {
         const prepare = vi.fn().mockRejectedValue(new Error('API error'));
         const { errorMessage, handleDownload } = useExportDownload(prepare);

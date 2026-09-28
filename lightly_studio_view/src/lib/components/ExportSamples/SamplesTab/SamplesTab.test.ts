@@ -77,4 +77,20 @@ describe('SamplesTab', () => {
         await fireEvent.click(screen.getByTestId('submit-button-samples'));
         expect(onDownloadClick).toHaveBeenCalledOnce();
     });
+
+    it('calls onExportTriggered with true on success', async () => {
+        mocks.exportCollectionPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
+        const onExportTriggered = vi.fn();
+        render(SamplesTab, { props: { onExportTriggered } });
+        await fireEvent.click(screen.getByTestId('submit-button-samples'));
+        await waitFor(() => expect(onExportTriggered).toHaveBeenCalledWith(true));
+    });
+
+    it('calls onExportTriggered with false on failure', async () => {
+        mocks.exportCollectionPrepare.mockRejectedValue(new Error('Network error'));
+        const onExportTriggered = vi.fn();
+        render(SamplesTab, { props: { onExportTriggered } });
+        await fireEvent.click(screen.getByTestId('submit-button-samples'));
+        await waitFor(() => expect(onExportTriggered).toHaveBeenCalledWith(false));
+    });
 });

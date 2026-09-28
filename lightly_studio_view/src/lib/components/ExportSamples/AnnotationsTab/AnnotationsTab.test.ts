@@ -159,4 +159,22 @@ describe('AnnotationsTab', () => {
         await fireEvent.click(screen.getByTestId('submit-button-annotations'));
         expect(onDownloadClick).toHaveBeenCalledOnce();
     });
+
+    it('calls onExportTriggered with true on success', async () => {
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
+            data: { export_key: 'key123' }
+        });
+        const onExportTriggered = vi.fn();
+        render(AnnotationsTab, { props: { ...defaultProps, onExportTriggered } });
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+        await waitFor(() => expect(onExportTriggered).toHaveBeenCalledWith(true));
+    });
+
+    it('calls onExportTriggered with false on failure', async () => {
+        mocks.exportCollectionAnnotationsPrepare.mockRejectedValue(new Error('Network error'));
+        const onExportTriggered = vi.fn();
+        render(AnnotationsTab, { props: { ...defaultProps, onExportTriggered } });
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+        await waitFor(() => expect(onExportTriggered).toHaveBeenCalledWith(false));
+    });
 });
