@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -77,6 +78,28 @@ class TestImagePathRoute:
         )
         # One request holds at most `max_batch_size` images.
         assert server_embedder.batches == [[b"a" * 10, b"b" * 20], [b"c" * 30]]
+
+    def test_embed_images__skips_unreadable_and_too_large(
+        self, tmp_path: Path, adapted: ImagePathEmbedder, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        missing = str(tmp_path / "missing.png")
+        too_large = _write(path=tmp_path / "large.png", data=b"l" * LIMITS.max_request_bytes)
+        paths = [
+            _write(path=tmp_path / "a.png", data=b"a" * 10),
+            missing,
+            too_large,
+            _write(path=tmp_path / "b.png", data=b"b" * 20),
+        ]
+
+        with caplog.at_level(logging.WARNING, logger=image_path_adapter.__name__):
+            result = adapted.embed_images(paths=paths)
+
+        assert result.kept_indices == [0, 3]
+        np.testing.assert_array_equal(
+            result.embeddings, np.array([[10.0, 0.0], [20.0, 0.0]], dtype=np.float32)
+        )
+        assert f"Cannot read the image {missing}" in caplog.text
+        assert f"Cannot embed the image {too_large}" in caplog.text
 
     def test_embed_images__empty(
         self, adapted: ImagePathEmbedder, server_embedder: LengthEmbedder

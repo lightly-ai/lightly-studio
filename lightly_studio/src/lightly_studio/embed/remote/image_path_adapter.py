@@ -7,7 +7,8 @@ image-bytes route.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import logging
+from collections.abc import Iterable, Iterator, Sequence
 
 import fsspec
 import numpy as np
@@ -18,6 +19,8 @@ from lightly_studio.embed.remote import batching
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
 from lightly_studio.utils import executor, parallelize
 
+logger = logging.getLogger(__name__)
+
 
 class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
     """Adds the image-path capability, which reaches the server as image bytes."""
@@ -27,15 +30,15 @@ class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
 
         The files are read on a thread pool, a small number ahead of the requests. Thus
         the memory use depends on the size of one request, not on the size of the batch.
+        A file that cannot be read, or that is larger than one request, is not embedded.
         """
         images = parallelize.thread_imap_lazy(
             function=_read,
             iterable=paths,
             max_workers=executor.get_media_worker_count(),
         )
-        # TODO(Iunir, 09/2026): Skip a file that cannot be read or is larger than one request.
         chunks = batching.split_batches(
-            items=enumerate(images),
+            items=self._sendable(paths=paths, images=images),
             max_batch_size=self._limits.max_batch_size,
             max_request_bytes=self._limits.max_request_bytes,
             size_of=_image_size,
@@ -60,11 +63,33 @@ class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
             kept_indices=[chunk[index][0] for index in result.kept_indices],
         )
 
+    def _sendable(
+        self, paths: Sequence[str], images: Iterable[bytes | None]
+    ) -> Iterator[tuple[int, bytes]]:
+        """Give each image that one request can hold, together with its index in the batch."""
+        for index, (path, image) in enumerate(zip(paths, images)):
+            if image is None:
+                continue
+            if len(image) + batching.ITEM_ENVELOPE_BYTES > self._limits.max_request_bytes:
+                logger.warning(
+                    "Cannot embed the image %s. It has %d bytes, and the embedding server "
+                    "accepts a request of at most %d bytes.",
+                    path,
+                    len(image),
+                    self._limits.max_request_bytes,
+                )
+                continue
+            yield index, image
 
-def _read(path: str) -> bytes:
-    """Read the bytes of a file."""
-    with fsspec.open(urlpath=path, mode="rb") as file:
-        data: bytes = file.read()
+
+def _read(path: str) -> bytes | None:
+    """Read the bytes of a file, or None if the file cannot be read."""
+    try:
+        with fsspec.open(urlpath=path, mode="rb") as file:
+            data: bytes = file.read()
+    except OSError as error:
+        logger.warning("Cannot read the image %s: %s", path, error)
+        return None
     return data
 
 
