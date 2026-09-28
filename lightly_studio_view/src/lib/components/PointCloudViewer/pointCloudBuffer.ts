@@ -17,7 +17,12 @@ export interface PointBatch {
 export interface PointCloudBuffer {
     geometry: BufferGeometry;
     updatePositions: (batch: PointBatch) => Box3 | undefined;
-    updateColors: (count: number, colorMode: ColorMode, intensityRange?: [number, number]) => void;
+    updateColors: (
+        count: number,
+        colorMode: ColorMode,
+        intensityRange?: [number, number],
+        pointColors?: Float32Array
+    ) => void;
     dispose: () => void;
 }
 

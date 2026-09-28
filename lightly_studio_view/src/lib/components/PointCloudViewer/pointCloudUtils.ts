@@ -34,51 +34,45 @@ interface BuildColorBufferParams {
  * @param params - See {@link BuildColorBufferParams}.
  */
 export function buildColorBuffer(params: BuildColorBufferParams): void {
-    const { positions, intensities, count, colorMode, colors, intensityRange, pointColors } =
-        params;
+    const { count, colorMode, colors, pointColors } = params;
     if (colorMode === 'rgb' && pointColors) {
         colors.set(pointColors.subarray(0, count * 3), 0);
         return;
     }
-
     if (colorMode === 'none' || colorMode === 'rgb') {
-        for (let i = 0; i < count; i++) {
-            colors[i * 3] = 0.5;
-            colors[i * 3 + 1] = 0.5;
-            colors[i * 3 + 2] = 0.5;
-        }
+        colors.fill(0.5, 0, count * 3);
         return;
     }
+    fillGradient(params, colorMode === 'intensity');
+}
 
-    let minVal: number;
-    let maxVal: number;
-
-    const useIntensity = colorMode === 'intensity';
-    if (useIntensity && intensityRange) {
-        [minVal, maxVal] = intensityRange;
-    } else {
-        minVal = Infinity;
-        maxVal = -Infinity;
-        for (let i = 0; i < count; i++) {
-            const v = useIntensity ? intensities[i] : positions[i * 3 + 2];
-            if (v < minVal) minVal = v;
-            if (v > maxVal) maxVal = v;
-        }
-    }
-
+/** Color the buffer with a turbo gradient over intensity or height values. */
+function fillGradient(params: BuildColorBufferParams, useIntensity: boolean): void {
+    const { positions, intensities, count, colors, intensityRange } = params;
+    const valueAt = (i: number): number => (useIntensity ? intensities[i] : positions[i * 3 + 2]);
+    const [minVal, maxVal] =
+        useIntensity && intensityRange ? intensityRange : computeRange(valueAt, count);
     const range = maxVal - minVal;
     const invRange = range === 0 ? 0 : 1 / range;
 
     for (let i = 0; i < count; i++) {
-        const raw = useIntensity ? intensities[i] : positions[i * 3 + 2];
-
-        let t = (raw - minVal) * invRange;
+        let t = (valueAt(i) - minVal) * invRange;
         if (t < 0) t = 0;
         else if (t > 1) t = 1;
-        if (useIntensity) t = Math.sqrt(t);
-
-        turboInto(t, colors, i * 3);
+        turboInto(useIntensity ? Math.sqrt(t) : t, colors, i * 3);
     }
+}
+
+/** Return the [min, max] of valueAt over the first count points. */
+function computeRange(valueAt: (i: number) => number, count: number): [number, number] {
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    for (let i = 0; i < count; i++) {
+        const v = valueAt(i);
+        if (v < minVal) minVal = v;
+        if (v > maxVal) maxVal = v;
+    }
+    return [minVal, maxVal];
 }
 
 /**
