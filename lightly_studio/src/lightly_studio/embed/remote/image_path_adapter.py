@@ -14,7 +14,12 @@ from typing import IO
 
 import fsspec
 import numpy as np
-from lightly_studio_serve.embedder import Capability, ImagePathEmbedder
+from lightly_studio_serve.embedder import (
+    Capability,
+    Embedder,
+    ImageBytesEmbedder,
+    ImagePathEmbedder,
+)
 from lightly_studio_serve.types import EmbeddingResult
 
 from lightly_studio.embed.remote import batching
@@ -81,6 +86,25 @@ class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
                 )
                 continue
             yield index, image
+
+
+def with_image_path(embedder: Embedder) -> Embedder:
+    """Give a remote embedder with the image-bytes route the image-path capability.
+
+    Args:
+        embedder: The embedder to adapt.
+
+    Returns:
+        A new embedder of the same server that also embeds images by path, if ``embedder``
+        is a remote embedder that embeds image bytes and not image paths. Else ``embedder``.
+    """
+    if (
+        not isinstance(embedder, RemoteEmbedder)
+        or not isinstance(embedder, ImageBytesEmbedder)
+        or isinstance(embedder, ImagePathEmbedder)
+    ):
+        return embedder
+    return embedder.with_route(route=ImagePathRoute)
 
 
 def _read(path: str, max_bytes: int) -> bytes | None:

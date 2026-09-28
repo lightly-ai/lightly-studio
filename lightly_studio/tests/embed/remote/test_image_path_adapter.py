@@ -14,7 +14,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from lightly_studio.embed.remote import connection, image_path_adapter
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
 from tests.embed.remote import threaded_server
-from tests.embed.remote.helpers import DIMENSION, SPACE_KEY
+from tests.embed.remote.helpers import DIMENSION, SPACE_KEY, FakeImageEmbedder, FakeServer
 
 # Small limits, so that a test batch fills more than one request.
 LIMITS = ServerLimits(max_batch_size=2, max_request_bytes=1024)
@@ -121,6 +121,27 @@ class TestImagePathRoute:
         assert result.kept_indices == []
         assert result.embeddings.shape == (0, DIMENSION)
         assert server_embedder.batches == []
+
+
+def test_with_image_path(remote: RemoteEmbedder) -> None:
+    embedder = image_path_adapter.with_image_path(embedder=remote)
+
+    assert isinstance(embedder, ImagePathEmbedder)
+    assert isinstance(embedder, ImageBytesEmbedder)
+    assert embedder.embedding_space_spec() == remote.embedding_space_spec()
+
+
+def test_with_image_path__local_embedder() -> None:
+    embedder = FakeImageEmbedder()
+
+    assert image_path_adapter.with_image_path(embedder=embedder) is embedder
+
+
+def test_with_image_path__remote_without_image_bytes() -> None:
+    with FakeServer(capabilities=["text"]).client() as client:
+        embedder = RemoteEmbedder.connect(client=client)
+
+    assert image_path_adapter.with_image_path(embedder=embedder) is embedder
 
 
 def test_read_at_most() -> None:
