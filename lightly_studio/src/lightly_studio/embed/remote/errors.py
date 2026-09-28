@@ -46,9 +46,9 @@ class RemoteEmbedderCapabilityError(RemoteEmbedderError):
 class RemoteEmbedderBatchTooLargeError(RemoteEmbedderError):
     """The server refused the request as too large.
 
-    The client already splits a batch to the ``max_batch_size`` that ``/v1/describe``
-    reports, so this names a single item that is too large on its own, or a batch of items
-    that together pass ``max_request_bytes``.
+    The client splits a batch to the limits that ``/v1/describe`` reports, and splits a
+    refused batch again in halves. So this names a single item that is too large on its
+    own.
     """
 
 
