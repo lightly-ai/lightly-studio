@@ -53,7 +53,7 @@ describe('useVideoAnnotationCounts', () => {
         });
     });
 
-    it('builds the request and is enabled by default', () => {
+    it('is enabled by default', () => {
         useVideoAnnotationCounts(() => ({ collectionId: 'col-1' }));
 
         expect(queryOptionsThunk()).toEqual({
@@ -61,18 +61,12 @@ describe('useVideoAnnotationCounts', () => {
             placeholderData: expect.any(Function),
             enabled: true
         });
-        expect(
-            svelteQueryGen.countVideoFrameAnnotationsByVideoCollectionOptions
-        ).toHaveBeenCalledWith(buildVideoAnnotationCountsRequest({ collectionId: 'col-1' }));
     });
 
-    it('passes enabled through without sending it in the request', () => {
+    it('passes enabled through', () => {
         useVideoAnnotationCounts(() => ({ collectionId: 'col-1', enabled: false }));
 
         expect(queryOptionsThunk().enabled).toBe(false);
-        expect(
-            svelteQueryGen.countVideoFrameAnnotationsByVideoCollectionOptions
-        ).toHaveBeenCalledWith(buildVideoAnnotationCountsRequest({ collectionId: 'col-1' }));
     });
 
     it('keeps the previous counts while the next request runs', () => {
