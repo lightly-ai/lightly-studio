@@ -2,7 +2,7 @@
     import { Canvas } from '@threlte/core';
     import PointCloudScene from './PointCloudScene.svelte';
     import type { ColorMode } from './pointCloudUtils';
-    import type { PointBatch } from './pointCloudBuffer';
+    import type { PointBatch } from './types';
 
     interface Props {
         /** A single point cloud batch to render. */

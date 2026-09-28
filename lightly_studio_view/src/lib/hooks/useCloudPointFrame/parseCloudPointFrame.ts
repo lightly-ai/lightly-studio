@@ -33,11 +33,17 @@ export async function parseCloudPointFrame(
  * @throws If x/y/z are missing or mismatched, or if r/g/b are partially present.
  */
 function packBatch(table: Table): PointBatch {
-    const x = table.getChild('x')?.toArray();
-    const y = table.getChild('y')?.toArray();
-    const z = table.getChild('z')?.toArray();
+    const xColumn = table.getChild('x');
+    const yColumn = table.getChild('y');
+    const zColumn = table.getChild('z');
+    const x = xColumn?.toArray();
+    const y = yColumn?.toArray();
+    const z = zColumn?.toArray();
     if (!x || !y || !z || x.length !== y.length || x.length !== z.length) {
         throw new Error('Point-cloud Arrow data must contain matching x, y, and z columns.');
+    }
+    if (xColumn?.nullCount || yColumn?.nullCount || zColumn?.nullCount) {
+        throw new Error('Point-cloud Arrow data must not contain null x, y, or z values.');
     }
     const intensity = table.getChild('intensity')?.toArray();
     const red = table.getChild('r')?.toArray();
@@ -87,10 +93,28 @@ function buildFrame(
         channelId: source.channelId,
         timestampNs,
         frameId,
-        sourcePointCount: Number(readMetadata(metadata, 'source_point_count') ?? batch.count),
+        sourcePointCount: readSourcePointCount(metadata, batch.count),
         bounds: boundsText ? JSON.parse(boundsText) : null,
         channels: [{ channelId: source.channelId, timestampNs, frameId }]
     };
+}
+
+/**
+ * Reads the `source_point_count` metadata as a non-negative integer, falling
+ * back to the packed count when the key is absent or malformed.
+ *
+ * @param metadata - The Arrow schema metadata map, if any.
+ * @param fallback - The count to use when the metadata is missing or invalid.
+ * @returns The validated source point count.
+ */
+function readSourcePointCount(
+    metadata: Map<string, string | Uint8Array> | undefined,
+    fallback: number
+): number {
+    const text = readMetadata(metadata, 'source_point_count');
+    if (text === undefined) return fallback;
+    const value = Number(text);
+    return Number.isInteger(value) && value >= 0 ? value : fallback;
 }
 
 /**

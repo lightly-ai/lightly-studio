@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+import logging
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -16,6 +18,13 @@ from tests.embed.remote.helpers import DIMENSION, SPACE_KEY
 
 # Small limits, so that a test batch fills more than one request.
 LIMITS = ServerLimits(max_batch_size=2, max_request_bytes=1024)
+
+
+class ChunkedFile(io.BytesIO):
+    """Gives at most 3 bytes for each read, the way an HTTP stream can."""
+
+    def read(self, size: int | None = -1) -> bytes:
+        return super().read(3 if size is None or size < 0 else min(size, 3))
 
 
 class LengthEmbedder(ImageBytesEmbedder):
@@ -78,6 +87,32 @@ class TestImagePathRoute:
         # One request holds at most `max_batch_size` images.
         assert server_embedder.batches == [[b"a" * 10, b"b" * 20], [b"c" * 30]]
 
+    def test_embed_images__skips_unreadable(
+        self, tmp_path: Path, adapted: ImagePathEmbedder, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        missing = str(tmp_path / "missing.png")
+        paths = [missing, _write(path=tmp_path / "a.png", data=b"a" * 10)]
+
+        with caplog.at_level(logging.WARNING, logger=image_path_adapter.__name__):
+            result = adapted.embed_images(paths=paths)
+
+        assert result.kept_indices == [1]
+        np.testing.assert_array_equal(result.embeddings, np.array([[10.0, 0.0]], dtype=np.float32))
+        assert f"Cannot read the image {missing}" in caplog.text
+
+    def test_embed_images__skips_too_large(
+        self, tmp_path: Path, adapted: ImagePathEmbedder, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        too_large = _write(path=tmp_path / "large.png", data=b"l" * 2 * LIMITS.max_request_bytes)
+        paths = [too_large, _write(path=tmp_path / "a.png", data=b"a" * 10)]
+
+        with caplog.at_level(logging.WARNING, logger=image_path_adapter.__name__):
+            result = adapted.embed_images(paths=paths)
+
+        assert result.kept_indices == [1]
+        np.testing.assert_array_equal(result.embeddings, np.array([[10.0, 0.0]], dtype=np.float32))
+        assert f"Cannot embed the image {too_large}" in caplog.text
+
     def test_embed_images__empty(
         self, adapted: ImagePathEmbedder, server_embedder: LengthEmbedder
     ) -> None:
@@ -86,6 +121,18 @@ class TestImagePathRoute:
         assert result.kept_indices == []
         assert result.embeddings.shape == (0, DIMENSION)
         assert server_embedder.batches == []
+
+
+def test_read_at_most() -> None:
+    data = image_path_adapter._read_at_most(file=ChunkedFile(b"abcdefgh"), max_bytes=100)
+
+    assert data == b"abcdefgh"
+
+
+def test_read_at_most__stops_at_the_limit() -> None:
+    data = image_path_adapter._read_at_most(file=ChunkedFile(b"abcdefgh"), max_bytes=5)
+
+    assert data == b"abcde"
 
 
 def _write(path: Path, data: bytes) -> str:
