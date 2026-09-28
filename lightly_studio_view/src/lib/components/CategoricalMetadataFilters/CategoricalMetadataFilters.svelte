@@ -33,7 +33,7 @@
     );
     const categoricalQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
-        filter,
+        filter: { ...filter, filter_type: 'image' },
         fields: visibleFields,
         enabled: validateUUID(collectionId) && visibleFields.length > 0
     }));
