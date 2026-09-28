@@ -3,6 +3,8 @@
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import lightlyQueryMonarch from './language/monarch.generated';
+import type { RootScope } from './language/types';
+import { setModelRootScope } from './useLightlyQueryLanguage/modelRootScope';
 import { useLightlyQueryLanguage } from './useLightlyQueryLanguage/useLightlyQueryLanguage';
 import { useSyntaxCompletion } from './useLightlyQueryLanguage/useSyntaxCompletion';
 import { useSyntaxDocumentation } from './useLightlyQueryLanguage/useSyntaxDocumentation';
@@ -45,6 +47,8 @@ self.MonacoEnvironment = {
 
 interface MountOptions {
     value: string;
+    /** Top-level scope of the query. Defaults to `image`. */
+    rootScope?: RootScope;
     readOnly?: boolean;
     onChange?: (value: string) => void;
 }
@@ -87,6 +91,7 @@ export const useQueryEditor = () => {
         // "Cannot add model because it already exists!" on remount.
         const uri = monaco.Uri.parse(`inmemory://model/lightly-query-${++modelCounter}.lql`);
         const model = monaco.editor.createModel(options.value, LIGHTLY_QUERY_LANGUAGE_ID, uri);
+        setModelRootScope(model, options.rootScope ?? 'image');
 
         const editor = monaco.editor.create(el, {
             model,

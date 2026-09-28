@@ -21,6 +21,7 @@ vi.mock('../language/lightly-query-module', () => ({
 }));
 
 vi.mock('../language/query-expr-translation', () => ({
+    getRootScopeRule: (rootScope: string) => (rootScope === 'video' ? 'VideoQuery' : 'ImageQuery'),
     parseLightlyQuery: mocks.parseLightlyQuery
 }));
 
@@ -77,8 +78,19 @@ describe('useLightlyQueryLanguage', () => {
 
         attach(model as never);
 
-        expect(mocks.parse).toHaveBeenCalledWith('width < 400');
+        expect(mocks.parse).toHaveBeenCalledWith('width < 400', { rule: 'ImageQuery' });
         expect(mocks.setModelMarkers).toHaveBeenCalledWith(model, 'lightly-query', []);
+    });
+
+    it('parses with the video rule when the model has the video root scope', async () => {
+        const { attach } = await loadHook();
+        const { setModelRootScope } = await import('./modelRootScope');
+        const model = makeModel('fps > 25');
+        setModelRootScope(model as never, 'video');
+
+        attach(model as never);
+
+        expect(mocks.parse).toHaveBeenCalledWith('fps > 25', { rule: 'VideoQuery' });
     });
 
     it('forwards lexer errors before parser errors to setModelMarkers', async () => {
@@ -102,7 +114,7 @@ describe('useLightlyQueryLanguage', () => {
         listener();
 
         expect(mocks.parse).toHaveBeenCalledTimes(2);
-        expect(mocks.parse).toHaveBeenLastCalledWith('second');
+        expect(mocks.parse).toHaveBeenLastCalledWith('second', { rule: 'ImageQuery' });
     });
 
     it('disposes the content subscription and clears markers on cleanup', async () => {
@@ -133,9 +145,13 @@ describe('useLightlyQueryLanguage', () => {
         mocks.parseLightlyQuery.mockReturnValue(expected);
 
         const { translateQuery } = await loadHook();
-        const result = translateQuery('width < 400');
+        const result = translateQuery('width < 400', 'image');
 
-        expect(mocks.parseLightlyQuery).toHaveBeenCalledWith({ parse: mocks.parse }, 'width < 400');
+        expect(mocks.parseLightlyQuery).toHaveBeenCalledWith(
+            { parse: mocks.parse },
+            'width < 400',
+            'image'
+        );
         expect(result).toBe(expected);
     });
 });
