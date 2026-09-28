@@ -77,7 +77,11 @@ vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     })
 }));
 
-let annotationCollectionsData: { collection_id: string; name: string }[] = [];
+let annotationCollectionsData: {
+    collection_id: string;
+    name: string;
+    annotation_types?: string[];
+}[] = [];
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({
@@ -519,6 +523,13 @@ describe('SamplingCombinationDialog', () => {
     it('can add a subpart diversity strategy and submit the correct API payload', async () => {
         submitMock.mockResolvedValue(false);
         filteredSampleCountStore.set(100);
+        annotationCollectionsData = [
+            {
+                collection_id: 'col-1',
+                name: 'ground_truth',
+                annotation_types: ['object_detection']
+            }
+        ];
 
         render(SamplingCombinationDialog);
 
@@ -542,6 +553,13 @@ describe('SamplingCombinationDialog', () => {
 
     it('disables subpart diversity in the add strategy menu after one has been added', async () => {
         filteredSampleCountStore.set(100);
+        annotationCollectionsData = [
+            {
+                collection_id: 'col-1',
+                name: 'ground_truth',
+                annotation_types: ['object_detection']
+            }
+        ];
 
         render(SamplingCombinationDialog);
 
@@ -557,6 +575,13 @@ describe('SamplingCombinationDialog', () => {
 
     it('disables the duplicate button on a subpart diversity strategy card', async () => {
         filteredSampleCountStore.set(100);
+        annotationCollectionsData = [
+            {
+                collection_id: 'col-1',
+                name: 'ground_truth',
+                annotation_types: ['object_detection']
+            }
+        ];
 
         render(SamplingCombinationDialog);
 
@@ -587,6 +612,36 @@ describe('SamplingCombinationDialog', () => {
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
 
         expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
+    it('disables subpart diversity when no croppable annotation sources exist', async () => {
+        annotationCollectionsData = [];
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
+    it('enables subpart diversity when a segmentation annotation collection exists', async () => {
+        annotationCollectionsData = [
+            {
+                collection_id: 'col-1',
+                name: 'masks',
+                annotation_types: ['segmentation_mask']
+            }
+        ];
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-subpart_diversity')).not.toHaveAttribute(
             'data-disabled'
         );
     });

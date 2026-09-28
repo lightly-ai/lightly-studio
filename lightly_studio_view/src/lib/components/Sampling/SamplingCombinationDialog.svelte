@@ -161,9 +161,11 @@
                                     : undefined}
                                 subpartDiversityDisabledReason={isVideoCollection
                                     ? 'Not available for video collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
-                                    : hasSubpartDiversity
-                                      ? 'Only one subpart diversity strategy can be added per selection.'
-                                      : undefined}
+                                    : !strategyOptions.hasCroppableAnnotationSources
+                                      ? 'No annotation sources found. Add object detection or segmentation annotations to enable this strategy.'
+                                      : hasSubpartDiversity
+                                        ? 'Only one subpart diversity strategy can be added per selection.'
+                                        : undefined}
                                 onAdd={handleAddStrategy}
                                 onMenuOpen={handleMenuOpen}
                             />
