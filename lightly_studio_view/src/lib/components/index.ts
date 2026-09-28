@@ -70,7 +70,6 @@ export { default as ImageOrderBy } from '$lib/components/OrderBy/ImageOrderBy.sv
 export { default as VideoOrderBy } from '$lib/components/OrderBy/VideoOrderBy.svelte';
 export { default as AnnotationOrderBy } from '$lib/components/OrderBy/AnnotationOrderBy.svelte';
 export { default as SamplingCombinationDialog } from '$lib/components/Sampling/SamplingCombinationDialog.svelte';
-export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';
 export { default as FormField } from '$lib/components/FormField/FormField.svelte';
 export { default as AnnotationSourceSelect } from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
 export { MultiSelectList } from '$lib/components/MultiSelectList';
