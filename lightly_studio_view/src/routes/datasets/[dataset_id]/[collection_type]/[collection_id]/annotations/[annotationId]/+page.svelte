@@ -1,6 +1,7 @@
 <script lang="ts">
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
     import ImageAnnotationDetails from '$lib/components/AnnotationDetails/ImageAnnotationDetails/ImageAnnotationDetails.svelte';
+    import VideoAnnotationDetails from '$lib/components/AnnotationDetails/VideoAnnotationDetails/VideoAnnotationDetails.svelte';
     import VideoFrameAnnotationDetails from '$lib/components/AnnotationDetails/VideoFrameAnnotationDetails/VideoFrameAnnotationDetails.svelte';
     import type { PageData } from './$types.js';
     import { useAnnotationDetails } from '$lib/hooks/useAnnotationDetails/useAnnotationsDetails.js';
@@ -31,6 +32,13 @@
         {#if annotationDetailsResponse.data && annotationId && collection}
             {#if annotationDetailsResponse.data.parent_sample_type == SampleType.VIDEO_FRAME}
                 <VideoFrameAnnotationDetails
+                    annotationDetails={annotationDetailsResponse.data}
+                    {updateAnnotation}
+                    {refetch}
+                    {collection}
+                />
+            {:else if annotationDetailsResponse.data.parent_sample_type == SampleType.VIDEO}
+                <VideoAnnotationDetails
                     annotationDetails={annotationDetailsResponse.data}
                     {updateAnnotation}
                     {refetch}
