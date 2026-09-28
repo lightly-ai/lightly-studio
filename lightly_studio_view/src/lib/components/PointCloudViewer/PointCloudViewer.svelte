@@ -2,12 +2,12 @@
     import { Canvas } from '@threlte/core';
     import PointCloudScene from './PointCloudScene.svelte';
     import type { ColorMode } from './pointCloudUtils';
-    import type { PointBatch } from './types';
+    import type { PointBatch } from './pointCloudBuffer';
 
     interface Props {
         /** A single point cloud batch to render. */
         batch: PointBatch;
-        /** Color mapping mode. "none" uses a neutral gray, "intensity" maps point intensity to color, "height" maps Z-axis to color, "rgb" uses per-point colors from the batch. */
+        /** Color mapping mode. "none" uses a neutral gray, "intensity" maps point intensity to color, "height" maps Z-axis to color. */
         colorMode?: ColorMode;
         /** Size of each rendered point. */
         pointSize?: number;

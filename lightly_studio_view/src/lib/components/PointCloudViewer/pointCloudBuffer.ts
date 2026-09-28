@@ -17,12 +17,7 @@ export interface PointBatch {
 export interface PointCloudBuffer {
     geometry: BufferGeometry;
     updatePositions: (batch: PointBatch) => Box3 | undefined;
-    updateColors: (
-        count: number,
-        colorMode: ColorMode,
-        intensityRange?: [number, number],
-        pointColors?: Float32Array
-    ) => void;
+    updateColors: (count: number, colorMode: ColorMode, intensityRange?: [number, number]) => void;
     dispose: () => void;
 }
 
@@ -71,20 +66,11 @@ export function createPointCloudBuffer(): PointCloudBuffer {
     function updateColors(
         count: number,
         colorMode: ColorMode,
-        intensityRange?: [number, number],
-        pointColors?: Float32Array
+        intensityRange?: [number, number]
     ): void {
         if (count === 0) return;
 
-        buildColorBuffer({
-            positions,
-            intensities,
-            count,
-            colorMode,
-            colors,
-            intensityRange,
-            pointColors
-        });
+        buildColorBuffer(positions, intensities, count, colorMode, colors, intensityRange);
         colorAttribute.needsUpdate = true;
     }
 

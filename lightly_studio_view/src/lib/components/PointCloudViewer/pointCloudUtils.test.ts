@@ -45,27 +45,9 @@ describe('buildColorBuffer', () => {
         const intensities = new Float32Array([10, 20]);
         const colors = new Float32Array(6);
 
-        buildColorBuffer({ positions, intensities, count: 2, colorMode: 'none', colors });
+        buildColorBuffer(positions, intensities, 2, 'none', colors);
 
         expect(Array.from(colors)).toEqual([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
-    });
-
-    it('copies per-point colors in rgb mode', () => {
-        const positions = new Float32Array([0, 0, 0, 1, 1, 1]);
-        const intensities = new Float32Array([10, 20]);
-        const colors = new Float32Array(6);
-        const pointColors = new Float32Array([0.25, 0.5, 0.75, 0.125, 0.375, 1]);
-
-        buildColorBuffer({
-            positions,
-            intensities,
-            count: 2,
-            colorMode: 'rgb',
-            colors,
-            pointColors
-        });
-
-        expect(Array.from(colors)).toEqual([0.25, 0.5, 0.75, 0.125, 0.375, 1]);
     });
 
     it('produces different colors for intensity vs height modes', () => {
@@ -74,20 +56,8 @@ describe('buildColorBuffer', () => {
         const colorsIntensity = new Float32Array(9);
         const colorsHeight = new Float32Array(9);
 
-        buildColorBuffer({
-            positions,
-            intensities,
-            count: 3,
-            colorMode: 'intensity',
-            colors: colorsIntensity
-        });
-        buildColorBuffer({
-            positions,
-            intensities,
-            count: 3,
-            colorMode: 'height',
-            colors: colorsHeight
-        });
+        buildColorBuffer(positions, intensities, 3, 'intensity', colorsIntensity);
+        buildColorBuffer(positions, intensities, 3, 'height', colorsHeight);
 
         let different = false;
         for (let i = 0; i < 9; i++) {
@@ -105,21 +75,8 @@ describe('buildColorBuffer', () => {
         const autoColors = new Float32Array(9);
         const customColors = new Float32Array(9);
 
-        buildColorBuffer({
-            positions,
-            intensities,
-            count: 3,
-            colorMode: 'intensity',
-            colors: autoColors
-        });
-        buildColorBuffer({
-            positions,
-            intensities,
-            count: 3,
-            colorMode: 'intensity',
-            colors: customColors,
-            intensityRange: [0, 200]
-        });
+        buildColorBuffer(positions, intensities, 3, 'intensity', autoColors);
+        buildColorBuffer(positions, intensities, 3, 'intensity', customColors, [0, 200]);
 
         let different = false;
         for (let i = 0; i < 9; i++) {
