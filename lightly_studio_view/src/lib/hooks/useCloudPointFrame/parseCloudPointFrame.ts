@@ -1,11 +1,22 @@
-import { tableFromIPC } from 'apache-arrow';
+import { tableFromIPC, type Table } from 'apache-arrow';
+import type { PointBatch } from '$lib/components/PointCloudViewer';
 import type { CloudPointFrame } from './types';
+
+interface CloudPointFrameSource {
+    channelId: number;
+    timestampNs: string;
+}
 
 export async function parseCloudPointFrame(
     buffer: ArrayBuffer,
-    source: { channelId: number; timestampNs: string }
+    source: CloudPointFrameSource
 ): Promise<CloudPointFrame> {
     const table = await tableFromIPC(new Uint8Array(buffer));
+    const batch = packBatch(table);
+    return buildFrame(table, batch, source);
+}
+
+function packBatch(table: Table): PointBatch {
     const x = table.getChild('x')?.toArray();
     const y = table.getChild('y')?.toArray();
     const z = table.getChild('z')?.toArray();
@@ -33,16 +44,24 @@ export async function parseCloudPointFrame(
             colors[index * 3 + 2] = Number(blue[index]);
         }
     }
+    return { positions, intensities, ...(colors ? { colors } : {}), count: x.length };
+}
+
+function buildFrame(
+    table: Table,
+    batch: PointBatch,
+    source: CloudPointFrameSource
+): CloudPointFrame {
     const metadata = table.schema.metadata;
     const boundsText = readMetadata(metadata, 'bounds');
     const timestampNs = readMetadata(metadata, 'log_time_ns') ?? source.timestampNs;
     const frameId = readMetadata(metadata, 'frame_id') ?? '';
     return {
-        batch: { positions, intensities, ...(colors ? { colors } : {}), count: x.length },
+        batch,
         channelId: source.channelId,
         timestampNs,
         frameId,
-        sourcePointCount: Number(readMetadata(metadata, 'source_point_count') ?? x.length),
+        sourcePointCount: Number(readMetadata(metadata, 'source_point_count') ?? batch.count),
         bounds: boundsText ? JSON.parse(boundsText) : null,
         channels: [{ channelId: source.channelId, timestampNs, frameId }]
     };
