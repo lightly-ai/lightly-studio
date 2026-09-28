@@ -99,11 +99,13 @@ def test_delete_dataset__with_parent_object_track(db_session: Session) -> None:
     db_session.add(child)
     db_session.commit()
 
-    dataset_resolver.delete_dataset(session=db_session, dataset_id=dataset.dataset_id)
+    dataset_id = dataset.dataset_id  # Capture before delete
+
+    dataset_resolver.delete_dataset(session=db_session, dataset_id=dataset_id)
 
     assert not object_track_resolver.get_all_by_dataset_id(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset_id,
     )
 
 
