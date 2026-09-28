@@ -4,68 +4,42 @@ import { turboInto } from './colormap';
 /** Determines how points are colored. */
 export type ColorMode = 'none' | 'intensity' | 'height';
 
+/** Neutral gray used as a fallback color for points without explicit data. */
+const NEUTRAL_GRAY = 0.5;
+
 /** Camera position and orbit target computed from point cloud bounds. */
 interface CameraPlacement {
     position: [number, number, number];
     target: [number, number, number];
 }
 
+/** Inputs for {@link buildColorBuffer}. */
+interface BuildColorBufferParams {
+    /** Flat positions [x0,y0,z0, x1,y1,z1, ...]. */
+    positions: Float32Array;
+    /** Per-point intensity values. */
+    intensities: Float32Array;
+    /** Number of active points. */
+    count: number;
+    /** How points are colored. */
+    colorMode: ColorMode;
+    /** Pre-allocated output buffer (must be >= count * 3). */
+    colors: Float32Array;
+    /** Optional [min, max] override for intensity normalization. */
+    intensityRange?: [number, number];
+}
+
 /**
  * Build a color buffer from position and intensity data.
- *
- * @param positions - Flat positions [x0,y0,z0, x1,y1,z1, ...].
- * @param intensities - Per-point intensity values.
- * @param count - Number of active points.
- * @param colorMode - "none", "intensity", or "height".
- * @param colors - Pre-allocated output buffer (must be >= count * 3).
- * @param intensityRange - Optional [min, max] override for intensity normalization.
  */
-export function buildColorBuffer(
-    positions: Float32Array,
-    intensities: Float32Array,
-    count: number,
-    colorMode: ColorMode,
-    colors: Float32Array,
-    intensityRange?: [number, number]
-): void {
+export function buildColorBuffer(params: BuildColorBufferParams): void {
+    const { colorMode, colors, count } = params;
+
     if (colorMode === 'none') {
-        for (let i = 0; i < count; i++) {
-            colors[i * 3] = 0.5;
-            colors[i * 3 + 1] = 0.5;
-            colors[i * 3 + 2] = 0.5;
-        }
+        fillNeutralColors(colors, count);
         return;
     }
-
-    let minVal: number;
-    let maxVal: number;
-
-    const useIntensity = colorMode === 'intensity';
-    if (useIntensity && intensityRange) {
-        [minVal, maxVal] = intensityRange;
-    } else {
-        minVal = Infinity;
-        maxVal = -Infinity;
-        for (let i = 0; i < count; i++) {
-            const v = useIntensity ? intensities[i] : positions[i * 3 + 2];
-            if (v < minVal) minVal = v;
-            if (v > maxVal) maxVal = v;
-        }
-    }
-
-    const range = maxVal - minVal;
-    const invRange = range === 0 ? 0 : 1 / range;
-
-    for (let i = 0; i < count; i++) {
-        const raw = useIntensity ? intensities[i] : positions[i * 3 + 2];
-
-        let t = (raw - minVal) * invRange;
-        if (t < 0) t = 0;
-        else if (t > 1) t = 1;
-        if (useIntensity) t = Math.sqrt(t);
-
-        turboInto(t, colors, i * 3);
-    }
+    fillGradientColors(params);
 }
 
 /**
@@ -93,4 +67,55 @@ export function computeCameraPlacement(bounds: Box3): CameraPlacement {
         position: [center.x + distance * 0.5, center.y + distance * 0.5, center.z + distance],
         target: [center.x, center.y, center.z]
     };
+}
+
+/** Fill the color buffer with neutral gray for the first `count` points. */
+function fillNeutralColors(colors: Float32Array, count: number): void {
+    for (let i = 0; i < count; i++) {
+        colors[i * 3] = NEUTRAL_GRAY;
+        colors[i * 3 + 1] = NEUTRAL_GRAY;
+        colors[i * 3 + 2] = NEUTRAL_GRAY;
+    }
+}
+
+/** Color the points along the turbo gradient using intensity or height. */
+function fillGradientColors(params: BuildColorBufferParams): void {
+    const { positions, intensities, count, colorMode, colors, intensityRange } = params;
+    const useIntensity = colorMode === 'intensity';
+
+    const [minVal, maxVal] =
+        useIntensity && intensityRange
+            ? intensityRange
+            : computeValueRange(positions, intensities, count, useIntensity);
+
+    const range = maxVal - minVal;
+    const invRange = range === 0 ? 0 : 1 / range;
+
+    for (let i = 0; i < count; i++) {
+        const raw = useIntensity ? intensities[i] : positions[i * 3 + 2];
+
+        let t = (raw - minVal) * invRange;
+        if (t < 0) t = 0;
+        else if (t > 1) t = 1;
+        if (useIntensity) t = Math.sqrt(t);
+
+        turboInto(t, colors, i * 3);
+    }
+}
+
+/** Find the [min, max] of the intensity or height values across active points. */
+function computeValueRange(
+    positions: Float32Array,
+    intensities: Float32Array,
+    count: number,
+    useIntensity: boolean
+): [number, number] {
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    for (let i = 0; i < count; i++) {
+        const v = useIntensity ? intensities[i] : positions[i * 3 + 2];
+        if (v < minVal) minVal = v;
+        if (v > maxVal) maxVal = v;
+    }
+    return [minVal, maxVal];
 }

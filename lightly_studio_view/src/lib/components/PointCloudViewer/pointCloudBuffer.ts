@@ -52,7 +52,7 @@ export function createPointCloudBuffer(): PointCloudBuffer {
     ): void {
         if (count === 0) return;
 
-        buildColorBuffer(positions, intensities, count, colorMode, colors, intensityRange);
+        buildColorBuffer({ positions, intensities, count, colorMode, colors, intensityRange });
         colorAttribute.needsUpdate = true;
     }
 
