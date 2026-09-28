@@ -178,6 +178,33 @@ class _DropPathEmbedder(ImagePathEmbedder):
         return EmbeddingResult(embeddings=np.empty((0, 3), dtype=np.float32), kept_indices=[])
 
 
+class _FailOnCallEmbedder(ImagePathEmbedder):
+    """Embeds paths as zeros and raises on a known call, as a failing embedder does.
+
+    Shares the random model's space so it resolves as the collection's default.
+    """
+
+    __slots__ = ("_call_count", "_fail_on_call")
+
+    def __init__(self, fail_on_call: int) -> None:
+        self._call_count = 0
+        self._fail_on_call = fail_on_call
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_images(self, paths: list[str]) -> EmbeddingResult:
+        """Embed every path as zeros, or raise on call number ``fail_on_call``."""
+        self._call_count += 1
+        if self._call_count == self._fail_on_call:
+            raise RuntimeError("The embedder failed.")
+        return EmbeddingResult(
+            embeddings=np.zeros((len(paths), 3), dtype=np.float32),
+            kept_indices=list(range(len(paths))),
+        )
+
+
 class _DropInputEmbedder(ImageBytesEmbedder, TextEmbedder):
     """Drops every input, so image and text queries get an empty result.
 
@@ -495,6 +522,39 @@ def test_embed_image_samples(
         session=db_session, collection_id=collection.collection_id, embedding_model_id=model_id
     )
     assert count == len(sample_ids)
+
+
+def test_embed_image_samples__failure_keeps_earlier_chunks(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """An embedder failure on a chunk keeps the embeddings of the chunks before it."""
+    collection = create_collection(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path=f"/test/{index}.jpg") for index in range(5)],
+    )
+    model_id = _register_default_random_model(
+        session=db_session, collection_id=collection.collection_id
+    )
+    # The chunks are [0, 1], [2, 3] and [4]. The embedder fails on the third chunk.
+    mocker.patch.object(embed_samples, "_IMAGE_EMBED_BATCH_SIZE", 2)
+    registry = EmbedderRegistry()
+    registry.register(embedder=_FailOnCallEmbedder(fail_on_call=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    sample_ids = [sample.sample_id for sample in samples]
+
+    with pytest.raises(RuntimeError, match="The embedder failed"):
+        embed_samples.embed_image_samples(
+            session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
+        )
+
+    db_session.rollback()
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=sample_ids, embedding_model_id=model_id
+    )
+    assert {row.sample_id for row in rows} == set(sample_ids[:4])
 
 
 @pytest.mark.usefixtures("patched_registry")
