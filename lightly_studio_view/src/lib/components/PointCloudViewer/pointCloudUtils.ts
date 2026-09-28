@@ -10,26 +10,32 @@ interface CameraPlacement {
     target: [number, number, number];
 }
 
+/** Inputs for {@link buildColorBuffer}. */
+interface BuildColorBufferParams {
+    /** Flat positions [x0,y0,z0, x1,y1,z1, ...]. */
+    positions: Float32Array;
+    /** Per-point intensity values. */
+    intensities: Float32Array;
+    /** Number of active points. */
+    count: number;
+    /** "none", "intensity", "height", or "rgb". */
+    colorMode: ColorMode;
+    /** Pre-allocated output buffer (must be >= count * 3). */
+    colors: Float32Array;
+    /** Optional [min, max] override for intensity normalization. */
+    intensityRange?: [number, number];
+    /** Per-point linear RGB values used when colorMode is "rgb". */
+    pointColors?: Float32Array;
+}
+
 /**
  * Build a color buffer from position and intensity data.
  *
- * @param positions - Flat positions [x0,y0,z0, x1,y1,z1, ...].
- * @param intensities - Per-point intensity values.
- * @param count - Number of active points.
- * @param colorMode - "none", "intensity", "height", or "rgb".
- * @param colors - Pre-allocated output buffer (must be >= count * 3).
- * @param intensityRange - Optional [min, max] override for intensity normalization.
- * @param pointColors - Per-point linear RGB values used when colorMode is "rgb".
+ * @param params - See {@link BuildColorBufferParams}.
  */
-export function buildColorBuffer(
-    positions: Float32Array,
-    intensities: Float32Array,
-    count: number,
-    colorMode: ColorMode,
-    colors: Float32Array,
-    intensityRange?: [number, number],
-    pointColors?: Float32Array
-): void {
+export function buildColorBuffer(params: BuildColorBufferParams): void {
+    const { positions, intensities, count, colorMode, colors, intensityRange, pointColors } =
+        params;
     if (colorMode === 'rgb' && pointColors) {
         colors.set(pointColors.subarray(0, count * 3), 0);
         return;
