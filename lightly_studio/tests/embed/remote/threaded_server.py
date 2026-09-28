@@ -12,6 +12,7 @@ import httpx
 import uvicorn
 from lightly_studio_serve import protocol, server
 from lightly_studio_serve.embedder import Embedder
+from lightly_studio_serve.protocol import ServerLimits
 
 _HOST = "127.0.0.1"
 
@@ -26,7 +27,7 @@ _POLL_TIMEOUT_SECONDS = 1.0
 def serve(
     embedder: Embedder,
     api_key: str | None = None,
-    limits: protocol.ServerLimits | None = None,
+    limits: ServerLimits | None = None,
 ) -> Iterator[str]:
     """Serve ``embedder`` until the context exits, and yield the address of the server.
 
