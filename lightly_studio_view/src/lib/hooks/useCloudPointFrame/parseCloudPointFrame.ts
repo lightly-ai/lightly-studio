@@ -2,11 +2,19 @@ import { tableFromIPC, type Table } from 'apache-arrow';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 import type { CloudPointFrame } from './types';
 
+/** Identifies the channel and fallback timestamp a raw frame buffer came from. */
 interface CloudPointFrameSource {
     channelId: number;
     timestampNs: string;
 }
 
+/**
+ * Parses an Arrow IPC point-cloud buffer into a renderable {@link CloudPointFrame}.
+ *
+ * @param buffer - The Arrow IPC bytes for a single frame.
+ * @param source - The channel and fallback timestamp the buffer came from.
+ * @returns The packed point batch together with the frame's metadata.
+ */
 export async function parseCloudPointFrame(
     buffer: ArrayBuffer,
     source: CloudPointFrameSource
@@ -16,6 +24,14 @@ export async function parseCloudPointFrame(
     return buildFrame(table, batch, source);
 }
 
+/**
+ * Extracts and packs the x/y/z, intensity, and optional r/g/b columns into
+ * flat typed arrays.
+ *
+ * @param table - The parsed Arrow table.
+ * @returns The packed positions, intensities, optional colors, and point count.
+ * @throws If x/y/z are missing or mismatched, or if r/g/b are partially present.
+ */
 function packBatch(table: Table): PointBatch {
     const x = table.getChild('x')?.toArray();
     const y = table.getChild('y')?.toArray();
@@ -47,6 +63,16 @@ function packBatch(table: Table): PointBatch {
     return { positions, intensities, ...(colors ? { colors } : {}), count: x.length };
 }
 
+/**
+ * Assembles a {@link CloudPointFrame} from a packed batch and the table's
+ * schema metadata, falling back to {@link CloudPointFrameSource} values when a
+ * metadata key is absent.
+ *
+ * @param table - The parsed Arrow table carrying the frame metadata.
+ * @param batch - The packed point batch from {@link packBatch}.
+ * @param source - The channel and fallback timestamp the frame came from.
+ * @returns The fully assembled frame.
+ */
 function buildFrame(
     table: Table,
     batch: PointBatch,
@@ -67,6 +93,13 @@ function buildFrame(
     };
 }
 
+/**
+ * Reads a metadata value by key, decoding it to text when stored as bytes.
+ *
+ * @param metadata - The Arrow schema metadata map, if any.
+ * @param key - The metadata key to look up.
+ * @returns The decoded string, or `undefined` when the key is absent.
+ */
 function readMetadata(
     metadata: Map<string, string | Uint8Array> | undefined,
     key: string
