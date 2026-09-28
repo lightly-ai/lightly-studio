@@ -3,12 +3,14 @@ import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters'
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
     AnnotationsFilter,
+    QueryExpr,
     SampleFilter,
     VideoFilter,
     VideoFieldsBoundsView,
     VideoSortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { CategoricalMetadataValues } from '$lib/services/types';
+import type { QueryExpression } from '../useImageFilters/useImageFilters';
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFilterParams = {
@@ -19,6 +21,7 @@ export type VideoFilterParams = {
         sample_ids?: string[];
         metadata_values?: MetadataValues;
         categorical_metadata_values?: CategoricalMetadataValues;
+        query_expr?: QueryExpr;
     };
     video_bounds?: VideoFieldsBoundsView | null;
 };
@@ -86,6 +89,11 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
         }
     }
 
+    const queryExpr = $filterParams.filters?.query_expr;
+    if (queryExpr) {
+        sampleFilter.query_expr = queryExpr;
+    }
+
     if (Object.keys(sampleFilter).length > 0) {
         filters.sample_filter = sampleFilter;
     }
@@ -103,6 +111,8 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
 const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
     buildVideoFilter($filterParams)
 );
+
+const videoQueryExpression = writable<QueryExpression | null>(null);
 
 const videoSortBy = writable<VideoSortFieldExpr[] | null>([
     {
@@ -137,12 +147,18 @@ export const useVideoFilters = () => {
         videoSortBy.set(sort);
     };
 
+    const updateQueryExpr = (expr?: QueryExpression) => {
+        videoQueryExpression.set(expr ?? null);
+    };
+
     return {
         filterParams,
         videoFilter,
         videoSortBy,
+        videoQueryExpression,
         updateFilterParams,
         updateSampleIds,
-        updateSortBy
+        updateSortBy,
+        updateQueryExpr
     };
 };

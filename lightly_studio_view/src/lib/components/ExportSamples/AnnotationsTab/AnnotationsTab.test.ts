@@ -49,7 +49,9 @@ describe('AnnotationsTab', () => {
             updateFilterParams: vi.fn(),
             updateSampleIds: vi.fn(),
             videoSortBy: writable(null),
-            updateSortBy: vi.fn()
+            videoQueryExpression: writable(null),
+            updateSortBy: vi.fn(),
+            updateQueryExpr: vi.fn()
         });
     });
 
@@ -107,7 +109,9 @@ describe('AnnotationsTab', () => {
             updateFilterParams: vi.fn(),
             updateSampleIds: vi.fn(),
             videoSortBy: writable(null),
-            updateSortBy: vi.fn()
+            videoQueryExpression: writable(null),
+            updateSortBy: vi.fn(),
+            updateQueryExpr: vi.fn()
         });
         render(AnnotationsTab, {
             props: {

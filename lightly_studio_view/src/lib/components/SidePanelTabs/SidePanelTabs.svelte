@@ -6,17 +6,17 @@
 
     interface Props {
         collectionId: string;
-        isImages: boolean;
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
         supportsDistribution: boolean;
+        supportsQuery: boolean;
     }
     const {
         collectionId,
-        isImages,
         hasMediaWithEmbeddings,
         supportsEvaluation,
-        supportsDistribution
+        supportsDistribution,
+        supportsQuery
     }: Props = $props();
 
     const { activePanel, toggle } = useSidePanelTabs({ getCollectionId: () => collectionId });
@@ -47,7 +47,7 @@
             </button>
         </Tooltip>
     {/if}
-    {#if isImages}
+    {#if supportsQuery}
         <Tooltip
             content="Write a query expression to filter your dataset"
             position="left"

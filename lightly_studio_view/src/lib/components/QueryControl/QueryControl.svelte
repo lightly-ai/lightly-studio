@@ -1,22 +1,22 @@
 <script lang="ts">
     import FilterChip from '$lib/components/FilterChip/FilterChip.svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import {
-        useImageFilters,
-        type QueryExpression
-    } from '$lib/hooks/useImageFilters/useImageFilters';
+    import type { QueryExpression } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useQueryExpression } from '$lib/hooks/useQueryExpression/useQueryExpression';
 
     interface Props {
+        /** The grid that the query filters. */
+        rootScope: Parameters<typeof useQueryExpression>[0];
         onOpen: () => void;
     }
-    let { onOpen }: Props = $props();
+    let { rootScope, onOpen }: Props = $props();
 
-    const { imageQueryExpression, updateQueryExpr } = useImageFilters();
+    const { queryExpression, updateQueryExpr } = $derived(useQueryExpression(rootScope));
 
     let lastQueryExpression = $state<QueryExpression | null>(null);
     $effect(() => {
-        if ($imageQueryExpression?.query_expr_str) {
-            lastQueryExpression = $imageQueryExpression;
+        if ($queryExpression?.query_expr_str) {
+            lastQueryExpression = $queryExpression;
         }
     });
 </script>
@@ -25,9 +25,9 @@
     <Segment title="Query">
         <FilterChip
             testId="query-filter-chip"
-            checked={!!$imageQueryExpression?.query_expr_str}
+            checked={!!$queryExpression?.query_expr_str}
             title="Query Filter"
-            checkboxLabel={$imageQueryExpression?.query_expr_str
+            checkboxLabel={$queryExpression?.query_expr_str
                 ? 'Disable query filter'
                 : 'Enable query filter'}
             onCheckedChange={(v) => {

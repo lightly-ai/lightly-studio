@@ -564,8 +564,18 @@ describe('right panel – main content stability', () => {
         expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
     });
 
-    it('queryEditor panel is not shown on videos route even when requested', async () => {
+    it('queryEditor panel is shown on videos route when requested', async () => {
         setPageRoute(APP_ROUTES.videos);
+        mockActivePanel.set('queryEditor');
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.getByTestId('pane-group-layout')).toBeInTheDocument();
+    });
+
+    it('queryEditor panel is not shown on annotations route even when requested', async () => {
+        setPageRoute(APP_ROUTES.annotations);
         mockActivePanel.set('queryEditor');
 
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
