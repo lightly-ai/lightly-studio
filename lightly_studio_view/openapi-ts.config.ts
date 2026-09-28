@@ -1,19 +1,4 @@
 import { defineConfig } from '@hey-api/openapi-ts';
-import dotenv from 'dotenv';
-import path from 'path';
-
-// Load environment variables from .env files
-dotenv.config({
-    path: [
-        // Local development environment variables
-        path.resolve(process.cwd(), '.env.local'),
-        // Default environment variables
-        path.resolve(process.cwd(), '.env')
-    ]
-});
-
-// Get the base URL from environment variables
-const baseUrl = process.env.PUBLIC_LIGHTLY_STUDIO_API_URL;
 
 export default defineConfig({
     input: '../lightly_studio/openapi.json',
@@ -33,8 +18,10 @@ export default defineConfig({
             name: '@hey-api/typescript'
         },
         {
-            baseUrl: baseUrl,
-            name: '@hey-api/client-fetch'
+            // The base URL is set at runtime from PUBLIC_LIGHTLY_STUDIO_API_URL.
+            baseUrl: false,
+            name: '@hey-api/client-fetch',
+            runtimeConfigPath: './src/lib/api/clientConfig.ts'
         },
         {
             name: '@hey-api/sdk',

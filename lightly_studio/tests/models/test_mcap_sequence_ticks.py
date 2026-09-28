@@ -63,11 +63,12 @@ class TestTickChannelView:
         db_session.commit()
         db_session.refresh(mcap)
 
-        view = TickChannelView.from_mcap_table(mcap=mcap)
+        view = TickChannelView.from_mcap_table(mcap=mcap, group_component_name="front")
 
         assert view.channel_id == 3
-        assert view.log_time_ns == 100
-        assert view.keyframe_log_time_ns == 80
+        assert view.group_component_name == "front"
+        assert view.log_time_ns == "100"
+        assert view.keyframe_log_time_ns == "80"
 
     def test_from_mcap_table__point_cloud(self, db_session: Session) -> None:
         """from_mcap_table leaves keyframe_log_time_ns as None for a lidar channel."""
@@ -86,10 +87,11 @@ class TestTickChannelView:
         db_session.commit()
         db_session.refresh(mcap)
 
-        view = TickChannelView.from_mcap_table(mcap=mcap)
+        view = TickChannelView.from_mcap_table(mcap=mcap, group_component_name="pcl_front")
 
         assert view.channel_id == 7
-        assert view.log_time_ns == 200
+        assert view.group_component_name == "pcl_front"
+        assert view.log_time_ns == "200"
         assert view.keyframe_log_time_ns is None
 
 
@@ -97,7 +99,12 @@ class TestTickDetailView:
     def test_fields(self) -> None:
         """TickDetailView exposes recording_id, seq_number, timestamp_ns, and channels."""
         recording_id = uuid4()
-        channel = TickChannelView(channel_id=1, log_time_ns=500, keyframe_log_time_ns=None)
+        channel = TickChannelView(
+            channel_id=1,
+            group_component_name="front",
+            log_time_ns="500",
+            keyframe_log_time_ns=None,
+        )
         detail = TickDetailView(
             recording_id=recording_id,
             seq_number=0,

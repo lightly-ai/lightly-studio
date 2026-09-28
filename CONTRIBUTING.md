@@ -117,7 +117,7 @@ the emulator, then points the example at the resulting `s3://` URI so it reads t
 Prerequisites:
 - Docker running locally (for the Floci S3 emulator)
 - The AWS CLI (`aws`) on your `PATH`
-- The `mcap` and `cloud-storage` extras (installed automatically by `uv run --extra` in the target)
+- The `cloud-storage` extra (installed automatically by `uv run --extra` in the target)
 
 Run it from the `lightly_studio` subdirectory, pointing `FLOCI_MCAP_FILES` at your recording:
 
@@ -277,7 +277,7 @@ Optional, for UI work only. This runs the Vite dev server in front of the backen
 
 ```shell
 cd lightly_studio_view
-cp .env.example .env.local
+cp .env.example .env.development.local
 npm run dev
 ```
 

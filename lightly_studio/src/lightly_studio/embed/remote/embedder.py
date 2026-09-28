@@ -120,6 +120,25 @@ class RemoteEmbedder(Embedder):
         """
         return self._spec
 
+    def with_route(self, route: type[RemoteEmbedder]) -> RemoteEmbedder:
+        """Build an embedder of the same server that also has the methods of ``route``.
+
+        The new embedder uses the transport, the space and the limits of this one. Call this
+        method only on an embedder that ``connect`` built.
+
+        Args:
+            route: The route class to add to the route classes of this embedder.
+
+        Returns:
+            An embedder that ``isinstance`` reports as each route class of this embedder
+            and as ``route``.
+        """
+        composed = cast(
+            "type[RemoteEmbedder]",
+            composition.composed_class(bases=(*type(self).__bases__, route)),
+        )
+        return composed(transport=self._transport, spec=self._spec, limits=self._limits)
+
     def _embed(
         self,
         items: Sequence[_ItemT],

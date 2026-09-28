@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -9,15 +10,19 @@ from typing_extensions import Self
 
 from lightly_studio.core import dataset
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME
-from lightly_studio.core.mcap import dataset_schema
+from lightly_studio.core.mcap import add_mcaps, dataset_schema
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.group_dataset import McapGroupDataset
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.database import db_manager
+from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import mcap_group_sequence_resolver, recording_resolver
+from lightly_studio.type_definitions import PathLike
+
+logger = logging.getLogger(__name__)
 
 
 class McapDataset:
@@ -31,22 +36,25 @@ class McapDataset:
     ```python
     import lightly_studio as ls
 
-    dataset = ls.McapDataset.load_or_create(
-        components=[
-            ls.McapComponentSpec(
-                name="front",
-                mcap_data_type=ls.McapDataType.VIDEO_FRAME,
-                topic="/cam/front/compressed_video",
-                camera_info_topic="/cam/front/camera_info",
-            ),
-            ls.McapComponentSpec(
-                name="pcl_front",
-                mcap_data_type=ls.McapDataType.POINT_CLOUD,
-                topic="/lidar/points",
-                frame_id="livox_front_left",
-            ),
-        ],
-        name="perception",
+    components = [
+        ls.McapComponentSpec(
+            name="front",
+            mcap_data_type=ls.McapDataType.VIDEO_FRAME,
+            topic="/cam/front/compressed_video",
+            camera_info_topic="/cam/front/camera_info",
+        ),
+        ls.McapComponentSpec(
+            name="pcl_front",
+            mcap_data_type=ls.McapDataType.POINT_CLOUD,
+            topic="/lidar/points",
+            frame_id="livox_front_left",
+        ),
+    ]
+    dataset = ls.McapDataset.load_or_create(components=components, name="perception")
+    dataset.add_mcaps_from_path(
+        path="/data/bags/",
+        sync_component="pcl_front",
+        components=components,
     )
     ```
 
@@ -114,6 +122,9 @@ class McapDataset:
     @classmethod
     def load(cls, name: str | None = None) -> Self:
         """Load an MCAP dataset that exists.
+
+        The topics of the components are not stored. To index another recording, pass
+        `components` to `add_mcaps_from_path`.
 
         Args:
             name: The name of the dataset. If None, a default name is used.
@@ -183,6 +194,70 @@ class McapDataset:
         if self._group_dataset is None:
             self._group_dataset = McapGroupDataset(collection=self._group_collection())
         return self._group_dataset
+
+    def add_mcaps_from_path(
+        self,
+        path: PathLike,
+        sync_component: str,
+        components: Sequence[McapComponentSpec],
+        max_pairing_diff_ns: int = add_mcaps.DEFAULT_MAX_PAIRING_DIFF_NS,
+        limit: int | None = None,
+    ) -> None:
+        """Index every `.mcap` recording under a path into the dataset.
+
+        One recording becomes one sequence of groups. Every message of the sync
+        component is a tick, the other components are paired against the tick closest
+        in time, and a tick that any component cannot be paired to is dropped, so every
+        group is complete:
+
+        ```python
+        dataset.add_mcaps_from_path(
+            path="/data/bags/",
+            sync_component="pcl_front",
+            components=components,
+        )
+        ```
+
+        Topics are not stored, so `components` is passed on every call. They must be the
+        components the dataset was created with.
+
+        A recording that is already indexed is skipped. A recording that cannot be read
+        is reported and the others are still indexed.
+
+        Args:
+            path: A folder of `.mcap` files, a single file, or a glob. It can also be a
+                URI into object storage, e.g. `s3://my-bucket/bags/`. It is stored on
+                the recording as given, so a relative path stops working once the
+                working directory changes.
+            sync_component: The name of the component whose messages are the ticks.
+            components: The specs the recordings are read through.
+            max_pairing_diff_ns: The largest time difference that still pairs a
+                component with an anchor tick.
+            limit: Maximum number of recordings to index. By default, all are indexed.
+
+        Raises:
+            ValueError: If `components` names other components than the dataset has, if
+                `sync_component` is not one of them, or if `limit` is not None and not
+                greater than 0.
+            AllInputFilesFailedError: If every recording under the path failed.
+        """
+        fsspec_lister.validate_limit(limit)
+        # Configure clients before discovery creates and caches a filesystem.
+        remote_storage.configure_connections(paths=[str(path)])
+        mcap_paths = list(
+            fsspec_lister.iter_files_from_path(
+                path=str(path), allowed_extensions=add_mcaps.MCAP_EXTENSIONS, limit=limit
+            )
+        )
+        logger.info(f"Found {len(mcap_paths)} MCAP recordings in {path}.")
+
+        add_mcaps.index_recordings(
+            dataset=self,
+            mcap_paths=mcap_paths,
+            sync_component=sync_component,
+            components=components,
+            max_pairing_diff_ns=max_pairing_diff_ns,
+        )
 
     def get_sequences(self) -> list[McapSequence]:
         """Get the sequences of the dataset, one per recording that was indexed.

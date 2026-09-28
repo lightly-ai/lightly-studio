@@ -59,6 +59,7 @@ def get_tick_details(
         seq_number=link.seq_number,
         timestamp_ns=link.timestamp_ns,
         channels={
-            name: TickChannelView.from_mcap_table(mcap=mcap) for name, mcap in channel_mcaps.items()
+            name: TickChannelView.from_mcap_table(mcap=mcap, group_component_name=name)
+            for name, mcap in channel_mcaps.items()
         },
     )

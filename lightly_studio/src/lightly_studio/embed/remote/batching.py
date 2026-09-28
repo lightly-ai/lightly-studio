@@ -9,7 +9,7 @@ item, so text and encoded bytes use the same splitter.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator
 from typing import TypeVar
 
 # What one item adds around its own data: a multipart boundary with the headers of the
@@ -20,7 +20,7 @@ _ItemT = TypeVar("_ItemT")
 
 
 def split_batches(
-    items: Sequence[_ItemT],
+    items: Iterable[_ItemT],
     max_batch_size: int,
     max_request_bytes: int,
     size_of: Callable[[_ItemT], int],

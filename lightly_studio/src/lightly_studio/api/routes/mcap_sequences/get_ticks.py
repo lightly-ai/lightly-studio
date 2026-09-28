@@ -23,8 +23,8 @@ def get_ticks(
 ) -> TickListView:
     """Returns the ordered list of ticks for an MCAP sequence.
 
-    Each tick holds its position (`seq_number`) and the anchor log time
-    (`timestamp_ns`) that was recorded at index time. The list is ordered by
+    Each tick holds its position (`seq_number`) and the capture time of its
+    sync component (`timestamp_ns`) that was recorded at index time. The list is ordered by
     `seq_number` ascending.
 
     Args:
