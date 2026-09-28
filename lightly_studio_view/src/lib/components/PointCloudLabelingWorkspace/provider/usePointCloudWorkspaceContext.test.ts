@@ -12,6 +12,9 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
         refetch: vi.fn()
     })
 }));
+vi.mock('$lib/hooks/useSequenceTicks/useSequenceTicks', () => ({
+    useSequenceTicks: () => ({ sequenceTicks: { data: undefined, refetch: vi.fn() } })
+}));
 vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails: { data: undefined } })
 }));

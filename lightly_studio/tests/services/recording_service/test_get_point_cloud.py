@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import io
-from collections import OrderedDict
+import struct
 from collections.abc import Iterator
 from pathlib import Path
-from typing import cast
 from uuid import UUID, uuid4
 
 import pyarrow as pa
@@ -19,6 +18,7 @@ from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import collection_resolver, recording_resolver
+from lightly_studio.services.recording_service import get_point_cloud as get_point_cloud_module
 from lightly_studio.services.recording_service import reader_cache
 from lightly_studio.services.recording_service.get_point_cloud import get_point_cloud
 from tests.core.mcap import helpers
@@ -26,20 +26,9 @@ from tests.core.mcap import helpers
 
 @pytest.fixture(autouse=True)
 def clear_reader_cache() -> Iterator[None]:
-    cache = cast(
-        "OrderedDict[str, McapFileReader] | None",
-        getattr(reader_cache._thread_local, "reader_cache", None),
-    )
-    if cache is None:
-        cache = OrderedDict()
-        reader_cache._thread_local.reader_cache = cache
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
     yield
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
 
 
 def _create_recording(session: Session, collection: CollectionTable, mcap_path: Path) -> UUID:
@@ -268,3 +257,36 @@ def test_get_point_cloud__non_point_cloud_channel(db_session: Session, tmp_path:
             channel_id=channel_id,
             timestamp_ns=helpers.VIDEO_LOG_TIMES_NS[0],
         )
+
+
+@pytest.mark.parametrize("field_name", ["intensity", "reflectivity"])
+def test_serialize_point_cloud__intensity(field_name: str) -> None:
+    # Two points of 13 bytes each: xyz as float32, then one uint8 intensity value.
+    data = struct.pack("<fffB", 1.0, 2.0, 3.0, 10) + struct.pack("<fffB", 4.0, 5.0, 6.0, 30)
+    message = {
+        "header": {"frame_id": helpers.LIDAR_FRAME_ID},
+        "height": 1,
+        "width": 2,
+        "fields": [
+            {"name": "x", "offset": 0, "datatype": 7, "count": 1},
+            {"name": "y", "offset": 4, "datatype": 7, "count": 1},
+            {"name": "z", "offset": 8, "datatype": 7, "count": 1},
+            {"name": field_name, "offset": 12, "datatype": 2, "count": 1},
+        ],
+        "is_bigendian": False,
+        "point_step": 13,
+        "row_step": 26,
+        "data": data,
+    }
+
+    payload = get_point_cloud_module._serialize_point_cloud(
+        message=message,
+        channel_id=1,
+        topic=helpers.LIDAR_POINTS_TOPIC,
+        log_time_ns=helpers.LIDAR_LOG_TIMES_NS[0],
+        transform=None,
+        frame_id=helpers.LIDAR_FRAME_ID,
+    )
+
+    # Intensity is scaled into [0, 1] over the cloud's own range.
+    assert _read_table(payload.data).column("intensity").to_pylist() == [0.0, 1.0]

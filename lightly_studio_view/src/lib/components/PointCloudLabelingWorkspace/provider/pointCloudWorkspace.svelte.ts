@@ -1,7 +1,11 @@
-import { useMcapSequenceSummary, useTickDetails } from '$lib/hooks';
+import { useMcapSequenceSummary, useSequenceTicks, useTickDetails } from '$lib/hooks';
 import { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
-import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 import type { PointCloudWorkspaceContext, WorkspaceStatus } from './types';
+
+// Every lidar point cloud is shown in this frame, so that the lidars align and the scene is upright.
+// The Gravis lidars are mounted on the cabin, and the front one is mounted upside down.
+// TODO(Horatiu, 09/2026): Make the reference frame configurable per dataset.
+const REFERENCE_FRAME_ID = 'CABIN';
 
 export type GetInputs = () => {
     datasetId: string;
@@ -20,20 +24,16 @@ export type GetInputs = () => {
  * active tick's point-cloud data. Instantiate via `createPointCloudWorkspaceContext`.
  */
 export class PointCloudWorkspace implements PointCloudWorkspaceContext {
-    // Placeholder ruler until browser-side MCAP frame loading lands (child issues of LIG-10657).
-    readonly ticks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
-        seq_number: index,
-        timestamp_ns: null
-    }));
-
     currentTick = $state(0);
     isPlaying = $state(false);
 
     readonly #getInputs: GetInputs;
     readonly #summary: ReturnType<typeof useMcapSequenceSummary>['summary'];
+    readonly #sequenceTicks: ReturnType<typeof useSequenceTicks>['sequenceTicks'];
     readonly tickDetails: ReturnType<typeof useTickDetails>['tickDetails'];
     readonly cloudPointFrame: ReturnType<typeof useCloudPointFrame>['query'];
     readonly retry: () => void;
+    #playbackFrame: number | undefined;
 
     // `$derived` is lazy, so referencing `this.#summary` here is safe — the body runs only when
     // the field is read, by which point the constructor has assigned it.
@@ -47,6 +47,8 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         if (!this.#summary.data || this.#summary.data.lidar_channels.length === 0) return 'empty';
         return 'ready';
     });
+
+    readonly ticks = $derived.by(() => this.#sequenceTicks.data?.ticks ?? []);
 
     readonly lidarChannels = $derived.by(() => this.#summary.data?.lidar_channels ?? []);
 
@@ -64,6 +66,11 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         });
         this.#getInputs = getInputs;
         this.#summary = summary;
+        const { sequenceTicks } = useSequenceTicks({
+            getDatasetId: () => getInputs().datasetId,
+            getSequenceId: () => getInputs().sequenceId
+        });
+        this.#sequenceTicks = sequenceTicks;
         // Read once at construction: this is the starting position, not a reactive binding.
         this.currentTick = getInputs().initialTick ?? 0;
         const { tickDetails } = useTickDetails({
@@ -86,14 +93,13 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
             datasetId: getInputs().datasetId,
             recordingId: tickDetails.data?.recording_id ?? '',
             channels,
-            // The first lidar is the reference frame, like the prototype; it does not follow the
-            // selection, so toggling channels does not move the scene.
-            targetFrameId: this.lidarChannels[0]?.frame_id ?? undefined
+            targetFrameId: REFERENCE_FRAME_ID
         }));
         this.tickDetails = tickDetails;
         this.cloudPointFrame = query;
         this.retry = () => {
             void refetch();
+            void sequenceTicks.refetch();
             void tickDetails.refetch();
             void query.refetch();
         };
@@ -114,15 +120,61 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
             : [...selected, channelId];
     }
 
-    goToPreviousFrame(): void {
-        if (this.currentTick > 0) this.currentTick -= 1;
+    // Arrow functions, because the panes pass these as event handlers without the instance.
+    goToPreviousFrame = (): void => {
+        this.#stepFrame(-1);
+    };
+
+    goToNextFrame = (): void => {
+        this.#stepFrame(1);
+    };
+
+    togglePlayback = (): void => {
+        if (this.isPlaying) {
+            this.#stopPlayback();
+            return;
+        }
+        // Play from the start again once the end of the sequence is reached.
+        if (this.ticks.at(-1)?.seq_number === this.currentTick) {
+            this.currentTick = this.ticks[0].seq_number;
+        }
+        this.isPlaying = true;
+        this.#playbackFrame = requestAnimationFrame(this.#advancePlayback);
+    };
+
+    /** Stops playback; call when the workspace unmounts. */
+    dispose(): void {
+        this.#stopPlayback();
     }
 
-    goToNextFrame(): void {
-        if (this.currentTick < this.ticks.length - 1) this.currentTick += 1;
+    // Playback runs as fast as the frames load: it checks once per animation frame and steps as
+    // soon as the current frame is on screen, not while the previous frame is still shown.
+    #advancePlayback = (): void => {
+        const isLoading =
+            this.tickDetails.isFetching ||
+            this.cloudPointFrame.isFetching ||
+            this.cloudPointFrame.isPlaceholderData;
+        if (!isLoading) {
+            const index = this.ticks.findIndex((tick) => tick.seq_number === this.currentTick);
+            if (index < 0 || index >= this.ticks.length - 1) {
+                this.#stopPlayback();
+                return;
+            }
+            this.#stepFrame(1);
+        }
+        this.#playbackFrame = requestAnimationFrame(this.#advancePlayback);
+    };
+
+    #stopPlayback(): void {
+        if (this.#playbackFrame !== undefined) cancelAnimationFrame(this.#playbackFrame);
+        this.#playbackFrame = undefined;
+        this.isPlaying = false;
     }
 
-    togglePlayback(): void {
-        this.isPlaying = !this.isPlaying;
+    // Ticks can be sparse, so step by position in the list rather than by seq number.
+    #stepFrame(offset: number): void {
+        const index = this.ticks.findIndex((tick) => tick.seq_number === this.currentTick);
+        const next = index < 0 ? undefined : this.ticks[index + offset];
+        if (next) this.currentTick = next.seq_number;
     }
 }

@@ -14,7 +14,8 @@ vi.mock('$lib/hooks', () => ({
         summary: { data: undefined, isLoading: false, isError: false },
         refetch: vi.fn()
     }),
-    useTickDetails: () => ({ tickDetails: { data: undefined } })
+    useTickDetails: () => ({ tickDetails: { data: undefined } }),
+    useSequenceTicks: () => ({ sequenceTicks: { data: undefined } })
 }));
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({

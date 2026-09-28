@@ -4,6 +4,9 @@ import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
 // The workspace mounts the camera projection strip, which reads the tick details
 // query; stub it so the chrome renders without a live TanStack query client.
+vi.mock('$lib/hooks/useSequenceTicks/useSequenceTicks', () => ({
+    useSequenceTicks: () => ({ sequenceTicks: { data: undefined, refetch: vi.fn() } })
+}));
 vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails: { data: undefined } })
 }));

@@ -31,6 +31,8 @@ _POINT_FIELD_DTYPES: dict[int, str] = {
     _FLOAT32_DATATYPE: "<f4",
     8: "<f8",
 }
+# Fields read as intensity, in order of preference. Livox lidars publish `reflectivity`.
+_INTENSITY_FIELD_NAMES = ("intensity", "reflectivity")
 # The sRGB component below which the transfer function is linear.
 _SRGB_LINEAR_THRESHOLD = 0.04045
 
@@ -172,8 +174,9 @@ def _serialize_point_cloud(  # noqa: PLR0913
         name: pa.array(xyz[valid, index], type=pa.float32())
         for index, name in enumerate(("x", "y", "z"))
     }
-    if "intensity" in fields:
-        intensity = _read_field(data, fields["intensity"], layout)
+    intensity_field_name = next((name for name in _INTENSITY_FIELD_NAMES if name in fields), None)
+    if intensity_field_name is not None:
+        intensity = _read_field(data, fields[intensity_field_name], layout)
         columns["intensity"] = pa.array(_normalize(intensity[valid]), type=pa.float32())
     colors = _read_colors(data, fields, layout)
     if colors is not None:

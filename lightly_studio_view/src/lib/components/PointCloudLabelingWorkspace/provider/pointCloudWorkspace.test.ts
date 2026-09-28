@@ -1,35 +1,66 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PointCloudWorkspace } from './pointCloudWorkspace.svelte';
 
 // The workspace wraps useMcapSequenceSummary; stub it so the class can be built without a live
 // TanStack query client. `summaryState` is mutable so each test drives the derived status/channels.
-const { summaryState, refetch, tickRefetch, cloudRefetch, cloudParams } = vi.hoisted(() => ({
-    summaryState: { data: undefined, isLoading: false, isError: false } as {
-        data: unknown;
-        isLoading: boolean;
-        isError: boolean;
-    },
-    refetch: vi.fn(),
-    tickRefetch: vi.fn(),
-    cloudRefetch: vi.fn(),
-    // The latest params getter the workspace handed to useCloudPointFrame.
-    cloudParams: { get: undefined as undefined | (() => { targetFrameId?: string }) }
-}));
+const {
+    summaryState,
+    ticksState,
+    tickQuery,
+    cloudQuery,
+    refetch,
+    ticksRefetch,
+    tickRefetch,
+    cloudRefetch,
+    cloudParams
+} = vi.hoisted(() => {
+    const tickRefetch = vi.fn();
+    const cloudRefetch = vi.fn();
+    return {
+        summaryState: { data: undefined, isLoading: false, isError: false } as {
+            data: unknown;
+            isLoading: boolean;
+            isError: boolean;
+        },
+        ticksState: { data: undefined } as { data: unknown },
+        // Live query objects, so a test can mark a frame as still loading.
+        tickQuery: {
+            data: undefined,
+            isLoading: false,
+            isError: false,
+            isFetching: false,
+            refetch: tickRefetch
+        },
+        cloudQuery: {
+            data: undefined,
+            isLoading: false,
+            isError: false,
+            isFetching: false,
+            isPlaceholderData: false,
+            refetch: cloudRefetch
+        },
+        refetch: vi.fn(),
+        ticksRefetch: vi.fn(),
+        tickRefetch,
+        cloudRefetch,
+        // The latest params getter the workspace handed to useCloudPointFrame.
+        cloudParams: { get: undefined as undefined | (() => { targetFrameId?: string }) }
+    };
+});
 
 vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     useMcapSequenceSummary: () => ({ summary: summaryState, refetch })
 }));
+vi.mock('$lib/hooks/useSequenceTicks/useSequenceTicks', () => ({
+    useSequenceTicks: () => ({ sequenceTicks: { ...ticksState, refetch: ticksRefetch } })
+}));
 vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
-    useTickDetails: () => ({
-        tickDetails: { data: undefined, isLoading: false, isError: false, refetch: tickRefetch }
-    })
+    useTickDetails: () => ({ tickDetails: tickQuery })
 }));
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: (getParams: () => { targetFrameId?: string }) => {
         cloudParams.get = getParams;
-        return {
-            query: { data: undefined, isLoading: false, isError: false, refetch: cloudRefetch }
-        };
+        return { query: cloudQuery };
     }
 }));
 
@@ -54,6 +85,15 @@ describe('PointCloudWorkspace', () => {
         summaryState.data = undefined;
         summaryState.isLoading = false;
         summaryState.isError = false;
+        ticksState.data = undefined;
+        tickQuery.isFetching = false;
+        cloudQuery.isFetching = false;
+        cloudQuery.isPlaceholderData = false;
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     it('exposes the inputs it was built with', () => {
@@ -106,7 +146,7 @@ describe('PointCloudWorkspace', () => {
         expect(workspace.selectedLidarChannels).toEqual([3, 1]);
     });
 
-    it('aligns the point clouds in the frame of the first lidar', () => {
+    it('aligns the point clouds in the cabin frame', () => {
         summaryState.data = {
             ...summaryWithChannels,
             lidar_channels: [
@@ -126,7 +166,7 @@ describe('PointCloudWorkspace', () => {
         };
         const workspace = createWorkspace();
         workspace.toggleLidarChannel(1);
-        expect(cloudParams.get?.().targetFrameId).toBe('livox_front_left');
+        expect(cloudParams.get?.().targetFrameId).toBe('CABIN');
     });
 
     it('starts on the initial tick when one is given', () => {
@@ -138,20 +178,108 @@ describe('PointCloudWorkspace', () => {
         expect(workspace.currentTick).toBe(3);
     });
 
-    it('advances and rewinds within bounds, clamped at both ends', () => {
+    it('steps through the sequence ticks, clamped at both ends', () => {
+        // Sparse ticks: stepping moves by position in the list, not by seq number.
+        ticksState.data = {
+            ticks: [
+                { seq_number: 0, timestamp_ns: 100 },
+                { seq_number: 2, timestamp_ns: 300 },
+                { seq_number: 5, timestamp_ns: 600 }
+            ]
+        };
         const workspace = createWorkspace();
-        expect(workspace.currentTick).toBe(0);
-        expect(workspace.isPlaying).toBe(false);
-        expect(workspace.ticks).toHaveLength(24);
+        expect(workspace.ticks).toHaveLength(3);
 
-        // Clamped at the first tick.
         workspace.goToPreviousFrame();
+        expect(workspace.currentTick).toBe(0);
+
         workspace.goToNextFrame();
+        expect(workspace.currentTick).toBe(2);
+
+        workspace.goToNextFrame();
+        workspace.goToNextFrame();
+        expect(workspace.currentTick).toBe(5);
+
+        workspace.goToPreviousFrame();
+        expect(workspace.currentTick).toBe(2);
+    });
+
+    it('steps and toggles playback when the handlers are called without the instance', () => {
+        ticksState.data = {
+            ticks: [
+                { seq_number: 0, timestamp_ns: 100 },
+                { seq_number: 1, timestamp_ns: 200 }
+            ]
+        };
+        const workspace = createWorkspace();
+        // The panes receive the handlers as plain callbacks, e.g. `onNextFrame={workspace.goToNextFrame}`.
+        const { goToNextFrame, goToPreviousFrame, togglePlayback } = workspace;
+
+        goToNextFrame();
+        expect(workspace.currentTick).toBe(1);
+        goToPreviousFrame();
+        expect(workspace.currentTick).toBe(0);
+        togglePlayback();
+        expect(workspace.isPlaying).toBe(true);
+    });
+
+    it('plays through the ticks and stops at the last one', () => {
+        ticksState.data = {
+            ticks: [0, 1, 2].map((seq) => ({ seq_number: seq, timestamp_ns: seq }))
+        };
+        const workspace = createWorkspace();
+
+        workspace.togglePlayback();
+        vi.advanceTimersToNextFrame();
         expect(workspace.currentTick).toBe(1);
 
-        // Clamped at the last tick.
-        for (let i = 0; i < 30; i += 1) workspace.goToNextFrame();
-        expect(workspace.currentTick).toBe(workspace.ticks.length - 1);
+        vi.advanceTimersByTime(200);
+        expect(workspace.currentTick).toBe(2);
+        expect(workspace.isPlaying).toBe(false);
+    });
+
+    it('waits for the current frame to load before playing on', () => {
+        ticksState.data = { ticks: [0, 1].map((seq) => ({ seq_number: seq, timestamp_ns: seq })) };
+        const workspace = createWorkspace();
+        cloudQuery.isFetching = true;
+
+        workspace.togglePlayback();
+        vi.advanceTimersByTime(200);
+        expect(workspace.currentTick).toBe(0);
+
+        // The fetch is done, but the previous frame is still shown until the new one is set.
+        cloudQuery.isFetching = false;
+        cloudQuery.isPlaceholderData = true;
+        vi.advanceTimersByTime(200);
+        expect(workspace.currentTick).toBe(0);
+
+        cloudQuery.isPlaceholderData = false;
+        vi.advanceTimersToNextFrame();
+        expect(workspace.currentTick).toBe(1);
+    });
+
+    it('pauses playback, and restarts from the first tick at the end', () => {
+        ticksState.data = { ticks: [0, 1].map((seq) => ({ seq_number: seq, timestamp_ns: seq })) };
+        const workspace = createWorkspace();
+
+        workspace.togglePlayback();
+        workspace.togglePlayback();
+        vi.advanceTimersByTime(200);
+        expect(workspace.currentTick).toBe(0);
+        expect(workspace.isPlaying).toBe(false);
+
+        workspace.goToNextFrame();
+        workspace.togglePlayback();
+        expect(workspace.currentTick).toBe(0);
+        expect(workspace.isPlaying).toBe(true);
+        workspace.dispose();
+        expect(workspace.isPlaying).toBe(false);
+    });
+
+    it('does not step without ticks', () => {
+        const workspace = createWorkspace();
+        workspace.goToNextFrame();
+        expect(workspace.currentTick).toBe(0);
     });
 
     it('toggles playback', () => {
@@ -163,6 +291,7 @@ describe('PointCloudWorkspace', () => {
     it('retry re-fetches all workspace data', () => {
         createWorkspace().retry();
         expect(refetch).toHaveBeenCalledOnce();
+        expect(ticksRefetch).toHaveBeenCalledOnce();
         expect(tickRefetch).toHaveBeenCalledOnce();
         expect(cloudRefetch).toHaveBeenCalledOnce();
     });

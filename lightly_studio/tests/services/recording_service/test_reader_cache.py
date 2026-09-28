@@ -1,11 +1,10 @@
-"""Tests for the thread-local MCAP reader cache."""
+"""Tests for the process-wide MCAP reader cache."""
 
 from __future__ import annotations
 
-from collections import OrderedDict
+import threading
 from collections.abc import Iterator
 from pathlib import Path
-from typing import cast
 
 import pytest
 
@@ -17,20 +16,9 @@ from tests.core.mcap import helpers
 
 @pytest.fixture(autouse=True)
 def clear_reader_cache() -> Iterator[None]:
-    cache = cast(
-        "OrderedDict[str, McapFileReader] | None",
-        getattr(reader_cache._thread_local, "reader_cache", None),
-    )
-    if cache is None:
-        cache = OrderedDict()
-        reader_cache._thread_local.reader_cache = cache
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
     yield
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
 
 
 def test_get_cached_reader__returns_same_reader_on_hit(tmp_path: Path) -> None:
@@ -59,3 +47,26 @@ def test_get_cached_reader__local_uri_has_no_storage_options(tmp_path: Path) -> 
     reader = get_cached_reader(uri)
     # Local paths must not use blockcache — the fsspec open call would fail if it tried.
     assert reader is not None
+
+
+def test_get_cached_reader__shares_reader_across_threads(tmp_path: Path) -> None:
+    uri = str(helpers.write_mcap(tmp_path / "recording.mcap"))
+    readers: list[McapFileReader] = []
+    threads = [
+        threading.Thread(target=lambda: readers.append(get_cached_reader(uri))) for _ in range(2)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert readers[0] is readers[1]
+
+
+def test_clear(tmp_path: Path) -> None:
+    uri = str(helpers.write_mcap(tmp_path / "recording.mcap"))
+    first = get_cached_reader(uri)
+
+    reader_cache.clear()
+
+    assert get_cached_reader(uri) is not first

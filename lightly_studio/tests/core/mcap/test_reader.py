@@ -500,5 +500,6 @@ def test_read_cache_options() -> None:
 def test_read_cache_options__random() -> None:
     options = reader_module._read_cache_options(ReadPattern.RANDOM)
 
-    assert options["cache_type"] == "readahead"
+    assert options["cache_type"] == "blockcache"
     assert 0 < options["block_size"] <= 4 * 1024 * 1024
+    assert options["cache_options"]["maxblocks"] > 1

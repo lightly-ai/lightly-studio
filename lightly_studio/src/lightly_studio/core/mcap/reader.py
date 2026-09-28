@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from enum import Enum
 from types import TracebackType
@@ -47,11 +48,14 @@ logger = logging.getLogger(__name__)
 
 STATIC_TRANSFORM_TOPIC = "/tf_static"
 
-# The fsspec read cache of a reader opened for random access. A small block keeps the
-# first read small, because a filesystem fetches a whole block for every read that
-# misses the cache, and the default block of a remote filesystem is tens of megabytes.
-_RANDOM_READ_CACHE_TYPE = "readahead"
-_RANDOM_READ_BLOCK_SIZE_BYTES = 64 * 1024
+# The fsspec read cache of a reader opened for random access. It keeps the most recently
+# used blocks, so that reads of nearby messages, e.g. the point clouds of several lidars
+# at one tick, share one fetch. A block holds about two chunks of a typical recording, and
+# stays small compared to the default block of a remote filesystem, which is tens of
+# megabytes.
+_RANDOM_READ_CACHE_TYPE = "blockcache"
+_RANDOM_READ_BLOCK_SIZE_BYTES = 1024 * 1024
+_RANDOM_READ_MAX_BLOCKS = 32
 
 
 class ReadPattern(Enum):
@@ -140,10 +144,14 @@ class McapFileReader:
         self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
         self._transform_tree_by_topic: dict[str, TransformTree] = {}
         self._decoder_by_channel_id: dict[int, Callable[[bytes], Any] | None] = {}
+        # Reads seek the shared stream, so one reader can serve several threads only
+        # one read at a time. Reentrant, because public methods call each other.
+        self._lock = threading.RLock()
 
     def close(self) -> None:
         """Closes the MCAP file."""
-        self._stream.close()
+        with self._lock:
+            self._stream.close()
 
     def __enter__(self) -> McapFileReader:
         """Returns the reader itself."""
@@ -184,28 +192,31 @@ class McapFileReader:
             TopicNotFoundError: If one of the topics is not in the file.
             McapAccessError: If the file has messages but no chunk index to locate them.
         """
-        unique_topics = list(dict.fromkeys(topics))
-        video_topics = {
-            topic
-            for topic in unique_topics
-            if self._require_topic_info(topic).kind is TopicKind.VIDEO
-        }
-        self._require_chunk_index()
-        locators_by_topic: dict[str, list[FrameLocator]] = {topic: [] for topic in unique_topics}
-        keyframe_log_time_ns_by_topic: dict[str, int | None] = dict.fromkeys(video_topics)
-        for schema, channel, message in self._reader.iter_messages(
-            topics=unique_topics, start_time=start_time_ns, end_time=end_time_ns
-        ):
-            locator = self._locator_for_message(
-                schema=schema,
-                channel=channel,
-                message=message,
-                video_topics=video_topics,
-                keyframe_log_time_ns_by_topic=keyframe_log_time_ns_by_topic,
-            )
-            if locator is not None:
-                locators_by_topic[channel.topic].append(locator)
-        self._locators_by_topic.update(locators_by_topic)
+        with self._lock:
+            unique_topics = list(dict.fromkeys(topics))
+            video_topics = {
+                topic
+                for topic in unique_topics
+                if self._require_topic_info(topic).kind is TopicKind.VIDEO
+            }
+            self._require_chunk_index()
+            locators_by_topic: dict[str, list[FrameLocator]] = {
+                topic: [] for topic in unique_topics
+            }
+            keyframe_log_time_ns_by_topic: dict[str, int | None] = dict.fromkeys(video_topics)
+            for schema, channel, message in self._reader.iter_messages(
+                topics=unique_topics, start_time=start_time_ns, end_time=end_time_ns
+            ):
+                locator = self._locator_for_message(
+                    schema=schema,
+                    channel=channel,
+                    message=message,
+                    video_topics=video_topics,
+                    keyframe_log_time_ns_by_topic=keyframe_log_time_ns_by_topic,
+                )
+                if locator is not None:
+                    locators_by_topic[channel.topic].append(locator)
+            self._locators_by_topic.update(locators_by_topic)
 
     @overload
     def get_frame_locators(
@@ -288,9 +299,10 @@ class McapFileReader:
             McapAccessError: If the topic has no message, if its messages do not hold
                 camera intrinsics, or if its messages cannot be decoded.
         """
-        if topic not in self._intrinsics_by_topic:
-            self._intrinsics_by_topic[topic] = self._read_intrinsic(topic)
-        return self._intrinsics_by_topic[topic]
+        with self._lock:
+            if topic not in self._intrinsics_by_topic:
+                self._intrinsics_by_topic[topic] = self._read_intrinsic(topic)
+            return self._intrinsics_by_topic[topic]
 
     def get_static_transform(
         self,
@@ -314,13 +326,14 @@ class McapFileReader:
             TransformNotFoundError: If no chain of transforms connects the two frames.
             McapAccessError: If a message on the topic cannot be decoded.
         """
-        if topic not in self._transform_tree_by_topic:
-            self._transform_tree_by_topic[topic] = TransformTree(
-                self._read_static_transforms(topic)
+        with self._lock:
+            if topic not in self._transform_tree_by_topic:
+                self._transform_tree_by_topic[topic] = TransformTree(
+                    self._read_static_transforms(topic)
+                )
+            return self._transform_tree_by_topic[topic].lookup(
+                target_frame_id=parent_frame_id, source_frame_id=child_frame_id
             )
-        return self._transform_tree_by_topic[topic].lookup(
-            target_frame_id=parent_frame_id, source_frame_id=child_frame_id
-        )
 
     def get_decoded_message_at(
         self,
@@ -349,26 +362,27 @@ class McapFileReader:
             McapAccessError: If the channel's messages cannot be decoded, e.g. because
                 their encoding has no matching decoder factory.
         """
-        topic_info = self._require_channel_info(channel_id)
-        try:
-            for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
-                topics=[topic_info.name],
-                start_time=timestamp_ns,
-                end_time=timestamp_ns + 1,
-            ):
-                if channel.id == channel_id and message.log_time == timestamp_ns:
-                    return DecodedMessage(
-                        channel_id=channel_id,
-                        topic=topic_info.name,
-                        log_time_ns=message.log_time,
-                        schema_name=topic_info.schema_name,
-                        decoded_message=decoded_message,
-                    )
-        except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
-            raise McapAccessError(
-                f"Cannot decode the messages of channel {channel_id} in '{self.path}': {exc}"
-            ) from exc
-        return None
+        with self._lock:
+            topic_info = self._require_channel_info(channel_id)
+            try:
+                for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
+                    topics=[topic_info.name],
+                    start_time=timestamp_ns,
+                    end_time=timestamp_ns + 1,
+                ):
+                    if channel.id == channel_id and message.log_time == timestamp_ns:
+                        return DecodedMessage(
+                            channel_id=channel_id,
+                            topic=topic_info.name,
+                            log_time_ns=message.log_time,
+                            schema_name=topic_info.schema_name,
+                            decoded_message=decoded_message,
+                        )
+            except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
+                raise McapAccessError(
+                    f"Cannot decode the messages of channel {channel_id} in '{self.path}': {exc}"
+                ) from exc
+            return None
 
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.
@@ -533,24 +547,25 @@ class McapFileReader:
         indexing the whole file: a remote file behind a filesystem that supports range
         requests (local disk, S3, GCS, or plain HTTP) is summarized cheaply.
         """
-        if self._topics is None:
-            summary = self._require_summary()
-            message_counts = (
-                {} if summary.statistics is None else summary.statistics.channel_message_counts
-            )
-            topics = [
-                _topic_info(
-                    channel=channel,
-                    schema=summary.schemas.get(channel.schema_id),
-                    message_count=message_counts.get(channel.id),
+        with self._lock:
+            if self._topics is None:
+                summary = self._require_summary()
+                message_counts = (
+                    {} if summary.statistics is None else summary.statistics.channel_message_counts
                 )
-                for channel in summary.channels.values()
-            ]
-            self._topics = sorted(topics, key=lambda topic: topic.name)
-            self._topics_by_name = {}
-            for topic_info in self._topics:
-                self._topics_by_name.setdefault(topic_info.name, topic_info)
-        return self._topics
+                topics = [
+                    _topic_info(
+                        channel=channel,
+                        schema=summary.schemas.get(channel.schema_id),
+                        message_count=message_counts.get(channel.id),
+                    )
+                    for channel in summary.channels.values()
+                ]
+                self._topics = sorted(topics, key=lambda topic: topic.name)
+                self._topics_by_name = {}
+                for topic_info in self._topics:
+                    self._topics_by_name.setdefault(topic_info.name, topic_info)
+            return self._topics
 
     def _require_chunk_index(self) -> None:
         """Checks that the file's messages, if any, are reachable through a chunk index.
@@ -601,6 +616,7 @@ def _read_cache_options(read_pattern: ReadPattern) -> dict[str, Any]:
     return {
         "cache_type": _RANDOM_READ_CACHE_TYPE,
         "block_size": _RANDOM_READ_BLOCK_SIZE_BYTES,
+        "cache_options": {"maxblocks": _RANDOM_READ_MAX_BLOCKS},
     }
 
 

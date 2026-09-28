@@ -1,5 +1,5 @@
 import { tableFromIPC } from 'apache-arrow';
-import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
+import { createQuery, keepPreviousData, type CreateQueryResult } from '@tanstack/svelte-query';
 import { client } from '$lib/api/lightly_studio_local/client.gen';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 
@@ -37,6 +37,9 @@ export const useCloudPointFrame = (
         return {
             queryKey: ['cloud-point-frame', datasetId, recordingId, channels, targetFrameId],
             enabled: Boolean(datasetId && recordingId && channels.length),
+            // Keep the previous frame on screen while the next one loads, e.g. during playback.
+            // Without channels there is nothing to show, so drop the previous frame too.
+            placeholderData: channels.length ? keepPreviousData : undefined,
             queryFn: async ({ signal }): Promise<CloudPointFrame> => {
                 const frames = await Promise.all(
                     channels.map(async ({ channelId, timestampNs }) => {
