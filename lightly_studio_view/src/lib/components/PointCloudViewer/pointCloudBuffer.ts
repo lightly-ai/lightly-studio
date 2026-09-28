@@ -1,25 +1,7 @@
 import { Box3, BufferAttribute, BufferGeometry, Sphere } from 'three';
 import { buildColorBuffer, computeActiveBounds } from './pointCloudUtils';
 import type { ColorMode } from './pointCloudUtils';
-
-/** A batch of points stored in pre-packed typed arrays. */
-export interface PointBatch {
-    /** Flat position data [x0,y0,z0, x1,y1,z1, ...]. Length >= count * 3. */
-    positions: Float32Array;
-    /** Per-point intensity values. Length >= count. */
-    intensities: Float32Array;
-    /** Optional packed linear RGB values [r0,g0,b0,...]. Length >= count * 3. */
-    colors?: Float32Array;
-    /** Number of active points in this batch. */
-    count: number;
-}
-
-export interface PointCloudBuffer {
-    geometry: BufferGeometry;
-    updatePositions: (batch: PointBatch) => Box3 | undefined;
-    updateColors: (count: number, colorMode: ColorMode, intensityRange?: [number, number]) => void;
-    dispose: () => void;
-}
+import type { PointBatch, PointCloudBuffer } from './types';
 
 export function createPointCloudBuffer(): PointCloudBuffer {
     let capacity = 0;
