@@ -7,7 +7,7 @@
     interface Props {
         /** A single point cloud batch to render. */
         batch: PointBatch;
-        /** Color mapping mode. "none" uses a neutral gray, "intensity" maps point intensity to color, "height" maps Z-axis to color. */
+        /** Color mapping mode. "none" uses a neutral gray, "intensity" maps point intensity to color, "height" maps Z-axis to color, "rgb" uses per-point colors from the batch. */
         colorMode?: ColorMode;
         /** Size of each rendered point. */
         pointSize?: number;
