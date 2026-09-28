@@ -25,7 +25,8 @@ def mcap_path(tmp_path: Path) -> Path:
 @pytest.fixture
 def dataset_id(db_session: Session) -> UUID:
     collection = collection_resolver.create(
-        db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
+        session=db_session,
+        collection=CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE),
     )
     return collection.dataset_id
 
@@ -42,15 +43,10 @@ def channel_id(mcap_path: Path) -> int:
     return _channel_id(mcap_path=mcap_path, topic_name=helpers.LIDAR_POINTS_TOPIC)
 
 
-def _point_cloud_url(dataset_id: UUID, recording_id: UUID) -> str:
-    return f"/datasets/{dataset_id}/recordings/{recording_id}/point-cloud"
-
-
 def test_get_point_cloud(
     test_client: TestClient, dataset_id: UUID, recording_id: UUID, channel_id: int
 ) -> None:
     timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
-
     response = test_client.get(
         _point_cloud_url(dataset_id, recording_id),
         params={"channel_id": channel_id, "timestamp_ns": timestamp_ns},
@@ -93,6 +89,10 @@ def test_get_point_cloud__400_on_non_point_cloud_channel(
     )
 
     assert response.status_code == status.HTTP_STATUS_BAD_REQUEST
+
+
+def _point_cloud_url(dataset_id: UUID, recording_id: UUID) -> str:
+    return f"/datasets/{dataset_id}/recordings/{recording_id}/point-cloud"
 
 
 def _channel_id(mcap_path: Path, topic_name: str) -> int:
