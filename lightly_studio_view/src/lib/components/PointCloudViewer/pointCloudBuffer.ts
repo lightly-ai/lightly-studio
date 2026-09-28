@@ -8,6 +8,8 @@ export interface PointBatch {
     positions: Float32Array;
     /** Per-point intensity values. Length >= count. */
     intensities: Float32Array;
+    /** Optional packed linear RGB values [r0,g0,b0,...]. Length >= count * 3. */
+    colors?: Float32Array;
     /** Number of active points in this batch. */
     count: number;
 }
