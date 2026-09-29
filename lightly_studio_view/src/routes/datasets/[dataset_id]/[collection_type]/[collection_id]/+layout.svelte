@@ -141,6 +141,8 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    // The distribution panel is available on the images and videos grids.
+    const supportsDistribution = $derived(isImages || isVideos);
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
@@ -407,6 +409,17 @@
         enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
     }));
 
+    const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
+        collectionId,
+        filter: buildVideoAnnotationCountsFilter({
+            metadataFilters,
+            annotationFilter: $annotationFilterStore,
+            videoBoundsValues: $videoBoundsValues,
+            sampleIds: plotFilterVideoSampleIds
+        }),
+        enabled: isVideos && !$allSourcesHidden
+    }));
+
     const videoFrameCountsCollectionId = $derived(
         isVideoFrameAnnotations ? (parentCollection?.collectionId ?? collectionId) : collectionId
     );
@@ -423,15 +436,7 @@
             });
         }
         if (isVideos) {
-            return useVideoAnnotationCounts({
-                collectionId,
-                filter: buildVideoAnnotationCountsFilter({
-                    metadataFilters,
-                    annotationFilter: $annotationFilterStore,
-                    videoBoundsValues: $videoBoundsValues,
-                    sampleIds: plotFilterVideoSampleIds
-                })
-            });
+            return videoAnnotationCountsQuery;
         }
         return imageAnnotationCountsQuery;
     });
@@ -474,7 +479,9 @@
     );
     const hasFilterPanel = $derived(isCollectionGrid && !isPointClouds);
 
-    const panelIsVisible = $derived(isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings));
+    const panelIsVisible = $derived(
+        isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
+    );
 
     // False only once annotation labels have loaded and come back empty — not
     // while loading, and not just because current filters hide every class.
@@ -488,7 +495,9 @@
         toggleAnnotationFilterSelection(item.label, collectionId);
     };
 
-    const distributionPanelVisible = $derived($activePanel === 'distribution' && isImages);
+    const distributionPanelVisible = $derived(
+        $activePanel === 'distribution' && supportsDistribution
+    );
 
     // The distribution settings live here, so they stay when the panel closes and opens again.
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
@@ -725,6 +734,19 @@
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
                                     <QueryEditorPanel onClose={() => setActivePanel('none')} />
                                 {/await}
+                            {:else if distributionPanelVisible && isVideos}
+                                {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}
+                                    {#key collectionId}
+                                        <VideoDistributionPanel
+                                            {collectionId}
+                                            {hasAnnotationClasses}
+                                            selectedClassNames={$selectedAnnotationFilterNames}
+                                            onClassBarClick={handleClassBarClick}
+                                            onClose={() => setActivePanel('none')}
+                                            bind:histogramBinCount
+                                        />
+                                    {/key}
+                                {/await}
                             {:else if distributionPanelVisible}
                                 {#await import('./ImageDistributionPanel/ImageDistributionPanel.svelte') then { default: ImageDistributionPanel }}
                                     {#key collectionId}
@@ -755,13 +777,14 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid && (isImages || hasMediaWithEmbeddings)}
+            {#if isCollectionGrid && (supportsDistribution || hasMediaWithEmbeddings)}
                 <div data-testid="side-panel-tabs" class="contents">
                     <SidePanelTabs
                         {collectionId}
                         {isImages}
                         {hasMediaWithEmbeddings}
                         {supportsEvaluation}
+                        {supportsDistribution}
                     />
                 </div>
             {/if}

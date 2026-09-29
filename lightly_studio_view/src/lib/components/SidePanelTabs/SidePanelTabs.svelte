@@ -9,8 +9,15 @@
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
+        supportsDistribution: boolean;
     }
-    const { collectionId, isImages, hasMediaWithEmbeddings, supportsEvaluation }: Props = $props();
+    const {
+        collectionId,
+        isImages,
+        hasMediaWithEmbeddings,
+        supportsEvaluation,
+        supportsDistribution
+    }: Props = $props();
 
     const { activePanel, toggle } = useSidePanelTabs({ getCollectionId: () => collectionId });
 </script>
@@ -88,7 +95,7 @@
             </button>
         </Tooltip>
     {/if}
-    {#if isImages}
+    {#if supportsDistribution}
         <Tooltip
             content="View dataset distribution"
             position="left"
