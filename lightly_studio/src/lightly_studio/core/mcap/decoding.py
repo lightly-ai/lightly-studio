@@ -1,6 +1,6 @@
 """Decoders for the MCAP message encodings the access layer can read.
 
-Calibration, keyframe detection, and sidecar SceneUpdate annotations need decoded
+Calibration, keyframe detection, and annotation MCAP SceneUpdate need decoded
 messages. Frame locators are built from the message index alone.
 """
 

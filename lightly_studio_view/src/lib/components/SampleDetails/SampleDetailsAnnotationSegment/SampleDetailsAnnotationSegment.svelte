@@ -149,6 +149,7 @@
                 addAnnotationDeleteToUndoStack({
                     annotation,
                     labels: annotationLabels.data!,
+                    sources: annotationSources,
                     addReversibleAction,
                     createAnnotation,
                     refetch
