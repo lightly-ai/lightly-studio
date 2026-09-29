@@ -126,16 +126,17 @@ class RemoteEmbedder(Embedder):
         """Get the address and the token of the server, for a dataset to store.
 
         A later process builds the embedder again from the stored endpoint with ``connect``,
-        and so reaches the server with no registration. That rebuild composes the route
-        classes of the server, so it would drop the methods of a class that a caller wrote
-        by hand. Such a class names no endpoint, unless it overrides this method.
+        and so reaches the server with no registration. A class that a caller wrote by hand
+        names no endpoint, unless it overrides this method.
 
         Returns:
             The endpoint that every request of the transport carries, or None for a class
             that ``connect`` and ``with_route`` did not compose.
         """
-        # Only `connect` and `with_route` compose classes, so this asks whether `connect`
-        # built the embedder.
+        # The rebuild through `connect` drops the methods of a class written by hand. For
+        # example, a class that adds "a photo of" to each text query loses it after a
+        # restart, and search then gives other results with no error. Only `connect` and
+        # `with_route` compose classes, so this asks whether `connect` built the embedder.
         if not composition.is_composed(cls=type(self)):
             return None
         return self._transport.endpoint()
