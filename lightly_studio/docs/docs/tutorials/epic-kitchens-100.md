@@ -1,6 +1,6 @@
 # Explore EPIC-KITCHENS-100 Video Clips in LightlyStudio
 
-EpicKitchens dataset has gained popularity in the computer vision community for its rich annotations for a set of egocentric videos, designed to develop models for robotics-related tasks. In this tutorial, we show how to preprocess the EpicKitchens dataset and visualize it in LightlyStudio.
+In this tutorial, we show how to download preprocessed EPIC-KITCHENS-100 video clips from HuggingFace and visualize them in LightlyStudio.
 
 At the end, we will have loaded and explored a dataset of more than 37000 video clips, each with a caption describing the action in the clip. We show how to explore the embedding plot and slice and dice the dataset for further analysis.
 
@@ -35,99 +35,177 @@ Moreover, separate, derived datasets annotating the data from EPIC-KITCHENS-100 
 - **EPIC-Sounds** - Audio annotations
 - **EPIC-Fields** - 3D digital twins
 
-## Downloading EPIC-KITCHENS-100
+## Download the Clips from HuggingFace
 
-For our tutorial we focus on EPIC-KITCHENS-100 and download videos and annotated actions.
+We have already cut the EPIC-KITCHENS-100 videos into clips and uploaded them together with the annotations and the loading scripts as the [lightly-ai/epic-kitchens-100-clips dataset](https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips) to HuggingFace. It contains:
+
+- `clips/`: 37455 video clips (24 GB), one for each annotated action, stored as `{participant_id}/{narration_id}.mp4`. The clips are downscaled to 854x480px.
+- `epic-kitchens-100-annotations/`: The original action annotations in `EPIC_100_train.csv` and `EPIC_100_validation.csv`.
+- `requirements.txt`: The Python dependencies for the loading scripts.
+- `lightly_studio_1_load_videos.py`, `lightly_studio_2_load_anotations_fast.py`, `lightly_studio_3_start_gui.py`: Scripts to load the clips into LightlyStudio.
+- `cut_clips.py`: The script that we used to cut the clips from the original videos.
 
 !!! note
-    You can skip the downloading and preprocessing steps if you are only interested in the final result. We uploaded it as the [lightly-ai/epic-kitchens-100-clips dataset](https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips) to HuggingFace (24GB).
+    The dataset is published under the [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) license, the same as the original EPIC-KITCHENS-100 dataset. You cannot use it for commercial purposes.
 
-### Download Videos
-
-The first obstacle is that EPIC-KITCHENS-55 videos and the extension part of EPIC-KITCHENS-100 are distributed separately. For simplicity, we focus on **the extension part of EPIC-KITCHENS-100**.
-
-The videos are officially hosted on DataBris servers, but the mirrors are slow. Luckily, the extension dataset is also available via AcademicTorrents and HuggingFace, we are going to use the HuggingFace mirror:
+Install the [HuggingFace CLI](https://huggingface.co/docs/huggingface_hub/en/guides/cli) and download the full dataset:
 
 ```bash
-# Install HuggingFace CLI according to https://huggingface.co/docs/huggingface_hub/en/guides/cli
+# Install HuggingFace CLI
 curl -LsSf https://hf.co/cli/install.sh | bash
 
-# Download videos (464 GB)
-hf download awsaf49/epic_kitchens_100 --repo-type dataset --include "*.MP4" --local-dir ./EPIC-KITCHENS-100
+# Download clips, annotations, and scripts (24 GB)
+hf download lightly-ai/epic-kitchens-100-clips \
+    --repo-type dataset \
+    --local-dir ./epic-kitchens-100-clips
 ```
 
-The download size is big. To follow along, you can download a subset of the videos with the official downloader, as follows:
+To try the tutorial with less data, download only the clips of one participant. For example, participant `P01` has 2401 clips (1.7 GB):
 
 ```bash
-# Clone the helper repo for downloading videos
-git clone https://github.com/epic-kitchens/epic-kitchens-download-scripts.git
-cd epic-kitchens-download-scripts
-
-# Download the 10 shortest videos
-python epic_downloader.py \
-    --videos \
-    --specific-videos P03_15,P03_26,P06_02,P09_01,P26_30,P04_19,P07_106,P03_110,P02_05,P26_12 \
-    --output-path ../EPIC-KITCHENS-100
+hf download lightly-ai/epic-kitchens-100-clips \
+    --repo-type dataset \
+    --include "clips/P01/*" \
+    --include "epic-kitchens-100-annotations/*" \
+    --include "*.py" \
+    --include "requirements.txt" \
+    --local-dir ./epic-kitchens-100-clips
 ```
 
-### Download Action Annotations
-
-The action annotations are available in the `epic-kitchens-100-annotations` repository, which we simply clone:
+Alternatively, clone the dataset with Git. Make sure that [Git LFS](https://git-lfs.com/) is installed, because the clips are stored as LFS files:
 
 ```bash
-git clone https://github.com/epic-kitchens/epic-kitchens-100-annotations.git
+git lfs install
+git clone https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips
 ```
 
-### Verify the Folder Structure
-
-After downloading, you should have the following folder structure. The videos are organized by participants `P01 - P37`, and each participant has a `videos` folder with the video files. The action annotations are in the `epic-kitchens-100-annotations` folder in `EPIC_100_train.csv` and `EPIC_100_validation.csv` files.
+After the download, you have the following folder structure:
 
 ```text
-.
-├── EPIC-KITCHENS-100/
+epic-kitchens-100-clips/
+├── clips/
 │   ├── P01/
-│   │   └── videos/
-│   │       ├── P01_101.MP4
-│   │       └── ...
+│   │   ├── P01_102_0.mp4
+│   │   └── ...
 │   └── ...
-└── epic-kitchens-100-annotations/
-    ├── EPIC_100_train.csv
-    ├── EPIC_100_validation.csv
-    └── ...
+├── epic-kitchens-100-annotations/
+│   ├── EPIC_100_train.csv
+│   └── EPIC_100_validation.csv
+├── cut_clips.py
+├── lightly_studio_1_load_videos.py
+├── lightly_studio_2_load_anotations_fast.py
+├── lightly_studio_3_start_gui.py
+└── requirements.txt
 ```
 
-## Preprocessing the Videos
+??? note "How we created the clips from the original EPIC-KITCHENS-100 videos"
+    You do not need these steps to follow the tutorial. They show how we created the clips on HuggingFace from the original videos.
 
-We cut the videos into clips, one for each annotated action. The annotations provide the start and end times of each action, an example annotation looks like this:
+    **Download the videos**
 
-```text
-narration_id,participant_id,video_id,narration_timestamp,start_timestamp,stop_timestamp,start_frame,stop_frame,narration,verb,verb_class,noun,noun_class,all_nouns,all_noun_classes
-P01_102_0,P01,P01_102,00:00:01.100,00:00:00.54,00:00:02.23,27,111,take knife and plate,take,0,knife,4,"['knife', 'plate']","[4, 2]"
-```
+    The first obstacle is that EPIC-KITCHENS-55 videos and the extension part of EPIC-KITCHENS-100 are distributed separately. For simplicity, we focus on **the extension part of EPIC-KITCHENS-100**.
 
-We have let an AI assistant write a Python script which loads the annotations from the two files with `pandas`, and then calls `ffmpeg` to cut the clips from the videos. We also downsized the videos to 854x480px.
+    The videos are officially hosted on DataBris servers, but the mirrors are slow. Luckily, the extension dataset is also available via AcademicTorrents and HuggingFace, we are going to use the HuggingFace mirror:
 
-We uploaded [the script](https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips/blob/main/cut_clips.py) together with its outputs as the [lightly-ai/epic-kitchens-100-clips dataset](https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips) to HuggingFace. You can run it as follows, make sure ffmpeg is already installed on your system:
+    ```bash
+    # Download videos (464 GB)
+    hf download awsaf49/epic_kitchens_100 --repo-type dataset --include "*.MP4" --local-dir ./EPIC-KITCHENS-100
+    ```
 
-```bash
-pip install pandas tqdm
-python cut_clips.py
-```
+    The download size is big. To follow along, you can download a subset of the videos with the official downloader, as follows:
 
-It expects the folder structure described above, and creates a clips folder with the cut clips, named by their narration ID, e.g. `clips/P01/P01_102_0.mp4` for the example annotation above.
+    ```bash
+    # Clone the helper repo for downloading videos
+    git clone https://github.com/epic-kitchens/epic-kitchens-download-scripts.git
+    cd epic-kitchens-download-scripts
 
-!!! note
-    For the 464 GB dataset of videos, the script ran for about 8.5 hours on a 47-core machine, not exhaustively using all cores. It created 37455 clips, with a total size of 24 GB.
+    # Download the 10 shortest videos
+    python epic_downloader.py \
+        --videos \
+        --specific-videos P03_15,P03_26,P06_02,P09_01,P26_30,P04_19,P07_106,P03_110,P02_05,P26_12 \
+        --output-path ../EPIC-KITCHENS-100
+    ```
+
+    **Download the action annotations**
+
+    The action annotations are available in the `epic-kitchens-100-annotations` repository, which we simply clone:
+
+    ```bash
+    git clone https://github.com/epic-kitchens/epic-kitchens-100-annotations.git
+    ```
+
+    **Verify the folder structure**
+
+    After downloading, you should have the following folder structure. The videos are organized by participants `P01 - P37`, and each participant has a `videos` folder with the video files. The action annotations are in the `epic-kitchens-100-annotations` folder in `EPIC_100_train.csv` and `EPIC_100_validation.csv` files.
+
+    ```text
+    .
+    ├── EPIC-KITCHENS-100/
+    │   ├── P01/
+    │   │   └── videos/
+    │   │       ├── P01_101.MP4
+    │   │       └── ...
+    │   └── ...
+    └── epic-kitchens-100-annotations/
+        ├── EPIC_100_train.csv
+        ├── EPIC_100_validation.csv
+        └── ...
+    ```
+
+    **Cut the videos into clips**
+
+    We cut the videos into clips, one for each annotated action. The annotations provide the start and end times of each action, an example annotation looks like this:
+
+    ```text
+    narration_id,participant_id,video_id,narration_timestamp,start_timestamp,stop_timestamp,start_frame,stop_frame,narration,verb,verb_class,noun,noun_class,all_nouns,all_noun_classes
+    P01_102_0,P01,P01_102,00:00:01.100,00:00:00.54,00:00:02.23,27,111,take knife and plate,take,0,knife,4,"['knife', 'plate']","[4, 2]"
+    ```
+
+    We have let an AI assistant write a Python script which loads the annotations from the two files with `pandas`, and then calls `ffmpeg` to cut the clips from the videos. We also downsized the videos to 854x480px.
+
+    You can find [the script](https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips/blob/main/cut_clips.py) in the HuggingFace dataset. You can run it as follows, make sure ffmpeg is already installed on your system:
+
+    ```bash
+    pip install pandas tqdm
+    python cut_clips.py
+    ```
+
+    It expects the folder structure described above, and creates a clips folder with the cut clips, named by their narration ID, e.g. `clips/P01/P01_102_0.mp4` for the example annotation above.
+
+    !!! note
+        For the 464 GB dataset of videos, the script ran for about 8.5 hours on a 47-core machine, not exhaustively using all cores. It created 37455 clips, with a total size of 24 GB.
 
 ## Loading the Clips in LightlyStudio
 
-Now the difficult part is done, and we are ready to load the clips in LightlyStudio. First we install dependencies, we use `pandas` for loading annotations and `tqdm` for displaying progress:
+Go to the downloaded folder and install the dependencies. We use `pandas` for loading annotations and `tqdm` for displaying progress:
 
 ```bash
-pip install lightly-studio pandas tqdm
+cd epic-kitchens-100-clips
+pip install -r requirements.txt
 ```
 
-Create a Python script `load_clips.py` with the following content:
+All commands below run from this folder, so that the relative paths `./clips` and `./epic-kitchens-100-annotations` resolve correctly.
+
+### Load the Full Dataset with the Provided Scripts
+
+For the full dataset, run the three scripts from the HuggingFace dataset in order:
+
+```bash
+# Add the clips to a new video dataset
+python lightly_studio_1_load_videos.py
+
+# Add captions and metadata from the annotation CSVs with bulk inserts
+python lightly_studio_2_load_anotations_fast.py
+
+# Start the LightlyStudio GUI
+python lightly_studio_3_start_gui.py
+```
+
+The first script creates the dataset and computes the embeddings for all clips, this is the slowest step. The second script loads the annotations in bulk, which is much faster than adding them one-by-one. Run the first script only once, because it creates a new dataset.
+
+### Understand the Loading Code
+
+For a subset, or to understand what the scripts do, you can also use a single script. Create a Python script `load_clips.py` with the following content:
 
 ```python title="load_clips.py"
 import lightly_studio as ls
@@ -167,14 +245,16 @@ We first create a video dataset and add the videos from the clips folder. Then w
 python load_clips.py
 ```
 
-Once the data is loaded, it is persisted in the `lightly_studio.db` file. The GUI server can be safely stopped by pressing Ctrl+C in the terminal, and restarted by calling `ls.start_gui()` again:
+!!! note
+    Loading annotations one-by-one is slow for the full dataset. Use the provided scripts above for all 37455 clips.
+
+### Restart the GUI
+
+Once the data is loaded, it is persisted in the `lightly_studio.db` file. The GUI server can be safely stopped by pressing Ctrl+C in the terminal, and restarted without loading the data again:
 
 ```bash
-python -c "import lightly_studio as ls; ls.start_gui()"
+python lightly_studio_3_start_gui.py
 ```
-
-!!! note
-    Loading annotations one-by-one can be very slow. To process the whole dataset, we used a more optimised version of the script with bulk inserts. You can find it [on HuggingFace](https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips/blob/main/lightly_studio_2_load_anotations_fast.py).
 
 ## Exploring EpicKitchens with LightlyStudio
 
@@ -207,7 +287,7 @@ The dataset is quite big to scroll through fully. To get an overview of samples 
 To summarise, we have shown how to:
 
 - Overcome the difficulties of loading the EPIC-KITCHENS-100 dataset
-- Preprocess the videos into clips corresponding to annotated actions
+- Download the preprocessed clips and annotations from HuggingFace
 - Load and explore the dataset in LightlyStudio
 
 This only scratches the surface of the capabilities of LightlyStudio. To see how to edit captions, export the annotations, and more, check out the rest of this documentation, for example [Add Captions](../workflows/captions.md), [Sampling](../workflows/sampling.md), and [Export](../workflows/export.md).
