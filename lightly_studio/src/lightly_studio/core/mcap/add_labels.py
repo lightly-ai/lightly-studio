@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from mcap.exceptions import McapError
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.core.file_outcome_report import (
@@ -224,7 +225,7 @@ def _add_labels_for_sequence(
             messages=messages,
             annotation_source=annotation_source,
         )
-    except (McapAccessError, ValueError) as error:
+    except (McapAccessError, McapError, ValueError) as error:
         raise BrokenInputFileError(
             f"Cannot add annotations from '{annotation_mcap_uri}': {error}"
         ) from error

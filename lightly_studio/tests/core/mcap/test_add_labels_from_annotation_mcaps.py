@@ -111,6 +111,23 @@ def test_add_labels_from_annotation_mcaps__missing_annotation_mcap(
     assert annotations == []
 
 
+def test_add_labels_from_annotation_mcaps__broken_annotation_mcap(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, group_ids = _index_recording(tmp_path=tmp_path)
+    (tmp_path / "recording_labeled.mcap").write_bytes(b"not an mcap file")
+
+    dataset.add_labels_from_annotation_mcaps(topic=SCENE_UPDATE_TOPIC)
+
+    annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_manager.persistent_session(),
+        parent_sample_ids=group_ids,
+        annotation_types=[AnnotationType.CUBOID_3D],
+    )
+    assert annotations == []
+
+
 def test_add_mcaps_from_path__add_labels(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
