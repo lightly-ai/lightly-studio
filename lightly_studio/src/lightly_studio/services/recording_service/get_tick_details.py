@@ -6,8 +6,10 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.mcap_sequence_ticks import TickChannelView, TickDetailView
 from lightly_studio.resolvers import (
+    annotation_resolver,
     collection_resolver,
     mcap_group_sequence_resolver,
     mcap_resolver,
@@ -25,7 +27,8 @@ def get_tick_details(
     """Return the tick details for one tick of a sequence.
 
     The tick is identified by `sequence_id` and `seq_number`, and the details
-    hold the MCAP locators for every channel of that tick.
+    hold the MCAP locators for every channel of that tick and the annotations
+    attached to the tick group.
 
     Args:
         session: The database session.
@@ -54,6 +57,9 @@ def get_tick_details(
         return None
 
     channel_mcaps = mcap_resolver.get_tick_channels(session=session, group_sample_id=link.sample_id)
+    annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=session, parent_sample_ids=[link.sample_id]
+    )
     return TickDetailView(
         recording_id=mcap_sequence.recording_id,
         seq_number=link.seq_number,
@@ -62,4 +68,8 @@ def get_tick_details(
             name: TickChannelView.from_mcap_table(mcap=mcap, group_component_name=name)
             for name, mcap in channel_mcaps.items()
         },
+        annotations=[
+            AnnotationView.from_annotation_table(annotation=annotation)
+            for annotation in annotations
+        ],
     )

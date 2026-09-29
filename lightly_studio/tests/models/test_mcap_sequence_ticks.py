@@ -97,7 +97,7 @@ class TestTickChannelView:
 
 class TestTickDetailView:
     def test_fields(self) -> None:
-        """TickDetailView exposes recording_id, seq_number, timestamp_ns, and channels."""
+        """TickDetailView exposes recording_id, seq_number, timestamp_ns, channels, annotations."""
         recording_id = uuid4()
         channel = TickChannelView(
             channel_id=1,
@@ -110,11 +110,13 @@ class TestTickDetailView:
             seq_number=0,
             timestamp_ns=500,
             channels={"front": channel},
+            annotations=[],
         )
         assert detail.recording_id == recording_id
         assert detail.seq_number == 0
         assert detail.timestamp_ns == 500
         assert detail.channels["front"].channel_id == 1
+        assert detail.annotations == []
 
     def test_timestamp_ns__none(self) -> None:
         """TickDetailView accepts None for timestamp_ns."""
@@ -123,5 +125,6 @@ class TestTickDetailView:
             seq_number=1,
             timestamp_ns=None,
             channels={},
+            annotations=[],
         )
         assert detail.timestamp_ns is None
