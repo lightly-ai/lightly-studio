@@ -27,6 +27,35 @@ def test_annotation_mcap_uri__custom_suffix() -> None:
     )
 
 
+def test_recording_uri_from_annotation_mcap() -> None:
+    assert (
+        annotation_mcap.recording_uri_from_annotation_mcap(uri="/data/foo_labeled.mcap")
+        == "/data/foo.mcap"
+    )
+    assert (
+        annotation_mcap.recording_uri_from_annotation_mcap(
+            uri="s3://bucket/runs/batch/foo_labeled.mcap"
+        )
+        == "s3://bucket/runs/batch/foo.mcap"
+    )
+    assert (
+        annotation_mcap.recording_uri_from_annotation_mcap(uri="C:\\bags\\foo_labeled.mcap")
+        == "C:/bags/foo.mcap"
+    )
+    assert (
+        annotation_mcap.recording_uri_from_annotation_mcap(uri="/data/foo_gt.mcap", suffix="_gt")
+        == "/data/foo.mcap"
+    )
+
+
+def test_recording_uri_from_annotation_mcap__roundtrip() -> None:
+    recording_uri = "C:\\bags\\foo.mcap"
+    annotation_uri = annotation_mcap.annotation_mcap_uri(recording_uri=recording_uri)
+    assert annotation_mcap.recording_uri_from_annotation_mcap(
+        uri=annotation_uri
+    ) == annotation_mcap.normalized_uri(recording_uri)
+
+
 def test_is_annotation_mcap() -> None:
     assert annotation_mcap.is_annotation_mcap(uri="/data/foo_labeled.mcap")
     assert annotation_mcap.is_annotation_mcap(uri="s3://bucket/foo_labeled.mcap")
