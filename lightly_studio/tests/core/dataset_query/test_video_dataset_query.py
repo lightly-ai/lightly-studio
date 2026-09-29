@@ -59,6 +59,12 @@ class TestVideoDatasetQuery:
         with pytest.raises(StopIteration):
             next(it)
 
+        query = dataset.query().match(VideoSampleField.duration_s > 12)
+        it = iter(query)
+        assert next(it).file_name == "test_video_1.mp4"
+        with pytest.raises(StopIteration):
+            next(it)
+
     def test_ordering(
         self,
         patch_collection: None,  # noqa: ARG002

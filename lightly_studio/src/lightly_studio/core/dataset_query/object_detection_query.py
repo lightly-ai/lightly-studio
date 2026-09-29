@@ -67,9 +67,11 @@ class ObjectDetectionQuery(MatchExpression):
 
     def get(self) -> ColumnElement[bool]:
         """Get the object detection match expression."""
-        return SampleTable.annotations.any(
-            and_(
-                col(AnnotationBaseTable.annotation_type) == AnnotationType.OBJECT_DETECTION,
-                self.criterion.get(),
-            )
+        return SampleTable.annotations.any(self.get_annotation_criterion())
+
+    def get_annotation_criterion(self) -> ColumnElement[bool]:
+        """Get the condition that a single annotation must fulfil to match."""
+        return and_(
+            col(AnnotationBaseTable.annotation_type) == AnnotationType.OBJECT_DETECTION,
+            self.criterion.get(),
         )

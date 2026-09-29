@@ -7,6 +7,7 @@ from sqlalchemy import or_
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.range import FloatRange
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -34,7 +35,7 @@ class VideoFilter(GridFilterBase):
         query = self._apply_duration_filters(query)
 
         if self.sample_filter:
-            query = self.sample_filter.apply(query)
+            query = self.sample_filter.apply(query=query, sample_type=SampleType.VIDEO)
         if self.frame_annotation_filter is not None:
             query = self._apply_annotation_filter(query)
 
