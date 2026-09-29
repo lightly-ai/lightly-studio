@@ -10,7 +10,7 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
-from lightly_studio.database import db_vector
+from lightly_studio.database import db_insert, db_vector
 from lightly_studio.database.db_manager import DatabaseBackend
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.sample import SampleTable
@@ -47,14 +47,17 @@ def create_many(
 ) -> None:
     """Create many sample embeddings.
 
+    Skips an embedding whose sample and model already have an embedding, for example one
+    that a concurrent caller stored first.
+
     Args:
         session: The database session.
         sample_embeddings: The embeddings to insert.
         commit: Whether to commit. Pass ``False`` to insert as part of a larger
             transaction that the caller commits, so multiple calls stay atomic.
     """
-    db_sample_embeddings = [SampleEmbeddingTable.model_validate(e) for e in sample_embeddings]
-    session.bulk_save_objects(db_sample_embeddings)
+    rows = [SampleEmbeddingTable.model_validate(e).model_dump() for e in sample_embeddings]
+    db_insert.insert_ignoring_conflicts(session=session, table=SampleEmbeddingTable, rows=rows)
     if commit:
         session.commit()
 

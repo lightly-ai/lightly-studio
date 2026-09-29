@@ -32,6 +32,7 @@ from sqlmodel import Session, SQLModel, col, select
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -147,6 +148,7 @@ def deep_copy(
     _copy_annotations(session=session, now=now)
     _copy_annotation_details(session=session, detail_table=ObjectDetectionAnnotationTable)
     _copy_annotation_details(session=session, detail_table=SegmentationAnnotationTable)
+    _copy_annotation_details(session=session, detail_table=Cuboid3DAnnotationTable)
     _copy_annotation_details(session=session, detail_table=TemporalSpanTable)
 
     _copy_sample_embeddings(session=session)
@@ -429,13 +431,17 @@ def _copy_tags(session: Session, now: datetime) -> None:
 
 
 def _copy_object_tracks(session: Session, new_dataset_id: UUID) -> None:
-    """Copy object tracks, remapping dataset_id."""
+    """Copy object tracks, remapping dataset_id and parent_object_track_id."""
     src = _table(ObjectTrackTable).alias("src")
     map_track = _map(_MAP_OBJECT_TRACK)
-    from_clause = src.join(map_track, map_track.c.old_id == src.c["object_track_id"])
+    map_parent_track = _map(_MAP_OBJECT_TRACK, alias="map_parent_track")
+    from_clause = src.join(map_track, map_track.c.old_id == src.c["object_track_id"]).outerjoin(
+        map_parent_track, map_parent_track.c.old_id == src.c["parent_object_track_id"]
+    )
     overrides = {
         "object_track_id": map_track.c.new_id,
         "dataset_id": literal(new_dataset_id),
+        "parent_object_track_id": map_parent_track.c.new_id,
     }
     _copy_table(
         session=session,
@@ -709,7 +715,7 @@ def _copy_annotations(session: Session, now: datetime) -> None:
 
 
 def _copy_annotation_details(session: Session, detail_table: type[SQLModel]) -> None:
-    """Copy an annotation detail table (object detection / segmentation), remapping sample_id."""
+    """Copy an annotation detail table, remapping sample_id."""
     src = _table(detail_table).alias("src")
     map_sample = _map(_MAP_SAMPLE)
     from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"])

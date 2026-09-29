@@ -493,3 +493,31 @@ def test_generate_embeddings__empty_sample_ids(
 
     # Embedder resolution should be skipped when sample_ids is empty.
     spy_get_embedder.assert_not_called()
+
+
+def test_generate_embeddings__rerun_embeds_missing_samples(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    session = db_manager.persistent_session()
+    dataset = create_collection(session=session)
+    image1 = create_image(
+        session=session, collection_id=dataset.collection_id, file_path_abs="/path/to/1.png"
+    )
+    image_dataset._generate_embeddings_image(
+        session=session,
+        collection_id=dataset.collection_id,
+        sample_ids=[image1.sample_id],
+    )
+    # This image has no embedding, as after an embedder failure
+    image2 = create_image(
+        session=session, collection_id=dataset.collection_id, file_path_abs="/path/to/2.png"
+    )
+
+    image_dataset._generate_embeddings_image(
+        session=session,
+        collection_id=dataset.collection_id,
+        sample_ids=[],
+    )
+
+    assert len(image1.sample.embeddings) == 1
+    assert len(image2.sample.embeddings) == 1
