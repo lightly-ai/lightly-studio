@@ -39,8 +39,8 @@ def register_default_embedder(
     builds, needs the first case only. When ingestion first embeds a collection with it,
     the dataset stores the URL and the API key of the server in plain text. A later
     process, such as ``lightly-studio gui``, then embeds search queries on that server
-    with no registration. To change the URL or the key later, use
-    ``register_remote_embedder``.
+    with no registration. A server that the dataset already stores for the space is kept.
+    To change the URL or the key, use ``register_remote_embedder``.
 
     Args:
         embedder: The embedder to register. Its embedding space is read from

@@ -275,7 +275,7 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
         ),
     )
     model_id = db_model.embedding_model_id
-    _store_remote_endpoint(session=session, embedding_model_id=model_id, embedder=embedder)
+    _store_remote_endpoint(session=session, embedding_model=db_model, embedder=embedder)
     collection_embedding_model_resolver.get_or_add_collection_model(
         session=session, collection_id=collection_id, embedding_model_id=model_id
     )
@@ -285,13 +285,19 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
     return model_id
 
 
-def _store_remote_endpoint(session: Session, embedding_model_id: UUID, embedder: Embedder) -> None:
+def _store_remote_endpoint(
+    session: Session, embedding_model: EmbeddingModelTable, embedder: Embedder
+) -> None:
     """Store the server of the embedder on the model, so that a later process reaches it.
 
     The model keeps the URL and the API key in plain text, the same write that
     ``register_remote_embedder`` makes. An embedder that names no server leaves the model
-    unchanged, so a local embedder does not clear a server that the model already stores.
+    unchanged, so a local embedder does not clear a server that the model already stores. A
+    model that already stores a server keeps it, so that only ``register_remote_embedder``
+    changes it.
     """
+    if embedding_model.remote_embedder_url is not None:
+        return
     if not isinstance(embedder, PersistableEmbedder):
         return
     endpoint = embedder.remote_endpoint()
@@ -299,7 +305,7 @@ def _store_remote_endpoint(session: Session, embedding_model_id: UUID, embedder:
         return
     embedding_model_resolver.set_remote_embedder(
         session=session,
-        embedding_model_id=embedding_model_id,
+        embedding_model_id=embedding_model.embedding_model_id,
         url=endpoint.url,
         api_key=endpoint.api_key,
     )

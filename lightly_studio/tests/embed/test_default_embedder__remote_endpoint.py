@@ -114,3 +114,42 @@ def test_resolve_default_embedder__local_embedder_keeps_stored_server(
     assert stored is not None
     assert stored.remote_embedder_url == "http://embedder.test"
     assert stored.api_key == "secret-token"
+
+
+def test_resolve_default_embedder__keeps_stored_server(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    registry = EmbedderRegistry()
+    registry.register(
+        embedder=_EndpointImageEmbedder(
+            endpoint=RemoteEndpoint(url="http://other.test", api_key="other-token")
+        )
+    )
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    # The dataset already stores a server for the space, and the collection has no default.
+    model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="acme/model@v1",
+        embedding_dimension=2,
+    )
+    embedding_model_resolver.set_remote_embedder(
+        session=db_session,
+        embedding_model_id=model.embedding_model_id,
+        url="http://embedder.test",
+        api_key="secret-token",
+    )
+
+    default_embedder.resolve_default_embedder(
+        session=db_session,
+        collection_id=collection.collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+    )
+
+    stored = embedding_model_resolver.get_by_id(
+        session=db_session, embedding_model_id=model.embedding_model_id
+    )
+    assert stored is not None
+    assert stored.remote_embedder_url == "http://embedder.test"
+    assert stored.api_key == "secret-token"
