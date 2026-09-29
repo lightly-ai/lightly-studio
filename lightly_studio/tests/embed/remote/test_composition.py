@@ -118,3 +118,12 @@ def test_compose_remote_embedder_class__repeated_capability() -> None:
             capabilities=[Capability.IMAGE_PATH, Capability.IMAGE_PATH],
             capability_to_base=_CAPABILITY_TO_BASE,
         )
+
+
+def test_is_composed() -> None:
+    built = composition.compose_remote_embedder_class(
+        capabilities=[Capability.TEXT], capability_to_base=_CAPABILITY_TO_BASE
+    )
+
+    assert composition.is_composed(cls=built)
+    assert not composition.is_composed(cls=_TextRoute)

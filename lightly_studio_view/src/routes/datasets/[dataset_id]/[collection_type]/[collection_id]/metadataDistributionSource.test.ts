@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     buildMetadataDistributionSource,
+    selectCategoricalFetchState,
     selectCategoricalMetadataKeys,
     selectNumericMetadataKeys,
     selectComparisonSampleTags
@@ -195,5 +196,42 @@ describe('selectComparisonSampleTags', () => {
 
     it('ignores an id no longer offered', () => {
         expect(selectComparisonSampleTags(items, ['tag-c'])).toEqual([]);
+    });
+});
+
+describe('selectCategoricalFetchState', () => {
+    const idle = { isFetching: false, data: { city: [zurich] } };
+    const refetching = { isFetching: true, data: { city: [zurich] } };
+
+    it('is idle when no query is fetching', () => {
+        expect(selectCategoricalFetchState([idle, idle], 'city')).toEqual({
+            loading: false,
+            updating: false
+        });
+    });
+
+    it('keeps the old bars while a query refetches the same field', () => {
+        expect(selectCategoricalFetchState([idle, refetching], 'city')).toEqual({
+            loading: false,
+            updating: true
+        });
+    });
+
+    it('waits while a query has no data for the field', () => {
+        const firstLoad = { isFetching: true, data: undefined };
+        const otherField = { isFetching: true, data: { country: [bern] } };
+
+        expect(selectCategoricalFetchState([idle, firstLoad], 'city').loading).toBe(true);
+        expect(selectCategoricalFetchState([refetching, otherField], 'city')).toEqual({
+            loading: true,
+            updating: false
+        });
+    });
+
+    it('is idle when no categorical field is active', () => {
+        expect(selectCategoricalFetchState([refetching], undefined)).toEqual({
+            loading: false,
+            updating: false
+        });
     });
 });

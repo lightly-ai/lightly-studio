@@ -52,10 +52,13 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
 
     readonly lidarChannels = $derived.by(() => this.#summary.data?.lidar_channels ?? []);
 
-    // `null` until the user picks channels, so every lidar channel is shown by default.
-    #pickedLidarChannels = $state<number[] | null>(null);
-    readonly selectedLidarChannels = $derived.by(
-        () => this.#pickedLidarChannels ?? this.lidarChannels.map((channel) => channel.channel_id)
+    // `null` until the user picks channels, so every lidar channel is shown by default. The pick
+    // is keyed by its source, so it resets when the dataset or the sequence changes.
+    #pickedLidarChannels = $state<{ source: string; channelIds: number[] } | null>(null);
+    readonly selectedLidarChannels = $derived.by(() =>
+        this.#pickedLidarChannels?.source === this.#source
+            ? this.#pickedLidarChannels.channelIds
+            : this.lidarChannels.map((channel) => channel.channel_id)
     );
     readonly cameraChannels = $derived.by(() => this.#summary.data?.camera_channels ?? []);
 
@@ -115,9 +118,16 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
 
     toggleLidarChannel(channelId: number): void {
         const selected = this.selectedLidarChannels;
-        this.#pickedLidarChannels = selected.includes(channelId)
-            ? selected.filter((id) => id !== channelId)
-            : [...selected, channelId];
+        this.#pickedLidarChannels = {
+            source: this.#source,
+            channelIds: selected.includes(channelId)
+                ? selected.filter((id) => id !== channelId)
+                : [...selected, channelId]
+        };
+    }
+
+    get #source(): string {
+        return `${this.datasetId}/${this.sequenceId}`;
     }
 
     // Arrow functions, because the panes pass these as event handlers without the instance.

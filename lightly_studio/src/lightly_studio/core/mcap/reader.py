@@ -477,11 +477,11 @@ class McapFileReader:
             McapAccessError: If the topic has no message, if its messages do not hold
                 camera intrinsics, or if its messages cannot be decoded.
         """
-        for _, decoded_message in self._iter_decoded_messages(topic):
+        for _, decoded_message in self.iter_decoded_messages(topic):
             return camera_info.from_decoded_message(decoded_message)
         raise McapAccessError(f"Topic '{topic}' has no message to read camera intrinsics from.")
 
-    def _iter_decoded_messages(self, topic: str) -> Iterator[tuple[int, Any]]:
+    def iter_decoded_messages(self, topic: str) -> Iterator[tuple[int, Any]]:
         """Yields the log time and the payload of every decoded message on a topic.
 
         Raises:
@@ -508,7 +508,7 @@ class McapFileReader:
             McapAccessError: If a message on the topic cannot be decoded.
         """
         static_transforms: list[StaticTransform] = []
-        for log_time_ns, decoded_message in self._iter_decoded_messages(topic):
+        for log_time_ns, decoded_message in self.iter_decoded_messages(topic):
             static_transforms.extend(
                 transforms.from_decoded_message(decoded_message, log_time_ns=log_time_ns)
             )

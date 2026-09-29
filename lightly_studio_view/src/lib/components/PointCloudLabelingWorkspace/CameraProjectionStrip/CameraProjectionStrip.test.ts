@@ -26,6 +26,7 @@ const tickDetails: TickDetailView = {
     recording_id: 'recording-1',
     seq_number: 0,
     timestamp_ns: 1000,
+    annotations: [],
     channels: {
         // Video channel with a keyframe locator: renders, seeking to the keyframe.
         front: {

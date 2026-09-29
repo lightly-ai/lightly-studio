@@ -31,6 +31,8 @@ export function createPointCloudBuffer(): PointCloudBuffer {
     let positions = new Float32Array(0);
     let intensities = new Float32Array(0);
     let colors = new Float32Array(0);
+    // Per-point rgb from the most recent batch, used when colorMode is "rgb".
+    let sourceColors: Float32Array | undefined;
     let positionAttribute = new BufferAttribute(positions, 3);
     let colorAttribute = new BufferAttribute(colors, 3);
 
@@ -57,6 +59,7 @@ export function createPointCloudBuffer(): PointCloudBuffer {
         ensureCapacity(batch.count);
         positions.set(batch.positions.subarray(0, batch.count * 3), 0);
         intensities.set(batch.intensities.subarray(0, batch.count), 0);
+        sourceColors = batch.colors;
         positionAttribute.needsUpdate = true;
         geometry.setDrawRange(0, batch.count);
 
@@ -76,15 +79,15 @@ export function createPointCloudBuffer(): PointCloudBuffer {
     ): void {
         if (count === 0) return;
 
-        buildColorBuffer(
+        buildColorBuffer({
             positions,
             intensities,
             count,
             colorMode,
             colors,
             intensityRange,
-            pointColors
-        );
+            pointColors: pointColors ?? sourceColors
+        });
         colorAttribute.needsUpdate = true;
     }
 

@@ -18,9 +18,11 @@ from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import collection_resolver, recording_resolver
-from lightly_studio.services.recording_service import get_point_cloud as get_point_cloud_module
-from lightly_studio.services.recording_service import reader_cache
-from lightly_studio.services.recording_service.get_point_cloud import get_point_cloud
+from lightly_studio.services.recording_service import (
+    get_point_cloud,
+    reader_cache,
+    serialize_point_cloud,
+)
 from tests.core.mcap import helpers
 
 
@@ -59,7 +61,7 @@ def test_get_point_cloud(db_session: Session, tmp_path: Path) -> None:
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
     timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
 
-    point_cloud = get_point_cloud(
+    point_cloud = get_point_cloud.get_point_cloud(
         session=db_session,
         dataset_id=collection.dataset_id,
         recording_id=recording_id,
@@ -84,7 +86,7 @@ def test_get_point_cloud__metadata(db_session: Session, tmp_path: Path) -> None:
     recording_id = _create_recording(db_session, collection, mcap_path)
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
-    point_cloud = get_point_cloud(
+    point_cloud = get_point_cloud.get_point_cloud(
         session=db_session,
         dataset_id=collection.dataset_id,
         recording_id=recording_id,
@@ -111,7 +113,7 @@ def test_get_point_cloud__target_frame(db_session: Session, tmp_path: Path) -> N
     recording_id = _create_recording(db_session, collection, mcap_path)
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
-    point_cloud = get_point_cloud(
+    point_cloud = get_point_cloud.get_point_cloud(
         session=db_session,
         dataset_id=collection.dataset_id,
         recording_id=recording_id,
@@ -138,7 +140,7 @@ def test_get_point_cloud__target_frame_is_sensor_frame(db_session: Session, tmp_
     recording_id = _create_recording(db_session, collection, mcap_path)
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
-    point_cloud = get_point_cloud(
+    point_cloud = get_point_cloud.get_point_cloud(
         session=db_session,
         dataset_id=collection.dataset_id,
         recording_id=recording_id,
@@ -165,7 +167,7 @@ def test_get_point_cloud__unknown_target_frame(db_session: Session, tmp_path: Pa
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
     with pytest.raises(McapAccessError, match="No static transform connects"):
-        get_point_cloud(
+        get_point_cloud.get_point_cloud(
             session=db_session,
             dataset_id=collection.dataset_id,
             recording_id=recording_id,
@@ -183,7 +185,7 @@ def test_get_point_cloud__no_match(db_session: Session, tmp_path: Path) -> None:
     recording_id = _create_recording(db_session, collection, mcap_path)
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
-    point_cloud = get_point_cloud(
+    point_cloud = get_point_cloud.get_point_cloud(
         session=db_session,
         dataset_id=collection.dataset_id,
         recording_id=recording_id,
@@ -195,7 +197,7 @@ def test_get_point_cloud__no_match(db_session: Session, tmp_path: Path) -> None:
 
 
 def test_get_point_cloud__unknown_recording(db_session: Session) -> None:
-    point_cloud = get_point_cloud(
+    point_cloud = get_point_cloud.get_point_cloud(
         session=db_session,
         dataset_id=uuid4(),
         recording_id=uuid4(),
@@ -213,7 +215,7 @@ def test_get_point_cloud__wrong_dataset(db_session: Session, tmp_path: Path) -> 
     recording_id = _create_recording(db_session, collection, mcap_path)
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
-    point_cloud = get_point_cloud(
+    point_cloud = get_point_cloud.get_point_cloud(
         session=db_session,
         dataset_id=uuid4(),
         recording_id=recording_id,
@@ -232,7 +234,7 @@ def test_get_point_cloud__unknown_channel(db_session: Session, tmp_path: Path) -
     recording_id = _create_recording(db_session, collection, mcap_path)
 
     with pytest.raises(ChannelNotFoundError):
-        get_point_cloud(
+        get_point_cloud.get_point_cloud(
             session=db_session,
             dataset_id=collection.dataset_id,
             recording_id=recording_id,
@@ -250,7 +252,7 @@ def test_get_point_cloud__non_point_cloud_channel(db_session: Session, tmp_path:
     channel_id = _channel_id(mcap_path, helpers.CAMERA_VIDEO_TOPIC)
 
     with pytest.raises(McapAccessError):
-        get_point_cloud(
+        get_point_cloud.get_point_cloud(
             session=db_session,
             dataset_id=collection.dataset_id,
             recording_id=recording_id,
@@ -279,13 +281,11 @@ def test_serialize_point_cloud__intensity(field_name: str) -> None:
         "data": data,
     }
 
-    payload = get_point_cloud_module._serialize_point_cloud(
+    payload = serialize_point_cloud.serialize_point_cloud(
         message=message,
         channel_id=1,
         topic=helpers.LIDAR_POINTS_TOPIC,
         log_time_ns=helpers.LIDAR_LOG_TIMES_NS[0],
-        transform=None,
-        frame_id=helpers.LIDAR_FRAME_ID,
     )
 
     # Intensity is scaled into [0, 1] over the cloud's own range.

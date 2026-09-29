@@ -25,6 +25,17 @@ class PointCloudLayout:
     endian: Literal[">", "<"]
 
 
+@dataclass(frozen=True)
+class PointCloudFrameMetadata:
+    """Frame-level metadata attached to a serialized point cloud."""
+
+    channel_id: int
+    topic: str
+    log_time_ns: int
+    frame_id: str
+    source_point_count: int
+
+
 FLOAT32_DATATYPE = 7
 POINT_FIELD_DTYPES: dict[int, str] = {
     1: "i1",

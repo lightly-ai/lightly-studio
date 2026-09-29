@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import MetadataCategoricalFilter from './MetadataCategoricalFilter.svelte';
 import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
@@ -23,6 +23,58 @@ const defaultProps = {
 };
 
 describe('MetadataCategoricalFilter', () => {
+    it('keeps field values collapsed until the values dropdown is opened', async () => {
+        const onToggle = vi.fn();
+        render(MetadataCategoricalFilter, {
+            props: {
+                ...defaultProps,
+                layout: 'list',
+                fieldLabel: 'location',
+                buckets: [
+                    { id: 'city', kind: 'value', value: 'city', label: 'city', count: 3 },
+                    { id: 'rural', kind: 'value', value: 'rural', label: 'rural', count: 2 }
+                ],
+                onToggle
+            }
+        });
+
+        const field = screen.getByTestId('metadata-categorical-filter');
+        expect(within(field).getByRole('heading', { name: 'location' })).toBeVisible();
+        const trigger = within(field).getByTestId('metadata-categorical-filter-trigger');
+        expect(trigger).toBeVisible();
+        expect(within(field).queryByRole('checkbox')).toBeNull();
+
+        await fireEvent.click(trigger);
+        expect(screen.getByText('city')).toBeVisible();
+        expect(screen.getByText('rural')).toBeVisible();
+
+        await fireEvent.click(
+            screen.getByRole('checkbox', { name: 'Select value city, 3 samples' })
+        );
+        expect(onToggle).toHaveBeenCalledWith('city');
+    });
+
+    it('shows the initial load error and retry action when no values have loaded', async () => {
+        const onRetry = vi.fn();
+        render(MetadataCategoricalFilter, {
+            props: {
+                ...defaultProps,
+                layout: 'list',
+                buckets: [],
+                error: 'Request failed',
+                onRetry
+            }
+        });
+
+        expect(screen.getByText('Could not load metadata distribution.')).toBeVisible();
+        expect(screen.getByRole('alert')).toBeVisible();
+        await fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+        expect(onRetry).toHaveBeenCalledOnce();
+
+        await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
+        expect(screen.getAllByText(/Could not load metadata distribution/)).toHaveLength(2);
+    });
+
     it('keeps the summary and the chevron as direct children of the trigger', () => {
         render(MetadataCategoricalFilter, { props: defaultProps });
 

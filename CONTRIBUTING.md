@@ -277,7 +277,7 @@ Optional, for UI work only. This runs the Vite dev server in front of the backen
 
 ```shell
 cd lightly_studio_view
-cp .env.example .env.local
+cp .env.example .env.development.local
 npm run dev
 ```
 

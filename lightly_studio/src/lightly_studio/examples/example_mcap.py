@@ -25,12 +25,17 @@ from lightly_studio.database import db_manager
 # camera reads its coordinate frame from `camera_info_topic`; a lidar names it here,
 # because it is part of the message payload, which the access layer does not read.
 COMPONENTS = [
-
     ls.McapComponentSpec(
         name="front",
         mcap_data_type=ls.McapDataType.VIDEO_FRAME,
         topic="/hal/perception/Main/compressed_video",
         camera_info_topic="/hal/perception/Main/camera_info",
+    ),
+    ls.McapComponentSpec(
+        name="mast_left_rear",
+        mcap_data_type=ls.McapDataType.VIDEO_FRAME,
+        topic="/hal/perception/MastLeftRear/compressed_video",
+        camera_info_topic="/hal/perception/MastLeftRear/camera_info",
     ),
     ls.McapComponentSpec(
         name="mast_left_side",
@@ -39,22 +44,16 @@ COMPONENTS = [
         camera_info_topic="/hal/perception/MastLeftSide/camera_info",
     ),
     ls.McapComponentSpec(
-        name="mast_right_side",
-        mcap_data_type=ls.McapDataType.VIDEO_FRAME,
-        topic="/hal/perception/MastRightSide/compressed_video",
-        camera_info_topic="/hal/perception/MastRightSide/camera_info",
-    ),
-        ls.McapComponentSpec(
-        name="mast_left_rear",
-        mcap_data_type=ls.McapDataType.VIDEO_FRAME,
-        topic="/hal/perception/MastLeftRear/compressed_video",
-        camera_info_topic="/hal/perception/MastLeftRear/camera_info",
-    ),
-    ls.McapComponentSpec(
         name="mast_right_rear",
         mcap_data_type=ls.McapDataType.VIDEO_FRAME,
         topic="/hal/perception/MastRightRear/compressed_video",
         camera_info_topic="/hal/perception/MastRightRear/camera_info",
+    ),
+    ls.McapComponentSpec(
+        name="mast_right_side",
+        mcap_data_type=ls.McapDataType.VIDEO_FRAME,
+        topic="/hal/perception/MastRightSide/compressed_video",
+        camera_info_topic="/hal/perception/MastRightSide/camera_info",
     ),
     ls.McapComponentSpec(
         name="pcl_front_left",

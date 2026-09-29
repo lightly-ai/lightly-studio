@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.services.recording_service.get_point_cloud import (
+from lightly_studio.services.recording_service import (
     get_point_cloud as get_point_cloud_service,
 )
 
@@ -22,9 +22,13 @@ class PointCloudQuery(BaseModel):
     """Query parameters selecting one point-cloud message."""
 
     channel_id: int = Query(description="The point-cloud channel to read.")
-    timestamp_ns: int = Query(
-        ge=0,
-        description="Exact MCAP log time in nanoseconds from the tick's channel locator.",
+    timestamp_ns: str = Query(
+        pattern=r"^\d+$",
+        max_length=20,
+        description=(
+            "Exact MCAP log time in nanoseconds from the tick's channel locator. "
+            "Sent as a string so the client can keep the 64-bit value exact."
+        ),
     )
     target_frame_id: str | None = Query(
         default=None,
@@ -45,12 +49,12 @@ def get_point_cloud(
 ) -> Response:
     """Return one channel's point data as an Arrow IPC stream."""
     try:
-        point_cloud = get_point_cloud_service(
+        point_cloud = get_point_cloud_service.get_point_cloud(
             session=session,
             dataset_id=dataset_id,
             recording_id=recording_id,
             channel_id=point_cloud_query.channel_id,
-            timestamp_ns=point_cloud_query.timestamp_ns,
+            timestamp_ns=int(point_cloud_query.timestamp_ns),
             target_frame_id=point_cloud_query.target_frame_id,
         )
     except ChannelNotFoundError as exc:

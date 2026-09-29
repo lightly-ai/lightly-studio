@@ -1,63 +1,85 @@
-import { describe, expect, it, vi } from 'vitest';
-import { Table, tableFromIPC } from 'apache-arrow';
-import { parseCloudPointFrame } from './useCloudPointFrame.svelte';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { CreateQueryResult } from '@tanstack/svelte-query';
+import * as tanstackQuery from '@tanstack/svelte-query';
+import { useCloudPointFrame } from './useCloudPointFrame.svelte';
+import { fetchCloudPointFrame } from './fetchCloudPointFrame';
+import { mergeCloudPointFrames } from './mergeCloudPointFrames';
+import type { CloudPointFrame } from './types';
 
-vi.mock('apache-arrow', () => ({ tableFromIPC: vi.fn() }));
+vi.mock('./fetchCloudPointFrame', () => ({ fetchCloudPointFrame: vi.fn() }));
+vi.mock('./mergeCloudPointFrames', () => ({ mergeCloudPointFrames: vi.fn() }));
 
-describe('parseCloudPointFrame', () => {
-    it('packs xyz columns and reads frame metadata', async () => {
-        const table = {
-            schema: {
-                metadata: new Map([
-                    ['frame_id', 'lidar'],
-                    ['log_time_ns', '1788220800123000000'],
-                    ['source_point_count', '2'],
-                    ['bounds', '{"min":[1,2,3],"max":[4,5,6]}']
-                ])
-            },
-            getChild: (name: string) => {
-                const values: Record<string, Float32Array> = {
-                    x: new Float32Array([1, 4]),
-                    y: new Float32Array([2, 5]),
-                    z: new Float32Array([3, 6]),
-                    intensity: new Float32Array([0.25, 0.75]),
-                    r: new Float32Array([0.1, 0.4]),
-                    g: new Float32Array([0.2, 0.5]),
-                    b: new Float32Array([0.3, 0.6])
-                };
-                return values[name] ? { toArray: () => values[name] } : null;
-            }
-        };
-        vi.mocked(tableFromIPC).mockResolvedValue(table as unknown as Table);
+interface QueryOptions {
+    queryKey: unknown[];
+    enabled: boolean;
+    queryFn: (context: { signal?: AbortSignal }) => Promise<CloudPointFrame>;
+}
 
-        const result = await parseCloudPointFrame(new ArrayBuffer(0), {
-            channelId: 7,
-            timestampNs: 'fallback'
-        });
+const defaultParams = () => ({
+    datasetId: 'dataset-1',
+    recordingId: 'recording-1',
+    channels: [
+        { channelId: 1, timestampNs: '100' },
+        { channelId: 2, timestampNs: '200' }
+    ]
+});
 
-        expect(result.batch).toEqual({
-            positions: new Float32Array([1, 2, 3, 4, 5, 6]),
-            intensities: new Float32Array([0.25, 0.75]),
-            colors: new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]),
-            count: 2
-        });
-        expect(result).toMatchObject({
-            channelId: 7,
-            timestampNs: '1788220800123000000',
-            frameId: 'lidar',
-            sourcePointCount: 2,
-            bounds: { min: [1, 2, 3], max: [4, 5, 6] },
-            channels: [{ channelId: 7, timestampNs: '1788220800123000000', frameId: 'lidar' }]
-        });
+function getQueryOptions(getParams: () => ReturnType<typeof defaultParams>): QueryOptions {
+    const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
+    useCloudPointFrame(getParams);
+    return createQuerySpy.mock.lastCall?.[0]() as unknown as QueryOptions;
+}
+
+describe('useCloudPointFrame', () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue(
+            {} as CreateQueryResult<CloudPointFrame, Error>
+        );
     });
 
-    it('rejects data without all coordinate columns', async () => {
-        vi.mocked(tableFromIPC).mockResolvedValue({
-            getChild: (name: string) => (name === 'x' ? { toArray: () => [1] } : null)
-        } as unknown as Table);
+    it('builds a query key from the dataset, recording, channels, and target frame', () => {
+        const options = getQueryOptions(() => ({ ...defaultParams(), targetFrameId: 'base' }));
 
-        await expect(
-            parseCloudPointFrame(new ArrayBuffer(0), { channelId: 7, timestampNs: '10' })
-        ).rejects.toThrow('Point-cloud Arrow data must contain matching x, y, and z columns.');
+        expect(options.queryKey).toEqual([
+            'cloud-point-frame',
+            'dataset-1',
+            'recording-1',
+            defaultParams().channels,
+            'base'
+        ]);
+    });
+
+    it('is enabled only when dataset, recording, and channels are all present', () => {
+        expect(getQueryOptions(defaultParams).enabled).toBe(true);
+        expect(getQueryOptions(() => ({ ...defaultParams(), channels: [] })).enabled).toBe(false);
+        expect(getQueryOptions(() => ({ ...defaultParams(), datasetId: '' })).enabled).toBe(false);
+        expect(getQueryOptions(() => ({ ...defaultParams(), recordingId: '' })).enabled).toBe(
+            false
+        );
+    });
+
+    it('fetches every channel and merges the resulting frames', async () => {
+        const merged = { frameId: 'merged' } as unknown as CloudPointFrame;
+        vi.mocked(fetchCloudPointFrame).mockImplementation(
+            async ({ channel }) => ({ frameId: `frame-${channel.channelId}` }) as CloudPointFrame
+        );
+        vi.mocked(mergeCloudPointFrames).mockReturnValue(merged);
+
+        const signal = new AbortController().signal;
+        const result = await getQueryOptions(defaultParams).queryFn({ signal });
+
+        expect(fetchCloudPointFrame).toHaveBeenCalledTimes(2);
+        expect(fetchCloudPointFrame).toHaveBeenNthCalledWith(1, {
+            datasetId: 'dataset-1',
+            recordingId: 'recording-1',
+            channel: { channelId: 1, timestampNs: '100' },
+            signal
+        });
+        expect(mergeCloudPointFrames).toHaveBeenCalledWith([
+            { frameId: 'frame-1' },
+            { frameId: 'frame-2' }
+        ]);
+        expect(result).toBe(merged);
     });
 });

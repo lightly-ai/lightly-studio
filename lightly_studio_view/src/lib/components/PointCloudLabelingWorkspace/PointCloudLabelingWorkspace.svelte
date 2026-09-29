@@ -21,7 +21,7 @@
      * beneath it and the frame timeline at the bottom. Annotations stay in a resizable right pane,
      * and the tool rail floats over the viewport rather than taking a column of its own.
      *
-     * Loads all lidar payloads for the active tick and renders them in the 3D scene.
+     * Loads the selected LiDAR payloads for the active tick and renders them in the 3D scene.
      */
     interface Props {
         sampleId: string;

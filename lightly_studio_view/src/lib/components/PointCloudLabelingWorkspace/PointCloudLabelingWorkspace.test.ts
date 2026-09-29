@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { beforeAll, describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
 // The workspace mounts the camera projection strip, which reads the tick details
@@ -19,12 +20,29 @@ vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
 
 vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     useMcapSequenceSummary: () => ({
-        summary: { data: undefined, isLoading: false, isError: false },
+        summary: {
+            data: {
+                lidar_channels: [
+                    {
+                        channel_id: 1,
+                        group_component_name: 'lidar_top',
+                        group_component_index: 0
+                    }
+                ],
+                camera_channels: []
+            },
+            isLoading: false,
+            isError: false
+        },
         refetch: vi.fn()
     })
 }));
 
 describe('PointCloudLabelingWorkspace', () => {
+    beforeAll(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
@@ -138,4 +156,33 @@ describe('PointCloudLabelingWorkspace', () => {
         screen.getByRole('button', { name: /close labeling workspace/i }).click();
         expect(onExit).toHaveBeenCalledOnce();
     });
+
+    it.each([
+        { datasetId: 'dataset-2', sequenceId: 'sequence-1' },
+        { datasetId: 'dataset-1', sequenceId: 'sequence-2' }
+    ])(
+        'resets the LiDAR selection when the source changes to $datasetId/$sequenceId',
+        async (next) => {
+            const user = userEvent.setup();
+            const props = {
+                sampleId: 'sample-1',
+                datasetId: 'dataset-1',
+                sequenceId: 'sequence-1',
+                onExit: vi.fn()
+            };
+            const { rerender } = render(PointCloudLabelingWorkspace, { props });
+
+            await user.click(screen.getByTestId('workspace-lidar-select'));
+            await user.click(screen.getByTestId('workspace-lidar-select-1'));
+            expect(screen.getByTestId('workspace-lidar-select')).not.toHaveTextContent(':');
+
+            await rerender({ ...props, ...next });
+
+            await waitFor(() =>
+                expect(screen.getByTestId('workspace-lidar-select')).toHaveTextContent(
+                    'Lidar: lidar_top'
+                )
+            );
+        }
+    );
 });
