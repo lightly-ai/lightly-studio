@@ -5,11 +5,21 @@ import ProviderHarness from './PointCloudWorkspaceProviderHarness.svelte';
 import NoProviderHarness from './UsePointCloudWorkspaceContextNoProviderHarness.svelte';
 import type { PointCloudWorkspaceContext } from './types';
 
-// The provider harness builds the context, which calls useMcapSequenceSummary; stub it out.
+// The provider harness builds the context, which calls query-backed hooks; stub them out.
 vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     useMcapSequenceSummary: () => ({
         summary: { data: undefined, isLoading: false, isError: false },
         refetch: vi.fn()
+    })
+}));
+vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
+    useTickDetails: () => ({
+        tickDetails: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+    })
+}));
+vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
+    useCloudPointFrame: () => ({
+        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
     })
 }));
 

@@ -8,6 +8,20 @@ interface CloudPointFrameSource {
     timestampNs: string;
 }
 
+type ColumnValues = ReturnType<NonNullable<ReturnType<Table['getChild']>>['toArray']>;
+
+interface CoordinateColumns {
+    x: ColumnValues;
+    y: ColumnValues;
+    z: ColumnValues;
+}
+
+interface ColorColumns {
+    red: ColumnValues;
+    green: ColumnValues;
+    blue: ColumnValues;
+}
+
 /**
  * Parses an Arrow IPC point-cloud buffer into a renderable {@link CloudPointFrame}.
  *
@@ -33,40 +47,74 @@ export async function parseCloudPointFrame(
  * @throws If x/y/z are missing or mismatched, or if r/g/b are partially present.
  */
 function packBatch(table: Table): PointBatch {
-    const xColumn = table.getChild('x');
-    const yColumn = table.getChild('y');
-    const zColumn = table.getChild('z');
-    const x = xColumn?.toArray();
-    const y = yColumn?.toArray();
-    const z = zColumn?.toArray();
-    if (!x || !y || !z || x.length !== y.length || x.length !== z.length) {
+    const coordinates = readCoordinates(table);
+    const intensity = table.getChild('intensity')?.toArray();
+    const colors = readColors(table);
+    return {
+        positions: packCoordinates(coordinates),
+        intensities: packIntensity(coordinates.x.length, intensity),
+        ...(colors ? { colors: packColors(colors, coordinates.x.length) } : {}),
+        count: coordinates.x.length
+    };
+}
+
+function readCoordinates(table: Table): CoordinateColumns {
+    const x = readCoordinate(table, 'x');
+    const y = readCoordinate(table, 'y');
+    const z = readCoordinate(table, 'z');
+    if (x.length !== y.length || x.length !== z.length) {
         throw new Error('Point-cloud Arrow data must contain matching x, y, and z columns.');
     }
-    if (xColumn?.nullCount || yColumn?.nullCount || zColumn?.nullCount) {
+    return { x, y, z };
+}
+
+function readCoordinate(table: Table, name: 'x' | 'y' | 'z'): ColumnValues {
+    const column = table.getChild(name);
+    if (!column) {
+        throw new Error('Point-cloud Arrow data must contain matching x, y, and z columns.');
+    }
+    if (column.nullCount) {
         throw new Error('Point-cloud Arrow data must not contain null x, y, or z values.');
     }
-    const intensity = table.getChild('intensity')?.toArray();
+    return column.toArray();
+}
+
+function readColors(table: Table): ColorColumns | undefined {
     const red = table.getChild('r')?.toArray();
     const green = table.getChild('g')?.toArray();
     const blue = table.getChild('b')?.toArray();
-    if (Boolean(red) !== Boolean(green) || Boolean(red) !== Boolean(blue)) {
+    if (!red && !green && !blue) return undefined;
+    if (!red || !green || !blue) {
         throw new Error('Point-cloud Arrow data must contain all or none of r, g, and b columns.');
     }
+    return { red, green, blue };
+}
+
+function packCoordinates({ x, y, z }: CoordinateColumns): Float32Array {
     const positions = new Float32Array(x.length * 3);
-    const intensities = new Float32Array(x.length);
-    const colors = red && green && blue ? new Float32Array(x.length * 3) : undefined;
     for (let index = 0; index < x.length; index++) {
         positions[index * 3] = Number(x[index]);
         positions[index * 3 + 1] = Number(y[index]);
         positions[index * 3 + 2] = Number(z[index]);
-        intensities[index] = intensity ? Number(intensity[index]) : 0;
-        if (colors && red && green && blue) {
-            colors[index * 3] = Number(red[index]);
-            colors[index * 3 + 1] = Number(green[index]);
-            colors[index * 3 + 2] = Number(blue[index]);
-        }
     }
-    return { positions, intensities, ...(colors ? { colors } : {}), count: x.length };
+    return positions;
+}
+
+function packIntensity(count: number, intensity?: ColumnValues): Float32Array {
+    const intensities = new Float32Array(count);
+    if (!intensity) return intensities;
+    for (let index = 0; index < count; index++) intensities[index] = Number(intensity[index]);
+    return intensities;
+}
+
+function packColors({ red, green, blue }: ColorColumns, count: number): Float32Array {
+    const colors = new Float32Array(count * 3);
+    for (let index = 0; index < count; index++) {
+        colors[index * 3] = Number(red[index]);
+        colors[index * 3 + 1] = Number(green[index]);
+        colors[index * 3 + 2] = Number(blue[index]);
+    }
+    return colors;
 }
 
 /**
@@ -105,6 +153,7 @@ function readBounds(
     const text = readMetadata(metadata, 'bounds');
     if (text === undefined) return null;
     const value: unknown = JSON.parse(text);
+    if (value === null) return null;
     if (!isBounds(value)) throw new Error('Point-cloud bounds metadata is invalid.');
     return value;
 }

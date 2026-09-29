@@ -14,7 +14,10 @@ vi.mock('$lib/hooks', () => ({
         summary: { data: undefined, isLoading: false, isError: false },
         refetch: vi.fn()
     }),
-    useTickDetails: () => ({ tickDetails: { data: undefined } })
+    useTickDetails: () => ({ tickDetails: { data: undefined } }),
+    useCloudPointFrame: () => ({
+        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+    })
 }));
 
 const mockPageData = {
