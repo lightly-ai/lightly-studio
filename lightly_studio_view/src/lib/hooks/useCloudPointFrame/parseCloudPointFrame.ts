@@ -1,6 +1,6 @@
 import { tableFromIPC, type Table } from 'apache-arrow';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
-import type { CloudPointFrame } from './types';
+import type { CloudPointFrame, Vec3 } from './types';
 
 /** Identifies the channel and fallback timestamp a raw frame buffer came from. */
 interface CloudPointFrameSource {
@@ -115,7 +115,7 @@ function isBounds(value: unknown): value is NonNullable<CloudPointFrame['bounds'
     return isVec3(bounds.min) && isVec3(bounds.max);
 }
 
-function isVec3(value: unknown): value is [number, number, number] {
+function isVec3(value: unknown): value is Vec3 {
     return Array.isArray(value) && value.length === 3 && value.every(Number.isFinite);
 }
 
