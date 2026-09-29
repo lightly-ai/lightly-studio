@@ -105,6 +105,7 @@ function readBounds(
     const text = readMetadata(metadata, 'bounds');
     if (text === undefined) return null;
     const value: unknown = JSON.parse(text);
+    if (value === null) return null;
     if (!isBounds(value)) throw new Error('Point-cloud bounds metadata is invalid.');
     return value;
 }
