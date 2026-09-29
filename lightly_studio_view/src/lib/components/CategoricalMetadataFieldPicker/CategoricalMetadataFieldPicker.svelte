@@ -24,7 +24,7 @@
                 {...props}
                 variant="outline"
                 size="sm"
-                class="h-8 w-full justify-between px-3 text-xs font-normal"
+                class="h-10 w-full justify-between px-3 text-sm font-normal"
                 disabled={fields.length === 0}
             >
                 Add categorical metadata field

@@ -96,6 +96,16 @@
 
 <Segment title="Metadata">
     <div class="space-y-4">
+        {#if isImageCollection && categoricalKeys.length > 0}
+            <CategoricalMetadataFilters
+                {collectionId}
+                filter={categoricalFilter}
+                {categoricalKeys}
+                onValueToggle={onCategoricalValueToggle}
+                onValuesClear={onCategoricalValuesClear}
+            />
+        {/if}
+
         {#if !isVideos && !isVideoFrames && $bounds && $values}
             <!-- Dimension Filters -->
             <div class="space-y-1">
@@ -150,16 +160,6 @@
                     onValueCommit={handleMetadataValueCommit}
                 />
             {/each}
-        {/if}
-
-        {#if isImageCollection && categoricalKeys.length > 0}
-            <CategoricalMetadataFilters
-                {collectionId}
-                filter={categoricalFilter}
-                {categoricalKeys}
-                onValueToggle={onCategoricalValueToggle}
-                onValuesClear={onCategoricalValuesClear}
-            />
         {/if}
     </div>
 </Segment>
