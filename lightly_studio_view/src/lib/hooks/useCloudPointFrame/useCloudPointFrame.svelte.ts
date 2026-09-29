@@ -3,6 +3,10 @@ import { fetchCloudPointFrame } from './fetchCloudPointFrame';
 import { mergeCloudPointFrames } from './mergeCloudPointFrames';
 import type { CloudPointFrame, CloudPointFrameParams } from './types';
 
+interface UseCloudPointFrameReturn {
+    query: CreateQueryResult<CloudPointFrame, Error>;
+}
+
 /**
  * Fetches and merges cloud point frames across the requested channels.
  *
@@ -14,7 +18,7 @@ import type { CloudPointFrame, CloudPointFrameParams } from './types';
  */
 export const useCloudPointFrame = (
     getParams: () => CloudPointFrameParams
-): { query: CreateQueryResult<CloudPointFrame, Error> } => {
+): UseCloudPointFrameReturn => {
     const query = createQuery(() => {
         const { datasetId, recordingId, channels } = getParams();
         return {
@@ -22,12 +26,17 @@ export const useCloudPointFrame = (
             // Skip fetching until a dataset, recording, and at least one channel are known.
             enabled: Boolean(datasetId && recordingId && channels.length),
             queryFn: async ({ signal }): Promise<CloudPointFrame> => {
+                const firstChannel = channels[0];
+                if (!firstChannel) throw new Error('No point cloud channels to load.');
                 // Fetch every channel concurrently; `signal` cancels in-flight requests.
-                const frames = await Promise.all(
-                    channels.map((channel) =>
-                        fetchCloudPointFrame({ datasetId, recordingId, channel, signal })
-                    )
-                );
+                const frames = await Promise.all([
+                    fetchCloudPointFrame({ datasetId, recordingId, channel: firstChannel, signal }),
+                    ...channels
+                        .slice(1)
+                        .map((channel) =>
+                            fetchCloudPointFrame({ datasetId, recordingId, channel, signal })
+                        )
+                ]);
                 // Combine the per-channel frames into one merged frame.
                 return mergeCloudPointFrames(frames);
             }

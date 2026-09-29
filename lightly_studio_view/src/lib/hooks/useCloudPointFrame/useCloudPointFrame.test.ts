@@ -9,11 +9,11 @@ import type { CloudPointFrame } from './types';
 vi.mock('./fetchCloudPointFrame', () => ({ fetchCloudPointFrame: vi.fn() }));
 vi.mock('./mergeCloudPointFrames', () => ({ mergeCloudPointFrames: vi.fn() }));
 
-type QueryOptions = {
+interface QueryOptions {
     queryKey: unknown[];
     enabled: boolean;
     queryFn: (context: { signal?: AbortSignal }) => Promise<CloudPointFrame>;
-};
+}
 
 const defaultParams = () => ({
     datasetId: 'dataset-1',
@@ -27,7 +27,7 @@ const defaultParams = () => ({
 function getQueryOptions(getParams: () => ReturnType<typeof defaultParams>): QueryOptions {
     const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
     useCloudPointFrame(getParams);
-    return createQuerySpy.mock.calls[0][0]() as unknown as QueryOptions;
+    return createQuerySpy.mock.lastCall?.[0]() as unknown as QueryOptions;
 }
 
 describe('useCloudPointFrame', () => {
