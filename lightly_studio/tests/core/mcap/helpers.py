@@ -6,7 +6,9 @@ compiled schemas.
 
 from __future__ import annotations
 
+import json
 import struct
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -365,6 +367,41 @@ def write_mcap_with_malformed_json_video(path: Path, payload: bytes = b"not vali
                 log_time=log_time_ns,
                 publish_time=log_time_ns,
                 data=payload,
+            )
+        writer.finish()
+    return path
+
+
+def write_json_mcap(
+    path: Path,
+    topic: str,
+    schema_name: str,
+    messages: Sequence[tuple[int, dict[str, Any]]],
+) -> Path:
+    """Writes an indexed MCAP whose messages are JSON-encoded dicts.
+
+    Args:
+        path: The path to write the file to.
+        topic: The topic the messages are published on.
+        schema_name: The schema name recorded on the channel.
+        messages: `(log_time_ns, payload)` pairs, in log-time order.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        schema_id = writer.register_schema(name=schema_name, encoding="jsonschema", data=b"{}")
+        channel_id = writer.register_channel(
+            topic=topic, message_encoding="json", schema_id=schema_id
+        )
+        for log_time_ns, payload in messages:
+            writer.add_message(
+                channel_id=channel_id,
+                log_time=log_time_ns,
+                publish_time=log_time_ns,
+                data=json.dumps(payload).encode(),
             )
         writer.finish()
     return path
