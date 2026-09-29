@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, untrack } from 'svelte';
+    import { untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components';
 
@@ -39,7 +39,7 @@ AND object_detection(class_name = "person")
 
     const initialValue = $derived(valueProp ?? DEFAULT_VALUES[rootScope]);
 
-    let containerEl: HTMLDivElement | null = null;
+    let containerEl = $state<HTMLDivElement | null>(null);
 
     const { mount, translateQuery } = useQueryEditor();
 
@@ -69,15 +69,27 @@ AND object_detection(class_name = "person")
     let draftValue = $state(untrack(() => initialValue));
     let lastAppliedValue = $state<string | null>(untrack(() => valueProp ?? null));
 
-    onMount(() => {
-        if (!containerEl) return;
-        return mount(containerEl, {
-            value: initialValue,
-            rootScope,
-            readOnly,
-            onChange: (next) => {
-                draftValue = next;
-            }
+    // Remount the editor when `rootScope` changes: a new Monaco model re-stamps the
+    // model scope (used by validation) so it never disagrees with the prop scope
+    // (used by Apply), and the scope-specific default example loads. Only
+    // `rootScope` and `containerEl` drive the remount (both read reactively here);
+    // the current `value`/example is read untracked so a parent value change does
+    // not rebuild the editor.
+    $effect(() => {
+        const scope = rootScope;
+        const el = containerEl;
+        if (!el) return;
+        return untrack(() => {
+            draftValue = initialValue;
+            lastAppliedValue = valueProp ?? null;
+            return mount(el, {
+                value: initialValue,
+                rootScope: scope,
+                readOnly,
+                onChange: (next) => {
+                    draftValue = next;
+                }
+            });
         });
     });
     const canApply = $derived(draftValue !== lastAppliedValue);
