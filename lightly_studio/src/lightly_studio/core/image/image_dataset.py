@@ -176,7 +176,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         logger.info(f"Found {len(image_paths)} images in {path}.")
 
-        if embed:
+        if embed and image_paths:
             # Fail before the insert, so that a wrongly registered embedder stores no image
             embed_samples.check_image_embedder_dimension(
                 session=self.session, collection_id=self.collection_id

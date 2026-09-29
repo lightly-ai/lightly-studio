@@ -234,6 +234,23 @@ class TestDataset:
 
         assert len(list(dataset)) == 2
 
+    def test_dataset_add_images_from_path__embedder_dimension_mismatch_no_images(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: Mocker,
+        tmp_path: Path,
+    ) -> None:
+        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_images_from_path(path=tmp_path / "first")
+        _register_wider_random_embedder(mocker=mocker)
+        (tmp_path / "empty").mkdir()
+
+        # No image is found, so nothing is checked, stored or embedded.
+        dataset.add_images_from_path(path=tmp_path / "empty")
+
+        assert len(list(dataset)) == 1
+
     def test_dataset_add_images_from_path__limit(
         self,
         patch_collection: None,  # noqa: ARG002
