@@ -283,7 +283,10 @@ All our code must be typed.
 
 ### A test states every value that its assertions depend on
 
-- Put each value that decides the outcome (a dimension, a count, a space key, a limit) in the test body or in a constant of the test module.
+- Put each value that decides the outcome (a dimension, a count, a space key, a limit) in one of these places:
+    - the test body
+    - a `pytest.mark.parametrize` decorator on the test
+    - a constant of the test module
 - Do not keep such a value only inside a fixture, a helper or the code under test.
 - Write a relation between two values as the two values, not as a helper name such as "wider".
 - Rationale: A test that hides a value assumes that the value never changes, and the reader cannot check it.
