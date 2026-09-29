@@ -180,19 +180,19 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
 
 
 def check_image_embedder_dimension(session: Session, collection_id: UUID) -> None:
-    """Check the image embedder of the collection's default model against its dimension.
+    """Check the image embedder of the collection against the stored dimension of its space.
 
     ``embed_image_samples`` makes the same check, but only after the caller stored the
     images. Call this before storing them, so that a wrongly registered embedder stores
-    nothing. A collection without a default model passes.
+    nothing.
 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is checked.
 
     Raises:
-        ValueError: If the image embedder does not produce the stored dimension of the
-            default model.
+        ValueError: If the image embedder does not produce the stored dimension of its
+            space.
     """
     default_embedder.check_embedder_dimension(
         session=session,

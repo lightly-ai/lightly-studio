@@ -11,14 +11,18 @@ from lightly_studio.resolvers import collection_embedding_model_resolver
 from tests.helpers_resolvers import create_collection, create_embedding_model
 
 
-def test_check_embedder_dimension__mismatch_raises(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    collection = create_collection(session=db_session)
-    # The embedder shares the space but produces a different dimension.
+@pytest.fixture
+def registry(mocker: MockerFixture) -> EmbedderRegistry:
+    """A registry that holds the random embedder with dimension 3, for every capability."""
     registry = EmbedderRegistry()
     registry.register(embedder=RandomEmbedder(dimension=3))
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    return registry
+
+
+@pytest.mark.usefixtures("registry")
+def test_check_embedder_dimension__default_model_mismatch_raises(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
@@ -35,13 +39,35 @@ def test_check_embedder_dimension__mismatch_raises(
         )
 
 
-def test_check_embedder_dimension__no_default_model(
-    db_session: Session, mocker: MockerFixture
-) -> None:
+@pytest.mark.usefixtures("registry")
+def test_check_embedder_dimension__bootstrap_mismatch_raises(db_session: Session) -> None:
     collection = create_collection(session=db_session)
-    registry = EmbedderRegistry()
-    registry.register(embedder=RandomEmbedder(dimension=3))
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    # The dataset holds the bootstrap space with another dimension, and the collection has
+    # no default model.
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="random_model",
+        embedding_dimension=8,
+    )
+
+    with pytest.raises(ValueError, match=r"does not match"):
+        default_embedder.check_embedder_dimension(
+            session=db_session,
+            collection_id=collection.collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        )
+
+
+@pytest.mark.usefixtures("registry")
+def test_check_embedder_dimension__bootstrap_matches(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="random_model",
+        embedding_dimension=3,
+    )
 
     default_embedder.check_embedder_dimension(
         session=db_session,
@@ -49,7 +75,29 @@ def test_check_embedder_dimension__no_default_model(
         get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
     )
 
-    # The check never bootstraps a default model.
+    # The check never registers a default model.
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection.collection_id
+        )
+        is None
+    )
+
+
+def test_check_embedder_dimension__dataset_without_models(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    get_embedder_fn = mocker.MagicMock()
+
+    default_embedder.check_embedder_dimension(
+        session=db_session,
+        collection_id=collection.collection_id,
+        get_embedder_fn=get_embedder_fn,
+    )
+
+    # A first import loads no embedder before its samples are stored.
+    get_embedder_fn.assert_not_called()
     linked = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     )

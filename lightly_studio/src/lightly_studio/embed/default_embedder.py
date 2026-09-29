@@ -144,28 +144,35 @@ def check_embedder_dimension(
         [EmbedderRegistry, str | None, EmbedderConfig | None], Embedder | None
     ],
 ) -> None:
-    """Check the embedder of the collection's default model against the stored dimension.
+    """Check the embedder that will embed the collection against the stored dimension.
 
     ``resolve_default_embedder`` makes the same check, but only when the samples are already
     stored. Call this before storing them, so that a mismatch stores no sample. The registry
-    caches the embedder, so the embedding after the insert does not build it again. A
-    collection without a default model, or a space without an embedder, passes.
+    caches the embedder, so the embedding after the insert does not build it again.
+
+    A collection with a default model checks the embedder of that model. A collection
+    without one checks the registry's bootstrap embedder against the dataset's model of the
+    same space. A space without an embedder passes.
 
     Args:
         session: Database session for resolver operations.
-        collection_id: The collection whose default embedding model is checked.
+        collection_id: The collection whose embedder is checked.
         get_embedder_fn: The typed getter of the needed capability, as described in
             ``resolve_default_embedder``.
 
     Raises:
-        ValueError: If the embedder's dimension does not match the default model's stored
-            dimension (a wrongly registered embedder).
+        ValueError: If the embedder's dimension does not match the stored dimension of its
+            space (a wrongly registered embedder), or if the collection does not exist.
     """
     default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection_id
     )
     if default_model is not None:
         _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
+        return
+    _check_bootstrap_dimension(
+        session=session, collection_id=collection_id, get_embedder_fn=get_embedder_fn
+    )
 
 
 def _embedder_for_model(
@@ -203,6 +210,44 @@ def _embedder_for_model(
             f"'{default_model.name}'. A wrongly registered embedder is likely."
         )
     return embedder
+
+
+def _check_bootstrap_dimension(
+    session: Session,
+    collection_id: UUID,
+    get_embedder_fn: Callable[
+        [EmbedderRegistry, str | None, EmbedderConfig | None], Embedder | None
+    ],
+) -> None:
+    """Check the bootstrap embedder against the dataset's model of its space, if there is one.
+
+    ``_register_default_model`` makes the same check in ``get_or_create``. A dataset without
+    an embedding model passes before the embedder is resolved, so a first import loads no
+    model before its samples are stored.
+
+    Raises:
+        ValueError: If the collection does not exist, or if the dataset has a model for the
+            embedder's space with another dimension.
+    """
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError("Provided collection_id could not be found.")
+    dataset_models = embedding_model_resolver.get_all_by_dataset_id(
+        session=session, dataset_id=collection.dataset_id
+    )
+    if not dataset_models:
+        return
+    embedder = get_embedder_fn(embedder_registry.get_registry(), None, None)
+    if embedder is None:
+        return
+    spec = embedder.embedding_space_spec()
+    for model in dataset_models:
+        if model.name == spec.space_key and model.embedding_dimension != spec.dimension:
+            raise ValueError(
+                f"Embedder dimension {spec.dimension} does not match the dimension "
+                f"{model.embedding_dimension} of the dataset's model for space "
+                f"'{model.name}'. A wrongly registered embedder is likely."
+            )
 
 
 def _register_default_model(session: Session, collection_id: UUID, embedder: Embedder) -> UUID:
