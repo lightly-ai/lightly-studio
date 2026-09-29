@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { mergeBounds } from './mergeBounds';
 
 describe('mergeBounds', () => {
-    it('returns null when there are no bounds', () => {
-        expect(mergeBounds([])).toBeNull();
-    });
-
-    it('returns null when every bound is null', () => {
-        expect(mergeBounds([null, null])).toBeNull();
+    it.each([
+        { name: 'the array is empty', input: [] },
+        { name: 'every bound is null', input: [null, null] }
+    ])('returns null when $name', ({ input }) => {
+        expect(mergeBounds(input)).toBeNull();
     });
 
     it('returns the single bound when only one is available', () => {

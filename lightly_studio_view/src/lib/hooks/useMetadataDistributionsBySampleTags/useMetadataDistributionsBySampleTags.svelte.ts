@@ -1,7 +1,7 @@
 import { createQueries } from '@tanstack/svelte-query';
 import type {
     HistogramView,
-    ImageFilter,
+    MetadataHistogramsRequest,
     MetadataValueCountsView
 } from '$lib/api/lightly_studio_local';
 import {
@@ -21,10 +21,13 @@ interface MetadataComparisonField {
     type: 'numeric' | 'categorical';
 }
 
+/** An image or video filter, tagged with its `filter_type`. */
+type MetadataDistributionFilter = NonNullable<MetadataHistogramsRequest['filters']>;
+
 interface MetadataComparisonParams {
     collectionId: string;
     sampleTags: SampleTagItem[];
-    filter?: ImageFilter;
+    filter?: MetadataDistributionFilter;
     binCount?: number;
     field?: MetadataComparisonField;
     enabled?: boolean;
@@ -61,11 +64,15 @@ export const useMetadataDistributionsBySampleTags = (getParams: () => MetadataCo
         };
     });
 
-/** Replaces the filter's tag scope, leaving the rest of the exploration filter. */
+/**
+ * Replaces the filter's tag scope, leaving the rest of the exploration filter.
+ * Without a filter, the result is an image filter.
+ */
 export const withSampleTagFilter = (
-    filter: ImageFilter | undefined,
+    filter: MetadataDistributionFilter | undefined,
     tagId: string
-): ImageFilter => ({
+): MetadataDistributionFilter => ({
+    filter_type: 'image',
     ...filter,
     sample_filter: {
         ...filter?.sample_filter,

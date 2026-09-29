@@ -23,7 +23,7 @@ export async function fetchCloudPointFrame({
         parseAs: 'arrayBuffer',
         signal
     });
-    if (!response.ok || !data) {
+    if (!response.ok || !data || (data as ArrayBuffer).byteLength === 0) {
         throw new Error(`Could not load point cloud (${response.status}).`);
     }
     // parseAs: 'arrayBuffer' makes data an ArrayBuffer at runtime, but the type is unknown.

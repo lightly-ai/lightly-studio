@@ -18,6 +18,7 @@ class TopicKind(str, Enum):
     POINT_CLOUD = "point_cloud"
     CAMERA_INFO = "camera_info"
     TRANSFORM = "transform"
+    SCENE_UPDATE = "scene_update"
     OTHER = "other"
 
 
@@ -37,6 +38,7 @@ _KIND_BY_MESSAGE_TYPE: Mapping[str, TopicKind] = {
     "FrameTransform": TopicKind.TRANSFORM,
     "FrameTransforms": TopicKind.TRANSFORM,
     "TransformStamped": TopicKind.TRANSFORM,
+    "SceneUpdate": TopicKind.SCENE_UPDATE,
 }
 
 
