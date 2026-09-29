@@ -3,7 +3,7 @@
 This document explains how to write queries in the
 [LightlyStudio query editor.](search_and_filter.md#query-in-gui)
 
-A query helps you find images that match certain rules. For example, you can search for:
+A query helps you find images or videos that match certain rules. For example, you can search for:
 
 - large images
 - images with a specific file name
@@ -46,6 +46,28 @@ file_path_abs != "/datasets/archive/bad.jpg"
 created_at >= "2025-01-01T00:00:00Z"
 ```
 
+## Supported video fields
+
+On the videos grid, these fields can be used directly in a query:
+
+- `width`
+- `height`
+- `fps`
+- `duration_s`
+- `file_name`
+- `file_path_abs`
+- `created_at`
+
+Example queries:
+
+```mysql
+duration_s > 10
+fps >= 25 AND width >= 1280
+file_name = "clip.mp4"
+```
+
+Tag filters and annotation match functions also work on the videos grid.
+
 
 ## Tag filtering
 
@@ -79,6 +101,13 @@ The query language supports three annotation functions:
 - `segmentation_mask(...)`
 
 Each function contains another query inside the parentheses and matches an image when it has at least one annotation of that type that satisfies the nested query.
+
+On the videos grid, a function matches a video when the video or one of its frames has a matching annotation:
+
+```mysql
+# Videos with a car on at least one frame
+object_detection(class_name = "car")
+```
 
 ### Classification queries
 

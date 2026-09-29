@@ -21,14 +21,14 @@ describe('SidePanelTabs', () => {
         setActivePanel.mockClear();
     });
 
-    it('renders the Query button only when isImages is true', () => {
+    it('renders the Query button only when supportsQuery is true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
         expect(screen.getByTestId('side-panel-tabs-query')).toBeInTheDocument();
@@ -37,10 +37,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: false
+                supportsDistribution: false,
+                supportsQuery: false
             }
         });
         expect(screen.queryByTestId('side-panel-tabs-query')).not.toBeInTheDocument();
@@ -50,10 +50,10 @@ describe('SidePanelTabs', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: false,
-                supportsDistribution: false
+                supportsDistribution: false,
+                supportsQuery: false
             }
         });
         expect(screen.getByTestId('side-panel-tabs-embed')).toBeInTheDocument();
@@ -62,10 +62,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: false
+                supportsDistribution: false,
+                supportsQuery: false
             }
         });
         expect(screen.queryByTestId('side-panel-tabs-embed')).not.toBeInTheDocument();
@@ -75,10 +75,10 @@ describe('SidePanelTabs', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: true,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
         expect(screen.getByTestId('side-panel-tabs-eval')).toBeInTheDocument();
@@ -87,10 +87,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
         expect(screen.queryByTestId('side-panel-tabs-eval')).not.toBeInTheDocument();
@@ -100,10 +100,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
 
@@ -116,10 +116,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
 
@@ -131,10 +131,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: false,
-                supportsDistribution: false
+                supportsDistribution: false,
+                supportsQuery: false
             }
         });
 
@@ -146,10 +146,10 @@ describe('SidePanelTabs', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
         expect(screen.getByTestId('side-panel-tabs-distribution')).toBeInTheDocument();
@@ -158,10 +158,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: false
+                supportsDistribution: false,
+                supportsQuery: false
             }
         });
         expect(screen.queryByTestId('side-panel-tabs-distribution')).not.toBeInTheDocument();
@@ -171,10 +171,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
 
@@ -186,10 +186,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: true,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
 
@@ -202,10 +202,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: true,
-                supportsDistribution: true
+                supportsDistribution: true,
+                supportsQuery: true
             }
         });
 

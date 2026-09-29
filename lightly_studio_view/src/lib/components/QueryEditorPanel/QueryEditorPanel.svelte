@@ -4,17 +4,21 @@
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useQueryExpression } from '$lib/hooks/useQueryExpression/useQueryExpression';
+
+    type RootScope = NonNullable<ComponentProps<typeof QueryEditor>['rootScope']>;
 
     interface Props {
+        /** The grid that the query filters. */
+        rootScope: RootScope;
         /** Invoked when the user clicks the close button in the panel header. */
         onClose: () => void;
     }
 
     type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
 
-    const { onClose }: Props = $props();
-    const { imageQueryExpression, updateQueryExpr } = useImageFilters();
+    const { rootScope, onClose }: Props = $props();
+    const { queryExpression, updateQueryExpr } = $derived(useQueryExpression(rootScope));
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
         if (!parsed) {
@@ -56,14 +60,25 @@
             <p>Write a query expression to filter your dataset. Available syntax:</p>
             <ul class="my-1 ml-4 list-disc space-y-1">
                 <li>Logical operations: <code>AND</code>, <code>OR</code>, <code>NOT</code></li>
-                <li>
-                    Image fields: <code>file_name</code>, <code>file_path_abs</code>,
-                    <code>width</code>, <code>height</code>, <code>created_at</code>
-                </li>
+                {#if rootScope === 'video'}
+                    <li>
+                        Video fields: <code>file_name</code>, <code>file_path_abs</code>,
+                        <code>width</code>, <code>height</code>, <code>fps</code>,
+                        <code>duration_s</code>, <code>created_at</code>
+                    </li>
+                {:else}
+                    <li>
+                        Image fields: <code>file_name</code>, <code>file_path_abs</code>,
+                        <code>width</code>, <code>height</code>, <code>created_at</code>
+                    </li>
+                {/if}
                 <li>Tag membership: <code>"tag_name" IN tags</code></li>
                 <li>
                     Annotation conditions: <code>segmentation_mask(…)</code>,
                     <code>object_detection(…)</code>, <code>classification(…)</code>
+                    {#if rootScope === 'video'}
+                        (these match the annotations of the video and of its frames)
+                    {/if}
                 </li>
             </ul>
             <p>Tip: Completion hints will appear as you type a space or a left parenthesis.</p>
@@ -71,7 +86,8 @@
     </div>
     <QueryEditor
         height="100%"
-        value={$imageQueryExpression?.query_expr_str}
+        {rootScope}
+        value={$queryExpression?.query_expr_str}
         onSave={handleQueryEditorValueChange}
     />
 </div>

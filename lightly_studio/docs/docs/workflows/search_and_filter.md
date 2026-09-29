@@ -50,14 +50,12 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 
 ## Query in GUI
 
-!!! warning "Query in GUI is currently available for image datasets only."
-
-Your dataset can be filtered by a custom query written in an SQL-like language. Open the
+You can filter the images grid or the videos grid with a custom query in an SQL-like language. Open the
 query editor by clicking the `Add query filter` button in the left sidebar.
 
 ![Query filter](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_query_v1.0.0.png){ width="100%" }
 
-The language supports filtering by image fields such as dimensions or file name, tags, annotations,
+The language supports filtering by image or video fields such as dimensions or file name, tags, annotations,
 as well as logical combinations of these. For a full reference, see the
 [Lightly Query Language](lightly_query_language.md) documentation.
 

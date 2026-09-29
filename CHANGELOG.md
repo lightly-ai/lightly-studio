@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Enable metric recomputing for instance-segmentation.
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
+- Filter videos with a query in the GUI. Annotation conditions match annotations on the video and on its frames.
 
 ### Changed
 

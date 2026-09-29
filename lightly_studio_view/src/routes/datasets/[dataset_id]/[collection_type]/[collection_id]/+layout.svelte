@@ -43,6 +43,7 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
+    import type { RootScope } from '$lib/components/QueryEditor/language/types';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -143,6 +144,11 @@
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
+    // The query filter is available on the images grid and on the videos grid.
+    const queryRootScope = $derived<RootScope | null>(
+        isImages ? 'image' : isVideos ? 'video' : null
+    );
+    const supportsQuery = $derived(queryRootScope !== null);
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
     );
@@ -475,7 +481,13 @@
     const hasFilterPanel = $derived(isCollectionGrid && !isPointClouds);
 
     const panelIsVisible = $derived(
-        isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
+        isPanelVisible(
+            $activePanel,
+            isImages,
+            hasMediaWithEmbeddings,
+            supportsDistribution,
+            supportsQuery
+        )
     );
 
     // False only once annotation labels have loaded and come back empty — not
@@ -557,14 +569,19 @@
                                 </Tooltip>
                             </h2>
 
-                            {#if isImages}
-                                <QueryControl
-                                    onOpen={() => {
-                                        setActivePanel(
-                                            $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
-                                        );
-                                    }}
-                                />
+                            {#if queryRootScope}
+                                {#key queryRootScope}
+                                    <QueryControl
+                                        rootScope={queryRootScope}
+                                        onOpen={() => {
+                                            setActivePanel(
+                                                $activePanel === 'queryEditor'
+                                                    ? 'none'
+                                                    : 'queryEditor'
+                                            );
+                                        }}
+                                    />
+                                {/key}
                             {/if}
 
                             <div>
@@ -688,9 +705,15 @@
                                         <PlotPanel {collectionId} />
                                     {/key}
                                 {/await}
-                            {:else if $activePanel === 'queryEditor' && isImages}
+                            {:else if $activePanel === 'queryEditor' && queryRootScope}
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
-                                    <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                                    <!-- The editor reads the root scope on mount. -->
+                                    {#key queryRootScope}
+                                        <QueryEditorPanel
+                                            rootScope={queryRootScope}
+                                            onClose={() => setActivePanel('none')}
+                                        />
+                                    {/key}
                                 {/await}
                             {:else if distributionPanelVisible && isVideos}
                                 {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}
@@ -735,14 +758,14 @@
                     {@render mainContent()}
                 </div>
             {/if}
-            {#if isCollectionGrid && (supportsDistribution || hasMediaWithEmbeddings)}
+            {#if isCollectionGrid && (supportsDistribution || supportsQuery || hasMediaWithEmbeddings)}
                 <div data-testid="side-panel-tabs" class="contents">
                     <SidePanelTabs
                         {collectionId}
-                        {isImages}
                         {hasMediaWithEmbeddings}
                         {supportsEvaluation}
                         {supportsDistribution}
+                        {supportsQuery}
                     />
                 </div>
             {/if}

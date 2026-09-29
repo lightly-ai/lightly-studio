@@ -67,6 +67,28 @@ describe('useVideoFilters', () => {
             });
         });
 
+        it('includes query_expr in sample_filter when provided', () => {
+            const { videoFilter, updateFilterParams } = useVideoFilters();
+            const queryExpr = {
+                match_expr: {
+                    type: 'ordinal_float_expr' as const,
+                    field: { table: 'video', name: 'duration_s' },
+                    operator: '>' as const,
+                    value: 10
+                }
+            };
+
+            updateFilterParams({
+                collection_id: 'coll-1',
+                filters: { query_expr: queryExpr }
+            });
+
+            expect(get(videoFilter)).toEqual({
+                filter_type: 'video',
+                sample_filter: { query_expr: queryExpr }
+            });
+        });
+
         it('includes sample_ids in sample_filter when provided', () => {
             const { videoFilter, updateFilterParams } = useVideoFilters();
 

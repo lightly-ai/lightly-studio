@@ -39,7 +39,9 @@ describe('YoutubeVisTab', () => {
             updateFilterParams: vi.fn(),
             updateSampleIds: vi.fn(),
             videoSortBy: writable(null),
-            updateSortBy: vi.fn()
+            videoQueryExpression: writable(null),
+            updateSortBy: vi.fn(),
+            updateQueryExpr: vi.fn()
         });
     });
 
@@ -78,7 +80,9 @@ describe('YoutubeVisTab', () => {
             updateFilterParams: vi.fn(),
             updateSampleIds: vi.fn(),
             videoSortBy: writable(null),
-            updateSortBy: vi.fn()
+            videoQueryExpression: writable(null),
+            updateSortBy: vi.fn(),
+            updateQueryExpr: vi.fn()
         });
         render(YoutubeVisTab);
         await fireEvent.click(

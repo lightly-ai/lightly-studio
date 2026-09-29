@@ -35,6 +35,9 @@
         useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
 
+    const { filterParams, videoSortBy, videoQueryExpression, updateFilterParams } =
+        useVideoFilters();
+
     const videosParams = $derived({
         collection_id: collectionId,
         filters: {
@@ -43,7 +46,8 @@
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_values: $metadataValues,
-            categorical_metadata_values: $categoricalMetadataValues
+            categorical_metadata_values: $categoricalMetadataValues,
+            query_expr: $videoQueryExpression?.query_expr
         },
         video_bounds: $videoBoundsValues
     });
@@ -54,8 +58,6 @@
             filters: params.filters ? omit(params.filters, ['sample_ids']) : undefined
         };
     };
-
-    const { filterParams, videoSortBy, updateFilterParams } = useVideoFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local videos parameters
