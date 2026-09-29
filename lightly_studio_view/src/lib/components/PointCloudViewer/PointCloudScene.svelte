@@ -12,7 +12,7 @@
     interface Props {
         /** Current point cloud batch with positions, intensities, and count. */
         batch: PointBatch;
-        /** How points are colored: by height, intensity, packed RGB, or neutral gray. */
+        /** How points are colored: by height, intensity, or neutral gray. */
         colorMode?: ColorMode;
         /** Screen-space point size in pixels. */
         pointSize?: number;
@@ -64,7 +64,7 @@
         const mode = colorMode;
         const range = intensityRange;
         untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentBatch.colors);
+            pointCloudBuffer.updateColors(currentBatch.count, mode, range);
             invalidate();
         });
     });
