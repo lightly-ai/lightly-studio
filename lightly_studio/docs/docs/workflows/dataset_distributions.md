@@ -10,7 +10,7 @@ to spot class imbalance, coverage gaps, and missing metadata before training or 
 
 ## Explore Distributions in the GUI
 
-Open an image dataset and click **Distr** to open the **Distribution** panel. Choose
+Open an image or video dataset and click **Distr** to open the **Distribution** panel. Choose
 **Annotation classes** or **Metadata**, then select the annotation type or metadata key you want to
 inspect.
 
@@ -30,6 +30,10 @@ settings, use **Count by** to choose what the bars represent:
 
 - **Objects** counts individual annotations, such as bounding boxes or segmentation masks.
 - **Samples** counts distinct images containing each annotation class.
+
+In a video dataset, the bars count distinct videos. A video counts for an annotation class when the
+video or one of its frames has an annotation of that class. **Count by** is not available for
+videos.
 
 You can also choose which classes to show, sort them by count or name, change the chart orientation,
 and expand the chart. These views help identify dominant, rare, and long-tail classes.

@@ -12,6 +12,7 @@ import httpx
 import uvicorn
 from lightly_studio_serve import protocol, server
 from lightly_studio_serve.embedder import Embedder
+from lightly_studio_serve.protocol import ServerLimits
 
 _HOST = "127.0.0.1"
 
@@ -23,7 +24,11 @@ _POLL_TIMEOUT_SECONDS = 1.0
 
 
 @contextlib.contextmanager
-def serve(embedder: Embedder, api_key: str | None = None) -> Iterator[str]:
+def serve(
+    embedder: Embedder,
+    api_key: str | None = None,
+    limits: ServerLimits | None = None,
+) -> Iterator[str]:
     """Serve ``embedder`` until the context exits, and yield the address of the server.
 
     The socket is bound before uvicorn starts, so another process cannot claim the port
@@ -32,6 +37,7 @@ def serve(embedder: Embedder, api_key: str | None = None) -> Iterator[str]:
     Args:
         embedder: The embedder to serve.
         api_key: The bearer token the server requires, or `None` for no authentication.
+        limits: The limits that the server reports and applies, or `None` for the default.
 
     Raises:
         TimeoutError: If the server does not answer within the startup timeout.
@@ -40,7 +46,7 @@ def serve(embedder: Embedder, api_key: str | None = None) -> Iterator[str]:
     listener.bind((_HOST, 0))
     listener.listen()
     port = int(listener.getsockname()[1])
-    app = server.create_app(embedder=embedder, api_key=api_key)
+    app = server.create_app(embedder=embedder, api_key=api_key, limits=limits)
     uvicorn_server = uvicorn.Server(uvicorn.Config(app=app, log_level="warning"))
     thread = threading.Thread(
         target=uvicorn_server.run,
@@ -51,7 +57,7 @@ def serve(embedder: Embedder, api_key: str | None = None) -> Iterator[str]:
     # A startup that fails still has to stop the server, or its thread serves on.
     try:
         url = f"http://{_HOST}:{port}"
-        _wait_until_ready(url=url, api_key=api_key)
+        wait_until_ready(url=url, api_key=api_key)
         yield url
     finally:
         uvicorn_server.should_exit = True
@@ -59,8 +65,12 @@ def serve(embedder: Embedder, api_key: str | None = None) -> Iterator[str]:
         listener.close()
 
 
-def _wait_until_ready(url: str, api_key: str | None = None) -> None:
+def wait_until_ready(url: str, api_key: str | None = None) -> None:
     """Poll `/v1/describe` until the server answers.
+
+    Args:
+        url: The address of the server.
+        api_key: The bearer token the server requires, or `None` for no authentication.
 
     Raises:
         TimeoutError: If the server does not answer within the startup timeout, with what

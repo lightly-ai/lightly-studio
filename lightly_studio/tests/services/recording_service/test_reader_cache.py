@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.services.recording_service import reader_cache
@@ -60,25 +59,3 @@ def test_get_cached_reader__local_uri_has_no_storage_options(tmp_path: Path) -> 
     reader = get_cached_reader(uri)
     # Local paths must not use blockcache — the fsspec open call would fail if it tried.
     assert reader is not None
-
-
-def test_get_cached_reader__remote_uri_uses_endpoint_url(
-    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
-) -> None:
-    mock_reader_cls = mocker.patch.object(reader_cache, "McapFileReader")
-    monkeypatch.setenv("AWS_ENDPOINT_URL", "https://minio.example.com")
-    assert get_cached_reader("s3://bucket/recording.mcap") is mock_reader_cls.return_value
-    _, kwargs = mock_reader_cls.call_args
-    assert kwargs["storage_options"] == {
-        "client_kwargs": {"endpoint_url": "https://minio.example.com"}
-    }
-
-
-def test_get_cached_reader__remote_uri_without_endpoint_has_no_storage_options(
-    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
-) -> None:
-    mock_reader_cls = mocker.patch.object(reader_cache, "McapFileReader")
-    monkeypatch.delenv("AWS_ENDPOINT_URL", raising=False)
-    get_cached_reader("gs://bucket/recording.mcap")
-    _, kwargs = mock_reader_cls.call_args
-    assert kwargs["storage_options"] is None

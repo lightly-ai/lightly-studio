@@ -64,61 +64,24 @@ def test_match_labels__unmatched_entity(caplog: pytest.LogCaptureFixture) -> Non
     assert str(TIMESTAMP_NS) in caplog.text
 
 
-def test_match_labels__empty_scene_uses_log_time() -> None:
-    group_id = uuid4()
-    ticks = {TIMESTAMP_NS: group_id}
+def test_match_labels__empty_scene_is_counted(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO")
+    ticks = {TIMESTAMP_NS: uuid4()}
     messages = [(TIMESTAMP_NS, SceneUpdateLabels(cuboids=()))]
 
     matched = add_labels.match_labels(messages=messages, ticks=ticks)
+    add_labels.log_match_summary(
+        annotation_mcap_uri="memory://foo_labeled.mcap",
+        matched=matched,
+        ticks=ticks,
+        messages=messages,
+    )
 
-    assert matched.empty_group_ids == {group_id}
-    assert matched.matched_count == 1
-
-
-def test_match_labels__empty_scene_uses_entity_clock_offset() -> None:
-    first_group_id = uuid4()
-    second_group_id = uuid4()
-    log_time_ns = 1_000
-    offset_ns = TIMESTAMP_NS - log_time_ns
-    empty_scene_log_time_ns = log_time_ns + 1_000_000_000
-    clock_variation_ns = 5_000_000
-    messages = [
-        (log_time_ns, SceneUpdateLabels(cuboids=(_cuboid(timestamp_ns=TIMESTAMP_NS),))),
-        (empty_scene_log_time_ns, SceneUpdateLabels(cuboids=())),
-    ]
-    ticks = {
-        TIMESTAMP_NS: first_group_id,
-        empty_scene_log_time_ns + offset_ns + clock_variation_ns: second_group_id,
-    }
-
-    matched = add_labels.match_labels(messages=messages, ticks=ticks)
-
-    assert matched.empty_group_ids == {second_group_id}
-    assert matched.matched_count == 2
-
-
-def test_match_labels__empty_scene_outside_tolerance_is_unmatched() -> None:
-    group_id = uuid4()
-    log_time_ns = 1_000
-    offset_ns = TIMESTAMP_NS - log_time_ns
-    empty_scene_log_time_ns = log_time_ns + 1_000_000_000
-    messages = [
-        (log_time_ns, SceneUpdateLabels(cuboids=(_cuboid(timestamp_ns=TIMESTAMP_NS),))),
-        (empty_scene_log_time_ns, SceneUpdateLabels(cuboids=())),
-    ]
-    ticks = {
-        TIMESTAMP_NS: group_id,
-        empty_scene_log_time_ns
-        + offset_ns
-        + add_labels.DEFAULT_EMPTY_SCENE_MAX_DIFF_NS
-        + 1: uuid4(),
-    }
-
-    matched = add_labels.match_labels(messages=messages, ticks=ticks)
-
-    assert matched.empty_group_ids == set()
-    assert matched.matched_count == 1
-    assert matched.unmatched_count == 1
+    assert matched.empty_count == 1
+    assert matched.matched_count == 0
+    assert matched.unmatched_count == 0
+    assert "1 empty messages" in caplog.text
+    assert "Clock mismatch" not in caplog.text
 
 
 def test_match_labels__frame_tags() -> None:

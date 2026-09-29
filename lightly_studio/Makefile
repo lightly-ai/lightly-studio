@@ -141,6 +141,11 @@ start-e2e-distribution: build
 start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
 
+# The script imports the test embedders from `tests`.
+.PHONY: start-e2e-remote-embedder
+start-e2e-remote-embedder: build
+	PYTHONPATH=. uv run e2e-tests/index_remote_embedder.py
+
 .PHONY: start-postgres
 start-postgres: stop-postgres
 	@echo "Starting PostgreSQL container ($(POSTGRES_IMAGE))..."
