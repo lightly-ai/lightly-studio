@@ -353,8 +353,10 @@ def test_register_and_resolve() -> None:
     text_embedder: object = registry.get_text_embedder()
     image_embedder: object = registry.get_image_bytes_embedder()
 
-    assert text_embedder is remote
-    assert image_embedder is remote
+    # `register` adds the image-path capability, so the registry holds a new embedder.
+    assert isinstance(text_embedder, RemoteEmbedder)
+    assert text_embedder.embedding_space_spec() == remote.embedding_space_spec()
+    assert image_embedder is text_embedder
 
 
 def _test_client(app: FastAPI) -> TestClient:
