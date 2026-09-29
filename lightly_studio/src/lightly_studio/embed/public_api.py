@@ -35,6 +35,13 @@ def register_default_embedder(
       images for reverse-image search. Search resolves the embedder by the collection's
       stored embedding space, so ``embedder`` must share that space to take effect.
 
+    An embedder that calls an embedding server, such as one that ``RemoteEmbedder.connect``
+    builds, needs the first case only. When ingestion first embeds a collection with it,
+    the dataset stores the URL and the API key of the server in plain text. A later
+    process, such as ``lightly-studio gui``, then embeds search queries on that server
+    with no registration. To change the URL or the key later, use
+    ``register_remote_embedder``.
+
     Args:
         embedder: The embedder to register. Its embedding space is read from
             ``embedder.embedding_space_spec()``.
@@ -63,6 +70,10 @@ def register_remote_embedder(dataset: Dataset[Any], url: str, api_key: str | Non
     same space still serves the capabilities it implements. A server that embeds no images
     leaves the space without image search. The dataset stores ``url`` and ``api_key`` in
     plain text.
+
+    A remote embedder that ``register_default_embedder`` registered before the import
+    stores its server without this call. Call this function for a space that was filled
+    with no stored server, or to change the URL or the key of a server.
 
     See ``examples/example_remote_embedder.py`` for a runnable example.
 

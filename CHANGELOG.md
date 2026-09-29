@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Enable metric recomputing for instance-segmentation.
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
+- Python SDK: Store the URL and API key of a remote embedder that `register_default_embedder` registered before an import, so that a later process, such as `lightly-studio gui`, searches on the server with no new registration.
 
 ### Changed
 

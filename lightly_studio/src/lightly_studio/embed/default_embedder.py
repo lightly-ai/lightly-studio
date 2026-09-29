@@ -18,6 +18,7 @@ from lightly_studio.embed.errors import (
     NoDefaultEmbeddingModelError,
     RemoteEmbedderUnavailableError,
 )
+from lightly_studio.embed.remote.endpoint import PersistableEmbedder
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -44,7 +45,8 @@ def resolve_default_embedder(
 
     - The collection has a default model in the DB: its embedding space selects the embedder.
     - The collection has no default in the DB yet: the registry's bootstrap embedder is used and
-      registered as the collection's default.
+      registered as the collection's default. The model stores the server of an embedder that
+      names one, see ``PersistableEmbedder``.
 
     Logs a warning and returns None when the registry has no matching embedder, so the
     caller only needs to return on None.
@@ -176,7 +178,8 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
     """Register the embedder's space as the collection's default model and return its id.
 
     Gets or creates the embedding model for the embedder's space in the collection's
-    dataset, links it to the collection, and marks it the default.
+    dataset, stores the server of the embedder on it, links it to the collection, and marks
+    it the default.
 
     Raises:
         ValueError: If the collection does not exist, or if the dataset already has a model
@@ -196,6 +199,7 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
         ),
     )
     model_id = db_model.embedding_model_id
+    _store_remote_endpoint(session=session, embedding_model_id=model_id, embedder=embedder)
     collection_embedding_model_resolver.get_or_add_collection_model(
         session=session, collection_id=collection_id, embedding_model_id=model_id
     )
@@ -203,3 +207,23 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
         session=session, collection_id=collection_id, embedding_model_id=model_id
     )
     return model_id
+
+
+def _store_remote_endpoint(session: Session, embedding_model_id: UUID, embedder: Embedder) -> None:
+    """Store the server of the embedder on the model, so that a later process reaches it.
+
+    The model keeps the URL and the API key in plain text, the same write that
+    ``register_remote_embedder`` makes. An embedder that names no server leaves the model
+    unchanged, so a local embedder does not clear a server that the model already stores.
+    """
+    if not isinstance(embedder, PersistableEmbedder):
+        return
+    endpoint = embedder.remote_endpoint()
+    if endpoint is None:
+        return
+    embedding_model_resolver.set_remote_embedder(
+        session=session,
+        embedding_model_id=embedding_model_id,
+        url=endpoint.url,
+        api_key=endpoint.api_key,
+    )

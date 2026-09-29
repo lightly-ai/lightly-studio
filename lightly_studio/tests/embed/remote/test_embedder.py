@@ -23,6 +23,7 @@ from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.remote import batching, composition, embedder
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
+from lightly_studio.embed.remote.endpoint import PersistableEmbedder, RemoteEndpoint
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderBatchTooLargeError,
     RemoteEmbedderCapabilityError,
@@ -81,6 +82,14 @@ class TestRemoteEmbedder:
 
         assert type(first) is type(second)
 
+    def test_connect__remote_endpoint(self) -> None:
+        server = FakeServer(capabilities=["text"])
+
+        remote = RemoteEmbedder.connect(client=server.client(), api_key="secret-token")
+
+        assert isinstance(remote, PersistableEmbedder)
+        assert remote.remote_endpoint() == RemoteEndpoint(url=BASE_URL, api_key="secret-token")
+
     def test_with_route(self) -> None:
         with _test_client(server.create_app(embedder=FakeTextImageEmbedder())) as client:
             remote = RemoteEmbedder.connect(client=client)
@@ -92,6 +101,7 @@ class TestRemoteEmbedder:
         assert isinstance(routed, _ExtraRoute)
         assert type(routed).__name__ == "RemoteTextImageBytesExtraEmbedder"
         assert routed.embedding_space_spec() == remote.embedding_space_spec()
+        assert routed.remote_endpoint() == RemoteEndpoint(url=BASE_URL, api_key=None)
 
     def test_connect__text_and_video_bytes(self) -> None:
         with _test_client(server.create_app(embedder=FakeTextVideoEmbedder())) as client:
