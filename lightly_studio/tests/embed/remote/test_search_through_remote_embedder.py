@@ -6,7 +6,6 @@ each search has to embed its query on the server.
 
 from __future__ import annotations
 
-import time
 from collections.abc import Iterator
 from pathlib import Path
 from uuid import UUID
@@ -27,6 +26,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.database import db_manager
+from lightly_studio.embed.remote import transport
 from lightly_studio.embed.remote.errors import RemoteEmbedderAuthError
 from lightly_studio.resolvers import embedding_model_resolver
 from tests.embed.remote import color_embedder, threaded_server
@@ -69,7 +69,7 @@ def image_paths(tmp_path: Path) -> dict[str, Path]:
 
 @pytest.fixture
 def no_retry_wait(mocker: MockerFixture) -> None:
-    mocker.patch.object(time, "sleep")
+    mocker.patch.object(transport, "time")
 
 
 @pytest.fixture
