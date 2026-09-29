@@ -172,9 +172,7 @@ class RemoteEmbedder(Embedder):
             size_of=size_of,
         )
         for offset, chunk in chunks:
-            answers = self._send_split(
-                send=send, chunk=chunk, offset=offset, capability=capability
-            )
+            answers = self._send_split(send=send, chunk=chunk, offset=offset, capability=capability)
             for part_offset, response in answers:
                 rows.extend(response.embeddings)
                 # A chunk counts its kept indices from its own start.
