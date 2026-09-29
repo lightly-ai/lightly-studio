@@ -281,6 +281,29 @@ All our code must be typed.
 - Keep tests small. Split larger tests that check multiple cases.
 - Prefer writing out test inputs instead of generating them
 
+### A test states every value that its assertions depend on
+
+- Put each value that decides the outcome (a dimension, a count, a space key, a limit) in the test body or in a constant of the test module.
+- Do not keep such a value only inside a fixture, a helper or the code under test.
+- Write a relation between two values as the two values, not as a helper name such as "wider".
+- Rationale: A test that hides a value assumes that the value never changes, and the reader cannot check it.
+
+```python
+# Bad: The first import stores dimension 3, the RandomEmbedder() default in patch_collection.
+# The name "wider" is true only while that default is less than 4.
+dataset.add_images_from_path(path=tmp_path / "first")
+_register_wider_random_embedder(mocker=mocker)
+with pytest.raises(ValueError, match=r"does not match"):
+    dataset.add_images_from_path(path=tmp_path / "second")
+
+# Good: The test body shows both dimensions.
+_patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
+dataset.add_images_from_path(path=tmp_path / "first")
+_patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
+with pytest.raises(ValueError, match=r"does not match"):
+    dataset.add_images_from_path(path=tmp_path / "second")
+```
+
 ### Tests must use pytest (NOT unittest)
 
 - Don't import unittest. Pytest is more modern.
