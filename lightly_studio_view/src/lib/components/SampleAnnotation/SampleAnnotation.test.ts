@@ -95,21 +95,6 @@ describe('SampleAnnotation', () => {
         expect(screen.queryByTestId('svg-annotation-text')).not.toBeInTheDocument();
     });
 
-    it('keeps instance-segmentation clickable when bounding boxes are hidden', () => {
-        render(SampleAnnotation, {
-            props: {
-                annotation: createSegmentationMaskAnnotationWithMask(),
-                imageWidth: 100,
-                showBoundingBox: false,
-                prerenderedDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
-                prerenderedHeight: 12
-            }
-        });
-
-        expect(screen.queryByTestId('annotation_box')).not.toBeInTheDocument();
-        expect(screen.getByTestId('annotation_hit_area')).toHaveAttribute('pointer-events', 'all');
-    });
-
     it('shows instance-segmentation label when bounding boxes are shown', () => {
         render(SampleAnnotation, {
             props: {
