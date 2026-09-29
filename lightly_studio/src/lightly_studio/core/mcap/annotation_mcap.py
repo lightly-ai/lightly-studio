@@ -29,6 +29,39 @@ def annotation_mcap_uri(recording_uri: str, suffix: str = DEFAULT_ANNOTATION_MCA
     return f"{recording_uri}{suffix}{add_mcaps.MCAP_EXTENSION}"
 
 
+def recording_uri_from_annotation_mcap(
+    uri: str,
+    suffix: str = DEFAULT_ANNOTATION_MCAP_SUFFIX,
+) -> str:
+    """Return the recording URI named by an annotation MCAP.
+
+    `s3://bucket/runs/foo_labeled.mcap` becomes `s3://bucket/runs/foo.mcap`.
+    Backslashes are rewritten to `/`.
+
+    Args:
+        uri: Path or URI of the annotation MCAP.
+        suffix: The annotation MCAP stem suffix, including the leading underscore.
+
+    Raises:
+        ValueError: If the file name does not end with `{suffix}.mcap`.
+    """
+    normalized = normalized_uri(uri)
+    name = normalized.rsplit("/", maxsplit=1)[-1]
+    marker = f"{suffix}{add_mcaps.MCAP_EXTENSION}"
+    if not name.endswith(marker):
+        raise ValueError(f"'{uri}' is not an annotation MCAP with suffix '{suffix}'.")
+    recording_name = f"{name[: -len(marker)]}{add_mcaps.MCAP_EXTENSION}"
+    if "/" not in normalized:
+        return recording_name
+    directory = normalized.rsplit("/", maxsplit=1)[0]
+    return f"{directory}/{recording_name}"
+
+
+def normalized_uri(uri: str) -> str:
+    """Rewrite backslashes to `/` so local paths compare equal."""
+    return uri.replace("\\", "/")
+
+
 def is_annotation_mcap(uri: str, suffix: str = DEFAULT_ANNOTATION_MCAP_SUFFIX) -> bool:
     """Return whether a URI names an annotation MCAP rather than a source recording.
 
@@ -59,5 +92,5 @@ def annotation_mcap_exists(uri: str) -> bool:
 
 def _file_name(uri: str) -> str:
     """Return the last path component of a local path or URI."""
-    normalized = uri.replace("\\", "/").rstrip("/")
+    normalized = normalized_uri(uri).rstrip("/")
     return normalized.rsplit("/", maxsplit=1)[-1]
