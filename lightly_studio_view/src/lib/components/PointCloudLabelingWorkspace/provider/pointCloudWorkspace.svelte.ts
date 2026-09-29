@@ -25,20 +25,6 @@ function createTickDetails(getInputs: GetInputs, getCurrentTick: () => number): 
     }).tickDetails;
 }
 
-function createChannelLocators(
-    summary: SequenceSummary,
-    tickDetails: TickDetails,
-    getInputs: GetInputs
-) {
-    return $derived.by(() =>
-        getChannelLocators(
-            summary.data?.lidar_channels ?? [],
-            tickDetails.data,
-            getInputs().selectedLidarChannels
-        )
-    );
-}
-
 function getChannelLocators(
     lidarChannels: ChannelSummaryView[],
     details: TickDetails['data'],
@@ -61,12 +47,16 @@ function getChannelLocators(
 function createCloudPointQuery(
     getInputs: GetInputs,
     tickDetails: TickDetails,
-    channels: ReturnType<typeof createChannelLocators>
+    summary: SequenceSummary
 ): CloudPointQuery {
     return useCloudPointFrame(() => ({
         datasetId: getInputs().datasetId,
         recordingId: tickDetails.data?.recording_id ?? '',
-        channels
+        channels: getChannelLocators(
+            summary.data?.lidar_channels ?? [],
+            tickDetails.data,
+            getInputs().selectedLidarChannels
+        )
     })).query;
 }
 
@@ -131,8 +121,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         // Read once at construction: this is the starting position, not a reactive binding.
         this.currentTick = getInputs().initialTick ?? 0;
         const tickDetails = createTickDetails(getInputs, () => this.currentTick);
-        const channels = createChannelLocators(summary, tickDetails, getInputs);
-        const cloudPointFrame = createCloudPointQuery(getInputs, tickDetails, channels);
+        const cloudPointFrame = createCloudPointQuery(getInputs, tickDetails, summary);
         this.tickDetails = tickDetails;
         this.cloudPointFrame = cloudPointFrame;
         this.retry = createRetryHandler(refetch, tickDetails, cloudPointFrame);
