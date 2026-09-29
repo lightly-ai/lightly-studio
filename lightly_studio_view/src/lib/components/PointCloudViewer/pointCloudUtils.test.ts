@@ -130,6 +130,26 @@ describe('buildColorBuffer', () => {
         }
         expect(different).toBe(true);
     });
+
+    it('fills missing rgb values with neutral gray instead of stale colors', () => {
+        const positions = new Float32Array([0, 0, 0, 1, 1, 1]);
+        const intensities = new Float32Array([10, 20]);
+        const colors = new Float32Array([9, 9, 9, 9, 9, 9]);
+        const pointColors = new Float32Array([0.1, 0.2, 0.3]);
+
+        buildColorBuffer({
+            positions,
+            intensities,
+            count: 2,
+            colorMode: 'rgb',
+            colors,
+            pointColors
+        });
+
+        expect(Array.from(colors)).toEqual(
+            Array.from(new Float32Array([0.1, 0.2, 0.3, 0.5, 0.5, 0.5]))
+        );
+    });
 });
 
 describe('computeActiveBounds', () => {
