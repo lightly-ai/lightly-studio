@@ -39,7 +39,7 @@ const parser = createParser();
 
 describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {
-        const result = parseLightlyQuery(parser, 'invalid_query');
+        const result = parseLightlyQuery(parser, 'invalid_query', 'image');
 
         expect(result.status).toBe('error');
         if (result.status !== 'error') return;
@@ -69,16 +69,29 @@ describe('parseLightlyQuery error handling', () => {
         },
         { name: 'classification unknown field', source: 'classification(x = 0)' },
         { name: 'wrong in operator use', source: '"jpg" IN file_name' },
-        { name: 'stray punctuation', source: '@@@' }
+        { name: 'stray punctuation', source: '@@@' },
+        { name: 'video prefix', source: 'video: height > 720' },
+        { name: 'video field in image scope', source: 'duration_s > 10' }
     ];
 
     it.each(PARSE_FAILURE_CASES)('reports errors for $name', ({ source }) => {
-        const result = parseLightlyQuery(parser, source);
+        const result = parseLightlyQuery(parser, source, 'image');
+        expect(result.status).toBe('error');
+    });
+
+    const VIDEO_PARSE_FAILURE_CASES: Array<{ name: string; source: string }> = [
+        { name: 'video prefix', source: 'video: height > 720' },
+        { name: 'string compared to float field', source: 'fps = "fast"' },
+        { name: 'unknown video field', source: 'x = 1' }
+    ];
+
+    it.each(VIDEO_PARSE_FAILURE_CASES)('reports errors in video scope for $name', ({ source }) => {
+        const result = parseLightlyQuery(parser, source, 'video');
         expect(result.status).toBe('error');
     });
 
     it('returns an error result for an invalid datetime literal', () => {
-        const result = parseLightlyQuery(parser, 'created_at = "not-a-date"');
+        const result = parseLightlyQuery(parser, 'created_at = "not-a-date"', 'image');
 
         expect(result).toEqual({
             status: 'error',
@@ -390,13 +403,6 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         )
     },
 
-    /* Video queries */
-    {
-        name: 'video height greater than',
-        source: 'video:height > 720',
-        expected: query(int('video', 'height', '>', 720))
-    },
-
     /* Complex queries */
     {
         name: 'complex reviewed large cat image',
@@ -445,9 +451,52 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     }
 ];
 
+const VIDEO_TRANSLATION_TEST_CASES: TranslationTestCase[] = [
+    {
+        name: 'video height greater than',
+        source: 'height > 720',
+        expected: query(int('video', 'height', '>', 720))
+    },
+    {
+        name: 'video duration greater than',
+        source: 'duration_s > 10.5',
+        expected: query(float('video', 'duration_s', '>', 10.5))
+    },
+    {
+        name: 'video fps greater than or equal',
+        source: 'fps >= 25',
+        expected: query(float('video', 'fps', '>=', 25))
+    },
+    {
+        name: 'video file name equality',
+        source: 'file_name = "clip.mp4"',
+        expected: query(str('video', 'file_name', '==', 'clip.mp4'))
+    },
+    {
+        name: 'video creation time less than',
+        source: 'created_at < "2025-01-01T00:00:00Z"',
+        expected: query(dt('video', 'created_at', '<', '2025-01-01T00:00:00Z'))
+    },
+    {
+        name: 'video with tag and object detection',
+        source: '"reviewed" IN tags AND NOT object_detection(class_name = "car")',
+        expected: query(
+            and(
+                tagsContains('video', 'reviewed'),
+                not(objectDetection(str('object_detection', 'class_name', '==', 'car')))
+            )
+        )
+    }
+];
+
 describe('parseLightlyQuery translates example queries', () => {
     it.each(TRANSLATION_TEST_CASES)('$name', ({ source, expected }) => {
-        const result = parseLightlyQuery(parser, source);
+        const result = parseLightlyQuery(parser, source, 'image');
+        expect(result).toEqual({ status: 'ok', queryExpr: expected });
+    });
+
+    it.each(VIDEO_TRANSLATION_TEST_CASES)('$name', ({ source, expected }) => {
+        const result = parseLightlyQuery(parser, source, 'video');
         expect(result).toEqual({ status: 'ok', queryExpr: expected });
     });
 });

@@ -1,19 +1,29 @@
 <script lang="ts">
-    import { onMount, untrack } from 'svelte';
+    import { untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components';
 
     import { useQueryEditor } from './useQueryEditor';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
+    import type { RootScope } from './language/types';
 
-    const LIGHTLY_QUERY_DEFAULT_VALUE = `# Example query
+    const DEFAULT_VALUES: Record<RootScope, string> = {
+        image: `# Example query
 width < 500
 AND "reviewed" IN tags
 AND object_detection(class_name = "person" AND x > 10)
-`;
+`,
+        video: `# Example query
+duration_s > 10
+AND "reviewed" IN tags
+AND object_detection(class_name = "person")
+`
+    };
 
     interface QueryEditorProps {
         value?: string;
+        /** Top-level scope of the query: the grid that the query filters. */
+        rootScope?: RootScope;
         height?: string;
         readOnly?: boolean;
         onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
@@ -21,14 +31,15 @@ AND object_detection(class_name = "person" AND x > 10)
 
     let {
         value: valueProp,
+        rootScope = 'image',
         height = '320px',
         readOnly = false,
         onSave
     }: QueryEditorProps = $props();
 
-    const initialValue = $derived(valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE);
+    const initialValue = $derived(valueProp ?? DEFAULT_VALUES[rootScope]);
 
-    let containerEl: HTMLDivElement | null = null;
+    let containerEl = $state<HTMLDivElement | null>(null);
 
     const { mount, translateQuery } = useQueryEditor();
 
@@ -46,7 +57,7 @@ AND object_detection(class_name = "person" AND x > 10)
     }
 
     function handleSave() {
-        const translationResult = translateQuery(draftValue);
+        const translationResult = translateQuery(draftValue, rootScope);
         if (translationResult.status === 'error') {
             toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);
             return;
@@ -58,14 +69,27 @@ AND object_detection(class_name = "person" AND x > 10)
     let draftValue = $state(untrack(() => initialValue));
     let lastAppliedValue = $state<string | null>(untrack(() => valueProp ?? null));
 
-    onMount(() => {
-        if (!containerEl) return;
-        return mount(containerEl, {
-            value: initialValue,
-            readOnly,
-            onChange: (next) => {
-                draftValue = next;
-            }
+    // Remount the editor when `rootScope` changes: a new Monaco model re-stamps the
+    // model scope (used by validation) so it never disagrees with the prop scope
+    // (used by Apply), and the scope-specific default example loads. Only
+    // `rootScope` and `containerEl` drive the remount (both read reactively here);
+    // the current `value`/example is read untracked so a parent value change does
+    // not rebuild the editor.
+    $effect(() => {
+        const scope = rootScope;
+        const el = containerEl;
+        if (!el) return;
+        return untrack(() => {
+            draftValue = initialValue;
+            lastAppliedValue = valueProp ?? null;
+            return mount(el, {
+                value: initialValue,
+                rootScope: scope,
+                readOnly,
+                onChange: (next) => {
+                    draftValue = next;
+                }
+            });
         });
     });
     const canApply = $derived(draftValue !== lastAppliedValue);
