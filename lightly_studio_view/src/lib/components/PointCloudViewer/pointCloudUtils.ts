@@ -21,7 +21,7 @@ interface BuildColorBufferParams {
     intensities: Float32Array;
     /** Number of active points. */
     count: number;
-    /** How points are colored. */
+    /** "none", "intensity", "height", or "rgb". */
     colorMode: ColorMode;
     /** Pre-allocated output buffer (must be >= count * 3). */
     colors: Float32Array;
@@ -33,6 +33,8 @@ interface BuildColorBufferParams {
 
 /**
  * Build a color buffer from position and intensity data.
+ *
+ * @param params - See {@link BuildColorBufferParams}.
  */
 export function buildColorBuffer(params: BuildColorBufferParams): void {
     const { colorMode, colors, count, pointColors } = params;
@@ -43,10 +45,39 @@ export function buildColorBuffer(params: BuildColorBufferParams): void {
     }
 
     if (colorMode === 'none' || colorMode === 'rgb') {
-        fillNeutralColors(colors, count);
+        colors.fill(NEUTRAL_GRAY, 0, count * 3);
         return;
     }
-    fillGradientColors(params);
+    fillGradient(params, colorMode === 'intensity');
+}
+
+/** Color the buffer with a turbo gradient over intensity or height values. */
+function fillGradient(params: BuildColorBufferParams, useIntensity: boolean): void {
+    const { positions, intensities, count, colors, intensityRange } = params;
+    const valueAt = (i: number): number => (useIntensity ? intensities[i] : positions[i * 3 + 2]);
+    const [minVal, maxVal] =
+        useIntensity && intensityRange ? intensityRange : computeRange(valueAt, count);
+    const range = maxVal - minVal;
+    const invRange = range === 0 ? 0 : 1 / range;
+
+    for (let i = 0; i < count; i++) {
+        let t = (valueAt(i) - minVal) * invRange;
+        if (t < 0) t = 0;
+        else if (t > 1) t = 1;
+        turboInto(useIntensity ? Math.sqrt(t) : t, colors, i * 3);
+    }
+}
+
+/** Return the [min, max] of valueAt over the first count points. */
+function computeRange(valueAt: (i: number) => number, count: number): [number, number] {
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    for (let i = 0; i < count; i++) {
+        const v = valueAt(i);
+        if (v < minVal) minVal = v;
+        if (v > maxVal) maxVal = v;
+    }
+    return [minVal, maxVal];
 }
 
 /**
@@ -74,55 +105,4 @@ export function computeCameraPlacement(bounds: Box3): CameraPlacement {
         position: [center.x + distance * 0.5, center.y + distance * 0.5, center.z + distance],
         target: [center.x, center.y, center.z]
     };
-}
-
-/** Fill the color buffer with neutral gray for the first `count` points. */
-function fillNeutralColors(colors: Float32Array, count: number): void {
-    for (let i = 0; i < count; i++) {
-        colors[i * 3] = NEUTRAL_GRAY;
-        colors[i * 3 + 1] = NEUTRAL_GRAY;
-        colors[i * 3 + 2] = NEUTRAL_GRAY;
-    }
-}
-
-/** Color the points along the turbo gradient using intensity or height. */
-function fillGradientColors(params: BuildColorBufferParams): void {
-    const { positions, intensities, count, colorMode, colors, intensityRange } = params;
-    const useIntensity = colorMode === 'intensity';
-
-    const [minVal, maxVal] =
-        useIntensity && intensityRange
-            ? intensityRange
-            : computeValueRange(positions, intensities, count, useIntensity);
-
-    const range = maxVal - minVal;
-    const invRange = range === 0 ? 0 : 1 / range;
-
-    for (let i = 0; i < count; i++) {
-        const raw = useIntensity ? intensities[i] : positions[i * 3 + 2];
-
-        let t = (raw - minVal) * invRange;
-        if (t < 0) t = 0;
-        else if (t > 1) t = 1;
-        if (useIntensity) t = Math.sqrt(t);
-
-        turboInto(t, colors, i * 3);
-    }
-}
-
-/** Find the [min, max] of the intensity or height values across active points. */
-function computeValueRange(
-    positions: Float32Array,
-    intensities: Float32Array,
-    count: number,
-    useIntensity: boolean
-): [number, number] {
-    let minVal = Infinity;
-    let maxVal = -Infinity;
-    for (let i = 0; i < count; i++) {
-        const v = useIntensity ? intensities[i] : positions[i * 3 + 2];
-        if (v < minVal) minVal = v;
-        if (v > maxVal) maxVal = v;
-    }
-    return [minVal, maxVal];
 }
