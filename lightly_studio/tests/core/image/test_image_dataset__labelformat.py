@@ -223,6 +223,37 @@ class TestDataset:
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
 
+    def test_from_labelformat__embedder_dimension_mismatch(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        assume_referenced_files_exist: None,  # noqa: ARG002
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_samples_from_labelformat(
+                input_labels=_get_input(filename="image.jpg"),
+                images_path="/fake/path/images",
+            )
+
+        assert len(dataset.query().to_list()) == 0
+
+    def test_from_labelformat__embedder_dimension_mismatch_dont_embed(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        assume_referenced_files_exist: None,  # noqa: ARG002
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+
+        dataset.add_samples_from_labelformat(
+            input_labels=_get_input(filename="image.jpg"),
+            images_path="/fake/path/images",
+            embed=False,
+            embed_annotations=False,
+        )
+
+        assert len(dataset.query().to_list()) == 1
+
 
 def _get_input(
     filename: str = "image.jpg", with_confidence: bool = False

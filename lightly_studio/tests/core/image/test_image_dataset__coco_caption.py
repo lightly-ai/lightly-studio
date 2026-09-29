@@ -157,6 +157,39 @@ class TestDataset:
         samples = list(dataset)
         assert all(len(sample.sample_table.embeddings) == 0 for sample in samples)
 
+    def test_add_samples_from_coco_caption__embedder_dimension_mismatch(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        annotations_path = tmp_path / "annotations.json"
+        _get_captions_input(annotations_path=annotations_path)
+        images_path = _create_valid_samples(tmp_path)
+
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_samples_from_coco_caption(
+                annotations_json=annotations_path, images_path=images_path
+            )
+
+        assert len(list(dataset)) == 0
+
+    def test_add_samples_from_coco_caption__embedder_dimension_mismatch_dont_embed(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        annotations_path = tmp_path / "annotations.json"
+        _get_captions_input(annotations_path=annotations_path)
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset.add_samples_from_coco_caption(
+            annotations_json=annotations_path, images_path=images_path, embed=False
+        )
+
+        assert len(list(dataset)) == 2
+
 
 def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:

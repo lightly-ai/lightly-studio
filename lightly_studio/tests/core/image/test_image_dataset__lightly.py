@@ -108,11 +108,54 @@ class TestDataset:
 
         assert len(list(dataset)) == 1
 
+    def test_add_samples_from_lightly__embedder_dimension_mismatch(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        preds_path = _create_valid_samples(path=tmp_path)
+
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_samples_from_lightly(input_folder=preds_path)
+
+        assert len(list(dataset)) == 0
+
+    def test_add_samples_from_lightly__embedder_dimension_mismatch_dont_embed(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        preds_path = _create_valid_samples(path=tmp_path)
+
+        dataset.add_samples_from_lightly(
+            input_folder=preds_path, embed=False, embed_annotations=False
+        )
+
+        assert len(list(dataset)) == 2
+
 
 def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:
         image_path.parent.mkdir(parents=True, exist_ok=True)
         Image.new("RGB", (10, 10)).save(image_path)
+
+
+def _create_valid_samples(path: Path) -> Path:
+    """Create two images and their predictions, and return the predictions folder."""
+    _create_sample_images(
+        image_paths=[
+            path / "images" / "image1.jpg",
+            path / "images" / "image2.jpg",
+        ]
+    )
+    preds_path = path / "predictions"
+    preds_path.mkdir()
+    (preds_path / "image1.json").write_text(json.dumps(_get_lightly_annotation_dict_1()))
+    (preds_path / "image2.json").write_text(json.dumps(_get_lightly_annotation_dict_2()))
+    (preds_path / "schema.json").write_text(json.dumps(_get_lightly_schema_dict()))
+    return preds_path
 
 
 def _get_lightly_annotation_dict_1() -> dict[str, Any]:

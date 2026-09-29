@@ -199,6 +199,40 @@ class TestImageDataset:
         assert sample.tags == {"test_split"}
         assert sample.sample_table.embeddings == []
 
+    def test_add_samples_from_pascal_voc_segmentations__embedder_dimension_mismatch(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        images_path, masks_path, _, _ = _build_pascal_voc_local_paths(tmp_path)
+
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_samples_from_pascal_voc_segmentations(
+                images_path=images_path,
+                masks_path=masks_path,
+                class_id_to_name={0: "bg", 1: "cat", 2: "dog"},
+            )
+
+        assert len(list(dataset)) == 0
+
+    def test_add_samples_from_pascal_voc_segmentations__embedder_dimension_mismatch_dont_embed(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        images_path, masks_path, _, _ = _build_pascal_voc_local_paths(tmp_path)
+
+        dataset.add_samples_from_pascal_voc_segmentations(
+            images_path=images_path,
+            masks_path=masks_path,
+            class_id_to_name={0: "bg", 1: "cat", 2: "dog"},
+            embed=False,
+        )
+
+        assert len(list(dataset)) == 2
+
     def test_add_samples_from_pascal_voc_segmentations__records_broken_image(
         self,
         patch_collection: None,  # noqa: ARG002

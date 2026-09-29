@@ -454,6 +454,39 @@ class TestDataset:
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
 
+    def test_add_samples_from_yolo__embedder_dimension_mismatch(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        yaml_path = tmp_path / "data.yaml"
+        yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+        _create_images(tmp_path / "train" / "images")
+        _create_labels(tmp_path / "train" / "labels")
+
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
+
+        assert len(list(dataset)) == 0
+
+    def test_add_samples_from_yolo__embedder_dimension_mismatch_dont_embed(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        yaml_path = tmp_path / "data.yaml"
+        yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+        _create_images(tmp_path / "train" / "images")
+        _create_labels(tmp_path / "train" / "labels")
+
+        dataset.add_samples_from_yolo(
+            data_yaml=yaml_path, input_split="train", embed=False, embed_annotations=False
+        )
+
+        assert len(list(dataset)) == 2
+
     def test_add_samples_from_yolo__records_broken_image(
         self,
         patch_collection: None,  # noqa: ARG002

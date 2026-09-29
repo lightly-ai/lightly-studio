@@ -456,6 +456,42 @@ class TestDataset:
         samples = list(dataset)
         assert all(len(sample.sample_table.embeddings) == 0 for sample in samples)
 
+    def test_add_samples_from_coco__embedder_dimension_mismatch(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path, images_path=images_path
+            )
+
+        assert len(list(dataset)) == 0
+
+    def test_add_samples_from_coco__embedder_dimension_mismatch_dont_embed(
+        self,
+        dataset_with_mismatched_embedder: ImageDataset,
+        tmp_path: Path,
+    ) -> None:
+        dataset = dataset_with_mismatched_embedder
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            embed=False,
+            embed_annotations=False,
+        )
+
+        assert len(list(dataset)) == 2
+
     def test_add_samples_from_coco__tags_created_for_split(
         self,
         patch_collection: None,  # noqa: ARG002

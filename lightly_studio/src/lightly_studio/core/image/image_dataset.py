@@ -176,10 +176,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         logger.info(f"Found {len(image_paths)} images in {path}.")
 
-        if embed and image_paths:
-            # Fail before the insert, so that a wrongly registered embedder stores no image
-            embed_samples.check_image_embedder_dimension(
-                session=self.session, collection_id=self.collection_id
+        # A path without images adds nothing, so the embedder is not checked
+        if image_paths:
+            _check_image_embedder_before_insert(
+                session=self.session, collection_id=self.collection_id, embed=embed
             )
 
         # Process images
@@ -368,10 +368,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If limit is not None and not greater than 0, or if embed is True and
+                the registered image embedder does not produce the dimension of the
+                dataset's embeddings. Nothing is added then.
         """
         fsspec_lister.validate_limit(limit)
         images_path = Path(images_path).absolute()
+        _check_image_embedder_before_insert(
+            session=self.session, collection_id=self.collection_id, embed=embed
+        )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
@@ -426,8 +431,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 added on top of the split tag.
 
         Raises:
-            ValueError: If tag_depth is negative, or if limit is not None and not greater
-                than 0.
+            ValueError: If tag_depth is negative, if limit is not None and not greater
+                than 0, or if embed is True and the registered image embedder does not
+                produce the dimension of the dataset's embeddings. Nothing is added then.
         """
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
@@ -440,6 +446,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         # Determine which splits to process
         splits_to_process = add_annotations.resolve_yolo_splits(
             data_yaml=data_yaml, input_split=input_split
+        )
+
+        _check_image_embedder_before_insert(
+            session=self.session, collection_id=self.collection_id, embed=embed
         )
 
         all_created_sample_ids = []
@@ -535,8 +545,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 These tags are added on top of the `split` tag.
 
         Raises:
-            ValueError: If tag_depth is negative, or if limit is not None and not greater
-                than 0.
+            ValueError: If tag_depth is negative, if limit is not None and not greater
+                than 0, or if embed is True and the registered image embedder does not
+                produce the dimension of the dataset's embeddings. Nothing is added then.
         """
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
@@ -558,6 +569,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             )
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")
+
+        _check_image_embedder_before_insert(
+            session=self.session, collection_id=self.collection_id, embed=embed
+        )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
@@ -620,11 +635,18 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If limit is not None and not greater than 0, or if embed is True and
+                the registered image embedder does not produce the dimension of the
+                dataset's embeddings. Nothing is added then.
         """
         fsspec_lister.validate_limit(limit)
         images_path = _normalize_input_path(path=images_path)
         masks_path = _normalize_input_path(path=masks_path)
+
+        # Check before the folder scan, which opens every image
+        _check_image_embedder_before_insert(
+            session=self.session, collection_id=self.collection_id, embed=embed
+        )
 
         # Pascal VOC opens every image to read its dimensions during the from_dirs folder scan,
         # which happens here at construction (not lazily in get_images/get_labels). Record broken
@@ -683,7 +705,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If limit is not None and not greater than 0, or if embed is True and
+                the registered image embedder does not produce the dimension of the
+                dataset's embeddings. Nothing is added then.
         """
         fsspec_lister.validate_limit(limit)
         input_folder = Path(input_folder).absolute()
@@ -693,6 +717,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_folder=input_folder, images_rel_path=images_rel_path
         )
         images_path = input_folder / images_rel_path
+
+        _check_image_embedder_before_insert(
+            session=self.session, collection_id=self.collection_id, embed=embed
+        )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
@@ -737,7 +765,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
-            ValueError: If limit is not None and not greater than 0.
+            ValueError: If limit is not None and not greater than 0, or if embed is True and
+                the registered image embedder does not produce the dimension of the
+                dataset's embeddings. Nothing is added then.
         """
         fsspec_lister.validate_limit(limit)
         annotations_json = Path(annotations_json).absolute()
@@ -745,6 +775,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         if not annotations_json.is_file() or annotations_json.suffix != ".json":
             raise FileNotFoundError(f"COCO caption json file not found: '{annotations_json}'")
+
+        _check_image_embedder_before_insert(
+            session=self.session, collection_id=self.collection_id, embed=embed
+        )
 
         created_sample_ids = add_images.load_into_dataset_from_coco_captions(
             session=self.session,
@@ -781,6 +815,26 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             # A generator, so the dataset scan runs only when a write method reads sample_ids.
             sample_ids=(sample.sample_id for sample in query),
         )
+
+
+def _check_image_embedder_before_insert(session: Session, collection_id: UUID, embed: bool) -> None:
+    """Check the image embedder of the collection before the images are stored.
+
+    The embedding after the insert makes the same check. This check comes first, so that a
+    wrongly registered embedder stores no sample.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The collection that the images are added to.
+        embed: If False, this is a no-op.
+
+    Raises:
+        ValueError: If embed is True and the registered image embedder does not produce the
+            dimension of the dataset's embeddings.
+    """
+    if not embed:
+        return
+    embed_samples.check_image_embedder_dimension(session=session, collection_id=collection_id)
 
 
 def _postprocess_created_images(
