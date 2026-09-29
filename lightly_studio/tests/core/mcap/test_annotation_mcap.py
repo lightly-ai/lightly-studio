@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import fsspec
+import pytest
 
 from lightly_studio.core.mcap import annotation_mcap
 
@@ -25,6 +26,27 @@ def test_annotation_mcap_uri__custom_suffix() -> None:
         annotation_mcap.annotation_mcap_uri(recording_uri="/data/foo.mcap", suffix="_gt")
         == "/data/foo_gt.mcap"
     )
+
+
+def test_recording_uri_from_annotation_mcap() -> None:
+    recording = annotation_mcap.recording_uri_from_annotation_mcap
+    assert recording(uri="/data/foo_labeled.mcap") == "/data/foo.mcap"
+    assert recording(uri="s3://bucket/runs/batch/foo_labeled.mcap") == (
+        "s3://bucket/runs/batch/foo.mcap"
+    )
+    assert recording(uri="C:\\bags\\foo_labeled.mcap") == "C:/bags/foo.mcap"
+    assert recording(uri="/data/foo_gt.mcap", suffix="_gt") == "/data/foo.mcap"
+    assert recording(uri="foo_labeled.mcap") == "foo.mcap"
+    with pytest.raises(ValueError, match="not an annotation MCAP"):
+        recording(uri="/data/foo.mcap")
+
+
+def test_recording_uri_from_annotation_mcap__roundtrip() -> None:
+    recording_uri = "C:\\bags\\foo.mcap"
+    annotation_uri = annotation_mcap.annotation_mcap_uri(recording_uri=recording_uri)
+    assert annotation_mcap.recording_uri_from_annotation_mcap(
+        uri=annotation_uri
+    ) == annotation_mcap.normalized_uri(recording_uri)
 
 
 def test_is_annotation_mcap() -> None:
