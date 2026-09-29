@@ -8,7 +8,6 @@ from typing import TypeVar
 from uuid import UUID
 
 from lightly_studio_serve.embedder import Embedder
-from lightly_studio_serve.types import EmbeddingSpaceSpec
 from sqlmodel import Session
 
 from lightly_studio.embed import embedder_config, embedder_registry
@@ -201,7 +200,11 @@ def _embedder_for_model(
     embedder = get_embedder_fn(embedder_registry.get_registry(), default_model.name, config)
     if embedder is None:
         return None
-    _check_dimension(spec=embedder.embedding_space_spec(), model=default_model)
+    _check_dimension(
+        embedder_dimension=embedder.embedding_space_spec().dimension,
+        stored_dimension=default_model.embedding_dimension,
+        space_key=default_model.name,
+    )
     return embedder
 
 
@@ -236,19 +239,28 @@ def _check_bootstrap_dimension(
     spec = embedder.embedding_space_spec()
     for model in dataset_models:
         if model.name == spec.space_key:
-            _check_dimension(spec=spec, model=model)
+            _check_dimension(
+                embedder_dimension=spec.dimension,
+                stored_dimension=model.embedding_dimension,
+                space_key=model.name,
+            )
 
 
-def _check_dimension(spec: EmbeddingSpaceSpec, model: EmbeddingModelTable) -> None:
+def _check_dimension(embedder_dimension: int, stored_dimension: int, space_key: str) -> None:
     """Check the dimension of an embedder against the stored dimension of its space.
+
+    Args:
+        embedder_dimension: The dimension that the embedder produces.
+        stored_dimension: The dimension that the dataset stores for the space.
+        space_key: The embedding space, named in the error.
 
     Raises:
         ValueError: If the dimensions differ (a wrongly registered embedder).
     """
-    if spec.dimension != model.embedding_dimension:
+    if embedder_dimension != stored_dimension:
         raise ValueError(
-            f"Embedder dimension {spec.dimension} does not match the dimension "
-            f"{model.embedding_dimension} stored for space '{model.name}'. "
+            f"Embedder dimension {embedder_dimension} does not match the dimension "
+            f"{stored_dimension} stored for space '{space_key}'. "
             "A wrongly registered embedder is likely."
         )
 
