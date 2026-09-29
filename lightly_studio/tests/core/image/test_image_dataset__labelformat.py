@@ -223,7 +223,7 @@ class TestDataset:
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
 
-    def test_from_labelformat__embedder_dimension_mismatch(
+    def test_add_samples_from_labelformat__embedder_dimension_mismatch(
         self,
         dataset_with_mismatched_embedder: ImageDataset,
         assume_referenced_files_exist: None,  # noqa: ARG002
@@ -238,7 +238,7 @@ class TestDataset:
 
         assert len(dataset.query().to_list()) == 0
 
-    def test_from_labelformat__embedder_dimension_mismatch_dont_embed(
+    def test_add_samples_from_labelformat__embedder_dimension_mismatch_dont_embed(
         self,
         dataset_with_mismatched_embedder: ImageDataset,
         assume_referenced_files_exist: None,  # noqa: ARG002
