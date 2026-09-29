@@ -29,12 +29,15 @@ _API_KEY = "test-api-key"
 # The fixture gives each test its own embedder registry and the test database.
 pytestmark = pytest.mark.usefixtures("patch_collection")
 
+# Another dimension than the one of the color space that the dataset stores
+_OTHER_DIMENSION = color_embedder.DIMENSION + 1
 
-class _NarrowColorEmbedder(TextEmbedder, ImageBytesEmbedder):
-    """Produces the color space with dimension 2 instead of 3."""
+
+class _OtherDimensionColorEmbedder(TextEmbedder, ImageBytesEmbedder):
+    """Produces the color space with another dimension."""
 
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        return EmbeddingSpaceSpec(space_key=color_embedder.SPACE_KEY, dimension=2)
+        return EmbeddingSpaceSpec(space_key=color_embedder.SPACE_KEY, dimension=_OTHER_DIMENSION)
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         return _zeros(count=len(texts))
@@ -110,7 +113,7 @@ def test_add_images_from_path__dimension_mismatch_after_restart(
     color_embedder.write_color_images(directory=more_images)
 
     with (
-        threaded_server.serve(embedder=_NarrowColorEmbedder(), api_key=_API_KEY) as url,
+        threaded_server.serve(embedder=_OtherDimensionColorEmbedder(), api_key=_API_KEY) as url,
         connection.build_client(url=url) as client,
     ):
         lightly_studio.register_default_embedder(
@@ -124,5 +127,6 @@ def test_add_images_from_path__dimension_mismatch_after_restart(
 
 def _zeros(count: int) -> EmbeddingResult:
     return EmbeddingResult(
-        embeddings=np.zeros((count, 2), dtype=np.float32), kept_indices=list(range(count))
+        embeddings=np.zeros((count, _OTHER_DIMENSION), dtype=np.float32),
+        kept_indices=list(range(count)),
     )

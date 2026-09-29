@@ -209,8 +209,9 @@ class TestDataset:
     ) -> None:
         _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
         dataset = ImageDataset.create(name="test_dataset")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
         dataset.add_images_from_path(path=tmp_path / "first")
-        _register_wider_random_embedder(mocker=mocker)
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
         _create_sample_images(image_paths=[tmp_path / "second" / "image2.jpg"])
 
         with pytest.raises(ValueError, match=r"does not match"):
@@ -226,8 +227,9 @@ class TestDataset:
     ) -> None:
         _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
         dataset = ImageDataset.create(name="test_dataset")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
         dataset.add_images_from_path(path=tmp_path / "first")
-        _register_wider_random_embedder(mocker=mocker)
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
         _create_sample_images(image_paths=[tmp_path / "second" / "image2.jpg"])
 
         dataset.add_images_from_path(path=tmp_path / "second", embed=False)
@@ -242,8 +244,9 @@ class TestDataset:
     ) -> None:
         _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
         dataset = ImageDataset.create(name="test_dataset")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
         dataset.add_images_from_path(path=tmp_path / "first")
-        _register_wider_random_embedder(mocker=mocker)
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
         (tmp_path / "empty").mkdir()
 
         # No image is found, so nothing is checked, stored or embedded.
@@ -344,8 +347,8 @@ def _create_sample_images(image_paths: list[Path]) -> None:
         Image.new("RGB", (10, 10)).save(image_path)
 
 
-def _register_wider_random_embedder(mocker: Mocker) -> None:
-    """Restart with the random embedder at dimension 4, one more than the dataset holds."""
+def _patch_registry(mocker: Mocker, embedder: RandomEmbedder) -> None:
+    """Replace the process-wide registry with one that holds only ``embedder``."""
     registry = EmbedderRegistry()
-    registry.register(embedder=RandomEmbedder(dimension=4))
+    registry.register(embedder=embedder)
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)

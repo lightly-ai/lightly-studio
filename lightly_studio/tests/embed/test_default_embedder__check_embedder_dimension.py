@@ -11,23 +11,16 @@ from lightly_studio.resolvers import collection_embedding_model_resolver
 from tests.helpers_resolvers import create_collection, create_embedding_model
 
 
-@pytest.fixture
-def registry(mocker: MockerFixture) -> EmbedderRegistry:
-    """A registry that holds the random embedder with dimension 3, for every capability."""
-    registry = EmbedderRegistry()
-    registry.register(embedder=RandomEmbedder(dimension=3))
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
-    return registry
-
-
-@pytest.mark.usefixtures("registry")
-def test_check_embedder_dimension__default_model_mismatch_raises(db_session: Session) -> None:
+def test_check_embedder_dimension__default_model_mismatch_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
     collection = create_collection(session=db_session)
     create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="random_model",
-        embedding_dimension=8,
+        embedding_dimension=4,
         set_as_default=True,
     )
 
@@ -39,16 +32,17 @@ def test_check_embedder_dimension__default_model_mismatch_raises(db_session: Ses
         )
 
 
-@pytest.mark.usefixtures("registry")
-def test_check_embedder_dimension__bootstrap_mismatch_raises(db_session: Session) -> None:
+def test_check_embedder_dimension__bootstrap_mismatch_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
     collection = create_collection(session=db_session)
-    # The dataset holds the bootstrap space with another dimension, and the collection has
-    # no default model.
+    # The dataset holds the bootstrap space, and the collection has no default model.
     create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_name="random_model",
-        embedding_dimension=8,
+        embedding_dimension=4,
     )
 
     with pytest.raises(ValueError, match=r"does not match"):
@@ -59,8 +53,10 @@ def test_check_embedder_dimension__bootstrap_mismatch_raises(db_session: Session
         )
 
 
-@pytest.mark.usefixtures("registry")
-def test_check_embedder_dimension__bootstrap_matches(db_session: Session) -> None:
+def test_check_embedder_dimension__bootstrap_matches(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
     collection = create_collection(session=db_session)
     create_embedding_model(
         session=db_session,
@@ -102,3 +98,10 @@ def test_check_embedder_dimension__dataset_without_models(
         session=db_session, collection_id=collection.collection_id
     )
     assert linked == []
+
+
+def _patch_registry(mocker: MockerFixture, embedder: RandomEmbedder) -> None:
+    """Replace the process-wide registry with one that holds only ``embedder``."""
+    registry = EmbedderRegistry()
+    registry.register(embedder=embedder)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)

@@ -680,22 +680,29 @@ def test_embed_image_samples__enables_text_query(
     assert len(embedding) == 3
 
 
-@pytest.mark.usefixtures("patched_registry")
-def test_check_image_embedder_dimension(db_session: Session) -> None:
+def test_check_image_embedder_dimension(db_session: Session, mocker: MockerFixture) -> None:
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     collection = create_collection(session=db_session)
-    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
+    _register_default_random_model(
+        session=db_session, collection_id=collection.collection_id, dimension=3
+    )
 
     embed_samples.check_image_embedder_dimension(
         session=db_session, collection_id=collection.collection_id
     )
 
 
-@pytest.mark.usefixtures("patched_registry")
-def test_check_image_embedder_dimension__mismatch_raises(db_session: Session) -> None:
+def test_check_image_embedder_dimension__mismatch_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     collection = create_collection(session=db_session)
-    # The registered random embedder produces dimension 3.
     _register_default_random_model(
-        session=db_session, collection_id=collection.collection_id, dimension=8
+        session=db_session, collection_id=collection.collection_id, dimension=4
     )
 
     with pytest.raises(ValueError, match=r"does not match"):
