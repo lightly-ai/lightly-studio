@@ -106,9 +106,8 @@
     <WorkspaceFilterBar
         {lidarChannels}
         {cameraChannels}
-        selectedLidarChannels={
-            selectedLidarChannels ?? lidarChannels.map((channel) => channel.channel_id)
-        }
+        selectedLidarChannels={selectedLidarChannels ??
+            lidarChannels.map((channel) => channel.channel_id)}
         {selectedCameraChannels}
         onToggleLidarChannel={(channelId) =>
             (selectedLidarChannels = toggleChannel(
