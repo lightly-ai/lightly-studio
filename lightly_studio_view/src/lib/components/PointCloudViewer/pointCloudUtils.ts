@@ -40,6 +40,7 @@ export function buildColorBuffer(params: BuildColorBufferParams): void {
     const { colorMode, colors, count, pointColors } = params;
 
     if (colorMode === 'rgb' && pointColors) {
+        colors.fill(NEUTRAL_GRAY, 0, count * 3);
         colors.set(pointColors.subarray(0, count * 3), 0);
         return;
     }
