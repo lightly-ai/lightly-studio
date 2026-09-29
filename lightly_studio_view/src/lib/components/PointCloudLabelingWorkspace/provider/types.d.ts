@@ -1,4 +1,6 @@
 import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+import type { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
+import type { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
 
 /** Lifecycle of the workspace as a whole; drives which shell state is rendered. */
 export type WorkspaceStatus = 'loading' | 'unsupported' | 'empty' | 'error' | 'ready';
@@ -16,6 +18,10 @@ export interface PointCloudWorkspaceContext {
     readonly status: WorkspaceStatus;
     readonly lidarChannels: ChannelSummaryView[];
     readonly cameraChannels: ChannelSummaryView[];
+    /** Details for the active tick, used to resolve channel payloads. */
+    readonly tickDetails: ReturnType<typeof useTickDetails>['tickDetails'];
+    /** Combined point cloud for all lidar channels in the active tick. */
+    readonly cloudPointFrame: ReturnType<typeof useCloudPointFrame>['query'];
     readonly ticks: TickView[];
     readonly currentTick: number;
     readonly isPlaying: boolean;

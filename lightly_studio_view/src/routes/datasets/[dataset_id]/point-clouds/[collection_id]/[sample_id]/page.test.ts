@@ -17,6 +17,12 @@ vi.mock('$lib/hooks', () => ({
     useTickDetails: () => ({ tickDetails: { data: undefined } })
 }));
 
+vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
+    useCloudPointFrame: () => ({
+        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+    })
+}));
+
 const mockPageData = {
     datasetId: 'dataset-1',
     collectionId: 'collection-1',

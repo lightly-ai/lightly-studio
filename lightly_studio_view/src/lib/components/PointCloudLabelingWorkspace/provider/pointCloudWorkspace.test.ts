@@ -3,17 +3,29 @@ import { PointCloudWorkspace } from './pointCloudWorkspace.svelte';
 
 // The workspace wraps useMcapSequenceSummary; stub it so the class can be built without a live
 // TanStack query client. `summaryState` is mutable so each test drives the derived status/channels.
-const { summaryState, refetch } = vi.hoisted(() => ({
+const { summaryState, refetch, tickRefetch, cloudRefetch } = vi.hoisted(() => ({
     summaryState: { data: undefined, isLoading: false, isError: false } as {
         data: unknown;
         isLoading: boolean;
         isError: boolean;
     },
-    refetch: vi.fn()
+    refetch: vi.fn(),
+    tickRefetch: vi.fn(),
+    cloudRefetch: vi.fn()
 }));
 
 vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     useMcapSequenceSummary: () => ({ summary: summaryState, refetch })
+}));
+vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
+    useTickDetails: () => ({
+        tickDetails: { data: undefined, isLoading: false, isError: false, refetch: tickRefetch }
+    })
+}));
+vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
+    useCloudPointFrame: () => ({
+        query: { data: undefined, isLoading: false, isError: false, refetch: cloudRefetch }
+    })
 }));
 
 const summaryWithChannels = {
@@ -102,8 +114,10 @@ describe('PointCloudWorkspace', () => {
         expect(workspace.isPlaying).toBe(true);
     });
 
-    it('retry re-fetches the summary', () => {
+    it('retry re-fetches all workspace data', () => {
         createWorkspace().retry();
         expect(refetch).toHaveBeenCalledOnce();
+        expect(tickRefetch).toHaveBeenCalledOnce();
+        expect(cloudRefetch).toHaveBeenCalledOnce();
     });
 });
