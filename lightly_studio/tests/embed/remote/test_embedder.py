@@ -29,6 +29,7 @@ from lightly_studio.embed.remote.errors import (
     RemoteEmbedderCapabilityError,
     RemoteEmbedderProtocolError,
 )
+from lightly_studio.embed.remote.transport import RemoteTransport
 from tests.embed.remote import helpers
 from tests.embed.remote.helpers import (
     BASE_URL,
@@ -89,6 +90,17 @@ class TestRemoteEmbedder:
 
         assert isinstance(remote, PersistableEmbedder)
         assert remote.remote_endpoint() == RemoteEndpoint(url=BASE_URL, api_key="secret-token")
+
+    def test_remote_endpoint__class_written_by_hand(self) -> None:
+        # A rebuild through `connect` would drop the methods of such a class.
+        with FakeServer(capabilities=["text"]).client() as client:
+            remote = _ExtraRoute(
+                transport=RemoteTransport(client=client, api_key="secret-token"),
+                spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION),
+                limits=ServerLimits(),
+            )
+
+        assert remote.remote_endpoint() is None
 
     def test_with_route(self) -> None:
         with _test_client(server.create_app(embedder=FakeTextImageEmbedder())) as client:

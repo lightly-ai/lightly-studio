@@ -59,19 +59,15 @@ class RemoteEmbedder(Embedder):
         transport: RemoteTransport,
         spec: EmbeddingSpaceSpec,
         limits: ServerLimits,
-        endpoint: RemoteEndpoint | None = None,
     ) -> None:
         """Embed through ``transport``, against a server of ``spec`` and ``limits``.
 
         Use ``connect``, which reads ``/v1/describe`` and passes what it learns here. This
         constructor takes the answer as given and validates nothing against the wire.
-        ``endpoint`` names the server of ``transport`` for a dataset to store, and None
-        stores no server.
         """
         self._transport = transport
         self._spec = spec
         self._limits = limits
-        self._endpoint = endpoint
 
     @classmethod
     def connect(
@@ -84,10 +80,9 @@ class RemoteEmbedder(Embedder):
 
         The ``base_url`` of ``client`` names the server, and ``connection.build_client``
         opens one against a URL. That ``base_url`` is the address that the URL policy
-        checks, before the first request leaves. ``remote_endpoint`` gives it back with
-        ``api_key``, so that a dataset can store both. The caller owns the client and
-        closes it, because an embedder outlives no request of its own: ``EmbedderRegistry``
-        holds a registered embedder for the lifetime of the process.
+        checks, before the first request leaves. The caller owns the client and closes it,
+        because an embedder outlives no request of its own: ``EmbedderRegistry`` holds a
+        registered embedder for the lifetime of the process.
 
         The description is read here and not at the first call, because
         ``EmbedderRegistry.register`` reads ``embedding_space_spec()`` as soon as it gets
@@ -112,17 +107,12 @@ class RemoteEmbedder(Embedder):
                 capability that LightlyStudio can use.
         """
         # The address that the requests really go to, checked before one is sent.
-        url = str(client.base_url)
-        url_policy.check_url(url=url, api_key=api_key)
+        url_policy.check_url(url=str(client.base_url), api_key=api_key)
         url_policy.check_no_redirects(client=client)
         transport = RemoteTransport(client=client, api_key=api_key, timeouts=timeouts)
         description = transport.describe()
         connection.log_if_loading(description=description, client=client)
-        return _embedder_for(
-            transport=transport,
-            description=description,
-            endpoint=RemoteEndpoint(url=url, api_key=api_key),
-        )
+        return _embedder_for(transport=transport, description=description)
 
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space that the server produces.
@@ -135,20 +125,26 @@ class RemoteEmbedder(Embedder):
     def remote_endpoint(self) -> RemoteEndpoint | None:
         """Get the address and the token of the server, for a dataset to store.
 
-        A later process builds the embedder again from the stored endpoint, and so reaches
-        the server with no registration.
+        A later process builds the embedder again from the stored endpoint with ``connect``,
+        and so reaches the server with no registration. That rebuild composes the route
+        classes of the server, so it would drop the methods of a class that a caller wrote
+        by hand. Such a class names no endpoint, unless it overrides this method.
 
         Returns:
-            The ``base_url`` of the client that ``connect`` got, and the token. None for an
-            embedder that was built without ``connect``.
+            The endpoint that every request of the transport carries, or None for a class
+            that ``connect`` and ``with_route`` did not compose.
         """
-        return self._endpoint
+        # Only `connect` and `with_route` compose classes, so this asks whether `connect`
+        # built the embedder.
+        if not composition.is_composed(cls=type(self)):
+            return None
+        return self._transport.endpoint()
 
     def with_route(self, route: type[RemoteEmbedder]) -> RemoteEmbedder:
         """Build an embedder of the same server that also has the methods of ``route``.
 
-        The new embedder uses the transport, the space, the limits and the endpoint of this
-        one. Call this method only on an embedder that ``connect`` built.
+        The new embedder uses the transport, the space and the limits of this one. Call this
+        method only on an embedder that ``connect`` built.
 
         Args:
             route: The route class to add to the route classes of this embedder.
@@ -161,12 +157,7 @@ class RemoteEmbedder(Embedder):
             "type[RemoteEmbedder]",
             composition.composed_class(bases=(*type(self).__bases__, route)),
         )
-        return composed(
-            transport=self._transport,
-            spec=self._spec,
-            limits=self._limits,
-            endpoint=self._endpoint,
-        )
+        return composed(transport=self._transport, spec=self._spec, limits=self._limits)
 
     def _embed(
         self,
@@ -368,14 +359,12 @@ _CAPABILITY_TO_BASE: dict[Capability, type[RemoteEmbedder]] = {
 def _embedder_for(
     transport: RemoteTransport,
     description: DescribeResponse,
-    endpoint: RemoteEndpoint,
 ) -> RemoteEmbedder:
     """Build the embedder of the capabilities that ``description`` advertises.
 
     Args:
         transport: The transport that carries every request.
         description: What ``GET /v1/describe`` answered.
-        endpoint: The address and the token of the server of ``transport``.
 
     Raises:
         RemoteEmbedderCapabilityError: If nothing advertised is usable from LightlyStudio.
@@ -391,5 +380,4 @@ def _embedder_for(
         transport=transport,
         spec=EmbeddingSpaceSpec(space_key=description.space_key, dimension=description.dimension),
         limits=description.limits,
-        endpoint=endpoint,
     )

@@ -21,6 +21,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 
 from lightly_studio.embed.remote import transport
+from lightly_studio.embed.remote.endpoint import RemoteEndpoint
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderAuthError,
     RemoteEmbedderBatchTooLargeError,
@@ -74,6 +75,12 @@ class FakeBytesEmbedder(ImageBytesEmbedder, VideoBytesEmbedder):
 
 
 class TestRemoteTransport:
+    def test_endpoint(self) -> None:
+        with httpx.Client(base_url=BASE_URL) as client:
+            endpoint = RemoteTransport(client=client, api_key=API_KEY).endpoint()
+
+        assert endpoint == RemoteEndpoint(url=BASE_URL, api_key=API_KEY)
+
     def test_describe(self) -> None:
         embedder = FakeTextEmbedder()
         with TestClient(server.create_app(embedder=embedder)) as client:
