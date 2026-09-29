@@ -12,7 +12,7 @@
     import { getColorByLabel, withAlpha } from '$lib/utils';
     import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
-    import { getBoundingBox } from './utils';
+    import { getBoundingBox, rleToSvgPath } from './utils';
 
     const {
         annotation,
@@ -26,7 +26,8 @@
         highlight = 'auto',
         prerenderedDataUrl,
         prerenderedHeight,
-        colorBySource
+        colorBySource,
+        isSelectable = false
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -42,6 +43,9 @@
         // Overrides when to color by annotation source instead of by label. When
         // undefined, falls back to the global rule (2+ sources selected in the grid).
         colorBySource?: boolean;
+        // Renders a click target shaped like the mask when its bounding box is hidden.
+        // Only set it inside a selectable parent, so other overlays stay click-through.
+        isSelectable?: boolean;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -119,6 +123,12 @@
         boundingBox.height
     ]);
 
+    const maskHitPath = $derived(
+        isSelectable && !showBoundingBox && segmentationMask
+            ? rleToSvgPath(segmentationMask, imageWidth)
+            : undefined
+    );
+
     const showAnnotationLabel = $derived(
         showLabel &&
             (highlight === 'auto' || highlight === 'active') &&
@@ -171,5 +181,12 @@
                 opacity={boundingBoxOpacity}
             />
         {/if}
+    {:else if maskHitPath}
+        <path
+            d={maskHitPath}
+            fill="transparent"
+            pointer-events="all"
+            data-testid="annotation_mask_hit_area"
+        />
     {/if}
 </g>

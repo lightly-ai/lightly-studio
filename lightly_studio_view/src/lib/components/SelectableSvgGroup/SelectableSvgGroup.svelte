@@ -43,17 +43,6 @@
     data-group-id={groupId}
     onkeydown={handleKeyDown}
 >
-    <!--Keep the box area clickable when no child accepts clicks, e.g. a mask with a hidden bounding box.-->
-    <rect
-        {x}
-        {y}
-        {width}
-        {height}
-        fill="transparent"
-        pointer-events="all"
-        data-testid="selectable-svg-group-hit-area"
-    />
-
     {@render children()}
 
     {#if isSelected}
