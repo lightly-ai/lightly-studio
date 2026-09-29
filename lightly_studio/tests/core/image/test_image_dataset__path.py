@@ -207,11 +207,11 @@ class TestDataset:
         mocker: Mocker,
         tmp_path: Path,
     ) -> None:
-        _create_sample_images([tmp_path / "first" / "image1.jpg"])
+        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=tmp_path / "first")
         _register_wider_random_embedder(mocker=mocker)
-        _create_sample_images([tmp_path / "second" / "image2.jpg"])
+        _create_sample_images(image_paths=[tmp_path / "second" / "image2.jpg"])
 
         with pytest.raises(ValueError, match=r"does not match"):
             dataset.add_images_from_path(path=tmp_path / "second")
@@ -224,11 +224,11 @@ class TestDataset:
         mocker: Mocker,
         tmp_path: Path,
     ) -> None:
-        _create_sample_images([tmp_path / "first" / "image1.jpg"])
+        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=tmp_path / "first")
         _register_wider_random_embedder(mocker=mocker)
-        _create_sample_images([tmp_path / "second" / "image2.jpg"])
+        _create_sample_images(image_paths=[tmp_path / "second" / "image2.jpg"])
 
         dataset.add_images_from_path(path=tmp_path / "second", embed=False)
 
