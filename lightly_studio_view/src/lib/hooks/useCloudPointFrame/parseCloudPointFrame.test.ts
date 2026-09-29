@@ -89,6 +89,24 @@ describe('parseCloudPointFrame', () => {
         expect(result.sourcePointCount).toBe(1);
     });
 
+    it('rejects malformed bounds metadata', async () => {
+        vi.mocked(tableFromIPC).mockResolvedValue({
+            schema: { metadata: new Map([['bounds', '{"min":[1,2,3]}']]) },
+            getChild: (name: string) => {
+                const values: Record<string, Float32Array> = {
+                    x: new Float32Array([1]),
+                    y: new Float32Array([2]),
+                    z: new Float32Array([3])
+                };
+                return values[name] ? { toArray: () => values[name] } : null;
+            }
+        } as unknown as Table);
+
+        await expect(
+            parseCloudPointFrame(new ArrayBuffer(0), { channelId: 7, timestampNs: '10' })
+        ).rejects.toThrow('Point-cloud bounds metadata is invalid.');
+    });
+
     it('rejects data without all coordinate columns', async () => {
         vi.mocked(tableFromIPC).mockResolvedValue({
             getChild: (name: string) => (name === 'x' ? { toArray: () => [1] } : null)
