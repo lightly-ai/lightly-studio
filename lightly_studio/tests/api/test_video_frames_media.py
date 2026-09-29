@@ -21,6 +21,7 @@ from sqlmodel import Session
 
 import lightly_studio.api.routes.video_frames_media as video_frames_media_module
 import lightly_studio.utils.executor as executor_module
+from lightly_studio.api.routes import media_job
 from lightly_studio.api.routes.video_frames_media import FrameTransformOptions
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.settings import GridViewThumbnailQualityType
@@ -149,6 +150,26 @@ def test_stream_frame_high_requires_bounds(
     )
 
     assert response.status_code == 400
+
+
+def test_stream_frame__client_disconnected(
+    media_test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Test that a client disconnect before the frame is ready returns 499."""
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_with_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/video.mp4", width=320, height=240, duration_s=2.0, fps=1.0),
+    )
+    mocker.patch.object(media_job, "run_media_job", return_value=None)
+
+    response = media_test_client.get(f"/frames/media/{video_with_frames.frame_sample_ids[0]}")
+
+    assert response.status_code == 499
+    assert response.content == b""
 
 
 @pytest.fixture(autouse=True)

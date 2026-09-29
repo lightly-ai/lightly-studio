@@ -8,9 +8,11 @@ import cv2
 import numpy as np
 from fastapi.testclient import TestClient
 from PIL import Image as PILImage
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 import lightly_studio.utils.executor as executor_module
+from lightly_studio.api.routes import media_job
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection, create_image
 
@@ -154,6 +156,28 @@ def test_stream_image_file_not_found(
     response = media_test_client.get(f"/images/sample/{image.sample_id}")
 
     assert response.status_code == 404
+
+
+def test_stream_image__client_disconnected(
+    media_test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Test that a client disconnect before the image is ready returns 499."""
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/image.png",
+        width=100,
+        height=100,
+    )
+    mocker.patch.object(media_job, "run_media_job", return_value=None)
+
+    response = media_test_client.get(f"/images/sample/{image.sample_id}")
+
+    assert response.status_code == 499
+    assert response.content == b""
 
 
 def test_get_media_executor_has_workers() -> None:
