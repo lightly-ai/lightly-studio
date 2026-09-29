@@ -27,6 +27,25 @@ def test_annotation_mcap_uri__custom_suffix() -> None:
     )
 
 
+def test_annotation_mcap_uri__directory() -> None:
+    assert (
+        annotation_mcap.annotation_mcap_uri(recording_uri="/data/foo.mcap", directory="/labels/")
+        == "/labels/foo_labeled.mcap"
+    )
+    assert (
+        annotation_mcap.annotation_mcap_uri(
+            recording_uri="/data/foo.mcap", directory="s3://bucket/labels"
+        )
+        == "s3://bucket/labels/foo_labeled.mcap"
+    )
+    assert (
+        annotation_mcap.annotation_mcap_uri(
+            recording_uri="C:\\bags\\foo.mcap", suffix="_gt", directory="D:\\labels\\"
+        )
+        == "D:\\labels/foo_gt.mcap"
+    )
+
+
 def test_is_annotation_mcap() -> None:
     assert annotation_mcap.is_annotation_mcap(uri="/data/foo_labeled.mcap")
     assert annotation_mcap.is_annotation_mcap(uri="s3://bucket/foo_labeled.mcap")

@@ -1,7 +1,8 @@
 """Derive and check annotation MCAP URIs.
 
-An annotation MCAP sits next to its source recording and shares the stem plus a
-suffix: `foo.mcap` → `foo_labeled.mcap`. It is not a recording of its own.
+By default, an annotation MCAP sits next to its source recording and shares the stem
+plus a suffix: `foo.mcap` → `foo_labeled.mcap`. It can also sit in a separate folder
+with the same file name. It is not a recording of its own.
 """
 
 from __future__ import annotations
@@ -13,20 +14,31 @@ from lightly_studio.core.mcap import add_mcaps
 DEFAULT_ANNOTATION_MCAP_SUFFIX = "_labeled"
 
 
-def annotation_mcap_uri(recording_uri: str, suffix: str = DEFAULT_ANNOTATION_MCAP_SUFFIX) -> str:
+def annotation_mcap_uri(
+    recording_uri: str,
+    suffix: str = DEFAULT_ANNOTATION_MCAP_SUFFIX,
+    directory: str | None = None,
+) -> str:
     """Return the URI of the annotation MCAP that belongs to a recording.
 
     Args:
         recording_uri: The path or URI of the source recording.
         suffix: Inserted before the `.mcap` extension.
+        directory: The folder that holds the annotation MCAP. By default, the folder
+            of the source recording.
 
     Returns:
         The annotation MCAP URI. `s3://` and local paths are rewritten the same way.
     """
     if recording_uri.endswith(add_mcaps.MCAP_EXTENSION):
         stem = recording_uri[: -len(add_mcaps.MCAP_EXTENSION)]
-        return f"{stem}{suffix}{add_mcaps.MCAP_EXTENSION}"
-    return f"{recording_uri}{suffix}{add_mcaps.MCAP_EXTENSION}"
+        uri = f"{stem}{suffix}{add_mcaps.MCAP_EXTENSION}"
+    else:
+        uri = f"{recording_uri}{suffix}{add_mcaps.MCAP_EXTENSION}"
+    if directory is None:
+        return uri
+    normalized_directory = directory.rstrip("/\\")
+    return f"{normalized_directory}/{_file_name(uri)}"
 
 
 def is_annotation_mcap(uri: str, suffix: str = DEFAULT_ANNOTATION_MCAP_SUFFIX) -> bool:

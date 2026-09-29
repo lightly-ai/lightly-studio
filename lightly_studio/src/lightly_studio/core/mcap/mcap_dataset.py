@@ -230,7 +230,8 @@ class McapDataset:
         A recording that is already indexed is skipped. A recording that cannot be read
         is reported and the others are still indexed. Files named `*_labeled.mcap` are
         annotation MCAPs, not recordings, and are not indexed. Pass `add_labels=True`
-        to attach cuboids from those annotation MCAPs after indexing.
+        to attach cuboids from those annotation MCAPs after indexing. Only recordings
+        indexed by this call receive cuboids, so a repeated call does not duplicate them.
 
         Args:
             path: A folder of `.mcap` files, a single file, or a glob. It can also be a
@@ -272,7 +273,7 @@ class McapDataset:
         )
         logger.info("Found %d MCAP recordings to index in %s.", len(mcap_paths), path)
 
-        add_mcaps.index_recordings(
+        sequence_ids = add_mcaps.index_recordings(
             dataset=self,
             mcap_paths=mcap_paths,
             sync_component=sync_component,
@@ -285,6 +286,7 @@ class McapDataset:
                 topic=topic,
                 suffix=suffix,
                 annotation_source=annotation_source,
+                restrict_to_sequence_ids=set(sequence_ids),
             )
 
     def add_labels_from_annotation_mcaps(
@@ -292,23 +294,35 @@ class McapDataset:
         topic: str,
         suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
         annotation_source: str = add_labels_module.DEFAULT_ANNOTATION_SOURCE,
+        path: PathLike | None = None,
+        restrict_to_sequence_ids: set[UUID] | None = None,
     ) -> None:
         """Attach 3D cuboids from annotation `*_labeled.mcap` files to existing sequences.
 
         Each recording URI is rewritten with `suffix` before the `.mcap` extension.
-        A missing annotation MCAP is skipped. Cuboids are stored on the tick group that
-        shares `SceneEntity.timestamp` with `sample_sequence_link.timestamp_ns`.
+        If `path` is given, the annotation MCAP with that file name is read from `path`
+        instead of the folder of the recording. A missing annotation MCAP is skipped.
+        Cuboids are stored on the tick group that shares `SceneEntity.timestamp`
+        with `sample_sequence_link.timestamp_ns`. Reusing the same `annotation_source`
+        appends to that source, so a repeated call adds the cuboids again.
 
         Args:
             topic: The SceneUpdate topic in the annotation MCAP.
             suffix: Inserted before `.mcap` to form the annotation MCAP URI.
             annotation_source: Name of the annotation source that stores the cuboids.
+            path: The folder of the annotation MCAPs. It can also be a URI into object
+                storage, e.g. `s3://my-bucket/labels/`. By default, each annotation MCAP
+                is read from the folder of its recording.
+            restrict_to_sequence_ids: When provided, only annotate sequences whose sample
+                ID is in this set. By default, all sequences are annotated.
         """
         add_labels_module.add_labels_from_annotation_mcaps(
             dataset=self,
             topic=topic,
             suffix=suffix,
             annotation_source=annotation_source,
+            path=path,
+            restrict_to_sequence_ids=restrict_to_sequence_ids,
         )
 
     def get_sequences(self) -> list[McapSequence]:

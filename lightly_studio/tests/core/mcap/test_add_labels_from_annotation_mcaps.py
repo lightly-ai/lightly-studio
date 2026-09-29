@@ -69,6 +69,32 @@ def test_add_labels_from_annotation_mcaps(
     assert track.source_track_id == 7
 
 
+def test_add_labels_from_annotation_mcaps__path(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, group_ids = _index_recording(tmp_path=tmp_path)
+    labels_path = tmp_path / "labels"
+    labels_path.mkdir()
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    _write_annotation_mcap(
+        source_path=labels_path / "recording.mcap",
+        messages=[
+            (timestamp_ns, {"entities": [_cuboid_entity(timestamp_ns=timestamp_ns, track_id=1)]})
+        ],
+    )
+
+    dataset.add_labels_from_annotation_mcaps(topic=SCENE_UPDATE_TOPIC, path=labels_path)
+
+    annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_manager.persistent_session(),
+        parent_sample_ids=group_ids,
+        annotation_types=[AnnotationType.CUBOID_3D],
+    )
+    assert len(annotations) == 1
+    assert annotations[0].parent_sample_id == group_ids[0]
+
+
 def test_add_labels_from_annotation_mcaps__missing_annotation_mcap(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
@@ -107,6 +133,64 @@ def test_add_mcaps_from_path__add_labels(
         add_labels=True,
         topic=SCENE_UPDATE_TOPIC,
     )
+
+    group_ids = [entry.sample_id for entry in dataset.get_sequences()[0].get_samples()]
+    annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_manager.persistent_session(),
+        parent_sample_ids=group_ids,
+        annotation_types=[AnnotationType.CUBOID_3D],
+    )
+    assert len(annotations) == 1
+
+
+def test_add_labels_from_annotation_mcaps__restrict_to_sequence_ids(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, group_ids = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    _write_annotation_mcap(
+        source_path=tmp_path / "recording.mcap",
+        messages=[
+            (timestamp_ns, {"entities": [_cuboid_entity(timestamp_ns=timestamp_ns, track_id=1)]})
+        ],
+    )
+
+    dataset.add_labels_from_annotation_mcaps(
+        topic=SCENE_UPDATE_TOPIC, restrict_to_sequence_ids=set()
+    )
+
+    annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_manager.persistent_session(),
+        parent_sample_ids=group_ids,
+        annotation_types=[AnnotationType.CUBOID_3D],
+    )
+    assert annotations == []
+
+
+def test_add_mcaps_from_path__add_labels_twice(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    helpers.write_mcap(tmp_path / "recording.mcap")
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    _write_annotation_mcap(
+        source_path=tmp_path / "recording.mcap",
+        messages=[
+            (timestamp_ns, {"entities": [_cuboid_entity(timestamp_ns=timestamp_ns, track_id=1)]})
+        ],
+    )
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    for _ in range(2):
+        dataset.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+            add_labels=True,
+            topic=SCENE_UPDATE_TOPIC,
+        )
 
     group_ids = [entry.sample_id for entry in dataset.get_sequences()[0].get_samples()]
     annotations = annotation_resolver.get_all_by_parent_sample_ids(

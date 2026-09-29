@@ -34,6 +34,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     object_track_resolver,
 )
+from lightly_studio.type_definitions import PathLike
 
 if TYPE_CHECKING:
     from lightly_studio.core.mcap.mcap_dataset import McapDataset
@@ -152,11 +153,13 @@ def write_sequence_labels(
     session.commit()
 
 
-def add_labels_from_annotation_mcaps(
+def add_labels_from_annotation_mcaps(  # noqa: PLR0913
     dataset: McapDataset,
     topic: str,
     suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
     annotation_source: str = DEFAULT_ANNOTATION_SOURCE,
+    path: PathLike | None = None,
+    restrict_to_sequence_ids: set[UUID] | None = None,
 ) -> None:
     """Read cuboids from each sequence's annotation MCAP and store them on tick groups.
 
@@ -169,12 +172,22 @@ def add_labels_from_annotation_mcaps(
         topic: The SceneUpdate topic in the annotation MCAP.
         suffix: Inserted before `.mcap` to form the annotation MCAP URI.
         annotation_source: Name of the annotation source that stores the cuboids.
+        path: The folder of the annotation MCAPs. It can also be a URI into object
+            storage, e.g. `s3://my-bucket/labels/`. By default, each annotation MCAP
+            is read from the folder of its recording.
+        restrict_to_sequence_ids: When provided, only annotate sequences whose sample ID
+            is in this set. Used internally to restrict to newly indexed recordings.
     """
+    directory = None if path is None else str(path)
     report = FileOutcomeReport()
     for sequence in dataset.get_sequences():
+        if restrict_to_sequence_ids is not None and sequence.sample_id not in (
+            restrict_to_sequence_ids
+        ):
+            continue
         recording = dataset.get_recording(recording_id=sequence.recording_id)
         annotation_mcap_path = annotation_mcap.annotation_mcap_uri(
-            recording_uri=recording.uri, suffix=suffix
+            recording_uri=recording.uri, suffix=suffix, directory=directory
         )
         with report.track(annotation_mcap_path):
             _add_labels_for_sequence(
