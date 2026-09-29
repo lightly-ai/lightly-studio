@@ -86,6 +86,11 @@
     };
 
     $effect(() => {
+        if (!datasetId || !sequenceId) return;
+        selectedLidarChannels = null;
+    });
+
+    $effect(() => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     });

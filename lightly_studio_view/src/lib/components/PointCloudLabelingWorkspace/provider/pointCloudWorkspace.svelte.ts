@@ -16,6 +16,7 @@ export type GetInputs = () => {
 type SequenceSummary = ReturnType<typeof useMcapSequenceSummary>['summary'];
 type TickDetails = ReturnType<typeof useTickDetails>['tickDetails'];
 type CloudPointQuery = ReturnType<typeof useCloudPointFrame>['query'];
+type CloudPointFrameParams = ReturnType<Parameters<typeof useCloudPointFrame>[0]>;
 
 function createTickDetails(getInputs: GetInputs, getCurrentTick: () => number): TickDetails {
     return useTickDetails({
@@ -44,12 +45,12 @@ function getChannelLocators(
         });
 }
 
-function createCloudPointQuery(
+function createCloudPointFrameParamsGetter(
     getInputs: GetInputs,
     tickDetails: TickDetails,
     summary: SequenceSummary
-): CloudPointQuery {
-    return useCloudPointFrame(() => ({
+): () => CloudPointFrameParams {
+    return () => ({
         datasetId: getInputs().datasetId,
         recordingId: tickDetails.data?.recording_id ?? '',
         channels: getChannelLocators(
@@ -57,18 +58,20 @@ function createCloudPointQuery(
             tickDetails.data,
             getInputs().selectedLidarChannels
         )
-    })).query;
+    });
 }
 
 function createRetryHandler(
     refetchSummary: () => unknown,
     tickDetails: TickDetails,
-    cloudPointFrame: CloudPointQuery
+    cloudPointFrame: CloudPointQuery,
+    getCloudPointFrameParams: () => CloudPointFrameParams
 ): () => void {
     return () => {
         void refetchSummary();
         void tickDetails.refetch();
-        void cloudPointFrame.refetch();
+        const { datasetId, recordingId, channels } = getCloudPointFrameParams();
+        if (datasetId && recordingId && channels.length > 0) void cloudPointFrame.refetch();
     };
 }
 
@@ -121,10 +124,20 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         // Read once at construction: this is the starting position, not a reactive binding.
         this.currentTick = getInputs().initialTick ?? 0;
         const tickDetails = createTickDetails(getInputs, () => this.currentTick);
-        const cloudPointFrame = createCloudPointQuery(getInputs, tickDetails, summary);
+        const getCloudPointFrameParams = createCloudPointFrameParamsGetter(
+            getInputs,
+            tickDetails,
+            summary
+        );
+        const cloudPointFrame = useCloudPointFrame(getCloudPointFrameParams).query;
         this.tickDetails = tickDetails;
         this.cloudPointFrame = cloudPointFrame;
-        this.retry = createRetryHandler(refetch, tickDetails, cloudPointFrame);
+        this.retry = createRetryHandler(
+            refetch,
+            tickDetails,
+            cloudPointFrame,
+            getCloudPointFrameParams
+        );
     }
 
     get datasetId(): string {

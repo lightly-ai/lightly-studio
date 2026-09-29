@@ -3,8 +3,17 @@ import { PointCloudWorkspace } from './pointCloudWorkspace.svelte';
 
 // The workspace wraps useMcapSequenceSummary; stub it so the class can be built without a live
 // TanStack query client. `summaryState` is mutable so each test drives the derived status/channels.
-const { summaryState, refetch, tickRefetch, cloudRefetch } = vi.hoisted(() => ({
+const { summaryState, tickDetailsState, refetch, tickRefetch, cloudRefetch } = vi.hoisted(() => ({
     summaryState: { data: undefined, isLoading: false, isError: false } as {
+        data: unknown;
+        isLoading: boolean;
+        isError: boolean;
+    },
+    tickDetailsState: {
+        data: undefined,
+        isLoading: false,
+        isError: false
+    } as {
         data: unknown;
         isLoading: boolean;
         isError: boolean;
@@ -19,7 +28,7 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
 }));
 vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({
-        tickDetails: { data: undefined, isLoading: false, isError: false, refetch: tickRefetch }
+        tickDetails: { ...tickDetailsState, refetch: tickRefetch }
     })
 }));
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
@@ -49,6 +58,9 @@ describe('PointCloudWorkspace', () => {
         summaryState.data = undefined;
         summaryState.isLoading = false;
         summaryState.isError = false;
+        tickDetailsState.data = undefined;
+        tickDetailsState.isLoading = false;
+        tickDetailsState.isError = false;
     });
 
     it('exposes the inputs it was built with', () => {
@@ -114,10 +126,36 @@ describe('PointCloudWorkspace', () => {
         expect(workspace.isPlaying).toBe(true);
     });
 
-    it('retry re-fetches all workspace data', () => {
+    it('retry re-fetches all workspace data when the frame query has usable inputs', () => {
+        summaryState.data = summaryWithChannels;
+        tickDetailsState.data = {
+            recording_id: 'rec-1',
+            channels: { lidar: { channel_id: 1, log_time_ns: '10' } }
+        };
+
         createWorkspace().retry();
+
         expect(refetch).toHaveBeenCalledOnce();
         expect(tickRefetch).toHaveBeenCalledOnce();
         expect(cloudRefetch).toHaveBeenCalledOnce();
+    });
+
+    it('retry does not fetch a frame when no LiDAR channels are selected', () => {
+        summaryState.data = summaryWithChannels;
+        tickDetailsState.data = {
+            recording_id: 'rec-1',
+            channels: { lidar: { channel_id: 1, log_time_ns: '10' } }
+        };
+        const workspace = new PointCloudWorkspace(() => ({
+            datasetId: 'dataset-1',
+            sequenceId: 'seq-1',
+            selectedLidarChannels: []
+        }));
+
+        workspace.retry();
+
+        expect(refetch).toHaveBeenCalledOnce();
+        expect(tickRefetch).toHaveBeenCalledOnce();
+        expect(cloudRefetch).not.toHaveBeenCalled();
     });
 });
