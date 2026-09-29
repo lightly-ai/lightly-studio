@@ -168,6 +168,35 @@ describe('QueryEditor', () => {
         expect(translateQuery).toHaveBeenCalledWith(expect.any(String), 'video');
     });
 
+    it('remounts with the new scope and translates with it when rootScope changes', async () => {
+        const onSave = vi.fn();
+        translateQuery.mockReturnValue({ status: 'error', errors: [] });
+
+        const { rerender } = render(QueryEditor, { props: { rootScope: 'image', onSave } });
+        expect(mount).toHaveBeenCalledOnce();
+        expect(mount).toHaveBeenLastCalledWith(
+            expect.anything(),
+            expect.objectContaining({ rootScope: 'image' })
+        );
+
+        // A collection switch changes the prop while the panel stays alive.
+        await rerender({ rootScope: 'video', onSave });
+
+        // The editor remounts so the model scope tracks the prop, and the video
+        // default example loads.
+        expect(mount).toHaveBeenCalledTimes(2);
+        expect(mount).toHaveBeenLastCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                rootScope: 'video',
+                value: expect.stringContaining('duration_s > 10')
+            })
+        );
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(translateQuery).toHaveBeenLastCalledWith(expect.any(String), 'video');
+    });
+
     it('disables the Apply button when readOnly is true even after modification', async () => {
         render(QueryEditor, {
             props: { value: 'query', readOnly: true, onSave: vi.fn() }
