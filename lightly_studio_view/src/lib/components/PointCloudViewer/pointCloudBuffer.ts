@@ -1,13 +1,38 @@
 import { Box3, BufferAttribute, BufferGeometry, Sphere } from 'three';
 import { buildColorBuffer, computeActiveBounds } from './pointCloudUtils';
 import type { ColorMode } from './pointCloudUtils';
-import type { PointBatch, PointCloudBuffer } from './types';
+
+/** A batch of points stored in pre-packed typed arrays. */
+export interface PointBatch {
+    /** Flat position data [x0,y0,z0, x1,y1,z1, ...]. Length >= count * 3. */
+    positions: Float32Array;
+    /** Per-point intensity values. Length >= count. */
+    intensities: Float32Array;
+    /** Optional packed linear RGB values [r0,g0,b0,...]. Length >= count * 3. */
+    colors?: Float32Array;
+    /** Number of active points in this batch. */
+    count: number;
+}
+
+export interface PointCloudBuffer {
+    geometry: BufferGeometry;
+    updatePositions: (batch: PointBatch) => Box3 | undefined;
+    updateColors: (
+        count: number,
+        colorMode: ColorMode,
+        intensityRange?: [number, number],
+        pointColors?: Float32Array
+    ) => void;
+    dispose: () => void;
+}
 
 export function createPointCloudBuffer(): PointCloudBuffer {
     let capacity = 0;
     let positions = new Float32Array(0);
     let intensities = new Float32Array(0);
     let colors = new Float32Array(0);
+    // Per-point rgb from the most recent batch, used when colorMode is "rgb".
+    let sourceColors: Float32Array | undefined;
     let positionAttribute = new BufferAttribute(positions, 3);
     let colorAttribute = new BufferAttribute(colors, 3);
 
@@ -34,6 +59,7 @@ export function createPointCloudBuffer(): PointCloudBuffer {
         ensureCapacity(batch.count);
         positions.set(batch.positions.subarray(0, batch.count * 3), 0);
         intensities.set(batch.intensities.subarray(0, batch.count), 0);
+        sourceColors = batch.colors;
         positionAttribute.needsUpdate = true;
         geometry.setDrawRange(0, batch.count);
 
@@ -48,11 +74,20 @@ export function createPointCloudBuffer(): PointCloudBuffer {
     function updateColors(
         count: number,
         colorMode: ColorMode,
-        intensityRange?: [number, number]
+        intensityRange?: [number, number],
+        pointColors?: Float32Array
     ): void {
         if (count === 0) return;
 
-        buildColorBuffer({ positions, intensities, count, colorMode, colors, intensityRange });
+        buildColorBuffer({
+            positions,
+            intensities,
+            count,
+            colorMode,
+            colors,
+            intensityRange,
+            pointColors: pointColors ?? sourceColors
+        });
         colorAttribute.needsUpdate = true;
     }
 
