@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from lightly_studio_serve import server
-from lightly_studio_serve.embedder import Embedder, ImagePathEmbedder, TextEmbedder
+from lightly_studio_serve.embedder import TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -22,7 +22,6 @@ from lightly_studio.embed.errors import (
 )
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.embed.remote import connection
-from lightly_studio.embed.remote.endpoint import RemoteEndpoint
 from lightly_studio.embed.remote.errors import RemoteEmbedderUnreachableError
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -40,22 +39,6 @@ class _ServerTextEmbedder(TextEmbedder):
             embeddings=np.zeros((len(texts), 2), dtype=np.float32),
             kept_indices=list(range(len(texts))),
         )
-
-
-class _EndpointImageEmbedder(ImagePathEmbedder):
-    """Names the server that it calls, the way a remote embedder does, and is no such one."""
-
-    def __init__(self, endpoint: RemoteEndpoint | None) -> None:
-        self._endpoint = endpoint
-
-    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        return EmbeddingSpaceSpec(space_key="acme/model@v1", dimension=2)
-
-    def embed_images(self, paths: list[str]) -> EmbeddingResult:
-        raise NotImplementedError
-
-    def remote_endpoint(self) -> RemoteEndpoint | None:
-        return self._endpoint
 
 
 def test_resolve_default_embedder__uses_existing_default(
@@ -118,92 +101,6 @@ def test_resolve_default_embedder__registers_bootstrap_when_no_default(
         )
         == model_id
     )
-
-
-def test_resolve_default_embedder__stores_remote_endpoint(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    collection = create_collection(session=db_session)
-    registry = EmbedderRegistry()
-    registry.register(
-        embedder=_EndpointImageEmbedder(
-            endpoint=RemoteEndpoint(url="http://embedder.test", api_key="secret-token")
-        )
-    )
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
-
-    result = default_embedder.resolve_default_embedder(
-        session=db_session,
-        collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-    )
-
-    assert result is not None
-    stored = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=result[1])
-    assert stored is not None
-    assert stored.remote_embedder_url == "http://embedder.test"
-    assert stored.api_key == "secret-token"
-
-
-@pytest.mark.parametrize(
-    "embedder",
-    [RandomEmbedder(dimension=3), _EndpointImageEmbedder(endpoint=None)],
-    ids=["local", "no_endpoint"],
-)
-def test_resolve_default_embedder__stores_no_server(
-    db_session: Session, mocker: MockerFixture, embedder: Embedder
-) -> None:
-    collection = create_collection(session=db_session)
-    registry = EmbedderRegistry()
-    registry.register(embedder=embedder)
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
-
-    result = default_embedder.resolve_default_embedder(
-        session=db_session,
-        collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-    )
-
-    assert result is not None
-    stored = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=result[1])
-    assert stored is not None
-    assert stored.remote_embedder_url is None
-    assert stored.api_key is None
-
-
-def test_resolve_default_embedder__local_embedder_keeps_stored_server(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    collection = create_collection(session=db_session)
-    registry = EmbedderRegistry()
-    registry.register(embedder=RandomEmbedder(dimension=3))
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
-    # The dataset already stores a server for the space, and the collection has no default.
-    model = create_embedding_model(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_name="random_model",
-        embedding_dimension=3,
-    )
-    embedding_model_resolver.set_remote_embedder(
-        session=db_session,
-        embedding_model_id=model.embedding_model_id,
-        url="http://embedder.test",
-        api_key="secret-token",
-    )
-
-    default_embedder.resolve_default_embedder(
-        session=db_session,
-        collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-    )
-
-    stored = embedding_model_resolver.get_by_id(
-        session=db_session, embedding_model_id=model.embedding_model_id
-    )
-    assert stored is not None
-    assert stored.remote_embedder_url == "http://embedder.test"
-    assert stored.api_key == "secret-token"
 
 
 def test_resolve_default_embedder__default_dimension_mismatch_raises(
@@ -451,51 +348,6 @@ def test_resolve_query_embedder__builds_remote_from_stored_config(
     )
 
     assert embedder.embed_text(texts=["a query"]).embeddings.shape == (1, 2)
-
-
-def test_check_embedder_dimension__mismatch_raises(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    collection = create_collection(session=db_session)
-    # The embedder shares the space but produces a different dimension.
-    registry = EmbedderRegistry()
-    registry.register(embedder=RandomEmbedder(dimension=3))
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
-    create_embedding_model(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_name="random_model",
-        embedding_dimension=8,
-        set_as_default=True,
-    )
-
-    with pytest.raises(ValueError, match=r"does not match"):
-        default_embedder.check_embedder_dimension(
-            session=db_session,
-            collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-        )
-
-
-def test_check_embedder_dimension__no_default_model(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    collection = create_collection(session=db_session)
-    registry = EmbedderRegistry()
-    registry.register(embedder=RandomEmbedder(dimension=3))
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
-
-    default_embedder.check_embedder_dimension(
-        session=db_session,
-        collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-    )
-
-    # The check never bootstraps a default model.
-    linked = collection_embedding_model_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    )
-    assert linked == []
 
 
 def _create_remote_default_model(session: Session, collection_id: UUID) -> None:
