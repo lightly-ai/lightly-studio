@@ -1157,6 +1157,19 @@ describe('DatasetDistributionPanel', () => {
         expect(onCountModeChange).toHaveBeenCalledWith(AnnotationCountMode.SAMPLES);
     });
 
+    it('hides the count by select in both dialogs when showCountMode is false', async () => {
+        render(DatasetDistributionPanel, { props: { ...defaultProps, showCountMode: false } });
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-configure'));
+        expect(screen.getByText('Configure classes')).toBeInTheDocument();
+        expect(screen.queryByTestId('distribution-config-count-mode')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByText('Cancel'));
+
+        await fireEvent.click(screen.getByTestId('dataset-distribution-expand'));
+        await fireEvent.click(screen.getByTestId('dataset-distribution-expanded-configure'));
+        expect(screen.queryByTestId('distribution-config-count-mode')).not.toBeInTheDocument();
+    });
+
     it('hides the total count in the header when count mode is changed to Samples', async () => {
         const user = userEvent.setup();
         render(DatasetDistributionPanel, {

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 from uuid import UUID
 
 import pytest
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
-from lightly_studio.core.mcap import add_mcaps
+from lightly_studio.core.mcap import add_mcaps, mcap_dataset
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.mcap_sample import McapSample
@@ -395,6 +396,27 @@ class TestMcapDatasetAddMcapsFromPath:
             "second.mcap",
         ]
 
+    def test_add_mcaps_from_path__skips_annotation_mcaps(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        helpers.write_mcap(tmp_path / "recording.mcap")
+        helpers.write_mcap(tmp_path / "recording_labeled.mcap")
+        dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+        dataset.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        )
+
+        recordings = recording_resolver.get_all_by_dataset_id(
+            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+        )
+        assert [Path(recording.uri).name for recording in recordings] == ["recording.mcap"]
+
     def test_add_mcaps_from_path__skips_already_present(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -447,6 +469,44 @@ class TestMcapDatasetAddMcapsFromPath:
             session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
         )
         assert len(recordings) == 1
+
+    def test_add_mcaps_from_path__filters_annotation_mcaps_before_limit(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        helpers.write_mcap(tmp_path / "a_labeled.mcap")
+        helpers.write_mcap(tmp_path / "b.mcap")
+        helpers.write_mcap(tmp_path / "c.mcap")
+        dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+        dataset.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+            limit=2,
+        )
+
+        recordings = recording_resolver.get_all_by_dataset_id(
+            session=db_manager.persistent_session(),
+            dataset_id=dataset.dataset_id,
+        )
+        assert sorted(Path(recording.uri).name for recording in recordings) == [
+            "b.mcap",
+            "c.mcap",
+        ]
+
+    def test_recording_paths__stops_discovery_at_limit(self) -> None:
+        def discovered_paths() -> Iterator[str]:
+            yield "a_labeled.mcap"
+            yield "b.mcap"
+            raise AssertionError("Discovery continued past the recording limit.")
+
+        assert mcap_dataset._recording_paths(
+            discovered_paths=discovered_paths(),
+            limit=1,
+        ) == ["b.mcap"]
 
     def test_add_mcaps_from_path__invalid_limit(
         self,

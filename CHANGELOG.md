@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
 - Python SDK: Embed search queries on a remote embedding server with `register_remote_embedder`.
 - Python SDK: Enable metric recomputing for instance-segmentation.
+- Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 
 ### Changed
 
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Disable the subpart diversity sampling strategy when no object detection or segmentation annotation sources exist in the collection.
 - Combine typicality and similarity computation and sampling into one backend request that continues if the frontend disconnects.
 - Fix the `Values` field in the distribution panel using a larger font than the other fields.
 - Fix undoing an annotation deletion restoring it to the default source instead of its original one.
