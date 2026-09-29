@@ -3,9 +3,8 @@ import type { PointBatch } from '$lib/components/PointCloudViewer/types';
 /** A 3D vector as an `[x, y, z]` tuple. */
 export type Vec3 = [number, number, number];
 
-/** Locates a single point-cloud frame within a channel. */
+/** Channel and timestamp that together identify a single point-cloud frame. */
 export interface CloudPointChannelLocator {
-    /** Identifier of the channel to load the frame from. */
     channelId: number;
     /** Capture time of the frame, in nanoseconds (string to preserve precision). */
     timestampNs: string;

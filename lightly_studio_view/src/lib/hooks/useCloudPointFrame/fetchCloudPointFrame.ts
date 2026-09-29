@@ -9,7 +9,7 @@ interface FetchCloudPointFrameParams {
     signal?: AbortSignal;
 }
 
-/** Loads and parses a single point-cloud frame for one channel. */
+/** Fetches and parses a single point-cloud frame for one channel. */
 export async function fetchCloudPointFrame({
     datasetId,
     recordingId,
