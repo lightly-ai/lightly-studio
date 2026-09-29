@@ -73,6 +73,85 @@ def test_write_sequence_labels(
     assert track.source_track_id == 7
 
 
+def test_write_sequence_labels__links_parent_tracks(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, _ = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    # Track 8 has a parent with cuboids. Track 9 has a parent without cuboids.
+    cuboids = (
+        _cuboid(timestamp_ns=timestamp_ns, track_id=7),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=8, parent_track_id=7),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=9, parent_track_id=5),
+    )
+
+    add_labels.write_sequence_labels(
+        dataset=dataset,
+        sequence=sequence,
+        annotation_mcap_uri="memory://foo_labeled.mcap",
+        messages=[(timestamp_ns, SceneUpdateLabels(cuboids=cuboids))],
+    )
+
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    by_source = {track.source_track_id: track for track in tracks}
+    assert set(by_source) == {5, 7, 8, 9}
+    assert by_source[5].parent_object_track_id is None
+    assert by_source[7].parent_object_track_id is None
+    assert by_source[8].parent_object_track_id == by_source[7].object_track_id
+    assert by_source[9].parent_object_track_id == by_source[5].object_track_id
+    assert sorted(track.object_track_number for track in tracks) == [1, 2, 3, 4]
+
+
+def test_write_sequence_labels__conflicting_parent_tracks(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, _ = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    cuboids = (
+        _cuboid(timestamp_ns=timestamp_ns, track_id=8, parent_track_id=7),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=8, parent_track_id=6),
+    )
+
+    with pytest.raises(ValueError, match="Track 8 has more than one parent track id"):
+        add_labels.write_sequence_labels(
+            dataset=dataset,
+            sequence=sequence,
+            annotation_mcap_uri="memory://foo_labeled.mcap",
+            messages=[(timestamp_ns, SceneUpdateLabels(cuboids=cuboids))],
+        )
+
+
+def test_write_sequence_labels__parent_track_cycle(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, _ = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    # Track 1 is a root. Tracks 7 and 8 parent each other.
+    cuboids = (
+        _cuboid(timestamp_ns=timestamp_ns, track_id=1),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=7, parent_track_id=8),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=8, parent_track_id=7),
+    )
+
+    with pytest.raises(ValueError, match="A parent track must not have a parent track itself"):
+        add_labels.write_sequence_labels(
+            dataset=dataset,
+            sequence=sequence,
+            annotation_mcap_uri="memory://foo_labeled.mcap",
+            messages=[(timestamp_ns, SceneUpdateLabels(cuboids=cuboids))],
+        )
+
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    assert len(tracks) == 0
+
+
 def _index_recording(tmp_path: Path) -> tuple[McapDataset, McapSequence, list[UUID]]:
     mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
@@ -88,13 +167,15 @@ def _index_recording(tmp_path: Path) -> tuple[McapDataset, McapSequence, list[UU
     return dataset, sequence, group_ids
 
 
-def _cuboid(timestamp_ns: int, track_id: int, px: float = 4.0) -> CuboidLabel:
+def _cuboid(
+    timestamp_ns: int, track_id: int, px: float = 4.0, parent_track_id: int | None = None
+) -> CuboidLabel:
     return CuboidLabel(
         timestamp_ns=timestamp_ns,
         frame_id="odom",
         class_name="truck",
         track_id=track_id,
-        parent_track_id=None,
+        parent_track_id=parent_track_id,
         interpolated=False,
         position=(px, 0.0, 0.5),
         rotation=(0.0, 0.0, 0.0, 1.0),

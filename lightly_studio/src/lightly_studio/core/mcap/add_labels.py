@@ -212,15 +212,72 @@ def _entity_timestamps(messages: Sequence[tuple[int, SceneUpdateLabels]]) -> lis
 
 
 def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -> dict[int, UUID]:
-    """Create a dataset-unique track for each source_track_id in this annotation MCAP."""
-    source_ids = list(
-        dict.fromkeys(
-            cuboid.track_id for cuboids in matched.cuboids_by_group.values() for cuboid in cuboids
-        )
-    )
-    if not source_ids:
+    """Create a dataset-unique track for each source_track_id and link it to its parent track.
+
+    A parent track id without cuboids of its own also gets a track. Parent tracks must be
+    root tracks. Roots are created before children, so the parent foreign key resolves.
+
+    Raises:
+        ValueError: If a track has more than one parent, or a parent track has a parent.
+    """
+    parent_by_source = _parent_by_source_track(matched=matched)
+    if not parent_by_source:
         return {}
+
+    roots = [source_id for source_id, parent_id in parent_by_source.items() if parent_id is None]
+    children = [
+        (source_id, parent_id)
+        for source_id, parent_id in parent_by_source.items()
+        if parent_id is not None
+    ]
+    root_ids = set(roots)
+    if any(parent_id not in root_ids for _, parent_id in children):
+        raise ValueError("A parent track must not have a parent track itself.")
+
     next_number = _next_track_number(session=session, dataset_id=dataset_id)
+    track_ids = _create_source_tracks(
+        session=session,
+        dataset_id=dataset_id,
+        next_number=next_number,
+        links=[(source_id, None) for source_id in roots],
+    )
+    if children:
+        track_ids.update(
+            _create_source_tracks(
+                session=session,
+                dataset_id=dataset_id,
+                next_number=next_number + len(roots),
+                links=[(source_id, track_ids[parent_id]) for source_id, parent_id in children],
+            )
+        )
+    return track_ids
+
+
+def _parent_by_source_track(matched: MatchResult) -> dict[int, int | None]:
+    """Map each source_track_id, including parent-only ids, to its parent source_track_id.
+
+    Raises:
+        ValueError: If cuboids of one track have different parent track ids.
+    """
+    parent_by_source: dict[int, int | None] = {}
+    for cuboids in matched.cuboids_by_group.values():
+        for cuboid in cuboids:
+            parent_id = parent_by_source.setdefault(cuboid.track_id, cuboid.parent_track_id)
+            if parent_id != cuboid.parent_track_id:
+                raise ValueError(f"Track {cuboid.track_id} has more than one parent track id.")
+    for parent_id in list(parent_by_source.values()):
+        if parent_id is not None:
+            parent_by_source.setdefault(parent_id, None)
+    return parent_by_source
+
+
+def _create_source_tracks(
+    session: Session,
+    dataset_id: UUID,
+    next_number: int,
+    links: Sequence[tuple[int, UUID | None]],
+) -> dict[int, UUID]:
+    """Insert tracks and map each source_track_id to its object_track_id."""
     created_ids = object_track_resolver.create_many(
         session=session,
         tracks=[
@@ -228,11 +285,14 @@ def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -
                 object_track_number=next_number + index,
                 dataset_id=dataset_id,
                 source_track_id=source_id,
+                parent_object_track_id=parent_object_track_id,
             )
-            for index, source_id in enumerate(source_ids)
+            for index, (source_id, parent_object_track_id) in enumerate(links)
         ],
     )
-    return dict(zip(source_ids, created_ids))
+    return {
+        source_id: object_track_id for (source_id, _), object_track_id in zip(links, created_ids)
+    }
 
 
 def _next_track_number(session: Session, dataset_id: UUID) -> int:
