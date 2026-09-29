@@ -516,7 +516,7 @@ jobs:
     name: End2End Test (${{ matrix.name }})
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     needs: prepare-caches
     env:
       # The index script imports the test embedders from `lightly_studio/tests`.
