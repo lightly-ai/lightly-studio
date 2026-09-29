@@ -23,6 +23,9 @@ from lightly_studio.embed.remote.errors import RemoteEmbedderCapabilityError
 # TODO(Iunir, 09/2026): Remove this constant when the registry gains a `VIDEO_BYTES` entry.
 _RESOLVABLE_CAPABILITIES = (Capability.TEXT, Capability.IMAGE_BYTES)
 
+# Every class that this module built. Only such a class has route classes as its bases.
+_COMPOSED_CLASSES: set[type[Embedder]] = set()
+
 
 def compose_remote_embedder_class(
     capabilities: Sequence[Capability],
@@ -63,6 +66,11 @@ def composed_class(bases: Sequence[type[Embedder]]) -> type[Embedder]:
     return _composed_class(bases=tuple(bases))
 
 
+def is_composed(cls: type[Embedder]) -> bool:
+    """Get whether this module built ``cls`` out of route classes."""
+    return cls in _COMPOSED_CLASSES
+
+
 @functools.cache
 def _composed_class(bases: tuple[type[Embedder], ...]) -> type[Embedder]:
     """Build and cache the class that carries exactly ``bases``.
@@ -78,7 +86,9 @@ def _composed_class(bases: tuple[type[Embedder], ...]) -> type[Embedder]:
         A class that ``isinstance`` reports as each of ``bases``.
     """
     capabilities = "".join(base.__name__.removeprefix("_").removesuffix("Route") for base in bases)
-    return type(f"Remote{capabilities}Embedder", bases, {})
+    composed = type(f"Remote{capabilities}Embedder", bases, {})
+    _COMPOSED_CLASSES.add(composed)
+    return composed
 
 
 def _check_routable(
