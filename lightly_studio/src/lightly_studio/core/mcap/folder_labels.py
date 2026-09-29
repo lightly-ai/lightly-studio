@@ -5,14 +5,31 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import UUID
 
+from mcap.exceptions import McapError
 from sqlmodel import Session
 
-from lightly_studio.core.file_outcome_report import MissingInputFileError
-from lightly_studio.core.mcap import add_mcaps, annotation_mcap
+from lightly_studio.core.file_outcome_report import (
+    AlreadyPresentInputFileError,
+    BrokenInputFileError,
+    FileOutcomeReport,
+    MissingInputFileError,
+)
+from lightly_studio.core.mcap import add_labels, add_mcaps, annotation_mcap
+from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.dataset import fsspec_lister
-from lightly_studio.resolvers import mcap_group_sequence_resolver
+from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
+    collection_resolver,
+    mcap_group_sequence_resolver,
+)
+from lightly_studio.type_definitions import PathLike
+
+if TYPE_CHECKING:
+    from lightly_studio.core.mcap.mcap_dataset import McapDataset
 
 logger = logging.getLogger(__name__)
 
@@ -90,3 +107,93 @@ def match_sequence(
         )
     logger.warning("No indexed recording for annotation MCAP '%s'.", annotation_uri)
     raise MissingInputFileError(f"No indexed recording for annotation MCAP '{annotation_uri}'.")
+
+
+@dataclass
+class _LabelingContext:
+    dataset: McapDataset
+    topic: str
+    suffix: str
+    annotation_source: str
+    by_uri: dict[str, _IndexedSequence]
+    by_file_name: dict[str, list[_IndexedSequence]]
+    labeled_sequence_ids: set[UUID]
+
+
+def add_labels_from_folder(
+    dataset: McapDataset,
+    path: PathLike,
+    topic: str,
+    suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
+    annotation_source: str = add_labels.DEFAULT_ANNOTATION_SOURCE,
+) -> None:
+    """Store cuboids from annotation MCAPs in a folder on indexed sequences."""
+    by_uri, by_file_name = recording_index(
+        session=dataset.group_dataset.session, dataset_id=dataset.dataset_id
+    )
+    context = _LabelingContext(
+        dataset=dataset,
+        topic=topic,
+        suffix=suffix,
+        annotation_source=annotation_source,
+        by_uri=by_uri,
+        by_file_name=by_file_name,
+        labeled_sequence_ids=_labeled_sequence_ids(
+            dataset=dataset, annotation_source=annotation_source
+        ),
+    )
+    report = FileOutcomeReport()
+    for annotation_uri in annotation_mcap_uris(path=str(path), suffix=suffix):
+        with report.track(annotation_uri):
+            _add_labels_from_file(context=context, annotation_uri=annotation_uri)
+    report.log_summary()
+
+
+def _labeled_sequence_ids(dataset: McapDataset, annotation_source: str) -> set[UUID]:
+    """Return sequences that already store this annotation source."""
+    session = dataset.group_dataset.session
+    collection_id = collection_resolver.get_by_name(
+        session=session,
+        name=annotation_source,
+        parent_collection_id=dataset.group_dataset.collection_id,
+    )
+    if collection_id is None:
+        return set()
+    return annotation_collection_coverage_resolver.sequence_sample_ids(
+        session=session, annotation_collection_id=collection_id
+    )
+
+
+def _add_labels_from_file(context: _LabelingContext, annotation_uri: str) -> None:
+    """Persist cuboids from one annotation MCAP onto the sequence it names."""
+    sequence_ref = match_sequence(
+        annotation_uri=annotation_uri,
+        suffix=context.suffix,
+        by_uri=context.by_uri,
+        by_file_name=context.by_file_name,
+    )
+    if sequence_ref.sample_id in context.labeled_sequence_ids:
+        raise AlreadyPresentInputFileError(
+            f"Sequence already has annotation source '{context.annotation_source}'."
+        )
+    sequence = McapSequence(
+        session=context.dataset.group_dataset.session,
+        sample_id=sequence_ref.sample_id,
+        recording_id=sequence_ref.recording_id,
+    )
+    try:
+        messages = add_labels.read_scene_updates(
+            annotation_mcap_uri=annotation_uri, topic=context.topic
+        )
+        add_labels.write_sequence_labels(
+            dataset=context.dataset,
+            sequence=sequence,
+            annotation_mcap_uri=annotation_uri,
+            messages=messages,
+            annotation_source=context.annotation_source,
+        )
+    except (McapAccessError, McapError, ValueError) as error:
+        raise BrokenInputFileError(
+            f"Cannot add annotations from '{annotation_uri}': {error}"
+        ) from error
+    context.labeled_sequence_ids.add(sequence_ref.sample_id)
