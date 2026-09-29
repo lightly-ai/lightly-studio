@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import SelectableSvgGroup from '../SelectableSvgGroup/SelectableSvgGroup.svelte';
+    import { SelectableSvgGroup } from '$lib/components';
     import SampleAnnotation from './SampleAnnotation.svelte';
     import { getBoundingBox } from './utils';
 

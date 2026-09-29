@@ -185,7 +185,7 @@
         <path
             d={maskHitPath}
             fill="transparent"
-            pointer-events="all"
+            pointer-events="visibleFill"
             data-testid="annotation_mask_hit_area"
         />
     {/if}
