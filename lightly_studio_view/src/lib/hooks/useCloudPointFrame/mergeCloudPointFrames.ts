@@ -36,7 +36,7 @@ function mergeBatches(batches: PointBatch[]): PointBatch {
     const count = batches.reduce((total, batch) => total + batch.count, 0);
     const positions = new Float32Array(count * 3);
     const intensities = new Float32Array(count);
-    const hasColors = batches.every((batch) => batch.colors);
+    const hasColors = batches.every((batch) => batch.count === 0 || batch.colors);
     const colors = hasColors ? new Float32Array(count * 3) : undefined;
     let offset = 0;
     for (const batch of batches) {

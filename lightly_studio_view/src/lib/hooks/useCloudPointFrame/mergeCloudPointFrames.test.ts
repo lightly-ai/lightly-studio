@@ -122,6 +122,7 @@ describe('mergeCloudPointFrames', () => {
         const result = mergeCloudPointFrames([withBounds, empty]);
 
         expect(result.bounds).toEqual({ min: [0, 0, 0], max: [2, 2, 2] });
+        expect(result.batch.colors).toEqual(new Float32Array([0.1, 0.2, 0.3]));
     });
 
     it('takes channel id and timestamp from the first frame', () => {
