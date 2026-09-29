@@ -8,6 +8,7 @@ from typing import TypeVar
 from uuid import UUID
 
 from lightly_studio_serve.embedder import Embedder
+from lightly_studio_serve.types import EmbeddingSpaceSpec
 from sqlmodel import Session
 
 from lightly_studio.embed import embedder_config, embedder_registry
@@ -200,13 +201,7 @@ def _embedder_for_model(
     embedder = get_embedder_fn(embedder_registry.get_registry(), default_model.name, config)
     if embedder is None:
         return None
-    spec = embedder.embedding_space_spec()
-    if spec.dimension != default_model.embedding_dimension:
-        raise ValueError(
-            f"Embedder dimension {spec.dimension} does not match the collection's default "
-            f"model dimension {default_model.embedding_dimension} for space "
-            f"'{default_model.name}'. A wrongly registered embedder is likely."
-        )
+    _check_dimension(spec=embedder.embedding_space_spec(), model=default_model)
     return embedder
 
 
@@ -240,12 +235,22 @@ def _check_bootstrap_dimension(
         return
     spec = embedder.embedding_space_spec()
     for model in dataset_models:
-        if model.name == spec.space_key and model.embedding_dimension != spec.dimension:
-            raise ValueError(
-                f"Embedder dimension {spec.dimension} does not match the dimension "
-                f"{model.embedding_dimension} of the dataset's model for space "
-                f"'{model.name}'. A wrongly registered embedder is likely."
-            )
+        if model.name == spec.space_key:
+            _check_dimension(spec=spec, model=model)
+
+
+def _check_dimension(spec: EmbeddingSpaceSpec, model: EmbeddingModelTable) -> None:
+    """Check the dimension of an embedder against the stored dimension of its space.
+
+    Raises:
+        ValueError: If the dimensions differ (a wrongly registered embedder).
+    """
+    if spec.dimension != model.embedding_dimension:
+        raise ValueError(
+            f"Embedder dimension {spec.dimension} does not match the dimension "
+            f"{model.embedding_dimension} stored for space '{model.name}'. "
+            "A wrongly registered embedder is likely."
+        )
 
 
 def _register_default_model(session: Session, collection_id: UUID, embedder: Embedder) -> UUID:
