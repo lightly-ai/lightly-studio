@@ -137,6 +137,37 @@ def resolve_query_embedder(
     raise MissingCapabilityError(space_key=default_model.name, query_kind=query_kind)
 
 
+def check_embedder_dimension(
+    session: Session,
+    collection_id: UUID,
+    get_embedder_fn: Callable[
+        [EmbedderRegistry, str | None, EmbedderConfig | None], Embedder | None
+    ],
+) -> None:
+    """Check the embedder of the collection's default model against the stored dimension.
+
+    ``resolve_default_embedder`` makes the same check, but only when the samples are already
+    stored. Call this before storing them, so that a mismatch stores no sample. The registry
+    caches the embedder, so the embedding after the insert does not build it again. A
+    collection without a default model, or a space without an embedder, passes.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The collection whose default embedding model is checked.
+        get_embedder_fn: The typed getter of the needed capability, as described in
+            ``resolve_default_embedder``.
+
+    Raises:
+        ValueError: If the embedder's dimension does not match the default model's stored
+            dimension (a wrongly registered embedder).
+    """
+    default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if default_model is not None:
+        _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
+
+
 def _embedder_for_model(
     default_model: EmbeddingModelTable,
     get_embedder_fn: Callable[

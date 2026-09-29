@@ -453,6 +453,51 @@ def test_resolve_query_embedder__builds_remote_from_stored_config(
     assert embedder.embed_text(texts=["a query"]).embeddings.shape == (1, 2)
 
 
+def test_check_embedder_dimension__mismatch_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    # The embedder shares the space but produces a different dimension.
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="random_model",
+        embedding_dimension=8,
+        set_as_default=True,
+    )
+
+    with pytest.raises(ValueError, match=r"does not match"):
+        default_embedder.check_embedder_dimension(
+            session=db_session,
+            collection_id=collection.collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        )
+
+
+def test_check_embedder_dimension__no_default_model(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session)
+    registry = EmbedderRegistry()
+    registry.register(embedder=RandomEmbedder(dimension=3))
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    default_embedder.check_embedder_dimension(
+        session=db_session,
+        collection_id=collection.collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+    )
+
+    # The check never bootstraps a default model.
+    linked = collection_embedding_model_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    )
+    assert linked == []
+
+
 def _create_remote_default_model(session: Session, collection_id: UUID) -> None:
     model = create_embedding_model(
         session=session,

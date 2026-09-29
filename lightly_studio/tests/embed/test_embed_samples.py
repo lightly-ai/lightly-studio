@@ -681,6 +681,30 @@ def test_embed_image_samples__enables_text_query(
 
 
 @pytest.mark.usefixtures("patched_registry")
+def test_check_image_embedder_dimension(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
+
+    embed_samples.check_image_embedder_dimension(
+        session=db_session, collection_id=collection.collection_id
+    )
+
+
+@pytest.mark.usefixtures("patched_registry")
+def test_check_image_embedder_dimension__mismatch_raises(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    # The registered random embedder produces dimension 3.
+    _register_default_random_model(
+        session=db_session, collection_id=collection.collection_id, dimension=8
+    )
+
+    with pytest.raises(ValueError, match=r"does not match"):
+        embed_samples.check_image_embedder_dimension(
+            session=db_session, collection_id=collection.collection_id
+        )
+
+
+@pytest.mark.usefixtures("patched_registry")
 def test_embed_annotation_collection(
     db_session: Session,
 ) -> None:

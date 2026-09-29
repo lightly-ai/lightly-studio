@@ -8,7 +8,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
+import numpy as np
 import pytest
+from lightly_studio_serve.embedder import ImageBytesEmbedder, TextEmbedder
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 
 import lightly_studio
@@ -25,6 +28,19 @@ _API_KEY = "test-api-key"
 
 # The fixture gives each test its own embedder registry and the test database.
 pytestmark = pytest.mark.usefixtures("patch_collection")
+
+
+class _NarrowColorEmbedder(TextEmbedder, ImageBytesEmbedder):
+    """Produces the color space with dimension 2 instead of 3."""
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(space_key=color_embedder.SPACE_KEY, dimension=2)
+
+    def embed_text(self, texts: list[str]) -> EmbeddingResult:
+        return _zeros(count=len(texts))
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        return _zeros(count=len(images))
 
 
 @pytest.fixture
@@ -83,3 +99,30 @@ def test_text_search__after_restart(
     # The server embeds a color name as its one-hot vector.
     assert embedding == [1.0, 0.0, 0.0]
     assert query_embedder.call_count == call_count + 1
+
+
+def test_add_images_from_path__dimension_mismatch_after_restart(
+    dataset: ImageDataset, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    more_images = tmp_path / "more"
+    more_images.mkdir()
+    color_embedder.write_color_images(directory=more_images)
+
+    with (
+        threaded_server.serve(embedder=_NarrowColorEmbedder(), api_key=_API_KEY) as url,
+        connection.build_client(url=url) as client,
+    ):
+        lightly_studio.register_default_embedder(
+            embedder=RemoteEmbedder.connect(client=client, api_key=_API_KEY)
+        )
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_images_from_path(path=more_images)
+
+    assert len(list(dataset)) == 3
+
+
+def _zeros(count: int) -> EmbeddingResult:
+    return EmbeddingResult(
+        embeddings=np.zeros((count, 2), dtype=np.float32), kept_indices=list(range(count))
+    )
