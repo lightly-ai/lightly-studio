@@ -10,6 +10,9 @@ from pytest_mock import MockerFixture as Mocker
 from lightly_studio import ImageDataset
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_images
+from lightly_studio.embed import embedder_registry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.random_embedder import RandomEmbedder
 
 
 class TestDataset:
@@ -198,6 +201,59 @@ class TestDataset:
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
 
+    def test_dataset_add_images_from_path__embedder_dimension_mismatch(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: Mocker,
+        tmp_path: Path,
+    ) -> None:
+        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
+        dataset = ImageDataset.create(name="test_dataset")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
+        dataset.add_images_from_path(path=tmp_path / "first")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
+        _create_sample_images(image_paths=[tmp_path / "second" / "image2.jpg"])
+
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_images_from_path(path=tmp_path / "second")
+
+        assert len(list(dataset)) == 1
+
+    def test_dataset_add_images_from_path__embedder_dimension_mismatch_dont_embed(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: Mocker,
+        tmp_path: Path,
+    ) -> None:
+        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
+        dataset = ImageDataset.create(name="test_dataset")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
+        dataset.add_images_from_path(path=tmp_path / "first")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
+        _create_sample_images(image_paths=[tmp_path / "second" / "image2.jpg"])
+
+        dataset.add_images_from_path(path=tmp_path / "second", embed=False)
+
+        assert len(list(dataset)) == 2
+
+    def test_dataset_add_images_from_path__embedder_dimension_mismatch_no_images(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: Mocker,
+        tmp_path: Path,
+    ) -> None:
+        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
+        dataset = ImageDataset.create(name="test_dataset")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
+        dataset.add_images_from_path(path=tmp_path / "first")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
+        (tmp_path / "empty").mkdir()
+
+        # No image is found, so nothing is checked, stored or embedded.
+        dataset.add_images_from_path(path=tmp_path / "empty")
+
+        assert len(list(dataset)) == 1
+
     def test_dataset_add_images_from_path__limit(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -289,3 +345,10 @@ def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:
         image_path.parent.mkdir(parents=True, exist_ok=True)
         Image.new("RGB", (10, 10)).save(image_path)
+
+
+def _patch_registry(mocker: Mocker, embedder: RandomEmbedder) -> None:
+    """Replace the process-wide registry with one that holds only ``embedder``."""
+    registry = EmbedderRegistry()
+    registry.register(embedder=embedder)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)

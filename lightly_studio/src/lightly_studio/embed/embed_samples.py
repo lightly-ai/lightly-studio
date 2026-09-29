@@ -179,6 +179,28 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
             progress.update(len(sample_id_chunk))
 
 
+def check_image_embedder_dimension(session: Session, collection_id: UUID) -> None:
+    """Check the image embedder of the collection against the stored dimension of its space.
+
+    ``embed_image_samples`` makes the same check, but only after the caller stored the
+    images. Call this before storing them, so that a wrongly registered embedder stores
+    nothing.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The collection whose default embedding model is checked.
+
+    Raises:
+        ValueError: If the image embedder does not produce the stored dimension of its
+            space.
+    """
+    default_embedder.check_embedder_dimension(
+        session=session,
+        collection_id=collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+    )
+
+
 def embed_annotation_collection(session: Session, annotation_collection_id: UUID) -> None:
     """Embed the crops of an annotation collection and store the result.
 

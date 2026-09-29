@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix undoing an annotation deletion restoring it to the default source instead of its original one.
 - Return 409 instead of 500 for text and image search on a collection whose embedding space cannot embed the query, and 502 when its embedding server cannot be used.
 - Python SDK: Keep the image embeddings stored before an embedder failure, and embed only the images without an embedding when the images are added again with `embed=True`.
+- Python SDK: Raise in `add_images_from_path` before any image is added when the registered image embedder produces a different dimension than the dataset's embeddings, instead of adding the images without embeddings.
 
 
 ### Security

@@ -153,8 +153,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
-            ValueError: If tag_depth is negative, or if limit is not None and not
-                greater than 0.
+            ValueError: If tag_depth is negative, if limit is not None and not greater
+                than 0, or if embed is True and the registered image embedder does not
+                produce the dimension of the dataset's embeddings. No image is added then.
             AllInputFilesFailedError: If every image in the path is missing or broken.
         """
         fsspec_lister.validate_limit(limit)
@@ -174,6 +175,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         logger.info(f"Found {len(image_paths)} images in {path}.")
+
+        if embed and image_paths:
+            # Fail before the insert, so that a wrongly registered embedder stores no image
+            embed_samples.check_image_embedder_dimension(
+                session=self.session, collection_id=self.collection_id
+            )
 
         # Process images
         path_to_sample_id = add_images.load_into_dataset_from_paths(
