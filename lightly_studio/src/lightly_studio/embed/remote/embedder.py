@@ -11,7 +11,7 @@ that the server does not advertise has no method to call.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from typing import TypeVar, cast
 
 import httpx
@@ -29,6 +29,7 @@ from numpy.typing import NDArray
 
 from lightly_studio.embed.remote import batching, composition, connection, url_policy
 from lightly_studio.embed.remote.errors import (
+    RemoteEmbedderBatchTooLargeError,
     RemoteEmbedderCapabilityError,
     RemoteEmbedderError,
     RemoteEmbedderProtocolError,
@@ -171,12 +172,47 @@ class RemoteEmbedder(Embedder):
             size_of=size_of,
         )
         for offset, chunk in chunks:
-            response = self._send(send=send, chunk=chunk, capability=capability)
-            self._check_answer(response=response, item_count=len(chunk))
-            rows.extend(response.embeddings)
-            # A chunk counts its kept indices from its own start.
-            kept_indices.extend(offset + index for index in response.kept_indices)
+            answers = self._send_split(send=send, chunk=chunk, offset=offset, capability=capability)
+            for part_offset, response in answers:
+                rows.extend(response.embeddings)
+                # A chunk counts its kept indices from its own start.
+                kept_indices.extend(part_offset + index for index in response.kept_indices)
         return EmbeddingResult(embeddings=self._to_array(rows=rows), kept_indices=kept_indices)
+
+    def _send_split(
+        self,
+        send: Callable[[list[_ItemT]], EmbeddingsResponse],
+        chunk: list[_ItemT],
+        offset: int,
+        capability: Capability,
+    ) -> Iterator[tuple[int, EmbeddingsResponse]]:
+        """Send one chunk. If the server answers 413, send the two halves of the chunk.
+
+        ``split_batches`` only estimates the size of a request, so the server can refuse a
+        chunk that is near ``max_request_bytes``.
+
+        Yields:
+            Each answer together with the index of its first item in the whole batch, in
+            input order.
+
+        Raises:
+            RemoteEmbedderBatchTooLargeError: If the server refuses one item as too large.
+        """
+        try:
+            response = self._send(send=send, chunk=chunk, capability=capability)
+        except RemoteEmbedderBatchTooLargeError:
+            if len(chunk) == 1:
+                raise
+            middle = len(chunk) // 2
+            yield from self._send_split(
+                send=send, chunk=chunk[:middle], offset=offset, capability=capability
+            )
+            yield from self._send_split(
+                send=send, chunk=chunk[middle:], offset=offset + middle, capability=capability
+            )
+            return
+        self._check_answer(response=response, item_count=len(chunk))
+        yield offset, response
 
     def _send(
         self,
