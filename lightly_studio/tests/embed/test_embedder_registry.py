@@ -21,10 +21,12 @@ from lightly_studio.embed import embedder_config, embedder_registry
 from lightly_studio.embed.embedder_config import EmbedderConfig
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
+from lightly_studio.embed.remote.embedder import RemoteEmbedder
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderCapabilityError,
     RemoteEmbedderUnreachableError,
 )
+from tests.embed.remote.helpers import SPACE_KEY, FakeServer
 
 
 class _FakeTextImageEmbedder(TextEmbedder, ImagePathEmbedder):
@@ -100,6 +102,18 @@ class TestEmbedderRegistry:
         assert registry.get_video_path_embedder(space_key="space-a") is None
         assert registry.get_image_pil_embedder(space_key="space-a") is None
         assert registry.get_image_bytes_embedder(space_key="space-a") is None
+
+    def test_register__remote_image_bytes_embeds_image_paths(self) -> None:
+        registry = EmbedderRegistry()
+
+        registry.register(embedder=_remote_image_bytes_embedder())
+
+        embedder = registry.get_image_path_embedder()
+        assert embedder is not None
+        assert embedder.embedding_space_spec().space_key == SPACE_KEY
+        # Typed as `object`, because the composed class exists only at runtime.
+        image_bytes_embedder: object = registry.get_image_bytes_embedder()
+        assert image_bytes_embedder is embedder
 
     def test_register__no_capability(self) -> None:
         registry = EmbedderRegistry()
@@ -468,6 +482,22 @@ class TestEmbedderRegistry:
 
         assert embedder is registered
 
+    def test_get_image_path_embedder__from_remote_image_bytes_config(
+        self, mocker: MockerFixture
+    ) -> None:
+        registry = EmbedderRegistry()
+        mocker.patch.object(
+            embedder_config, "build_remote", return_value=_remote_image_bytes_embedder()
+        )
+        config = _config(space_key=SPACE_KEY, url="http://first.test")
+
+        embedder = registry.get_image_path_embedder(config=config)
+
+        assert embedder is not None
+        # Typed as `object`, because the composed class exists only at runtime.
+        text_embedder: object = registry.get_text_embedder(config=config)
+        assert text_embedder is embedder
+
     def test_get_image_path_embedder__explicit_key_has_no_fallback(
         self, mocker: MockerFixture
     ) -> None:
@@ -596,6 +626,13 @@ class TestEmbedderRegistry:
         # The registered custom embedder covers its space, so only the image builtin loads.
         load_builtin.assert_called_once_with(space_key="mobileclip_s0")
         assert registry.get_video_path_embedder() is custom
+
+
+def _remote_image_bytes_embedder() -> RemoteEmbedder:
+    """Connect to a server that embeds text and image bytes, and not image paths."""
+    server = FakeServer(capabilities=[Capability.TEXT.value, Capability.IMAGE_BYTES.value])
+    with server.client() as client:
+        return RemoteEmbedder.connect(client=client)
 
 
 def _config(
