@@ -24,9 +24,14 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
-from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
+from lightly_studio.models.annotation_sort import (
+    AnnotationEvaluationMetricSortExpr,
+    AnnotationSortExpr,
+)
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
 from lightly_studio.models.embedding_region import EmbeddingRegion
+from lightly_studio.models.sort import SimilaritySortExpr
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
@@ -103,7 +108,7 @@ class ReadAnnotationsWithPayloadRequest(BaseModel):
     text_embedding: list[float] | None = None
     # Keeps only annotations at least this similar to ``text_embedding``.
     min_similarity: float | None = Field(default=None, ge=-1.0, le=1.0)
-    sort_by: AnnotationEvaluationMetricSortExpr | None = None
+    sort_by: AnnotationSortExpr | None = None
 
     @model_validator(mode="after")
     def _validate_min_similarity(self) -> Self:  # noqa: N804
@@ -176,7 +181,7 @@ def read_annotations_with_payload(
 ) -> AnnotationWithPayloadAndCountView:
     """Retrieve annotations with payload and optional similarity or sample filters."""
     order_by = None
-    if body.sort_by is not None:
+    if isinstance(body.sort_by, AnnotationEvaluationMetricSortExpr):
         # An invalid sort raises ValueError, which the registered handler turns into a 400.
         order_by = annotation_metric_sort.sort_expr_to_order_by(
             session=session,
@@ -204,6 +209,11 @@ def read_annotations_with_payload(
         ordering=AnnotationOrdering(
             text_embedding=body.text_embedding,
             order_by=order_by,
+            similarity_direction=(
+                body.sort_by.direction
+                if isinstance(body.sort_by, SimilaritySortExpr)
+                else SortDirection.desc
+            ),
         ),
     )
 

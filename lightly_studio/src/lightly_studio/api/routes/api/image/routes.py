@@ -65,9 +65,6 @@ def read_images(
     Returns:
         A list of filtered samples.
     """
-    order_by = (
-        [sort.image_sort_expr_to_order_by(expr) for expr in body.sort_by] if body.sort_by else None
-    )
     result = image_resolver.get_all_by_collection_id(
         session=session,
         collection_id=collection_id,
@@ -75,7 +72,8 @@ def read_images(
         filters=body.filters,
         text_embedding=body.text_embedding,
         sample_ids=body.sample_ids,
-        order_by=order_by,
+        order_by=sort.sort_exprs_to_order_by(sort_by=body.sort_by),
+        similarity_direction=sort.get_similarity_direction(sort_by=body.sort_by),
     )
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.

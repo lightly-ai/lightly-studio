@@ -14,6 +14,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sort import (
     AdjacentSortExpr,
     ImageSortFieldExpr,
+    SimilaritySortExpr,
     SortFieldSource,
     VideoSortFieldExpr,
 )
@@ -79,6 +80,43 @@ def test_get_adjacent_samples__delegates_to_image_resolver(
         filters=filters,
         text_embedding=text_embedding,
         order_by=None,
+        similarity_direction=SortDirection.desc,
+    )
+
+
+@pytest.mark.parametrize(
+    ("sample_type", "resolver_path"),
+    [
+        (SampleType.IMAGE, "lightly_studio.resolvers.image_resolver.get_adjacent_images"),
+        (SampleType.VIDEO, "lightly_studio.resolvers.video_resolver.get_adjacent_videos"),
+    ],
+)
+def test_get_adjacent_samples__forwards_similarity_direction(
+    db_session: Session,
+    mocker: MockerFixture,
+    sample_type: SampleType,
+    resolver_path: str,
+) -> None:
+    mock_resolver = mocker.patch(resolver_path, return_value=_make_adjacent_result())
+    sample_id = uuid4()
+    collection_id = uuid4()
+    request = AdjacentRequest(
+        sample_type=sample_type,
+        collection_id=collection_id,
+        text_embedding=[0.1, 0.2],
+        sort_by=[SimilaritySortExpr(direction=SortDirection.asc)],
+    )
+
+    get_adjacent_samples(session=db_session, sample_id=sample_id, request=request)
+
+    mock_resolver.assert_called_once_with(
+        session=db_session,
+        sample_id=sample_id,
+        collection_id=collection_id,
+        filters=None,
+        text_embedding=[0.1, 0.2],
+        order_by=None,
+        similarity_direction=SortDirection.asc,
     )
 
 
@@ -117,6 +155,7 @@ def test_get_adjacent_samples__delegates_to_video_resolver(
         filters=filters,
         text_embedding=text_embedding,
         order_by=None,
+        similarity_direction=SortDirection.desc,
     )
 
 
@@ -167,6 +206,7 @@ def test_get_adjacent_samples__translates_video_sort_by_before_delegating(
         filters=filters,
         text_embedding=None,
         order_by=[fake_order_by],
+        similarity_direction=SortDirection.desc,
     )
 
 

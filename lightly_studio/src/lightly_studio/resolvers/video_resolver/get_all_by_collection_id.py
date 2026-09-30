@@ -22,6 +22,7 @@ from lightly_studio.core.dataset_query.video_sample_field import VideoSampleFiel
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.models.video import (
     VideoFrameTable,
     VideoTable,
@@ -32,6 +33,7 @@ from lightly_studio.resolvers.similarity_utils import (
     apply_similarity_join,
     distance_to_similarity,
     get_distance_expression,
+    similarity_order_by,
 )
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -44,11 +46,13 @@ def get_all_by_collection_id(  # noqa: PLR0913
     filters: VideoFilter | None = None,
     text_embedding: list[float] | None = None,
     order_by: list[OrderByExpression] | None = None,
+    similarity_direction: SortDirection = SortDirection.desc,
 ) -> VideoViewsWithCount:
     """Retrieve samples for a specific collection with optional filtering.
 
     Similarity search takes precedence over ``order_by``: when ``text_embedding`` is
-    given, results are ordered by distance and ``order_by`` is ignored.
+    given, results are sorted by similarity in ``similarity_direction`` and ``order_by``
+    is ignored.
     """
     embedding_model_id, distance_expr = get_distance_expression(
         session=session,
@@ -62,6 +66,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             collection_id=collection_id,
             embedding_model_id=embedding_model_id,
             distance_expr=distance_expr,
+            similarity_direction=similarity_direction,
             pagination=pagination,
             sample_ids=sample_ids,
             filters=filters,
@@ -129,6 +134,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     collection_id: UUID,
     embedding_model_id: UUID,
     distance_expr: ColumnElement[float],
+    similarity_direction: SortDirection,
     pagination: Paginated | None,
     sample_ids: list[UUID] | None,
     filters: VideoFilter | None,
@@ -186,7 +192,13 @@ def _get_all_with_similarity(  # noqa: PLR0913
 
     # `distance_expr` alone is not a total order: equal distances would let rows move
     # between page requests. `file_path_abs` breaks the tie, matching the images resolver.
-    samples_query = samples_query.order_by(distance_expr, col(VideoTable.file_path_abs).asc())
+    samples_query = samples_query.order_by(
+        *similarity_order_by(
+            distance_expr=distance_expr,
+            file_path_abs=VideoTable.file_path_abs,
+            direction=similarity_direction,
+        )
+    )
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)

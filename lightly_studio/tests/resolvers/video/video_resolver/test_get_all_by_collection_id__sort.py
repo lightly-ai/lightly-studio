@@ -1,3 +1,4 @@
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -14,7 +15,12 @@ from tests.helpers_resolvers import (
     create_embedding_model,
     create_sample_embedding,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, create_videos
+from tests.resolvers.video.helpers import (
+    VideoStub,
+    create_video_with_frames,
+    create_videos,
+    create_videos_with_embeddings,
+)
 
 
 def test_get_all_by_collection_id__embedding_sort_overrides_order_by(db_session: Session) -> None:
@@ -65,6 +71,41 @@ def test_get_all_by_collection_id__embedding_sort_overrides_order_by(db_session:
         video1_data.video_sample_id,
     ]
     assert result.samples[0].similarity_score is not None
+
+
+@pytest.mark.parametrize(
+    ("direction", "expected_names"),
+    [
+        (SortDirection.desc, ["most.mp4", "tie_a.mp4", "tie_b.mp4", "least.mp4"]),
+        (SortDirection.asc, ["least.mp4", "tie_b.mp4", "tie_a.mp4", "most.mp4"]),
+    ],
+)
+def test_get_all_by_collection_id__similarity_direction(
+    db_session: Session, direction: SortDirection, expected_names: list[str]
+) -> None:
+    # The tied pair checks that the file path tiebreaker follows the direction.
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    create_videos_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        videos_and_embeddings=[
+            (VideoStub(path="/videos/tie_b.mp4"), [1.0, 1.0]),
+            (VideoStub(path="/videos/least.mp4"), [0.0, 1.0]),
+            (VideoStub(path="/videos/most.mp4"), [1.0, 0.0]),
+            (VideoStub(path="/videos/tie_a.mp4"), [1.0, 1.0]),
+        ],
+    )
+
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        similarity_direction=direction,
+    )
+
+    assert [sample.file_name for sample in result.samples] == expected_names
 
 
 def test_get_all_by_collection_id__similarity_ties_broken_by_file_path(

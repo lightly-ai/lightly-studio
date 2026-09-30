@@ -13,6 +13,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers import adjacents, similarity_utils
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
@@ -25,6 +26,7 @@ def get_adjacent_videos(  # noqa: PLR0913
     filters: VideoFilter | None = None,
     text_embedding: list[float] | None = None,
     order_by: list[OrderByExpression] | None = None,
+    similarity_direction: SortDirection = SortDirection.desc,
 ) -> AdjacentResultView | None:
     """Get the adjacent videos for a given sample ID.
 
@@ -37,6 +39,8 @@ def get_adjacent_videos(  # noqa: PLR0913
             ordering and ``order_by`` is ignored.
         order_by: Requested grid sort so prev/next follows it; empty for the
             default ``file_path_abs`` order.
+        similarity_direction: Direction of the similarity sort while ``text_embedding``
+            is set.
 
     Returns:
         The adjacency result with the previous/next sample IDs and the anchor's
@@ -53,9 +57,13 @@ def get_adjacent_videos(  # noqa: PLR0913
 
     if distance_expr is not None and embedding_model_id is not None:
         base_query = similarity_utils.apply_similarity_join(
-            query=_base_query(ordering_expression=[distance_expr]).where(
-                col(SampleTable.collection_id) == collection_id
-            ),
+            query=_base_query(
+                ordering_expression=similarity_utils.similarity_order_by(
+                    distance_expr=distance_expr,
+                    file_path_abs=VideoTable.file_path_abs,
+                    direction=similarity_direction,
+                )
+            ).where(col(SampleTable.collection_id) == collection_id),
             sample_id_column=col(VideoTable.sample_id),
             embedding_model_id=embedding_model_id,
         )
@@ -79,13 +87,13 @@ def _base_query(
 ) -> Select[Any]:
     """Return a per-video window query for adjacency lookup.
 
-    Rows are ordered by ``ordering_expression`` (similarity), then the requested
-    ``order_by``, then a ``file_path_abs`` tiebreaker. Each row is annotated with its
+    Rows are ordered by ``ordering_expression`` (similarity), or else by the requested
+    ``order_by`` and a ``file_path_abs`` tiebreaker. Each row is annotated with its
     previous/next ``sample_id`` and row number via ``lag`` / ``lead`` / ``row_number``.
 
     Args:
-        ordering_expression: Extra sort keys for the window ``ORDER BY`` (e.g. the
-            similarity distance). The caller must add any JOINs these need.
+        ordering_expression: Similarity sort keys, including their tiebreaker. The
+            caller must add any JOINs these need.
         order_by: Grid sort expressions; their JOINs are applied via ``apply_joins``.
     """
     order_col = _window_order_columns(ordering_expression=ordering_expression, order_by=order_by)
@@ -116,11 +124,17 @@ def _window_order_columns(
 ) -> Any:
     """Assemble the window ``ORDER BY`` from similarity, grid sort, and tiebreaker.
 
-    A ``file_path_abs`` tiebreaker (following the primary sort direction) is appended
-    unless the grid sort already sorts by ``file_path_abs``. With no explicit ordering,
-    falls back to ``file_path_abs`` ascending. Mirrors the video grid resolver's
-    tiebreaker rather than sharing a builder with the image window.
+    The similarity ``ordering_expression`` already carries its tiebreaker and is used
+    unchanged. For a grid sort, a ``file_path_abs`` tiebreaker (following the primary
+    sort direction) is appended unless the grid sort already sorts by ``file_path_abs``.
+    With no explicit ordering, falls back to ``file_path_abs`` ascending. Mirrors the
+    video grid resolver's tiebreaker rather than sharing a builder with the image window.
     """
+    # Similarity and grid sort never arrive together: the similarity call passes only
+    # ``ordering_expression``, the grid call passes only ``order_by``.
+    if ordering_expression is not None:
+        return ordering_expression
+
     needs_tiebreaker = not order_by or not any(
         isinstance(expr, OrderByField) and expr.field is VideoSampleField.file_path_abs
         for expr in order_by
@@ -134,10 +148,6 @@ def _window_order_columns(
     else:
         tiebreaker = []
 
-    # Similarity and grid sort never arrive together: the similarity call passes only
-    # ``ordering_expression``, the grid call passes only ``order_by``.
-    if ordering_expression is not None:
-        return [*ordering_expression, *tiebreaker]
     if order_by:
         return [e for expr in order_by for e in expr.to_column_elements()] + tiebreaker
     return col(VideoTable.file_path_abs).asc()

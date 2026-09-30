@@ -8,6 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.models.adjacents import AdjacentResultView
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import similarity_utils
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.image_resolver.get_adjacent_images.get_adjacent_images_keyset import (
@@ -25,6 +26,7 @@ def get_adjacent_images(  # noqa: PLR0913
     filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
     order_by: list[OrderByExpression] | None = None,
+    similarity_direction: SortDirection = SortDirection.desc,
 ) -> AdjacentResultView | None:
     """Get the previous and next image for a sample in the current sort order.
 
@@ -41,6 +43,8 @@ def get_adjacent_images(  # noqa: PLR0913
         filters: Optional image filters constraining the collection.
         text_embedding: Text embedding for similarity search; forces the window path.
         order_by: Requested sort; ``None`` means the default ``file_path_abs`` sort.
+        similarity_direction: Direction of the similarity sort while ``text_embedding``
+            is set.
 
     Returns:
         The adjacency result, or ``None`` if the anchor is not in the (filtered)
@@ -69,6 +73,7 @@ def get_adjacent_images(  # noqa: PLR0913
         filters=filters,
         distance_expr=distance_expr,
         embedding_model_id=embedding_model_id,
+        similarity_direction=similarity_direction,
         order_by=order_by,
     )
 

@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.annotation_base import (
     VideoFrameAnnotationView,
 )
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from tests.helpers_resolvers import (
@@ -277,6 +278,34 @@ def test_get_all_with_payload__orders_by_text_embedding_similarity(
     assert far_score is not None
     assert near_score == pytest.approx(1.0, abs=0.01)
     assert near_score >= far_score
+
+
+@pytest.mark.parametrize(
+    ("direction", "expected_order"),
+    [(SortDirection.desc, [0, 1, 2, 3]), (SortDirection.asc, [3, 2, 1, 0])],
+)
+def test_get_all_with_payload__similarity_direction(
+    db_session: Session, direction: SortDirection, expected_order: list[int]
+) -> None:
+    # Annotations 1 and 2 tie, so the tiebreaker chain must follow the direction.
+    collection = create_collection(session=db_session)
+    annotations = create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.0], [1.0, 1.0], [1.0, 1.0], [0.0, 1.0]],
+    )
+
+    annotations_page = annotation_resolver.get_all_with_payload(
+        session=db_session,
+        collection_id=annotations[0].sample.collection_id,
+        ordering=annotation_resolver.AnnotationOrdering(
+            text_embedding=[1.0, 0.0], similarity_direction=direction
+        ),
+    )
+
+    assert [a.annotation.sample_id for a in annotations_page.annotations] == [
+        annotations[i].sample_id for i in expected_order
+    ]
 
 
 def test_get_all_with_payload__without_embedding_model_has_no_similarity_score(

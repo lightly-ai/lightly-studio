@@ -29,6 +29,7 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver, embedding_region_resolver
 from lightly_studio.resolvers.annotations import annotation_ordering
@@ -53,10 +54,14 @@ class AnnotationOrdering:
         text_embedding: Optional embedding; when given, annotations are ordered by cosine
             distance of their embedding to it.
         order_by: Optional order by expression, e.g. an evaluation metric value.
+        similarity_direction: Direction of the similarity sort. Descending shows the most
+            similar first. The tiebreaker chain follows it, so ascending is the exact
+            reverse of descending.
     """
 
     text_embedding: list[float] | None = None
     order_by: OrderByExpression | None = None
+    similarity_direction: SortDirection = SortDirection.desc
 
 
 def get_all_with_payload(
@@ -120,12 +125,18 @@ def get_all_with_payload(
         # below is appended after the sort key.
         rows_query = order_by.apply_with_order_value(rows_query)
 
+    is_similarity_ascending = ordering.similarity_direction == SortDirection.asc
+    leading_order_key = None
+    if distance_expr is not None:
+        # Descending similarity is ascending distance.
+        leading_order_key = distance_expr.desc() if is_similarity_ascending else distance_expr.asc()
     annotations_query: Any = rows_query.order_by(
         *annotation_ordering.build_order_by(
             file_path_abs=annotation_ordering.file_path_abs_expression(sample_type=sample_type),
             created_at=col(AnnotationBaseTable.created_at),
             annotation_sample_id=col(AnnotationBaseTable.sample_id),
-            leading_order_key=distance_expr,
+            leading_order_key=leading_order_key,
+            ascending=distance_expr is None or not is_similarity_ascending,
         ),
     )
     if distance_expr is not None:

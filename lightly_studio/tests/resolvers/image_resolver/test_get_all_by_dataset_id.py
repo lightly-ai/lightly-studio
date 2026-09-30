@@ -15,6 +15,7 @@ from lightly_studio.core.dataset_query.order_by import (
 )
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import (
     image_resolver,
@@ -629,6 +630,46 @@ def test_get_all_by_collection_id__similarity_pagination_with_tied_distances(
     # file_path_abs tiebreaker → page 1 is a, b; page 2 is c.
     assert page1_ids == [image_a.sample_id, image_b.sample_id]
     assert page2_ids == [image_c.sample_id]
+
+
+@pytest.mark.parametrize(
+    ("direction", "expected_paths"),
+    [
+        (SortDirection.desc, ["most.png", "tie_a.png", "tie_b.png", "least.png"]),
+        (SortDirection.asc, ["least.png", "tie_b.png", "tie_a.png", "most.png"]),
+    ],
+)
+def test_get_all_by_collection_id__similarity_direction(
+    db_session: Session, direction: SortDirection, expected_paths: list[str]
+) -> None:
+    # The tied pair checks that the file path tiebreaker follows the direction.
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="tie_b.png"), [1.0, 1.0]),
+            (ImageStub(path="least.png"), [0.0, 1.0]),
+            (ImageStub(path="most.png"), [1.0, 0.0]),
+            (ImageStub(path="tie_a.png"), [1.0, 1.0]),
+        ],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        similarity_direction=direction,
+    )
+
+    assert [sample.file_path_abs for sample in result.samples] == expected_paths
 
 
 def test_get_all_by_collection_id__returns_total_count(db_session: Session) -> None:

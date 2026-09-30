@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import Enum
 from typing import Annotated, Literal, Union
 
@@ -19,6 +20,7 @@ class SortFieldSource(str, Enum):
     video = "video"
     metadata = "metadata"
     evaluation_metric = "evaluation_metric"
+    similarity = "similarity"
 
 
 class SortFieldExprBase(BaseModel):
@@ -70,8 +72,28 @@ class EvaluationMetricSortExpr(BaseModel):
     direction: SortDirection
 
 
+class SimilaritySortExpr(BaseModel):
+    """A sorting expression for the similarity to the text search.
+
+    Applies only while a text search is active and is ignored otherwise.
+
+    Attributes:
+        source: Always ``"similarity"`` (discriminator for the union type).
+        direction: The sort direction. Descending shows the most similar samples first.
+    """
+
+    source: Literal[SortFieldSource.similarity] = SortFieldSource.similarity
+    direction: SortDirection
+
+
 ImageSortExpr = Annotated[
-    Union[ImageSortFieldExpr, EvaluationMetricSortExpr],
+    Union[ImageSortFieldExpr, EvaluationMetricSortExpr, SimilaritySortExpr],
+    Field(discriminator="source"),
+]
+
+
+VideoSortExpr = Annotated[
+    Union[VideoSortFieldExpr, SimilaritySortExpr],
     Field(discriminator="source"),
 ]
 
@@ -85,9 +107,46 @@ ImageSortExpr = Annotated[
 # structurally identical, guarded by
 # tests/models/test_sort.py::test_image_and_video_sort_field_exprs_stay_structurally_identical.
 AdjacentSortExpr = Annotated[
-    Union[ImageSortFieldExpr, VideoSortFieldExpr, EvaluationMetricSortExpr],
+    Union[ImageSortFieldExpr, VideoSortFieldExpr, EvaluationMetricSortExpr, SimilaritySortExpr],
     Field(union_mode="left_to_right"),
 ]
+
+
+def get_similarity_direction(sort_by: Sequence[AdjacentSortExpr] | None) -> SortDirection:
+    """Get the similarity sort direction from the sort expressions.
+
+    Args:
+        sort_by: The sort expressions from the API request, or None.
+
+    Returns:
+        The direction of the first similarity expression, descending if there is none.
+    """
+    for expr in sort_by or []:
+        if isinstance(expr, SimilaritySortExpr):
+            return expr.direction
+    return SortDirection.desc
+
+
+def sort_exprs_to_order_by(
+    sort_by: Sequence[AdjacentSortExpr] | None,
+) -> list[OrderByExpression] | None:
+    """Translate the field sort expressions to OrderByExpressions.
+
+    Similarity expressions are skipped. They need the text embedding, so the resolvers
+    apply them, see ``get_similarity_direction``.
+
+    Args:
+        sort_by: The sort expressions from the API request, or None.
+
+    Returns:
+        The translated expressions, or None when no field sort was requested.
+    """
+    order_by = [
+        adjacent_sort_expr_to_order_by(expr)
+        for expr in sort_by or []
+        if not isinstance(expr, SimilaritySortExpr)
+    ]
+    return order_by or None
 
 
 def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
@@ -105,8 +164,10 @@ def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
     )
 
 
-def image_sort_expr_to_order_by(expr: ImageSortExpr) -> OrderByExpression:
-    """Translate an ImageSortExpr (image, metadata, or evaluation metric) to an OrderByExpression.
+def image_sort_expr_to_order_by(
+    expr: ImageSortFieldExpr | EvaluationMetricSortExpr,
+) -> OrderByExpression:
+    """Translate an image, metadata, or evaluation metric sort to an OrderByExpression.
 
     Args:
         expr: The sort expression from the API request.
@@ -114,11 +175,12 @@ def image_sort_expr_to_order_by(expr: ImageSortExpr) -> OrderByExpression:
     Returns:
         An OrderByExpression ready to be applied to a database query.
     """
-    # ImageSortExpr is a subset of AdjacentSortExpr, so the shared translator handles it.
     return adjacent_sort_expr_to_order_by(expr)
 
 
-def adjacent_sort_expr_to_order_by(expr: AdjacentSortExpr) -> OrderByExpression:
+def adjacent_sort_expr_to_order_by(
+    expr: ImageSortFieldExpr | VideoSortFieldExpr | EvaluationMetricSortExpr,
+) -> OrderByExpression:
     """Translate an adjacency sort expression to an OrderByExpression.
 
     Handles image, video, metadata, and evaluation-metric expressions, so the

@@ -1,3 +1,4 @@
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -6,6 +7,7 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -221,6 +223,55 @@ def test_get_adjacent_images__with_similarity(db_session: Session) -> None:
     assert result.next_sample_id == image_b.sample_id
     assert result.current_sample_position == 1
     assert result.total_count == 3
+
+
+@pytest.mark.parametrize(
+    ("direction", "expected_previous", "expected_next", "expected_position"),
+    [
+        (SortDirection.desc, "most.png", "tie_b.png", 2),
+        (SortDirection.asc, "tie_b.png", "most.png", 3),
+    ],
+)
+def test_get_adjacent_images__similarity_direction(
+    db_session: Session,
+    direction: SortDirection,
+    expected_previous: str,
+    expected_next: str,
+    expected_position: int,
+) -> None:
+    # The anchor ties with tie_b.png, so the file path tiebreaker must follow the direction.
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    images = helpers_resolvers.create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (helpers_resolvers.ImageStub(path="most.png"), [1.0, 0.0]),
+            (helpers_resolvers.ImageStub(path="tie_a.png"), [1.0, 1.0]),
+            (helpers_resolvers.ImageStub(path="tie_b.png"), [1.0, 1.0]),
+            (helpers_resolvers.ImageStub(path="least.png"), [0.0, 1.0]),
+        ],
+    )
+    sample_ids = {image.file_path_abs: image.sample_id for image in images}
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=sample_ids["tie_a.png"],
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        similarity_direction=direction,
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == sample_ids[expected_previous]
+    assert result.next_sample_id == sample_ids[expected_next]
+    assert result.current_sample_position == expected_position
 
 
 def test_get_adjacent_images__sort_by_file_name(db_session: Session) -> None:

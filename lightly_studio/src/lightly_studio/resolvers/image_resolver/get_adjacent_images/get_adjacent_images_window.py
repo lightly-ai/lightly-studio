@@ -22,6 +22,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import adjacents, similarity_utils
 from lightly_studio.resolvers.image_filter import ImageFilter
 
@@ -33,6 +34,7 @@ def get_adjacent_images_window(  # noqa: PLR0913
     filters: ImageFilter | None,
     distance_expr: ColumnElement[float] | None,
     embedding_model_id: UUID | None,
+    similarity_direction: SortDirection,
     order_by: list[OrderByExpression] | None,
 ) -> AdjacentResultView | None:
     """Find the previous/next image and the anchor's position via window functions.
@@ -48,6 +50,7 @@ def get_adjacent_images_window(  # noqa: PLR0913
         filters: Optional image filters constraining the collection.
         distance_expr: Similarity distance expression to sort by, or ``None``.
         embedding_model_id: Embedding model for the similarity join, or ``None``.
+        similarity_direction: Direction of the similarity sort.
         order_by: Requested dataset sort; may be empty for the default sort.
 
     Returns:
@@ -62,7 +65,11 @@ def get_adjacent_images_window(  # noqa: PLR0913
     if distance_expr is not None and embedding_model_id is not None:
         base_query = similarity_utils.apply_similarity_join(
             query=_base_query(
-                ordering_expression=[distance_expr],
+                ordering_expression=similarity_utils.similarity_order_by(
+                    distance_expr=distance_expr,
+                    file_path_abs=ImageTable.file_path_abs,
+                    direction=similarity_direction,
+                ),
             ).where(col(SampleTable.collection_id) == collection_id),
             sample_id_column=col(ImageTable.sample_id),
             embedding_model_id=embedding_model_id,
@@ -84,14 +91,14 @@ def _base_query(
 ) -> Select[Any]:
     """Return a per-image window query for adjacency lookup.
 
-    Rows are ordered by ``ordering_expression``, then ``order_by``, then an optional
+    Rows are ordered by ``ordering_expression``, or else by ``order_by`` and an optional
     ``file_path_abs`` tiebreaker (default sort when both are omitted). Each row
     includes ``sample_id``, ``previous_sample_id``, ``next_sample_id``, and
     ``row_number`` via ``lag`` / ``lead`` / ``row_number`` over that ordering.
 
     Args:
-        ordering_expression: Extra sort keys passed through to the window
-            ``ORDER BY`` (e.g. similarity distance). Caller must add any JOINs
+        ordering_expression: Similarity sort keys, including their tiebreaker. They
+            replace ``order_by`` in the window ``ORDER BY``. Caller must add any JOINs
             these expressions need.
         order_by: Dataset sort expressions; JOINs are applied via ``apply_joins``.
 
@@ -128,10 +135,15 @@ def _window_order_columns(
 ) -> Any:
     """Assemble the window ``ORDER BY`` from similarity, dataset sort, and tiebreaker.
 
-    A ``file_path_abs`` tiebreaker (following the primary sort direction) is appended
-    unless the dataset sort already sorts by ``file_path_abs``, keeping the ordering
-    deterministic. With no explicit ordering at all, falls back to ``file_path_abs``.
+    The similarity ``ordering_expression`` already carries its tiebreaker and is used
+    unchanged. For a dataset sort, a ``file_path_abs`` tiebreaker (following the primary
+    sort direction) is appended unless the sort already sorts by ``file_path_abs``,
+    keeping the ordering deterministic. With no explicit ordering at all, falls back to
+    ``file_path_abs``.
     """
+    if ordering_expression is not None:
+        return ordering_expression
+
     needs_tiebreaker = not order_by or not any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
@@ -145,14 +157,6 @@ def _window_order_columns(
     else:
         tiebreaker = []
 
-    if ordering_expression is not None:
-        return (
-            ordering_expression
-            + [e for expr in order_by for e in expr.to_column_elements()]
-            + tiebreaker
-            if order_by
-            else [*ordering_expression, *tiebreaker]
-        )
     if order_by:
         return [e for expr in order_by for e in expr.to_column_elements()] + tiebreaker
     return col(ImageTable.file_path_abs).asc()

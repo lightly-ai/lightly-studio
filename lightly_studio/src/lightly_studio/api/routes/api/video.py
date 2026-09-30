@@ -10,7 +10,7 @@ from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCur
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models import sort
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.models.sort import VideoSortFieldExpr
+from lightly_studio.models.sort import VideoSortExpr
 from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
@@ -32,7 +32,7 @@ class ReadVideosRequest(BaseModel):
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
     text_embedding: Optional[list[float]] = Field(None, description="Text embedding to search for")
-    sort_by: Optional[list[VideoSortFieldExpr]] = Field(
+    sort_by: Optional[list[VideoSortExpr]] = Field(
         None, description="Sort expressions for ordering"
     )
 
@@ -100,16 +100,14 @@ def get_all_videos(
     Returns:
         A list of videos along with the total count.
     """
-    order_by = (
-        [sort.sort_field_expr_to_order_by(expr) for expr in body.sort_by] if body.sort_by else None
-    )
     return video_resolver.get_all_by_collection_id(
         session=session,
         collection_id=collection_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter,
         text_embedding=body.text_embedding,
-        order_by=order_by,
+        order_by=sort.sort_exprs_to_order_by(sort_by=body.sort_by),
+        similarity_direction=sort.get_similarity_direction(sort_by=body.sort_by),
     )
 
 

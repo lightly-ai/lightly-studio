@@ -26,6 +26,7 @@ def build_order_by(
     created_at: OrderExpression,
     annotation_sample_id: OrderExpression,
     leading_order_key: ColumnElement[Any] | None = None,
+    ascending: bool = True,
 ) -> list[ColumnElement[Any]]:
     """Build the order by clauses for an annotation query.
 
@@ -37,10 +38,11 @@ def build_order_by(
             e.g. an embedding distance or a metric value. Passed through unchanged, so it
             must already carry its sort direction and null placement, e.g.
             `nullslast(col(...).desc())`.
+        ascending: Direction of the tiebreaker chain. Descending reverses the whole chain.
 
     Returns:
-        Order by clauses: the leading order key if given, then ascending file path,
-        creation time and annotation sample ID.
+        Order by clauses: the leading order key if given, then file path, creation time
+        and annotation sample ID.
     """
     sort_keys = build_sort_keys(
         file_path_abs=file_path_abs,
@@ -49,7 +51,10 @@ def build_order_by(
     )
     return [
         *([leading_order_key] if leading_order_key is not None else []),
-        *(column.asc() if ascending else column.desc() for column, ascending in sort_keys),
+        *(
+            column.asc() if key_ascending == ascending else column.desc()
+            for column, key_ascending in sort_keys
+        ),
     ]
 
 

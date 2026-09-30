@@ -1,8 +1,10 @@
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.order_by import OrderByField, OrderByMetadataField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import metadata_resolver, video_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -305,6 +307,49 @@ def test_get_adjacent_videos__with_similarity(db_session: Session) -> None:
     assert result.next_sample_id == video_b.sample_id
     assert result.current_sample_position == 1
     assert result.total_count == 3
+
+
+@pytest.mark.parametrize(
+    ("direction", "expected_previous", "expected_next", "expected_position"),
+    [
+        (SortDirection.desc, "most", "tie_b", 2),
+        (SortDirection.asc, "tie_b", "most", 3),
+    ],
+)
+def test_get_adjacent_videos__similarity_direction(
+    db_session: Session,
+    direction: SortDirection,
+    expected_previous: str,
+    expected_next: str,
+    expected_position: int,
+) -> None:
+    # The anchor ties with tie_b, so the file path tiebreaker must follow the direction.
+    collection_id = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    names = ["most", "tie_a", "tie_b", "least"]
+    video_ids = video_helpers.create_videos_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        videos_and_embeddings=[
+            (video_helpers.VideoStub(path=f"/videos/{name}.mp4"), embedding)
+            for name, embedding in zip(names, [[1.0, 0.0], [1.0, 1.0], [1.0, 1.0], [0.0, 1.0]])
+        ],
+    )
+    sample_ids = dict(zip(names, video_ids))
+
+    result = video_resolver.get_adjacent_videos(
+        session=db_session,
+        sample_id=sample_ids["tie_a"],
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        similarity_direction=direction,
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == sample_ids[expected_previous]
+    assert result.next_sample_id == sample_ids[expected_next]
+    assert result.current_sample_position == expected_position
 
 
 def test_get_adjacent_videos__similarity_threshold(db_session: Session) -> None:

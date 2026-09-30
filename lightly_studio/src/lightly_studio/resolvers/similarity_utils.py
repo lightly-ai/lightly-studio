@@ -10,6 +10,7 @@ from sqlmodel import Session, col
 
 from lightly_studio.database import db_vector
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import collection_embedding_model_resolver
 from lightly_studio.type_definitions import QueryType
 
@@ -44,6 +45,29 @@ def get_distance_expression(
 def distance_to_similarity(distance: float) -> float:
     """Convert cosine distance to similarity score."""
     return 1.0 - distance
+
+
+def similarity_order_by(
+    distance_expr: ColumnElement[float],
+    file_path_abs: Any,
+    direction: SortDirection,
+) -> list[ColumnElement[Any]]:
+    """Get the ORDER BY clauses for a similarity sort.
+
+    The ``file_path_abs`` tiebreaker changes direction together with the similarity, so the
+    ascending order is the exact reverse of the descending order.
+
+    Args:
+        distance_expr: The cosine distance expression from ``get_distance_expression``.
+        file_path_abs: The file path column that breaks ties between equal distances.
+        direction: The similarity direction. Descending shows the most similar first.
+
+    Returns:
+        The distance clause, then the file path clause.
+    """
+    if direction == SortDirection.desc:
+        return [distance_expr.asc(), col(file_path_abs).asc()]
+    return [distance_expr.desc(), col(file_path_abs).desc()]
 
 
 def apply_similarity_join(

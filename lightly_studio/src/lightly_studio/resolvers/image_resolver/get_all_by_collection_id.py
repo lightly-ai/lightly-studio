@@ -24,12 +24,14 @@ from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import embedding_region_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.similarity_utils import (
     apply_similarity_join,
     distance_to_similarity,
     get_distance_expression,
+    similarity_order_by,
 )
 
 
@@ -96,8 +98,13 @@ def get_all_by_collection_id(  # noqa: PLR0913
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
     order_by: list[OrderByExpression] | None = None,
+    similarity_direction: SortDirection = SortDirection.desc,
 ) -> GetAllSamplesByCollectionIdResult:
-    """Retrieve samples for a specific collection with optional filtering."""
+    """Retrieve samples for a specific collection with optional filtering.
+
+    With a ``text_embedding``, samples are sorted by similarity in ``similarity_direction``
+    and ``order_by`` is ignored.
+    """
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).
     if (
@@ -127,6 +134,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             collection_id=collection_id,
             embedding_model_id=embedding_model_id,
             distance_expr=distance_expr,
+            similarity_direction=similarity_direction,
             pagination=pagination,
             filters=filters,
             sample_ids=sample_ids,
@@ -146,6 +154,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     collection_id: UUID,
     embedding_model_id: UUID,
     distance_expr: ColumnElement[float],
+    similarity_direction: SortDirection,
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
@@ -190,7 +199,13 @@ def _get_all_with_similarity(  # noqa: PLR0913
             db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
         )
 
-    samples_query = samples_query.order_by(distance_expr, col(ImageTable.file_path_abs).asc())
+    samples_query = samples_query.order_by(
+        *similarity_order_by(
+            distance_expr=distance_expr,
+            file_path_abs=ImageTable.file_path_abs,
+            direction=similarity_direction,
+        )
+    )
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)

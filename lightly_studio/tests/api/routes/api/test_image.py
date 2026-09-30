@@ -12,6 +12,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import (
     collection_resolver,
     image_resolver,
@@ -74,6 +75,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
             "offset": 0,
             "limit": 100,
         },
+        "sort_by": [{"source": "similarity", "direction": "asc"}],
     }
     response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
 
@@ -106,6 +108,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
         text_embedding=json_body["text_embedding"],
         sample_ids=None,
         order_by=None,
+        similarity_direction=SortDirection.asc,
     )
 
 

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Union
 from uuid import UUID
 
 from pydantic import BaseModel
 
+from lightly_studio.models.sort import SimilaritySortExpr
 from lightly_studio.models.sort_direction import SortDirection
 
 
@@ -21,9 +22,11 @@ class AnnotationEvaluationMetricSortExpr(BaseModel):
         direction: The sort direction, either ascending or descending.
     """
 
-    # TODO(Jonas, 08/2026): Promote to a discriminated union when a second annotation
-    # sort field lands.
     source: Literal["annotation_evaluation_metric"] = "annotation_evaluation_metric"
     evaluation_run_id: UUID
     metric_name: str
     direction: SortDirection
+
+
+# Not discriminated on ``source``, so ``source`` stays optional in the generated client.
+AnnotationSortExpr = Union[AnnotationEvaluationMetricSortExpr, SimilaritySortExpr]

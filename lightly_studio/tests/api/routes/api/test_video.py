@@ -16,7 +16,12 @@ from tests.helpers_resolvers import (
     create_annotations,
     create_collection,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, create_videos
+from tests.resolvers.video.helpers import (
+    VideoStub,
+    create_video_with_frames,
+    create_videos,
+    create_videos_with_embeddings,
+)
 
 
 def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
@@ -77,6 +82,35 @@ def test_get_all_videos__with_sort_by_video_field(
 
     assert [sample["file_name"] for sample in data] == ["sample2.mp4", "sample1.mp4"]
     assert [sample["order_value"] for sample in data] == [30.0, 10.0]
+
+
+def test_get_all_videos__with_similarity_sort_ascending(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    create_videos_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        videos_and_embeddings=[
+            (VideoStub(path="/path/to/similar.mp4"), [1.0, 0.0]),
+            (VideoStub(path="/path/to/dissimilar.mp4"), [0.0, 1.0]),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/video/",
+        params={"offset": 0, "limit": 2},
+        json={
+            "text_embedding": [1.0, 0.0],
+            "sort_by": [{"source": "similarity", "direction": "asc"}],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()["data"]
+    assert [sample["file_name"] for sample in data] == ["dissimilar.mp4", "similar.mp4"]
 
 
 def test_get_all_videos__with_sort_by_metadata(

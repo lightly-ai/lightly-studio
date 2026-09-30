@@ -92,8 +92,9 @@ _ALLOWED_SORT_SOURCES: dict[SampleType, set[SortFieldSource]] = {
         SortFieldSource.image,
         SortFieldSource.metadata,
         SortFieldSource.evaluation_metric,
+        SortFieldSource.similarity,
     },
-    SampleType.VIDEO: {SortFieldSource.video, SortFieldSource.metadata},
+    SampleType.VIDEO: {SortFieldSource.video, SortFieldSource.metadata, SortFieldSource.similarity},
 }
 
 
@@ -108,7 +109,7 @@ def _build_sort_order_by(
         sample_type: The sample type whose grid ordering the adjacency must match.
 
     Returns:
-        The translated order-by expressions, or None when no sort was requested.
+        The translated order-by expressions, or None when no field sort was requested.
 
     Raises:
         ValueError: If a sort expression uses a source the sample type cannot sort by.
@@ -122,7 +123,7 @@ def _build_sort_order_by(
                 f"Sort field source '{expr.source.value}' is not valid"
                 f" for sample type '{sample_type.value}'."
             )
-    return [sort.adjacent_sort_expr_to_order_by(expr) for expr in sort_by]
+    return sort.sort_exprs_to_order_by(sort_by=sort_by)
 
 
 def get_adjacent_samples(
@@ -152,6 +153,7 @@ def get_adjacent_samples(
             filters=request.filters,
             text_embedding=request.text_embedding,
             order_by=order_by,
+            similarity_direction=sort.get_similarity_direction(sort_by=request.sort_by),
         )
     if request.sample_type == SampleType.VIDEO:
         if request.filters is not None and not isinstance(request.filters, VideoFilter):
@@ -167,6 +169,7 @@ def get_adjacent_samples(
             filters=request.filters,
             text_embedding=request.text_embedding,
             order_by=order_by,
+            similarity_direction=sort.get_similarity_direction(sort_by=request.sort_by),
         )
     if request.sample_type == SampleType.VIDEO_FRAME:
         if not isinstance(request.filters, VideoFrameAdjacentFilter):

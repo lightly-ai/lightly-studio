@@ -304,6 +304,33 @@ def test_read_annotations_with_payload__min_similarity_below_minus_one(
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
 
 
+def test_read_annotations_with_payload__similarity_sort_ascending(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    similar, dissimilar = create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{similar.sample.collection_id}/annotations/payload",
+        json={
+            "pagination": {"cursor": 0, "limit": 10},
+            "text_embedding": [1.0, 0.0],
+            "sort_by": {"source": "similarity", "direction": "asc"},
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert [entry["annotation"]["sample_id"] for entry in response.json()["data"]] == [
+        str(dissimilar.sample_id),
+        str(similar.sample_id),
+    ]
+
+
 def test_read_annotations_with_payload__min_similarity_requires_text_embedding(
     test_client: TestClient,
     db_session: Session,

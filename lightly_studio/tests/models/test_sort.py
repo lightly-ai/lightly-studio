@@ -13,11 +13,16 @@ from lightly_studio.core.dataset_query.order_by import (
 )
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models import sort
+from lightly_studio.models.annotation_sort import AnnotationSortExpr
 from lightly_studio.models.sort import (
+    AdjacentSortExpr,
     EvaluationMetricSortExpr,
     ImageSortExpr,
     ImageSortFieldExpr,
+    SimilaritySortExpr,
     SortFieldSource,
+    VideoSortExpr,
     VideoSortFieldExpr,
     image_sort_expr_to_order_by,
     sort_field_expr_to_order_by,
@@ -284,3 +289,42 @@ def test_image_sort_expr_discriminated_union__routes_to_sort_field_expr() -> Non
     )
     assert isinstance(expr, ImageSortFieldExpr)
     assert expr.field_name == "file_name"
+
+
+@pytest.mark.parametrize(
+    "sort_expr_type", [ImageSortExpr, VideoSortExpr, AdjacentSortExpr, AnnotationSortExpr]
+)
+def test_sort_expr_unions__route_to_similarity_sort_expr(sort_expr_type: object) -> None:
+    adapter: TypeAdapter[SimilaritySortExpr] = TypeAdapter(sort_expr_type)
+    expr = adapter.validate_python({"source": "similarity", "direction": "asc"})
+    assert expr == SimilaritySortExpr(direction=SortDirection.asc)
+
+
+def test_get_similarity_direction() -> None:
+    field_expr = ImageSortFieldExpr(
+        source=SortFieldSource.image, field_name="width", direction=SortDirection.desc
+    )
+    assert sort.get_similarity_direction(sort_by=None) == SortDirection.desc
+    assert sort.get_similarity_direction(sort_by=[field_expr]) == SortDirection.desc
+    assert (
+        sort.get_similarity_direction(
+            sort_by=[field_expr, SimilaritySortExpr(direction=SortDirection.asc)]
+        )
+        == SortDirection.asc
+    )
+
+
+def test_sort_exprs_to_order_by__skips_similarity() -> None:
+    field_expr = ImageSortFieldExpr(
+        source=SortFieldSource.image, field_name="width", direction=SortDirection.asc
+    )
+    similarity_expr = SimilaritySortExpr(direction=SortDirection.asc)
+
+    order_by = sort.sort_exprs_to_order_by(sort_by=[similarity_expr, field_expr])
+
+    assert order_by is not None
+    assert len(order_by) == 1
+    assert isinstance(order_by[0], OrderByField)
+    assert order_by[0].field is ImageSampleField.width
+    assert sort.sort_exprs_to_order_by(sort_by=[similarity_expr]) is None
+    assert sort.sort_exprs_to_order_by(sort_by=None) is None
