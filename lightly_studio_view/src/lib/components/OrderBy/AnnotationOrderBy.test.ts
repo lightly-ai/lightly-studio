@@ -146,12 +146,13 @@ describe('AnnotationOrderBy', () => {
         expect(useAnnotationSortBy().getSortBy(COLLECTION_ID)).toBeNull();
     });
 
-    it('is disabled during similarity search', () => {
+    it('locks the field to similarity during a search and keeps the direction enabled', () => {
         mocks.textEmbeddingValue = { queryText: 'cat', embedding: [0.1] } as TextEmbedding;
         render(AnnotationOrderBy, { props: defaultProps });
 
         expect(screen.getByTestId('sort-by-trigger')).toBeDisabled();
-        expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('Similarity');
+        expect(screen.getByTestId('sort-direction-button')).toBeEnabled();
     });
 
     it('stays enabled when the source has no embeddings to search', () => {

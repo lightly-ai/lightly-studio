@@ -12,7 +12,8 @@
         /** Fixed trigger label, shown instead of the selected item's label. */
         triggerLabel?: string;
         direction: SortDirection;
-        disabled?: boolean;
+        /** Disables the field select but keeps the direction button enabled. */
+        fieldLocked?: boolean;
         allowDeselect?: boolean;
         onValueChange: (value: string) => void;
         onOpen: () => void;
@@ -24,7 +25,7 @@
         selectedValue,
         triggerLabel,
         direction,
-        disabled = false,
+        fieldLocked = false,
         allowDeselect = false,
         onValueChange,
         onOpen,
@@ -47,7 +48,7 @@
             onOpenChange={(open) => {
                 if (open) onOpen();
             }}
-            {disabled}
+            disabled={fieldLocked}
             placeholder="Sort by"
             size="xs"
             variant="ghost"
@@ -63,7 +64,7 @@
             ariaLabel={directionTooltip}
             buttonProps={{
                 size: 'icon',
-                disabled: !triggerLabel || disabled,
+                disabled: !triggerLabel,
                 onclick: onToggleDirection,
                 class: 'size-auto p-0 hover:bg-transparent [&>svg]:text-foreground [&>svg]:hover:text-muted-foreground',
                 'data-testid': 'sort-direction-button'

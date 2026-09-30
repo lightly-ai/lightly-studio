@@ -13,6 +13,7 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { RefreshCw, TriangleAlert } from '@lucide/svelte';
     import OrderByControl from './OrderByControl.svelte';
+    import SimilarityOrderBy from './SimilarityOrderBy.svelte';
 
     const STALE_WARNING =
         'Annotations changed after this evaluation ran, so this sort order is out of date. ' +
@@ -30,10 +31,10 @@
     const { textEmbedding } = useGlobalStorage();
     const { trackEvent } = usePostHog();
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
-    // Similarity ordering keeps precedence over metric sorting, so the control is disabled while
-    // a search applies to this source. A search started elsewhere persists but cannot be applied
-    // to a source without embeddings, and the grid keeps sorting there. The selection survives
-    // clearing the search.
+    // Similarity ordering keeps precedence over metric sorting, so the control sorts by similarity
+    // while a search applies to this source. A search started elsewhere persists but cannot be
+    // applied to a source without embeddings, and the grid keeps sorting there. The selection
+    // survives clearing the search.
     const isSimilaritySearchActive = $derived(!!$textEmbedding && !!hasEmbeddingsQuery.data);
 
     const {
@@ -84,17 +85,20 @@
 </script>
 
 <div class="flex items-center gap-1">
-    <OrderByControl
-        items={sortItems}
-        selectedValue={selectValue}
-        triggerLabel={$allSortFields[$selectedIndex]?.label}
-        direction={$selectedDirection}
-        disabled={isSimilaritySearchActive}
-        allowDeselect
-        onValueChange={handleValueChange}
-        onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
-        onToggleDirection={toggleDirection}
-    />
+    {#if isSimilaritySearchActive}
+        <SimilarityOrderBy />
+    {:else}
+        <OrderByControl
+            items={sortItems}
+            selectedValue={selectValue}
+            triggerLabel={$allSortFields[$selectedIndex]?.label}
+            direction={$selectedDirection}
+            allowDeselect
+            onValueChange={handleValueChange}
+            onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
+            onToggleDirection={toggleDirection}
+        />
+    {/if}
 
     {#if isActiveRunStale}
         <Tooltip

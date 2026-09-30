@@ -11,6 +11,7 @@
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
     import { useAnnotationSortBy } from '$lib/hooks';
     import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
+    import { useSimilaritySort } from '$lib/hooks/useSimilaritySort';
     import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
@@ -73,6 +74,7 @@
     const minSimilarity = $derived(
         searchEmbedding ? ($similarityThreshold ?? undefined) : undefined
     );
+    const { similaritySortBy } = useSimilaritySort();
 
     // Drag-to-search crop preview. Tiles report only their crop geometry; the blob is
     // rendered lazily when a drag starts (not per visible tile), and revoked on unmount.
@@ -109,8 +111,8 @@
         // Embedding text search reorders the grid by similarity (shared with images tab).
         text_embedding: searchEmbedding?.embedding ?? undefined,
         min_similarity: minSimilarity,
-        // Similarity ordering keeps precedence, so the two are never sent together.
-        sort_by: searchEmbedding ? undefined : ($sortByFor(collection_id) ?? undefined)
+        // Similarity ordering keeps precedence over the metric sort.
+        sort_by: searchEmbedding ? $similaritySortBy : ($sortByFor(collection_id) ?? undefined)
     });
 
     const {

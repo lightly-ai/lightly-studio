@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
-import { SampleType } from '$lib/api/lightly_studio_local';
+import { SampleType, SortDirection } from '$lib/api/lightly_studio_local';
 import type { VideoFilter, VideoSortFieldExpr } from '$lib/api/lightly_studio_local';
 import type { TextEmbedding } from '../useGlobalStorage';
+import { useSimilaritySort } from '../useSimilaritySort';
 
 const useAdjacentSamplesMock = vi.fn();
 const videoFilterStore = writable<VideoFilter | null>(null);
@@ -39,6 +40,7 @@ describe('useAdjacentVideos', () => {
         videoSortByStore.set(null);
         textEmbeddingStore.set({ embedding: [0.11, 0.22], queryText: 'query' });
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
+        useSimilaritySort().resetOnNewSearch({});
     });
 
     it('calls useAdjacentSamplesMock with video filters and text embedding and returns its result', () => {
@@ -55,7 +57,7 @@ describe('useAdjacentVideos', () => {
                         sample_filter: { tag_ids: ['t1'] }
                     },
                     text_embedding: [0.11, 0.22],
-                    sort_by: undefined
+                    sort_by: [{ source: 'similarity', direction: SortDirection.DESC }]
                 }
             }
         });
@@ -117,12 +119,12 @@ describe('useAdjacentVideos', () => {
         );
     });
 
-    it('passes sort_by as undefined when text embedding is active, even if videoSortBy is set', () => {
-        textEmbeddingStore.set({ embedding: [0.11, 0.22], queryText: 'query' });
+    it('sends the similarity sort while text embedding is active, even if videoSortBy is set', () => {
         const sort: VideoSortFieldExpr[] = [
             { source: 'video', field_name: 'duration_s', direction: 'desc' }
         ];
         videoSortByStore.set(sort);
+        useSimilaritySort().toggleDirection();
 
         useAdjacentVideos({ sampleId: 'video-123', collectionId: 'collection-1' });
 
@@ -130,7 +132,7 @@ describe('useAdjacentVideos', () => {
             expect.objectContaining({
                 params: expect.objectContaining({
                     body: expect.objectContaining({
-                        sort_by: undefined,
+                        sort_by: [{ source: 'similarity', direction: SortDirection.ASC }],
                         text_embedding: [0.11, 0.22]
                     })
                 })

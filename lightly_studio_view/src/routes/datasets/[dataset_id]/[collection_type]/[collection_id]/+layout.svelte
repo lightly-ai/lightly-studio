@@ -70,6 +70,7 @@
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
     import SimilarityThresholdFilter from '$lib/components/SimilarityThresholdFilter';
     import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
+    import { useSimilaritySort } from '$lib/hooks/useSimilaritySort';
     import {
         useSelectionSummary,
         useImageAnnotationCounts,
@@ -302,6 +303,10 @@
     } = useSimilarityThreshold();
     $effect(() => {
         resetSimilarityThresholdOnScopeChange({ search: $textEmbedding, collectionId, gridType });
+    });
+    const { resetOnNewSearch: resetSimilaritySortOnNewSearch } = useSimilaritySort();
+    $effect(() => {
+        resetSimilaritySortOnNewSearch($textEmbedding);
     });
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));

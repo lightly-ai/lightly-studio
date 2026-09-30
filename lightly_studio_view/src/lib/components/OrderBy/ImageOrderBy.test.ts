@@ -423,13 +423,7 @@ describe('ImageOrderBy', () => {
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('run1.precision');
     });
 
-    it('disables the sort select when text embedding is active', () => {
-        mocks.textEmbeddingValue = { embedding: [0.1, 0.2], queryText: 'dogs' };
-        render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
-        expect(screen.getByTestId('sort-by-trigger')).toBeDisabled();
-    });
-
-    it('disables the direction button when text embedding is active', () => {
+    it('locks the field to similarity during a search and keeps the direction enabled', () => {
         mocks.textEmbeddingValue = { embedding: [0.1, 0.2], queryText: 'dogs' };
         mocks.imageSortByValue = [
             {
@@ -439,7 +433,10 @@ describe('ImageOrderBy', () => {
             }
         ];
         render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
-        expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
+
+        expect(screen.getByTestId('sort-by-trigger')).toBeDisabled();
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('Similarity');
+        expect(screen.getByTestId('sort-direction-button')).toBeEnabled();
     });
 
     it('enables the sort select when text embedding is inactive', () => {

@@ -2,6 +2,7 @@ import { SampleType } from '$lib/api/lightly_studio_local';
 import { get } from 'svelte/store';
 import { useAdjacentSamples } from '../useAdjacentSamples/useAdjacentSamples';
 import { useGlobalStorage } from '../useGlobalStorage';
+import { useSimilaritySort } from '../useSimilaritySort';
 import { useVideoFilters } from '../useVideoFilters/useVideoFilters';
 
 export const useAdjacentVideos = ({
@@ -16,7 +17,8 @@ export const useAdjacentVideos = ({
 
     const filter = get(videoFilter);
     const embedding = get(textEmbedding);
-    const sortBy = embedding ? undefined : (get(videoSortBy) ?? undefined);
+    const { similaritySortBy } = useSimilaritySort();
+    const sortBy = embedding ? [get(similaritySortBy)] : (get(videoSortBy) ?? undefined);
     return useAdjacentSamples({
         params: {
             sampleId,

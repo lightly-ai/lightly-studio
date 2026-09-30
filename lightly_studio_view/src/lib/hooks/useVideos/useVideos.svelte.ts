@@ -2,7 +2,7 @@ import { getAllVideosInfiniteOptions } from '$lib/api/lightly_studio_local/@tans
 
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { writable } from 'svelte/store';
-import type { VideoFilter, VideoSortFieldExpr, VideoView } from '$lib/api/lightly_studio_local';
+import type { ReadVideosRequest, VideoFilter, VideoView } from '$lib/api/lightly_studio_local';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 
 export const useVideos = (
@@ -10,7 +10,7 @@ export const useVideos = (
         collection_id: string;
         filter: VideoFilter;
         text_embedding?: Array<number>;
-        sort_by?: VideoSortFieldExpr[] | null;
+        sort_by?: ReadVideosRequest['sort_by'];
     }
 ) => {
     const query = createInfiniteQuery(() => {

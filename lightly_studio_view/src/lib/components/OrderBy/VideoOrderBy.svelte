@@ -2,6 +2,7 @@
     import { useGlobalStorage, usePostHog, useVideoOrderBy } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
     import OrderByControl from './OrderByControl.svelte';
+    import SimilarityOrderBy from './SimilarityOrderBy.svelte';
 
     interface Props {
         collectionId: string;
@@ -46,14 +47,17 @@
     };
 </script>
 
-<OrderByControl
-    items={sortItems}
-    selectedValue={selectValue}
-    triggerLabel={$selectedLabel ?? undefined}
-    direction={$selectedDirection}
-    disabled={isSimilaritySearchActive}
-    allowDeselect
-    onValueChange={handleValueChange}
-    onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
-    onToggleDirection={toggleDirection}
-/>
+{#if isSimilaritySearchActive}
+    <SimilarityOrderBy />
+{:else}
+    <OrderByControl
+        items={sortItems}
+        selectedValue={selectValue}
+        triggerLabel={$selectedLabel ?? undefined}
+        direction={$selectedDirection}
+        allowDeselect
+        onValueChange={handleValueChange}
+        onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
+        onToggleDirection={toggleDirection}
+    />
+{/if}

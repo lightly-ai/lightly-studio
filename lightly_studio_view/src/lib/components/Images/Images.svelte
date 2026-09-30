@@ -18,6 +18,7 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
+    import { useSimilaritySort } from '$lib/hooks/useSimilaritySort';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import { isEqual } from 'lodash-es';
@@ -107,11 +108,14 @@
         updateFilterParams(mergeExternalFilters(baseParams, currentParams));
     });
 
+    const { similaritySortBy } = useSimilaritySort();
+    const sortBy = $derived($textEmbedding ? [$similaritySortBy] : ($imageSortBy ?? undefined));
+
     const { samples: infiniteSamples } = useImagesInfinite(() => ({
         ...$filterParams,
         collection_id: collection_id,
         query_expr: $imageQueryExpression?.query_expr,
-        sort_by: $textEmbedding ? undefined : ($imageSortBy ?? undefined)
+        sort_by: sortBy
     }));
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
@@ -159,7 +163,7 @@
             $textEmbedding?.queryText || '',
             $similarityThreshold?.toString() ?? '',
             confusionCell ? JSON.stringify(confusionCell) : '',
-            JSON.stringify($imageSortBy)
+            JSON.stringify(sortBy)
         ];
 
         return parts.filter(Boolean).join('|');

@@ -3,6 +3,7 @@ import { get } from 'svelte/store';
 import { useAdjacentSamples } from '../useAdjacentSamples/useAdjacentSamples';
 import { useImageFilters } from '../useImageFilters/useImageFilters';
 import { useGlobalStorage } from '../useGlobalStorage';
+import { useSimilaritySort } from '../useSimilaritySort';
 
 export const useAdjacentImages = ({
     sampleId,
@@ -16,7 +17,8 @@ export const useAdjacentImages = ({
 
     const filter = get(imageFilter);
     const embedding = get(textEmbedding);
-    const sortBy = embedding ? undefined : (get(imageSortBy) ?? undefined);
+    const { similaritySortBy } = useSimilaritySort();
+    const sortBy = embedding ? [get(similaritySortBy)] : (get(imageSortBy) ?? undefined);
     return useAdjacentSamples({
         params: {
             sampleId,

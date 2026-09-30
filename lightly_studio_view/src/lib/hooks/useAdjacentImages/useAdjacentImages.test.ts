@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
-import { SampleType } from '$lib/api/lightly_studio_local';
+import { SampleType, SortDirection } from '$lib/api/lightly_studio_local';
 import type { ImageFilter, ImageSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import type { TextEmbedding } from '../useGlobalStorage';
+import { useSimilaritySort } from '../useSimilaritySort';
 
 const useAdjacentSamplesMock = vi.fn();
 const imageFilterStore = writable<ImageFilter | null>(null);
@@ -39,6 +40,7 @@ describe('useAdjacentImages', () => {
         imageSortByStore.set(null);
         textEmbeddingStore.set({ embedding: [0.12, 0.34], queryText: 'cats' });
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
+        useSimilaritySort().resetOnNewSearch({});
     });
 
     it('calls useAdjacentSamplesMock with image filters and text embedding and returns its result', () => {
@@ -54,7 +56,8 @@ describe('useAdjacentImages', () => {
                         filter_type: 'image',
                         sample_filter: {}
                     },
-                    text_embedding: [0.12, 0.34]
+                    text_embedding: [0.12, 0.34],
+                    sort_by: [{ source: 'similarity', direction: SortDirection.DESC }]
                 }
             }
         });
@@ -89,7 +92,8 @@ describe('useAdjacentImages', () => {
                     filters: {
                         filter_type: 'image'
                     },
-                    text_embedding: [0.12, 0.34]
+                    text_embedding: [0.12, 0.34],
+                    sort_by: [{ source: 'similarity', direction: SortDirection.DESC }]
                 }
             }
         });
@@ -153,12 +157,12 @@ describe('useAdjacentImages', () => {
         );
     });
 
-    it('passes sort_by as undefined when text embedding is active, even if imageSortBy is set', () => {
-        textEmbeddingStore.set({ embedding: [0.12, 0.34], queryText: 'cats' });
+    it('sends the similarity sort while text embedding is active, even if imageSortBy is set', () => {
         const sort: ImageSortFieldExpr[] = [
             { source: 'image', field_name: 'score', direction: 'desc' }
         ];
         imageSortByStore.set(sort);
+        useSimilaritySort().toggleDirection();
 
         useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
 
@@ -166,7 +170,7 @@ describe('useAdjacentImages', () => {
             expect.objectContaining({
                 params: expect.objectContaining({
                     body: expect.objectContaining({
-                        sort_by: undefined,
+                        sort_by: [{ source: 'similarity', direction: SortDirection.ASC }],
                         text_embedding: [0.12, 0.34]
                     })
                 })

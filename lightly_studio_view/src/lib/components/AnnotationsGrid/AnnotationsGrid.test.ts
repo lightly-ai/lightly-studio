@@ -5,6 +5,7 @@ import { type Writable } from 'svelte/store';
 import {
     AnnotationType,
     SampleType,
+    SortDirection,
     type AnnotationEvaluationMetricSortExpr,
     type AnnotationView,
     type AnnotationWithPayloadView,
@@ -13,6 +14,7 @@ import {
 import AnnotationsGrid from './AnnotationsGrid.svelte';
 import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
 import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
+import { useSimilaritySort } from '$lib/hooks/useSimilaritySort';
 
 const SORT_BY: AnnotationEvaluationMetricSortExpr = {
     source: 'annotation_evaluation_metric',
@@ -126,14 +128,15 @@ vi.mock('$lib/hooks/useAnnotationSortBy/useAnnotationSortBy', async () => {
     };
 });
 
-// Stands in for the backend: answers with the sorted page only when the grid sends sort_by.
-function pageFor(params: { sort_by?: unknown }) {
-    const data = params.sort_by ? mocks.sortedAnnotationsData : mocks.annotationsData;
+// Stands in for the backend: answers with the sorted page only when the grid sends a metric sort.
+function pageFor(params: { sort_by?: { source?: string } | null }) {
+    const isMetricSort = !!params.sort_by && params.sort_by.source !== 'similarity';
+    const data = isMetricSort ? mocks.sortedAnnotationsData : mocks.annotationsData;
     return { data, total_count: data.length };
 }
 
 vi.mock('$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite', () => ({
-    useAnnotationsInfinite: vi.fn((getParams: () => { sort_by?: unknown }) => ({
+    useAnnotationsInfinite: vi.fn((getParams: () => { sort_by?: { source?: string } | null }) => ({
         annotations: {
             data: {
                 pages: [pageFor(getParams())]
@@ -254,6 +257,7 @@ describe('AnnotationsGrid', () => {
         mocks.textEmbeddingStore.set(undefined);
         mocks.sortBy = null;
         useSimilarityThreshold().clearThreshold();
+        useSimilaritySort().resetOnNewSearch({});
     });
 
     function renderWithSortSelection() {
@@ -274,17 +278,26 @@ describe('AnnotationsGrid', () => {
         expect(screen.getByTestId('mock-grid-scroll-reset-key')).toHaveTextContent('sort:');
     });
 
-    it('renders the unsorted page while a similarity search is active', () => {
+    it('sends the similarity sort instead of the metric sort while a search is active', () => {
         mocks.hasEmbeddings = true;
         mocks.textEmbeddingStore.set({
             embedding: [0.1, 0.2],
             queryText: 'a cat'
         } as unknown as undefined);
+        useSimilaritySort().toggleDirection();
 
         const tiles = renderWithSortSelection();
 
         expect(tiles[0]).toHaveAttribute('data-annotation-id', 'cls-1');
-        expect(screen.getByTestId('mock-grid-scroll-reset-key')).not.toHaveTextContent('sort:');
+        const getParams = vi.mocked(useAnnotationsInfinite).mock.calls[0][0];
+        expect(getParams().sort_by).toEqual({
+            source: 'similarity',
+            direction: SortDirection.ASC
+        });
+        // The direction is in the reset key, so toggling it restarts the loader and the scroll.
+        expect(screen.getByTestId('mock-grid-scroll-reset-key')).toHaveTextContent(
+            'sort:{"source":"similarity","direction":"asc"}'
+        );
     });
 
     it('sends the similarity threshold while a similarity search is active', () => {

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
 - Set a similarity search threshold in the image, video and annotation sidebar in the GUI to show only images, videos or annotations that are at least that similar to the search. Select all and tagging then use only these samples.
+- Sort text search results by ascending similarity in the image, video and annotation grid in the GUI, to check the least similar samples first. Each new search starts in descending order.
 
 ### Changed
 

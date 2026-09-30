@@ -18,6 +18,7 @@
     import { onMount } from 'svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
+    import { useSimilaritySort } from '$lib/hooks/useSimilaritySort';
 
     const collectionId = $derived($page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
@@ -119,11 +120,14 @@
         return buildVideoFilter(paramsWithSelection) ?? {};
     });
 
+    const { similaritySortBy } = useSimilaritySort();
+    const sortBy = $derived($textEmbedding ? [$similaritySortBy] : ($videoSortBy ?? undefined));
+
     const { data, query, loadMore, totalCount } = useVideos(() => ({
         collection_id: collectionId,
         filter: currentVideoFilter,
         text_embedding: $textEmbedding?.embedding,
-        sort_by: $textEmbedding ? undefined : ($videoSortBy ?? undefined)
+        sort_by: sortBy
     }));
     const { setfilteredSampleCount } = useGlobalStorage();
 
@@ -171,7 +175,7 @@
     const filterHash = $derived(
         JSON.stringify({
             filters: $filterParams ? omit($filterParams, ['text_embedding']) : $filterParams,
-            sortBy: $videoSortBy
+            sortBy
         })
     );
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');

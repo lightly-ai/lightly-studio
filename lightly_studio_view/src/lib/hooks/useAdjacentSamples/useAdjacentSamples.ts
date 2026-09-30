@@ -6,6 +6,7 @@ import type {
     AnnotationsFilter,
     ImageFilter,
     SampleType,
+    SimilaritySortExpr,
     VideoFilter,
     VideoFrameAdjacentFilter,
     VideoSortFieldExpr
@@ -18,14 +19,14 @@ export type AdjacentSamplesRequestBody =
           collection_id: string;
           filters?: ({ filter_type: 'image' } & ImageFilter) | null;
           text_embedding?: number[];
-          sort_by?: ImageSortExpr[] | null;
+          sort_by?: (ImageSortExpr | SimilaritySortExpr)[] | null;
       }
     | {
           sample_type: Extract<SampleType, 'video'>;
           collection_id: string;
           filters?: ({ filter_type: 'video' } & VideoFilter) | null;
           text_embedding?: number[];
-          sort_by?: VideoSortFieldExpr[] | null;
+          sort_by?: (VideoSortFieldExpr | SimilaritySortExpr)[] | null;
       }
     | {
           sample_type: Extract<SampleType, 'video_frame'>;
