@@ -111,14 +111,16 @@ class StaticTransform:
         child_frame_id: The frame the transform maps points from.
         translation: The translation as (x, y, z) in meters.
         rotation: The rotation as a quaternion (x, y, z, w).
-        log_time_ns: The time the transform was logged, in nanoseconds.
+        timestamp_ns: The time the transform is valid at, from `header.stamp` or
+            `timestamp`, in nanoseconds. The log time if the transform has no stamp,
+            or a stamp of zero.
     """
 
     parent_frame_id: str
     child_frame_id: str
     translation: tuple[float, float, float]
     rotation: tuple[float, float, float, float]
-    log_time_ns: int
+    timestamp_ns: int
 
 
 @dataclass(frozen=True)
