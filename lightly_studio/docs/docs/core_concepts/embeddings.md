@@ -339,9 +339,9 @@ the key of a stored server.
     - A local embedder registered for the same space still serves the capabilities it
       implements. Register only ingestion capabilities locally so search goes to the server.
     - Without `ImageBytesEmbedder` on the server or locally, image search is not available.
-    - If the server implements `ImageBytesEmbedder`, images embed on the server at
-      ingestion.
-      Annotation crops and video frames still embed locally.
+    - Images embed on the server at ingestion only if the server implements
+      `ImageBytesEmbedder` and no local embedder registered for the same space embeds
+      images. Annotation crops and video frames still embed locally.
 
 `register_remote_embedder` raises a `RemoteEmbedderError` from
 `lightly_studio.embed.remote.errors` and stores nothing if the URL is malformed or
