@@ -22,7 +22,7 @@ Add new topics as their own `##` section below.
 | A group of annotations, e.g. ground truth, a model's predictions | **annotation source** | `annotation_source` | annotation collection, collection, collection name, label source |
 | Creating annotations | **labeling** | - | the noun 'label' |
 
-## Data ingest
+## Data ingestion
 
 | Concept | Term | Avoid |
 |---|---|---|
@@ -31,6 +31,7 @@ Add new topics as their own `##` section below.
 | Adding samples to a dataset, for example with `add_images_from_path` | **ingestion** (verb: ingest) | import |
 
 "Import" clashes with Python `import` in nearby code blocks, so avoid it for adding samples.
-It is still correct for loading an external annotation format such as COCO, YOLO, or Label
-Studio, for example `add_samples_from_coco` or `add_annotations_from_*`.
+Exception: loading an external annotation format such as COCO, YOLO, or Label Studio is an
+**import**, also when it creates samples, for example `add_samples_from_coco` or
+`add_annotations_from_*`.
 
