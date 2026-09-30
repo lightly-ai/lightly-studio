@@ -12,26 +12,22 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
 def test_resolve_embedding_region__no_filter(db_session: Session) -> None:
-    assert (
-        video_resolver.resolve_embedding_region(
-            session=db_session,
-            collection_id=UUID(int=1),
-            video_filter=None,
-        )
-        is None
+    video_resolver.resolve_embedding_region(
+        session=db_session,
+        collection_id=UUID(int=1),
+        video_filter=None,
     )
 
 
 def test_resolve_embedding_region__filter_without_region_is_unchanged(db_session: Session) -> None:
     video_filter = VideoFilter(sample_filter=SampleFilter())
 
-    result = video_resolver.resolve_embedding_region(
+    video_resolver.resolve_embedding_region(
         session=db_session,
         collection_id=UUID(int=1),
         video_filter=video_filter,
     )
 
-    assert result is None
     assert video_filter.sample_filter is not None
     assert video_filter.sample_filter.region_sample_ids is None
 
@@ -50,7 +46,7 @@ def test_resolve_embedding_region__resolves_sample_ids(
         return_value=sample_ids,
     )
 
-    result = video_resolver.resolve_embedding_region(
+    video_resolver.resolve_embedding_region(
         session=db_session,
         collection_id=collection_id,
         video_filter=video_filter,
@@ -61,7 +57,6 @@ def test_resolve_embedding_region__resolves_sample_ids(
         collection_id=collection_id,
         region=region,
     )
-    assert result is None
     assert video_filter.sample_filter is not None
     assert video_filter.sample_filter.region_sample_ids == sample_ids
 
@@ -73,13 +68,12 @@ def test_resolve_embedding_region__preserves_empty_match(
     video_filter = VideoFilter(sample_filter=SampleFilter(embedding_region=_create_region()))
     mocker.patch.object(embedding_region_resolver, "get_sample_ids_in_region", return_value=[])
 
-    result = video_resolver.resolve_embedding_region(
+    video_resolver.resolve_embedding_region(
         session=db_session,
         collection_id=UUID(int=1),
         video_filter=video_filter,
     )
 
-    assert result is None
     assert video_filter.sample_filter is not None
     assert video_filter.sample_filter.region_sample_ids == []
 
