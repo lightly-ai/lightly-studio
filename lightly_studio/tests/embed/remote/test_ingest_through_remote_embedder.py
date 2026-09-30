@@ -121,12 +121,31 @@ def test_add_images_from_path__dimension_mismatch_after_restart(
         )
         with pytest.raises(ValueError, match=r"does not match"):
             dataset.add_images_from_path(path=more_images)
+    # The new images are stored without an embedding
+    assert len(list(dataset)) == 6
+    assert _embedding_count(dataset=dataset) == 3
 
-    assert len(list(dataset)) == 3
+    # After a restart without the other server, the stored server embeds them
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    dataset.add_images_from_path(path=more_images)
+
+    assert _embedding_count(dataset=dataset) == 6
 
 
 def _zeros(count: int) -> EmbeddingResult:
     return EmbeddingResult(
         embeddings=np.zeros((count, _OTHER_DIMENSION), dtype=np.float32),
         kept_indices=list(range(count)),
+    )
+
+
+def _embedding_count(dataset: ImageDataset) -> int:
+    default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=dataset.session, collection_id=dataset.collection_id
+    )
+    assert default_model is not None
+    return sample_embedding_resolver.get_embedding_count(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        embedding_model_id=default_model.embedding_model_id,
     )

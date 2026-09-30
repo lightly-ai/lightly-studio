@@ -216,43 +216,20 @@ class TestDataset:
 
         with pytest.raises(ValueError, match=r"does not match"):
             dataset.add_images_from_path(path=tmp_path / "second")
+        # The new image is stored without an embedding
+        assert _embedding_count_by_file_name(dataset=dataset) == {
+            "image1.jpg": 1,
+            "image2.jpg": 0,
+        }
 
-        assert len(list(dataset)) == 1
-
-    def test_dataset_add_images_from_path__embedder_dimension_mismatch_dont_embed(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        mocker: Mocker,
-        tmp_path: Path,
-    ) -> None:
-        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
-        dataset = ImageDataset.create(name="test_dataset")
         _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
-        dataset.add_images_from_path(path=tmp_path / "first")
-        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
-        _create_sample_images(image_paths=[tmp_path / "second" / "image2.jpg"])
+        dataset.add_images_from_path(path=tmp_path / "second")
 
-        dataset.add_images_from_path(path=tmp_path / "second", embed=False)
-
-        assert len(list(dataset)) == 2
-
-    def test_dataset_add_images_from_path__embedder_dimension_mismatch_no_images(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        mocker: Mocker,
-        tmp_path: Path,
-    ) -> None:
-        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
-        dataset = ImageDataset.create(name="test_dataset")
-        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
-        dataset.add_images_from_path(path=tmp_path / "first")
-        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
-        (tmp_path / "empty").mkdir()
-
-        # No image is found, so nothing is checked, stored or embedded.
-        dataset.add_images_from_path(path=tmp_path / "empty")
-
-        assert len(list(dataset)) == 1
+        # Adding the images again with the right embedder embeds the image
+        assert _embedding_count_by_file_name(dataset=dataset) == {
+            "image1.jpg": 1,
+            "image2.jpg": 1,
+        }
 
     def test_dataset_add_images_from_path__limit(
         self,
@@ -352,3 +329,10 @@ def _patch_registry(mocker: Mocker, embedder: RandomEmbedder) -> None:
     registry = EmbedderRegistry()
     registry.register(embedder=embedder)
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+
+def _embedding_count_by_file_name(dataset: ImageDataset) -> dict[str, int]:
+    return {
+        sample.file_name: len(sample.sample_table.embeddings)
+        for sample in dataset.query().to_list()
+    }
