@@ -63,11 +63,12 @@
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
-    const { goToPreviousFrame, goToNextFrame } = usePointCloudTickNavigation({
-        workspace,
-        getTickNumber: () => tickNumber,
-        getOnTickChange: () => onTickChange
-    });
+    const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
+        usePointCloudTickNavigation({
+            workspace,
+            getTickNumber: () => tickNumber,
+            getOnTickChange: () => onTickChange
+        });
     let selectedCuboidId = $state<string | null>(null);
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
@@ -210,9 +211,9 @@
                                 )}
                                 onPreviousFrame={goToPreviousFrame}
                                 onNextFrame={goToNextFrame}
-                                onPlayToggle={workspace.togglePlayback}
+                                onPlayToggle={togglePlayback}
                                 onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
-                                onSelectTick={workspace.goToFrame}
+                                onSelectTick={goToFrame}
                             />
                         </Pane>
                     </PaneGroup>

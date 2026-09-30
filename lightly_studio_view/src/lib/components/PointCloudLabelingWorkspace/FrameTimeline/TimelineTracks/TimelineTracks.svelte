@@ -41,6 +41,7 @@
             class="absolute top-0 h-4 cursor-pointer appearance-none bg-transparent accent-primary [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:bg-transparent"
             style:left={ticks.length > 0 ? `${50 / ticks.length}%` : '0%'}
             style:right={ticks.length > 0 ? `${50 / ticks.length}%` : '0%'}
+            style:width={`calc(100% - ${ticks.length > 0 ? 100 / ticks.length : 0}%)`}
             type="range"
             min="0"
             max={Math.max(0, ticks.length - 1)}
