@@ -6,11 +6,7 @@ interface Params {
     getOnTickChange: () => (tickNumber: number) => void;
 }
 
-export function usePointCloudTickNavigation({
-    workspace,
-    getTickNumber,
-    getOnTickChange
-}: Params) {
+export function usePointCloudTickNavigation({ workspace, getTickNumber, getOnTickChange }: Params) {
     const goToPreviousFrame = () => {
         workspace.goToPreviousFrame();
         getOnTickChange()(workspace.currentTick + 1);
@@ -34,6 +30,22 @@ export function usePointCloudTickNavigation({
                     : closest
             ).seq_number
         );
+    });
+
+    $effect(() => {
+        if (!workspace.isPlaying) return;
+        const intervalMs = workspace.playbackIntervalMs;
+        const ticks = workspace.ticks;
+        const currentTick = workspace.currentTick;
+        const activeIndex = ticks.findIndex((tick) => tick.seq_number === currentTick);
+        const timeout = setTimeout(() => {
+            if (activeIndex >= ticks.length - 1) {
+                workspace.togglePlayback();
+                return;
+            }
+            goToNextFrame();
+        }, intervalMs);
+        return () => clearTimeout(timeout);
     });
 
     return { goToPreviousFrame, goToNextFrame };

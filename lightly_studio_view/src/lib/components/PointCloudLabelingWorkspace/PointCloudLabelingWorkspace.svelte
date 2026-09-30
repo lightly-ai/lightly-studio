@@ -201,6 +201,7 @@
                                 ticks={workspace.ticks}
                                 currentTick={workspace.currentTick}
                                 isPlaying={workspace.isPlaying}
+                                playbackIntervalMs={workspace.playbackIntervalMs}
                                 lidarChannelNames={lidarChannels.map(
                                     (channel) => channel.group_component_name
                                 )}
@@ -210,6 +211,8 @@
                                 onPreviousFrame={goToPreviousFrame}
                                 onNextFrame={goToNextFrame}
                                 onPlayToggle={workspace.togglePlayback}
+                                onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
+                                onSelectTick={workspace.goToFrame}
                             />
                         </Pane>
                     </PaneGroup>
