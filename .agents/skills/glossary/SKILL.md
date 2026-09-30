@@ -28,10 +28,8 @@ Add new topics as their own `##` section below.
 |---|---|---|
 | Images added without any annotations | **raw images** | image folder, unlabeled images |
 | Videos added without any annotations | **raw videos** | video folder |
-| Adding samples to a dataset, for example with `add_images_from_path` | **ingestion** (verb: ingest) | import |
+| Adding samples to a dataset from any source, for example with `add_images_from_path` or `add_samples_from_coco` | **ingestion** (verb: ingest) | import |
+| Adding annotations to samples that are already in the dataset, for example with `add_annotations_from_yolo` | **add annotations** | import |
 
-"Import" clashes with Python `import` in nearby code blocks, so avoid it for adding samples.
-Exception: loading an external annotation format such as COCO, YOLO, or Label Studio is an
-**import**, also when it creates samples, for example `add_samples_from_coco` or
-`add_annotations_from_*`.
+Do not use "import" for data. It reads like the Python `import` in nearby code blocks.
 
