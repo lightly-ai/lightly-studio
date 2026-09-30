@@ -476,6 +476,53 @@ def create_samples_with_embeddings(
     return result
 
 
+def create_annotations_with_embeddings(
+    session: Session,
+    collection_id: UUID,
+    embeddings: list[list[float]],
+) -> list[AnnotationBaseTable]:
+    """Creates one annotation per embedding, each on its own image.
+
+    The embeddings belong to a new default embedding model of the annotation collection.
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the image collection to add the images to.
+        embeddings: The embedding of each annotation.
+
+    Returns:
+        The created annotations, in the order of ``embeddings``.
+    """
+    label = create_annotation_label(session=session, root_collection_id=collection_id)
+    annotations = []
+    for i in range(len(embeddings)):
+        image = create_image(
+            session=session, collection_id=collection_id, file_path_abs=f"/image_{i}.png"
+        )
+        annotations.append(
+            create_annotation(
+                session=session,
+                collection_id=collection_id,
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            )
+        )
+    embedding_model = create_embedding_model(
+        session=session,
+        collection_id=annotations[0].sample.collection_id,
+        embedding_dimension=len(embeddings[0]),
+        set_as_default=True,
+    )
+    for annotation, embedding in zip(annotations, embeddings):
+        create_sample_embedding(
+            session=session,
+            sample_id=annotation.sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+    return annotations
+
+
 def create_caption(
     session: Session,
     # TODO(Michal, 12/2025): Get collection_id from the parent sample and remove it from here.

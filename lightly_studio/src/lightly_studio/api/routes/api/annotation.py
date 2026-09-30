@@ -7,8 +7,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from pydantic_core import PydanticCustomError
 from sqlmodel import col
+from typing_extensions import Self
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -99,7 +101,19 @@ class ReadAnnotationsWithPayloadRequest(BaseModel):
     # list of selected annotation sample ids; resolved to sample ids server-side (LIG-9903).
     embedding_region: EmbeddingRegion | None = None
     text_embedding: list[float] | None = None
+    # Keeps only annotations at least this similar to ``text_embedding``.
+    min_similarity: float | None = Field(default=None, ge=-1.0, le=1.0)
     sort_by: AnnotationEvaluationMetricSortExpr | None = None
+
+    @model_validator(mode="after")
+    def _validate_min_similarity(self) -> Self:  # noqa: N804
+        if self.min_similarity is not None and not self.text_embedding:
+            # Not a ValueError: its exception in the error context is not JSON-serializable.
+            raise PydanticCustomError(
+                "min_similarity_requires_text_embedding",
+                "min_similarity requires text_embedding.",
+            )
+        return self
 
 
 @annotations_router.get(
@@ -183,6 +197,8 @@ def read_annotations_with_payload(
             tag_ids=body.tag_ids,
             sample_ids=body.sample_ids,
             embedding_region=body.embedding_region,
+            text_embedding=body.text_embedding if body.min_similarity is not None else None,
+            min_similarity=body.min_similarity,
         ),
         collection_id=collection_id,
         ordering=AnnotationOrdering(

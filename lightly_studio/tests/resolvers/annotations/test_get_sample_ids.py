@@ -8,6 +8,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
+    create_annotations_with_embeddings,
     create_collection,
     create_image,
 )
@@ -116,3 +117,20 @@ def test_build_sample_ids_query(db_session: Session) -> None:
 
     query = annotation_resolver.build_sample_ids_query(collection_id=annotation_collection_id)
     assert set(db_session.exec(query).all()) == {annotation.sample_id}
+
+
+def test_get_sample_ids__similarity_threshold(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    similar, _ = create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.1], [0.0, 1.0]],
+    )
+
+    sample_ids = annotation_resolver.get_sample_ids(
+        session=db_session,
+        collection_id=similar.sample.collection_id,
+        filters=AnnotationsFilter(text_embedding=[1.0, 0.0], min_similarity=0.9),
+    )
+
+    assert sample_ids == {similar.sample_id}

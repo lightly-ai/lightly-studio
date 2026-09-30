@@ -21,6 +21,7 @@ from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
     create_annotation_label,
+    create_annotations_with_embeddings,
     create_collection,
     create_embedding_model,
     create_image,
@@ -184,6 +185,33 @@ def test_add_samples_by_filter__annotation_grid(
 
     assert response.status_code == HTTP_STATUS_CREATED
     assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {annotation.sample_id}
+
+
+def test_add_samples_by_filter__annotation_similarity_threshold(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    similar, _ = create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.1], [0.0, 1.0]],
+    )
+    annotation_collection_id = similar.sample.collection_id
+    tag = create_tag(session=db_session, collection_id=annotation_collection_id, kind="annotation")
+
+    response = test_client.post(
+        f"/api/collections/{annotation_collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
+        json={
+            "filter": {
+                "filter_type": "annotations",
+                "text_embedding": [1.0, 0.0],
+                "min_similarity": 0.9,
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {similar.sample_id}
 
 
 def test_add_samples_by_filter__unknown_tag_returns_404(

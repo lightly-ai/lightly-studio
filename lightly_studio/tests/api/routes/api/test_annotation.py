@@ -6,7 +6,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import collection_resolver
@@ -14,6 +18,7 @@ from tests.conftest import AnnotationsTestData
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
+    create_annotations_with_embeddings,
     create_collection,
     create_embedding_model,
     create_image,
@@ -224,6 +229,95 @@ def test_read_annotations_with_payload(
     assert result["data"][0]["parent_sample_data"]["sample_id"] == str(image_2.sample_id)
 
 
+def test_read_annotations_with_payload__min_similarity(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    similar, _ = create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.1], [0.0, 1.0]],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{similar.sample.collection_id}/annotations/payload",
+        json={
+            "pagination": {"cursor": 0, "limit": 10},
+            "text_embedding": [1.0, 0.0],
+            "min_similarity": 0.9,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 1
+    assert [entry["annotation"]["sample_id"] for entry in result["data"]] == [
+        str(similar.sample_id)
+    ]
+
+
+def test_read_annotations_with_payload__negative_min_similarity(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    # Similarities to [1, 0]: ~0.995, ~-0.707 and -1.0.
+    similar, obtuse, _ = create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.1], [-1.0, 1.0], [-1.0, 0.0]],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{similar.sample.collection_id}/annotations/payload",
+        json={
+            "pagination": {"cursor": 0, "limit": 10},
+            "text_embedding": [1.0, 0.0],
+            "min_similarity": -0.8,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert {entry["annotation"]["sample_id"] for entry in result["data"]} == {
+        str(similar.sample_id),
+        str(obtuse.sample_id),
+    }
+
+
+def test_read_annotations_with_payload__min_similarity_below_minus_one(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/annotations/payload",
+        json={
+            "pagination": {"cursor": 0, "limit": 10},
+            "text_embedding": [1.0, 0.0],
+            "min_similarity": -1.5,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_read_annotations_with_payload__min_similarity_requires_text_embedding(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/annotations/payload",
+        json={"pagination": {"cursor": 0, "limit": 10}, "min_similarity": 0.9},
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
 def test_get_annotation_with_payload(
     test_client: TestClient,
     db_session: Session,
@@ -299,6 +393,32 @@ def test_get_annotation_sample_ids(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [str(annotation.sample_id)]
+
+
+def test_get_annotation_sample_ids__similarity_threshold(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    similar, _ = create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.1], [0.0, 1.0]],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{similar.sample.collection_id}/annotations/sample_ids",
+        json={
+            "filters": {
+                "filter_type": "annotations",
+                "text_embedding": [1.0, 0.0],
+                "min_similarity": 0.9,
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [str(similar.sample_id)]
 
 
 def test_read_annotation_embedding__returns_stored_vector(

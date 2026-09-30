@@ -16,10 +16,11 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
+from lightly_studio.resolvers.similarity_threshold_filter import SimilarityThresholdFilter
 from lightly_studio.type_definitions import QueryType
 
 
-class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
+class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter, SimilarityThresholdFilter):
     """Handles filtering for annotation queries."""
 
     filter_type: Literal["annotations"] = "annotations"
@@ -93,6 +94,7 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
             or self.annotation_types
             or self.sample_ids
             or self.region_sample_ids is not None
+            or self.min_similarity is not None
         )
 
     def _apply_annotation_filters(
@@ -125,6 +127,11 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
 
         # Filter by embedding-plot region selection, resolved server-side to sample ids.
         query = self._apply_region_sample_ids_filter(
+            query, sample_id_column=col(annotation_sample.sample_id)
+        )
+
+        # Filter by similarity of the annotation crop embeddings to the text search
+        query = self._apply_similarity_threshold_filter(
             query, sample_id_column=col(annotation_sample.sample_id)
         )
 

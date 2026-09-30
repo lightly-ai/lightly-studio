@@ -208,6 +208,39 @@ def test_get_adjacent_samples__returns_adjacents_for_videos(
     assert data["total_count"] == 3
 
 
+def test_get_adjacent_samples__annotations_similarity_threshold(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    first, _, third = helpers_resolvers.create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.1], [0.0, 1.0], [1.0, 0.2]],
+    )
+    annotation_collection_id = first.sample.collection_id
+
+    response = test_client.post(
+        f"/api/samples/{first.sample_id}/adjacents",
+        json={
+            "sample_type": SampleType.ANNOTATION.value,
+            "collection_id": str(annotation_collection_id),
+            "filters": {
+                "filter_type": "annotations",
+                "collection_ids": [str(annotation_collection_id)],
+                "text_embedding": [1.0, 0.0],
+                "min_similarity": 0.9,
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    # The dissimilar second annotation is skipped.
+    assert result["next_sample_id"] == str(third.sample_id)
+    assert result["total_count"] == 2
+
+
 def test_get_adjacent_samples__annotations_match_grid_ordering(
     db_session: Session,
     test_client: TestClient,

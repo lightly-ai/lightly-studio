@@ -16,6 +16,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
+    create_annotations_with_embeddings,
     create_collection,
     create_embedding_model,
     create_image,
@@ -299,6 +300,36 @@ def test_get_all_with_payload__without_embedding_model_has_no_similarity_score(
     )
 
     assert annotations_page.annotations[0].similarity_score is None
+
+
+def test_get_all_with_payload__similarity_threshold(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    near, middle, _ = create_annotations_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embeddings=[[1.0, 0.0], [1.0, 0.5], [0.0, 1.0]],
+    )
+    annotation_collection_id = near.sample.collection_id
+
+    annotations_page = annotation_resolver.get_all_with_payload(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        pagination=Paginated(offset=0, limit=10),
+        filters=AnnotationsFilter(
+            collection_ids=[annotation_collection_id],
+            text_embedding=[1.0, 0.0],
+            min_similarity=0.8,
+        ),
+        ordering=annotation_resolver.AnnotationOrdering(text_embedding=[1.0, 0.0]),
+    )
+
+    assert annotations_page.total_count == 2
+    assert [a.annotation.sample_id for a in annotations_page.annotations] == [
+        near.sample_id,
+        middle.sample_id,
+    ]
 
 
 def test_get_all_with_payload__filters_by_sample_ids(
