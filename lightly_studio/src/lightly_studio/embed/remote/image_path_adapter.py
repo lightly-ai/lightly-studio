@@ -1,6 +1,6 @@
 """Embeds images by path through the image-bytes route of a remote embedder.
 
-An fsspec path does not cross the wire, and the image import asks for an image-path
+An fsspec path does not cross the wire, and image ingestion asks for an image-path
 embedder. This module reads each file in this process and sends its bytes on the
 image-bytes route.
 """
