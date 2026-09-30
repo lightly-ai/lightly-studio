@@ -28,7 +28,7 @@ _COMPOSED_CLASSES: set[type[Embedder]] = set()
 
 # The route classes that a later process composes again when it builds the embedder from a
 # stored endpoint. Another route, such as one that a caller adds with `with_route`, is lost.
-_REBUILT_ROUTES: set[type[Embedder]] = set()
+_REBUILDABLE_ROUTES: set[type[Embedder]] = set()
 
 
 def compose_remote_embedder_class(
@@ -75,19 +75,19 @@ def is_composed(cls: type[Embedder]) -> bool:
     return cls in _COMPOSED_CLASSES
 
 
-def add_rebuilt_routes(routes: Iterable[type[Embedder]]) -> None:
+def add_rebuildable_routes(routes: Iterable[type[Embedder]]) -> None:
     """Record route classes that a build from a stored endpoint composes again.
 
     Args:
         routes: The route classes that ``RemoteEmbedder.connect`` or ``EmbedderRegistry``
             compose for a server that advertises their capability.
     """
-    _REBUILT_ROUTES.update(routes)
+    _REBUILDABLE_ROUTES.update(routes)
 
 
-def is_rebuilt(cls: type[Embedder]) -> bool:
+def is_rebuildable(cls: type[Embedder]) -> bool:
     """Get whether a build from a stored endpoint composes every route class of ``cls``."""
-    return cls in _COMPOSED_CLASSES and all(base in _REBUILT_ROUTES for base in cls.__bases__)
+    return cls in _COMPOSED_CLASSES and all(base in _REBUILDABLE_ROUTES for base in cls.__bases__)
 
 
 @functools.cache

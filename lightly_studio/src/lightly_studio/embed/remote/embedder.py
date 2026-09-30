@@ -137,7 +137,7 @@ class RemoteEmbedder(Embedder):
         # example, a class that adds "a photo of" to each text query loses it after a
         # restart, and search then gives other results with no error. A text route that
         # turns a query into an image is lost too, and text search then fails.
-        if not composition.is_rebuilt(cls=type(self)):
+        if not composition.is_rebuildable(cls=type(self)):
             return None
         return self._transport.endpoint()
 
@@ -355,7 +355,7 @@ _CAPABILITY_TO_BASE: dict[Capability, type[RemoteEmbedder]] = {
     Capability.IMAGE_BYTES: _ImageBytesRoute,
     Capability.VIDEO_BYTES: _VideoBytesRoute,
 }
-composition.add_rebuilt_routes(routes=_CAPABILITY_TO_BASE.values())
+composition.add_rebuildable_routes(routes=_CAPABILITY_TO_BASE.values())
 
 
 def _embedder_for(

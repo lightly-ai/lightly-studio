@@ -89,7 +89,7 @@ class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
 
 
 # `EmbedderRegistry` adds this route again when it builds the embedder from a stored endpoint
-composition.add_rebuilt_routes(routes=[ImagePathRoute])
+composition.add_rebuildable_routes(routes=[ImagePathRoute])
 
 
 def with_image_path(embedder: Embedder) -> Embedder:
