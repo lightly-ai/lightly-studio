@@ -15,6 +15,8 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import { useDeleteAnnotations } from '$lib/hooks/useDeleteAnnotations/useDeleteAnnotations.svelte';
+    import { toast } from 'svelte-sonner';
     import type { AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -208,6 +210,25 @@
         clearSelectedSampleAnnotationCrops(collection_id);
     };
 
+    const { deleteAnnotations } = useDeleteAnnotations({ getCollectionId: () => collection_id });
+
+    // All selected IDs, including annotations that the grid did not load yet (e.g. after select-all).
+    const selectedAnnotationIds = $derived([...($pickedAnnotationIds[collection_id] ?? [])]);
+
+    const handleDeleteSelected = async () => {
+        try {
+            const deletedCount = await deleteAnnotations(selectedAnnotationIds);
+            toast.success(
+                `Deleted ${deletedCount} ${deletedCount === 1 ? 'annotation' : 'annotations'}`
+            );
+            clearSelectedSampleAnnotationCrops(collection_id);
+            // Undo entries can reference deleted annotations and would fail.
+            clearReversibleActions();
+        } catch {
+            toast.error('Failed to delete annotations. Please try again.');
+        }
+    };
+
     const scrollResetKey = $derived(infiniteLoaderIdentifier);
     const hideSelectedAnnotationsPanel = $derived(
         infiniteAnnotations.isFetched && annotations.length === 0
@@ -290,6 +311,8 @@
                 isLoading={$isPending}
                 onSelect={handleSelectLabel}
                 collectionId={collection_id}
+                selectedCount={selectedAnnotationIds.length}
+                onDelete={handleDeleteSelected}
             />
         </div>
     {/if}

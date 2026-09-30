@@ -7,9 +7,11 @@
         isLoading: boolean;
         collectionId: string;
         onSelect: (item: { value: string; label: string }) => void;
+        selectedCount: number;
+        onDelete: () => Promise<void>;
     }
 
-    let { onSelect }: Props = $props();
+    let { onSelect, selectedCount, onDelete }: Props = $props();
 </script>
 
 <button
@@ -17,4 +19,8 @@
     onclick={() => onSelect({ value: 'new-label', label: 'New Label' })}
 >
     Select Label
+</button>
+
+<button data-testid="mock-delete-annotations" onclick={() => onDelete()}>
+    Delete {selectedCount}
 </button>

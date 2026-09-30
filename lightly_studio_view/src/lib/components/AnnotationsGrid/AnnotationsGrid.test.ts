@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
     sortedAnnotationsData: [] as AnnotationWithPayloadView[],
     updateAnnotations: vi.fn(),
     updateAnnotationsRaw: vi.fn(),
+    deleteAnnotations: vi.fn(),
     refresh: vi.fn(),
     isPendingStore: null as unknown as Writable<boolean>,
     pickedAnnotationIds: null as unknown as Writable<Record<string, Set<string>>>,
@@ -153,6 +154,12 @@ vi.mock('$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite', () => ({
 vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
     useUpdateAnnotationsMutation: vi.fn(() => ({
         updateAnnotations: mocks.updateAnnotationsRaw
+    }))
+}));
+
+vi.mock('$lib/hooks/useDeleteAnnotations/useDeleteAnnotations.svelte', () => ({
+    useDeleteAnnotations: vi.fn(() => ({
+        deleteAnnotations: mocks.deleteAnnotations
     }))
 }));
 
@@ -340,5 +347,37 @@ describe('AnnotationsGrid', () => {
                 groupId: 'annotation-label-change'
             })
         );
+    });
+
+    it('deletes all selected annotations, including ones not loaded in the grid', async () => {
+        // Select-all can select annotations that the grid did not load yet, like 'cls-2'.
+        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
+        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1', 'cls-2']) });
+        mocks.isEditingModeStore.set(true);
+        mocks.deleteAnnotations.mockResolvedValue(2);
+
+        renderGrid();
+
+        const button = screen.getByTestId('mock-delete-annotations');
+        expect(button).toHaveTextContent('Delete 2');
+        await fireEvent.click(button);
+
+        expect(mocks.deleteAnnotations).toHaveBeenCalledWith(['cls-1', 'cls-2']);
+        expect(mocks.clearSelectedSampleAnnotationCrops).toHaveBeenCalledWith('col-1');
+        expect(mocks.clearReversibleActions).toHaveBeenCalled();
+    });
+
+    it('keeps the selection when the delete fails', async () => {
+        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
+        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1']) });
+        mocks.isEditingModeStore.set(true);
+        mocks.deleteAnnotations.mockRejectedValue(new Error('Request failed'));
+
+        renderGrid();
+
+        await fireEvent.click(screen.getByTestId('mock-delete-annotations'));
+
+        expect(mocks.deleteAnnotations).toHaveBeenCalledWith(['cls-1']);
+        expect(mocks.clearSelectedSampleAnnotationCrops).not.toHaveBeenCalled();
     });
 });
