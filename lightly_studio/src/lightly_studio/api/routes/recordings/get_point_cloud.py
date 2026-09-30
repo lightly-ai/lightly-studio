@@ -30,6 +30,15 @@ class PointCloudQuery(BaseModel):
             "Sent as a string so the client can keep the 64-bit value exact."
         ),
     )
+    target_frame_id: str | None = Query(
+        default=None,
+        description=(
+            "The coordinate frame to express the points in, e.g. the world frame, so that "
+            "the point clouds of several lidars align. The points are mapped with the "
+            "recording's static and dynamic transforms at the time of the message. "
+            "Omit to keep the sensor frame."
+        ),
+    )
 
 
 @get_point_cloud_router.get("/point-cloud")
@@ -47,6 +56,7 @@ def get_point_cloud(
             recording_id=recording_id,
             channel_id=point_cloud_query.channel_id,
             timestamp_ns=int(point_cloud_query.timestamp_ns),
+            target_frame_id=point_cloud_query.target_frame_id,
         )
     except ChannelNotFoundError as exc:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(exc)) from exc

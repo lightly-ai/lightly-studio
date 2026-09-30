@@ -91,6 +91,39 @@ def test_get_point_cloud__400_on_non_point_cloud_channel(
     assert response.status_code == status.HTTP_STATUS_BAD_REQUEST
 
 
+def test_get_point_cloud__target_frame(
+    test_client: TestClient, dataset_id: UUID, recording_id: UUID, channel_id: int
+) -> None:
+    response = test_client.get(
+        _point_cloud_url(dataset_id, recording_id),
+        params={
+            "channel_id": channel_id,
+            "timestamp_ns": helpers.LIDAR_LOG_TIMES_NS[0],
+            "target_frame_id": helpers.LIDAR_FRAME_ID,
+        },
+    )
+
+    assert response.status_code == status.HTTP_STATUS_OK
+    assert response.content
+
+
+def test_get_point_cloud__400_on_unconnected_target_frame(
+    test_client: TestClient, dataset_id: UUID, recording_id: UUID, channel_id: int
+) -> None:
+    # The recording has no `/tf` topic and no static transforms are stored.
+    response = test_client.get(
+        _point_cloud_url(dataset_id, recording_id),
+        params={
+            "channel_id": channel_id,
+            "timestamp_ns": helpers.LIDAR_LOG_TIMES_NS[0],
+            "target_frame_id": "map",
+        },
+    )
+
+    assert response.status_code == status.HTTP_STATUS_BAD_REQUEST
+    assert "map" in response.json()["detail"]
+
+
 def _point_cloud_url(dataset_id: UUID, recording_id: UUID) -> str:
     return f"/datasets/{dataset_id}/recordings/{recording_id}/point-cloud"
 
