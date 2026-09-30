@@ -12,6 +12,7 @@ vi.mock('./mergeCloudPointFrames', () => ({ mergeCloudPointFrames: vi.fn() }));
 interface QueryOptions {
     queryKey: unknown[];
     enabled: boolean;
+    placeholderData: (previous: CloudPointFrame | undefined) => CloudPointFrame | undefined;
     queryFn: (context: { signal?: AbortSignal }) => Promise<CloudPointFrame>;
 }
 
@@ -80,5 +81,13 @@ describe('useCloudPointFrame', () => {
             { frameId: 'frame-2' }
         ]);
         expect(result).toBe(merged);
+    });
+
+    it('keeps the previous point cloud while the next tick loads', () => {
+        const previous = { frameId: 'previous' } as unknown as CloudPointFrame;
+        const options = getQueryOptions(defaultParams);
+
+        expect(options.placeholderData(previous)).toBe(previous);
+        expect(options.placeholderData(undefined)).toBeUndefined();
     });
 });

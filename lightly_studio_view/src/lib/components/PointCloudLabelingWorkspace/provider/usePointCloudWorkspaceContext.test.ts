@@ -17,6 +17,12 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
         tickDetails: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
     })
 }));
+vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
+    useMcapSequenceTicks: () => ({
+        ticks: { data: { ticks: [] } },
+        refetch: vi.fn()
+    })
+}));
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
         query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
@@ -31,7 +37,10 @@ describe('usePointCloudWorkspaceContext', () => {
         render(ProviderHarness, {
             datasetId: 'dataset-1',
             sequenceId: 'seq-1',
-            onReady: (r) => {
+            onReady: (r: {
+                created: PointCloudWorkspaceContext;
+                used: PointCloudWorkspaceContext;
+            }) => {
                 result = r;
             }
         });

@@ -1,17 +1,32 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { writable, readonly } from 'svelte/store';
+import { goto } from '$app/navigation';
 import Page from './+page.svelte';
 import { load } from './+page';
 import type { PageData } from './$types';
 
 const featureFlags = writable<string[]>([]);
 
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+
 vi.mock('$lib/hooks', () => ({
     useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
     // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
     useMcapSequenceSummary: () => ({
         summary: { data: undefined, isLoading: false, isError: false },
+        refetch: vi.fn()
+    }),
+    useMcapSequenceTicks: () => ({
+        ticks: {
+            data: {
+                ticks: [
+                    { seq_number: 0, timestamp_ns: 1000 },
+                    { seq_number: 1, timestamp_ns: 2000 }
+                ]
+            }
+        },
         refetch: vi.fn()
     }),
     useTickDetails: () => ({ tickDetails: { data: undefined } }),
@@ -28,6 +43,8 @@ const mockPageData = {
 } as unknown as PageData;
 
 describe('point-clouds/[collection_id]/[sample_id] page', () => {
+    beforeEach(() => vi.clearAllMocks());
+
     it('renders the route shell but not the workspace when the feature is disabled', () => {
         featureFlags.set([]);
         render(Page, { props: { data: mockPageData } });
@@ -43,6 +60,20 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
         await waitFor(() =>
             expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument()
         );
+    });
+
+    it('reflects timeline navigation in the one-based tick hash', async () => {
+        featureFlags.set(['point_cloud_rendering']);
+        const user = userEvent.setup();
+        render(Page, { props: { data: mockPageData } });
+
+        await user.click(await screen.findByRole('button', { name: 'Next frame' }));
+
+        expect(goto).toHaveBeenCalledOnce();
+        const [url, options] = vi.mocked(goto).mock.calls[0];
+        expect(url).toBeInstanceOf(URL);
+        expect((url as URL).hash).toBe('#tick=2');
+        expect(options).toMatchObject({ replaceState: true, noScroll: true, keepFocus: true });
     });
 });
 

@@ -25,6 +25,8 @@ export const useCloudPointFrame = (
             queryKey: ['cloud-point-frame', datasetId, recordingId, channels],
             // Skip fetching until a dataset, recording, and at least one channel are known.
             enabled: Boolean(datasetId && recordingId && channels.length),
+            // Preserve the mounted scene and its camera while the next tick is loading.
+            placeholderData: (previous: CloudPointFrame | undefined) => previous,
             queryFn: async ({ signal }): Promise<CloudPointFrame> => {
                 const firstChannel = channels[0];
                 if (!firstChannel) throw new Error('No point cloud channels to load.');
