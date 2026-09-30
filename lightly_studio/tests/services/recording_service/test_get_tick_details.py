@@ -11,7 +11,7 @@ from sqlmodel import Session
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.sequence import SampleSequenceLinkTable
-from lightly_studio.resolvers import annotation_resolver, group_resolver
+from lightly_studio.resolvers import annotation_resolver, group_resolver, static_transform_resolver
 from lightly_studio.services import recording_service
 from tests.core.mcap import helpers as mcap_helpers
 from tests.helpers_resolvers import create_annotation_label, create_mcap, cuboid_create
@@ -133,6 +133,9 @@ def test_get_tick_details__annotations(db_session: Session) -> None:
 def test_get_tick_details__target_frame_id(db_session: Session, tmp_path: Path) -> None:
     path = mcap_helpers.write_mcap_with_dynamic_transforms(tmp_path / "with_tf.mcap")
     fixture = helpers.create_mcap_sequence(session=db_session, uri=str(path))
+    static_transform_resolver.create_many(
+        session=db_session, rows=mcap_helpers.static_transform_creates(fixture.recording_id)
+    )
     _add_tick_with_cuboid(session=db_session, fixture=fixture, timestamp_ns=1_150_000_000)
 
     result = recording_service.get_tick_details(

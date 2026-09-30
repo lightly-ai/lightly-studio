@@ -22,7 +22,7 @@ from lightly_studio.resolvers import (
     sample_resolver,
     sequence_resolver,
 )
-from lightly_studio.services.recording_service import reader_cache
+from lightly_studio.services.recording_service import load_static_transforms, reader_cache
 
 
 def get_tick_details(
@@ -45,7 +45,8 @@ def get_tick_details(
         seq_number: The zero-based index of the tick to fetch.
         target_frame_id: The coordinate frame to express the 3D cuboids in, e.g. the
             frame the point clouds are shown in. The cuboids are mapped with the static
-            and dynamic transforms of the recording at the tick timestamp. `None` keeps
+            and dynamic transforms of the recording at the tick timestamp. The static
+            transforms are the edges stored when the recording was indexed. `None` keeps
             each cuboid in its own frame.
 
     Returns:
@@ -175,9 +176,12 @@ def _transform_at(
     reader = reader_cache.get_cached_reader(uri=recording.uri)
     # The tick timestamp is a capture time, and the dynamic transforms are matched by log
     # time. The two differ by the transport delay, which is small compared to the motion
-    # of the vehicle between two transforms.
+    # of the vehicle between two transforms. The static edges come from the database.
     return reader.get_transform_at(
         parent_frame_id=parent_frame_id,
         child_frame_id=child_frame_id,
         timestamp_ns=timestamp_ns,
+        static_transforms=load_static_transforms.load_static_transforms(
+            session=session, recording_id=recording_id
+        ),
     )

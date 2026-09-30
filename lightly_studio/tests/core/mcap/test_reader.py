@@ -345,6 +345,7 @@ class TestMcapFileReader:
                 parent_frame_id=helpers.LIDAR_FRAME_ID,
                 child_frame_id=helpers.WORLD_FRAME_ID,
                 timestamp_ns=1_150_000_000,
+                static_transforms=reader.get_static_transforms(),
             )
 
         # The pose at 1.2 s is the closest one. It puts the base 20 m ahead in the world,
@@ -360,6 +361,7 @@ class TestMcapFileReader:
                 parent_frame_id=helpers.LIDAR_FRAME_ID,
                 child_frame_id=helpers.WORLD_FRAME_ID,
                 timestamp_ns=1_050_000_000,
+                static_transforms=reader.get_static_transforms(),
             )
 
         # The pose at 1.0 s puts the base 10 m ahead in the world, not turned.
@@ -373,6 +375,7 @@ class TestMcapFileReader:
                 parent_frame_id=helpers.LIDAR_FRAME_ID,
                 child_frame_id=helpers.WORLD_FRAME_ID,
                 timestamp_ns=5_000_000_000,
+                static_transforms=reader.get_static_transforms(),
             )
 
     def test_get_transform_at__static_transforms_only(self, reader: McapFileReader) -> None:
@@ -380,6 +383,7 @@ class TestMcapFileReader:
             parent_frame_id=helpers.CAMERA_FRAME_ID,
             child_frame_id=helpers.LIDAR_FRAME_ID,
             timestamp_ns=1_000_000_000,
+            static_transforms=reader.get_static_transforms(),
         )
 
         assert np.allclose(

@@ -17,7 +17,11 @@ from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessErro
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.recording import RecordingFormat
-from lightly_studio.resolvers import collection_resolver, recording_resolver
+from lightly_studio.resolvers import (
+    collection_resolver,
+    recording_resolver,
+    static_transform_resolver,
+)
 from lightly_studio.services.recording_service import (
     get_point_cloud,
     reader_cache,
@@ -104,13 +108,14 @@ def test_get_point_cloud__metadata(db_session: Session, tmp_path: Path) -> None:
 
 
 def test_get_point_cloud__target_frame(db_session: Session, tmp_path: Path) -> None:
-    mcap_path = helpers.write_mcap_with_point_cloud(
-        tmp_path / "recording.mcap", with_static_transforms=True
-    )
+    mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
     recording_id = _create_recording(db_session, collection, mcap_path)
+    static_transform_resolver.create_many(
+        session=db_session, rows=helpers.static_transform_creates(recording_id)
+    )
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
     point_cloud = get_point_cloud.get_point_cloud(
@@ -133,12 +138,15 @@ def test_get_point_cloud__target_frame(db_session: Session, tmp_path: Path) -> N
 
 def test_get_point_cloud__world_frame(db_session: Session, tmp_path: Path) -> None:
     mcap_path = helpers.write_mcap_with_point_cloud(
-        tmp_path / "recording.mcap", with_static_transforms=True, with_dynamic_transforms=True
+        tmp_path / "recording.mcap", with_dynamic_transforms=True
     )
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
     recording_id = _create_recording(db_session, collection, mcap_path)
+    static_transform_resolver.create_many(
+        session=db_session, rows=helpers.static_transform_creates(recording_id)
+    )
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
     point_cloud = get_point_cloud.get_point_cloud(
@@ -186,13 +194,14 @@ def test_get_point_cloud__target_frame_is_sensor_frame(db_session: Session, tmp_
 
 
 def test_get_point_cloud__unknown_target_frame(db_session: Session, tmp_path: Path) -> None:
-    mcap_path = helpers.write_mcap_with_point_cloud(
-        tmp_path / "recording.mcap", with_static_transforms=True
-    )
+    mcap_path = helpers.write_mcap_with_point_cloud(tmp_path / "recording.mcap")
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
     recording_id = _create_recording(db_session, collection, mcap_path)
+    static_transform_resolver.create_many(
+        session=db_session, rows=helpers.static_transform_creates(recording_id)
+    )
     channel_id = _channel_id(mcap_path, helpers.LIDAR_POINTS_TOPIC)
 
     with pytest.raises(McapAccessError, match="No transform connects"):

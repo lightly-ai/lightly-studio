@@ -99,6 +99,7 @@ dataset.add_mcaps_from_path(
     components=COMPONENTS,
     max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
 )
+dataset.add_labels_from_folder(path=mcap_path, topic="/platform/perception/visualization/detections_3d_ground_truth")
 
 group_dataset = dataset.group_dataset
 print(f"\nComponents of '{dataset.name}':")

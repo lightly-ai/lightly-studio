@@ -11,6 +11,7 @@ from lightly_studio.core.mcap import add_mcaps, mcap_dataset
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.mcap_sample import McapSample
+from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.database import db_manager
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.sequence import SampleSequenceLinkTable
@@ -18,6 +19,7 @@ from lightly_studio.resolvers import (
     recording_resolver,
     sensor_calibration_resolver,
     sequence_resolver,
+    static_transform_resolver,
 )
 from tests.core.mcap import helpers
 
@@ -218,6 +220,73 @@ def test_index_recording__stores_the_camera_calibration(
     assert calibrations[0].width == helpers.IMAGE_WIDTH
     assert calibrations[0].height == helpers.IMAGE_HEIGHT
     assert calibrations[0].k == list(helpers.CAMERA_MATRIX)
+
+
+def test_index_recording__stores_the_static_transforms(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    add_mcaps.index_recording(
+        dataset=dataset,
+        mcap_path=str(mcap_path),
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    )
+
+    session = db_manager.persistent_session()
+    recordings = recording_resolver.get_all_by_dataset_id(
+        session=session, dataset_id=dataset.dataset_id
+    )
+    assert len(recordings) == 1
+    rows = static_transform_resolver.get_all_by_recording_id(
+        session=session, recording_id=recordings[0].recording_id
+    )
+    by_child = {row.child: row for row in rows}
+    assert set(by_child) == {helpers.CAMERA_FRAME_ID, helpers.LIDAR_FRAME_ID}
+    lidar = by_child[helpers.LIDAR_FRAME_ID]
+    assert lidar.parent == helpers.BASE_FRAME_ID
+    assert (lidar.tx, lidar.ty, lidar.tz) == (0.0, 1.0, 2.0)
+    assert (lidar.qx, lidar.qy, lidar.qz, lidar.qw) == (0.0, 0.0, 0.0, 1.0)
+    camera = by_child[helpers.CAMERA_FRAME_ID]
+    assert camera.parent == helpers.BASE_FRAME_ID
+    assert (camera.tx, camera.ty, camera.tz) == (1.0, 0.0, 2.0)
+    assert (camera.qx, camera.qy) == (0.0, 0.0)
+    assert camera.qz == pytest.approx(0.7071067811865476)
+    assert camera.qw == pytest.approx(0.7071067811865476)
+
+
+def test_latest_static_transform_per_child() -> None:
+    first = StaticTransform(
+        parent_frame_id="base",
+        child_frame_id="lidar",
+        translation=(0.0, 0.0, 0.0),
+        rotation=(0.0, 0.0, 0.0, 1.0),
+        log_time_ns=1,
+    )
+    replaced = StaticTransform(
+        parent_frame_id="odom",
+        child_frame_id="lidar",
+        translation=(1.0, 0.0, 0.0),
+        rotation=(0.0, 0.0, 0.0, 1.0),
+        log_time_ns=2,
+    )
+    camera = StaticTransform(
+        parent_frame_id="base",
+        child_frame_id="cam",
+        translation=(0.0, 1.0, 0.0),
+        rotation=(0.0, 0.0, 0.0, 1.0),
+        log_time_ns=1,
+    )
+
+    edges = add_mcaps._latest_static_transform_per_child([first, camera, replaced])
+
+    assert [(edge.child_frame_id, edge.parent_frame_id, edge.translation) for edge in edges] == [
+        ("lidar", "odom", (1.0, 0.0, 0.0)),
+        ("cam", "base", (0.0, 1.0, 0.0)),
+    ]
 
 
 def test_index_recording__unknown_sync_component(

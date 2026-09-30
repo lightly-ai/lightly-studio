@@ -343,27 +343,50 @@ class McapFileReader:
                 target_frame_id=parent_frame_id, source_frame_id=child_frame_id
             )
 
+    def get_static_transforms(self, topic: str = STATIC_TRANSFORM_TOPIC) -> list[StaticTransform]:
+        """Returns the static transforms published on a topic.
+
+        A topic that is not in the file counts as a topic without transforms. The
+        result is cached for the lifetime of the reader. Indexing stores these edges
+        and `get_transform_at` composes the stored edges instead of reading the topic
+        again.
+
+        Args:
+            topic: The topic the static transforms are published on.
+
+        Returns:
+            One transform per edge in the topic. A later edge for the same child frame
+            is included as its own entry; the caller decides which one to keep.
+
+        Raises:
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        with self._lock:
+            return list(self._cached_static_transforms(topic=topic))
+
     def get_transform_at(
         self,
         parent_frame_id: str,
         child_frame_id: str,
         timestamp_ns: int,
-        static_topic: str = STATIC_TRANSFORM_TOPIC,
+        static_transforms: Sequence[StaticTransform],
         dynamic_topic: str = DYNAMIC_TRANSFORM_TOPIC,
     ) -> NDArray[np.float64]:
         """Returns the transform between two coordinate frames at a point in time.
 
-        Composes the static transforms with the dynamic transforms, e.g. the pose of a
-        moving vehicle in the world frame. For each child frame, the dynamic transform
-        logged closest to `timestamp_ns` is used. Only the dynamic transforms logged
-        within `_DYNAMIC_TRANSFORM_WINDOW_NS` of `timestamp_ns` are read. A topic that
-        is not in the file counts as a topic without transforms.
+        Composes `static_transforms` with the dynamic transforms, e.g. the pose of a
+        moving vehicle in the world frame. The static transforms are the edges stored
+        for the recording. For each child frame, the dynamic transform logged closest
+        to `timestamp_ns` is used. Only the dynamic transforms logged within
+        `_DYNAMIC_TRANSFORM_WINDOW_NS` of `timestamp_ns` are read. A topic that is not
+        in the file counts as a topic without transforms.
 
         Args:
             parent_frame_id: The frame to map points to, e.g. the frame of a lidar.
             child_frame_id: The frame to map points from, e.g. the world frame.
             timestamp_ns: The time of the transform, in nanoseconds.
-            static_topic: The topic the static transforms are published on.
+            static_transforms: The static edges to compose, e.g. the edges stored for
+                the recording when it was indexed.
             dynamic_topic: The topic the dynamic transforms are published on.
 
         Returns:
@@ -372,12 +395,12 @@ class McapFileReader:
 
         Raises:
             TransformNotFoundError: If no chain of transforms connects the two frames.
-            McapAccessError: If a message on one of the topics cannot be decoded.
+            McapAccessError: If a message on the dynamic topic cannot be decoded.
         """
         with self._lock:
             tree = TransformTree(
                 [
-                    *self._cached_static_transforms(topic=static_topic),
+                    *static_transforms,
                     *self._dynamic_transforms_near(topic=dynamic_topic, timestamp_ns=timestamp_ns),
                 ]
             )

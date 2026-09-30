@@ -28,7 +28,11 @@ from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequenceEntry
-from lightly_studio.core.mcap.type_definitions import CameraIntrinsics, FrameLocator
+from lightly_studio.core.mcap.type_definitions import (
+    CameraIntrinsics,
+    FrameLocator,
+    StaticTransform,
+)
 from lightly_studio.database import db_manager
 from lightly_studio.models.mcap import McapCreate
 from lightly_studio.resolvers import group_resolver, mcap_resolver, recording_resolver
@@ -174,6 +178,7 @@ def index_recording(
         mcap_components=mcap_components,
         loaded=loaded,
     )
+    _add_static_transforms(recording=recording, static_transforms=loaded.static_transforms)
     _fill_mcap_definitions(components=components, mcap_components=mcap_components, loaded=loaded)
 
     sequence = dataset.create_sequence(recording_id=recording.recording_id)
@@ -194,7 +199,7 @@ def index_recording(
 
 
 class _LoadedRecording(NamedTuple):
-    """The locators of every component, paired to the sync component, plus camera intrinsics.
+    """Locators paired to the sync component, plus camera intrinsics and static transforms.
 
     `channel_ids` comes from the file summary, so a component still has a channel even
     when pairing finds no tick for it.
@@ -203,6 +208,7 @@ class _LoadedRecording(NamedTuple):
     locators: dict[str, list[FrameLocator | None]]
     intrinsics: dict[str, CameraIntrinsics]
     channel_ids: dict[str, int]
+    static_transforms: list[StaticTransform]
 
 
 def _get_sync_component(
@@ -229,7 +235,7 @@ def _read_recording(
     sync_component: McapComponentSpec,
     max_pairing_diff_ns: int,
 ) -> _LoadedRecording:
-    """Pair every component to the sync_component, and read the intrinsics of the cameras.
+    """Pair every component to the sync component, and read intrinsics and static transforms.
 
     Pairing uses capture timestamps first, then log times when the capture clocks do
     not overlap. The topics are read in a single pass, because a chunk holds the
@@ -257,7 +263,13 @@ def _read_recording(
             if component.camera_info_topic is not None
         }
         channel_ids = _channel_ids_by_component(reader=reader, components=components)
-    return _LoadedRecording(locators=locators, intrinsics=intrinsics, channel_ids=channel_ids)
+        static_transforms = reader.get_static_transforms()
+    return _LoadedRecording(
+        locators=locators,
+        intrinsics=intrinsics,
+        channel_ids=channel_ids,
+        static_transforms=static_transforms,
+    )
 
 
 def _pair_to_sync(
@@ -331,6 +343,29 @@ def _add_calibrations(
     ]
     if calibrations:
         recording.add_sensor_calibrations(calibrations=calibrations)
+
+
+def _add_static_transforms(
+    recording: Recording, static_transforms: Sequence[StaticTransform]
+) -> None:
+    """Store the static transforms of the recording, if it has any.
+
+    A later message for the same child frame replaces the earlier edge, which is how
+    the transform tree composes `/tf_static`.
+    """
+    edges = _latest_static_transform_per_child(static_transforms)
+    if edges:
+        recording.add_static_transforms(transforms=edges)
+
+
+def _latest_static_transform_per_child(
+    static_transforms: Sequence[StaticTransform],
+) -> list[StaticTransform]:
+    """Keep the last transform of each child frame."""
+    latest_by_child: dict[str, StaticTransform] = {}
+    for transform in static_transforms:
+        latest_by_child[transform.child_frame_id] = transform
+    return list(latest_by_child.values())
 
 
 def _fill_mcap_definitions(

@@ -11,9 +11,12 @@ import struct
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from mcap.writer import Writer as RawWriter
 from mcap_ros2.writer import Writer
+
+from lightly_studio.models.static_transform import StaticTransformCreate
 
 CAMERA_VIDEO_TOPIC = "/cam/front/compressed_video"
 CAMERA_INFO_TOPIC = "/cam/front/camera_info"
@@ -616,6 +619,36 @@ def _write_dynamic_transforms(writer: Writer, tf_schema: Any) -> None:
             },
             log_time=log_time_ns,
         )
+
+
+def static_transform_creates(recording_id: UUID) -> list[StaticTransformCreate]:
+    """Return the static edges written by `_static_transforms_message`."""
+    return [
+        StaticTransformCreate(
+            recording_id=recording_id,
+            parent=BASE_FRAME_ID,
+            child=CAMERA_FRAME_ID,
+            qx=0.0,
+            qy=0.0,
+            qz=0.7071067811865476,
+            qw=0.7071067811865476,
+            tx=1.0,
+            ty=0.0,
+            tz=2.0,
+        ),
+        StaticTransformCreate(
+            recording_id=recording_id,
+            parent=BASE_FRAME_ID,
+            child=LIDAR_FRAME_ID,
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            tx=0.0,
+            ty=1.0,
+            tz=2.0,
+        ),
+    ]
 
 
 def _static_transforms_message() -> dict[str, Any]:

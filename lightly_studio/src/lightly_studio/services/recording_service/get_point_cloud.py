@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 import numpy as np
@@ -11,8 +12,10 @@ from sqlmodel import Session
 from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.topic_kind import TopicKind
+from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.resolvers import recording_resolver
 from lightly_studio.services.recording_service import (
+    load_static_transforms,
     point_cloud_value,
     reader_cache,
     serialize_point_cloud,
@@ -39,8 +42,9 @@ def get_point_cloud(  # noqa: PLR0913
         target_frame_id: Coordinate frame to express the points in, e.g. the world
             frame. The points are mapped from the frame in the message header with the
             static and dynamic transforms of the recording at the log time of the
-            message, so that the point clouds of several lidars align. ``None`` keeps
-            the points in the sensor frame.
+            message, so that the point clouds of several lidars align. The static
+            transforms are the edges stored when the recording was indexed. ``None``
+            keeps the points in the sensor frame.
 
     Returns:
         The decoded point-cloud payload, or ``None`` when the recording is
@@ -70,11 +74,17 @@ def get_point_cloud(  # noqa: PLR0913
             name="frame_id",
         )
     )
+    static_transforms: list[StaticTransform] = []
+    if target_frame_id is not None and target_frame_id != source_frame_id:
+        static_transforms = load_static_transforms.load_static_transforms(
+            session=session, recording_id=recording_id
+        )
     transform = _transform_to_target_frame(
         reader=reader,
         source_frame_id=source_frame_id,
         target_frame_id=target_frame_id,
         timestamp_ns=message.log_time_ns,
+        static_transforms=static_transforms,
     )
     return serialize_point_cloud.serialize_point_cloud(
         message=message.decoded_message,
@@ -87,12 +97,17 @@ def get_point_cloud(  # noqa: PLR0913
 
 
 def _transform_to_target_frame(
-    reader: McapFileReader, source_frame_id: str, target_frame_id: str | None, timestamp_ns: int
+    reader: McapFileReader,
+    source_frame_id: str,
+    target_frame_id: str | None,
+    timestamp_ns: int,
+    static_transforms: Sequence[StaticTransform],
 ) -> NDArray[np.float64] | None:
     """Return the transform from the sensor frame to the target frame at a time.
 
     Returns `None` if the points stay in the sensor frame, so a recording without
-    transforms can still serve points in their own frame.
+    transforms can still serve points in their own frame. The static edges come from
+    the database. The dynamic edges are read from the recording at `timestamp_ns`.
     """
     if target_frame_id is None or target_frame_id == source_frame_id:
         return None
@@ -100,4 +115,5 @@ def _transform_to_target_frame(
         parent_frame_id=target_frame_id,
         child_frame_id=source_frame_id,
         timestamp_ns=timestamp_ns,
+        static_transforms=static_transforms,
     )
