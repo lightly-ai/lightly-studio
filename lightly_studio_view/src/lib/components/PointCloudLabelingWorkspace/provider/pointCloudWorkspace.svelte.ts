@@ -111,6 +111,8 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         if (this.#summary.isLoading) return 'loading';
         if (this.#summary.isError) return 'error';
         if (!this.#summary.data || this.#summary.data.lidar_channels.length === 0) return 'empty';
+        if (this.#sequenceTicks.isLoading) return 'loading';
+        if (this.#sequenceTicks.isError) return 'error';
         return 'ready';
     });
 
@@ -165,11 +167,13 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     goToPreviousFrame = (): void => {
         const index = this.ticks.findIndex((tick) => tick.seq_number === this.currentTick);
         if (index > 0) this.currentTick = this.ticks[index - 1].seq_number;
+        else if (index === -1) this.currentTick = this.ticks[0]?.seq_number ?? this.currentTick;
     };
 
     goToNextFrame = (): void => {
         const index = this.ticks.findIndex((tick) => tick.seq_number === this.currentTick);
-        if (index >= 0 && index < this.ticks.length - 1) {
+        if (index === -1) this.currentTick = this.ticks[0]?.seq_number ?? this.currentTick;
+        else if (index < this.ticks.length - 1) {
             this.currentTick = this.ticks[index + 1].seq_number;
         }
     };

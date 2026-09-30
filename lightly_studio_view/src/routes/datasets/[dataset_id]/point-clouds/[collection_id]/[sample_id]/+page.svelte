@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { PageData } from './$types';
-    import { replaceState } from '$app/navigation';
+    import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { useFeatureFlags } from '$lib/hooks';
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
@@ -21,7 +21,12 @@
         const hash = new URLSearchParams(url.hash.slice(1));
         hash.set('tick', String(nextTickNumber));
         url.hash = hash.toString();
-        replaceState(url, page.state);
+        void goto(url, {
+            replaceState: true,
+            noScroll: true,
+            keepFocus: true,
+            state: page.state
+        });
     };
 </script>
 

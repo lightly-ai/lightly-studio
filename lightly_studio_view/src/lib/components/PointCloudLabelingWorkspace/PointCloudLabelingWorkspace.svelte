@@ -10,6 +10,7 @@
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
+    import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -62,6 +63,11 @@
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
+    const { goToPreviousFrame, goToNextFrame } = usePointCloudTickNavigation({
+        workspace,
+        getTickNumber: () => tickNumber,
+        getOnTickChange: () => onTickChange
+    });
     let selectedCuboidId = $state<string | null>(null);
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
@@ -74,16 +80,6 @@
         selected.includes(channelId)
             ? selected.filter((id) => id !== channelId)
             : [...selected, channelId];
-
-    const goToPreviousFrame = () => {
-        workspace.goToPreviousFrame();
-        onTickChange(workspace.currentTick + 1);
-    };
-
-    const goToNextFrame = () => {
-        workspace.goToNextFrame();
-        onTickChange(workspace.currentTick + 1);
-    };
 
     const handleFullscreenChange = () => {
         isFullscreen = document.fullscreenElement === containerEl;
@@ -102,8 +98,6 @@
         if (!datasetId || !sequenceId) return;
         selectedLidarChannels = null;
     });
-
-    $effect(() => workspace.goToFrame(tickNumber - 1));
 
     $effect(() => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);

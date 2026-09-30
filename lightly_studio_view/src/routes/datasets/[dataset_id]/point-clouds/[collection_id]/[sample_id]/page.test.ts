@@ -2,14 +2,14 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { writable, readonly } from 'svelte/store';
-import { replaceState } from '$app/navigation';
+import { goto } from '$app/navigation';
 import Page from './+page.svelte';
 import { load } from './+page';
 import type { PageData } from './$types';
 
 const featureFlags = writable<string[]>([]);
 
-vi.mock('$app/navigation', () => ({ replaceState: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 vi.mock('$lib/hooks', () => ({
     useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
@@ -69,10 +69,11 @@ describe('point-clouds/[collection_id]/[sample_id] page', () => {
 
         await user.click(await screen.findByRole('button', { name: 'Next frame' }));
 
-        expect(replaceState).toHaveBeenCalledOnce();
-        const [url] = vi.mocked(replaceState).mock.calls[0];
+        expect(goto).toHaveBeenCalledOnce();
+        const [url, options] = vi.mocked(goto).mock.calls[0];
         expect(url).toBeInstanceOf(URL);
         expect((url as URL).hash).toBe('#tick=2');
+        expect(options).toMatchObject({ replaceState: true, noScroll: true, keepFocus: true });
     });
 });
 

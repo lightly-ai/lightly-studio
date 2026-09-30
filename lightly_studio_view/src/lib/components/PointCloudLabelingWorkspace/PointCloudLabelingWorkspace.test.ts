@@ -49,6 +49,8 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     })
 }));
 
+const defaultProps = { sampleId: 'sample-1', datasetId: 'dataset-1', sequenceId: 'sequence-1' };
+
 describe('PointCloudLabelingWorkspace', () => {
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
@@ -57,9 +59,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 onExit: vi.fn()
             }
         });
@@ -83,9 +83,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('renders the source breadcrumb when a path is given', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 sourcePath: [
                     { label: 'Home', href: '/datasets/d1/mcap/d1' },
                     { label: 'Recordings', href: '/datasets/d1/mcap/c1' },
@@ -104,9 +102,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('falls back to the sample id when no source path is given', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 onExit: vi.fn()
             }
         });
@@ -118,9 +114,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('shows the unsupported state and does not render the panel layout', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 status: 'unsupported',
                 onExit: vi.fn()
             }
@@ -138,9 +132,7 @@ describe('PointCloudLabelingWorkspace', () => {
         const onRetry = vi.fn();
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 status: 'error',
                 onExit: vi.fn(),
                 onRetry
@@ -159,9 +151,7 @@ describe('PointCloudLabelingWorkspace', () => {
         const onExit = vi.fn();
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 onExit
             }
         });
@@ -175,9 +165,7 @@ describe('PointCloudLabelingWorkspace', () => {
         const onTickChange = vi.fn();
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 onTickChange
             }
         });
@@ -193,9 +181,7 @@ describe('PointCloudLabelingWorkspace', () => {
 
     it('updates the active frame when the route tick changes', async () => {
         const props = {
-            sampleId: 'sample-1',
-            datasetId: 'dataset-1',
-            sequenceId: 'sequence-1',
+            ...defaultProps,
             tickNumber: 1
         };
         const { rerender } = render(PointCloudLabelingWorkspace, { props });
@@ -213,9 +199,7 @@ describe('PointCloudLabelingWorkspace', () => {
         async (next) => {
             const user = userEvent.setup();
             const props = {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 onExit: vi.fn()
             };
             const { rerender } = render(PointCloudLabelingWorkspace, { props });
