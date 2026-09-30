@@ -337,6 +337,17 @@ class TestMcapFileReader:
                 topic="/unknown",
             )
 
+    def test_get_dynamic_transform_edges(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_dynamic_transforms(tmp_path / "with_tf.mcap")
+
+        with McapFileReader(path) as reader:
+            edges = reader.get_dynamic_transform_edges()
+
+        assert edges == [(helpers.WORLD_FRAME_ID, helpers.BASE_FRAME_ID)]
+
+    def test_get_dynamic_transform_edges__no_topic(self, reader: McapFileReader) -> None:
+        assert reader.get_dynamic_transform_edges(topic="/unknown") == []
+
     def test_get_transform_at(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_dynamic_transforms(tmp_path / "with_tf.mcap")
 

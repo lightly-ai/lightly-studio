@@ -6,15 +6,6 @@ import {
 } from '$lib/components/PointCloudLabelingWorkspace/tickAnnotations/tickAnnotations';
 import type { PointCloudWorkspaceContext, WorkspaceStatus } from './types';
 
-// Every lidar point cloud and cuboid is shown in the selected frame, so that the lidars align and
-// the scene is upright. In the world frame `map` the static surroundings stay in place while the
-// vehicle moves; in the vehicle frame `CABIN` the vehicle stays in place. The first is the default.
-// TODO(Horatiu, 09/2026): Read the reference frames of a dataset from its recordings.
-const REFERENCE_FRAMES = [
-    { id: 'map', name: 'Map' },
-    { id: 'CABIN', name: 'Cabin' }
-] as const;
-
 export type GetInputs = () => {
     datasetId: string;
     sequenceId: string;
@@ -34,8 +25,9 @@ export type GetInputs = () => {
 export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     currentTick = $state(0);
     isPlaying = $state(false);
-    readonly referenceFrames = REFERENCE_FRAMES;
-    referenceFrameId = $state<string>(REFERENCE_FRAMES[0].id);
+    // The first frame is the default. A pick is kept only while it is still in the list, and
+    // it is keyed by its source so it resets when the dataset or the sequence changes.
+    #pickedReferenceFrame = $state<{ source: string; frameId: string } | null>(null);
 
     readonly #getInputs: GetInputs;
     readonly #summary: ReturnType<typeof useMcapSequenceSummary>['summary'];
@@ -61,6 +53,19 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     readonly ticks = $derived.by(() => this.#sequenceTicks.data?.ticks ?? []);
 
     readonly lidarChannels = $derived.by(() => this.#summary.data?.lidar_channels ?? []);
+
+    readonly referenceFrames = $derived.by(() => this.#summary.data?.reference_frames ?? []);
+    readonly referenceFrameId = $derived.by(() => {
+        const frames = this.referenceFrames;
+        const picked = this.#pickedReferenceFrame;
+        if (
+            picked?.source === this.#source &&
+            frames.some((frame) => frame.id === picked.frameId)
+        ) {
+            return picked.frameId;
+        }
+        return frames[0]?.id ?? '';
+    });
 
     // `null` until the user picks channels, so every lidar channel is shown by default. The pick
     // is keyed by its source, so it resets when the dataset or the sequence changes.
@@ -136,7 +141,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     // Arrow function, because the filter bar passes it as an event handler without the instance.
     selectReferenceFrame = (frameId: string): void => {
         if (this.referenceFrames.some((frame) => frame.id === frameId)) {
-            this.referenceFrameId = frameId;
+            this.#pickedReferenceFrame = { source: this.#source, frameId };
         }
     };
 

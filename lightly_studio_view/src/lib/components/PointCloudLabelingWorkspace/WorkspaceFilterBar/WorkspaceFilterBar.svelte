@@ -57,15 +57,17 @@
 </script>
 
 <div class="flex shrink-0 items-center gap-4" data-testid="workspace-filter-bar">
-    <Select
-        items={frameItems}
-        value={referenceFrameId}
-        triggerLabel={frameTriggerLabel}
-        size="xs"
-        class="w-40"
-        testId="workspace-frame-select"
-        onValueChange={onSelectReferenceFrame}
-    />
+    {#if referenceFrames.length > 0}
+        <Select
+            items={frameItems}
+            value={referenceFrameId}
+            triggerLabel={frameTriggerLabel}
+            size="xs"
+            class="w-40"
+            testId="workspace-frame-select"
+            onValueChange={onSelectReferenceFrame}
+        />
+    {/if}
     <WorkspaceChannelSelect
         label="Lidar"
         channels={lidarChannels}

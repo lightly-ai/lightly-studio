@@ -14,6 +14,13 @@ from lightly_studio.models.mcap_group_sequence import McapGroupSequenceInfoView
 from lightly_studio.models.recording import RecordingFormat
 
 
+class ReferenceFrameView(BaseModel):
+    """One coordinate frame the scene of a sequence can be shown in."""
+
+    id: str = Field(description="The coordinate frame id, e.g. `map`.")
+    name: str = Field(description="The name shown for the frame. The frame id.")
+
+
 class ChannelSummaryView(BaseModel):
     """One MCAP channel, as configured on the indexed sequence's GROUP collection."""
 
@@ -57,6 +64,10 @@ class MCAPSequenceSummary(BaseModel):
     camera_channels: list[ChannelSummaryView] = Field(
         description="Image and video channels, e.g. compressed camera frames."
     )
+    reference_frames: list[ReferenceFrameView] = Field(
+        description="Coordinate frames the scene can be shown in, in menu order. "
+        "The first is the default. Set when the recording is indexed."
+    )
 
     @classmethod
     def from_info(
@@ -86,4 +97,8 @@ class MCAPSequenceSummary(BaseModel):
             start_log_time_ns=start_log_time_ns,
             lidar_channels=lidar_channels,
             camera_channels=camera_channels,
+            reference_frames=[
+                ReferenceFrameView(id=frame_id, name=frame_id)
+                for frame_id in info.reference_frame_ids
+            ],
         )

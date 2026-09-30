@@ -8,6 +8,7 @@ import pytest
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.mcap import add_mcaps, mcap_dataset
+from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.mcap_sample import McapSample
@@ -256,6 +257,54 @@ def test_index_recording__stores_the_static_transforms(
     assert (camera.qx, camera.qy) == (0.0, 0.0)
     assert camera.qz == pytest.approx(0.7071067811865476)
     assert camera.qw == pytest.approx(0.7071067811865476)
+    # The base is the only root. The camera and the lidar are its direct children.
+    assert recordings[0].reference_frame_ids == [
+        helpers.BASE_FRAME_ID,
+        helpers.CAMERA_FRAME_ID,
+        helpers.LIDAR_FRAME_ID,
+    ]
+
+
+def test_index_recording__stores_configured_reference_frames(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    add_mcaps.index_recording(
+        dataset=dataset,
+        mcap_path=str(mcap_path),
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        reference_frame_ids=[helpers.LIDAR_FRAME_ID, helpers.BASE_FRAME_ID],
+    )
+
+    session = db_manager.persistent_session()
+    recordings = recording_resolver.get_all_by_dataset_id(
+        session=session, dataset_id=dataset.dataset_id
+    )
+    assert recordings[0].reference_frame_ids == [
+        helpers.LIDAR_FRAME_ID,
+        helpers.BASE_FRAME_ID,
+    ]
+
+
+def test_index_recording__unknown_reference_frame(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    with pytest.raises(McapAccessError, match="map"):
+        add_mcaps.index_recording(
+            dataset=dataset,
+            mcap_path=str(mcap_path),
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+            reference_frame_ids=["map"],
+        )
 
 
 def test_latest_static_transform_per_child() -> None:

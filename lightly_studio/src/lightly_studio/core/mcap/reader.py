@@ -151,6 +151,7 @@ class McapFileReader:
         self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
         self._transform_tree_by_topic: dict[str, TransformTree] = {}
         self._static_transforms_by_topic: dict[str, list[StaticTransform]] = {}
+        self._dynamic_edges_by_topic: dict[str, list[tuple[str, str]]] = {}
         self._decoder_by_channel_id: dict[int, Callable[[bytes], Any] | None] = {}
         # Reads seek the shared stream, so one reader can serve several threads only
         # one read at a time. Reentrant, because public methods call each other.
@@ -363,6 +364,29 @@ class McapFileReader:
         """
         with self._lock:
             return list(self._cached_static_transforms(topic=topic))
+
+    def get_dynamic_transform_edges(
+        self, topic: str = DYNAMIC_TRANSFORM_TOPIC
+    ) -> list[tuple[str, str]]:
+        """Returns each parent-child pair published on the dynamic transform topic.
+
+        A pair is returned once, in the order it is first seen. The pose is not
+        returned. A topic that is not in the file counts as a topic without edges.
+        The result is cached for the lifetime of the reader.
+
+        Args:
+            topic: The topic the dynamic transforms are published on.
+
+        Returns:
+            The parent frame id and the child frame id of each edge.
+
+        Raises:
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        with self._lock:
+            if topic not in self._dynamic_edges_by_topic:
+                self._dynamic_edges_by_topic[topic] = self._read_dynamic_transform_edges(topic)
+            return list(self._dynamic_edges_by_topic[topic])
 
     def get_transform_at(
         self,
@@ -596,6 +620,31 @@ class McapFileReader:
                 self._read_static_transforms(topic) if self._has_topic(topic) else []
             )
         return self._static_transforms_by_topic[topic]
+
+    def _read_dynamic_transform_edges(self, topic: str) -> list[tuple[str, str]]:
+        """Returns each parent-child pair on a dynamic topic, once.
+
+        Returns none if the topic is not in the file.
+
+        Raises:
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        if not self._has_topic(topic):
+            return []
+        edges: dict[tuple[str, str], None] = {}
+        try:
+            for _, _, message, decoded_message in self._reader.iter_decoded_messages(
+                topics=[topic]
+            ):
+                for transform in transforms.from_decoded_message(
+                    decoded_message, log_time_ns=message.log_time
+                ):
+                    edges.setdefault((transform.parent_frame_id, transform.child_frame_id), None)
+        except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
+            raise McapAccessError(
+                f"Cannot decode the messages of topic '{topic}' in '{self.path}': {exc}"
+            ) from exc
+        return list(edges)
 
     def _dynamic_transforms_near(self, topic: str, timestamp_ns: int) -> list[StaticTransform]:
         """Returns, per child frame, the transform logged closest to a time.

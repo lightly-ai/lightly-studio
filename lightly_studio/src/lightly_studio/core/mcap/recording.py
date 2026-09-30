@@ -107,6 +107,19 @@ class Recording:
             ],
         )
 
+    def set_reference_frame_ids(self, frame_ids: Sequence[str]) -> None:
+        """Store the frames the scene of this recording can be shown in.
+
+        The first frame is the default. The order is the order of the Frame menu.
+
+        Args:
+            frame_ids: The coordinate frame ids, in display order.
+        """
+        self._inner.reference_frame_ids = list(frame_ids)
+        self._session.add(self._inner)
+        self._session.commit()
+        self._session.refresh(self._inner)
+
 
 def _static_transform_create(
     recording_id: UUID, transform: StaticTransform

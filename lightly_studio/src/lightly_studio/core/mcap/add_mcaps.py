@@ -20,7 +20,7 @@ from lightly_studio.core.file_outcome_report import (
     BrokenInputFileError,
     FileOutcomeReport,
 )
-from lightly_studio.core.mcap import dataset_schema, matching
+from lightly_studio.core.mcap import dataset_schema, matching, reference_frames
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
@@ -57,6 +57,7 @@ def index_recordings(
     sync_component: str,
     components: Sequence[McapComponentSpec],
     max_pairing_diff_ns: int = DEFAULT_MAX_PAIRING_DIFF_NS,
+    reference_frame_ids: Sequence[str] | None = None,
 ) -> list[UUID]:
     """Index several recordings into a dataset, one sequence each.
 
@@ -73,6 +74,10 @@ def index_recordings(
             passed on every call.
         max_pairing_diff_ns: The largest time difference that still pairs a component
             with an anchor tick.
+        reference_frame_ids: The coordinate frames shown in the viewer, in menu order.
+            The first is the default. Each id is the frame string from the bag, for
+            example `map` or `CABIN`. When omitted, the roots and two levels of
+            children are used.
 
     Returns:
         The sample ID of the sequence of every recording that was indexed, in the order
@@ -80,11 +85,13 @@ def index_recordings(
         no entry.
 
     Raises:
-        ValueError: If `components` names other components than the dataset has, or if
-            `sync_component` is not one of them.
+        ValueError: If `components` names other components than the dataset has, if
+            `sync_component` is not one of them, or if a reference frame id is empty
+            or repeated.
         AllInputFilesFailedError: If at least one recording was attempted and every
             attempted recording failed.
     """
+    reference_frames.check_reference_frame_ids(frame_ids=reference_frame_ids)
     dataset_schema.check_components_match(
         session=dataset.group_dataset.session,
         group_collection_id=dataset.group_dataset.collection_id,
@@ -109,6 +116,7 @@ def index_recordings(
                         sync_component=sync_component,
                         components=components,
                         max_pairing_diff_ns=max_pairing_diff_ns,
+                        reference_frame_ids=reference_frame_ids,
                     )
                 )
             except McapAccessError as exc:
@@ -124,6 +132,7 @@ def index_recording(
     sync_component: str,
     components: Sequence[McapComponentSpec],
     max_pairing_diff_ns: int = DEFAULT_MAX_PAIRING_DIFF_NS,
+    reference_frame_ids: Sequence[str] | None = None,
 ) -> UUID:
     """Index one recording into a dataset.
 
@@ -138,16 +147,22 @@ def index_recording(
             every call.
         max_pairing_diff_ns: The largest time difference that still pairs a component
             with an anchor tick.
+        reference_frame_ids: The coordinate frames shown in the viewer, in menu order.
+            The first is the default. Each id is the frame string from the bag, for
+            example `map` or `CABIN`. When omitted, the roots and two levels of
+            children are used.
 
     Returns:
         The sample ID of the sequence that holds the groups of the recording.
 
     Raises:
-        ValueError: If `components` names other components than the dataset has, or if
-            `sync_component` is not one of them.
-        McapAccessError: If the recording cannot be read, or if it has no topic of a
-            component.
+        ValueError: If `components` names other components than the dataset has, if
+            `sync_component` is not one of them, or if a reference frame id is empty
+            or repeated.
+        McapAccessError: If the recording cannot be read, if it has no topic of a
+            component, or if a reference frame is not in the recording.
     """
+    reference_frames.check_reference_frame_ids(frame_ids=reference_frame_ids)
     dataset_schema.check_components_match(
         session=dataset.group_dataset.session,
         group_collection_id=dataset.group_dataset.collection_id,
@@ -179,6 +194,9 @@ def index_recording(
         loaded=loaded,
     )
     _add_static_transforms(recording=recording, static_transforms=loaded.static_transforms)
+    _add_reference_frames(
+        recording=recording, loaded=loaded, reference_frame_ids=reference_frame_ids
+    )
     _fill_mcap_definitions(components=components, mcap_components=mcap_components, loaded=loaded)
 
     sequence = dataset.create_sequence(recording_id=recording.recording_id)
@@ -209,6 +227,7 @@ class _LoadedRecording(NamedTuple):
     intrinsics: dict[str, CameraIntrinsics]
     channel_ids: dict[str, int]
     static_transforms: list[StaticTransform]
+    dynamic_edges: list[tuple[str, str]]
 
 
 def _get_sync_component(
@@ -264,11 +283,13 @@ def _read_recording(
         }
         channel_ids = _channel_ids_by_component(reader=reader, components=components)
         static_transforms = reader.get_static_transforms()
+        dynamic_edges = reader.get_dynamic_transform_edges()
     return _LoadedRecording(
         locators=locators,
         intrinsics=intrinsics,
         channel_ids=channel_ids,
         static_transforms=static_transforms,
+        dynamic_edges=dynamic_edges,
     )
 
 
@@ -356,6 +377,27 @@ def _add_static_transforms(
     edges = _latest_static_transform_per_child(static_transforms)
     if edges:
         recording.add_static_transforms(transforms=edges)
+
+
+def _add_reference_frames(
+    recording: Recording,
+    loaded: _LoadedRecording,
+    reference_frame_ids: Sequence[str] | None,
+) -> None:
+    """Store the frames the scene of the recording can be shown in."""
+    static_transforms = _latest_static_transform_per_child(loaded.static_transforms)
+    if reference_frame_ids is None:
+        frame_ids = reference_frames.reference_frame_ids(
+            static_transforms=static_transforms,
+            dynamic_edges=loaded.dynamic_edges,
+        )
+    else:
+        frame_ids = reference_frames.known_reference_frame_ids(
+            frame_ids=reference_frame_ids,
+            static_transforms=static_transforms,
+            dynamic_edges=loaded.dynamic_edges,
+        )
+    recording.set_reference_frame_ids(frame_ids=frame_ids)
 
 
 def _latest_static_transform_per_child(

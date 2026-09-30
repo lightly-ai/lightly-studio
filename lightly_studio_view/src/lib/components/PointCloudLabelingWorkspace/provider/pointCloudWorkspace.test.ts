@@ -69,7 +69,11 @@ const summaryWithChannels = {
     format: 'mcap',
     start_log_time_ns: 0,
     lidar_channels: [{ channel_id: 1, group_component_name: 'lidar', group_component_index: 0 }],
-    camera_channels: [{ channel_id: 2, group_component_name: 'front', group_component_index: 0 }]
+    camera_channels: [{ channel_id: 2, group_component_name: 'front', group_component_index: 0 }],
+    reference_frames: [
+        { id: 'map', name: 'map' },
+        { id: 'CABIN', name: 'CABIN' }
+    ]
 };
 
 const createWorkspace = (statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error') =>
@@ -171,6 +175,7 @@ describe('PointCloudWorkspace', () => {
     });
 
     it('shows the scene in the selected frame and ignores an unknown frame', () => {
+        summaryState.data = summaryWithChannels;
         const workspace = createWorkspace();
         expect(workspace.referenceFrameId).toBe('map');
 

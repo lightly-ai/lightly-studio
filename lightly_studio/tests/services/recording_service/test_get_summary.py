@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlmodel import Session
 
+from lightly_studio.models.recording import RecordingTable
 from lightly_studio.services.recording_service import get_mcap_sequence_summary
 from tests.resolvers.mcap_group_sequence_resolver.helpers import create_mcap_sequence
 
@@ -31,6 +32,28 @@ def test_get_mcap_sequence_summary(db_session: Session) -> None:
     lidar_channel = summary.lidar_channels[0]
     assert lidar_channel.channel_id == 7
     assert lidar_channel.frame_id == "livox_front_left"
+    assert summary.reference_frames == []
+
+
+def test_get_mcap_sequence_summary__reference_frames(db_session: Session) -> None:
+    fixture = create_mcap_sequence(session=db_session, uri="/bags/drive_001.mcap")
+    recording = db_session.get(RecordingTable, fixture.recording_id)
+    assert recording is not None
+    recording.reference_frame_ids = ["map", "CABIN"]
+    db_session.add(recording)
+    db_session.commit()
+
+    summary = get_mcap_sequence_summary(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+    )
+
+    assert summary is not None
+    assert [(frame.id, frame.name) for frame in summary.reference_frames] == [
+        ("map", "map"),
+        ("CABIN", "CABIN"),
+    ]
 
 
 def test_get_mcap_sequence_summary__unknown_sequence(db_session: Session) -> None:
