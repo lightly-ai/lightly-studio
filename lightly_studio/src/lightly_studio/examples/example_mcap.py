@@ -21,8 +21,7 @@ import lightly_studio as ls
 from lightly_studio.core.mcap.mcap_sample import McapSample
 from lightly_studio.database import db_manager
 
-# The cameras come first, so that a grid preview starts with them, then the lidars. A
-# camera reads its coordinate frame from `camera_info_topic`; a lidar names it here,
+# A camera reads its coordinate frame from `camera_info_topic`; a lidar names it here,
 # because it is part of the message payload, which the access layer does not read.
 COMPONENTS = [
     ls.McapComponentSpec(
@@ -84,6 +83,9 @@ MAX_PAIRING_DIFF_NS = 50_000_000
 # How many groups to print at the end.
 PREVIEW_COUNT = 10
 
+# Annotation topic
+ANNOTATION_TOPIC = "/platform/perception/visualization/detections_3d_ground_truth"
+
 env = Env()
 env.read_env()
 # Read as a string, not as a path, so that a URI such as `s3://my-bucket/bags/` survives
@@ -98,6 +100,7 @@ dataset.add_mcaps_from_path(
     components=COMPONENTS,
     max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
 )
+dataset.add_labels_from_folder(path=mcap_path, topic=ANNOTATION_TOPIC)
 
 group_dataset = dataset.group_dataset
 print(f"\nComponents of '{dataset.name}':")
