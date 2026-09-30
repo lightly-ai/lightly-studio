@@ -95,7 +95,7 @@ describe('useDatasetSplit', () => {
         });
         await fireEvent.click(screen.getByRole('button', { name: 'Split dataset' }));
         await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-        expect(refreshAllData).toHaveBeenCalledOnce();
+        expect(refreshAllData).toHaveBeenCalledExactlyOnceWith('collection');
         expect(toast.success).toHaveBeenCalledWith(
             'Created the following tags: training (9 samples).'
         );

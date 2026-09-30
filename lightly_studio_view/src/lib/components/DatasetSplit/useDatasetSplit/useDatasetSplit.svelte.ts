@@ -20,7 +20,7 @@ export function useDatasetSplit(getOptions: () => Options) {
     const { collectionId, sampleType, onClose } = getOptions();
     const mutation = createMutation(() => splitDatasetMutation());
     const { tags } = useTags({ collection_id: collectionId });
-    const { refreshAllData } = useRefreshAllData({ collectionId });
+    const { refreshAllData } = useRefreshAllData();
     const { filteredSampleCount } = useGlobalStorage();
     // Capture once per opening so later filter changes cannot alter the submitted scope.
     const filter = structuredClone(
@@ -43,7 +43,7 @@ export function useDatasetSplit(getOptions: () => Options) {
                 path: { collection_id: collectionId },
                 body: { ...values, filter }
             });
-            await refreshAllData();
+            await refreshAllData(collectionId);
             toast.success(
                 `Created the following tags: ${counts
                     .map(

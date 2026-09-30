@@ -60,7 +60,7 @@
     const collectionId = $page.params.collection_id!;
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
-    const { refreshAllData } = useRefreshAllData({ collectionId });
+    const { refreshAllData } = useRefreshAllData();
 
     const { scopeLabel, contextFilter } = useOperatorContext(pageContext, tagsSelected);
 
@@ -146,7 +146,7 @@
             if (response.data.success) {
                 executionSuccess = response.data.message || 'Execution succeeded.';
                 toast.success('Operator executed', { description: executionSuccess });
-                refreshAllData();
+                refreshAllData(currentCollectionId);
             } else {
                 executionError = response.data.message || 'Execution failed.';
                 toast.error('Operator execution failed', { description: executionError });

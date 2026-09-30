@@ -1,23 +1,16 @@
 import { useQueryClient } from '@tanstack/svelte-query';
-import { useTags } from '$lib/hooks/useTags/useTags';
-
-interface UseRefreshAllDataParams {
-    collectionId: string;
-}
+import { loadCollectionTags } from '$lib/hooks';
 
 interface UseRefreshAllDataReturn {
-    refreshAllData: () => Promise<void>;
+    refreshAllData: (collectionId: string) => Promise<void>;
 }
 
 /** Refetches all data, e.g. after it changed outside the GUI. Tags have their own store. */
-export function useRefreshAllData({
-    collectionId
-}: UseRefreshAllDataParams): UseRefreshAllDataReturn {
+export function useRefreshAllData(): UseRefreshAllDataReturn {
     const client = useQueryClient();
-    const { loadTags } = useTags({ collection_id: collectionId });
 
-    const refreshAllData = async () => {
-        await Promise.all([loadTags(), client.invalidateQueries()]);
+    const refreshAllData = async (collectionId: string) => {
+        await Promise.all([loadCollectionTags(collectionId), client.invalidateQueries()]);
     };
 
     return { refreshAllData };

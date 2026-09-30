@@ -26,21 +26,19 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
 }));
 vi.mock('$lib/hooks', async (importOriginal) => ({
     ...(await importOriginal()),
-    useRefreshAllData: vi.fn(() => ({ refreshAllData }))
+    useRefreshAllData: () => ({ refreshAllData })
 }));
 
 describe('QueryEditorPanel', () => {
     it('updates the query and refreshes all data when re-applying the same query', async () => {
-        const { useRefreshAllData } = await import('$lib/hooks');
         render(QueryEditorPanel, { props: { onClose: vi.fn() } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Re-apply' }));
 
-        expect(useRefreshAllData).toHaveBeenCalledWith({ collectionId: 'col-1' });
         expect(updateQueryExpr).toHaveBeenCalledWith({
             query_expr: queryExpr,
             query_expr_str: 'width < 500'
         });
-        await waitFor(() => expect(refreshAllData).toHaveBeenCalledOnce());
+        await waitFor(() => expect(refreshAllData).toHaveBeenCalledExactlyOnceWith('col-1'));
     });
 });

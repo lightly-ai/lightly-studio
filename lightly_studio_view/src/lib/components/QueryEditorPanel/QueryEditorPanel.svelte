@@ -17,7 +17,7 @@
 
     const { onClose }: Props = $props();
     const { imageQueryExpression, updateQueryExpr } = useImageFilters();
-    const { refreshAllData } = useRefreshAllData({ collectionId: page.params.collection_id! });
+    const { refreshAllData } = useRefreshAllData();
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
         if (!parsed) {
@@ -31,7 +31,7 @@
             query_expr_str: value
         });
         // Data may have changed outside the GUI, so refetch even if the query is unchanged.
-        refreshAllData();
+        refreshAllData(page.params.collection_id!);
     };
 </script>
 
