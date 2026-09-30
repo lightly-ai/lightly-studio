@@ -12,6 +12,7 @@ import type {
     SampleFilter
 } from '$lib/api/lightly_studio_local';
 import type { ImageSortExpr } from '../useImagesInfinite/types';
+import { buildSimilarityThresholdFilter } from '../useSimilarityThreshold';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
@@ -69,7 +70,10 @@ const imageFilter = derived(
             filters.height = height;
         }
 
-        const sampleFilter: SampleFilter = {};
+        const sampleFilter: SampleFilter = buildSimilarityThresholdFilter(
+            $filterParams.text_embedding,
+            $filterParams.min_similarity
+        );
 
         const sampleIds = $filterParams.filters?.sample_ids;
         if (sampleIds && sampleIds.length > 0) {

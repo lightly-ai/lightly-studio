@@ -30,6 +30,7 @@ export const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         {
             metadata_filters: metadataFilters,
             text_embedding: params.text_embedding,
+            min_similarity: params.min_similarity,
             query_expr: params.query_expr
         },
         params.sort_by

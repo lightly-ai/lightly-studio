@@ -24,6 +24,7 @@ export type ImagesInfiniteParams = {
     query_expr?: QueryExpr;
     sort_by?: ReadImagesRequest['sort_by'];
     text_embedding?: ReadImagesRequest['text_embedding'];
+    min_similarity?: SampleFilter['min_similarity'];
     metadata_values?: MetadataValues;
     categorical_metadata_values?: CategoricalMetadataValues;
 } & (
@@ -39,6 +40,7 @@ export type SamplesQueryKey = readonly [
     {
         metadata_filters?: SampleFilter['metadata_filters'];
         text_embedding?: ReadImagesRequest['text_embedding'];
+        min_similarity?: SampleFilter['min_similarity'];
         query_expr?: QueryExpr;
     },
     ReadImagesRequest['sort_by']

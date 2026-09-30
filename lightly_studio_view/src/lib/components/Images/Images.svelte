@@ -17,6 +17,7 @@
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import { isEqual } from 'lodash-es';
@@ -63,6 +64,7 @@
         sampleSize
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
+    const { threshold: similarityThreshold } = useSimilarityThreshold();
 
     const samplesParams = $derived({
         collection_id,
@@ -76,7 +78,8 @@
         },
         metadata_values: $metadataValues,
         categorical_metadata_values: $categoricalMetadataValues,
-        text_embedding: $textEmbedding?.embedding
+        text_embedding: $textEmbedding?.embedding,
+        min_similarity: $textEmbedding ? ($similarityThreshold ?? undefined) : undefined
     });
 
     const { filterParams, updateFilterParams, imageQueryExpression, imageSortBy } =
@@ -154,6 +157,7 @@
             // key and yank the grid to the top.
             JSON.stringify(createMetadataFilters($metadataValues, $categoricalMetadataValues)),
             $textEmbedding?.queryText || '',
+            $similarityThreshold?.toString() ?? '',
             confusionCell ? JSON.stringify(confusionCell) : '',
             JSON.stringify($imageSortBy)
         ];

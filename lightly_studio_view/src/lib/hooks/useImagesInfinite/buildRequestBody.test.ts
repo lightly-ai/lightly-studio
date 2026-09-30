@@ -185,6 +185,27 @@ describe('buildRequestBody', () => {
             expect(result.text_embedding).toEqual([0.1, 0.2]);
         });
 
+        it('adds the similarity threshold to the sample filter only while it is set', () => {
+            const params: Params = {
+                collection_id: 'col-1',
+                mode: 'normal',
+                filters: { tag_ids: ['t1'] },
+                text_embedding: [0.1, 0.2]
+            };
+
+            const withoutThreshold = buildRequestBody(params, 0).filters?.sample_filter;
+            expect(withoutThreshold).not.toHaveProperty('text_embedding');
+            expect(withoutThreshold).not.toHaveProperty('min_similarity');
+
+            const result = buildRequestBody({ ...params, min_similarity: -0.25 }, 0);
+            expect(result.text_embedding).toEqual([0.1, 0.2]);
+            expect(result.filters?.sample_filter).toMatchObject({
+                text_embedding: [0.1, 0.2],
+                min_similarity: -0.25,
+                tag_ids: ['t1']
+            });
+        });
+
         it('applies metadata_values via createMetadataFilters', () => {
             const result = buildRequestBody(
                 {

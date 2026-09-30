@@ -1,6 +1,7 @@
 import type { ReadImagesRequest } from '$lib/api/lightly_studio_local';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { GRID_PAGE_SIZE } from '$lib/constants';
+import { buildSimilarityThresholdFilter } from '$lib/hooks/useSimilarityThreshold';
 import { getAnnotationsFilter } from './getAnnotationsFilter';
 import type { ClassifierSamples, ImagesInfiniteParams, NormalModeFilters } from './types';
 
@@ -13,6 +14,7 @@ const buildBaseBody = (params: ImagesInfiniteParams, pageParam: number): ReadIma
     sort_by: params.sort_by ?? undefined,
     filters: {
         sample_filter: {
+            ...buildSimilarityThresholdFilter(params.text_embedding, params.min_similarity),
             query_expr: params.query_expr ?? undefined,
             metadata_filters:
                 params.metadata_values || params.categorical_metadata_values

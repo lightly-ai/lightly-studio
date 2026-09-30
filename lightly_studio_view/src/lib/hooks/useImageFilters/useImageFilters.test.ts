@@ -68,6 +68,25 @@ describe('useImageFilters', () => {
         });
     });
 
+    describe('imageFilter similarity threshold', () => {
+        it('includes the embedding and threshold only while a threshold is set', () => {
+            const { imageFilter, updateFilterParams } = useImageFilters();
+
+            updateFilterParams({ ...normalFilterParams, text_embedding: [0.1, 0.2] });
+            expect(get(imageFilter)?.sample_filter).toBeUndefined();
+
+            updateFilterParams({
+                ...normalFilterParams,
+                text_embedding: [0.1, 0.2],
+                min_similarity: 0.3
+            });
+            expect(get(imageFilter)?.sample_filter).toEqual({
+                text_embedding: [0.1, 0.2],
+                min_similarity: 0.3
+            });
+        });
+    });
+
     describe('updateConfusionCell', () => {
         const cell = {
             evaluation_run_id: 'run-1',

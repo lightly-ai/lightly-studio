@@ -68,6 +68,8 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
+    import SimilarityThresholdFilter from '$lib/components/SimilarityThresholdFilter';
+    import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
     import {
         useSelectionSummary,
         useImageAnnotationCounts,
@@ -290,6 +292,16 @@
         // Temporary hack to remember where the user was when navigating
         // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate
         setLastGridType(gridType);
+    });
+
+    const {
+        threshold: similarityThreshold,
+        setThreshold: setSimilarityThreshold,
+        clearThreshold: clearSimilarityThreshold,
+        resetOnScopeChange: resetSimilarityThresholdOnScopeChange
+    } = useSimilarityThreshold();
+    $effect(() => {
+        resetSimilarityThresholdOnScopeChange({ search: $textEmbedding, collectionId, gridType });
     });
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
@@ -597,6 +609,16 @@
                                             $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
                                         );
                                     }}
+                                />
+                            {/if}
+
+                            {#if isImages && $textEmbedding}
+                                <SimilarityThresholdFilter
+                                    {collectionId}
+                                    textEmbedding={$textEmbedding.embedding}
+                                    value={$similarityThreshold}
+                                    onCommit={setSimilarityThreshold}
+                                    onClear={clearSimilarityThreshold}
                                 />
                             {/if}
 

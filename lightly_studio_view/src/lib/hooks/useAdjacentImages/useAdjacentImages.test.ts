@@ -61,6 +61,20 @@ describe('useAdjacentImages', () => {
         expect(result).toEqual({ query: 'query-result', refetch: expect.any(Function) });
     });
 
+    it('sends the similarity threshold of the image filter so neighbors match the grid', () => {
+        imageFilterStore.set({
+            filter_type: 'image',
+            sample_filter: { text_embedding: [0.12, 0.34], min_similarity: 0.6 }
+        });
+
+        useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
+
+        expect(useAdjacentSamplesMock.mock.calls[0][0].params.body.filters.sample_filter).toEqual({
+            text_embedding: [0.12, 0.34],
+            min_similarity: 0.6
+        });
+    });
+
     it('calls useAdjacentSamplesMock with collection_id when image filters are missing', () => {
         imageFilterStore.set(null);
 

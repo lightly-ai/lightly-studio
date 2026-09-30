@@ -66,6 +66,19 @@ describe('createImagesInfiniteOptions', () => {
             expect(options.queryKey).toContain(sort);
         });
 
+        it('changes when the similarity threshold changes', () => {
+            const params = {
+                collection_id: 'col-1',
+                mode: 'normal' as const,
+                text_embedding: [0.1]
+            };
+
+            const off = createImagesInfiniteOptions(params);
+            const on = createImagesInfiniteOptions({ ...params, min_similarity: 0.4 });
+
+            expect(on.queryKey).not.toEqual(off.queryKey);
+        });
+
         it('includes null in query key when sort_by is null', () => {
             const options = createImagesInfiniteOptions({
                 collection_id: 'col-1',
