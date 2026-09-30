@@ -126,18 +126,18 @@ class RemoteEmbedder(Embedder):
         """Get the address and the token of the server, for a dataset to store.
 
         A later process builds the embedder again from the stored endpoint with ``connect``,
-        and so reaches the server with no registration. A class that a caller wrote by hand
-        names no endpoint, unless it overrides this method.
+        and so reaches the server with no registration. A class that a caller wrote by hand,
+        or that has a route that a caller added with ``with_route``, names no endpoint.
 
         Returns:
             The endpoint that every request of the transport carries, or None for a class
-            that ``connect`` and ``with_route`` did not compose.
+            that a build from the endpoint does not compose again.
         """
-        # The rebuild through `connect` drops the methods of a class written by hand. For
+        # The build from a stored endpoint drops the methods that a caller wrote. For
         # example, a class that adds "a photo of" to each text query loses it after a
-        # restart, and search then gives other results with no error. Only `connect` and
-        # `with_route` compose classes, so this asks whether `connect` built the embedder.
-        if not composition.is_composed(cls=type(self)):
+        # restart, and search then gives other results with no error. A text route that
+        # turns a query into an image is lost too, and text search then fails.
+        if not composition.is_rebuilt(cls=type(self)):
             return None
         return self._transport.endpoint()
 
@@ -355,6 +355,7 @@ _CAPABILITY_TO_BASE: dict[Capability, type[RemoteEmbedder]] = {
     Capability.IMAGE_BYTES: _ImageBytesRoute,
     Capability.VIDEO_BYTES: _VideoBytesRoute,
 }
+composition.add_rebuilt_routes(routes=_CAPABILITY_TO_BASE.values())
 
 
 def _embedder_for(

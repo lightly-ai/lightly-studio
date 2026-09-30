@@ -11,7 +11,7 @@ composes the class and refuses a server that LightlyStudio can never ask for an 
 from __future__ import annotations
 
 import functools
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from lightly_studio_serve.embedder import Capability, Embedder
 
@@ -25,6 +25,10 @@ _RESOLVABLE_CAPABILITIES = (Capability.TEXT, Capability.IMAGE_BYTES)
 
 # Every class that this module built. Only such a class has route classes as its bases.
 _COMPOSED_CLASSES: set[type[Embedder]] = set()
+
+# The route classes that a later process composes again when it builds the embedder from a
+# stored endpoint. Another route, such as one that a caller adds with `with_route`, is lost.
+_REBUILT_ROUTES: set[type[Embedder]] = set()
 
 
 def compose_remote_embedder_class(
@@ -69,6 +73,21 @@ def composed_class(bases: Sequence[type[Embedder]]) -> type[Embedder]:
 def is_composed(cls: type[Embedder]) -> bool:
     """Get whether this module built ``cls`` out of route classes."""
     return cls in _COMPOSED_CLASSES
+
+
+def add_rebuilt_routes(routes: Iterable[type[Embedder]]) -> None:
+    """Record route classes that a build from a stored endpoint composes again.
+
+    Args:
+        routes: The route classes that ``RemoteEmbedder.connect`` or ``EmbedderRegistry``
+            compose for a server that advertises their capability.
+    """
+    _REBUILT_ROUTES.update(routes)
+
+
+def is_rebuilt(cls: type[Embedder]) -> bool:
+    """Get whether a build from a stored endpoint composes every route class of ``cls``."""
+    return cls in _COMPOSED_CLASSES and all(base in _REBUILT_ROUTES for base in cls.__bases__)
 
 
 @functools.cache

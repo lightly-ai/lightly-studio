@@ -113,7 +113,8 @@ class TestRemoteEmbedder:
         assert isinstance(routed, _ExtraRoute)
         assert type(routed).__name__ == "RemoteTextImageBytesExtraEmbedder"
         assert routed.embedding_space_spec() == remote.embedding_space_spec()
-        assert routed.remote_endpoint() == RemoteEndpoint(url=BASE_URL, api_key=None)
+        # A build from the stored endpoint would not compose `_ExtraRoute` again
+        assert routed.remote_endpoint() is None
 
     def test_connect__text_and_video_bytes(self) -> None:
         with _test_client(server.create_app(embedder=FakeTextVideoEmbedder())) as client:
