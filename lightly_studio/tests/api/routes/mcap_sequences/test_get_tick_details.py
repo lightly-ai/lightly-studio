@@ -5,11 +5,18 @@ from __future__ import annotations
 import uuid
 
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
+from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import group_resolver
+from lightly_studio.services import recording_service
 from tests.helpers_resolvers import create_mcap
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 from tests.resolvers.mcap_group_sequence_resolver.helpers import McapSequenceFixture
@@ -45,6 +52,41 @@ def test_get_tick_details(test_client: TestClient, db_session: Session) -> None:
         "keyframe_log_time_ns": None,
     }
     assert body["annotations"] == []
+
+
+def test_get_tick_details__target_frame_id(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    fixture = helpers.create_mcap_sequence(session=db_session)
+    _add_tick(session=db_session, fixture=fixture)
+    spy = mocker.spy(recording_service, "get_tick_details")
+
+    response = test_client.get(
+        f"/datasets/{fixture.sequence_collection.dataset_id}/mcap-sequences/"
+        f"{fixture.sample_id}/ticks/0",
+        params={"target_frame_id": "CABIN"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert spy.call_args.kwargs["target_frame_id"] == "CABIN"
+
+
+def test_get_tick_details__transform_not_found(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(
+        recording_service,
+        "get_tick_details",
+        side_effect=McapAccessError("No transform connects the frames."),
+    )
+
+    response = test_client.get(
+        f"/datasets/{uuid.uuid4()}/mcap-sequences/{uuid.uuid4()}/ticks/0",
+        params={"target_frame_id": "CABIN"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json()["detail"] == "No transform connects the frames."
 
 
 def test_get_tick_details__unknown_sequence(test_client: TestClient) -> None:

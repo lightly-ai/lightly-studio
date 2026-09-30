@@ -21,7 +21,8 @@ export interface CloudPointFrameParams {
     channels: CloudPointChannelLocator[];
     /**
      * Frame to express every channel's points in, so that several lidars align. The backend
-     * maps each cloud with the recording's static transforms. Omit to keep each sensor frame.
+     * maps each cloud with the recording's static and dynamic transforms at the cloud's log time.
+     * Omit to keep each sensor frame.
      */
     targetFrameId?: string;
 }

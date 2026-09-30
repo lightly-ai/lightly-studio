@@ -36,10 +36,11 @@ def get_point_cloud(  # noqa: PLR0913
         recording_id: Recording to read the point cloud from.
         channel_id: Channel that carries the point-cloud messages.
         timestamp_ns: Log time of the message to read, in nanoseconds.
-        target_frame_id: Coordinate frame to express the points in, e.g. the frame
-            of a reference lidar. The points are mapped from the frame in the message
-            header with the static transforms of the recording, so that the point clouds
-            of several lidars align. ``None`` keeps the points in the sensor frame.
+        target_frame_id: Coordinate frame to express the points in, e.g. the world
+            frame. The points are mapped from the frame in the message header with the
+            static and dynamic transforms of the recording at the log time of the
+            message, so that the point clouds of several lidars align. ``None`` keeps
+            the points in the sensor frame.
 
     Returns:
         The decoded point-cloud payload, or ``None`` when the recording is
@@ -49,7 +50,7 @@ def get_point_cloud(  # noqa: PLR0913
     Raises:
         ChannelNotFoundError: If ``channel_id`` is not present in the recording.
         McapAccessError: If ``channel_id`` does not carry a point cloud, or if no
-            static transform connects the sensor frame to ``target_frame_id``.
+            chain of transforms connects the sensor frame to ``target_frame_id``.
     """
     recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
     if recording is None or recording.dataset_id != dataset_id:
@@ -70,7 +71,10 @@ def get_point_cloud(  # noqa: PLR0913
         )
     )
     transform = _transform_to_target_frame(
-        reader=reader, source_frame_id=source_frame_id, target_frame_id=target_frame_id
+        reader=reader,
+        source_frame_id=source_frame_id,
+        target_frame_id=target_frame_id,
+        timestamp_ns=message.log_time_ns,
     )
     return serialize_point_cloud.serialize_point_cloud(
         message=message.decoded_message,
@@ -83,15 +87,17 @@ def get_point_cloud(  # noqa: PLR0913
 
 
 def _transform_to_target_frame(
-    reader: McapFileReader, source_frame_id: str, target_frame_id: str | None
+    reader: McapFileReader, source_frame_id: str, target_frame_id: str | None, timestamp_ns: int
 ) -> NDArray[np.float64] | None:
-    """Return the static transform from the sensor frame to the target frame.
+    """Return the transform from the sensor frame to the target frame at a time.
 
     Returns `None` if the points stay in the sensor frame, so a recording without
-    static transforms can still serve points in their own frame.
+    transforms can still serve points in their own frame.
     """
     if target_frame_id is None or target_frame_id == source_frame_id:
         return None
-    return reader.get_static_transform(
-        parent_frame_id=target_frame_id, child_frame_id=source_frame_id
+    return reader.get_transform_at(
+        parent_frame_id=target_frame_id,
+        child_frame_id=source_frame_id,
+        timestamp_ns=timestamp_ns,
     )

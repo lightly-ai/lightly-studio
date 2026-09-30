@@ -38,7 +38,12 @@ describe('useTickDetails', () => {
         });
     });
 
-    const renderHook = (props: { datasetId: string; sequenceId: string; seqNumber: number }) => {
+    const renderHook = (props: {
+        datasetId: string;
+        sequenceId: string;
+        seqNumber: number;
+        targetFrameId?: string;
+    }) => {
         let result: ReturnType<typeof useTickDetails> | undefined;
         render(UseTickDetailsHarness, {
             ...props,
@@ -67,6 +72,21 @@ describe('useTickDetails', () => {
 
         expect(svelteQueryGen.getTickDetailsOptions).toHaveBeenCalledWith({
             path: { dataset_id: 'dataset-1', sequence_id: 'sequence-1', seq_number: 2 }
+        });
+    });
+
+    it('requests the cuboids in the target frame when one is given', () => {
+        renderHook({
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            seqNumber: 2,
+            targetFrameId: 'CABIN'
+        });
+        queryOptionsThunk();
+
+        expect(svelteQueryGen.getTickDetailsOptions).toHaveBeenCalledWith({
+            path: { dataset_id: 'dataset-1', sequence_id: 'sequence-1', seq_number: 2 },
+            query: { target_frame_id: 'CABIN' }
         });
     });
 

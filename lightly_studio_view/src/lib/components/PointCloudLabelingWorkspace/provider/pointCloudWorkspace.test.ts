@@ -25,7 +25,7 @@ const {
         ticksState: { data: undefined } as { data: unknown },
         // Live query objects, so a test can mark a frame as still loading.
         tickQuery: {
-            data: undefined,
+            data: undefined as unknown,
             isLoading: false,
             isError: false,
             isFetching: false,
@@ -86,6 +86,7 @@ describe('PointCloudWorkspace', () => {
         summaryState.isLoading = false;
         summaryState.isError = false;
         ticksState.data = undefined;
+        tickQuery.data = undefined;
         tickQuery.isFetching = false;
         cloudQuery.isFetching = false;
         cloudQuery.isPlaceholderData = false;
@@ -146,7 +147,7 @@ describe('PointCloudWorkspace', () => {
         expect(workspace.selectedLidarChannels).toEqual([3, 1]);
     });
 
-    it('aligns the point clouds in the cabin frame', () => {
+    it('aligns the point clouds in the map frame', () => {
         summaryState.data = {
             ...summaryWithChannels,
             lidar_channels: [
@@ -166,7 +167,44 @@ describe('PointCloudWorkspace', () => {
         };
         const workspace = createWorkspace();
         workspace.toggleLidarChannel(1);
+        expect(cloudParams.get?.().targetFrameId).toBe('map');
+    });
+
+    it('shows the scene in the selected frame and ignores an unknown frame', () => {
+        const workspace = createWorkspace();
+        expect(workspace.referenceFrameId).toBe('map');
+
+        workspace.selectReferenceFrame('CABIN');
+        expect(workspace.referenceFrameId).toBe('CABIN');
         expect(cloudParams.get?.().targetFrameId).toBe('CABIN');
+
+        workspace.selectReferenceFrame('unknown');
+        expect(workspace.referenceFrameId).toBe('CABIN');
+    });
+
+    it('exposes the cuboids of the active tick with one class per label', () => {
+        expect(createWorkspace().cuboids).toEqual([]);
+
+        tickQuery.data = {
+            annotations: [
+                {
+                    sample_id: 'annotation-1',
+                    annotation_collection_id: 'collection-1',
+                    annotation_label: { annotation_label_name: 'truck' },
+                    cuboid_3d_details: {
+                        frame_id: 'odom',
+                        ...{ px: 1, py: 2, pz: 3, qx: 0, qy: 0, qz: 0, qw: 1 },
+                        ...{ sx: 4, sy: 2, sz: 1 }
+                    }
+                },
+                { sample_id: 'box-2d', annotation_label: { annotation_label_name: 'car' } }
+            ]
+        };
+        const workspace = createWorkspace();
+        expect(workspace.cuboids.map((cuboid) => cuboid.id)).toEqual(['annotation-1']);
+        expect(workspace.annotationClasses.map((annotationClass) => annotationClass.id)).toEqual([
+            'truck'
+        ]);
     });
 
     it('starts on the initial tick when one is given', () => {

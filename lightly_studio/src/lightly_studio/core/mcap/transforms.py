@@ -66,7 +66,7 @@ class TransformTree:
         path = self._find_path(target_frame_id=target_frame_id, source_frame_id=source_frame_id)
         if path is None:
             raise TransformNotFoundError(
-                f"No static transform connects frame '{source_frame_id}' to '{target_frame_id}'."
+                f"No transform connects frame '{source_frame_id}' to '{target_frame_id}'."
             )
 
         matrix = np.eye(4, dtype=np.float64)
@@ -181,6 +181,32 @@ def to_matrix(transform: StaticTransform) -> NDArray[np.float64]:
     return matrix
 
 
+def transform_pose(
+    matrix: NDArray[np.float64],
+    position: tuple[float, float, float],
+    rotation: tuple[float, float, float, float],
+) -> tuple[tuple[float, float, float], tuple[float, float, float, float]]:
+    """Maps a pose to another frame.
+
+    Args:
+        matrix: The 4x4 homogeneous transform that maps points from the frame of the
+            pose to the target frame, e.g. from `TransformTree.lookup`.
+        position: The position as (x, y, z) in meters.
+        rotation: The orientation as a quaternion (x, y, z, w).
+
+    Returns:
+        The position and the orientation in the target frame. The orientation is a
+        unit quaternion (x, y, z, w) with `w >= 0`.
+
+    Raises:
+        ValueError: If the quaternion has zero length.
+    """
+    mapped_position = matrix[:3, :3] @ np.asarray(position, dtype=np.float64) + matrix[:3, 3]
+    mapped_rotation = _quaternion_from_matrix(matrix[:3, :3] @ _rotation_matrix(rotation))
+    x, y, z = (float(value) for value in mapped_position)
+    return (x, y, z), mapped_rotation
+
+
 def _transform(decoded_transform: Any, log_time_ns: int) -> StaticTransform:
     """Extracts a single transform from a decoded message or one of its entries.
 
@@ -285,3 +311,47 @@ def _rotation_matrix(rotation: tuple[float, float, float, float]) -> NDArray[np.
         ],
         dtype=np.float64,
     )
+
+
+def _quaternion_from_matrix(
+    rotation_matrix: NDArray[np.float64],
+) -> tuple[float, float, float, float]:
+    """Returns the quaternion of a rotation matrix.
+
+    Uses the largest of the four quaternion components as the pivot, so that the
+    result stays precise for every rotation.
+
+    Args:
+        rotation_matrix: The 3x3 rotation matrix.
+
+    Returns:
+        The rotation as a unit quaternion (x, y, z, w) with `w >= 0`.
+    """
+    m = rotation_matrix
+    trace = float(np.trace(m))
+    if trace > 0.0:
+        s = 2.0 * np.sqrt(trace + 1.0)
+        quaternion = np.array(
+            [(m[2, 1] - m[1, 2]) / s, (m[0, 2] - m[2, 0]) / s, (m[1, 0] - m[0, 1]) / s, s / 4]
+        )
+    elif m[0, 0] > m[1, 1] and m[0, 0] > m[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + m[0, 0] - m[1, 1] - m[2, 2])
+        quaternion = np.array(
+            [s / 4, (m[0, 1] + m[1, 0]) / s, (m[0, 2] + m[2, 0]) / s, (m[2, 1] - m[1, 2]) / s]
+        )
+    elif m[1, 1] > m[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + m[1, 1] - m[0, 0] - m[2, 2])
+        quaternion = np.array(
+            [(m[0, 1] + m[1, 0]) / s, s / 4, (m[1, 2] + m[2, 1]) / s, (m[0, 2] - m[2, 0]) / s]
+        )
+    else:
+        s = 2.0 * np.sqrt(1.0 + m[2, 2] - m[0, 0] - m[1, 1])
+        quaternion = np.array(
+            [(m[0, 2] + m[2, 0]) / s, (m[1, 2] + m[2, 1]) / s, s / 4, (m[1, 0] - m[0, 1]) / s]
+        )
+    quaternion /= np.linalg.norm(quaternion)
+    # A quaternion and its negation are the same rotation. Keep one of the two.
+    if quaternion[3] < 0.0:
+        quaternion = -quaternion
+    x, y, z, w = (float(value) for value in quaternion)
+    return x, y, z, w

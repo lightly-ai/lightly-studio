@@ -33,9 +33,10 @@ class PointCloudQuery(BaseModel):
     target_frame_id: str | None = Query(
         default=None,
         description=(
-            "The coordinate frame to express the points in, e.g. the frame of a reference "
-            "lidar, so that the point clouds of several lidars align. The points are mapped "
-            "with the recording's static transforms. Omit to keep the sensor frame."
+            "The coordinate frame to express the points in, e.g. the world frame, so that "
+            "the point clouds of several lidars align. The points are mapped with the "
+            "recording's static and dynamic transforms at the log time of the message. "
+            "Omit to keep the sensor frame."
         ),
     )
 

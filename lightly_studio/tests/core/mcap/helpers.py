@@ -34,6 +34,17 @@ LIDAR_LOG_TIMES_NS = (1_050_000_000, 1_250_000_000)
 CAMERA_INFO_LOG_TIME_NS = 1_000_000_000
 STATIC_TRANSFORM_LOG_TIME_NS = 900_000_000
 
+DYNAMIC_TRANSFORM_TOPIC = "/tf"
+WORLD_FRAME_ID = "odom"
+# The pose of the base frame in the world frame, logged at these times. The base frame
+# moves along the world x axis and turns by 90 degrees around the z axis at the second
+# pose. The last pose is logged far from the others, outside the dynamic transform window.
+DYNAMIC_TRANSFORMS = (
+    (1_000_000_000, (10.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0)),
+    (1_200_000_000, (20.0, 0.0, 0.0), (0.0, 0.0, 0.7071067811865476, 0.7071067811865476)),
+    (9_000_000_000, (99.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0)),
+)
+
 CAMERA_MATRIX = (600.0, 0.0, 320.0, 0.0, 600.0, 240.0, 0.0, 0.0, 1.0)
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 480
@@ -228,7 +239,9 @@ def write_mcap_with_compressed_image(path: Path) -> Path:
     return path
 
 
-def write_mcap_with_point_cloud(path: Path, with_static_transforms: bool = False) -> Path:
+def write_mcap_with_point_cloud(
+    path: Path, with_static_transforms: bool = False, with_dynamic_transforms: bool = False
+) -> Path:
     """Writes an MCAP with a lidar topic carrying an xyz PointCloud2 message.
 
     The message holds the finite points in `POINT_CLOUD_XYZ_POINTS` followed by one
@@ -238,6 +251,8 @@ def write_mcap_with_point_cloud(path: Path, with_static_transforms: bool = False
         path: The path to write the file to.
         with_static_transforms: Whether to also write the static transforms of
             `write_mcap`, which mount the lidar at (0, 1, 2) in the base frame.
+        with_dynamic_transforms: Whether to also write the poses in
+            `DYNAMIC_TRANSFORMS` of the base frame in the world frame.
 
     Returns:
         The path of the written file.
@@ -246,22 +261,51 @@ def write_mcap_with_point_cloud(path: Path, with_static_transforms: bool = False
     point_cloud_schema = writer.register_msgdef(
         datatype="sensor_msgs/msg/PointCloud2", msgdef_text=_POINT_CLOUD_MSGDEF
     )
+    tf_schema = writer.register_msgdef(
+        datatype="tf2_msgs/msg/TFMessage", msgdef_text=_TF_MESSAGE_MSGDEF
+    )
     if with_static_transforms:
-        tf_schema = writer.register_msgdef(
-            datatype="tf2_msgs/msg/TFMessage", msgdef_text=_TF_MESSAGE_MSGDEF
-        )
         writer.write_message(
             topic=STATIC_TRANSFORM_TOPIC,
             schema=tf_schema,
             message=_static_transforms_message(),
             log_time=STATIC_TRANSFORM_LOG_TIME_NS,
         )
+    if with_dynamic_transforms:
+        _write_dynamic_transforms(writer=writer, tf_schema=tf_schema)
     writer.write_message(
         topic=LIDAR_POINTS_TOPIC,
         schema=point_cloud_schema,
         message=_xyz_point_cloud_message(),
         log_time=LIDAR_LOG_TIMES_NS[0],
     )
+    writer.finish()
+    return path
+
+
+def write_mcap_with_dynamic_transforms(path: Path) -> Path:
+    """Writes an MCAP with the static transforms of `write_mcap` and dynamic transforms.
+
+    The dynamic transforms on `DYNAMIC_TRANSFORM_TOPIC` are the poses in
+    `DYNAMIC_TRANSFORMS` of the base frame in the world frame.
+
+    Args:
+        path: The path to write the file to.
+
+    Returns:
+        The path of the written file.
+    """
+    writer = Writer(output=str(path))
+    tf_schema = writer.register_msgdef(
+        datatype="tf2_msgs/msg/TFMessage", msgdef_text=_TF_MESSAGE_MSGDEF
+    )
+    writer.write_message(
+        topic=STATIC_TRANSFORM_TOPIC,
+        schema=tf_schema,
+        message=_static_transforms_message(),
+        log_time=STATIC_TRANSFORM_LOG_TIME_NS,
+    )
+    _write_dynamic_transforms(writer=writer, tf_schema=tf_schema)
     writer.finish()
     return path
 
@@ -554,6 +598,26 @@ def _xyz_point_cloud_message() -> dict[str, Any]:
     }
 
 
+def _write_dynamic_transforms(writer: Writer, tf_schema: Any) -> None:
+    """Writes the poses in `DYNAMIC_TRANSFORMS` on `DYNAMIC_TRANSFORM_TOPIC`."""
+    for log_time_ns, translation, rotation in DYNAMIC_TRANSFORMS:
+        writer.write_message(
+            topic=DYNAMIC_TRANSFORM_TOPIC,
+            schema=tf_schema,
+            message={
+                "transforms": [
+                    _transform_stamped(
+                        child_frame_id=BASE_FRAME_ID,
+                        translation=translation,
+                        rotation=rotation,
+                        parent_frame_id=WORLD_FRAME_ID,
+                    )
+                ]
+            },
+            log_time=log_time_ns,
+        )
+
+
 def _static_transforms_message() -> dict[str, Any]:
     """Returns a TF message with the camera and the lidar mounted on the base frame.
 
@@ -580,13 +644,14 @@ def _transform_stamped(
     child_frame_id: str,
     translation: tuple[float, float, float],
     rotation: tuple[float, float, float, float],
+    parent_frame_id: str = BASE_FRAME_ID,
 ) -> dict[str, Any]:
     x, y, z = translation
     quaternion_x, quaternion_y, quaternion_z, quaternion_w = rotation
     return {
         "header": {
             "stamp": _time(STATIC_TRANSFORM_LOG_TIME_NS),
-            "frame_id": BASE_FRAME_ID,
+            "frame_id": parent_frame_id,
         },
         "child_frame_id": child_frame_id,
         "transform": {

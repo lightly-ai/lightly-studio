@@ -4,6 +4,8 @@
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
     import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
+    import GroundGrid from './GroundGrid/GroundGrid.svelte';
+    import OriginAxes from './OriginAxes/OriginAxes.svelte';
     import type {
         AnnotationClass,
         Bounds3,
@@ -12,7 +14,7 @@
         WorkspaceTool
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
-    /** Composes the shared Threlte scene from the point cloud and annotation layers. */
+    /** Composes the shared Threlte scene from the point cloud, ground grid, origin axes, and annotation layers. */
     interface Props {
         /** Point positions and intensities consumed by the existing renderer. */
         batch?: PointBatch;
@@ -80,6 +82,8 @@
 >
     <Canvas>
         <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
+        <GroundGrid />
+        <OriginAxes />
         <CuboidLayer
             {cuboids}
             {annotationClasses}

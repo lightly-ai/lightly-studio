@@ -21,7 +21,8 @@
      * beneath it and the frame timeline at the bottom. Annotations stay in a resizable right pane,
      * and the tool rail floats over the viewport rather than taking a column of its own.
      *
-     * Loads the selected LiDAR payloads for the active tick and renders them in the 3D scene.
+     * Loads the selected LiDAR payloads for the active tick and renders them in the 3D scene,
+     * together with the tick's cuboid annotations.
      */
     interface Props {
         sampleId: string;
@@ -58,6 +59,7 @@
         statusOverride: status
     }));
     let selectedCuboidId = $state<string | null>(null);
+    let hoveredCuboidId = $state<string | null>(null);
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
@@ -107,6 +109,9 @@
     />
     <Separator class="shrink-0 bg-border-hard" />
     <WorkspaceFilterBar
+        referenceFrames={workspace.referenceFrames}
+        referenceFrameId={workspace.referenceFrameId}
+        onSelectReferenceFrame={workspace.selectReferenceFrame}
         {lidarChannels}
         {cameraChannels}
         selectedLidarChannels={workspace.selectedLidarChannels}
@@ -144,12 +149,24 @@
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
                                 <WorkspaceStatusPanel status="loading" {onExit} />
                             {:else if workspace.cloudPointFrame.data}
-                                <SceneViewport
-                                    batch={workspace.cloudPointFrame.data.batch}
-                                    colorMode={workspace.cloudPointFrame.data.batch.colors
-                                        ? 'rgb'
-                                        : 'intensity'}
-                                />
+                                <!-- The camera fits the points once per mount. Mount the scene again
+                                     when the shown points change frame, not when the pick changes,
+                                     because the previous points stay shown while the next load. -->
+                                {#key workspace.cloudPointFrame.data.channels[0]?.frameId}
+                                    <SceneViewport
+                                        batch={workspace.cloudPointFrame.data.batch}
+                                        colorMode={workspace.cloudPointFrame.data.batch.colors
+                                            ? 'rgb'
+                                            : 'intensity'}
+                                        cuboids={workspace.cuboids}
+                                        annotationClasses={workspace.annotationClasses}
+                                        selectedAnnotationId={selectedCuboidId}
+                                        hoveredAnnotationId={hoveredCuboidId}
+                                        onselect={(annotationId) =>
+                                            (selectedCuboidId = annotationId)}
+                                        onhover={(annotationId) => (hoveredCuboidId = annotationId)}
+                                    />
+                                {/key}
                             {:else}
                                 <WorkspaceStatusPanel status="empty" {onExit} />
                             {/if}
@@ -161,6 +178,7 @@
                                 {datasetId}
                                 {sequenceId}
                                 seqNumber={workspace.currentTick}
+                                targetFrameId={workspace.referenceFrameId}
                             />
                         </Pane>
                         <WorkspacePaneResizer direction="vertical" />
@@ -178,7 +196,11 @@
                 </Pane>
                 <WorkspacePaneResizer direction="horizontal" />
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <PointCloudRightSidePanel bind:selectedCuboidId />
+                    <PointCloudRightSidePanel
+                        cuboids={workspace.cuboids}
+                        annotationClasses={workspace.annotationClasses}
+                        bind:selectedCuboidId
+                    />
                 </Pane>
             </PaneGroup>
         {/if}

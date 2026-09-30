@@ -19,6 +19,7 @@ from lightly_studio.core.mcap.errors import (
     DataNotLoadedError,
     McapAccessError,
     TopicNotFoundError,
+    TransformNotFoundError,
 )
 from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
 from tests.core.mcap import helpers
@@ -335,6 +336,58 @@ class TestMcapFileReader:
                 child_frame_id=helpers.LIDAR_FRAME_ID,
                 topic="/unknown",
             )
+
+    def test_get_transform_at(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_dynamic_transforms(tmp_path / "with_tf.mcap")
+
+        with McapFileReader(path) as reader:
+            matrix = reader.get_transform_at(
+                parent_frame_id=helpers.LIDAR_FRAME_ID,
+                child_frame_id=helpers.WORLD_FRAME_ID,
+                timestamp_ns=1_150_000_000,
+            )
+
+        # The pose at 1.2 s is the closest one. It puts the base 20 m ahead in the world,
+        # turned by 90 degrees, so the base sees the world origin 20 m to its left. The
+        # lidar is mounted at (0, 1, 2) in the base frame.
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [0.0, 19.0, -2.0, 1.0])
+
+    def test_get_transform_at__closest_earlier_transform(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_dynamic_transforms(tmp_path / "with_tf.mcap")
+
+        with McapFileReader(path) as reader:
+            matrix = reader.get_transform_at(
+                parent_frame_id=helpers.LIDAR_FRAME_ID,
+                child_frame_id=helpers.WORLD_FRAME_ID,
+                timestamp_ns=1_050_000_000,
+            )
+
+        # The pose at 1.0 s puts the base 10 m ahead in the world, not turned.
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [-10.0, -1.0, -2.0, 1.0])
+
+    def test_get_transform_at__no_dynamic_transform_in_window(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_dynamic_transforms(tmp_path / "with_tf.mcap")
+
+        with McapFileReader(path) as reader, pytest.raises(TransformNotFoundError):
+            reader.get_transform_at(
+                parent_frame_id=helpers.LIDAR_FRAME_ID,
+                child_frame_id=helpers.WORLD_FRAME_ID,
+                timestamp_ns=5_000_000_000,
+            )
+
+    def test_get_transform_at__static_transforms_only(self, reader: McapFileReader) -> None:
+        matrix = reader.get_transform_at(
+            parent_frame_id=helpers.CAMERA_FRAME_ID,
+            child_frame_id=helpers.LIDAR_FRAME_ID,
+            timestamp_ns=1_000_000_000,
+        )
+
+        assert np.allclose(
+            matrix,
+            reader.get_static_transform(
+                parent_frame_id=helpers.CAMERA_FRAME_ID, child_frame_id=helpers.LIDAR_FRAME_ID
+            ),
+        )
 
     def test_get_decoded_message_at(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")

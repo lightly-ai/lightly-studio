@@ -47,6 +47,13 @@ from lightly_studio.type_definitions import PathLike
 logger = logging.getLogger(__name__)
 
 STATIC_TRANSFORM_TOPIC = "/tf_static"
+DYNAMIC_TRANSFORM_TOPIC = "/tf"
+
+# Dynamic transforms are read in this window before and after the requested time. The
+# window holds a message of every transform published at 10 Hz or faster. A chunk holds
+# the messages of all topics, so a wider window decompresses more chunks, e.g. about
+# 160 ms for this window and 1 s for a window of 1 s in a recording with 70 ms chunks.
+_DYNAMIC_TRANSFORM_WINDOW_NS = 100_000_000
 
 # The fsspec read cache of a reader opened for random access. It keeps the most recently
 # used blocks, so that reads of nearby messages, e.g. the point clouds of several lidars
@@ -143,6 +150,7 @@ class McapFileReader:
         self._locators_by_topic: dict[str, list[FrameLocator]] = {}
         self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
         self._transform_tree_by_topic: dict[str, TransformTree] = {}
+        self._static_transforms_by_topic: dict[str, list[StaticTransform]] = {}
         self._decoder_by_channel_id: dict[int, Callable[[bytes], Any] | None] = {}
         # Reads seek the shared stream, so one reader can serve several threads only
         # one read at a time. Reentrant, because public methods call each other.
@@ -335,6 +343,46 @@ class McapFileReader:
                 target_frame_id=parent_frame_id, source_frame_id=child_frame_id
             )
 
+    def get_transform_at(
+        self,
+        parent_frame_id: str,
+        child_frame_id: str,
+        timestamp_ns: int,
+        static_topic: str = STATIC_TRANSFORM_TOPIC,
+        dynamic_topic: str = DYNAMIC_TRANSFORM_TOPIC,
+    ) -> NDArray[np.float64]:
+        """Returns the transform between two coordinate frames at a point in time.
+
+        Composes the static transforms with the dynamic transforms, e.g. the pose of a
+        moving vehicle in the world frame. For each child frame, the dynamic transform
+        logged closest to `timestamp_ns` is used. Only the dynamic transforms logged
+        within `_DYNAMIC_TRANSFORM_WINDOW_NS` of `timestamp_ns` are read. A topic that
+        is not in the file counts as a topic without transforms.
+
+        Args:
+            parent_frame_id: The frame to map points to, e.g. the frame of a lidar.
+            child_frame_id: The frame to map points from, e.g. the world frame.
+            timestamp_ns: The time of the transform, in nanoseconds.
+            static_topic: The topic the static transforms are published on.
+            dynamic_topic: The topic the dynamic transforms are published on.
+
+        Returns:
+            The 4x4 homogeneous transform that maps points from the child frame to the
+            parent frame.
+
+        Raises:
+            TransformNotFoundError: If no chain of transforms connects the two frames.
+            McapAccessError: If a message on one of the topics cannot be decoded.
+        """
+        with self._lock:
+            tree = TransformTree(
+                [
+                    *self._cached_static_transforms(topic=static_topic),
+                    *self._dynamic_transforms_near(topic=dynamic_topic, timestamp_ns=timestamp_ns),
+                ]
+            )
+            return tree.lookup(target_frame_id=parent_frame_id, source_frame_id=child_frame_id)
+
     def get_decoded_message_at(
         self,
         channel_id: int,
@@ -513,6 +561,55 @@ class McapFileReader:
                 transforms.from_decoded_message(decoded_message, log_time_ns=log_time_ns)
             )
         return static_transforms
+
+    def _cached_static_transforms(self, topic: str) -> list[StaticTransform]:
+        """Returns the transforms of a static topic, or none if the topic is not in the file.
+
+        Raises:
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        if topic not in self._static_transforms_by_topic:
+            self._static_transforms_by_topic[topic] = (
+                self._read_static_transforms(topic) if self._has_topic(topic) else []
+            )
+        return self._static_transforms_by_topic[topic]
+
+    def _dynamic_transforms_near(self, topic: str, timestamp_ns: int) -> list[StaticTransform]:
+        """Returns, per child frame, the transform logged closest to a time.
+
+        Returns none if the topic is not in the file.
+
+        Raises:
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        if not self._has_topic(topic):
+            return []
+        closest_by_child: dict[str, StaticTransform] = {}
+        try:
+            for _, _, message, decoded_message in self._reader.iter_decoded_messages(
+                topics=[topic],
+                start_time=max(timestamp_ns - _DYNAMIC_TRANSFORM_WINDOW_NS, 0),
+                end_time=timestamp_ns + _DYNAMIC_TRANSFORM_WINDOW_NS + 1,
+            ):
+                for transform in transforms.from_decoded_message(
+                    decoded_message, log_time_ns=message.log_time
+                ):
+                    closest = closest_by_child.get(transform.child_frame_id)
+                    if closest is None or abs(transform.log_time_ns - timestamp_ns) < abs(
+                        closest.log_time_ns - timestamp_ns
+                    ):
+                        closest_by_child[transform.child_frame_id] = transform
+        except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
+            raise McapAccessError(
+                f"Cannot decode the messages of topic '{topic}' in '{self.path}': {exc}"
+            ) from exc
+        return list(closest_by_child.values())
+
+    def _has_topic(self, topic: str) -> bool:
+        """Returns whether a topic is in the file."""
+        self.get_topics()
+        assert self._topics_by_name is not None
+        return topic in self._topics_by_name
 
     def _require_topic_info(self, topic: str) -> TopicInfo:
         """Returns the info of a topic.

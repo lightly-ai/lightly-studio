@@ -1,11 +1,19 @@
 import { useMcapSequenceSummary, useSequenceTicks, useTickDetails } from '$lib/hooks';
 import { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
+import {
+    toAnnotationClasses,
+    toCuboidAnnotations
+} from '$lib/components/PointCloudLabelingWorkspace/tickAnnotations/tickAnnotations';
 import type { PointCloudWorkspaceContext, WorkspaceStatus } from './types';
 
-// Every lidar point cloud is shown in this frame, so that the lidars align and the scene is upright.
-// The Gravis lidars are mounted on the cabin, and the front one is mounted upside down.
-// TODO(Horatiu, 09/2026): Make the reference frame configurable per dataset.
-const REFERENCE_FRAME_ID = 'CABIN';
+// Every lidar point cloud and cuboid is shown in the selected frame, so that the lidars align and
+// the scene is upright. In the world frame `map` the static surroundings stay in place while the
+// vehicle moves; in the vehicle frame `CABIN` the vehicle stays in place. The first is the default.
+// TODO(Horatiu, 09/2026): Read the reference frames of a dataset from its recordings.
+const REFERENCE_FRAMES = [
+    { id: 'map', name: 'Map' },
+    { id: 'CABIN', name: 'Cabin' }
+] as const;
 
 export type GetInputs = () => {
     datasetId: string;
@@ -26,6 +34,8 @@ export type GetInputs = () => {
 export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     currentTick = $state(0);
     isPlaying = $state(false);
+    readonly referenceFrames = REFERENCE_FRAMES;
+    referenceFrameId = $state<string>(REFERENCE_FRAMES[0].id);
 
     readonly #getInputs: GetInputs;
     readonly #summary: ReturnType<typeof useMcapSequenceSummary>['summary'];
@@ -62,6 +72,11 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     );
     readonly cameraChannels = $derived.by(() => this.#summary.data?.camera_channels ?? []);
 
+    readonly cuboids = $derived.by(() =>
+        toCuboidAnnotations(this.tickDetails.data?.annotations ?? [])
+    );
+    readonly annotationClasses = $derived.by(() => toAnnotationClasses(this.cuboids));
+
     constructor(getInputs: GetInputs) {
         const { summary, refetch } = useMcapSequenceSummary({
             getDatasetId: () => getInputs().datasetId,
@@ -79,7 +94,9 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         const { tickDetails } = useTickDetails({
             getDatasetId: () => getInputs().datasetId,
             getSequenceId: () => getInputs().sequenceId,
-            getSeqNumber: () => this.currentTick
+            getSeqNumber: () => this.currentTick,
+            // The cuboids are mapped into the frame of the point clouds, so that the two align.
+            getTargetFrameId: () => this.referenceFrameId
         });
         const channels = $derived.by(() => {
             const details = tickDetails.data;
@@ -96,7 +113,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
             datasetId: getInputs().datasetId,
             recordingId: tickDetails.data?.recording_id ?? '',
             channels,
-            targetFrameId: REFERENCE_FRAME_ID
+            targetFrameId: this.referenceFrameId
         }));
         this.tickDetails = tickDetails;
         this.cloudPointFrame = query;
@@ -115,6 +132,13 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     get sequenceId(): string {
         return this.#getInputs().sequenceId;
     }
+
+    // Arrow function, because the filter bar passes it as an event handler without the instance.
+    selectReferenceFrame = (frameId: string): void => {
+        if (this.referenceFrames.some((frame) => frame.id === frameId)) {
+            this.referenceFrameId = frameId;
+        }
+    };
 
     toggleLidarChannel(channelId: number): void {
         const selected = this.selectedLidarChannels;

@@ -1,6 +1,10 @@
 import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local/types.gen';
 import type { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
 import type { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
+import type {
+    AnnotationClass,
+    CuboidAnnotation
+} from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 /** Lifecycle of the workspace as a whole; drives which shell state is rendered. */
 export type WorkspaceStatus = 'loading' | 'unsupported' | 'empty' | 'error' | 'ready';
@@ -24,6 +28,16 @@ export interface PointCloudWorkspaceContext {
     readonly tickDetails: ReturnType<typeof useTickDetails>['tickDetails'];
     /** Combined point cloud for the selected lidar channels in the active tick. */
     readonly cloudPointFrame: ReturnType<typeof useCloudPointFrame>['query'];
+    /** Frames the point clouds and the cuboids can be shown in. */
+    readonly referenceFrames: readonly { readonly id: string; readonly name: string }[];
+    /** Frame the point clouds and the cuboids are shown in; one of `referenceFrames`. */
+    readonly referenceFrameId: string;
+    /** Shows the scene in another of `referenceFrames`; ignores an unknown frame. */
+    selectReferenceFrame: (frameId: string) => void;
+    /** 3D cuboid annotations of the active tick. */
+    readonly cuboids: CuboidAnnotation[];
+    /** One class per label name used by `cuboids`, with its display color. */
+    readonly annotationClasses: AnnotationClass[];
     readonly ticks: TickView[];
     readonly currentTick: number;
     readonly isPlaying: boolean;

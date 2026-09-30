@@ -19,6 +19,12 @@ const cameraChannels: ChannelSummaryView[] = [
 ];
 
 const defaultProps = {
+    referenceFrames: [
+        { id: 'map', name: 'Map' },
+        { id: 'CABIN', name: 'Cabin' }
+    ],
+    referenceFrameId: 'map',
+    onSelectReferenceFrame: vi.fn(),
     lidarChannels,
     cameraChannels,
     selectedLidarChannels: [] as number[],
@@ -29,6 +35,10 @@ const defaultProps = {
 
 describe('WorkspaceFilterBar', () => {
     beforeAll(() => {
+        // The bits-ui select of the frame uses pointer-capture APIs that jsdom does not implement.
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
         Element.prototype.scrollIntoView = vi.fn();
     });
 
@@ -62,6 +72,19 @@ describe('WorkspaceFilterBar', () => {
         await user.click(screen.getByText('rear'));
 
         expect(onToggleCameraChannel).toHaveBeenCalledExactlyOnceWith(3);
+    });
+
+    it('shows the selected frame and selects another frame by its id', async () => {
+        const user = userEvent.setup();
+        const onSelectReferenceFrame = vi.fn();
+        render(WorkspaceFilterBar, { props: { ...defaultProps, onSelectReferenceFrame } });
+
+        const trigger = screen.getByTestId('workspace-frame-select');
+        expect(trigger).toHaveTextContent('Frame: Map');
+        await user.click(trigger);
+        await user.click(screen.getByTestId('workspace-frame-select-CABIN'));
+
+        expect(onSelectReferenceFrame).toHaveBeenCalledExactlyOnceWith('CABIN');
     });
 
     it('disables a lane that has no channels', () => {

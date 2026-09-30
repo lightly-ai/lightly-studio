@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
+from types import MappingProxyType, SimpleNamespace
 
 import pytest
 
@@ -20,6 +20,10 @@ def test_get_field__second_name() -> None:
 
 def test_get_field__mapping() -> None:
     assert message_fields.get_field({"K": [1.0]}, ("k", "K")) == [1.0]
+
+
+def test_get_field__read_only_mapping() -> None:
+    assert message_fields.get_field(MappingProxyType({"K": [1.0]}), ("k", "K")) == [1.0]
 
 
 def test_get_field__missing() -> None:

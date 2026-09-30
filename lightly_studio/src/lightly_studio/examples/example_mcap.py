@@ -88,10 +88,10 @@ env = Env()
 env.read_env()
 # Read as a string, not as a path, so that a URI such as `s3://my-bucket/bags/` survives
 # unchanged. Set `EXAMPLES_MCAP_PATH` to a folder of indexed `.mcap` files to run this.
-#mcap_path = env.str("EXAMPLES_MCAP_PATH", r"D:\data\mcap\example_data_ingest\mcaps\rosbag2_2026_08_02-20_05_43_0.mcap")
-mcap_path = env.str("EXAMPLES_MCAP_PATH", "s3://horatiu-mcap-test/full_size/Copy of rosbag2_2026_08_02-20_05_43_0.mcap")
+mcap_path = env.str("EXAMPLES_MCAP_PATH", r"D:\data\mcap\example_data_ingest\mcaps")
+#mcap_path = env.str("EXAMPLES_MCAP_PATH", "s3://horatiu-mcap-test/full_size/Copy of rosbag2_2026_08_02-20_05_43_0.mcap")
 
-db_manager.connect(cleanup_existing=True)
+db_manager.connect(cleanup_existing=False)
 dataset = ls.McapDataset.load_or_create(components=COMPONENTS, name="mcap_sequence_example")
 dataset.add_mcaps_from_path(
     path=mcap_path,
