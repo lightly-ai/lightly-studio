@@ -1,5 +1,6 @@
-import { beforeAll, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { beforeAll, describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/svelte';
+import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
@@ -52,6 +53,7 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
 const defaultProps = { sampleId: 'sample-1', datasetId: 'dataset-1', sequenceId: 'sequence-1' };
 
 describe('PointCloudLabelingWorkspace', () => {
+    afterEach(() => vi.useRealTimers());
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
     });
@@ -177,6 +179,20 @@ describe('PointCloudLabelingWorkspace', () => {
         await user.click(screen.getByRole('button', { name: 'Previous frame' }));
         expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
         expect(onTickChange).toHaveBeenLastCalledWith(1);
+    });
+
+    it('plays through ticks at the selected interval and stops at the end', async () => {
+        vi.useFakeTimers();
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Play frames' }));
+        await vi.advanceTimersByTimeAsync(300);
+        flushSync();
+        expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
+
+        await vi.advanceTimersByTimeAsync(300);
+        flushSync();
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
     });
 
     it('updates the active frame when the route tick changes', async () => {

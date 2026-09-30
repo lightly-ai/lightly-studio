@@ -93,6 +93,7 @@ function createRetryHandler(
 export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     currentTick = $state(0);
     isPlaying = $state(false);
+    playbackIntervalMs = $state(300);
 
     readonly #getInputs: GetInputs;
     readonly #summary: ReturnType<typeof useMcapSequenceSummary>['summary'];
@@ -179,6 +180,17 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     };
 
     togglePlayback = (): void => {
+        if (
+            !this.isPlaying &&
+            this.ticks.length > 0 &&
+            this.currentTick === this.ticks.at(-1)?.seq_number
+        ) {
+            this.currentTick = this.ticks[0].seq_number;
+        }
         this.isPlaying = !this.isPlaying;
+    };
+
+    setPlaybackIntervalMs = (intervalMs: number): void => {
+        this.playbackIntervalMs = intervalMs;
     };
 }

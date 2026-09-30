@@ -14,6 +14,7 @@
         currentTick: number;
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
+        playbackIntervalMs: number;
         /** Point-cloud channel names rendered as timeline lanes. */
         lidarChannelNames?: string[];
         /** Image and video channel names rendered as timeline lanes. */
@@ -24,17 +25,22 @@
         onNextFrame: () => void;
         /** Toggle playback between playing and paused. */
         onPlayToggle: () => void;
+        onPlaybackIntervalChange: (intervalMs: number) => void;
+        onSelectTick: (seqNumber: number) => void;
     }
 
     let {
         ticks,
         currentTick,
         isPlaying,
+        playbackIntervalMs,
         lidarChannelNames = [],
         cameraChannelNames = [],
         onPreviousFrame,
         onNextFrame,
-        onPlayToggle
+        onPlayToggle,
+        onPlaybackIntervalChange,
+        onSelectTick
     }: Props = $props();
 
     // Ticks can be sparse, so resolve the active seq number to its array position rather than
@@ -62,12 +68,14 @@
     <TimelineTransport
         {frameLabel}
         {isPlaying}
+        {playbackIntervalMs}
         hasTicks={ticks.length > 0}
         {canGoPrevious}
         {canGoNext}
         {onPreviousFrame}
         {onNextFrame}
         {onPlayToggle}
+        {onPlaybackIntervalChange}
     />
-    <TimelineTracks {ticks} {currentTick} {lanes} />
+    <TimelineTracks {ticks} {currentTick} {lanes} {onSelectTick} />
 </div>
