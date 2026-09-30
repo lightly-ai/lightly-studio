@@ -26,3 +26,6 @@ coverage.json
 
 # docs build
 /docs/site
+
+# OpenAPI schema export cache
+.openapi.json.signature

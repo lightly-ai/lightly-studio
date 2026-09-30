@@ -293,6 +293,10 @@ else
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
 endif
 
+.PHONY: export-schema-cached
+export-schema-cached:
+	@uv run src/lightly_studio/export_schema.py --if-changed
+
 .PHONY: export-version
 export-version:
 	@echo "Exporting version information for lightly_studio_view..."
