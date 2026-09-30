@@ -1,4 +1,4 @@
-"""Route that returns the MCAP channel locators for one tick of a sequence."""
+"""Route that returns the MCAP channel locators and annotations for one tick of a sequence."""
 
 from __future__ import annotations
 
@@ -27,7 +27,8 @@ def get_tick_details(
     The tick is identified by `sequence_id` and `seq_number`. The response
     includes `recording_id` and, for each component, the fields
     needed to request a rendered frame from the recording's camera-frame endpoint:
-    `channel_id` and `keyframe_log_time_ns`.
+    `channel_id` and `keyframe_log_time_ns`. It also includes the annotations
+    attached to the tick, e.g. 3D cuboids.
 
     Args:
         session: The database session.
@@ -36,7 +37,7 @@ def get_tick_details(
         seq_number: The zero-based position of the tick to fetch.
 
     Returns:
-        The tick detail with per-channel locators.
+        The tick detail with per-channel locators and annotations.
 
     Raises:
         NotFoundError: If the sequence does not exist, does not belong to

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.mcap import McapTable
 
 
@@ -57,7 +58,7 @@ class TickChannelView(BaseModel):
 
 
 class TickDetailView(BaseModel):
-    """One tick with its per-component MCAP locators."""
+    """One tick with its per-component MCAP locators and annotations."""
 
     recording_id: UUID = Field(description="The recording this tick belongs to.")
     seq_number: int = Field(description="Zero-based position of the tick in the sequence.")
@@ -66,4 +67,7 @@ class TickDetailView(BaseModel):
     )
     channels: dict[str, TickChannelView] = Field(
         description="MCAP locators keyed by component name, e.g. `front` or `pcl_front`."
+    )
+    annotations: list[AnnotationView] = Field(
+        description="Annotations attached to the tick, e.g. 3D cuboids."
     )
