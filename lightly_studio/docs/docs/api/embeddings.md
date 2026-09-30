@@ -109,9 +109,8 @@ capability.
 
 ## Serving
 
-`lightly_studio_serve` serves an embedder over HTTP. An import can embed through it with
-[`register_default_embedder`](#register_default_embedder), and
-[`register_remote_embedder`](#register_remote_embedder) can connect a filled dataset to it. See
+`lightly_studio_serve` serves an embedder over HTTP, so that
+[`register_remote_embedder`](#register_remote_embedder) can connect a dataset to it. See
 [Serving an embedder from a remote server](../core_concepts/embeddings.md#serving-an-embedder-from-a-remote-server).
 
 ### serve

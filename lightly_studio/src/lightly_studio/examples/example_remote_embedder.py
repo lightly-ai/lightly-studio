@@ -1,10 +1,9 @@
-"""Example of an import and search through an embedder on a remote server.
+"""Example of search through an embedder on a remote server.
 
-A subprocess serves ``ColorServerEmbedder`` with ``lightly_studio_serve.serve``.
-``ls.register_default_embedder`` registers the server before the import, so the import embeds
-the images on the server and the dataset stores the URL and the API key. Search then embeds
-the queries on the same server. The embedder maps an image to its mean color, so no model is
-downloaded. Search for "red", "green", "blue" or "white", or paste an image.
+A subprocess serves ``ColorServerEmbedder`` with ``lightly_studio_serve.serve``. The dataset
+fills the space at ingestion with ``ColorPathEmbedder``, then ``ls.register_remote_embedder``
+points search at the server. Both map an image to its mean color, so no model is downloaded.
+Search for "red", "green", "blue" or "white", or paste an image.
 """
 
 from __future__ import annotations
@@ -19,13 +18,11 @@ import lightly_studio_serve
 import numpy as np
 from environs import Env
 from lightly_studio_serve import protocol
-from lightly_studio_serve.embedder import ImageBytesEmbedder, TextEmbedder
+from lightly_studio_serve.embedder import ImageBytesEmbedder, ImagePathEmbedder, TextEmbedder
 from PIL import Image
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
-from lightly_studio.embed.remote import connection
-from lightly_studio.embed.remote.embedder import RemoteEmbedder
 
 SPACE_KEY = "example/mean-color@v1"
 EMBEDDING_DIMENSION = 3
@@ -41,11 +38,23 @@ COLOR_VECTORS = {
 }
 
 
-class ColorServerEmbedder(TextEmbedder, ImageBytesEmbedder):
-    """Embeds the images at import and the search queries. Runs on the server."""
+class ColorPathEmbedder(ImagePathEmbedder):
+    """Embeds images by path at ingestion. Runs in the LightlyStudio process."""
 
     def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
-        """Describe the mean-color space."""
+        """Describe the shared mean-color space."""
+        return ls.EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=EMBEDDING_DIMENSION)
+
+    def embed_images(self, paths: list[str]) -> ls.EmbeddingResult:
+        """Embed each image file as its mean color."""
+        return _result(rows=[_mean_color(image=Image.open(path)) for path in paths])
+
+
+class ColorServerEmbedder(TextEmbedder, ImageBytesEmbedder):
+    """Embeds search queries. Runs on the server."""
+
+    def embedding_space_spec(self) -> ls.EmbeddingSpaceSpec:
+        """Describe the shared mean-color space."""
         return ls.EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=EMBEDDING_DIMENSION)
 
     def embed_text(self, texts: list[str]) -> ls.EmbeddingResult:
@@ -53,7 +62,7 @@ class ColorServerEmbedder(TextEmbedder, ImageBytesEmbedder):
         return _result(rows=[_text_color(text=text) for text in texts])
 
     def embed_image_bytes(self, images: list[bytes]) -> ls.EmbeddingResult:
-        """Embed each image as its mean color."""
+        """Embed each uploaded image as its mean color."""
         return _result(rows=[_mean_color(image=Image.open(io.BytesIO(data))) for data in images])
 
 
@@ -68,14 +77,10 @@ def main() -> None:
     _wait_for_server(server=server, api_key=api_key)
 
     db_manager.connect(cleanup_existing=True)
-    # The registry holds the embedder, and with it the client, until the process ends
-    ls.register_default_embedder(
-        embedder=RemoteEmbedder.connect(
-            client=connection.build_client(url=SERVER_URL), api_key=api_key
-        )
-    )
+    ls.register_default_embedder(embedder=ColorPathEmbedder())
     dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=env.path("EXAMPLES_DATASET_PATH"))
+    ls.register_remote_embedder(dataset=dataset, url=SERVER_URL, api_key=api_key)
     ls.start_gui()
 
 
