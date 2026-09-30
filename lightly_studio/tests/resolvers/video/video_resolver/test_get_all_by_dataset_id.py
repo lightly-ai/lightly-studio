@@ -143,9 +143,7 @@ def test_get_all_by_collection_id__with_embedding_region_and_pagination(
         collection_id=collection.collection_id,
         videos=[VideoStub(path=f"/sample{i}.mp4") for i in range(4)],
     )
-    region = EmbeddingRegion(
-        polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1)]
-    )
+    region = EmbeddingRegion(polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1)])
     mocker.patch.object(
         embedding_region_resolver,
         "get_sample_ids_in_region",
@@ -161,7 +159,7 @@ def test_get_all_by_collection_id__with_embedding_region_and_pagination(
 
     assert result.total_count == 3
     assert len(result.samples) == 1
-    assert result.samples[0].sample_id in set(video_ids[:3])
+    assert result.samples[0].sample_id == video_ids[1]
 
 
 def test_get_all_by_collection_id__empty_output(

@@ -109,7 +109,7 @@ def test_count_video_frame_annotations_by_video_collection_without_filter(
     assert annotations[1].current_count == 1
 
 
-def test_count_video_annotations__with_embedding_region(
+def test_count_video_frame_annotations_by_video_collection__with_embedding_region(
     db_session: Session, mocker: MockerFixture
 ) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)

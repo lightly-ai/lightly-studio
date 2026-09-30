@@ -75,18 +75,14 @@ def test_build_sample_ids_query(db_session: Session) -> None:
     assert set(db_session.exec(filtered_query).all()) == {created_video_ids[1]}
 
 
-def test_get_sample_ids__with_embedding_region(
-    db_session: Session, mocker: MockerFixture
-) -> None:
+def test_get_sample_ids__with_embedding_region(db_session: Session, mocker: MockerFixture) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video_ids = create_videos(
         session=db_session,
         collection_id=collection.collection_id,
         videos=[VideoStub(path="/path/to/a.mp4"), VideoStub(path="/path/to/b.mp4")],
     )
-    region = EmbeddingRegion(
-        polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1)]
-    )
+    region = EmbeddingRegion(polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1)])
     mocker.patch.object(
         embedding_region_resolver, "get_sample_ids_in_region", return_value=[video_ids[1]]
     )
