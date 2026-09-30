@@ -83,6 +83,7 @@
                 }}
                 {isResizable}
                 {onBoundingBoxChanged}
+                isSelectable
             />
         </SelectableSvgGroup>
     {/key}
