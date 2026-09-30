@@ -6,6 +6,8 @@ interface FetchCloudPointFrameParams {
     datasetId: string;
     recordingId: string;
     channel: CloudPointChannelLocator;
+    /** Frame to express the points in. Omit to keep the sensor frame. */
+    targetFrameId?: string;
     signal?: AbortSignal;
 }
 
@@ -14,12 +16,17 @@ export async function fetchCloudPointFrame({
     datasetId,
     recordingId,
     channel,
+    targetFrameId,
     signal
 }: FetchCloudPointFrameParams): Promise<CloudPointFrame> {
     const { channelId, timestampNs } = channel;
     const { data, response } = await getPointCloud({
         path: { dataset_id: datasetId, recording_id: recordingId },
-        query: { channel_id: channelId, timestamp_ns: timestampNs },
+        query: {
+            channel_id: channelId,
+            timestamp_ns: timestampNs,
+            ...(targetFrameId ? { target_frame_id: targetFrameId } : {})
+        },
         parseAs: 'arrayBuffer',
         signal
     });

@@ -44,6 +44,11 @@ const {
     tickRefetch: vi.fn(),
     cloudRefetch: vi.fn()
 }));
+const { cloudState } = vi.hoisted(() => ({
+    cloudState: { data: undefined } as {
+        data: { channels: Array<{ frameId: string }> } | undefined;
+    }
+}));
 
 vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     useMcapSequenceSummary: () => ({ summary: summaryState, refetch })
@@ -58,7 +63,14 @@ vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
 }));
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
-        query: { data: undefined, isLoading: false, isError: false, refetch: cloudRefetch }
+        query: {
+            get data() {
+                return cloudState.data;
+            },
+            isLoading: false,
+            isError: false,
+            refetch: cloudRefetch
+        }
     })
 }));
 
@@ -68,6 +80,11 @@ const summaryWithChannels = {
     start_log_time_ns: 0,
     lidar_channels: [{ channel_id: 1, group_component_name: 'lidar', group_component_index: 0 }],
     camera_channels: [{ channel_id: 2, group_component_name: 'front', group_component_index: 0 }]
+};
+
+const summaryWithFrames = {
+    ...summaryWithChannels,
+    reference_frames: [{ name: 'map' }, { name: 'CABIN' }]
 };
 
 const createWorkspace = (statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error') =>
@@ -86,6 +103,46 @@ describe('PointCloudWorkspace', () => {
         tickDetailsState.data = undefined;
         tickDetailsState.isLoading = false;
         tickDetailsState.isError = false;
+        cloudState.data = undefined;
+    });
+
+    it('defaults to the first reference frame, or none without frames', () => {
+        expect(createWorkspace().referenceFrameId).toBe('');
+
+        summaryState.data = summaryWithFrames;
+        expect(createWorkspace().referenceFrameId).toBe('map');
+    });
+
+    it('selects a known reference frame and ignores an unknown one', () => {
+        summaryState.data = summaryWithFrames;
+        const workspace = createWorkspace();
+
+        workspace.selectReferenceFrame('CABIN');
+        expect(workspace.referenceFrameId).toBe('CABIN');
+
+        workspace.selectReferenceFrame('odom');
+        expect(workspace.referenceFrameId).toBe('CABIN');
+    });
+
+    it('resets the picked reference frame when the sequence changes', () => {
+        summaryState.data = summaryWithFrames;
+        let sequenceId = $state('seq-1');
+        const workspace = new PointCloudWorkspace(() => ({ datasetId: 'dataset-1', sequenceId }));
+        workspace.selectReferenceFrame('CABIN');
+
+        sequenceId = 'seq-2';
+
+        expect(workspace.referenceFrameId).toBe('map');
+    });
+
+    it.each<[Array<{ frameId: string }>, boolean]>([
+        [[{ frameId: 'map' }, { frameId: 'map' }], false],
+        [[{ frameId: 'lidar_left' }, { frameId: 'lidar_right' }], true]
+    ])('flags a tick shown in the sensor frames %#', (channels, expected) => {
+        summaryState.data = summaryWithFrames;
+        cloudState.data = { channels };
+
+        expect(createWorkspace().isShowingSensorFrames).toBe(expected);
     });
 
     it('exposes the inputs it was built with', () => {

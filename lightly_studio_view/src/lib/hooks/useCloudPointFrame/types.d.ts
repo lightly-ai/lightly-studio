@@ -19,6 +19,8 @@ export interface CloudPointFrameParams {
     recordingId: string;
     /** The channels to load and merge into a single frame. */
     channels: CloudPointChannelLocator[];
+    /** Frame to express the points in. Omit to keep each sensor frame. */
+    targetFrameId?: string;
 }
 
 /** A parsed point-cloud frame with its batch data, metadata, and source channels. */
