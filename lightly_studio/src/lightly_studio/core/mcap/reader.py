@@ -139,6 +139,7 @@ class McapFileReader:
         self._locators_by_topic: dict[str, list[FrameLocator]] = {}
         self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
         self._transform_tree_by_topic: dict[str, TransformTree] = {}
+        self._static_transforms_by_topic: dict[str, list[StaticTransform]] = {}
         self._decoder_by_channel_id: dict[int, Callable[[bytes], Any] | None] = {}
 
     def close(self) -> None:
@@ -163,6 +164,7 @@ class McapFileReader:
         topics: Sequence[str],
         start_time_ns: int | None = None,
         end_time_ns: int | None = None,
+        static_transform_topic: str | None = None,
     ) -> None:
         """Reads several topics in a single pass and caches their frame locators.
 
@@ -179,6 +181,10 @@ class McapFileReader:
             topics: The topics to locate the messages of. A repeated topic is read once.
             start_time_ns: If given, messages logged before this time are skipped.
             end_time_ns: If given, messages logged at or after this time are skipped.
+            static_transform_topic: If given, the transforms of this topic are read in
+                the same pass and cached for `get_static_transforms`. Only the
+                transforms logged in the time range are read. A topic that is not in
+                the file caches no transforms.
 
         Raises:
             TopicNotFoundError: If one of the topics is not in the file.
@@ -193,9 +199,20 @@ class McapFileReader:
         self._require_chunk_index()
         locators_by_topic: dict[str, list[FrameLocator]] = {topic: [] for topic in unique_topics}
         keyframe_log_time_ns_by_topic: dict[str, int | None] = dict.fromkeys(video_topics)
+        static_transforms: list[StaticTransform] = []
+        read_topics = [
+            *unique_topics,
+            *([static_transform_topic] if static_transform_topic else []),
+        ]
         for schema, channel, message in self._reader.iter_messages(
-            topics=unique_topics, start_time=start_time_ns, end_time=end_time_ns
+            topics=read_topics, start_time=start_time_ns, end_time=end_time_ns
         ):
+            if channel.topic == static_transform_topic:
+                static_transforms.extend(
+                    self._transforms_of_message(schema=schema, channel=channel, message=message)
+                )
+            if channel.topic not in locators_by_topic:
+                continue
             locator = self._locator_for_message(
                 schema=schema,
                 channel=channel,
@@ -206,6 +223,8 @@ class McapFileReader:
             if locator is not None:
                 locators_by_topic[channel.topic].append(locator)
         self._locators_by_topic.update(locators_by_topic)
+        if static_transform_topic:
+            self._static_transforms_by_topic[static_transform_topic] = static_transforms
 
     @overload
     def get_frame_locators(
@@ -321,6 +340,23 @@ class McapFileReader:
         return self._transform_tree_by_topic[topic].lookup(
             target_frame_id=parent_frame_id, source_frame_id=child_frame_id
         )
+
+    def get_static_transforms(self, topic: str = STATIC_TRANSFORM_TOPIC) -> list[StaticTransform]:
+        """Returns the static transforms published on a topic.
+
+        A topic that is not in the file counts as a topic without transforms. The
+        result is cached for the lifetime of the reader. The topic is read only if
+        `load_data_for_topics` did not read it already. Indexing stores these edges.
+
+        Args:
+            topic: The topic the static transforms are published on.
+
+        Returns:
+            One transform per edge in the topic. A later edge for the same child frame
+            is included as its own entry; the caller decides which one to keep. A
+            message that cannot be decoded, or holds no transform, is skipped.
+        """
+        return list(self._cached_static_transforms(topic=topic))
 
     def get_decoded_message_at(
         self,
@@ -499,6 +535,50 @@ class McapFileReader:
                 transforms.from_decoded_message(decoded_message, log_time_ns=log_time_ns)
             )
         return static_transforms
+
+    def _cached_static_transforms(self, topic: str) -> list[StaticTransform]:
+        """Returns the transforms of a static topic, or none if the topic is not in the file."""
+        if topic not in self._static_transforms_by_topic:
+            self._static_transforms_by_topic[topic] = self._read_transforms(topic)
+        return self._static_transforms_by_topic[topic]
+
+    def _read_transforms(self, topic: str) -> list[StaticTransform]:
+        """Reads the transforms of every message on a topic, skipping unreadable messages.
+
+        Returns none if the topic is not in the file.
+        """
+        if not self._has_topic(topic):
+            return []
+        return [
+            transform
+            for schema, channel, message in self._reader.iter_messages(topics=[topic])
+            for transform in self._transforms_of_message(
+                schema=schema, channel=channel, message=message
+            )
+        ]
+
+    def _transforms_of_message(
+        self, schema: Schema | None, channel: Channel, message: Message
+    ) -> list[StaticTransform]:
+        """Returns the transforms of a message, or none if it cannot be read."""
+        decoded_message = self._decoded_payload(schema=schema, channel=channel, message=message)
+        if decoded_message is None:
+            return []
+        try:
+            return transforms.from_decoded_message(decoded_message, log_time_ns=message.log_time)
+        except McapAccessError:
+            logger.warning(
+                "Cannot read the transforms of a message of topic '%s' in '%s'. It is skipped.",
+                channel.topic,
+                self.path,
+            )
+            return []
+
+    def _has_topic(self, topic: str) -> bool:
+        """Returns whether a topic is in the file."""
+        self.get_topics()
+        assert self._topics_by_name is not None
+        return topic in self._topics_by_name
 
     def _require_topic_info(self, topic: str) -> TopicInfo:
         """Returns the info of a topic.
