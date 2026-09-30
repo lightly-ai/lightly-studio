@@ -4,6 +4,7 @@ import { useAdjacentSamples } from '../useAdjacentSamples/useAdjacentSamples';
 import { useAnnotationSortBy } from '$lib/hooks';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useTags } from '../useTags/useTags';
+import { buildSimilarityThresholdFilter, useSimilarityThreshold } from '../useSimilarityThreshold';
 
 export const useAdjacentAnnotations = ({
     sampleId,
@@ -15,6 +16,7 @@ export const useAdjacentAnnotations = ({
     const { selectedAnnotationFilterIds, textEmbedding } = useGlobalStorage();
     const { tagsSelected } = useTags({ collection_id: collectionId });
     const { getSortBy } = useAnnotationSortBy();
+    const { threshold } = useSimilarityThreshold();
     const embedding = get(textEmbedding);
     const sortBy = embedding ? undefined : (getSortBy(collectionId) ?? undefined);
 
@@ -31,7 +33,8 @@ export const useAdjacentAnnotations = ({
                         get(selectedAnnotationFilterIds).size > 0
                             ? Array.from(get(selectedAnnotationFilterIds))
                             : undefined,
-                    tag_ids: get(tagsSelected).size > 0 ? Array.from(get(tagsSelected)) : undefined
+                    tag_ids: get(tagsSelected).size > 0 ? Array.from(get(tagsSelected)) : undefined,
+                    ...buildSimilarityThresholdFilter(embedding?.embedding, get(threshold))
                 },
                 annotation_sort_by: sortBy
             }

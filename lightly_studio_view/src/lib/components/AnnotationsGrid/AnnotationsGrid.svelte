@@ -10,6 +10,7 @@
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
     import { useAnnotationSortBy } from '$lib/hooks';
+    import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
     import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
@@ -68,6 +69,10 @@
     // Only apply it when this annotation collection actually has embeddings.
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId: collection_id }));
     const searchEmbedding = $derived(hasEmbeddingsQuery.data ? $textEmbedding : undefined);
+    const { threshold: similarityThreshold } = useSimilarityThreshold();
+    const minSimilarity = $derived(
+        searchEmbedding ? ($similarityThreshold ?? undefined) : undefined
+    );
 
     // Drag-to-search crop preview. Tiles report only their crop geometry; the blob is
     // rendered lazily when a drag starts (not per visible tile), and revoked on unmount.
@@ -103,6 +108,7 @@
         embedding_region: plotSelectedRegion ?? undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
         text_embedding: searchEmbedding?.embedding ?? undefined,
+        min_similarity: minSimilarity,
         // Similarity ordering keeps precedence, so the two are never sent together.
         sort_by: searchEmbedding ? undefined : ($sortByFor(collection_id) ?? undefined)
     });
@@ -122,6 +128,7 @@
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
             (searchEmbedding ? `search:${searchEmbedding.queryText}` : '') +
+            (minSimilarity !== undefined ? `threshold:${minSimilarity}` : '') +
             (queryParams.sort_by ? `sort:${JSON.stringify(queryParams.sort_by)}` : '')
     );
 

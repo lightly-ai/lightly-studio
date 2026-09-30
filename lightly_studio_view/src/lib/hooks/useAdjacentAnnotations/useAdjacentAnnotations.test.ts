@@ -31,6 +31,7 @@ vi.mock('$lib/hooks', () => ({
 }));
 
 import { useAdjacentAnnotations } from './useAdjacentAnnotations';
+import { useSimilarityThreshold } from '../useSimilarityThreshold';
 
 describe('useAdjacentAnnotations', () => {
     beforeEach(() => {
@@ -39,6 +40,7 @@ describe('useAdjacentAnnotations', () => {
         selectedAnnotationFilterIds.set(new Set());
         tagsSelected.set(new Set());
         textEmbedding.set(undefined);
+        useSimilarityThreshold().clearThreshold();
         getSortByMock.mockReturnValue(null);
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
@@ -132,5 +134,25 @@ describe('useAdjacentAnnotations', () => {
             })
         );
         expect(result.sortBy).toBeUndefined();
+    });
+
+    it('adds the similarity threshold to the filters while a threshold is set', () => {
+        textEmbedding.set({ queryText: 'a dog', embedding: [0.1, 0.2] });
+        useSimilarityThreshold().setThreshold(0.7);
+
+        useAdjacentAnnotations({ sampleId: 'ann-123', collectionId: 'col-9' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({
+                        filters: expect.objectContaining({
+                            text_embedding: [0.1, 0.2],
+                            min_similarity: 0.7
+                        })
+                    })
+                })
+            })
+        );
     });
 });

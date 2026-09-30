@@ -11,6 +11,8 @@ import {
     type ImageAnnotationView
 } from '$lib/api/lightly_studio_local';
 import AnnotationsGrid from './AnnotationsGrid.svelte';
+import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
+import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
 
 const SORT_BY: AnnotationEvaluationMetricSortExpr = {
     source: 'annotation_evaluation_metric',
@@ -251,6 +253,7 @@ describe('AnnotationsGrid', () => {
         mocks.hasEmbeddings = false;
         mocks.textEmbeddingStore.set(undefined);
         mocks.sortBy = null;
+        useSimilarityThreshold().clearThreshold();
     });
 
     function renderWithSortSelection() {
@@ -282,6 +285,23 @@ describe('AnnotationsGrid', () => {
 
         expect(tiles[0]).toHaveAttribute('data-annotation-id', 'cls-1');
         expect(screen.getByTestId('mock-grid-scroll-reset-key')).not.toHaveTextContent('sort:');
+    });
+
+    it('sends the similarity threshold while a similarity search is active', () => {
+        mocks.hasEmbeddings = true;
+        mocks.textEmbeddingStore.set({
+            embedding: [0.1, 0.2],
+            queryText: 'a cat'
+        } as unknown as undefined);
+        useSimilarityThreshold().setThreshold(0.7);
+
+        renderGrid();
+
+        const getParams = vi.mocked(useAnnotationsInfinite).mock.calls[0][0];
+        expect(getParams()).toEqual(
+            expect.objectContaining({ text_embedding: [0.1, 0.2], min_similarity: 0.7 })
+        );
+        expect(screen.getByTestId('mock-grid-scroll-reset-key')).toHaveTextContent('threshold:0.7');
     });
 
     it('renders two separate tiles for two classification annotations', () => {

@@ -192,6 +192,20 @@ describe('resolveContextFilter', () => {
             });
         });
 
+        it('returns AnnotationsFilter with the similarity threshold when it is set', () => {
+            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.annotations };
+            expect(
+                resolveContextFilter(ctx, null, null, null, new Set(), new Set(), {
+                    text_embedding: [0.1, 0.2],
+                    min_similarity: 0.7
+                })
+            ).toEqual({
+                filter_type: 'annotations',
+                text_embedding: [0.1, 0.2],
+                min_similarity: 0.7
+            });
+        });
+
         it('returns undefined when no filters are set', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.annotations };
             expect(

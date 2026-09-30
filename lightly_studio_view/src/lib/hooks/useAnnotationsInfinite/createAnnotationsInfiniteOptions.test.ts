@@ -77,6 +77,20 @@ describe('createAnnotationsInfiniteOptions', () => {
             expect(options1.queryKey).not.toEqual(options2.queryKey);
         });
 
+        it('produces different keys for different min_similarity values', () => {
+            const options1 = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                text_embedding: [0.1],
+                min_similarity: 0.5
+            });
+            const options2 = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                text_embedding: [0.1],
+                min_similarity: 0.6
+            });
+            expect(options1.queryKey).not.toEqual(options2.queryKey);
+        });
+
         it('produces different keys for different sort_by values', () => {
             const options1 = createAnnotationsInfiniteOptions({
                 collection_id: 'col-1',
@@ -183,6 +197,23 @@ describe('createAnnotationsInfiniteOptions', () => {
             expect(readAnnotationsWithPayloadMock).toHaveBeenCalledWith(
                 expect.objectContaining({
                     body: expect.objectContaining({ embedding_region })
+                })
+            );
+        });
+
+        it('passes min_similarity to readAnnotationsWithPayload body', async () => {
+            const options = createAnnotationsInfiniteOptions({
+                collection_id: 'col-1',
+                text_embedding: [0.5, 0.5],
+                min_similarity: 0.7
+            });
+            await callQueryFn(options, { pageParam: 0, signal: new AbortController().signal });
+            expect(readAnnotationsWithPayloadMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    body: expect.objectContaining({
+                        text_embedding: [0.5, 0.5],
+                        min_similarity: 0.7
+                    })
                 })
             );
         });

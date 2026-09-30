@@ -9,6 +9,10 @@ import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 import { getFrameFilter } from '$lib/hooks/useFramesFilter/frameFilter';
 import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
 import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+import {
+    buildSimilarityThresholdFilter,
+    useSimilarityThreshold
+} from '$lib/hooks/useSimilarityThreshold';
 import { fetchSampleIdsForImages } from './fetchSampleIdsForImages';
 import { fetchSampleIdsForVideos } from './fetchSampleIdsForVideos';
 import { fetchSampleIdsForVideoFrames } from './fetchSampleIdsForVideoFrames';
@@ -31,13 +35,15 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
         setSelectAllSnapshot,
         setSelectAllAnnotationSnapshot,
         clearSelectAllSnapshot,
-        clearSelectAllAnnotationSnapshot
+        clearSelectAllAnnotationSnapshot,
+        textEmbedding
     } = useGlobalStorage();
     const { imageFilter, filterParams: imageFilterParams } = useImageFilters();
     const { filterParams: videoFilterParams } = useVideoFilters();
     const { filterParams: frameFilterParams } = useFramesFilter();
     const { annotationFilter } = useSelectedAnnotationsFilter(collectionId);
     const { annotationPlotRegion } = useAnnotationPlotSelection();
+    const { threshold: similarityThreshold } = useSimilarityThreshold();
 
     let isLoading = false;
 
@@ -84,12 +90,17 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
                 // The plot selection is geometry; the backend resolves it to sample ids when
                 // fetching / tagging, so select-all also carries the region, not a list.
                 const plotRegion = get(annotationPlotRegion);
+                const thresholdFilter = buildSimilarityThresholdFilter(
+                    get(textEmbedding)?.embedding,
+                    get(similarityThreshold)
+                );
                 const filter =
-                    plotRegion !== null
+                    plotRegion !== null || thresholdFilter.min_similarity !== undefined
                         ? {
                               ...get(annotationFilter),
                               filter_type: GRID_FILTER_TYPE.annotations,
-                              embedding_region: plotRegion
+                              ...(plotRegion !== null && { embedding_region: plotRegion }),
+                              ...thresholdFilter
                           }
                         : get(annotationFilter);
                 return {

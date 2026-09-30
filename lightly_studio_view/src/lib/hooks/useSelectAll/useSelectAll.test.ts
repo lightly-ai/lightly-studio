@@ -60,6 +60,8 @@ vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', async () => {
 import { toast } from 'svelte-sonner';
 import { useSelectAll } from './useSelectAll';
 import { fetchSampleIdsForImages } from './fetchSampleIdsForImages';
+import { fetchSampleIdsForAnnotations } from './fetchSampleIdsForAnnotations';
+import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -96,6 +98,8 @@ describe('useSelectAll', () => {
         videoParamsStore().set(null);
         frameParamsStore().set(null);
         annotationFilterStore().set(undefined);
+        storage.setTextEmbedding(undefined);
+        useSimilarityThreshold().clearThreshold();
     });
 
     it('records the captured filter and size into the sample store (images)', async () => {
@@ -139,6 +143,23 @@ describe('useSelectAll', () => {
 
         expect(annotationSnapshot()).toEqual({ filter: annotationFilter, size: 3 });
         expect(sampleSnapshot()).toBeNull();
+    });
+
+    it('adds the similarity threshold to the annotations filter', async () => {
+        annotationFilterStore().set({ filter_type: 'annotations', annotation_label_ids: ['a1'] });
+        storage.setTextEmbedding({ queryText: 'a dog', embedding: [0.1, 0.2] });
+        useSimilarityThreshold().setThreshold(0.7);
+
+        await useSelectAll(collectionId, 'annotations').handleSelectAll();
+
+        const expectedFilter = {
+            filter_type: 'annotations',
+            annotation_label_ids: ['a1'],
+            text_embedding: [0.1, 0.2],
+            min_similarity: 0.7
+        };
+        expect(fetchSampleIdsForAnnotations).toHaveBeenCalledWith(collectionId, expectedFilter);
+        expect(annotationSnapshot()).toEqual({ filter: expectedFilter, size: 3 });
     });
 
     it('normalizes an empty annotations select-all to a conditionless typed filter', async () => {

@@ -24,6 +24,12 @@ import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import {
+    buildSimilarityThresholdFilter,
+    useSimilarityThreshold
+} from '$lib/hooks/useSimilarityThreshold';
+
+type SimilarityThresholdFilter = ReturnType<typeof buildSimilarityThresholdFilter>;
 
 export type PageContext = {
     routeId: string | null;
@@ -68,7 +74,8 @@ export function resolveContextFilter(
     videoFilter: VideoFilter | null,
     frameFilter: VideoFrameFilter | null,
     annotationFilterIds: Set<string>,
-    tagsSelected: Set<string>
+    tagsSelected: Set<string>,
+    annotationThresholdFilter: SimilarityThresholdFilter = {}
 ): OperatorContextFilter {
     if (isAnnotationDetailsRoute(routeId) && annotationId) {
         return { filter_type: 'sample', sample_ids: [annotationId] } satisfies SampleFilter;
@@ -79,11 +86,13 @@ export function resolveContextFilter(
     if (isAnnotationsRoute(routeId)) {
         const labelIds = Array.from(annotationFilterIds);
         const tagIds = Array.from(tagsSelected);
-        if (labelIds.length === 0 && tagIds.length === 0) return undefined;
+        const hasThreshold = annotationThresholdFilter.min_similarity !== undefined;
+        if (labelIds.length === 0 && tagIds.length === 0 && !hasThreshold) return undefined;
         return {
             filter_type: 'annotations',
             ...(labelIds.length > 0 && { annotation_label_ids: labelIds }),
-            ...(tagIds.length > 0 && { tag_ids: tagIds })
+            ...(tagIds.length > 0 && { tag_ids: tagIds }),
+            ...annotationThresholdFilter
         } satisfies AnnotationsFilter;
     }
     if (isCaptionsRoute(routeId))
@@ -109,8 +118,18 @@ export function useOperatorContext(
     const { imageFilter } = useImageFilters();
     const { videoFilter } = useVideoFilters();
     const { frameFilter } = useFramesFilter();
-    const { selectedAnnotationFilterIds, filteredSampleCount, filteredAnnotationCount } =
-        useGlobalStorage();
+    const {
+        selectedAnnotationFilterIds,
+        filteredSampleCount,
+        filteredAnnotationCount,
+        textEmbedding
+    } = useGlobalStorage();
+    const { threshold: similarityThreshold } = useSimilarityThreshold();
+    const annotationThresholdFilter = derived(
+        [textEmbedding, similarityThreshold],
+        ([$textEmbedding, $threshold]) =>
+            buildSimilarityThresholdFilter($textEmbedding?.embedding, $threshold)
+    );
 
     const contextFilter = derived(
         [
@@ -119,7 +138,8 @@ export function useOperatorContext(
             videoFilter,
             frameFilter,
             selectedAnnotationFilterIds,
-            tagsSelected
+            tagsSelected,
+            annotationThresholdFilter
         ],
         ([
             $p,
@@ -127,7 +147,8 @@ export function useOperatorContext(
             $videoFilter,
             $frameFilter,
             $annotationFilterIds,
-            $tagsSelected
+            $tagsSelected,
+            $annotationThresholdFilter
         ]): OperatorContextFilter =>
             resolveContextFilter(
                 $p,
@@ -135,24 +156,38 @@ export function useOperatorContext(
                 $videoFilter,
                 $frameFilter,
                 $annotationFilterIds,
-                $tagsSelected
+                $tagsSelected,
+                $annotationThresholdFilter
             )
     );
 
     // True only when the user has applied explicit filters — excludes intrinsic route constraints
     // (e.g. the captions route always sends has_captions:true, which is not a user-applied filter).
     const hasActiveFilter = derived(
-        [routeId, imageFilter, videoFilter, frameFilter, selectedAnnotationFilterIds, tagsSelected],
+        [
+            routeId,
+            imageFilter,
+            videoFilter,
+            frameFilter,
+            selectedAnnotationFilterIds,
+            tagsSelected,
+            annotationThresholdFilter
+        ],
         ([
             $routeId,
             $imageFilter,
             $videoFilter,
             $frameFilter,
             $annotationFilterIds,
-            $tagsSelected
+            $tagsSelected,
+            $annotationThresholdFilter
         ]) => {
             if (isAnnotationsRoute($routeId)) {
-                return $annotationFilterIds.size > 0 || $tagsSelected.size > 0;
+                return (
+                    $annotationFilterIds.size > 0 ||
+                    $tagsSelected.size > 0 ||
+                    $annotationThresholdFilter.min_similarity !== undefined
+                );
             }
             if (isImagesRoute($routeId)) return $imageFilter !== null;
             if (isVideosRoute($routeId)) return $videoFilter !== null;

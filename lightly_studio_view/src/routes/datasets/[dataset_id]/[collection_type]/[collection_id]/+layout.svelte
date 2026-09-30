@@ -612,7 +612,7 @@
                                 />
                             {/if}
 
-                            {#if (isImages || isVideos) && $textEmbedding}
+                            {#if hasMediaWithEmbeddings && $textEmbedding}
                                 <SimilarityThresholdFilter
                                     {collectionId}
                                     textEmbedding={$textEmbedding.embedding}
