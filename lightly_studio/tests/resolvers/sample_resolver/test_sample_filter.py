@@ -39,7 +39,9 @@ from tests.helpers_resolvers import (
     create_annotation_label,
     create_annotations,
     create_collection,
+    create_embedding_model,
     create_images,
+    create_samples_with_embeddings,
     create_tag,
 )
 from tests.resolvers.evaluation_sample_metric_resolver import (
@@ -497,6 +499,40 @@ class TestSampleFilter:
         spy.assert_called_once()
         assert spy.call_args.kwargs["sample_id_column"] is col(SampleTable.sample_id)
         assert [sample.sample_id for sample in result] == [samples[0].sample_id]
+
+    def test_apply__similarity_threshold_combined_with_tag(self, db_session: Session) -> None:
+        collection_id = create_collection(session=db_session).collection_id
+        model_id = create_embedding_model(
+            session=db_session,
+            collection_id=collection_id,
+            embedding_dimension=2,
+            set_as_default=True,
+        ).embedding_model_id
+        similar_tagged, _, dissimilar_tagged = create_samples_with_embeddings(
+            session=db_session,
+            collection_id=collection_id,
+            embedding_model_id=model_id,
+            images_and_embeddings=[
+                (ImageStub(path="similar_tagged.png"), [1.0, 0.0]),
+                (ImageStub(path="similar_untagged.png"), [1.0, 0.1]),
+                (ImageStub(path="dissimilar_tagged.png"), [0.0, 1.0]),
+            ],
+        )
+        tag = create_tag(session=db_session, collection_id=collection_id)
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=db_session,
+            tag_id=tag.tag_id,
+            sample_ids=[similar_tagged.sample_id, dissimilar_tagged.sample_id],
+        )
+
+        sample_filter = SampleFilter(
+            tag_ids=[tag.tag_id],
+            text_embedding=[1.0, 0.0],
+            min_similarity=0.9,
+        )
+        result = db_session.exec(sample_filter.apply(query=select(SampleTable))).all()
+
+        assert [sample.sample_id for sample in result] == [similar_tagged.sample_id]
 
     def test_apply__combination_with_query_expr(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)

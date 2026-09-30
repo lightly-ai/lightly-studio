@@ -21,10 +21,11 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from lightly_studio.resolvers.metadata_resolver import metadata_filter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
+from lightly_studio.resolvers.similarity_threshold_filter import SimilarityThresholdFilter
 from lightly_studio.type_definitions import QueryType
 
 
-class SampleFilter(RegionSampleIdsFilter):
+class SampleFilter(RegionSampleIdsFilter, SimilarityThresholdFilter):
     """Encapsulates filter parameters for querying samples."""
 
     filter_type: Literal["sample"] = "sample"
@@ -53,6 +54,9 @@ class SampleFilter(RegionSampleIdsFilter):
         query = self._apply_metadata_filters(query)
         query = self._apply_captions_filter(query)
         query = self._apply_region_sample_ids_filter(
+            query, sample_id_column=col(SampleTable.sample_id)
+        )
+        query = self._apply_similarity_threshold_filter(
             query, sample_id_column=col(SampleTable.sample_id)
         )
         return self._apply_query_expr_filter(query)

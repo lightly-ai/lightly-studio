@@ -8,6 +8,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_OK,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.resolvers import (
     tag_resolver,
@@ -135,6 +136,19 @@ def test_read_samples__filters(
         str(samples[1].sample_id),
         str(samples[3].sample_id),
     }
+
+
+def test_read_samples__min_similarity_without_text_embedding(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    json_body = {"filters": {"min_similarity": 0.9}}
+    response = test_client.post(f"/api/collections/{collection_id}/samples/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+    assert "min_similarity requires text_embedding." in response.json()["detail"][0]["msg"]
 
 
 def test_add_tag_to_sample_calls_add_tag_to_sample(
