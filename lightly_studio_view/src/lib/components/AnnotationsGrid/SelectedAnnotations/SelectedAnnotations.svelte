@@ -6,6 +6,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
+    import DeleteAnnotationsDialog from './DeleteAnnotationsDialog/DeleteAnnotationsDialog.svelte';
 
     type Props = {
         selectedAnnotations: Array<AnnotationView>;
@@ -13,9 +14,20 @@
         disabled?: boolean;
         isLoading?: boolean;
         collectionId: string;
+        /** Number of all selected annotations, including the ones not loaded in the grid. */
+        selectedCount: number;
+        onDelete: () => Promise<void>;
     };
 
-    const { selectedAnnotations, onSelect, disabled, isLoading, collectionId }: Props = $props();
+    const {
+        selectedAnnotations,
+        onSelect,
+        disabled,
+        isLoading,
+        collectionId,
+        selectedCount,
+        onDelete
+    }: Props = $props();
 
     const result = useAnnotationLabels(() => ({ collectionId }));
 
@@ -46,6 +58,9 @@
                         {/snippet}
                     </SelectList>
                 </div>
+            </Segment>
+            <Segment title="Delete annotations">
+                <DeleteAnnotationsDialog {selectedCount} {onDelete} />
             </Segment>
         </div>
     </CardContent>
