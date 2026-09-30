@@ -4,21 +4,9 @@
     import { Button } from '$lib/components';
 
     import { useQueryEditor } from './useQueryEditor';
+    import { DEFAULT_QUERIES, formatTranslationErrors } from './QueryEditor.helpers';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
     import type { RootScope } from './language/types';
-
-    const DEFAULT_VALUES: Record<RootScope, string> = {
-        image: `# Example query
-width < 500
-AND "reviewed" IN tags
-AND object_detection(class_name = "person" AND x > 10)
-`,
-        video: `# Example query
-duration_s > 10
-AND "reviewed" IN tags
-AND object_detection(class_name = "person")
-`
-    };
 
     interface QueryEditorProps {
         value?: string;
@@ -37,24 +25,11 @@ AND object_detection(class_name = "person")
         onSave
     }: QueryEditorProps = $props();
 
-    const initialValue = $derived(valueProp ?? DEFAULT_VALUES[rootScope]);
+    const initialValue = $derived(valueProp ?? DEFAULT_QUERIES[rootScope]);
 
     let containerEl = $state<HTMLDivElement | null>(null);
 
     const { mount, translateQuery } = useQueryEditor();
-
-    function formatTranslationErrors(
-        result: Extract<QueryExprTranslationResult, { status: 'error' }>
-    ): string {
-        return result.errors
-            .map((error) => {
-                if (error.line !== undefined && error.column !== undefined) {
-                    return `${error.message} (line ${error.line}, column ${error.column})`;
-                }
-                return error.message;
-            })
-            .join('\n');
-    }
 
     function handleSave() {
         const translationResult = translateQuery(draftValue, rootScope);
@@ -69,12 +44,9 @@ AND object_detection(class_name = "person")
     let draftValue = $state(untrack(() => initialValue));
     let lastAppliedValue = $state<string | null>(untrack(() => valueProp ?? null));
 
-    // Remount the editor when `rootScope` changes: a new Monaco model re-stamps the
-    // model scope (used by validation) so it never disagrees with the prop scope
-    // (used by Apply), and the scope-specific default example loads. Only
-    // `rootScope` and `containerEl` drive the remount (both read reactively here);
-    // the current `value`/example is read untracked so a parent value change does
-    // not rebuild the editor.
+    // Remount when `rootScope` changes, so the model scope (validation) matches the
+    // prop scope (Apply) and the scope's default example loads. The value is read
+    // untracked, so a parent value change does not rebuild the editor.
     $effect(() => {
         const scope = rootScope;
         const el = containerEl;
