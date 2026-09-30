@@ -188,19 +188,23 @@ stop-postgres:
 
 .PHONY: start-floci
 start-floci:
-	@docker rm -f $(FLOCI_CONTAINER_NAME) >/dev/null 2>&1 || true
-	@docker run -d --name $(FLOCI_CONTAINER_NAME) -p $(FLOCI_PORT):4566 \
-		-v /var/run/docker.sock:/var/run/docker.sock -u root floci/floci:latest
-	@echo "Waiting for Floci..."
-	@deadline=$$(($$(date +%s) + $(FLOCI_STARTUP_TIMEOUT_SECONDS))); \
-	until curl -sf http://localhost:$(FLOCI_PORT)/_floci/health >/dev/null; do \
-		if [ $$(date +%s) -ge $$deadline ]; then \
-			echo "Floci did not become ready within $(FLOCI_STARTUP_TIMEOUT_SECONDS) seconds"; \
-			docker logs $(FLOCI_CONTAINER_NAME); \
-			exit 1; \
-		fi; \
-		sleep 1; \
-	done
+	@if curl -sf http://localhost:$(FLOCI_PORT)/_floci/health >/dev/null; then \
+		echo "Reusing running Floci at http://localhost:$(FLOCI_PORT)"; \
+	else \
+		docker rm -f $(FLOCI_CONTAINER_NAME) >/dev/null 2>&1 || true; \
+		docker run -d --name $(FLOCI_CONTAINER_NAME) -p $(FLOCI_PORT):4566 \
+			-v /var/run/docker.sock:/var/run/docker.sock -u root floci/floci:latest; \
+		echo "Waiting for Floci..."; \
+		deadline=$$(($$(date +%s) + $(FLOCI_STARTUP_TIMEOUT_SECONDS))); \
+		until curl -sf http://localhost:$(FLOCI_PORT)/_floci/health >/dev/null; do \
+			if [ $$(date +%s) -ge $$deadline ]; then \
+				echo "Floci did not become ready within $(FLOCI_STARTUP_TIMEOUT_SECONDS) seconds"; \
+				docker logs $(FLOCI_CONTAINER_NAME); \
+				exit 1; \
+			fi; \
+			sleep 1; \
+		done; \
+	fi
 	@$(FLOCI_ENV) aws s3 mb s3://$(FLOCI_S3_BUCKET) 2>/dev/null || true
 	@echo "Floci is ready at http://localhost:$(FLOCI_PORT)"
 
@@ -208,9 +212,15 @@ start-floci:
 setup-floci: start-floci
 	@for file in $(FLOCI_MCAP_FILES); do \
 		key="$(FLOCI_S3_PREFIX)/$$(basename "$$file")"; \
-		echo "Uploading $$file to s3://$(FLOCI_S3_BUCKET)/$$key..."; \
-		$(FLOCI_ENV) aws s3 cp "$$file" "s3://$(FLOCI_S3_BUCKET)/$$key"; \
-	done
+		hash=$$(shasum -a 256 "$$file" | awk '{print $$1}'); \
+		existing=$$($(FLOCI_ENV) aws s3api head-object --bucket "$(FLOCI_S3_BUCKET)" --key "$$key" --query 'Metadata.sha256' --output text 2>/dev/null || true); \
+		if [ "$$existing" = "$$hash" ]; then \
+			echo "Skipping unchanged $$file (already at s3://$(FLOCI_S3_BUCKET)/$$key)."; \
+		else \
+			echo "Uploading $$file to s3://$(FLOCI_S3_BUCKET)/$$key..."; \
+			$(FLOCI_ENV) aws s3 cp "$$file" "s3://$(FLOCI_S3_BUCKET)/$$key" --metadata "sha256=$$hash"; \
+		fi; \
+	 done
 	@echo "Available MCAP recordings:"
 	@$(FLOCI_ENV) aws s3 ls s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
 
@@ -316,10 +326,35 @@ start-example:
 # Usage:
 #   make start-example-mcap-s3 FLOCI_MCAP_FILES=/path/to/recording.mcap
 .PHONY: start-example-mcap-s3
-start-example-mcap-s3: setup-floci build
+start-example-mcap-s3: setup-floci build-cached-lightly_studio_view
 	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
 	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
 		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+
+# Reuse the packaged UI for the interactive MCAP example when its build inputs
+# have not changed. Keep this separate from `build`, which intentionally cleans
+# and rebuilds everything for distribution and CI.
+.PHONY: build-cached-lightly_studio_view
+build-cached-lightly_studio_view: export-schema-cached export-version
+	@set -eu; \
+	view=../lightly_studio_view; \
+	dist=src/lightly_studio/dist_lightly_studio_view_app; \
+	cache=.ui-build-cache-signature; \
+	signature=$$({ find "$$view" \
+		\( -type d \( -name node_modules -o -name build -o -name .svelte-kit -o -name .git \) -prune \) -o \
+		\( -type f -print \) | sort | xargs shasum -a 256; \
+		shasum -a 256 openapi.json; \
+	} | shasum -a 256 | awk '{print $$1}'); \
+	if [ -f "$$cache" ] && [ -d "$$view/build" ] && [ "$$(cat "$$cache")" = "$$signature" ]; then \
+		echo "Frontend build is up to date; reusing cached UI."; \
+	else \
+		echo "Frontend build inputs changed; rebuilding UI..."; \
+		$(MAKE) -C ../lightly_studio_view build-cached; \
+		printf '%s\n' "$$signature" > "$$cache"; \
+	fi; \
+	mkdir -p "$$dist"; \
+	cp -r "$$view/build/." "$$dist"/; \
+	cp "$$view/src/lib/version.json" "$$dist/version-info.json"
 
 # Demo targets for the camera-frame endpoint.
 # Uploads the MCAP to the local Floci S3 emulator and starts the API server so

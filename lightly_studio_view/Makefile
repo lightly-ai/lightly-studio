@@ -41,6 +41,39 @@ else
 	bash -c 'export NVM_DIR="$${HOME}/.nvm"; \
 	[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
 	nvm use; \
+		npm run build-dirty'
+endif
+
+# Reinstall only when dependencies are missing or the lockfile or Node version
+# changed. The marker is written after a successful npm ci.
+.PHONY: install-if-needed
+install-if-needed:
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$signature = (Get-FileHash package.json, package-lock.json -Algorithm SHA256 | ForEach-Object Hash) -join ':'; $$signature += ':' + (node --version); $$marker = 'node_modules/.lightly-studio-deps-signature'; if ((Test-Path node_modules) -and (Test-Path $$marker) -and ((Get-Content $$marker -Raw).Trim() -eq $$signature)) { Write-Host 'Frontend dependencies are up to date.' } else { npm ci; if ($$LASTEXITCODE -ne 0) { exit $$LASTEXITCODE }; New-Item -ItemType Directory -Force node_modules | Out-Null; Set-Content -NoNewline $$marker $$signature }"
+else
+	bash -c 'set -e; \
+	export NVM_DIR="$${HOME}/.nvm"; \
+	[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
+	nvm use; \
+	marker=node_modules/.lightly-studio-deps-signature; \
+	signature=$$(shasum -a 256 package.json package-lock.json | shasum -a 256 | awk "{print \$$1}"):$$(node --version); \
+	if [ -d node_modules ] && [ -f "$$marker" ] && [ "$$(cat "$$marker")" = "$$signature" ]; then \
+		echo "Frontend dependencies are up to date."; \
+	else \
+		npm ci; \
+		mkdir -p node_modules; \
+		printf "%s\\n" "$$signature" > "$$marker"; \
+	fi'
+endif
+
+.PHONY: build-cached
+build-cached: install-if-needed
+ifeq ($(OS),Windows_NT)
+	npm run build-dirty
+else
+	bash -c 'export NVM_DIR="$${HOME}/.nvm"; \
+	[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
+	nvm use; \
 	npm run build-dirty'
 endif
 
