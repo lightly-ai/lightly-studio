@@ -114,22 +114,17 @@ describe('QueryEditor', () => {
         expect(onSave).not.toHaveBeenCalled();
     });
 
-    it('shows Apply on first open and Re-apply after applying and when reopened', async () => {
+    it('follows the applied value from the parent', async () => {
         const onSave = vi.fn();
-        const parsed = { status: 'ok', queryExpr: {} } as QueryExprTranslationResult;
-        translateQuery.mockReturnValue(parsed);
-
-        const { unmount } = render(QueryEditor, { props: { onSave } });
+        const { rerender } = render(QueryEditor, { props: { onSave } });
         expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
 
         await simulateUserEdit('width < 1000');
-        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-        expect(onSave).toHaveBeenCalledWith('width < 1000', parsed);
+        await rerender({ value: 'width < 1000', onSave });
         expect(screen.getByRole('button', { name: 'Re-apply' })).toBeEnabled();
 
-        unmount();
-        render(QueryEditor, { props: { value: 'width < 1000', onSave } });
-        expect(screen.getByRole('button', { name: 'Re-apply' })).toBeEnabled();
+        await rerender({ value: undefined, onSave });
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
     });
 
     it('disables the button when readOnly is true', async () => {

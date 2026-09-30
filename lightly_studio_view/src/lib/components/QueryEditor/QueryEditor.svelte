@@ -52,11 +52,9 @@ AND object_detection(class_name = "person" AND x > 10)
             return;
         }
         onSave?.(draftValue, translationResult);
-        lastAppliedValue = draftValue;
     }
 
     let draftValue = $state(untrack(() => initialValue));
-    let lastAppliedValue = $state<string | null>(untrack(() => valueProp ?? null));
 
     onMount(() => {
         if (!containerEl) return;
@@ -68,7 +66,7 @@ AND object_detection(class_name = "person" AND x > 10)
             }
         });
     });
-    const applyLabel = $derived(draftValue === lastAppliedValue ? 'Re-apply' : 'Apply');
+    const applyLabel = $derived(draftValue === valueProp ? 'Re-apply' : 'Apply');
 </script>
 
 <!-- Prevent keypresses from triggering global shortcuts (e.g. 'E' toggling edit mode) -->
