@@ -13,7 +13,13 @@ describe('useTickDetails', () => {
     // the hook merges its own `enabled` flag onto them.
     const baseOptions = { queryKey: ['tick-details'], queryFn: vi.fn() };
     const query = {
-        data: { recording_id: 'recording-1', seq_number: 0, timestamp_ns: 1000, channels: {} },
+        data: {
+            recording_id: 'recording-1',
+            seq_number: 0,
+            timestamp_ns: 1000,
+            channels: {},
+            annotations: []
+        },
         isSuccess: true
     } satisfies Partial<CreateQueryResult<TickDetailView, Error>>;
 

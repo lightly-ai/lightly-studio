@@ -193,4 +193,6 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     setPlaybackIntervalMs = (intervalMs: number): void => {
         this.playbackIntervalMs = intervalMs;
     };
+        this.isPlaying = !this.isPlaying;
+    };
 }
