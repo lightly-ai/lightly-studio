@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
@@ -38,6 +39,9 @@ def count_video_frame_annotations_by_video_collection(
     restricted to annotations of that type (e.g. only CLASSIFICATION or only
     OBJECT_DETECTION).
     """
+    video_resolver.resolve_embedding_region(
+        session=session, collection_id=collection_id, video_filter=filters
+    )
     label_video_pairs = _build_label_video_pairs_subquery(
         collection_id=collection_id, annotation_type=annotation_type
     )
