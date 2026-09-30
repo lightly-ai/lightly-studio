@@ -25,7 +25,7 @@
     } from '$lib/hooks/useOperatorContext/useOperatorContext';
     import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
-    import { useQueryClient } from '@tanstack/svelte-query';
+    import { useRefreshAllData } from '$lib/hooks';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 
     interface Props {
@@ -55,12 +55,12 @@
             }) satisfies PageContext
     );
 
-    const queryClient = useQueryClient();
     const { setPluginExecuting } = useOperatorsDialog();
 
     const collectionId = $page.params.collection_id!;
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
+    const { refreshAllData } = useRefreshAllData({ collectionId });
 
     const { scopeLabel, contextFilter } = useOperatorContext(pageContext, tagsSelected);
 
@@ -146,7 +146,7 @@
             if (response.data.success) {
                 executionSuccess = response.data.message || 'Execution succeeded.';
                 toast.success('Operator executed', { description: executionSuccess });
-                queryClient.invalidateQueries();
+                refreshAllData();
             } else {
                 executionError = response.data.message || 'Execution failed.';
                 toast.error('Operator execution failed', { description: executionError });

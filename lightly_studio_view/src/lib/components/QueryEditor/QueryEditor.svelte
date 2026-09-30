@@ -68,7 +68,7 @@ AND object_detection(class_name = "person" AND x > 10)
             }
         });
     });
-    const canApply = $derived(draftValue !== lastAppliedValue);
+    const applyLabel = $derived(draftValue === lastAppliedValue ? 'Re-apply' : 'Apply');
 </script>
 
 <!-- Prevent keypresses from triggering global shortcuts (e.g. 'E' toggling edit mode) -->
@@ -88,10 +88,10 @@ AND object_detection(class_name = "person" AND x > 10)
                 variant="default"
                 buttonProps={{
                     type: 'button',
-                    disabled: readOnly || !canApply,
+                    disabled: readOnly,
                     'data-testid': 'query-editor-apply-button',
                     onclick: handleSave
-                }}>Apply</Button
+                }}>{applyLabel}</Button
             >
         </div>
     {/if}
