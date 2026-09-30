@@ -11,7 +11,13 @@ from typing_extensions import Self
 
 from lightly_studio.core import dataset
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME
-from lightly_studio.core.mcap import add_mcaps, annotation_mcap, dataset_schema
+from lightly_studio.core.mcap import (
+    add_labels,
+    add_mcaps,
+    annotation_mcap,
+    dataset_schema,
+    folder_labels,
+)
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.group_dataset import McapGroupDataset
 from lightly_studio.core.mcap.recording import Recording
@@ -263,6 +269,26 @@ class McapDataset:
             sync_component=sync_component,
             components=components,
             max_pairing_diff_ns=max_pairing_diff_ns,
+        )
+
+    def add_labels_from_folder(
+        self,
+        path: PathLike,
+        topic: str,
+        suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
+        annotation_source: str = add_labels.DEFAULT_ANNOTATION_SOURCE,
+    ) -> None:
+        """Attach cuboids from annotation MCAPs in a folder to indexed sequences.
+
+        Args:
+            path: Folder of annotation MCAPs, or an object-storage URI.
+            topic: The SceneUpdate topic in the annotation MCAP.
+            suffix: Inserted before `.mcap`. The default is `_labeled`.
+            annotation_source: Name of the annotation source that stores the cuboids.
+        """
+        remote_storage.configure_connections(paths=[str(path)])
+        folder_labels.add_labels_from_folder(
+            dataset=self, path=path, topic=topic, suffix=suffix, annotation_source=annotation_source
         )
 
     def get_sequences(self) -> list[McapSequence]:
