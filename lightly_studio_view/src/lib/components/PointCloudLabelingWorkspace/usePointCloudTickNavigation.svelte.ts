@@ -15,6 +15,10 @@ export function usePointCloudTickNavigation({ workspace, getTickNumber, getOnTic
         workspace.goToNextFrame();
         getOnTickChange()(workspace.currentTick + 1);
     };
+    const selectFrame = (seqNumber: number) => {
+        workspace.goToFrame(seqNumber);
+        getOnTickChange()(seqNumber + 1);
+    };
 
     $effect(() => workspace.goToFrame(getTickNumber() - 1));
 
@@ -48,5 +52,5 @@ export function usePointCloudTickNavigation({ workspace, getTickNumber, getOnTic
         return () => clearTimeout(timeout);
     });
 
-    return { goToPreviousFrame, goToNextFrame };
+    return { goToPreviousFrame, goToNextFrame, selectFrame };
 }

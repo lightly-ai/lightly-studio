@@ -63,7 +63,7 @@
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
-    const { goToPreviousFrame, goToNextFrame } = usePointCloudTickNavigation({
+    const { goToPreviousFrame, goToNextFrame, selectFrame } = usePointCloudTickNavigation({
         workspace,
         getTickNumber: () => tickNumber,
         getOnTickChange: () => onTickChange
@@ -212,7 +212,7 @@
                                 onNextFrame={goToNextFrame}
                                 onPlayToggle={workspace.togglePlayback}
                                 onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
-                                onSelectTick={workspace.goToFrame}
+                                onSelectTick={selectFrame}
                             />
                         </Pane>
                     </PaneGroup>

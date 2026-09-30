@@ -40,15 +40,13 @@
     {#if recordingId}
         <div class="flex min-h-0 flex-1 gap-2 overflow-x-auto px-3 pb-2">
             {#each cameraChannels as channel}
-                {#if channel.keyframe_log_time_ns}
-                    <CameraProjectionFrame
-                        {datasetId}
-                        {recordingId}
-                        channelId={channel.channel_id}
-                        timestampNs={channel.keyframe_log_time_ns}
-                        label={channel.group_component_name}
-                    />
-                {/if}
+                <CameraProjectionFrame
+                    {datasetId}
+                    {recordingId}
+                    channelId={channel.channel_id}
+                    timestampNs={channel.keyframe_log_time_ns ?? undefined}
+                    label={channel.group_component_name}
+                />
             {/each}
         </div>
     {/if}
