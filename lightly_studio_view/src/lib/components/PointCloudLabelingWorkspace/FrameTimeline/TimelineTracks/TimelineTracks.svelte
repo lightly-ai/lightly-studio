@@ -1,10 +1,12 @@
 <script lang="ts">
     import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 
-    /** Ruler of sequence ticks plus one lane per channel. Placeholder lanes until frames land. */
+    /** Ruler of sequence ticks plus one lane per channel. */
     interface Props {
         /** Sequence ticks (seq number + anchor timestamp). */
         ticks: TickView[];
+        /** Seq numbers whose point-cloud data is already cached. */
+        cachedTicks: number[];
         /** Seq number of the active tick; highlighted on the ruler. */
         currentTick: number;
         /** Lane names rendered beneath the ruler, in display order. */
@@ -13,7 +15,7 @@
         onSelectTick: (seqNumber: number) => void;
     }
 
-    let { ticks, currentTick, lanes, onSelectTick }: Props = $props();
+    let { ticks, cachedTicks, currentTick, lanes, onSelectTick }: Props = $props();
 
     const NANOS_PER_SECOND = 1_000_000_000;
 
@@ -32,8 +34,12 @@
     <div class="relative flex h-4 shrink-0 items-end gap-px">
         {#each ticks as tick (tick.seq_number)}
             <span
-                class="w-full {tick.seq_number % 5 === 0 ? 'h-3 bg-border' : 'h-1.5 bg-border'}"
-                title={formatTickTime(tick.timestamp_ns)}
+                class="w-full {tick.seq_number % 5 === 0 ? 'h-3' : 'h-1.5'} {cachedTicks.includes(
+                    tick.seq_number
+                )
+                    ? 'bg-emerald-500'
+                    : 'bg-border'}"
+                title={`${formatTickTime(tick.timestamp_ns) ?? `Frame ${tick.seq_number + 1}`}${cachedTicks.includes(tick.seq_number) ? ' · cached' : ''}`}
             ></span>
         {/each}
         <input

@@ -23,6 +23,7 @@ export const useTickDetails = ({
                 }
             }),
             enabled: Boolean(datasetId) && Boolean(sequenceId),
+            staleTime: 60_000,
             placeholderData: (previous: TickDetailView | undefined) => previous
         };
     });

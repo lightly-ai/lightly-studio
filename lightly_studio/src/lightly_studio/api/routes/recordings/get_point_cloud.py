@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from pydantic import BaseModel
 
+from lightly_studio.api.cache_control import cache_control
 from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
 from lightly_studio.database.db_manager import SessionDep
@@ -69,5 +70,8 @@ def get_point_cloud(
             "Content-Type": "application/vnd.apache.arrow.stream",
             "X-Content-Type-Options": "nosniff",
             "X-Frame-Log-Time-Ns": str(point_cloud.log_time_ns),
+            # The URL identifies immutable content within a recording. Keep the response in the
+            # browser's private cache so revisiting a frame avoids transferring its Arrow payload.
+            "Cache-Control": cache_control(max_age_seconds=3600, private=True),
         },
     )

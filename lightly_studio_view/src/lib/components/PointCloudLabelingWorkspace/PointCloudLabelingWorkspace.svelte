@@ -200,6 +200,7 @@
                         <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
                             <FrameTimeline
                                 ticks={workspace.ticks}
+                                cachedTicks={workspace.cachedTicks}
                                 currentTick={workspace.currentTick}
                                 isPlaying={workspace.isPlaying}
                                 playbackIntervalMs={workspace.playbackIntervalMs}

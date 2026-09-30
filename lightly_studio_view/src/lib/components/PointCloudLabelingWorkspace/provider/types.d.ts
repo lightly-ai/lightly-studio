@@ -23,6 +23,8 @@ export interface PointCloudWorkspaceContext {
     /** Combined point cloud for all lidar channels in the active tick. */
     readonly cloudPointFrame: ReturnType<typeof useCloudPointFrame>['query'];
     readonly ticks: TickView[];
+    /** Sequence ticks whose point-cloud frame is available from the query cache. */
+    readonly cachedTicks: number[];
     readonly currentTick: number;
     readonly isPlaying: boolean;
     readonly playbackIntervalMs: number;

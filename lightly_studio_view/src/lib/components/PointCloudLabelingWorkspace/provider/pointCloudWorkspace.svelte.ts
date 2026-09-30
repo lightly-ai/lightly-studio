@@ -93,6 +93,7 @@ function createRetryHandler(
 export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     currentTick = $state(0);
     isPlaying = $state(false);
+    cachedTicks = $state<number[]>([]);
     playbackIntervalMs = $state(300);
 
     readonly #getInputs: GetInputs;
@@ -144,6 +145,14 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         const cloudPointFrame = useCloudPointFrame(getCloudPointFrameParams).query;
         this.tickDetails = tickDetails;
         this.cloudPointFrame = cloudPointFrame;
+        $effect(() => {
+            if (cloudPointFrame.isSuccess && !cloudPointFrame.isPlaceholderData) {
+                const seqNumber = this.currentTick;
+                if (!this.cachedTicks.includes(seqNumber)) {
+                    this.cachedTicks = [...this.cachedTicks, seqNumber];
+                }
+            }
+        });
         this.retry = createRetryHandler(
             refetch,
             refetchTicks,

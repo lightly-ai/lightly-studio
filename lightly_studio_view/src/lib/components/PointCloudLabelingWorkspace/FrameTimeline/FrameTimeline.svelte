@@ -10,6 +10,8 @@
     interface Props {
         /** Sequence ticks (seq number + anchor timestamp). */
         ticks: TickView[];
+        /** Seq numbers with successfully fetched point-cloud data in the query cache. */
+        cachedTicks?: number[];
         /** Seq number of the active tick; drives the frame counter and ruler highlight. */
         currentTick: number;
         /** Whether playback is currently running; toggles the play/pause icon. */
@@ -31,6 +33,7 @@
 
     let {
         ticks,
+        cachedTicks = [],
         currentTick,
         isPlaying,
         playbackIntervalMs,
@@ -77,5 +80,5 @@
         {onPlayToggle}
         {onPlaybackIntervalChange}
     />
-    <TimelineTracks {ticks} {currentTick} {lanes} {onSelectTick} />
+    <TimelineTracks {ticks} {cachedTicks} {currentTick} {lanes} {onSelectTick} />
 </div>
