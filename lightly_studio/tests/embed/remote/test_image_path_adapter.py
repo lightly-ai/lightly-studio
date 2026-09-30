@@ -137,6 +137,9 @@ def test_with_image_path(remote: RemoteEmbedder) -> None:
     assert isinstance(embedder, ImagePathEmbedder)
     assert isinstance(embedder, ImageBytesEmbedder)
     assert embedder.embedding_space_spec() == remote.embedding_space_spec()
+    assert isinstance(embedder, RemoteEmbedder)
+    assert embedder.remote_endpoint() is not None
+    assert embedder.remote_endpoint() == remote.remote_endpoint()
 
 
 def test_with_image_path__local_embedder() -> None:
