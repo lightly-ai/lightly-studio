@@ -22,20 +22,18 @@ def test_resolve_embedding_region__no_filter(db_session: Session) -> None:
     )
 
 
-def test_resolve_embedding_region__copies_filter_without_region(db_session: Session) -> None:
-    original_filter = VideoFilter(sample_filter=SampleFilter())
+def test_resolve_embedding_region__filter_without_region_is_unchanged(db_session: Session) -> None:
+    video_filter = VideoFilter(sample_filter=SampleFilter())
 
-    resolved_filter = video_resolver.resolve_embedding_region(
+    result = video_resolver.resolve_embedding_region(
         session=db_session,
         collection_id=UUID(int=1),
-        video_filter=original_filter,
+        video_filter=video_filter,
     )
 
-    assert resolved_filter is not None
-    assert resolved_filter is not original_filter
-    assert resolved_filter.sample_filter is not original_filter.sample_filter
-    assert resolved_filter.sample_filter is not None
-    assert resolved_filter.sample_filter.region_sample_ids is None
+    assert result is None
+    assert video_filter.sample_filter is not None
+    assert video_filter.sample_filter.region_sample_ids is None
 
 
 def test_resolve_embedding_region__resolves_sample_ids(
@@ -45,17 +43,17 @@ def test_resolve_embedding_region__resolves_sample_ids(
     collection_id = UUID(int=1)
     sample_ids = [UUID(int=2), UUID(int=3)]
     region = _create_region()
-    original_filter = VideoFilter(sample_filter=SampleFilter(embedding_region=region))
+    video_filter = VideoFilter(sample_filter=SampleFilter(embedding_region=region))
     resolve_mock = mocker.patch.object(
         embedding_region_resolver,
         "get_sample_ids_in_region",
         return_value=sample_ids,
     )
 
-    resolved_filter = video_resolver.resolve_embedding_region(
+    result = video_resolver.resolve_embedding_region(
         session=db_session,
         collection_id=collection_id,
-        video_filter=original_filter,
+        video_filter=video_filter,
     )
 
     resolve_mock.assert_called_once_with(
@@ -63,29 +61,27 @@ def test_resolve_embedding_region__resolves_sample_ids(
         collection_id=collection_id,
         region=region,
     )
-    assert resolved_filter is not None
-    assert resolved_filter.sample_filter is not None
-    assert resolved_filter.sample_filter.region_sample_ids == sample_ids
-    assert original_filter.sample_filter is not None
-    assert original_filter.sample_filter.region_sample_ids is None
+    assert result is None
+    assert video_filter.sample_filter is not None
+    assert video_filter.sample_filter.region_sample_ids == sample_ids
 
 
 def test_resolve_embedding_region__preserves_empty_match(
     db_session: Session,
     mocker: MockerFixture,
 ) -> None:
-    original_filter = VideoFilter(sample_filter=SampleFilter(embedding_region=_create_region()))
+    video_filter = VideoFilter(sample_filter=SampleFilter(embedding_region=_create_region()))
     mocker.patch.object(embedding_region_resolver, "get_sample_ids_in_region", return_value=[])
 
-    resolved_filter = video_resolver.resolve_embedding_region(
+    result = video_resolver.resolve_embedding_region(
         session=db_session,
         collection_id=UUID(int=1),
-        video_filter=original_filter,
+        video_filter=video_filter,
     )
 
-    assert resolved_filter is not None
-    assert resolved_filter.sample_filter is not None
-    assert resolved_filter.sample_filter.region_sample_ids == []
+    assert result is None
+    assert video_filter.sample_filter is not None
+    assert video_filter.sample_filter.region_sample_ids == []
 
 
 def _create_region() -> EmbeddingRegion:

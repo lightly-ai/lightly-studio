@@ -14,19 +14,14 @@ def resolve_embedding_region(
     session: Session,
     collection_id: UUID,
     video_filter: VideoFilter | None,
-) -> VideoFilter | None:
-    """Return a copied video filter with its sample region resolved to sample IDs."""
-    if video_filter is None:
-        return None
-
-    resolved_filter = video_filter.model_copy(deep=True)
-    sample_filter = resolved_filter.sample_filter
+) -> None:
+    """Resolve the sample region in the video filter to sample IDs in place."""
+    sample_filter = video_filter.sample_filter if video_filter is not None else None
     if sample_filter is None or sample_filter.embedding_region is None:
-        return resolved_filter
+        return
 
     sample_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
         session=session,
         collection_id=collection_id,
         region=sample_filter.embedding_region,
     )
-    return resolved_filter
