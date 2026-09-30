@@ -15,6 +15,20 @@ vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     })
 }));
 
+vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
+    useMcapSequenceTicks: () => ({
+        ticks: {
+            data: {
+                ticks: [
+                    { seq_number: 0, timestamp_ns: 1000 },
+                    { seq_number: 1, timestamp_ns: 2000 }
+                ]
+            }
+        },
+        refetch: vi.fn()
+    })
+}));
+
 vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     useMcapSequenceSummary: () => ({
         summary: {
@@ -56,6 +70,8 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
+        expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
+        expect(screen.getByText('lidar_top')).toBeInTheDocument();
         expect(screen.getByTestId('point-cloud-right-side-panel')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
@@ -152,6 +168,41 @@ describe('PointCloudLabelingWorkspace', () => {
 
         screen.getByRole('button', { name: /close labeling workspace/i }).click();
         expect(onExit).toHaveBeenCalledOnce();
+    });
+
+    it('navigates through the loaded ticks from the timeline controls', async () => {
+        const user = userEvent.setup();
+        const onTickChange = vi.fn();
+        render(PointCloudLabelingWorkspace, {
+            props: {
+                sampleId: 'sample-1',
+                datasetId: 'dataset-1',
+                sequenceId: 'sequence-1',
+                onTickChange
+            }
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Next frame' }));
+        expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
+        expect(onTickChange).toHaveBeenLastCalledWith(2);
+
+        await user.click(screen.getByRole('button', { name: 'Previous frame' }));
+        expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
+        expect(onTickChange).toHaveBeenLastCalledWith(1);
+    });
+
+    it('updates the active frame when the route tick changes', async () => {
+        const props = {
+            sampleId: 'sample-1',
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            tickNumber: 1
+        };
+        const { rerender } = render(PointCloudLabelingWorkspace, { props });
+
+        await rerender({ ...props, tickNumber: 2 });
+
+        expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
     });
 
     it.each([

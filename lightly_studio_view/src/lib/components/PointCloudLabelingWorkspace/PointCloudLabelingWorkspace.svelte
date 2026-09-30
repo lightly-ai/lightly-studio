@@ -29,6 +29,8 @@
         sequenceId: string;
         /** 1-based tick to open on (from the route hash); defaults to the first frame. */
         tickNumber?: number;
+        /** Reports the active tick as a 1-based number for route synchronization. */
+        onTickChange?: (tickNumber: number) => void;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
         /** Optional status override for tests and stories. */
@@ -42,6 +44,7 @@
         datasetId,
         sequenceId,
         tickNumber = 1,
+        onTickChange = () => undefined,
         sourcePath = [],
         status,
         onExit = () => undefined,
@@ -72,6 +75,16 @@
             ? selected.filter((id) => id !== channelId)
             : [...selected, channelId];
 
+    const goToPreviousFrame = () => {
+        workspace.goToPreviousFrame();
+        onTickChange(workspace.currentTick + 1);
+    };
+
+    const goToNextFrame = () => {
+        workspace.goToNextFrame();
+        onTickChange(workspace.currentTick + 1);
+    };
+
     const handleFullscreenChange = () => {
         isFullscreen = document.fullscreenElement === containerEl;
     };
@@ -89,6 +102,8 @@
         if (!datasetId || !sequenceId) return;
         selectedLidarChannels = null;
     });
+
+    $effect(() => workspace.goToFrame(tickNumber - 1));
 
     $effect(() => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -192,8 +207,14 @@
                                 ticks={workspace.ticks}
                                 currentTick={workspace.currentTick}
                                 isPlaying={workspace.isPlaying}
-                                onPreviousFrame={workspace.goToPreviousFrame}
-                                onNextFrame={workspace.goToNextFrame}
+                                lidarChannelNames={lidarChannels.map(
+                                    (channel) => channel.group_component_name
+                                )}
+                                cameraChannelNames={cameraChannels.map(
+                                    (channel) => channel.group_component_name
+                                )}
+                                onPreviousFrame={goToPreviousFrame}
+                                onNextFrame={goToNextFrame}
                                 onPlayToggle={workspace.togglePlayback}
                             />
                         </Pane>
