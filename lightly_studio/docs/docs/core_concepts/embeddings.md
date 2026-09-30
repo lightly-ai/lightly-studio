@@ -288,9 +288,37 @@ LIGHTLY_STUDIO_SERVE_API_KEY=your-secret-key lightly-studio-serve conformance ht
 See the [Serving API](../api/embeddings.md#serving) for `serve`, `create_app`, the protocol
 and the conformance command.
 
-**3. Connect a dataset.** Fill the embedding space at ingestion, with
-`ls.register_default_embedder` or with precomputed embeddings. Then point the space at the
-server:
+**3. Connect a dataset.** You can embed the images on the server at ingestion, or point a
+filled space at the server.
+
+*Embed at ingestion.* Register the server before ingestion. Then `add_images_from_path`
+sends each image to the server, so the server must implement `ImageBytesEmbedder`:
+
+```python
+import lightly_studio as ls
+from lightly_studio.embed.remote.connection import build_client
+from lightly_studio.embed.remote.embedder import RemoteEmbedder
+
+ls.register_default_embedder(
+    embedder=RemoteEmbedder.connect(
+        client=build_client(url="http://127.0.0.1:8080"), api_key="your-secret-key"
+    )
+)
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path="my_images/")
+ls.start_gui()
+```
+
+The dataset stores the URL and the API key in plain text. As a result, `lightly-studio gui`
+in a new process searches on the server with no new registration. Give the key with
+`api_key=`, not in the headers of the client, because the dataset stores only `api_key`.
+If the dataset already stores a server for the space, ingestion keeps that server.
+
+For a full runnable version, which starts a small server that runs on CPU, see
+[`example_remote_embedder.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_remote_embedder.py).
+
+*Search in a space that is already filled.* If a local embedder or precomputed embeddings
+filled the space, point the space at the server:
 
 ```python
 import lightly_studio as ls
@@ -304,16 +332,16 @@ ls.start_gui()
 ```
 
 The dataset stores the URL and the API key in plain text, so search uses the server also
-after you open the dataset again.
-
-For a full runnable version, which starts a small server that runs on CPU, see
-[`example_remote_embedder.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_remote_embedder.py).
+after you open the dataset again. Use `register_remote_embedder` also to change the URL or
+the key of a stored server.
 
 !!! warning "Limits"
     - A local embedder registered for the same space still serves the capabilities it
       implements. Register only ingestion capabilities locally so search goes to the server.
     - Without `ImageBytesEmbedder` on the server or locally, image search is not available.
-    - The server embeds search queries only. Ingestion still runs locally.
+    - Images embed on the server at ingestion only if the server implements
+      `ImageBytesEmbedder` and no local embedder registered for the same space embeds
+      images. Annotation crops and video frames still embed locally.
 
 `register_remote_embedder` raises a `RemoteEmbedderError` from
 `lightly_studio.embed.remote.errors` and stores nothing if the URL is malformed or
