@@ -98,7 +98,7 @@ class EmbedderRegistry:
         The embedding space is read from ``embedder.embedding_space_spec()``. If an
         embedder is already registered for the same space, it is replaced. A remote
         embedder that ``RemoteEmbedder.connect`` built and that embeds image bytes also
-        gets the image-path capability.
+        gets the image-path and the image-crop-path capabilities.
 
         Args:
             embedder: The embedder to register.
