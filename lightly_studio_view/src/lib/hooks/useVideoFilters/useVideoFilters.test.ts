@@ -112,6 +112,23 @@ describe('useVideoFilters', () => {
             });
         });
 
+        it('includes the embedding and threshold only while a threshold is set', () => {
+            const { videoFilter, updateFilterParams } = useVideoFilters();
+
+            updateFilterParams({ collection_id: 'coll-1', text_embedding: [0.1, 0.2] });
+            expect(get(videoFilter)?.sample_filter).toBeUndefined();
+
+            updateFilterParams({
+                collection_id: 'coll-1',
+                text_embedding: [0.1, 0.2],
+                min_similarity: 0.3
+            });
+            expect(get(videoFilter)?.sample_filter).toEqual({
+                text_embedding: [0.1, 0.2],
+                min_similarity: 0.3
+            });
+        });
+
         it('includes metadata_filters in sample_filter when createMetadataFilters returns filters', async () => {
             const { createMetadataFilters } =
                 await import('../useMetadataFilters/useMetadataFilters');

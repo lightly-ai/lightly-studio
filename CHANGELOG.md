@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Enable metric recomputing for instance-segmentation.
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
-- Set a similarity search threshold in the image sidebar in the GUI to show only images that are at least that similar to the search. Select all and tagging then use only these images.
+- Set a similarity search threshold in the image and video sidebar in the GUI to show only images or videos that are at least that similar to the search. Select all and tagging then use only these samples.
 
 ### Changed
 

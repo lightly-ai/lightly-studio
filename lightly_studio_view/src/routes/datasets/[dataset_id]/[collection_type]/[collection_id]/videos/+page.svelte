@@ -17,6 +17,7 @@
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { onMount } from 'svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
+    import { useSimilarityThreshold } from '$lib/hooks/useSimilarityThreshold';
 
     const collectionId = $derived($page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
@@ -34,6 +35,7 @@
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection, sampleSize } =
         useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
+    const { threshold: similarityThreshold } = useSimilarityThreshold();
 
     const videosParams = $derived({
         collection_id: collectionId,
@@ -45,7 +47,9 @@
             metadata_values: $metadataValues,
             categorical_metadata_values: $categoricalMetadataValues
         },
-        video_bounds: $videoBoundsValues
+        video_bounds: $videoBoundsValues,
+        text_embedding: $textEmbedding?.embedding,
+        min_similarity: $textEmbedding ? ($similarityThreshold ?? undefined) : undefined
     });
 
     const paramsWithoutSampleIds = (params: VideoFilterParams) => {
@@ -163,7 +167,13 @@
 
     // TODO(Mihnea, 09/2026): hash the effective metadata filters, not raw $filterParams.
     // Same fix as Images.svelte's filterHash.
-    const filterHash = $derived(JSON.stringify({ filters: $filterParams, sortBy: $videoSortBy }));
+    // The search is in scrollResetKey as query text, so the hash leaves out the long embedding.
+    const filterHash = $derived(
+        JSON.stringify({
+            filters: $filterParams ? omit($filterParams, ['text_embedding']) : $filterParams,
+            sortBy: $videoSortBy
+        })
+    );
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
         initialize();

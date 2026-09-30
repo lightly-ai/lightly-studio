@@ -1,5 +1,6 @@
 import { derived, get, writable } from 'svelte/store';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import { buildSimilarityThresholdFilter } from '../useSimilarityThreshold';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
     AnnotationsFilter,
@@ -21,6 +22,8 @@ export type VideoFilterParams = {
         categorical_metadata_values?: CategoricalMetadataValues;
     };
     video_bounds?: VideoFieldsBoundsView | null;
+    text_embedding?: SampleFilter['text_embedding'];
+    min_similarity?: SampleFilter['min_similarity'];
 };
 
 const filterParams = writable<VideoFilterParams | null>(null);
@@ -61,7 +64,10 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
         }
     }
 
-    const sampleFilter: SampleFilter = {};
+    const sampleFilter: SampleFilter = buildSimilarityThresholdFilter(
+        $filterParams.text_embedding,
+        $filterParams.min_similarity
+    );
 
     const sampleIds = $filterParams.filters?.sample_ids;
     if (sampleIds && sampleIds.length > 0) {
