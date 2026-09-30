@@ -6,6 +6,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path, Query
+from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
@@ -13,8 +14,16 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.embed import embed_samples
 from lightly_studio.embed.errors import QueryEmbedderError
+from lightly_studio.models.range import FloatRange
+from lightly_studio.resolvers import similarity_range_resolver
 
 text_embedding_router = APIRouter()
+
+
+class SimilarityRangeRequest(BaseModel):
+    """Request body for the similarity range of a text embedding."""
+
+    text_embedding: list[float]
 
 
 @text_embedding_router.get(
@@ -49,3 +58,19 @@ def embed_text(
         ) from None
 
     return text_embeddings
+
+
+@text_embedding_router.post("/collections/{collection_id}/similarity_range")
+def get_similarity_range(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="The ID of the collection.")],
+    body: SimilarityRangeRequest,
+) -> FloatRange | None:
+    """Get the min and max similarity between a text embedding and all samples of a collection.
+
+    Filters are not applied. Returns null if the collection has no sample embeddings of its
+    default embedding model.
+    """
+    return similarity_range_resolver.get_similarity_range(
+        session=session, collection_id=collection_id, text_embedding=body.text_embedding
+    )

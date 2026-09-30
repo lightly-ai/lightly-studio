@@ -119,3 +119,40 @@ def test_embed_text__value_error(
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
     assert response.json()["detail"] == "Embedding failed"
+
+
+def test_get_similarity_range(db_session: Session, test_client: TestClient) -> None:
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    model_id = helpers_resolvers.create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=2, set_as_default=True
+    ).embedding_model_id
+    for index, embedding in enumerate([[1.0, 0.0], [0.0, 1.0]]):
+        image = helpers_resolvers.create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"{index}.png"
+        )
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding_model_id=model_id,
+            embedding=embedding,
+        )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id!s}/similarity_range",
+        json={"text_embedding": [1.0, 0.0]},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"min": pytest.approx(0.0, abs=1e-6), "max": pytest.approx(1.0)}
+
+
+def test_get_similarity_range__no_embeddings(db_session: Session, test_client: TestClient) -> None:
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+
+    response = test_client.post(
+        f"/api/collections/{collection_id!s}/similarity_range",
+        json={"text_embedding": [1.0, 0.0]},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() is None
