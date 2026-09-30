@@ -6,11 +6,7 @@ interface Params {
     getOnTickChange: () => (tickNumber: number) => void;
 }
 
-export function usePointCloudTickNavigation({
-    workspace,
-    getTickNumber,
-    getOnTickChange
-}: Params) {
+export function usePointCloudTickNavigation({ workspace, getTickNumber, getOnTickChange }: Params) {
     const goToPreviousFrame = () => {
         workspace.goToPreviousFrame();
         getOnTickChange()(workspace.currentTick + 1);
