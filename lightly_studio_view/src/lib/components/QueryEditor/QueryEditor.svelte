@@ -1,19 +1,17 @@
 <script lang="ts">
-    import { onMount, untrack } from 'svelte';
+    import { untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components';
 
     import { useQueryEditor } from './useQueryEditor';
+    import { DEFAULT_QUERIES, formatTranslationErrors } from './QueryEditor.helpers';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
-
-    const LIGHTLY_QUERY_DEFAULT_VALUE = `# Example query
-width < 500
-AND "reviewed" IN tags
-AND object_detection(class_name = "person" AND x > 10)
-`;
+    import type { RootScope } from './language/types';
 
     interface QueryEditorProps {
         value?: string;
+        /** Top-level scope of the query: the grid that the query filters. */
+        rootScope?: RootScope;
         height?: string;
         readOnly?: boolean;
         onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
@@ -21,32 +19,20 @@ AND object_detection(class_name = "person" AND x > 10)
 
     let {
         value: valueProp,
+        rootScope = 'image',
         height = '320px',
         readOnly = false,
         onSave
     }: QueryEditorProps = $props();
 
-    const initialValue = $derived(valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE);
+    const initialValue = $derived(valueProp ?? DEFAULT_QUERIES[rootScope]);
 
-    let containerEl: HTMLDivElement | null = null;
+    let containerEl = $state<HTMLDivElement | null>(null);
 
     const { mount, translateQuery } = useQueryEditor();
 
-    function formatTranslationErrors(
-        result: Extract<QueryExprTranslationResult, { status: 'error' }>
-    ): string {
-        return result.errors
-            .map((error) => {
-                if (error.line !== undefined && error.column !== undefined) {
-                    return `${error.message} (line ${error.line}, column ${error.column})`;
-                }
-                return error.message;
-            })
-            .join('\n');
-    }
-
     function handleSave() {
-        const translationResult = translateQuery(draftValue);
+        const translationResult = translateQuery(draftValue, rootScope);
         if (translationResult.status === 'error') {
             toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);
             return;
@@ -58,14 +44,24 @@ AND object_detection(class_name = "person" AND x > 10)
     let draftValue = $state(untrack(() => initialValue));
     let lastAppliedValue = $state<string | null>(untrack(() => valueProp ?? null));
 
-    onMount(() => {
-        if (!containerEl) return;
-        return mount(containerEl, {
-            value: initialValue,
-            readOnly,
-            onChange: (next) => {
-                draftValue = next;
-            }
+    // Remount when `rootScope` changes, so the model scope (validation) matches the
+    // prop scope (Apply) and the scope's default example loads. The value is read
+    // untracked, so a parent value change does not rebuild the editor.
+    $effect(() => {
+        const scope = rootScope;
+        const el = containerEl;
+        if (!el) return;
+        return untrack(() => {
+            draftValue = initialValue;
+            lastAppliedValue = valueProp ?? null;
+            return mount(el, {
+                value: initialValue,
+                rootScope: scope,
+                readOnly,
+                onChange: (next) => {
+                    draftValue = next;
+                }
+            });
         });
     });
     const canApply = $derived(draftValue !== lastAppliedValue);

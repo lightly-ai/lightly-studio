@@ -87,6 +87,14 @@ function makeModel(
     };
 }
 
+/** Must be called after `loadAndAttach`, so that it shares the fresh module registry. */
+async function makeVideoModel(value: string): Promise<ModelMock> {
+    const { setModelRootScope } = await import('./modelRootScope');
+    const model = makeModel(value);
+    setModelRootScope(model as never, 'video');
+    return model;
+}
+
 async function loadAndAttach(items: LspCompletionItem[] | undefined): Promise<{
     provideCompletionItems: (
         model: monaco.editor.ITextModel,
@@ -392,22 +400,24 @@ describe('useSyntaxCompletion', () => {
         const { provideCompletionItems } = await loadAndAttach([
             { label: 'fps', kind: LspCompletionItemKind.Field }
         ]);
+        const model = await makeVideoModel('fps');
         const result = await provideCompletionItems(
-            makeModel('video: fps') as never,
-            { lineNumber: 1, column: 11 } as never
+            model as never,
+            { lineNumber: 1, column: 4 } as never
         );
 
         expect(result.suggestions[0].detail).toBe('Video.fps: float');
         expect(result.suggestions[0].documentation).toEqual({
-            value: 'Frames per second. Equality only (`=`, `!=`).'
+            value: 'Frames per second.'
         });
     });
 
-    it('suggests video-scope properties after `video:`', async () => {
+    it('suggests video-scope properties at the top level of a video model', async () => {
         const { provideCompletionItems } = await loadAndAttach([]);
+        const model = await makeVideoModel('');
         const result = await provideCompletionItems(
-            makeModel('video: ') as never,
-            { lineNumber: 1, column: 8 } as never
+            model as never,
+            { lineNumber: 1, column: 1 } as never
         );
 
         const labels = result.suggestions.map((suggestion) =>
@@ -416,8 +426,8 @@ describe('useSyntaxCompletion', () => {
 
         expect(labels).toContain('fps');
         expect(labels).toContain('duration_s');
-        expect(labels).toContain('file_name');
-        expect(labels).not.toContain('created_at');
+        expect(labels).toContain('created_at');
+        expect(labels).not.toContain('x');
         expect(labels).not.toContain('video:');
     });
 

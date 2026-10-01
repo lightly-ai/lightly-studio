@@ -22,7 +22,7 @@ export function buildSchemaCompletions<Scope extends keyof typeof SCOPES>(
     }
 
     const keywords = TOP_LEVEL_KEYWORDS.filter((kw) => {
-        if (scope === 'image' || scope === 'video') return kw.name !== 'video:';
+        if (scope === 'image' || scope === 'video') return true;
         return ALLOWED_NESTED_KEYWORDS.has(kw.name);
     });
 

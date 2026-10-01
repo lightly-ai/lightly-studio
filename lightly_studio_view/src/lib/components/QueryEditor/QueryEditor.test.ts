@@ -11,7 +11,12 @@ let capturedOnChange: ((next: string) => void) | undefined;
 const mount = vi.fn(
     (
         _el: HTMLElement,
-        options: { value: string; readOnly?: boolean; onChange?: (next: string) => void }
+        options: {
+            value: string;
+            rootScope?: string;
+            readOnly?: boolean;
+            onChange?: (next: string) => void;
+        }
     ) => {
         capturedOnChange = options.onChange;
         return () => {};
@@ -61,7 +66,7 @@ describe('QueryEditor', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
         expect(translateQuery).toHaveBeenCalledOnce();
-        expect(translateQuery).toHaveBeenCalledWith('my modified query');
+        expect(translateQuery).toHaveBeenCalledWith('my modified query', 'image');
         expect(onSave).toHaveBeenCalledOnce();
         expect(onSave).toHaveBeenCalledWith('my modified query', parsed);
     });
@@ -101,7 +106,7 @@ describe('QueryEditor', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
         expect(translateQuery).toHaveBeenCalledOnce();
-        expect(translateQuery).toHaveBeenCalledWith('my modified query');
+        expect(translateQuery).toHaveBeenCalledWith('my modified query', 'image');
         expect(toast.error).toHaveBeenCalledWith(
             'Failed to translate query: unexpected token (line 1, column 5)'
         );
@@ -144,6 +149,52 @@ describe('QueryEditor', () => {
             props: { value: 'width < 1000', onSave }
         });
         expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    });
+
+    it('mounts and translates video queries with the video root scope', async () => {
+        const onSave = vi.fn();
+        translateQuery.mockReturnValueOnce({ status: 'error', errors: [] });
+        render(QueryEditor, { props: { rootScope: 'video', onSave } });
+
+        expect(mount).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                rootScope: 'video',
+                value: expect.stringContaining('duration_s > 10')
+            })
+        );
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(translateQuery).toHaveBeenCalledWith(expect.any(String), 'video');
+    });
+
+    it('remounts with the new scope and translates with it when rootScope changes', async () => {
+        const onSave = vi.fn();
+        translateQuery.mockReturnValue({ status: 'error', errors: [] });
+
+        const { rerender } = render(QueryEditor, { props: { rootScope: 'image', onSave } });
+        expect(mount).toHaveBeenCalledOnce();
+        expect(mount).toHaveBeenLastCalledWith(
+            expect.anything(),
+            expect.objectContaining({ rootScope: 'image' })
+        );
+
+        // A collection switch changes the prop while the panel stays alive.
+        await rerender({ rootScope: 'video', onSave });
+
+        // The editor remounts so the model scope tracks the prop, and the video
+        // default example loads.
+        expect(mount).toHaveBeenCalledTimes(2);
+        expect(mount).toHaveBeenLastCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                rootScope: 'video',
+                value: expect.stringContaining('duration_s > 10')
+            })
+        );
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(translateQuery).toHaveBeenLastCalledWith(expect.any(String), 'video');
     });
 
     it('disables the Apply button when readOnly is true even after modification', async () => {

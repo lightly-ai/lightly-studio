@@ -104,6 +104,18 @@ describe('useQueryEditor', () => {
         );
     });
 
+    it('stores the root scope of the model, defaulting to image', async () => {
+        const { getModelRootScope } = await import('./useLightlyQueryLanguage/modelRootScope');
+        const { mount } = useQueryEditor();
+
+        mount(document.createElement('div'), { value: '' });
+        mount(document.createElement('div'), { value: '', rootScope: 'video' });
+
+        const [imageModel, videoModel] = mocks.createModel.mock.results.map((r) => r.value);
+        expect(getModelRootScope(imageModel)).toBe('image');
+        expect(getModelRootScope(videoModel)).toBe('video');
+    });
+
     it('forwards readOnly to Monaco', () => {
         const { mount } = useQueryEditor();
         const el = document.createElement('div');

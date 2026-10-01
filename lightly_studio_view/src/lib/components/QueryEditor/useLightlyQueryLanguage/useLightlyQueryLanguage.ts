@@ -10,10 +10,13 @@ import {
     type LightlyQueryServicesBundle
 } from '../language/lightly-query-module';
 import {
+    getRootScopeRule,
     parseLightlyQuery,
     type QueryExprTranslationResult
 } from '../language/query-expr-translation';
+import type { RootScope } from '../language/types';
 import { lexerErrorToMarker, type LexerErrorLike } from './lexerErrorToMarker';
+import { getModelRootScope } from './modelRootScope';
 import { parserErrorToMarker, type ParserErrorLike } from './parserErrorToMarker';
 
 const LANGUAGE_ID = 'lightly-query';
@@ -36,14 +39,15 @@ function getServices(): LightlyQueryServicesBundle {
 export interface UseLightlyQueryLanguageReturn {
     /** Wires the language service to a Monaco model: runs an initial validation
      * pass, subscribes to content changes to keep diagnostics in sync, and
-     * publishes errors as Monaco markers. Returns a cleanup function that
-     * disposes the subscription and clears any markers this hook owns. */
+     * publishes errors as Monaco markers. Validation uses the root scope of the
+     * model. Returns a cleanup function that disposes the subscription and
+     * clears any markers this hook owns. */
     attach: (model: monaco.editor.ITextModel) => () => void;
     /** Synchronously parses a query string and returns either the translated
      * backend `QueryExpr` (`status: 'ok'`) or the collected lexer/parser errors
      * (`status: 'error'`). Intended for one-off translation outside the editor
      * lifecycle (e.g. on Save). */
-    translateQuery: (value: string) => QueryExprTranslationResult;
+    translateQuery: (value: string, rootScope: RootScope) => QueryExprTranslationResult;
 }
 
 export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
@@ -51,7 +55,9 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
     const parser = services.LightlyQuery.parser.LangiumParser;
 
     function validate(model: monaco.editor.ITextModel): void {
-        const result = parser.parse(model.getValue());
+        const result = parser.parse(model.getValue(), {
+            rule: getRootScopeRule(getModelRootScope(model))
+        });
         const markers = [
             ...result.lexerErrors.map((e) => lexerErrorToMarker(e as LexerErrorLike)),
             ...result.parserErrors.map((e) => parserErrorToMarker(e as ParserErrorLike))
@@ -68,8 +74,8 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
         };
     }
 
-    function translateQuery(value: string): QueryExprTranslationResult {
-        return parseLightlyQuery(parser, value);
+    function translateQuery(value: string, rootScope: RootScope): QueryExprTranslationResult {
+        return parseLightlyQuery(parser, value, rootScope);
     }
 
     return { attach, translateQuery };

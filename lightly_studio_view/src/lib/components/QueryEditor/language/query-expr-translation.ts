@@ -25,7 +25,7 @@ import {
     isSegmentationMaskFloatFieldName,
     isStringLiteral,
     isTagInExpression,
-    isVideoEqualityFloatFieldName,
+    isVideoDateTimeFieldName,
     isVideoIntFieldName,
     isVideoOrdinalFloatFieldName,
     isVideoStringFieldName,
@@ -33,6 +33,7 @@ import {
     type Expression,
     type Query
 } from './generated/ast.js';
+import type { RootScope } from './types';
 
 export interface QueryParseError {
     message: string;
@@ -47,18 +48,27 @@ export type QueryExprTranslationResult =
 type QueryScope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
 
 interface TranslationParser {
-    parse: (value: string) => {
+    parse: (
+        value: string,
+        options?: { rule?: string }
+    ) => {
         lexerErrors: Array<{ message: string; line?: number; column?: number }>;
         parserErrors: Array<{ message: string; line?: number; column?: number }>;
         value: Query;
     };
 }
 
+/** Returns the name of the grammar rule that parses a query in the given root scope. */
+export function getRootScopeRule(rootScope: RootScope): 'ImageQuery' | 'VideoQuery' {
+    return rootScope === 'video' ? 'VideoQuery' : 'ImageQuery';
+}
+
 export function parseLightlyQuery(
     parser: TranslationParser,
-    value: string
+    value: string,
+    rootScope: RootScope
 ): QueryExprTranslationResult {
-    const parseResult = parser.parse(value);
+    const parseResult = parser.parse(value, { rule: getRootScopeRule(rootScope) });
     const errors = [...parseResult.lexerErrors, ...parseResult.parserErrors];
     if (errors.length > 0) {
         return {
@@ -74,7 +84,7 @@ export function parseLightlyQuery(
     try {
         return {
             status: 'ok',
-            queryExpr: toQueryExpr(parseResult.value)
+            queryExpr: toQueryExpr(parseResult.value, rootScope)
         };
     } catch (error) {
         return {
@@ -87,10 +97,9 @@ export function parseLightlyQuery(
 /**
  * Converts a Langium AST into a backend-compatible QueryExpr.
  */
-function toQueryExpr(parseResult: Query): QueryExpr {
-    const table = getRootScope(parseResult);
+function toQueryExpr(parseResult: Query, rootScope: RootScope): QueryExpr {
     return {
-        match_expr: visit(parseResult.expression, table)
+        match_expr: visit(parseResult.expression, rootScope)
     };
 }
 
@@ -180,6 +189,14 @@ function visitComparisonExpression(
                         value: right.value
                     };
                 }
+                if (isVideoDateTimeFieldName(fieldName)) {
+                    return {
+                        type: 'datetime_expr',
+                        field: { table, name: fieldName },
+                        operator: toOrdinalComparisonOperator(expr.operator),
+                        value: parseDatetimeLiteral(right.value)
+                    };
+                }
                 break;
             case 'object_detection':
                 if (isObjectDetectionStringFieldName(fieldName)) {
@@ -229,15 +246,6 @@ function visitComparisonExpression(
                         type: 'ordinal_float_expr',
                         field: { table, name: fieldName },
                         operator: toOrdinalComparisonOperator(expr.operator),
-                        value: right.value
-                    };
-                }
-                if (isVideoEqualityFloatFieldName(fieldName)) {
-                    return {
-                        type: 'equality_float_expr',
-                        field: { table, name: fieldName },
-                        // TODO: make Langium grammar more strict, so that `toEqualityComparisonOperator` is not needed
-                        operator: toEqualityComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }
@@ -300,10 +308,6 @@ function visitComparisonExpression(
     }
 
     throw new Error(`Unsupported comparison: ${fieldName} ${expr.operator} ${right.$type}`);
-}
-
-function getRootScope(parseResult: Query): Extract<QueryScope, 'image' | 'video'> {
-    return parseResult.isVideo ? 'video' : 'image';
 }
 
 function getFunctionScope(
