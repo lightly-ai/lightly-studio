@@ -20,10 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class TopicScan(NamedTuple):
-    """Locators and static transforms collected while reading a file once."""
+    """Locators and transforms collected while reading a file once."""
 
     locators_by_topic: dict[str, list[FrameLocator]]
     static_transforms: list[StaticTransform]
+    dynamic_edges: list[tuple[str, str]]
 
 
 class TopicScanRequest(NamedTuple):
@@ -34,6 +35,7 @@ class TopicScanRequest(NamedTuple):
     start_time_ns: int | None
     end_time_ns: int | None
     static_transform_topic: str | None
+    dynamic_transform_topic: str | None
 
 
 class FrameScanner:
@@ -52,22 +54,28 @@ class FrameScanner:
         self._path = path
 
     def scan_topics(self, request: TopicScanRequest) -> TopicScan:
-        """Reads frame locators, and optional static transforms, in one pass.
+        """Reads frame locators, and optional transforms, in one pass.
 
         Args:
-            request: The topics to locate and the optional static transform topic
-                to collect in the same pass.
+            request: The topics to locate and the optional transform topics to
+                collect in the same pass.
 
         Returns:
-            The locators of each topic, in log time order, and the static transforms
-            when a static transform topic was given.
+            The locators of each topic, in log time order, the static transforms
+            when a static transform topic was given, and the dynamic edges when a
+            dynamic transform topic was given.
         """
         locators_by_topic: dict[str, list[FrameLocator]] = {topic: [] for topic in request.topics}
         keyframe_log_time_ns_by_topic: dict[str, int | None] = dict.fromkeys(request.video_topics)
         static_transforms: list[StaticTransform] = []
+        dynamic_edges: dict[tuple[str, str], None] = {}
         read_topics = [
             *request.topics,
-            *([request.static_transform_topic] if request.static_transform_topic else []),
+            *(
+                topic
+                for topic in (request.static_transform_topic, request.dynamic_transform_topic)
+                if topic
+            ),
         ]
         for schema, channel, message in self._mcap_reader.iter_messages(
             topics=read_topics, start_time=request.start_time_ns, end_time=request.end_time_ns
@@ -82,6 +90,17 @@ class FrameScanner:
                         message=message,
                     )
                 )
+            if channel.topic == request.dynamic_transform_topic:
+                # Only the frame names are kept, so a long recording stays small.
+                message_transforms = calibration.transforms_of_message(
+                    decoder=self._decoder,
+                    path=self._path,
+                    schema=schema,
+                    channel=channel,
+                    message=message,
+                )
+                for edge in calibration.unique_edges(static_transforms=message_transforms):
+                    dynamic_edges.setdefault(edge, None)
             if channel.topic not in locators_by_topic:
                 continue
             locator = self._locator_for_message(
@@ -93,7 +112,11 @@ class FrameScanner:
             )
             if locator is not None:
                 locators_by_topic[channel.topic].append(locator)
-        return TopicScan(locators_by_topic=locators_by_topic, static_transforms=static_transforms)
+        return TopicScan(
+            locators_by_topic=locators_by_topic,
+            static_transforms=static_transforms,
+            dynamic_edges=list(dynamic_edges),
+        )
 
     def _locator_for_message(
         self,

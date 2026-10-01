@@ -13,7 +13,10 @@ from numpy.typing import NDArray
 from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError
 from lightly_studio.core.mcap.matching import MatchFunction
 from lightly_studio.core.mcap.reader import calibration, frame_scan, session
-from lightly_studio.core.mcap.reader.calibration import STATIC_TRANSFORM_TOPIC
+from lightly_studio.core.mcap.reader.calibration import (
+    DYNAMIC_TRANSFORM_TOPIC,
+    STATIC_TRANSFORM_TOPIC,
+)
 from lightly_studio.core.mcap.reader.frame_scan import FrameScanner, TopicScanRequest
 from lightly_studio.core.mcap.reader.session import ReadPattern, TopicIndex
 from lightly_studio.core.mcap.topic_kind import TopicKind
@@ -80,6 +83,7 @@ class McapFileReader:
         self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
         self._transform_tree_by_topic: dict[str, TransformTree] = {}
         self._static_transforms_by_topic: dict[str, list[StaticTransform]] = {}
+        self._dynamic_edges_by_topic: dict[str, list[tuple[str, str]]] = {}
 
     def close(self) -> None:
         """Closes the MCAP file."""
@@ -104,6 +108,7 @@ class McapFileReader:
         start_time_ns: int | None = None,
         end_time_ns: int | None = None,
         static_transform_topic: str | None = None,
+        dynamic_transform_topic: str | None = None,
     ) -> None:
         """Reads several topics in a single pass and caches their frame locators.
 
@@ -124,6 +129,10 @@ class McapFileReader:
                 the same pass and cached for `get_static_transforms`. Only the
                 transforms logged in the time range are read. A topic that is not in
                 the file caches no transforms.
+            dynamic_transform_topic: If given, the parent-child pairs of this topic
+                are read in the same pass and cached for `get_dynamic_transform_edges`.
+                The poses are not kept. Only the messages logged in the time range are
+                read.
 
         Raises:
             TopicNotFoundError: If one of the topics is not in the file.
@@ -145,11 +154,14 @@ class McapFileReader:
                 start_time_ns=start_time_ns,
                 end_time_ns=end_time_ns,
                 static_transform_topic=static_transform_topic,
+                dynamic_transform_topic=dynamic_transform_topic,
             )
         )
         self._locators_by_topic.update(scan.locators_by_topic)
         if static_transform_topic:
             self._static_transforms_by_topic[static_transform_topic] = scan.static_transforms
+        if dynamic_transform_topic:
+            self._dynamic_edges_by_topic[dynamic_transform_topic] = scan.dynamic_edges
 
     @overload
     def get_frame_locators(
@@ -285,6 +297,29 @@ class McapFileReader:
         """
         return list(self._cached_static_transforms(topic=topic))
 
+    def get_dynamic_transform_edges(
+        self, topic: str = DYNAMIC_TRANSFORM_TOPIC
+    ) -> list[tuple[str, str]]:
+        """Returns each parent-child pair published on the dynamic transform topic.
+
+        A pair is returned once, in the order it is first seen. The pose is not
+        returned. A topic that is not in the file counts as a topic without edges.
+        The result is cached for the lifetime of the reader. The topic is read only if
+        `load_data_for_topics` did not read it already.
+
+        Args:
+            topic: The topic the dynamic transforms are published on.
+
+        Returns:
+            The parent frame id and the child frame id of each edge. A message that
+            cannot be decoded is skipped.
+        """
+        if topic not in self._dynamic_edges_by_topic:
+            self._dynamic_edges_by_topic[topic] = calibration.unique_edges(
+                static_transforms=self._read_transforms(topic)
+            )
+        return list(self._dynamic_edges_by_topic[topic])
+
     def get_decoded_message_at(
         self,
         channel_id: int,
@@ -371,14 +406,19 @@ class McapFileReader:
     def _cached_static_transforms(self, topic: str) -> list[StaticTransform]:
         """Returns the transforms of a static topic, or none if the topic is not in the file."""
         if topic not in self._static_transforms_by_topic:
-            self._static_transforms_by_topic[topic] = (
-                calibration.read_transforms(
-                    mcap_reader=self._reader,
-                    decoder=self._decoder,
-                    path=self.path,
-                    topic=topic,
-                )
-                if self._topic_index.has_topic(topic)
-                else []
-            )
+            self._static_transforms_by_topic[topic] = self._read_transforms(topic)
         return self._static_transforms_by_topic[topic]
+
+    def _read_transforms(self, topic: str) -> list[StaticTransform]:
+        """Reads the transforms of every message on a topic, skipping unreadable messages.
+
+        Returns none if the topic is not in the file.
+        """
+        if not self._topic_index.has_topic(topic):
+            return []
+        return calibration.read_transforms(
+            mcap_reader=self._reader,
+            decoder=self._decoder,
+            path=self.path,
+            topic=topic,
+        )
