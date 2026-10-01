@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
     import { X } from '@lucide/svelte';
+    import { useQueryClient } from '@tanstack/svelte-query';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
@@ -15,6 +16,7 @@
 
     const { onClose }: Props = $props();
     const { imageQueryExpression, updateQueryExpr } = useImageFilters();
+    const queryClient = useQueryClient();
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
         if (!parsed) {
@@ -27,6 +29,8 @@
             query_expr: parsed.queryExpr,
             query_expr_str: value
         });
+        // Data may have changed since the last apply, so refetch even if the query is unchanged.
+        queryClient.invalidateQueries();
     };
 </script>
 
