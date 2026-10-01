@@ -1,11 +1,14 @@
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.range import FloatRange
 from lightly_studio.resolvers import (
+    embedding_region_resolver,
     metadata_resolver,
     video_resolver,
 )
@@ -129,6 +132,34 @@ def test_get_all_by_collection_id__with_pagination(
     )
     assert len(result_empty.samples) == 0
     assert result_empty.total_count == 5
+
+
+def test_get_all_by_collection_id__with_embedding_region_and_pagination(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=collection.collection_id,
+        videos=[VideoStub(path=f"/sample{i}.mp4") for i in range(4)],
+    )
+    region = EmbeddingRegion(polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1)])
+    mocker.patch.object(
+        embedding_region_resolver,
+        "get_sample_ids_in_region",
+        return_value=video_ids[:3],
+    )
+
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=VideoFilter(sample_filter=SampleFilter(embedding_region=region)),
+        pagination=Paginated(offset=1, limit=1),
+    )
+
+    assert result.total_count == 3
+    assert len(result.samples) == 1
+    assert result.samples[0].sample_id == video_ids[1]
 
 
 def test_get_all_by_collection_id__empty_output(
