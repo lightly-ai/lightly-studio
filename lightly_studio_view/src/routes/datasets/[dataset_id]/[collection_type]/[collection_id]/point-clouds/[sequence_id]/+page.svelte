@@ -25,7 +25,14 @@
     const sourcePath = $derived([
         {
             label: 'Home',
-            href: routeHelpers.toCollectionHome(page.params.dataset_id!, collectionType, datasetId)
+            // The dataset_id URL slot is the root collection id, so the home crumb points the
+            // collection id back at it. Using the dataset entity id here links to a collection
+            // that does not exist and the collection layout load throws.
+            href: routeHelpers.toCollectionHome(
+                page.params.dataset_id!,
+                collectionType,
+                page.params.dataset_id!
+            )
         },
         {
             label: collectionName,
