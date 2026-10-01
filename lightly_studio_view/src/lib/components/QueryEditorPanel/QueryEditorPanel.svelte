@@ -1,12 +1,11 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
     import { X } from '@lucide/svelte';
-    import { page } from '$app/state';
+    import { useQueryClient } from '@tanstack/svelte-query';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useRefreshAllData } from '$lib/hooks';
 
     interface Props {
         /** Invoked when the user clicks the close button in the panel header. */
@@ -17,7 +16,7 @@
 
     const { onClose }: Props = $props();
     const { imageQueryExpression, updateQueryExpr } = useImageFilters();
-    const { refreshAllData } = useRefreshAllData();
+    const queryClient = useQueryClient();
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
         if (!parsed) {
@@ -30,8 +29,8 @@
             query_expr: parsed.queryExpr,
             query_expr_str: value
         });
-        // Data may have changed outside the GUI, so refetch even if the query is unchanged.
-        refreshAllData(page.params.collection_id!);
+        // Data may have changed since the last apply, so refetch even if the query is unchanged.
+        queryClient.invalidateQueries();
     };
 </script>
 

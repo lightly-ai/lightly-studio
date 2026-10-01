@@ -80,7 +80,7 @@ test.describe('query editor', () => {
         // Editor should contain the previously applied query
         await expect(page.locator('.monaco-editor .view-lines')).toContainText(QUERY);
 
-        // Re-apply should be offered since draft === lastAppliedValue
+        // Re-apply is offered since the editor holds the applied query
         await expect(page.getByTestId('query-editor-apply-button')).toBeEnabled();
         await expect(page.getByTestId('query-editor-apply-button')).toHaveText('Re-apply');
 

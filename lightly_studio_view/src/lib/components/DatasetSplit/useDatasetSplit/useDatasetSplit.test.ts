@@ -5,11 +5,11 @@ import { splitDataset } from '$lib/api/lightly_studio_local/sdk.gen';
 import { toast } from 'svelte-sonner';
 import DatasetSplitHarness from './DatasetSplitHarness.svelte';
 
-const { refreshAllData, imageFilter, videoFilter, filteredSampleCount, tags } = await vi.hoisted(
+const { loadTags, imageFilter, videoFilter, filteredSampleCount, tags } = await vi.hoisted(
     async () => {
         const { writable } = await import('svelte/store');
         return {
-            refreshAllData: vi.fn(),
+            loadTags: vi.fn(),
             imageFilter: writable({ filter_type: 'image', sample_filter: { tag_ids: ['images'] } }),
             videoFilter: writable({ filter_type: 'video', sample_filter: { tag_ids: ['videos'] } }),
             filteredSampleCount: writable(11),
@@ -23,15 +23,15 @@ vi.mock('$lib/hooks', () => ({
     useImageFilters: () => ({ imageFilter }),
     useVideoFilters: () => ({ videoFilter }),
     useGlobalStorage: () => ({ filteredSampleCount }),
-    useTags: () => ({ tags }),
-    useRefreshAllData: () => ({ refreshAllData })
+    useTags: () => ({ tags, loadTags })
 }));
 
 function setup(sampleType: 'image' | 'video') {
     const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
     const onClose = vi.fn();
     render(DatasetSplitHarness, { client, sampleType, onClose });
-    return { onClose };
+    return { invalidate, onClose };
 }
 
 beforeEach(() => {
@@ -79,7 +79,7 @@ describe('useDatasetSplit', () => {
     );
 
     it('preserves inputs on failure and refreshes on a successful retry', async () => {
-        const { onClose } = setup('image');
+        const { invalidate, onClose } = setup('image');
         await fireEvent.input(screen.getByLabelText('Tag 1'), { target: { value: 'training' } });
         vi.mocked(splitDataset).mockRejectedValueOnce(new Error('Network error'));
         await fireEvent.click(screen.getByRole('button', { name: 'Split dataset' }));
@@ -95,7 +95,8 @@ describe('useDatasetSplit', () => {
         });
         await fireEvent.click(screen.getByRole('button', { name: 'Split dataset' }));
         await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
-        expect(refreshAllData).toHaveBeenCalledExactlyOnceWith('collection');
+        expect(loadTags).toHaveBeenCalledOnce();
+        expect(invalidate).toHaveBeenCalledOnce();
         expect(toast.success).toHaveBeenCalledWith(
             'Created the following tags: training (9 samples).'
         );

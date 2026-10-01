@@ -6,7 +6,7 @@ export { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
 export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
-export { loadCollectionTags, useTags } from '$lib/hooks/useTags/useTags';
+export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution';
@@ -83,4 +83,3 @@ export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
 export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
-export { useRefreshAllData } from '$lib/hooks/useRefreshAllData/useRefreshAllData';

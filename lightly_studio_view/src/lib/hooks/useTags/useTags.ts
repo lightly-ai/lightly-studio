@@ -24,32 +24,6 @@ interface UseTagsReturn {
 
 const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 
-/** Fetches the tags of a collection into the global store. Rejects if the request fails. */
-export async function loadCollectionTags(collectionId: string): Promise<void> {
-    const response = await readTags({ path: { collection_id: collectionId } });
-    if (response.error) {
-        throw new Error(JSON.stringify(response.error));
-    }
-    if (!response.data) return;
-
-    const tags = response.data;
-    const validTagIds = tags.map((tag) => tag.tag_id);
-    // Store tags by collection_id to prevent preloading from overwriting other collections' tags
-    useGlobalStorage().tags.update((tagsByCollection) => ({
-        ...tagsByCollection,
-        [collectionId]: tags
-    }));
-    tagsSelectedByCollection.update((selectedByCollection) => {
-        const selected = selectedByCollection[collectionId] ?? new Set<string>();
-        return {
-            ...selectedByCollection,
-            [collectionId]: new Set(
-                Array.from(selected).filter((tagId) => validTagIds.includes(tagId))
-            )
-        };
-    });
-}
-
 export function useTags(options: UseTagsOptions): UseTagsReturn {
     const { collection_id, kind } = options;
     const { tags: tagsData } = useGlobalStorage();
@@ -64,7 +38,37 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         if (!collection_id) return;
 
         isLoading.set(true);
-        currentLoadPromise = loadCollectionTags(collection_id)
+        currentLoadPromise = readTags({
+            path: {
+                collection_id
+            }
+        })
+            .then((response) => {
+                if (response.error) {
+                    throw new Error(JSON.stringify(response.error));
+                }
+                if (response.data) {
+                    const validTagIds = response.data.map((tag) => tag.tag_id);
+
+                    // Store tags by collection_id to prevent preloading from overwriting other collections' tags
+                    tagsData.update((tagsByCollection) => ({
+                        ...tagsByCollection,
+                        [collection_id]: response.data ?? []
+                    }));
+
+                    tagsSelectedByCollection.update((selectedByCollection) => {
+                        const selected = selectedByCollection[collection_id] ?? new Set<string>();
+                        const prunedSelected = new Set(
+                            Array.from(selected).filter((tagId) => validTagIds.includes(tagId))
+                        );
+
+                        return {
+                            ...selectedByCollection,
+                            [collection_id]: prunedSelected
+                        };
+                    });
+                }
+            })
             .catch((err) => {
                 error.set(err as Error);
             })

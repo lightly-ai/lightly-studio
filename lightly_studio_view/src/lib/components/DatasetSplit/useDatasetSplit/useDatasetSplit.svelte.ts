@@ -1,14 +1,8 @@
-import { createMutation } from '@tanstack/svelte-query';
+import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import { splitDatasetMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import {
-    useGlobalStorage,
-    useImageFilters,
-    useRefreshAllData,
-    useTags,
-    useVideoFilters
-} from '$lib/hooks';
+import { useGlobalStorage, useImageFilters, useTags, useVideoFilters } from '$lib/hooks';
 
 interface Options {
     collectionId: string;
@@ -18,9 +12,9 @@ interface Options {
 
 export function useDatasetSplit(getOptions: () => Options) {
     const { collectionId, sampleType, onClose } = getOptions();
+    const client = useQueryClient();
     const mutation = createMutation(() => splitDatasetMutation());
-    const { tags } = useTags({ collection_id: collectionId });
-    const { refreshAllData } = useRefreshAllData();
+    const { tags, loadTags } = useTags({ collection_id: collectionId });
     const { filteredSampleCount } = useGlobalStorage();
     // Capture once per opening so later filter changes cannot alter the submitted scope.
     const filter = structuredClone(
@@ -43,7 +37,8 @@ export function useDatasetSplit(getOptions: () => Options) {
                 path: { collection_id: collectionId },
                 body: { ...values, filter }
             });
-            await refreshAllData(collectionId);
+            // Tags have a separate store; refresh both it and queries that may depend on tags.
+            await Promise.all([loadTags(), client.invalidateQueries()]);
             toast.success(
                 `Created the following tags: ${counts
                     .map(
