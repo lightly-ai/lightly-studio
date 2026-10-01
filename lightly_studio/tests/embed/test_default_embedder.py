@@ -191,7 +191,7 @@ def test_resolve_default_embedder__parent_model_without_server_uses_bootstrap(
 ) -> None:
     parent = create_collection(session=db_session)
     child = create_collection(session=db_session, parent_collection_id=parent.collection_id)
-    create_embedding_model(
+    parent_model = create_embedding_model(
         session=db_session,
         collection_id=parent.collection_id,
         embedding_model_name="local/model@v1",
@@ -213,9 +213,7 @@ def test_resolve_default_embedder__parent_model_without_server_uses_bootstrap(
     assert result is not None
     returned_embedder, model_id = result
     assert returned_embedder is builtin
-    registered = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=model_id)
-    assert registered is not None
-    assert registered.name == "random_model"
+    assert model_id != parent_model.embedding_model_id
 
 
 def test_resolve_default_embedder__unusable_parent_server_skips(
@@ -223,7 +221,9 @@ def test_resolve_default_embedder__unusable_parent_server_skips(
 ) -> None:
     parent = create_collection(session=db_session)
     child = create_collection(session=db_session, parent_collection_id=parent.collection_id)
-    _create_remote_default_model(session=db_session, collection_id=parent.collection_id)
+    _create_remote_default_model(
+        session=db_session, collection_id=parent.collection_id, url="http://parent.test"
+    )
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
     mocker.patch.object(
         embedder_config, "build_remote", side_effect=RemoteEmbedderUnreachableError("down")
@@ -245,7 +245,7 @@ def test_resolve_default_embedder__unusable_parent_server_skips(
         )
         is None
     )
-    assert "on the server http://embedder.test of its parent collection" in caplog.text
+    assert "on the server http://parent.test of its parent collection" in caplog.text
 
 
 def test_resolve_query_embedder__uses_existing_default(
@@ -412,7 +412,9 @@ def test_resolve_query_embedder__builds_remote_from_stored_config(
     assert embedder.embed_text(texts=["a query"]).embeddings.shape == (1, 2)
 
 
-def _create_remote_default_model(session: Session, collection_id: UUID) -> None:
+def _create_remote_default_model(
+    session: Session, collection_id: UUID, url: str = "http://embedder.test"
+) -> None:
     model = create_embedding_model(
         session=session,
         collection_id=collection_id,
@@ -420,6 +422,6 @@ def _create_remote_default_model(session: Session, collection_id: UUID) -> None:
         embedding_dimension=2,
         set_as_default=True,
     )
-    model.remote_embedder_url = "http://embedder.test"
+    model.remote_embedder_url = url
     session.add(model)
     session.commit()

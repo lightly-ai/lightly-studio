@@ -150,6 +150,8 @@ def test_embed_annotation_collection__new_collection_after_restart(
     dataset: ImageDataset, server_url: str, mocker: MockerFixture
 ) -> None:
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    # One box on each of the 3 images
+    assert len(list(dataset)) == 3
     annotation_collection_id = _add_box_to_each_image(dataset=dataset)
 
     embed_samples.embed_annotation_collection(
@@ -172,10 +174,9 @@ def test_embed_annotation_collection__new_collection_after_restart(
 def test_embed_annotation_collection__new_collection_after_restart_with_registration(
     dataset: ImageDataset, mocker: MockerFixture
 ) -> None:
+    crop_embedder = RandomEmbedder(dimension=4)
     registry = EmbedderRegistry()
-    registry.register(
-        embedder=RandomEmbedder(dimension=4), bootstrap_for={Capability.IMAGE_CROP_PATH}
-    )
+    registry.register(embedder=crop_embedder, bootstrap_for={Capability.IMAGE_CROP_PATH})
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     annotation_collection_id = _add_box_to_each_image(dataset=dataset)
 
@@ -185,7 +186,7 @@ def test_embed_annotation_collection__new_collection_after_restart_with_registra
 
     # The registered crop embedder wins over the server of the images
     crop_model = _default_model(dataset=dataset, collection_id=annotation_collection_id)
-    assert crop_model.name == "random_model"
+    assert crop_model.name == crop_embedder.embedding_space_spec().space_key
     assert crop_model.embedding_dimension == 4
     assert crop_model.remote_embedder_url is None
 
