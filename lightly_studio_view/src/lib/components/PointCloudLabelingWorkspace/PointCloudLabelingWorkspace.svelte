@@ -154,8 +154,6 @@
                                 />
                             {:else if workspace.status === 'empty'}
                                 <WorkspaceStatusPanel status="empty" {onExit} />
-                            {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
-                                <WorkspaceStatusPanel status="loading" {onExit} />
                             {:else if workspace.cloudPointFrame.data}
                                 <SceneViewport
                                     batch={workspace.cloudPointFrame.data.batch}
@@ -165,6 +163,8 @@
                                     pointCloudBounds={workspace.cloudPointFrame.data.bounds ??
                                         undefined}
                                 />
+                            {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
+                                <WorkspaceStatusPanel status="loading" {onExit} />
                             {:else}
                                 <WorkspaceStatusPanel status="empty" {onExit} />
                             {/if}
