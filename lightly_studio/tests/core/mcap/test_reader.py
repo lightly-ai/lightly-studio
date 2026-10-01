@@ -402,6 +402,81 @@ class TestMcapFileReader:
             for transform in static_transforms
         ] == [("base_link", "lidar", (0.0, 1.0, 2.0))]
 
+    def test_get_dynamic_transform_edges(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_100_000_000, (20.0, 0.0, 0.0)),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            edges = reader.get_dynamic_transform_edges()
+
+        # Two messages publish the same edge, so it is returned once.
+        assert edges == [("map", "base_link")]
+
+    def test_get_dynamic_transform_edges__read_by_load_data_for_topics(
+        self, tmp_path: Path, mocker: MockerFixture
+    ) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_100_000_000, (20.0, 0.0, 0.0)),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            iter_messages = mocker.spy(reader._reader, "iter_messages")
+            reader.load_data_for_topics(
+                [helpers.LIDAR_POINTS_TOPIC],
+                static_transform_topic="/tf_static",
+                dynamic_transform_topic="/tf",
+            )
+            edges = reader.get_dynamic_transform_edges()
+            static_transforms = reader.get_static_transforms()
+
+        # The locators and both transform topics come from one pass over the file.
+        assert iter_messages.call_count == 1
+        assert edges == [("map", "base_link")]
+        assert len(static_transforms) == 2
+
+    def test_get_dynamic_transform_edges__unknown_topic(self, reader: McapFileReader) -> None:
+        assert reader.get_dynamic_transform_edges() == []
+
+    def test_get_dynamic_transform_edges__skips_bad_message(self, tmp_path: Path) -> None:
+        path = helpers.write_json_mcap(
+            path=tmp_path / "bad_tf.mcap",
+            topic="/tf",
+            schema_name="tf2_msgs/msg/TFMessage",
+            messages=[
+                # The first message has no header, so it holds no transform.
+                (1_000_000_000, {"transforms": [{"child_frame_id": "base_link"}]}),
+                (
+                    1_100_000_000,
+                    {
+                        "transforms": [
+                            {
+                                "header": {"frame_id": "map"},
+                                "child_frame_id": "base_link",
+                                "transform": {
+                                    "translation": {"x": 1.0, "y": 0.0, "z": 0.0},
+                                    "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                                },
+                            }
+                        ]
+                    },
+                ),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            edges = reader.get_dynamic_transform_edges()
+
+        assert edges == [("map", "base_link")]
+
     def test_get_decoded_message_at(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
         with McapFileReader(path) as reader:

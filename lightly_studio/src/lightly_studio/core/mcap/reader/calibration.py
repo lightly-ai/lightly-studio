@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from mcap.reader import McapReader
@@ -17,6 +17,7 @@ from lightly_studio.core.mcap.type_definitions import CameraIntrinsics, StaticTr
 logger = logging.getLogger(__name__)
 
 STATIC_TRANSFORM_TOPIC = "/tf_static"
+DYNAMIC_TRANSFORM_TOPIC = "/tf"
 
 
 def read_intrinsic(messages: Iterable[tuple[int, Any]], topic: str) -> CameraIntrinsics:
@@ -83,6 +84,15 @@ def read_transforms(
             decoder=decoder, path=path, schema=schema, channel=channel, message=message
         )
     ]
+
+
+def unique_edges(static_transforms: Sequence[StaticTransform]) -> list[tuple[str, str]]:
+    """Returns the parent and child frame of each transform, once, in order of appearance."""
+    return list(
+        dict.fromkeys(
+            (transform.parent_frame_id, transform.child_frame_id) for transform in static_transforms
+        )
+    )
 
 
 def transforms_of_message(
