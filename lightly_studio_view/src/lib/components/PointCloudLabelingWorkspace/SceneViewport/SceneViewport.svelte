@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Canvas } from '@threlte/core';
+    import { Canvas, T } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
@@ -65,6 +65,15 @@
 
     let cursorX = $state(0);
     let cursorY = $state(0);
+    const axisIndicator = $derived.by(() => {
+        const center = pointCloudBounds.min.map((min, axis) =>
+            (min + pointCloudBounds.max[axis]) / 2
+        ) as [number, number, number];
+        const size = Math.max(
+            ...pointCloudBounds.min.map((min, axis) => pointCloudBounds.max[axis] - min)
+        ) * 0.15;
+        return { center, size: Math.max(size, 0.5) };
+    });
 
     function handleMouseMove(event: MouseEvent) {
         const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -82,6 +91,7 @@
     <Canvas>
         <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
         <GroundPlane {pointCloudBounds} />
+        <T.AxesHelper args={[axisIndicator.size]} position={axisIndicator.center} />
         <CuboidLayer
             {cuboids}
             {annotationClasses}
