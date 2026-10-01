@@ -114,6 +114,17 @@ class TestRecording:
             (0.0, 0.0, 0.6, 0.8)
         )
 
+    def test_set_reference_frame_ids(self, db_session: Session) -> None:
+        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+
+        recording.set_reference_frame_ids(frame_ids=["map", "CABIN"])
+
+        stored = recording_resolver.get_by_id(
+            session=db_session, recording_id=recording.recording_id
+        )
+        assert stored is not None
+        assert stored.reference_frame_ids == ["map", "CABIN"]
+
 
 def _create_recording(session: Session, uri: str) -> Recording:
     """Create a recording on a fresh dataset, and wrap it."""
