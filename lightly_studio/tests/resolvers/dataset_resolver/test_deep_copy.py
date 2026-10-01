@@ -1037,6 +1037,53 @@ def test_deep_copy__with_evaluation_class_metrics(db_session: Session) -> None:
     assert len(original_metrics) == 2
 
 
+def test_deep_copy__skips_class_metrics_of_deleted_labels(db_session: Session) -> None:
+    # Arrange - one class metric of an existing label and one of a deleted label
+    dataset = create_collection(session=db_session, collection_name="original")
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id
+    )
+    cat = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="cat"
+    )
+    evaluation_class_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=label_id,
+                metric_name="average_precision",
+                value=0.6,
+            )
+            for label_id in (cat.annotation_label_id, uuid.uuid4())
+        ],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - only the metric of the existing label is copied
+    copied_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=copied.dataset_id,
+    )
+    copied_metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=copied_runs[0].id,
+    )
+    copied_cat = annotation_label_resolver.get_by_label_name(
+        session=db_session, dataset_id=copied.dataset_id, label_name="cat"
+    )
+    assert copied_cat is not None
+    assert [metric.annotation_label_id for metric in copied_metrics] == [
+        copied_cat.annotation_label_id
+    ]
+
+
 def test_deep_copy__raises_for_nonexistent_dataset(db_session: Session) -> None:
     # Arrange
     nonexistent_id = uuid.uuid4()
