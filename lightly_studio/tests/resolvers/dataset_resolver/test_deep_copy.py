@@ -12,6 +12,7 @@ from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
@@ -27,12 +28,14 @@ from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTabl
 from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
     annotation_resolver,
     collection_embedding_model_resolver,
     collection_resolver,
     dataset_resolver,
     embedding_model_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     image_resolver,
@@ -960,6 +963,74 @@ def test_deep_copy__with_evaluation_sample_metrics(db_session: Session) -> None:
 
     # Assert - original run metrics are untouched
     original_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+    assert len(original_metrics) == 2
+
+
+def test_deep_copy__with_evaluation_class_metrics(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="original")
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id
+    )
+    cat = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="cat"
+    )
+    dog = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
+    )
+    evaluation_class_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=cat.annotation_label_id,
+                metric_name="average_precision",
+                value=0.6,
+            ),
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=dog.annotation_label_id,
+                metric_name="average_precision",
+                value=0.4,
+            ),
+        ],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copied run has the same class metrics
+    copied_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=copied.dataset_id,
+    )
+    assert len(copied_runs) == 1
+    assert copied_runs[0].id != run.id
+    copied_metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=copied_runs[0].id,
+    )
+    # The copied metrics point at the copied labels, not at the original ones.
+    copied_labels = annotation_label_resolver.get_by_ids(
+        session=db_session, ids=[m.annotation_label_id for m in copied_metrics]
+    )
+    assert {label.dataset_id for label in copied_labels} == {copied.dataset_id}
+    label_names = {
+        label.annotation_label_id: label.annotation_label_name for label in copied_labels
+    }
+    assert {label_names[m.annotation_label_id]: m.value for m in copied_metrics} == pytest.approx(
+        {"cat": 0.6, "dog": 0.4}
+    )
+
+    # Assert - original run metrics are untouched
+    original_metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
         session=db_session,
         evaluation_run_id=run.id,
     )

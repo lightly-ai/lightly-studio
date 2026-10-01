@@ -42,6 +42,7 @@ from lightly_studio.models.collection_embedding_model import CollectionEmbedding
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.export_job import ExportJobTable
@@ -111,6 +112,7 @@ def delete_dataset(
     _delete_temporal_spans(session=session, dataset_id=dataset_id)
     _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
     _delete_evaluation_annotation_metrics(session=session, dataset_id=dataset_id)
+    _delete_evaluation_class_metrics(session=session, dataset_id=dataset_id)
 
     # 2. annotation_base and the sample link tables.
     _delete_annotation_base(session=session, dataset_id=dataset_id)
@@ -513,6 +515,25 @@ def _delete_evaluation_annotation_metrics(session: Session, dataset_id: UUID) ->
     session.exec(
         delete(EvaluationAnnotationMetricTable).where(
             col(EvaluationAnnotationMetricTable.evaluation_run_id).in_(run_ids_subquery)
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_evaluation_class_metrics(session: Session, dataset_id: UUID) -> None:
+    """Delete evaluation class metrics for the given dataset."""
+    run_ids_subquery = (
+        select(EvaluationRunTable.id)
+        .join(
+            CollectionTable,
+            col(EvaluationRunTable.gt_annotation_collection_id)
+            == col(CollectionTable.collection_id),
+        )
+        .where(col(CollectionTable.dataset_id) == dataset_id)
+    )
+    session.exec(
+        delete(EvaluationClassMetricTable).where(
+            col(EvaluationClassMetricTable.evaluation_run_id).in_(run_ids_subquery)
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )

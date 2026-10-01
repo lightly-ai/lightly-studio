@@ -50,6 +50,7 @@ from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricTable,
 )
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
@@ -155,6 +156,7 @@ def deep_copy(
     _copy_metadata(session=session, now=now)
     _copy_evaluation_sample_metrics(session=session)
     _copy_evaluation_annotation_metrics(session=session)
+    _copy_evaluation_class_metrics(session=session)
 
     _copy_sample_tag_links(session=session)
     _copy_sample_group_links(session=session)
@@ -792,6 +794,29 @@ def _copy_evaluation_sample_metrics(session: Session) -> None:
         source=src,
         from_clause=from_clause,
         overrides=overrides,
+    )
+
+
+def _copy_evaluation_class_metrics(session: Session) -> None:
+    """Copy evaluation class metrics, remapping evaluation_run_id and annotation_label_id.
+
+    Rows of deleted annotation labels are not copied.
+    """
+    src = _table(EvaluationClassMetricTable).alias("src")
+    map_run = _map(_MAP_EVALUATION_RUN)
+    map_label = _map(_MAP_ANNOTATION_LABEL)
+    from_clause = src.join(map_run, map_run.c.old_id == src.c["evaluation_run_id"]).join(
+        map_label, map_label.c.old_id == src.c["annotation_label_id"]
+    )
+    _copy_table(
+        session=session,
+        target=EvaluationClassMetricTable,
+        source=src,
+        from_clause=from_clause,
+        overrides={
+            "evaluation_run_id": map_run.c.new_id,
+            "annotation_label_id": map_label.c.new_id,
+        },
     )
 
 
