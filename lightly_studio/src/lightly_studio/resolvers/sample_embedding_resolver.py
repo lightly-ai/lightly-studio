@@ -13,6 +13,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.database import db_insert, db_vector
 from lightly_studio.database.db_manager import DatabaseBackend
 from lightly_studio.database.db_vector import Embedding
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -150,7 +151,9 @@ def get_all_by_collection_id(
         .order_by(col(SampleTable.created_at).asc(), col(SampleEmbeddingTable.sample_id).asc())
     )
     if filters:
-        statement = filters.apply(statement)
+        # TODO(Nauryzbay, 10/2026): Use the sample type of the collection. Annotation queries
+        # on video collections do not match frame annotations here.
+        statement = filters.apply(query=statement, sample_type=SampleType.IMAGE)
     if session.get_bind().dialect.name == DatabaseBackend.POSTGRESQL.value:
         # Compile to SQL + params and read it on the binary cursor.
         compiled = statement.compile(

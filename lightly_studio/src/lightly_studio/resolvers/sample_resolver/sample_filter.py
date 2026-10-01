@@ -11,6 +11,7 @@ from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -44,8 +45,17 @@ class SampleFilter(RegionSampleIdsFilter):
     # before applying this filter.
     query_expr: Optional[QueryExpr] = None
 
-    def apply(self, query: QueryType) -> QueryType:
-        """Apply the filters to the given query."""
+    def apply(self, query: QueryType, sample_type: SampleType) -> QueryType:
+        """Apply the filters to the given query.
+
+        Args:
+            query: The query to filter.
+            sample_type: The type of the samples in the query. It defines how the query
+                expression matches annotations.
+
+        Returns:
+            The filtered query.
+        """
         query = self._apply_sample_ids_filter(query)
         query = self._apply_annotation_filters(query)
         query = self._apply_tag_filters(query)
@@ -55,7 +65,7 @@ class SampleFilter(RegionSampleIdsFilter):
         query = self._apply_region_sample_ids_filter(
             query, sample_id_column=col(SampleTable.sample_id)
         )
-        return self._apply_query_expr_filter(query)
+        return self._apply_query_expr_filter(query=query, sample_type=sample_type)
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:
@@ -163,8 +173,10 @@ class SampleFilter(RegionSampleIdsFilter):
             return query.where(col(SampleTable.captions).any())
         return query.where(~col(SampleTable.captions).any())
 
-    def _apply_query_expr_filter(self, query: QueryType) -> QueryType:
+    def _apply_query_expr_filter(self, query: QueryType, sample_type: SampleType) -> QueryType:
         if self.query_expr is None:
             return query
-        match_expression = query_translation.to_match_expression(self.query_expr.match_expr)
+        match_expression = query_translation.to_match_expression(
+            expr=self.query_expr.match_expr, sample_type=sample_type
+        )
         return query.where(match_expression.get())

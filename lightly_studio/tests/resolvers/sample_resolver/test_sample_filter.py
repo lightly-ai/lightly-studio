@@ -11,6 +11,7 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.image import ImageTable
@@ -64,7 +65,9 @@ class TestSampleFilter:
         sample_filter = SampleFilter()
 
         # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         # Should return all samples
@@ -91,7 +94,9 @@ class TestSampleFilter:
         sample_filter = SampleFilter(sample_ids=[filtered_sample_id])
 
         # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         # Should only return one sample
@@ -141,7 +146,9 @@ class TestSampleFilter:
         )
 
         # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         # Should only return samples with dog annotations
@@ -205,7 +212,9 @@ class TestSampleFilter:
         )
 
         # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         # Should only return samples[0]
@@ -249,7 +258,9 @@ class TestSampleFilter:
         sample_filter = SampleFilter(tag_ids=[tag1.tag_id])
 
         # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         # Should only return samples[0]
@@ -309,7 +320,9 @@ class TestSampleFilter:
         sample_filter = SampleFilter(tag_ids=[tag1.tag_id, tag2.tag_id])
 
         # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         # Should return samples[0]
@@ -335,7 +348,9 @@ class TestSampleFilter:
         sample_filter = SampleFilter(metadata_filters=[Metadata("height") > 150])
 
         # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         # Should return samples[1]
@@ -375,7 +390,7 @@ class TestSampleFilter:
 
         # Create a positive filter
         sample_filter = SampleFilter(has_captions=True)
-        filtered_query = sample_filter.apply(query=base_query)
+        filtered_query = sample_filter.apply(query=base_query, sample_type=SampleType.IMAGE)
         result = db_session.exec(filtered_query).all()
 
         # Should return samples[0]
@@ -384,7 +399,7 @@ class TestSampleFilter:
 
         # Create a negative filter
         sample_filter = SampleFilter(has_captions=False)
-        filtered_query = sample_filter.apply(query=base_query)
+        filtered_query = sample_filter.apply(query=base_query, sample_type=SampleType.IMAGE)
         result = db_session.exec(filtered_query).all()
 
         # Should return samples[1]
@@ -410,7 +425,7 @@ class TestSampleFilter:
         )
 
         query = select(ImageTable).join(ImageTable.sample)
-        filtered_query = sample_filter.apply(query=query)
+        filtered_query = sample_filter.apply(query=query, sample_type=SampleType.IMAGE)
         result = db_session.exec(filtered_query).all()
 
         assert len(result) == 1
@@ -466,7 +481,9 @@ class TestSampleFilter:
         )
 
         # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         # Should return samples 1 and 2
@@ -491,7 +508,9 @@ class TestSampleFilter:
         )
 
         sample_filter = SampleFilter(region_sample_ids=[samples[0].sample_id])
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         spy.assert_called_once()
@@ -525,7 +544,7 @@ class TestSampleFilter:
         )
 
         query = select(ImageTable).join(ImageTable.sample)
-        filtered_query = sample_filter.apply(query=query)
+        filtered_query = sample_filter.apply(query=query, sample_type=SampleType.IMAGE)
         result = db_session.exec(filtered_query).all()
 
         assert len(result) == 1
@@ -587,7 +606,9 @@ class TestSampleFilterConfusionCell:
             )
         )
 
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         assert len(result) == 1
@@ -638,7 +659,9 @@ class TestSampleFilterConfusionCell:
             )
         )
 
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         assert len(result) == 1
@@ -688,7 +711,9 @@ class TestSampleFilterConfusionCell:
             sample_ids=[samples[1].sample_id],
         )
 
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         assert len(result) == 1
@@ -745,7 +770,9 @@ class TestSampleFilterConfusionCell:
             )
         )
 
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         assert len(result) == 1
@@ -800,7 +827,9 @@ class TestSampleFilterConfusionCell:
             confusion_cell=ConfusionCell(evaluation_run_id=run.id, gt_label="car", pred_label=None)
         )
 
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        filtered_query = sample_filter.apply(
+            query=select(SampleTable), sample_type=SampleType.IMAGE
+        )
         result = db_session.exec(filtered_query).all()
 
         assert len(result) == 1

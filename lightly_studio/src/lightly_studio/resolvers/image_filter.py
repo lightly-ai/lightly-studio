@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -33,7 +34,7 @@ class ImageFilter(GridFilterBase):
         """Apply the filters to the given query."""
         # Apply sample filters to the query.
         if self.sample_filter is not None:
-            query = self.sample_filter.apply(query)
+            query = self.sample_filter.apply(query=query, sample_type=SampleType.IMAGE)
 
         # Apply dimension-based filters to the query.
         query = self._apply_dimension_filters(query)

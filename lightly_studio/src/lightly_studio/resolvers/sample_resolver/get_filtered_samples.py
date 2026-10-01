@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
@@ -36,8 +37,10 @@ def get_filtered_samples(
     )
 
     if filters is not None:
-        samples_query = filters.apply(samples_query)
-        total_count_query = filters.apply(total_count_query)
+        # TODO(Nauryzbay, 10/2026): Use the sample type of the collection. Annotation queries
+        # on video collections do not match frame annotations here.
+        samples_query = filters.apply(query=samples_query, sample_type=SampleType.IMAGE)
+        total_count_query = filters.apply(query=total_count_query, sample_type=SampleType.IMAGE)
 
     # Apply default ordering
     samples_query = samples_query.order_by(
