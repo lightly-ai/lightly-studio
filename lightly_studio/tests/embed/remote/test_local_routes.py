@@ -3,7 +3,11 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from lightly_studio_serve.embedder import ImageBytesEmbedder, ImagePathEmbedder
+from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+)
 from lightly_studio_serve.protocol import ServerLimits
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
@@ -37,6 +41,7 @@ def test_with_local_routes(remote: RemoteEmbedder) -> None:
     embedder = local_routes.with_local_routes(embedder=remote)
 
     assert isinstance(embedder, ImagePathEmbedder)
+    assert isinstance(embedder, ImageCropPathEmbedder)
     assert isinstance(embedder, ImageBytesEmbedder)
     assert embedder.embedding_space_spec() == remote.embedding_space_spec()
     assert isinstance(embedder, RemoteEmbedder)

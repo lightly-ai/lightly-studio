@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
 - Python SDK: Store the URL and API key of a remote embedder that `register_default_embedder` registered before an import, so that a later process, such as `lightly-studio gui`, searches on the server with no new registration.
+- Python SDK: Embed annotation crops on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
 
 ### Changed
 
