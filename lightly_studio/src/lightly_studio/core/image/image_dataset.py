@@ -596,7 +596,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Load a Pascal VOC segmentation dataset and store in DB.
 
         Pascal VOC masks encode class IDs per pixel (semantic segmentation).
-        Imported masks are persisted as `AnnotationType.SEGMENTATION_MASK`.
+        The masks are persisted as `AnnotationType.SEGMENTATION_MASK`.
         Query and export workflows should use segmentation mask type filters.
 
         Args:

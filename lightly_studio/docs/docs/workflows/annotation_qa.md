@@ -140,6 +140,6 @@ to it. Click `Recompute evaluation` to bring the order back in step with your ed
 
 ## Next Steps
 
-- [Annotations](annotations.md): create, edit, and import annotations.
+- [Annotations](annotations.md): create, edit, and add annotations.
 - [Model Evaluation](evaluation.md): the full evaluation workflow, including the confusion matrix.
 - [Curate a Traffic CCTV Dataset for YOLO Training](../tutorials/yolo-traffic-cctv-object-detection.md): a worked example that includes a grid-based QA pass on a real dataset.
