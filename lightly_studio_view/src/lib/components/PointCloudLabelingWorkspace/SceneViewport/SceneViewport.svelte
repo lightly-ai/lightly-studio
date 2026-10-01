@@ -1,10 +1,13 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
+    import { Rotate3d } from '@lucide/svelte';
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
     import GroundPlane from '$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.svelte';
     import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
+    import SceneNavigationControls from './SceneNavigationControls.svelte';
     import type {
         AnnotationClass,
         Bounds3,
@@ -65,12 +68,23 @@
 
     let cursorX = $state(0);
     let cursorY = $state(0);
+    let isRotating = $state(false);
 
     function handleMouseMove(event: MouseEvent) {
         const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
         cursorX = event.clientX - rect.left;
         cursorY = event.clientY - rect.top;
     }
+
+    function handleMouseDown(event: MouseEvent) {
+        if (event.button === 0 && event.target instanceof HTMLCanvasElement) isRotating = true;
+    }
+
+    onMount(() => {
+        const stopRotating = () => (isRotating = false);
+        window.addEventListener('mouseup', stopRotating);
+        return () => window.removeEventListener('mouseup', stopRotating);
+    });
 </script>
 
 <div
@@ -78,6 +92,8 @@
     role="application"
     data-testid="workspace-scene-viewport"
     onmousemove={handleMouseMove}
+    onmousedown={handleMouseDown}
+    onmouseup={() => (isRotating = false)}
 >
     <Canvas>
         <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
@@ -93,5 +109,15 @@
             {onhover}
         />
     </Canvas>
+    <SceneNavigationControls />
+    {#if isRotating}
+        <div
+            class="pointer-events-none absolute z-20"
+            style={`left: ${cursorX + 14}px; top: ${cursorY + 14}px`}
+            aria-hidden="true"
+        >
+            <Rotate3d class="size-5 text-white drop-shadow" />
+        </div>
+    {/if}
     <CuboidTooltipOverlay {cursorX} {cursorY} {hoveredAnnotationId} {cuboids} {annotationClasses} />
 </div>
