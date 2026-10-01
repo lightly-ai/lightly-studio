@@ -247,7 +247,7 @@ def evaluation_metric_sort_to_order_by(
 
 def to_match_expression(  # noqa: PLR0911 C901
     expr: MatchExpr,
-    sample_type: SampleType = SampleType.IMAGE,
+    sample_type: SampleType,
 ) -> MatchExpression:
     """Translate a validated query-language expression to a dataset-query expression.
 
@@ -296,19 +296,26 @@ def to_match_expression(  # noqa: PLR0911 C901
     if isinstance(expr, TagsContainsExpr):
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
+    # The subexpression of an annotation expression filters annotations, not the outer samples.
     if isinstance(expr, ClassificationMatchExpr):
         return _to_sample_annotation_query(
-            annotation_query=ClassificationQuery(to_match_expression(expr=expr.subexpr)),
+            annotation_query=ClassificationQuery(
+                to_match_expression(expr=expr.subexpr, sample_type=SampleType.ANNOTATION)
+            ),
             sample_type=sample_type,
         )
     if isinstance(expr, ObjectDetectionMatchExpr):
         return _to_sample_annotation_query(
-            annotation_query=ObjectDetectionQuery(to_match_expression(expr=expr.subexpr)),
+            annotation_query=ObjectDetectionQuery(
+                to_match_expression(expr=expr.subexpr, sample_type=SampleType.ANNOTATION)
+            ),
             sample_type=sample_type,
         )
     if isinstance(expr, SegmentationMaskMatchExpr):
         return _to_sample_annotation_query(
-            annotation_query=SegmentationMaskQuery(to_match_expression(expr=expr.subexpr)),
+            annotation_query=SegmentationMaskQuery(
+                to_match_expression(expr=expr.subexpr, sample_type=SampleType.ANNOTATION)
+            ),
             sample_type=sample_type,
         )
     if isinstance(expr, AndExpr):

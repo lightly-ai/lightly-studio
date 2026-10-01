@@ -35,7 +35,7 @@ def test_to_match_expression__string_eq() -> None:
         operator=EqualityComparisonOperator.EQ,
         value="cat.jpg",
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "image.file_name = 'cat.jpg'" in sql
 
 
@@ -45,7 +45,7 @@ def test_to_match_expression__string_neq() -> None:
         operator=EqualityComparisonOperator.NEQ,
         value="dog.jpg",
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "image.file_name != 'dog.jpg'" in sql
 
 
@@ -56,7 +56,7 @@ def test_to_match_expression__string_unknown_field() -> None:
         value="x",
     )
     with pytest.raises(QueryExprError, match="Unknown string field"):
-        query_translation.to_match_expression(expr)
+        query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
 
 
 @pytest.mark.parametrize(
@@ -78,7 +78,7 @@ def test_to_match_expression__integer_operators(
         operator=operator,
         value=800,
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert f"image.width {expected_op} 800" in sql
 
 
@@ -89,7 +89,7 @@ def test_to_match_expression__integer_unknown_field() -> None:
         value=3,
     )
     with pytest.raises(QueryExprError, match="Unknown integer field"):
-        query_translation.to_match_expression(expr)
+        query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
 
 
 def test_to_match_expression__integer_wrong_type_for_valid_field() -> None:
@@ -99,7 +99,7 @@ def test_to_match_expression__integer_wrong_type_for_valid_field() -> None:
         value=3,
     )
     with pytest.raises(QueryExprError, match="Unknown integer field"):
-        query_translation.to_match_expression(expr)
+        query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
 
 
 def test_to_match_expression__datetime_gt() -> None:
@@ -109,7 +109,7 @@ def test_to_match_expression__datetime_gt() -> None:
         operator=OrdinalComparisonOperator.GT,
         value=dt,
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "image.created_at >" in sql
     assert "2024-01-15" in sql
 
@@ -120,7 +120,7 @@ def test_to_match_expression__datetime_video() -> None:
         operator=OrdinalComparisonOperator.LT,
         value=datetime(2024, 1, 15, tzinfo=timezone.utc),
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "sample.created_at <" in sql
     assert "2024-01-15" in sql
 
@@ -132,7 +132,7 @@ def test_to_match_expression__datetime_unknown_field() -> None:
         value=datetime(2024, 1, 1, tzinfo=timezone.utc),
     )
     with pytest.raises(QueryExprError, match="Unknown datetime field"):
-        query_translation.to_match_expression(expr)
+        query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
 
 
 def test_to_match_expression__ordinal_float_lt() -> None:
@@ -141,7 +141,7 @@ def test_to_match_expression__ordinal_float_lt() -> None:
         operator=OrdinalComparisonOperator.LT,
         value=30.0,
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "video.fps < 30.0" in sql
 
 
@@ -152,7 +152,7 @@ def test_to_match_expression__ordinal_float_unknown_field() -> None:
         value=1.0,
     )
     with pytest.raises(QueryExprError, match="Unknown ordinal float field"):
-        query_translation.to_match_expression(expr)
+        query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
 
 
 def test_to_match_expression__ordinal_float_duration_gt() -> None:
@@ -161,7 +161,7 @@ def test_to_match_expression__ordinal_float_duration_gt() -> None:
         operator=OrdinalComparisonOperator.GT,
         value=10.5,
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "video.duration_s > 10.5" in sql
 
 
@@ -172,7 +172,7 @@ def test_to_match_expression__equality_float_unknown_field() -> None:
         value=1.0,
     )
     with pytest.raises(QueryExprError, match="Unknown equality float field"):
-        query_translation.to_match_expression(expr)
+        query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
 
 
 def test_to_match_expression__tags_contains() -> None:
@@ -180,7 +180,7 @@ def test_to_match_expression__tags_contains() -> None:
         field=FieldRef(table="image", name="tags"),
         tag_name="reviewed",
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "exists" in sql
     assert "tag.name = 'reviewed'" in sql
 
@@ -191,7 +191,7 @@ def test_to_match_expression__tags_unknown_field() -> None:
         tag_name="x",
     )
     with pytest.raises(QueryExprError, match="Unknown tags field"):
-        query_translation.to_match_expression(expr)
+        query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
 
 
 def test_to_match_expression__classification_match() -> None:
@@ -201,7 +201,7 @@ def test_to_match_expression__classification_match() -> None:
         value="cat",
     )
     expr = ClassificationMatchExpr(subexpr=subexpr)
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "exists" in sql
     assert "annotation_type = 'classification'" in sql
     assert "annotation_label_name = 'cat'" in sql
@@ -215,7 +215,7 @@ def test_to_match_expression__classification_source() -> None:
             value="ground_truth",
         )
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "collection.name = 'ground_truth'" in sql
 
 
@@ -227,7 +227,7 @@ def test_to_match_expression__classification_confidence() -> None:
             value=0.7,
         )
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "annotation_base.confidence >= 0.7" in sql
 
 
@@ -238,7 +238,7 @@ def test_to_match_expression__object_detection_match() -> None:
         value=50,
     )
     expr = ObjectDetectionMatchExpr(subexpr=subexpr)
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "exists" in sql
     assert "annotation_type = 'object_detection'" in sql
     assert "object_detection_annotation.width > 50" in sql
@@ -252,7 +252,7 @@ def test_to_match_expression__object_detection_source() -> None:
             value="predictions",
         )
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "collection.name = 'predictions'" in sql
 
 
@@ -264,7 +264,7 @@ def test_to_match_expression__object_detection_confidence() -> None:
             value=0.9,
         )
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "annotation_base.confidence > 0.9" in sql
 
 
@@ -275,7 +275,7 @@ def test_to_match_expression__segmentation_mask_match() -> None:
         value="person",
     )
     expr = SegmentationMaskMatchExpr(subexpr=subexpr)
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "exists" in sql
     assert "annotation_type = 'segmentation_mask'" in sql
     assert "annotation_label_name = 'person'" in sql
@@ -289,7 +289,7 @@ def test_to_match_expression__segmentation_mask_source() -> None:
             value="ground_truth",
         )
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "collection.name = 'ground_truth'" in sql
 
 
@@ -301,7 +301,7 @@ def test_to_match_expression__segmentation_mask_confidence() -> None:
             value=0.5,
         )
     )
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "annotation_base.confidence <= 0.5" in sql
 
 
@@ -357,7 +357,7 @@ def test_to_match_expression__and() -> None:
         value=500,
     )
     expr = AndExpr(children=[child_a, child_b])
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "image.width > 100" in sql
     assert "image.height < 500" in sql
     assert " and " in sql
@@ -375,7 +375,7 @@ def test_to_match_expression__or() -> None:
         value="b.jpg",
     )
     expr = OrExpr(children=[child_a, child_b])
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     assert "file_name = 'a.jpg'" in sql
     assert "file_name = 'b.jpg'" in sql
     assert " or " in sql
@@ -388,7 +388,7 @@ def test_to_match_expression__not() -> None:
         value=100,
     )
     expr = NotExpr(child=child)
-    sql = _to_sql(query_translation.to_match_expression(expr))
+    sql = _to_sql(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
     # NOT(width < 100) is compiled as width >= 100 by SQLAlchemy.
     assert "image.width >= 100" in sql
 
@@ -419,7 +419,9 @@ def test_to_match_expression__nested_and_or() -> None:
             or_expr,
         ]
     )
-    sql = _to_sql(query_translation.to_match_expression(and_expr))
+    sql = _to_sql(
+        query_translation.to_match_expression(expr=and_expr, sample_type=SampleType.IMAGE)
+    )
     assert "image.height > 50" in sql
     assert "image.width = 100" in sql
     assert "image.width = 200" in sql

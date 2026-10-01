@@ -17,6 +17,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     ClassificationMatchExpr,
     EqualityComparisonOperator,
@@ -76,7 +77,7 @@ def test_to_match_expression__image_field_inside_classification_matcher(
             value=500,
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     # Wrong: both samples have the same classification annotation shape, but
@@ -144,7 +145,7 @@ def test_to_match_expression__classification_field_inside_object_detection_match
             value="dog",
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     # Wrong: the field says "classification.class_name", but the matcher's
@@ -201,7 +202,7 @@ def test_to_match_expression__classification_class_name_at_top_level(
         operator=EqualityComparisonOperator.EQ,
         value="cat",
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     # Wrong: the top-level EXISTS subquery is not scoped to the current sample,

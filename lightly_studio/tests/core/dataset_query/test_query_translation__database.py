@@ -15,6 +15,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
@@ -54,7 +55,7 @@ def test_to_match_expression__string_eq(db_session: Session) -> None:
         operator=EqualityComparisonOperator.EQ,
         value="target.jpg",
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [target.sample_id]
@@ -75,7 +76,7 @@ def test_to_match_expression__integer_gt(db_session: Session) -> None:
         operator=OrdinalComparisonOperator.GT,
         value=500,
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [big.sample_id]
@@ -100,7 +101,7 @@ def test_to_match_expression__datetime_gt(db_session: Session) -> None:
         operator=OrdinalComparisonOperator.GT,
         value=cutoff,
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [new.sample_id]
@@ -119,7 +120,7 @@ def test_to_match_expression__tags_contains(db_session: Session) -> None:
         field=FieldRef(table="image", name="tags"),
         tag_name="reviewed",
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -147,7 +148,7 @@ def test_to_match_expression__classification_match(db_session: Session) -> None:
             value="cat",
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -184,7 +185,7 @@ def test_to_match_expression__classification_source(db_session: Session) -> None
             value="ground_truth",
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -213,7 +214,7 @@ def test_to_match_expression__classification_confidence(db_session: Session) -> 
             value=0.7,
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -244,7 +245,7 @@ def test_to_match_expression__classification_confidence_no_match(db_session: Ses
 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
-        .match(query_translation.to_match_expression(expr))
+        .match(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
         .to_list()
     )
 
@@ -277,7 +278,7 @@ def test_to_match_expression__classification_confidence_none_no_match(
 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
-        .match(query_translation.to_match_expression(expr))
+        .match(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
         .to_list()
     )
 
@@ -315,7 +316,7 @@ def test_to_match_expression__object_detection_match(db_session: Session) -> Non
             value=50,
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -345,7 +346,7 @@ def test_to_match_expression__object_detection_source(db_session: Session) -> No
             value="predictions",
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -374,7 +375,7 @@ def test_to_match_expression__object_detection_confidence(db_session: Session) -
             value=0.9,
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -405,7 +406,7 @@ def test_to_match_expression__object_detection_confidence_no_match(db_session: S
 
     results = (
         DatasetQuery(dataset=dataset, session=db_session)
-        .match(query_translation.to_match_expression(expr))
+        .match(query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE))
         .to_list()
     )
 
@@ -434,7 +435,7 @@ def test_to_match_expression__segmentation_mask_match(db_session: Session) -> No
             value="person",
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -463,7 +464,7 @@ def test_to_match_expression__segmentation_mask_source(db_session: Session) -> N
             value="ground_truth",
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -492,7 +493,7 @@ def test_to_match_expression__segmentation_mask_confidence(db_session: Session) 
             value=0.5,
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [image1.sample_id]
@@ -537,7 +538,7 @@ def test_to_match_expression__and(db_session: Session) -> None:
             ),
         ]
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [target.sample_id]
@@ -564,7 +565,7 @@ def test_to_match_expression__or(db_session: Session) -> None:
             ),
         ]
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert {r.sample_id for r in results} == {img_a.sample_id, img_b.sample_id}
@@ -593,7 +594,7 @@ def test_to_match_expression__not(db_session: Session) -> None:
             value=500,
         )
     )
-    match = query_translation.to_match_expression(expr)
+    match = query_translation.to_match_expression(expr=expr, sample_type=SampleType.IMAGE)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [big.sample_id]

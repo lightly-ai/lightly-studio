@@ -45,7 +45,7 @@ class SampleFilter(RegionSampleIdsFilter):
     # before applying this filter.
     query_expr: Optional[QueryExpr] = None
 
-    def apply(self, query: QueryType, sample_type: SampleType = SampleType.IMAGE) -> QueryType:
+    def apply(self, query: QueryType, sample_type: SampleType) -> QueryType:
         """Apply the filters to the given query.
 
         Args:
