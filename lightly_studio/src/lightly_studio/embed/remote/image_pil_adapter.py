@@ -57,12 +57,12 @@ def _encode_jpeg(image: Image.Image) -> bytes | None:
 
     Returns:
         The JPEG bytes of the image, or None if the encoder rejects the image, for
-        example a mode that JPEG cannot hold, such as RGBA.
+        example a mode that JPEG cannot hold, such as RGBA, or an image with no pixels.
     """
     with io.BytesIO() as buffer:
         try:
             image.save(buffer, format="JPEG", quality=_JPEG_QUALITY)
-        except OSError as error:
+        except (OSError, ValueError) as error:
             logger.warning("Cannot encode the image %s as JPEG: %s", image, error)
             return None
         return buffer.getvalue()

@@ -95,11 +95,22 @@ class TestImagePILRoute:
         np.testing.assert_array_equal(result.embeddings, np.array([[3.0, 3.0]], dtype=np.float32))
         assert "Cannot embed the image at index 0 of the batch" in caplog.text
 
+    @pytest.mark.parametrize(
+        "unencodable",
+        [
+            # JPEG cannot hold an alpha channel
+            Image.new("RGBA", (5, 4)),
+            # JPEG cannot hold an image with no pixels
+            Image.new("RGB", (0, 4)),
+        ],
+    )
     def test_embed_images_pil__skips_unencodable(
-        self, adapted: ImagePILEmbedder, caplog: pytest.LogCaptureFixture
+        self,
+        adapted: ImagePILEmbedder,
+        caplog: pytest.LogCaptureFixture,
+        unencodable: Image.Image,
     ) -> None:
-        # JPEG cannot hold an alpha channel
-        images = [Image.new("RGBA", (5, 4)), Image.new("RGB", (3, 3))]
+        images = [unencodable, Image.new("RGB", (3, 3))]
 
         with caplog.at_level(logging.WARNING, logger=image_pil_adapter.__name__):
             result = adapted.embed_images_pil(images=images)
