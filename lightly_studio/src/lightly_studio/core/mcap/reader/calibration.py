@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator
 from typing import Any
 
 from mcap.reader import McapReader
@@ -64,7 +64,7 @@ def read_transforms(
     decoder: ChannelDecoder,
     path: str,
     topic: str,
-) -> list[StaticTransform]:
+) -> Iterator[StaticTransform]:
     """Reads the transforms of every message on a topic, skipping unreadable messages.
 
     Args:
@@ -74,19 +74,19 @@ def read_transforms(
         topic: The topic to read. The topic is in the file.
 
     Returns:
-        One transform per edge in the topic. A message that cannot be decoded, or
-        holds no transform, is skipped.
+        One transform per edge in the topic, read lazily. A message that cannot be
+        decoded, or holds no transform, is skipped.
     """
-    return [
+    return (
         transform
         for schema, channel, message in mcap_reader.iter_messages(topics=[topic])
         for transform in transforms_of_message(
             decoder=decoder, path=path, schema=schema, channel=channel, message=message
         )
-    ]
+    )
 
 
-def unique_edges(static_transforms: Sequence[StaticTransform]) -> list[tuple[str, str]]:
+def unique_edges(static_transforms: Iterable[StaticTransform]) -> list[tuple[str, str]]:
     """Returns the parent and child frame of each transform, once, in order of appearance."""
     return list(
         dict.fromkeys(

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from types import TracebackType
 from typing import Any, overload
 
@@ -406,10 +406,10 @@ class McapFileReader:
     def _cached_static_transforms(self, topic: str) -> list[StaticTransform]:
         """Returns the transforms of a static topic, or none if the topic is not in the file."""
         if topic not in self._static_transforms_by_topic:
-            self._static_transforms_by_topic[topic] = self._read_transforms(topic)
+            self._static_transforms_by_topic[topic] = list(self._read_transforms(topic))
         return self._static_transforms_by_topic[topic]
 
-    def _read_transforms(self, topic: str) -> list[StaticTransform]:
+    def _read_transforms(self, topic: str) -> Iterable[StaticTransform]:
         """Reads the transforms of every message on a topic, skipping unreadable messages.
 
         Returns none if the topic is not in the file.
