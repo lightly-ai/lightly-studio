@@ -22,7 +22,8 @@ export const useTickDetails = ({
                     seq_number: getSeqNumber()
                 }
             }),
-            enabled: Boolean(datasetId) && Boolean(sequenceId)
+            enabled: Boolean(datasetId) && Boolean(sequenceId),
+            placeholderData: (previous: TickDetailView | undefined) => previous
         };
     });
 

@@ -13,13 +13,22 @@ describe('useTickDetails', () => {
     // the hook merges its own `enabled` flag onto them.
     const baseOptions = { queryKey: ['tick-details'], queryFn: vi.fn() };
     const query = {
-        data: { recording_id: 'recording-1', seq_number: 0, timestamp_ns: 1000, channels: {} },
+        data: {
+            recording_id: 'recording-1',
+            seq_number: 0,
+            timestamp_ns: 1000,
+            channels: {},
+            annotations: []
+        },
         isSuccess: true
     } satisfies Partial<CreateQueryResult<TickDetailView, Error>>;
 
     // The thunk the hook hands to createQuery; invoking it yields the resolved
     // query options for the current getter values.
-    let queryOptionsThunk: () => { enabled: boolean };
+    let queryOptionsThunk: () => {
+        enabled: boolean;
+        placeholderData: (previous: TickDetailView | undefined) => TickDetailView | undefined;
+    };
 
     beforeEach(() => {
         vi.resetAllMocks();
@@ -75,5 +84,13 @@ describe('useTickDetails', () => {
     ])('disables the query when the $label is missing', ({ datasetId, sequenceId }) => {
         renderHook({ datasetId, sequenceId, seqNumber: 0 });
         expect(queryOptionsThunk().enabled).toBe(false);
+    });
+
+    it('keeps the previous tick details while the next tick loads', () => {
+        renderHook({ datasetId: 'dataset-1', sequenceId: 'sequence-1', seqNumber: 2 });
+        const previous = query.data;
+
+        expect(queryOptionsThunk().placeholderData(previous)).toBe(previous);
+        expect(queryOptionsThunk().placeholderData(undefined)).toBeUndefined();
     });
 });

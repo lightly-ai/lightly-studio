@@ -1,6 +1,6 @@
 ---
 name: glossary
-description: Read when naming anything user-facing - GUI text, docs, public Python API names, arguments, docstrings, or error messages. Gives the approved LightlyStudio term for each concept and the wording to avoid, currently covering annotations, annotation classes, annotation sources, and labeling.
+description: Read when naming anything user-facing - GUI text, docs, public Python API names, arguments, docstrings, or error messages. Gives the approved LightlyStudio term for each concept and the wording to avoid, currently covering annotations, annotation classes, annotation sources, labeling, and ingestion.
 ---
 
 # Glossary and Naming
@@ -22,10 +22,14 @@ Add new topics as their own `##` section below.
 | A group of annotations, e.g. ground truth, a model's predictions | **annotation source** | `annotation_source` | annotation collection, collection, collection name, label source |
 | Creating annotations | **labeling** | - | the noun 'label' |
 
-## Data ingest
+## Data ingestion
 
 | Concept | Term | Avoid |
 |---|---|---|
 | Images added without any annotations | **raw images** | image folder, unlabeled images |
 | Videos added without any annotations | **raw videos** | video folder |
+| Adding samples to a dataset from any source, for example with `add_images_from_path` or `add_samples_from_coco` | **ingestion** (verb: ingest) | import |
+| Adding annotations to samples that are already in the dataset, for example with `add_annotations_from_yolo` | **add annotations** | import |
+
+Do not use "import" for data. It reads like the Python `import` in nearby code blocks.
 

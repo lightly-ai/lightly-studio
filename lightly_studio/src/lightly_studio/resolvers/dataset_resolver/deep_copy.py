@@ -453,7 +453,10 @@ def _copy_object_tracks(session: Session, new_dataset_id: UUID) -> None:
 
 
 def _copy_recordings(session: Session, new_dataset_id: UUID) -> None:
-    """Copy recordings, remapping dataset_id. ``format`` and ``uri`` are copied verbatim."""
+    """Copy recordings, remapping dataset_id.
+
+    ``format``, ``uri``, and ``reference_frame_ids`` are copied verbatim.
+    """
     src = _table(RecordingTable).alias("src")
     map_recording = _map(_MAP_RECORDING)
     from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"])
