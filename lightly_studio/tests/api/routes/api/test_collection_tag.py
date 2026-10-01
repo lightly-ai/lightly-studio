@@ -221,6 +221,56 @@ def test_add_samples_by_filter__image_filter_with_embedding_region_tags_only_reg
     }
 
 
+def test_add_samples_by_filter__image_filter_with_axes_embedding_region_tags_only_region_samples(
+    db_session: Session, test_client: TestClient
+) -> None:
+    """A region drawn on a plot with projection axes is resolved in that layout."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=3,
+        set_as_default=True,
+    )
+    # With the axes below, the coordinates are (2, 0), (-2, 0), (0, 1) and (0, -1).
+    images = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="right.png"), [2.0, 0.0, 0.0]),
+            (ImageStub(path="left.png"), [-2.0, 0.0, 0.0]),
+            (ImageStub(path="top.png"), [0.0, 1.0, 0.0]),
+            (ImageStub(path="bottom.png"), [0.0, -1.0, 0.0]),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
+        json={
+            "filter": {
+                "filter_type": "image",
+                "sample_filter": {
+                    "embedding_region": {
+                        "polygon": [
+                            {"x": 1.0, "y": -0.5},
+                            {"x": 3.0, "y": -0.5},
+                            {"x": 3.0, "y": 0.5},
+                            {"x": 1.0, "y": 0.5},
+                        ],
+                        "axes": {"x": [1.0, 0.0, 0.0], "y": [0.0, 1.0, 0.0]},
+                    }
+                },
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {images[0].sample_id}
+
+
 def test_add_samples_by_filter__annotations_filter_with_embedding_region_tags_only_region_samples(
     db_session: Session, test_client: TestClient
 ) -> None:
