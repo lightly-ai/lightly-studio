@@ -147,6 +147,7 @@ def write_mcap(
     lidar_stamp_offset_ns: int = 0,
     video_stamp_offset_ns: int = 0,
     base_link_poses: Sequence[tuple[int, tuple[float, float, float]]] = (),
+    tf_stamp_offset_ns: int = 0,
 ) -> Path:
     """Writes an indexed MCAP file with a camera, a lidar, and static transforms.
 
@@ -159,6 +160,8 @@ def write_mcap(
         base_link_poses: `(log_time_ns, translation)` pairs, in log-time order. Each
             pair is written on `/tf` as the position of the base frame in the world
             frame, without rotation. Empty writes no `/tf` topic.
+        tf_stamp_offset_ns: Added to each `/tf` log time to form `header.stamp`.
+            Zero keeps the stamp equal to the log time.
 
     Returns:
         The path of the written file.
@@ -194,7 +197,7 @@ def write_mcap(
                         translation=translation,
                         rotation=(0.0, 0.0, 0.0, 1.0),
                         parent_frame_id=WORLD_FRAME_ID,
-                        stamp_ns=log_time_ns,
+                        stamp_ns=log_time_ns + tf_stamp_offset_ns,
                     )
                 ]
             },
