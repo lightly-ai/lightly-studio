@@ -80,6 +80,10 @@ SYNC_COMPONENT = "pcl_front_left"
 # The largest time difference that still pairs a component with a tick of the sync component.
 MAX_PAIRING_DIFF_NS = 50_000_000
 
+# Frames in the viewer Frame menu, in menu order. The first is the default. Each id
+# is the frame string from the bag.
+REFERENCE_FRAME_IDS = ["map", "CABIN"]
+
 # How many groups to print at the end.
 PREVIEW_COUNT = 10
 
@@ -99,6 +103,7 @@ dataset.add_mcaps_from_path(
     sync_component=SYNC_COMPONENT,
     components=COMPONENTS,
     max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    reference_frame_ids=REFERENCE_FRAME_IDS,
 )
 dataset.add_labels_from_folder(path=mcap_path, topic=ANNOTATION_TOPIC)
 

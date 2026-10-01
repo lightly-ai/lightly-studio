@@ -135,6 +135,19 @@ class TestTransformTree:
         assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0])
 
 
+def test_frame_edges__ignores_the_pose() -> None:
+    message = {
+        "transforms": [
+            {
+                "header": {"frame_id": "map"},
+                "child_frame_id": "base_link",
+            }
+        ]
+    }
+
+    assert transforms.frame_edges(message) == [("map", "base_link")]
+
+
 def test_from_decoded_message__ros() -> None:
     message = SimpleNamespace(
         transforms=[
