@@ -122,7 +122,7 @@
                         <p>No plugins available.</p>
                         <p class="mt-2">
                             Extend LightlyStudio with plugins. Install ready-made plugins or build
-                            your own to import/export data, run model-assisted annotation, and
+                            your own to ingest/export data, run model-assisted annotation, and
                             automate workflows.
                         </p>
                     </div>

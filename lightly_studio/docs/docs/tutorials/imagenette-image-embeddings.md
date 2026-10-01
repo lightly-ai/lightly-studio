@@ -7,7 +7,7 @@ whole group at once and give all of its images the same annotation class in one 
 
 You will:
 
-- Import 9,469 raw images across 10 classes.
+- Ingest 9,469 raw images across 10 classes.
 - Explore the embedding plot, and use the lasso to select groups of similar images.
 - Review a selected group and annotate all of it in one action.
 - Use the legend and the `Color by` control to inspect your annotations.
@@ -110,7 +110,7 @@ imagenette-tutorial/
 ```
 
 The archive holds 13,394 images in two splits: 9,469 in `train/` and 3,925 in `val/`. This
-tutorial imports `train/` only. The `val/` split stays on disk for later use.
+tutorial ingests `train/` only. The `val/` split stays on disk for later use.
 
 Each split has one folder per class, named by its WordNet ID. Use this table to find the
 class of a folder:
@@ -136,7 +136,7 @@ LightlyStudio and compare it against your own work.
 Imagenette is a subset of ImageNet, so the terms of ImageNet apply to the images. See the
 Imagenette repository for its license note.
 
-## Step 2: Import the images
+## Step 2: Ingest the images
 
 Save the following as `explore_imagenette.py` in the same working directory:
 
@@ -156,7 +156,7 @@ python explore_imagenette.py
 ```
 
 <figure markdown>
-  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_002_image.png" alt="The grid view after the import, filled with Imagenette images" style="width: 100%; border-radius: 6px;">
+  <img src="https://storage.googleapis.com/lightly-public/studio/tutorials/imagenette-image-embeddings/step_002_image.png" alt="The grid view after ingestion, filled with Imagenette images" style="width: 100%; border-radius: 6px;">
   <figcaption>After all images load, the main view shows all Imagenette images.</figcaption>
 </figure>
 
@@ -525,7 +525,7 @@ For more export options, see [Export](../workflows/export.md).
 
 ## Conclusion
 
-You imported 9,469 raw images, explored their embeddings, and used groups of similar
+You ingested 9,469 raw images, explored their embeddings, and used groups of similar
 images to guide labeling. Instead of deciding what every image shows, you reviewed related
 images together and gave a whole group its shared annotation class in one action. Then you
 loaded the ground truth of the dataset and measured where your annotations and the ground
@@ -542,6 +542,6 @@ and inspect them before you accept them.
 
 Related guides: [Embeddings](../core_concepts/embeddings.md), which also shows how to
 [load precomputed embeddings](../core_concepts/embeddings.md#loading-precomputed-embeddings)
-instead of computing them at import,
+instead of computing them at ingestion,
 [Image Dataset](../workflows/image_dataset.md), and
 [Annotations](../workflows/annotations.md).

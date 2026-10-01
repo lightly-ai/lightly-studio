@@ -49,4 +49,4 @@ Files remain in the remote storage and are streamed to the UI on demand. Make su
 **Current Limitations:**
 
 !!! warning "Cloud Storage Limitation"
-    Cloud storage is supported for raw media folders via `add_images_from_path()` and `add_videos_from_path()`, and for COCO object detection and segmentation mask imports via `add_samples_from_coco()`. Other dataset importers still expect local files.
+    Cloud storage is supported for raw media folders via `add_images_from_path()` and `add_videos_from_path()`, and for COCO samples with object detection or segmentation mask annotations via `add_samples_from_coco()`. Other ingestion methods still expect local files.
