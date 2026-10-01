@@ -29,7 +29,7 @@ from lightly_studio_serve.embedder import (
 
 from lightly_studio.embed import embedder_config
 from lightly_studio.embed.embedder_config import EmbedderConfig
-from lightly_studio.embed.remote import image_path_adapter
+from lightly_studio.embed.remote import local_routes
 from lightly_studio.embed.remote.errors import RemoteEmbedderCapabilityError, RemoteEmbedderError
 
 logger = logging.getLogger(__name__)
@@ -112,7 +112,7 @@ class EmbedderRegistry:
                 a ``space_key`` with an embedder the registry already holds, registered
                 or built-in, but does not match its spec.
         """
-        embedder = image_path_adapter.with_image_path(embedder=embedder)
+        embedder = local_routes.with_local_routes(embedder=embedder)
         spec = embedder.embedding_space_spec()
         space_key = spec.space_key
         capabilities = _capabilities_of(embedder=embedder)
@@ -296,7 +296,7 @@ class EmbedderRegistry:
         # embedder gains a teardown hook.
         key = (config.dataset_id, config.space_key)
         try:
-            embedder = image_path_adapter.with_image_path(
+            embedder = local_routes.with_local_routes(
                 embedder=embedder_config.build_remote(config=config)
             )
         except RemoteEmbedderError as error:
