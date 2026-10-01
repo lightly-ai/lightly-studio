@@ -8,6 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.recording import Recording
+from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.recording import RecordingFormat
@@ -16,6 +17,7 @@ from lightly_studio.resolvers import (
     mcap_group_component_definition_resolver,
     recording_resolver,
     sensor_calibration_resolver,
+    static_transform_resolver,
 )
 from tests.helpers_resolvers import create_collection
 
@@ -85,6 +87,32 @@ class TestRecording:
         with pytest.raises(IntegrityError):
             recording.add_sensor_calibrations(calibrations=[calibration])
         db_session.rollback()
+
+    def test_add_static_transforms(self, db_session: Session) -> None:
+        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+
+        transform_ids = recording.add_static_transforms(
+            transforms=[
+                StaticTransform(
+                    parent_frame_id="base_link",
+                    child_frame_id="lidar",
+                    translation=(1.0, 2.0, 3.0),
+                    rotation=(0.0, 0.0, 0.6, 0.8),
+                    log_time_ns=900,
+                )
+            ]
+        )
+
+        assert len(transform_ids) == 1
+        rows = static_transform_resolver.get_all_by_recording_id(
+            session=db_session, recording_id=recording.recording_id
+        )
+        assert [(row.parent, row.child) for row in rows] == [("base_link", "lidar")]
+        # The columns are stored as 32-bit floats.
+        assert (rows[0].tx, rows[0].ty, rows[0].tz) == pytest.approx((1.0, 2.0, 3.0))
+        assert (rows[0].qx, rows[0].qy, rows[0].qz, rows[0].qw) == pytest.approx(
+            (0.0, 0.0, 0.6, 0.8)
+        )
 
 
 def _create_recording(session: Session, uri: str) -> Recording:
