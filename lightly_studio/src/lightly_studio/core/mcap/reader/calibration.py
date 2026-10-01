@@ -1,11 +1,12 @@
-"""Reads camera intrinsics and static transforms from an open MCAP file."""
+"""Reads camera intrinsics and transforms from an open MCAP file."""
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 
+from mcap.exceptions import DecoderNotFoundError
 from mcap.reader import McapReader
 from mcap.records import Channel, Message, Schema
 
@@ -17,6 +18,48 @@ from lightly_studio.core.mcap.type_definitions import CameraIntrinsics, StaticTr
 logger = logging.getLogger(__name__)
 
 STATIC_TRANSFORM_TOPIC = "/tf_static"
+DYNAMIC_TRANSFORM_TOPIC = "/tf"
+
+
+def dynamic_edges_until(
+    mcap_reader: McapReader,
+    path: str,
+    topic: str,
+    frame_ids: Sequence[str],
+) -> list[tuple[str, str]]:
+    """Returns dynamic edges read from the start of a topic until frames are seen.
+
+    Reading stops once every frame id has appeared as a parent or a child. The pose
+    and the stamp are not read. If the topic ends first, the edges seen so far are
+    returned.
+
+    Args:
+        mcap_reader: The seeking reader of the open file.
+        path: The path or URI of the MCAP file, used in error messages.
+        topic: The topic the dynamic transforms are published on.
+        frame_ids: The coordinate frames to find.
+
+    Returns:
+        The parent and child frame id of each edge seen, in order, once each.
+
+    Raises:
+        McapAccessError: If a message on the topic cannot be decoded.
+    """
+    needed = set(frame_ids)
+    edges: dict[tuple[str, str], None] = {}
+    seen: set[str] = set()
+    try:
+        for _, _, _, decoded_message in mcap_reader.iter_decoded_messages(topics=[topic]):
+            _collect_frame_edges(
+                decoded_message=decoded_message, path=path, topic=topic, edges=edges, seen=seen
+            )
+            if needed <= seen:
+                break
+    except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
+        raise McapAccessError(
+            f"Cannot decode the messages of topic '{topic}' in '{path}': {exc}"
+        ) from exc
+    return list(edges)
 
 
 def read_intrinsic(messages: Iterable[tuple[int, Any]], topic: str) -> CameraIntrinsics:
@@ -105,3 +148,26 @@ def transforms_of_message(
             path,
         )
         return []
+
+
+def _collect_frame_edges(
+    decoded_message: Any,
+    path: str,
+    topic: str,
+    edges: dict[tuple[str, str], None],
+    seen: set[str],
+) -> None:
+    """Adds the frame names of one message, or skips a message that has none."""
+    try:
+        message_edges = transforms.frame_edges(decoded_message)
+    except McapAccessError:
+        logger.warning(
+            "Cannot read the frame names of a message of topic '%s' in '%s'. It is skipped.",
+            topic,
+            path,
+        )
+        return
+    for parent_frame_id, child_frame_id in message_edges:
+        edges.setdefault((parent_frame_id, child_frame_id), None)
+        seen.add(parent_frame_id)
+        seen.add(child_frame_id)

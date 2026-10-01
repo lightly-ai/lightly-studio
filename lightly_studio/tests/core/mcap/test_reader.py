@@ -12,7 +12,7 @@ from mcap.exceptions import InvalidMagic
 from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
-from lightly_studio.core.mcap import matching
+from lightly_studio.core.mcap import matching, transforms
 from lightly_studio.core.mcap.errors import (
     ChannelNotFoundError,
     DataNotLoadedError,
@@ -457,6 +457,27 @@ class TestMcapFileReader:
                     channel_id=channel_id,
                     timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
                 )
+
+    def test_read_dynamic_edges_until__stops_when_the_frames_are_seen(
+        self, tmp_path: Path, mocker: MockerFixture
+    ) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_100_000_000, (20.0, 0.0, 0.0)),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            frame_edges = mocker.spy(transforms, "frame_edges")
+            edges = reader.read_dynamic_edges_until(frame_ids=["map"])
+
+        assert edges == [("map", "base_link")]
+        assert frame_edges.call_count == 1
+
+    def test_read_dynamic_edges_until__missing_topic(self, reader: McapFileReader) -> None:
+        assert reader.read_dynamic_edges_until(frame_ids=["map"]) == []
 
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
