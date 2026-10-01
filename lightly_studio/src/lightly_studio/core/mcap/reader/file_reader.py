@@ -13,7 +13,10 @@ from numpy.typing import NDArray
 from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError
 from lightly_studio.core.mcap.matching import MatchFunction
 from lightly_studio.core.mcap.reader import calibration, frame_scan, session
-from lightly_studio.core.mcap.reader.calibration import STATIC_TRANSFORM_TOPIC
+from lightly_studio.core.mcap.reader.calibration import (
+    DYNAMIC_TRANSFORM_TOPIC,
+    STATIC_TRANSFORM_TOPIC,
+)
 from lightly_studio.core.mcap.reader.frame_scan import FrameScanner, TopicScanRequest
 from lightly_studio.core.mcap.reader.session import ReadPattern, TopicIndex
 from lightly_studio.core.mcap.topic_kind import TopicKind
@@ -284,6 +287,34 @@ class McapFileReader:
             message that cannot be decoded, or holds no transform, is skipped.
         """
         return list(self._cached_static_transforms(topic=topic))
+
+    def read_dynamic_edges_until(
+        self,
+        frame_ids: Sequence[str],
+        topic: str = DYNAMIC_TRANSFORM_TOPIC,
+    ) -> list[tuple[str, str]]:
+        """Returns dynamic edges read from the start of a topic until frames are seen.
+
+        Reading stops once every frame id has appeared as a parent or a child. The pose
+        and the stamp are not read. An edge with a blank frame name is skipped. A topic
+        that is not in the file, or an empty `frame_ids`, returns no edges. If the
+        topic ends first, the edges seen so far are returned.
+
+        Args:
+            frame_ids: The coordinate frames to find.
+            topic: The topic the dynamic transforms are published on.
+
+        Returns:
+            The parent and child frame id of each edge seen, in order, once each.
+
+        Raises:
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        if not frame_ids or not self._topic_index.has_topic(topic):
+            return []
+        return calibration.dynamic_edges_until(
+            mcap_reader=self._reader, path=self.path, topic=topic, frame_ids=frame_ids
+        )
 
     def get_decoded_message_at(
         self,

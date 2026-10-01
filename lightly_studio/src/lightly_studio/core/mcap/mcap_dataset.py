@@ -202,13 +202,14 @@ class McapDataset:
             self._group_dataset = McapGroupDataset(collection=self._group_collection())
         return self._group_dataset
 
-    def add_mcaps_from_path(
+    def add_mcaps_from_path(  # noqa: PLR0913
         self,
         path: PathLike,
         sync_component: str,
         components: Sequence[McapComponentSpec],
         max_pairing_diff_ns: int = add_mcaps.DEFAULT_MAX_PAIRING_DIFF_NS,
         limit: int | None = None,
+        reference_frame_ids: Sequence[str] | None = None,
     ) -> None:
         """Index every `.mcap` recording under a path into the dataset.
 
@@ -242,11 +243,15 @@ class McapDataset:
             max_pairing_diff_ns: The largest time difference that still pairs a
                 component with an anchor tick.
             limit: Maximum number of recordings to index. By default, all are indexed.
+            reference_frame_ids: The coordinate frames shown in the viewer, in menu
+                order. The first is the default. Each id is the frame string from the
+                bag, for example `map` or `CABIN`. When omitted, no frames are
+                stored and the viewer keeps each point cloud in its sensor frame.
 
         Raises:
             ValueError: If `components` names other components than the dataset has, if
-                `sync_component` is not one of them, or if `limit` is not None and not
-                greater than 0.
+                `sync_component` is not one of them, if `limit` is not None and not
+                greater than 0, or if a reference frame id is empty or repeated.
             AllInputFilesFailedError: If every recording under the path failed.
         """
         fsspec_lister.validate_limit(limit)
@@ -269,6 +274,7 @@ class McapDataset:
             sync_component=sync_component,
             components=components,
             max_pairing_diff_ns=max_pairing_diff_ns,
+            reference_frame_ids=reference_frame_ids,
         )
 
     def add_labels_from_folder(
