@@ -99,23 +99,31 @@ class TestTickDetailView:
     def test_fields(self) -> None:
         """TickDetailView exposes recording_id, seq_number, timestamp_ns, channels, annotations."""
         recording_id = uuid4()
-        channel = TickChannelView(
+        camera_channel = TickChannelView(
             channel_id=1,
             group_component_name="front",
             log_time_ns="500",
+            keyframe_log_time_ns="500",
+        )
+        lidar_channel = TickChannelView(
+            channel_id=2,
+            group_component_name="pcl_front",
+            log_time_ns="501",
             keyframe_log_time_ns=None,
         )
         detail = TickDetailView(
             recording_id=recording_id,
             seq_number=0,
             timestamp_ns=500,
-            channels={"front": channel},
+            camera_channels={"front": camera_channel},
+            lidar_channels={"pcl_front": lidar_channel},
             annotations=[],
         )
         assert detail.recording_id == recording_id
         assert detail.seq_number == 0
         assert detail.timestamp_ns == 500
-        assert detail.channels["front"].channel_id == 1
+        assert detail.camera_channels["front"].channel_id == 1
+        assert detail.lidar_channels["pcl_front"].channel_id == 2
         assert detail.annotations == []
 
     def test_timestamp_ns__none(self) -> None:
@@ -124,7 +132,8 @@ class TestTickDetailView:
             recording_id=uuid4(),
             seq_number=1,
             timestamp_ns=None,
-            channels={},
+            camera_channels={},
+            lidar_channels={},
             annotations=[],
         )
         assert detail.timestamp_ns is None

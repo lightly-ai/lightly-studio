@@ -17,7 +17,8 @@ describe('useTickDetails', () => {
             recording_id: 'recording-1',
             seq_number: 0,
             timestamp_ns: 1000,
-            channels: {},
+            camera_channels: {},
+            lidar_channels: {},
             annotations: []
         },
         isSuccess: true
