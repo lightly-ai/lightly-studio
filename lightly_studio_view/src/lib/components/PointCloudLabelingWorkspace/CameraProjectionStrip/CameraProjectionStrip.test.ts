@@ -41,7 +41,8 @@ const tickDetails: TickDetailView = {
             log_time_ns: '3000',
             keyframe_log_time_ns: null
         }
-    }
+    },
+    annotations: []
 };
 
 describe('CameraProjectionStrip', () => {

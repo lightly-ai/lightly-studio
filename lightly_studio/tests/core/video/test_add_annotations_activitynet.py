@@ -1,4 +1,4 @@
-"""Tests for ActivityNet annotation import."""
+"""Tests for adding ActivityNet annotations."""
 
 from __future__ import annotations
 
@@ -15,9 +15,7 @@ from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
-def test_add_annotations_from_activitynet__imports_events(
-    db_session: Session, tmp_path: Path
-) -> None:
+def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_path: Path) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     video = create_video(
         session=db_session,

@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { beforeAll, describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/svelte';
+import { flushSync } from 'svelte';
+import userEvent from '@testing-library/user-event';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
 // The workspace mounts the camera projection strip, which reads the tick details
@@ -8,20 +10,58 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails: { data: undefined } })
 }));
 
-vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
-    useMcapSequenceSummary: () => ({
-        summary: { data: undefined, isLoading: false, isError: false },
+vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
+    useCloudPointFrame: () => ({
+        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+    })
+}));
+
+vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
+    useMcapSequenceTicks: () => ({
+        ticks: {
+            data: {
+                ticks: [
+                    { seq_number: 0, timestamp_ns: 1000 },
+                    { seq_number: 1, timestamp_ns: 2000 }
+                ]
+            }
+        },
         refetch: vi.fn()
     })
 }));
 
+vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
+    useMcapSequenceSummary: () => ({
+        summary: {
+            data: {
+                lidar_channels: [
+                    {
+                        channel_id: 1,
+                        group_component_name: 'lidar_top',
+                        group_component_index: 0
+                    }
+                ],
+                camera_channels: []
+            },
+            isLoading: false,
+            isError: false
+        },
+        refetch: vi.fn()
+    })
+}));
+
+const defaultProps = { sampleId: 'sample-1', datasetId: 'dataset-1', sequenceId: 'sequence-1' };
+
 describe('PointCloudLabelingWorkspace', () => {
+    afterEach(() => vi.useRealTimers());
+    beforeAll(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 onExit: vi.fn()
             }
         });
@@ -32,6 +72,8 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
+        expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
+        expect(screen.getByText('lidar_top')).toBeInTheDocument();
         expect(screen.getByTestId('point-cloud-right-side-panel')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
@@ -43,9 +85,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('renders the source breadcrumb when a path is given', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 sourcePath: [
                     { label: 'Home', href: '/datasets/d1/mcap/d1' },
                     { label: 'Recordings', href: '/datasets/d1/mcap/c1' },
@@ -64,9 +104,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('falls back to the sample id when no source path is given', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 onExit: vi.fn()
             }
         });
@@ -78,9 +116,7 @@ describe('PointCloudLabelingWorkspace', () => {
     it('shows the unsupported state and does not render the panel layout', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 status: 'unsupported',
                 onExit: vi.fn()
             }
@@ -98,9 +134,7 @@ describe('PointCloudLabelingWorkspace', () => {
         const onRetry = vi.fn();
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 status: 'error',
                 onExit: vi.fn(),
                 onRetry
@@ -119,9 +153,7 @@ describe('PointCloudLabelingWorkspace', () => {
         const onExit = vi.fn();
         render(PointCloudLabelingWorkspace, {
             props: {
-                sampleId: 'sample-1',
-                datasetId: 'dataset-1',
-                sequenceId: 'sequence-1',
+                ...defaultProps,
                 onExit
             }
         });
@@ -129,4 +161,76 @@ describe('PointCloudLabelingWorkspace', () => {
         screen.getByRole('button', { name: /close labeling workspace/i }).click();
         expect(onExit).toHaveBeenCalledOnce();
     });
+
+    it('navigates through the loaded ticks from the timeline controls', async () => {
+        const user = userEvent.setup();
+        const onTickChange = vi.fn();
+        render(PointCloudLabelingWorkspace, {
+            props: {
+                ...defaultProps,
+                onTickChange
+            }
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Next frame' }));
+        expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
+        expect(onTickChange).toHaveBeenLastCalledWith(2);
+
+        await user.click(screen.getByRole('button', { name: 'Previous frame' }));
+        expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
+        expect(onTickChange).toHaveBeenLastCalledWith(1);
+    });
+
+    it('plays through ticks at the selected interval and stops at the end', async () => {
+        vi.useFakeTimers();
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Play frames' }));
+        await vi.advanceTimersByTimeAsync(300);
+        flushSync();
+        expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
+
+        await vi.advanceTimersByTimeAsync(300);
+        flushSync();
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
+    });
+
+    it('updates the active frame when the route tick changes', async () => {
+        const props = {
+            ...defaultProps,
+            tickNumber: 1
+        };
+        const { rerender } = render(PointCloudLabelingWorkspace, { props });
+
+        await rerender({ ...props, tickNumber: 2 });
+
+        expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
+    });
+
+    it.each([
+        { datasetId: 'dataset-2', sequenceId: 'sequence-1' },
+        { datasetId: 'dataset-1', sequenceId: 'sequence-2' }
+    ])(
+        'resets the LiDAR selection when the source changes to $datasetId/$sequenceId',
+        async (next) => {
+            const user = userEvent.setup();
+            const props = {
+                ...defaultProps,
+                onExit: vi.fn()
+            };
+            const { rerender } = render(PointCloudLabelingWorkspace, { props });
+
+            await user.click(screen.getByTestId('workspace-lidar-select'));
+            await user.click(screen.getByTestId('workspace-lidar-select-1'));
+            expect(screen.getByTestId('workspace-lidar-select')).not.toHaveTextContent(':');
+
+            await rerender({ ...props, ...next });
+
+            await waitFor(() =>
+                expect(screen.getByTestId('workspace-lidar-select')).toHaveTextContent(
+                    'Lidar: lidar_top'
+                )
+            );
+        }
+    );
 });

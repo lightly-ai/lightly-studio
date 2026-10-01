@@ -35,6 +35,13 @@ def register_default_embedder(
       images for reverse-image search. Search resolves the embedder by the collection's
       stored embedding space, so ``embedder`` must share that space to take effect.
 
+    An embedder that calls an embedding server, such as one that ``RemoteEmbedder.connect``
+    builds, needs the first case only. When ingestion first embeds a collection with it,
+    the dataset stores the URL and the API key of the server in plain text. A later
+    process, such as ``lightly-studio gui``, then embeds search queries on that server
+    with no registration. A server that the dataset already stores for the space is kept.
+    To change the URL or the key, use ``register_remote_embedder``.
+
     Args:
         embedder: The embedder to register. Its embedding space is read from
             ``embedder.embedding_space_spec()``.
@@ -58,9 +65,15 @@ def register_remote_embedder(dataset: Dataset[Any], url: str, api_key: str | Non
     The server must produce an embedding space that the dataset already holds embeddings
     in, such as one filled by an embedder registered with ``register_default_embedder``.
     Text and image search in that space then embed the query on the server, starting with
-    the next query. An embedder registered in this process for the same space still serves
-    the capabilities it implements. A server that embeds no images leaves the space without
-    image search. The dataset stores ``url`` and ``api_key`` in plain text.
+    the next query. If the server embeds image bytes, images that are added to the dataset
+    later are embedded on the server too. An embedder registered in this process for the
+    same space still serves the capabilities it implements. A server that embeds no images
+    leaves the space without image search. The dataset stores ``url`` and ``api_key`` in
+    plain text.
+
+    A remote embedder that ``register_default_embedder`` registered before the import
+    stores its server without this call. Call this function for a space that was filled
+    with no stored server, or to change the URL or the key of a server.
 
     See ``examples/example_remote_embedder.py`` for a runnable example.
 

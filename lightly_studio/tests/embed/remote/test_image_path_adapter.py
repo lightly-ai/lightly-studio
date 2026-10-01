@@ -11,7 +11,7 @@ from lightly_studio_serve.embedder import ImageBytesEmbedder, ImagePathEmbedder
 from lightly_studio_serve.protocol import ServerLimits
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
-from lightly_studio.embed.remote import connection, image_path_adapter
+from lightly_studio.embed.remote import connection, image_path_adapter, prepared_image_route
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
 from tests.embed.remote import threaded_server
 from tests.embed.remote.helpers import DIMENSION, SPACE_KEY
@@ -106,7 +106,7 @@ class TestImagePathRoute:
         too_large = _write(path=tmp_path / "large.png", data=b"l" * 2 * LIMITS.max_request_bytes)
         paths = [too_large, _write(path=tmp_path / "a.png", data=b"a" * 10)]
 
-        with caplog.at_level(logging.WARNING, logger=image_path_adapter.__name__):
+        with caplog.at_level(logging.WARNING, logger=prepared_image_route.__name__):
             result = adapted.embed_images(paths=paths)
 
         assert result.kept_indices == [1]

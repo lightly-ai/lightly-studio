@@ -11,7 +11,7 @@ that the server does not advertise has no method to call.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from typing import TypeVar, cast
 
 import httpx
@@ -28,7 +28,9 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from numpy.typing import NDArray
 
 from lightly_studio.embed.remote import batching, composition, connection, url_policy
+from lightly_studio.embed.remote.endpoint import RemoteEndpoint
 from lightly_studio.embed.remote.errors import (
+    RemoteEmbedderBatchTooLargeError,
     RemoteEmbedderCapabilityError,
     RemoteEmbedderError,
     RemoteEmbedderProtocolError,
@@ -120,6 +122,25 @@ class RemoteEmbedder(Embedder):
         """
         return self._spec
 
+    def remote_endpoint(self) -> RemoteEndpoint | None:
+        """Get the address and the token of the server, for a dataset to store.
+
+        A later process builds the embedder again from the stored endpoint with ``connect``,
+        and so reaches the server with no registration. A class that a caller wrote by hand,
+        or that has a route that a caller added with ``with_route``, names no endpoint.
+
+        Returns:
+            The endpoint that every request of the transport carries, or None for a class
+            that a build from the endpoint does not compose again.
+        """
+        # The build from a stored endpoint drops the methods that a caller wrote. For
+        # example, a class that adds "a photo of" to each text query loses it after a
+        # restart, and search then gives other results with no error. A text route that
+        # turns a query into an image is lost too, and text search then fails.
+        if not composition.is_rebuildable(cls=type(self)):
+            return None
+        return self._transport.endpoint()
+
     def with_route(self, route: type[RemoteEmbedder]) -> RemoteEmbedder:
         """Build an embedder of the same server that also has the methods of ``route``.
 
@@ -171,12 +192,47 @@ class RemoteEmbedder(Embedder):
             size_of=size_of,
         )
         for offset, chunk in chunks:
-            response = self._send(send=send, chunk=chunk, capability=capability)
-            self._check_answer(response=response, item_count=len(chunk))
-            rows.extend(response.embeddings)
-            # A chunk counts its kept indices from its own start.
-            kept_indices.extend(offset + index for index in response.kept_indices)
+            answers = self._send_split(send=send, chunk=chunk, offset=offset, capability=capability)
+            for part_offset, response in answers:
+                rows.extend(response.embeddings)
+                # A chunk counts its kept indices from its own start.
+                kept_indices.extend(part_offset + index for index in response.kept_indices)
         return EmbeddingResult(embeddings=self._to_array(rows=rows), kept_indices=kept_indices)
+
+    def _send_split(
+        self,
+        send: Callable[[list[_ItemT]], EmbeddingsResponse],
+        chunk: list[_ItemT],
+        offset: int,
+        capability: Capability,
+    ) -> Iterator[tuple[int, EmbeddingsResponse]]:
+        """Send one chunk. If the server answers 413, send the two halves of the chunk.
+
+        ``split_batches`` only estimates the size of a request, so the server can refuse a
+        chunk that is near ``max_request_bytes``.
+
+        Yields:
+            Each answer together with the index of its first item in the whole batch, in
+            input order.
+
+        Raises:
+            RemoteEmbedderBatchTooLargeError: If the server refuses one item as too large.
+        """
+        try:
+            response = self._send(send=send, chunk=chunk, capability=capability)
+        except RemoteEmbedderBatchTooLargeError:
+            if len(chunk) == 1:
+                raise
+            middle = len(chunk) // 2
+            yield from self._send_split(
+                send=send, chunk=chunk[:middle], offset=offset, capability=capability
+            )
+            yield from self._send_split(
+                send=send, chunk=chunk[middle:], offset=offset + middle, capability=capability
+            )
+            return
+        self._check_answer(response=response, item_count=len(chunk))
+        yield offset, response
 
     def _send(
         self,
@@ -299,6 +355,7 @@ _CAPABILITY_TO_BASE: dict[Capability, type[RemoteEmbedder]] = {
     Capability.IMAGE_BYTES: _ImageBytesRoute,
     Capability.VIDEO_BYTES: _VideoBytesRoute,
 }
+composition.add_rebuildable_routes(routes=_CAPABILITY_TO_BASE.values())
 
 
 def _embedder_for(

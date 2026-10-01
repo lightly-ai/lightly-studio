@@ -28,9 +28,12 @@
             ticks: placeholderTicks,
             currentTick: 0,
             isPlaying: false,
+            playbackIntervalMs: 300,
             onPreviousFrame: fn(),
             onNextFrame: fn(),
-            onPlayToggle: fn()
+            onPlayToggle: fn(),
+            onPlaybackIntervalChange: fn(),
+            onSelectTick: fn()
         }
     });
 </script>

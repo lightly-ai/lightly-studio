@@ -54,7 +54,7 @@
 
     createAnnotationLabelContext();
 
-    // Imported events: classification annotations on the video carrying a time span.
+    // Events: classification annotations on the video carrying a time span.
     const videoEvents = $derived(toVideoEvents(video.sample.annotations ?? []));
 
     // Whole-video classification annotations (no time span) shown in the side panel.

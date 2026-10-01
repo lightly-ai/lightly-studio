@@ -10,6 +10,7 @@
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import type { WorkspaceCrumb } from './types';
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
+    import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -19,10 +20,7 @@
      * beneath it and the frame timeline at the bottom. Annotations stay in a resizable right pane,
      * and the tool rail floats over the viewport rather than taking a column of its own.
      *
-     * This issue only delivers the route and composed placeholders: browser-side MCAP frame
-     * loading, the Three.js scene, and persistence land in later child issues of LIG-10657. Until
-     * then `status` defaults to `empty` so the chrome (breadcrumb, filters, resizable panels,
-     * fullscreen, timeline) is fully in place and testable ahead of real data.
+     * Loads the selected LiDAR payloads for the active tick and renders them in the 3D scene.
      */
     interface Props {
         sampleId: string;
@@ -32,9 +30,11 @@
         sequenceId: string;
         /** 1-based tick to open on (from the route hash); defaults to the first frame. */
         tickNumber?: number;
+        /** Reports the active tick as a 1-based number for route synchronization. */
+        onTickChange?: (tickNumber: number) => void;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
-        /** Overridable for tests/stories; production always starts at `empty` today. */
+        /** Optional status override for tests and stories. */
         status?: 'unsupported' | 'empty' | 'error';
         onExit?: () => void;
         onRetry?: () => void;
@@ -45,29 +45,34 @@
         datasetId,
         sequenceId,
         tickNumber = 1,
+        onTickChange = () => undefined,
         sourcePath = [],
         status,
         onExit = () => undefined,
         onRetry
     }: Props = $props();
 
+    let selectedLidarChannels = $state<number[] | null>(null);
+    let selectedCameraChannels = $state<number[]>([]);
+
     const workspace = createPointCloudWorkspaceContext(() => ({
         datasetId,
         sequenceId,
+        selectedLidarChannels: selectedLidarChannels ?? undefined,
         // The hash tick is 1-based; the transport tracks 0-based seq numbers.
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
-
+    const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
+        usePointCloudTickNavigation({
+            workspace,
+            getTickNumber: () => tickNumber,
+            getOnTickChange: () => onTickChange
+        });
     let selectedCuboidId = $state<string | null>(null);
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
-
-    // Channel data lands with browser-side MCAP loading (later child issues of LIG-10657); until
-    // then the filter bar renders empty but its selection state is already owned here.
-    let selectedLidarChannels = $state<number[]>([]);
-    let selectedCameraChannels = $state<number[]>([]);
 
     const lidarChannels = $derived(workspace.lidarChannels);
     const cameraChannels = $derived(workspace.cameraChannels);
@@ -91,6 +96,11 @@
     };
 
     $effect(() => {
+        if (!datasetId || !sequenceId) return;
+        selectedLidarChannels = null;
+    });
+
+    $effect(() => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     });
@@ -111,10 +121,14 @@
     <WorkspaceFilterBar
         {lidarChannels}
         {cameraChannels}
-        {selectedLidarChannels}
+        selectedLidarChannels={selectedLidarChannels ??
+            lidarChannels.map((channel) => channel.channel_id)}
         {selectedCameraChannels}
         onToggleLidarChannel={(channelId) =>
-            (selectedLidarChannels = toggleChannel(selectedLidarChannels, channelId))}
+            (selectedLidarChannels = toggleChannel(
+                selectedLidarChannels ?? lidarChannels.map((channel) => channel.channel_id),
+                channelId
+            ))}
         onToggleCameraChannel={(channelId) =>
             (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
     />
@@ -132,10 +146,25 @@
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
                             <ToolRail />
-                            {#if workspace.status === 'empty' || workspace.status === 'loading'}
-                                <WorkspaceStatusPanel status={workspace.status} {onExit} />
+                            {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
+                                <WorkspaceStatusPanel
+                                    status="error"
+                                    onRetry={workspace.retry}
+                                    {onExit}
+                                />
+                            {:else if workspace.status === 'empty'}
+                                <WorkspaceStatusPanel status="empty" {onExit} />
+                            {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
+                                <WorkspaceStatusPanel status="loading" {onExit} />
+                            {:else if workspace.cloudPointFrame.data}
+                                <SceneViewport
+                                    batch={workspace.cloudPointFrame.data.batch}
+                                    colorMode={workspace.cloudPointFrame.data.batch.colors
+                                        ? 'rgb'
+                                        : 'intensity'}
+                                />
                             {:else}
-                                <SceneViewport />
+                                <WorkspaceStatusPanel status="empty" {onExit} />
                             {/if}
                         </Pane>
                         <PaneResizer
@@ -173,9 +202,18 @@
                                 ticks={workspace.ticks}
                                 currentTick={workspace.currentTick}
                                 isPlaying={workspace.isPlaying}
-                                onPreviousFrame={workspace.goToPreviousFrame}
-                                onNextFrame={workspace.goToNextFrame}
-                                onPlayToggle={workspace.togglePlayback}
+                                playbackIntervalMs={workspace.playbackIntervalMs}
+                                lidarChannelNames={lidarChannels.map(
+                                    (channel) => channel.group_component_name
+                                )}
+                                cameraChannelNames={cameraChannels.map(
+                                    (channel) => channel.group_component_name
+                                )}
+                                onPreviousFrame={goToPreviousFrame}
+                                onNextFrame={goToNextFrame}
+                                onPlayToggle={togglePlayback}
+                                onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
+                                onSelectTick={goToFrame}
                             />
                         </Pane>
                     </PaneGroup>
