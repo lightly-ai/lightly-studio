@@ -13,7 +13,7 @@ def _edge(parent_frame_id: str, child_frame_id: str) -> StaticTransform:
         child_frame_id=child_frame_id,
         translation=(0.0, 0.0, 0.0),
         rotation=(0.0, 0.0, 0.0, 1.0),
-        log_time_ns=0,
+        timestamp_ns=0,
     )
 
 

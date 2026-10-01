@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 STATIC_TRANSFORM_TOPIC = "/tf_static"
 DYNAMIC_TRANSFORM_TOPIC = "/tf"
 
+# Dynamic transforms captured in this window before and after the requested time are
+# used. The window holds a message of every transform published at 10 Hz or faster.
+_DYNAMIC_TRANSFORM_WINDOW_NS = 300_000_000
+
 
 def dynamic_edges_until(
     mcap_reader: McapReader,
@@ -126,6 +130,57 @@ def read_transforms(
             decoder=decoder, path=path, schema=schema, channel=channel, message=message
         )
     ]
+
+
+def dynamic_transforms_near(
+    mcap_reader: McapReader,
+    path: str,
+    topic: str,
+    timestamp_ns: int,
+    topic_in_file: bool,
+) -> list[StaticTransform]:
+    """Returns, per child frame, the transform captured closest to a time.
+
+    Only the transforms captured within `_DYNAMIC_TRANSFORM_WINDOW_NS` of the time are
+    used. Returns none if the topic is not in the file.
+
+    Args:
+        mcap_reader: The seeking reader of the open file.
+        path: The path or URI of the MCAP file, used in error messages.
+        topic: The topic the dynamic transforms are published on.
+        timestamp_ns: The capture time to look up, in nanoseconds, e.g. the
+            `header.stamp` of a point cloud.
+        topic_in_file: Whether the topic is in the file.
+
+    Returns:
+        The transform captured closest to `timestamp_ns`, per child frame.
+
+    Raises:
+        McapAccessError: If a message on the topic cannot be decoded.
+    """
+    if not topic_in_file:
+        return []
+    closest_by_child: dict[str, StaticTransform] = {}
+    try:
+        for _, _, message, decoded_message in mcap_reader.iter_decoded_messages(
+            topics=[topic],
+            start_time=max(timestamp_ns - _DYNAMIC_TRANSFORM_WINDOW_NS, 0),
+            end_time=timestamp_ns + _DYNAMIC_TRANSFORM_WINDOW_NS + 1,
+        ):
+            for transform in transforms.from_decoded_message(
+                decoded_message, log_time_ns=message.log_time
+            ):
+                offset_ns = abs(transform.timestamp_ns - timestamp_ns)
+                if offset_ns > _DYNAMIC_TRANSFORM_WINDOW_NS:
+                    continue
+                closest = closest_by_child.get(transform.child_frame_id)
+                if closest is None or offset_ns < abs(closest.timestamp_ns - timestamp_ns):
+                    closest_by_child[transform.child_frame_id] = transform
+    except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
+        raise McapAccessError(
+            f"Cannot decode the messages of topic '{topic}' in '{path}': {exc}"
+        ) from exc
+    return list(closest_by_child.values())
 
 
 def transforms_of_message(
