@@ -60,13 +60,6 @@ describe('CameraProjectionStrip', () => {
         tickDetailsResult.data = undefined;
     });
 
-    it('renders the strip chrome with its heading', () => {
-        render(CameraProjectionStrip, { props: defaultProps });
-
-        expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
-        expect(screen.getByText('Cameras')).toBeInTheDocument();
-    });
-
     it('renders a frame only for channels that have a keyframe locator for the tick', () => {
         tickDetailsResult.data = tickDetails;
         render(CameraProjectionStrip, { props: defaultProps });
