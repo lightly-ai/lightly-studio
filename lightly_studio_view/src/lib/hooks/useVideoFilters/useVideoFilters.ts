@@ -1,8 +1,9 @@
 import { derived, get, writable } from 'svelte/store';
-import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
     AnnotationsFilter,
+    EmbeddingRegion,
     SampleFilter,
     VideoFilter,
     VideoFieldsBoundsView,
@@ -17,6 +18,7 @@ export type VideoFilterParams = {
         tag_ids?: string[];
         annotation_frames_label_ids?: string[];
         sample_ids?: string[];
+        embedding_region?: EmbeddingRegion;
         metadata_values?: MetadataValues;
         categorical_metadata_values?: CategoricalMetadataValues;
     };
@@ -66,6 +68,11 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
     const sampleIds = $filterParams.filters?.sample_ids;
     if (sampleIds && sampleIds.length > 0) {
         sampleFilter.sample_ids = sampleIds;
+    }
+
+    const embeddingRegion = $filterParams.filters?.embedding_region;
+    if (embeddingRegion) {
+        sampleFilter.embedding_region = embeddingRegion;
     }
 
     const tagIds = $filterParams.filters?.tag_ids;
@@ -133,6 +140,21 @@ export const useVideoFilters = () => {
         filterParams.set(newParams);
     };
 
+    const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
+        const params = get(filterParams);
+        if (!params?.collection_id) {
+            return;
+        }
+
+        filterParams.set({
+            ...params,
+            filters: {
+                ...params.filters,
+                embedding_region: embeddingRegion ?? undefined
+            }
+        });
+    };
+
     const updateSortBy = (sort: VideoSortFieldExpr[] | null) => {
         videoSortBy.set(sort);
     };
@@ -143,6 +165,7 @@ export const useVideoFilters = () => {
         videoSortBy,
         updateFilterParams,
         updateSampleIds,
+        updateEmbeddingRegion,
         updateSortBy
     };
 };
