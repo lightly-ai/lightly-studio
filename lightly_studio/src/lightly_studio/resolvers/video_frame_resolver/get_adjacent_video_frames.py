@@ -14,7 +14,7 @@ from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import adjacents, similarity_utils
+from lightly_studio.resolvers import adjacents, similarity_utils, video_resolver
 from lightly_studio.resolvers.filter_with_collection_id import FilterWithCollectionId
 from lightly_studio.resolvers.video_frame_resolver.video_frame_adjacent_filter import (
     VideoFrameAdjacentFilter,
@@ -62,6 +62,12 @@ def get_adjacent_video_frames(
 
     base_query = video_frame_filter.apply(base_query)
 
+    if video_filter is not None:
+        video_resolver.resolve_embedding_region(
+            session=session,
+            collection_id=video_filter.collection_id,
+            video_filter=video_filter.filter,
+        )
     video_ids_subquery = _video_ids_subquery(video_filter=video_filter)
 
     if video_ids_subquery is not None:

@@ -28,6 +28,7 @@ from lightly_studio.models.video import (
     VideoView,
     VideoViewsWithCount,
 )
+from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.similarity_utils import (
     apply_similarity_join,
     distance_to_similarity,
@@ -50,6 +51,9 @@ def get_all_by_collection_id(  # noqa: PLR0913
     Similarity search takes precedence over ``order_by``: when ``text_embedding`` is
     given, results are ordered by distance and ``order_by`` is ignored.
     """
+    video_resolver.resolve_embedding_region(
+        session=session, collection_id=collection_id, video_filter=filters
+    )
     embedding_model_id, distance_expr = get_distance_expression(
         session=session,
         collection_id=collection_id,

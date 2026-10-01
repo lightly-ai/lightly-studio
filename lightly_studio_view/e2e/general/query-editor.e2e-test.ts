@@ -32,8 +32,9 @@ test.describe('query editor', () => {
         // Verify the grid shows only airplane samples
         await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
 
-        // Apply button should be disabled (draft matches applied value)
-        await expect(page.getByTestId('query-editor-apply-button')).toBeDisabled();
+        // Apply button stays enabled to allow refreshing data (draft matches applied value)
+        await expect(page.getByTestId('query-editor-apply-button')).toBeEnabled();
+        await expect(page.getByTestId('query-editor-apply-button')).toHaveText('Re-apply');
 
         // Filter chip should be visible
         await expect(page.getByTestId('query-filter-chip')).toBeVisible();
@@ -64,7 +65,7 @@ test.describe('query editor', () => {
         await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
     });
 
-    test('reopening editor loads existing query with Apply disabled', async ({
+    test('reopening editor loads existing query with Re-apply enabled', async ({
         samplesPage,
         page
     }) => {
@@ -79,8 +80,9 @@ test.describe('query editor', () => {
         // Editor should contain the previously applied query
         await expect(page.locator('.monaco-editor .view-lines')).toContainText(QUERY);
 
-        // Apply should be disabled since draft === lastAppliedValue
-        await expect(page.getByTestId('query-editor-apply-button')).toBeDisabled();
+        // Re-apply is offered since the editor holds the applied query
+        await expect(page.getByTestId('query-editor-apply-button')).toBeEnabled();
+        await expect(page.getByTestId('query-editor-apply-button')).toHaveText('Re-apply');
 
         // Grid should still show filtered results
         await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);

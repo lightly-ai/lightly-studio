@@ -13,7 +13,6 @@ from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import matching
-from lightly_studio.core.mcap import reader as reader_module
 from lightly_studio.core.mcap.errors import (
     ChannelNotFoundError,
     DataNotLoadedError,
@@ -21,6 +20,7 @@ from lightly_studio.core.mcap.errors import (
     TopicNotFoundError,
 )
 from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
+from lightly_studio.core.mcap.reader import session as session_module
 from tests.core.mcap import helpers
 
 # The bucket and key the recording is uploaded to, to read it back over S3.
@@ -336,6 +336,72 @@ class TestMcapFileReader:
                 topic="/unknown",
             )
 
+    def test_get_static_transforms(self, reader: McapFileReader) -> None:
+        static_transforms = reader.get_static_transforms()
+
+        assert [
+            (transform.parent_frame_id, transform.child_frame_id, transform.translation)
+            for transform in static_transforms
+        ] == [
+            (helpers.BASE_FRAME_ID, helpers.CAMERA_FRAME_ID, (1.0, 0.0, 2.0)),
+            (helpers.BASE_FRAME_ID, helpers.LIDAR_FRAME_ID, (0.0, 1.0, 2.0)),
+        ]
+
+    def test_get_static_transforms__unknown_topic(self, reader: McapFileReader) -> None:
+        assert reader.get_static_transforms(topic="/unknown") == []
+
+    def test_get_static_transforms__read_by_load_data_for_topics(
+        self, reader: McapFileReader, mocker: MockerFixture
+    ) -> None:
+        iter_messages = mocker.spy(reader._reader, "iter_messages")
+
+        reader.load_data_for_topics(
+            [helpers.LIDAR_POINTS_TOPIC], static_transform_topic="/tf_static"
+        )
+        static_transforms = reader.get_static_transforms()
+
+        # The locators and the transforms come from one pass over the file.
+        assert iter_messages.call_count == 1
+        assert [transform.child_frame_id for transform in static_transforms] == [
+            helpers.CAMERA_FRAME_ID,
+            helpers.LIDAR_FRAME_ID,
+        ]
+        assert len(reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)) == 2
+
+    def test_get_static_transforms__skips_bad_message(self, tmp_path: Path) -> None:
+        path = helpers.write_json_mcap(
+            path=tmp_path / "bad_tf_static.mcap",
+            topic="/tf_static",
+            schema_name="tf2_msgs/msg/TFMessage",
+            messages=[
+                # The first message has no header, so it holds no transform.
+                (1_000_000_000, {"transforms": [{"child_frame_id": "lidar"}]}),
+                (
+                    1_100_000_000,
+                    {
+                        "transforms": [
+                            {
+                                "header": {"frame_id": "base_link"},
+                                "child_frame_id": "lidar",
+                                "transform": {
+                                    "translation": {"x": 0.0, "y": 1.0, "z": 2.0},
+                                    "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                                },
+                            }
+                        ]
+                    },
+                ),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            static_transforms = reader.get_static_transforms()
+
+        assert [
+            (transform.parent_frame_id, transform.child_frame_id, transform.translation)
+            for transform in static_transforms
+        ] == [("base_link", "lidar", (0.0, 1.0, 2.0))]
+
     def test_get_decoded_message_at(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
         with McapFileReader(path) as reader:
@@ -494,11 +560,11 @@ def test_mcap_file_reader__read_pattern_random(mcap_path: Path) -> None:
 
 
 def test_read_cache_options() -> None:
-    assert reader_module._read_cache_options(ReadPattern.SEQUENTIAL) == {}
+    assert session_module._read_cache_options(ReadPattern.SEQUENTIAL) == {}
 
 
 def test_read_cache_options__random() -> None:
-    options = reader_module._read_cache_options(ReadPattern.RANDOM)
+    options = session_module._read_cache_options(ReadPattern.RANDOM)
 
     assert options["cache_type"] == "readahead"
     assert 0 < options["block_size"] <= 4 * 1024 * 1024
