@@ -2,7 +2,12 @@
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
+    import { Select } from '$lib/components/Select';
+    import { toast } from 'svelte-sonner';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
+    import { createEmptyTextAxesDraft } from './PlotTextAxesInputs/textAxesDraft';
+    import { embedTextAxes } from './PlotTextAxesInputs/embedTextAxes';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
@@ -17,7 +22,7 @@
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
     import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
+    import type { EmbeddingRegion, ProjectionAxes } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
@@ -132,7 +137,32 @@
         annotationLabels
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
+    // The plot shows the PaCMAP layout. In Text mode it shows the projection onto two text axes,
+    // once all four texts are committed. A region drawn on the plot carries the same axes, so
+    // the server resolves the region in the same layout.
+    type PlotLayout = 'pacmap' | 'text';
+    const PLOT_LAYOUT_ITEMS = [
+        { value: 'pacmap', label: 'PaCMAP' },
+        { value: 'text', label: 'Text' }
+    ];
+    let plotLayout = $state<PlotLayout>('pacmap');
+    let textAxesDraft = $state(createEmptyTextAxesDraft());
+    let committedAxes = $state<ProjectionAxes | null>(null);
+    let isEmbeddingAxes = $state(false);
+    const plotAxes = $derived(plotLayout === 'text' ? committedAxes : null);
+
+    const commitTextAxes = async (textAxes: Parameters<typeof embedTextAxes>[1]) => {
+        isEmbeddingAxes = true;
+        try {
+            committedAxes = await embedTextAxes(collectionId, textAxes);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Failed to embed the axis texts.');
+        } finally {
+            isEmbeddingAxes = false;
+        }
+    };
+
+    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, plotAxes));
 
     const {
         data: arrowData,
@@ -236,7 +266,7 @@
         }
     };
     const commitRegion = (polygon: Point[], count: number) => {
-        saveRegion({ polygon });
+        saveRegion(plotAxes ? { polygon, axes: plotAxes } : { polygon });
         setPlotSelectionCount(collectionId, count);
     };
     const clearRegion = () => {
@@ -404,6 +434,19 @@
         viewportState = state;
     };
 
+    // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
+    // region belongs to the layout it was drawn on.
+    let previousPlotAxes: ProjectionAxes | null = null;
+    $effect(() => {
+        const axes = plotAxes;
+        untrack(() => {
+            if (axes === previousPlotAxes) return;
+            previousPlotAxes = axes;
+            viewportState = null;
+            if (hasActiveSelection) clearSelection();
+        });
+    });
+
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
     // The array-based EmbeddingView only emits hover tooltips when querySelection
     // is provided; ours returns the nearest visible point with its sample ID.
@@ -456,7 +499,17 @@
 
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="text-lg font-semibold">Embedding Plot</div>
+        <div class="flex items-center gap-3">
+            <div class="text-lg font-semibold">Embedding Plot</div>
+            <Select
+                items={PLOT_LAYOUT_ITEMS}
+                value={plotLayout}
+                onValueChange={(value) => (plotLayout = value as PlotLayout)}
+                size="xs"
+                class="w-28"
+                testId="plot-layout-select"
+            />
+        </div>
         <Button
             variant="ghost"
             buttonProps={{
@@ -537,6 +590,13 @@
 
                         <PlotToolPill {plotContainer} bind:activeTool />
                     </div>
+                {/if}
+                {#if plotLayout === 'text'}
+                    <PlotTextAxesInputs
+                        bind:draft={textAxesDraft}
+                        onCommit={commitTextAxes}
+                        isPending={isEmbeddingAxes}
+                    />
                 {/if}
             </div>
         {:else}

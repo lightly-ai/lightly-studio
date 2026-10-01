@@ -9,16 +9,18 @@ import type {
 import { createQuery } from '@tanstack/svelte-query';
 
 type EmbeddingsColorBy = GetEmbeddings2dRequest['color_by'];
+type EmbeddingsAxes = GetEmbeddings2dRequest['axes'];
 
 export function useEmbeddings(
     collectionId: string,
     filters: ImageFilter | VideoFilter | AnnotationsFilter | null,
-    colorBy: EmbeddingsColorBy = null
+    colorBy: EmbeddingsColorBy = null,
+    axes: EmbeddingsAxes = null
 ) {
     return createQuery(() =>
         get2dEmbeddingsOptions({
             path: { collection_id: collectionId },
-            body: { filters: filters ?? {}, color_by: colorBy }
+            body: { filters: filters ?? {}, color_by: colorBy, axes }
         })
     );
 }

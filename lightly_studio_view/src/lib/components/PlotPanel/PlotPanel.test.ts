@@ -78,6 +78,8 @@ vi.mock('embedding-atlas/svelte', () => ({
     EmbeddingView: class MockEmbeddingView {}
 }));
 vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
+const mockEmbedTextAxes = vi.hoisted(() => vi.fn());
+vi.mock('./PlotTextAxesInputs/embedTextAxes', () => ({ embedTextAxes: mockEmbedTextAxes }));
 vi.mock('./useArrowData/useArrowData', () => ({
     useArrowData: () => ({
         data: arrowDataStore,
@@ -162,6 +164,24 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
         })
     };
 });
+
+const SQUARE_POLYGON = [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: 1, y: 1 },
+    { x: 0, y: 1 }
+];
+const TEXT_LAYOUT_AXES = { x: [1, 0, 0], y: [0, 1, 0] };
+
+// Switches the plot to the Text layout and commits four axis texts.
+const commitTextAxes = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByTestId('plot-layout-select'));
+    await user.click(await screen.findByRole('option', { name: 'Text' }));
+    await user.type(screen.getByLabelText('X axis start'), 'young');
+    await user.type(screen.getByLabelText('X axis end'), 'old');
+    await user.type(screen.getByLabelText('Y axis start'), 'sad');
+    await user.type(screen.getByLabelText('Y axis end'), 'happy{Enter}');
+};
 
 describe('PlotPanel.svelte', () => {
     afterEach(() => {
@@ -544,6 +564,7 @@ describe('PlotPanel.svelte', () => {
         expect(useEmbeddings).toHaveBeenLastCalledWith(
             'test-collection-id',
             expect.anything(),
+            null,
             null
         );
 
@@ -551,10 +572,12 @@ describe('PlotPanel.svelte', () => {
         await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
         await tick();
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith('test-collection-id', expect.anything(), {
-            type: 'metadata_field',
-            key: 'split'
-        });
+        expect(useEmbeddings).toHaveBeenLastCalledWith(
+            'test-collection-id',
+            expect.anything(),
+            { type: 'metadata_field', key: 'split' },
+            null
+        );
     });
 
     it('passes tag_ids colorBy to useEmbeddings when tags type is selected', async () => {
@@ -566,10 +589,58 @@ describe('PlotPanel.svelte', () => {
         await user.click(await screen.findByRole('option', { name: 'tags' }));
         await tick();
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith('test-collection-id', expect.anything(), {
-            type: 'tag',
-            tag_ids: ['tag-a', 'tag-b']
+        expect(useEmbeddings).toHaveBeenLastCalledWith(
+            'test-collection-id',
+            expect.anything(),
+            { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
+            null
+        );
+    });
+
+    it('lays the plot out on the committed text axes and saves them with the lasso region', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+        await commitTextAxes(user);
+
+        expect(mockEmbedTextAxes).toHaveBeenCalledWith('test-collection-id', {
+            x: { negative: 'young', positive: 'old' },
+            y: { negative: 'sad', positive: 'happy' }
         });
+        await vi.waitFor(() =>
+            expect(useEmbeddings).toHaveBeenLastCalledWith(
+                'test-collection-id',
+                expect.anything(),
+                null,
+                TEXT_LAYOUT_AXES
+            )
+        );
+
+        selectedSampleIdsStore.set(['sample-1']);
+        rangeSelectionStore.set(SQUARE_POLYGON);
+        await fireEvent.mouseUp(window);
+
+        // The server resolves the region on the same axes as the plot.
+        expect(mockUpdateEmbeddingRegion).toHaveBeenLastCalledWith({
+            polygon: SQUARE_POLYGON,
+            axes: TEXT_LAYOUT_AXES
+        });
+    });
+
+    it('clears the committed region when the plot layout changes', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        imageFilterStore = writable({
+            sample_filter: { sample_ids: [], embedding_region: { polygon: SQUARE_POLYGON } }
+        });
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+        await commitTextAxes(user);
+
+        // The region was drawn on the PaCMAP layout, so it does not apply to the text axes.
+        await vi.waitFor(() => expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null));
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
     });
 
     it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
