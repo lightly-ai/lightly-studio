@@ -5,22 +5,36 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.errors import TagNotFoundError
+from lightly_studio.errors import NotFoundError, TagNotFoundError
 from lightly_studio.metadata import compute_similarity, compute_typicality
-from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.metadata import MetadataInfoView
-from lightly_studio.resolvers import embedding_model_resolver
-from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
-    get_all_metadata_keys_and_schema,
+from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.metadata import (
+    HistogramView,
+    MetadataInfoView,
+    MetadataValueCountsView,
 )
+from lightly_studio.resolvers import collection_embedding_model_resolver, collection_resolver
+from lightly_studio.resolvers.grid_filter import CollectionFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.sample import (
+    categorical_value_counts as metadata_value_counts_resolver,
+)
+from lightly_studio.resolvers.metadata_resolver.sample import (
+    get_metadata_info as metadata_info_resolver,
+)
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
+
+# Default number of equal-width bins per metadata histogram.
+_DEFAULT_BIN_COUNT = 20
 
 
 @metadata_router.get("/metadata/info", response_model=list[MetadataInfoView])
@@ -38,7 +52,103 @@ def get_metadata_info(
         List of metadata info objects with name, type, and optionally min/max values
         for numerical metadata types.
     """
-    return get_all_metadata_keys_and_schema(session=session, collection_id=collection_id)
+    return metadata_info_resolver.get_metadata_info(session=session, collection_id=collection_id)
+
+
+class MetadataHistogramsRequest(BaseModel):
+    """Request body for computing filtered metadata histograms."""
+
+    filters: CollectionFilter | None = Field(None, description="Filter parameters for samples")
+    bin_count: int = Field(
+        _DEFAULT_BIN_COUNT, ge=1, le=200, description="Number of equal-width bins per histogram"
+    )
+    fields: list[str] | None = Field(
+        None, description="Numeric fields to histogram; all numeric fields are computed when absent"
+    )
+
+
+@metadata_router.post("/metadata/histograms", response_model=dict[str, HistogramView])
+def get_metadata_histograms(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    request: MetadataHistogramsRequest | None = None,
+) -> dict[str, HistogramView]:
+    """Compute value-distribution histograms for selected numeric metadata keys.
+
+    Bin edges always span the full (unfiltered) value range of each key so the
+    chart axis stays stable; the counts reflect the given filters. Each key's
+    own metadata filter is excluded from its histogram (faceted-search
+    behavior).
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection.
+        request: Optional request body carrying the active sample filters and bin count.
+
+    Returns:
+        Mapping of metadata key to its histogram.
+    """
+    if request is not None:
+        _validate_filter_type(session=session, collection_id=collection_id, filters=request.filters)
+    return metadata_info_resolver.get_metadata_histograms(
+        session=session,
+        collection_id=collection_id,
+        filters=request.filters if request else None,
+        bin_count=request.bin_count if request else _DEFAULT_BIN_COUNT,
+        fields=request.fields if request else None,
+    )
+
+
+class MetadataValueCountsRequest(BaseModel):
+    """Request body for computing filtered categorical value counts."""
+
+    limit: int | None = Field(
+        metadata_value_counts_resolver.DEFAULT_VALUE_COUNT_LIMIT,
+        ge=1,
+        description="Maximum concrete values per field; null returns all values",
+    )
+
+    filters: CollectionFilter | None = Field(None, description="Filter parameters for samples")
+    fields: list[str] | None = Field(
+        None, description="Categorical fields to count; all fields are counted when absent"
+    )
+
+
+_DEFAULT_METADATA_VALUE_COUNTS_REQUEST = MetadataValueCountsRequest()
+_DEFAULT_METADATA_VALUE_COUNTS_BODY = Body(default=_DEFAULT_METADATA_VALUE_COUNTS_REQUEST)
+
+
+@metadata_router.post("/metadata/value-counts")
+def get_metadata_value_counts(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    request: MetadataValueCountsRequest = _DEFAULT_METADATA_VALUE_COUNTS_BODY,
+) -> dict[str, MetadataValueCountsView]:
+    """Compute categorical metadata value counts under optional sample filters.
+
+    Returns the requested number of most frequent concrete values per key (default 20),
+    or all values when limit is null, followed by an
+    ``__other__`` row aggregating the less frequent concrete values and a
+    ``__missing__`` row counting the samples with an absent or null value. Each
+    key's own metadata filter is excluded from its counts (faceted-search
+    behavior).
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection.
+        request: Request body carrying the active sample filters.
+
+    Returns:
+        Mapping of categorical metadata key to its value counts.
+    """
+    _validate_filter_type(session=session, collection_id=collection_id, filters=request.filters)
+    return metadata_value_counts_resolver.get_metadata_value_counts(
+        session=session,
+        collection_id=collection_id,
+        filters=request.filters,
+        fields=request.fields,
+        limit=request.limit,
+    )
 
 
 class ComputeTypicalityRequest(BaseModel):
@@ -78,7 +188,7 @@ def compute_typicality_metadata(
     Returns:
         None (204 No Content on success).
     """
-    embedding_model = embedding_model_resolver.get_by_name(
+    embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
         session=session,
         collection_id=collection.collection_id,
         embedding_model_name=request.embedding_model_name,
@@ -87,7 +197,7 @@ def compute_typicality_metadata(
     compute_typicality.compute_typicality_metadata(
         session=session,
         collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        embedding_model_id=embedding_model_id,
         metadata_name=request.metadata_name,
     )
 
@@ -134,7 +244,7 @@ def compute_similarity_metadata(
         HTTPException: 404 if invalid embedding model or query tag is given.
     """
     try:
-        embedding_model = embedding_model_resolver.get_by_name(
+        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
             session=session,
             collection_id=collection.collection_id,
             embedding_model_name=request.embedding_model_name,
@@ -150,7 +260,7 @@ def compute_similarity_metadata(
             session=session,
             key_collection_id=collection.collection_id,
             query_tag_id=query_tag_id,
-            embedding_model_id=embedding_model.embedding_model_id,
+            embedding_model_id=embedding_model_id,
             metadata_name=request.metadata_name,
         )
     except TagNotFoundError as e:
@@ -158,3 +268,22 @@ def compute_similarity_metadata(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Query tag {query_tag_id} not found",
         ) from e
+
+
+def _validate_filter_type(
+    session: Session, collection_id: UUID, filters: CollectionFilter | None
+) -> None:
+    """Raise if ``filters`` is for a different sample type than the collection.
+
+    A filter for the wrong sample type matches no samples, so the distributions would be empty.
+    """
+    if filters is None:
+        return
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise NotFoundError(f"Collection with ID {collection_id} not found.")
+    if collection.sample_type == SampleType.IMAGE and isinstance(filters, ImageFilter):
+        return
+    if collection.sample_type == SampleType.VIDEO and isinstance(filters, VideoFilter):
+        return
+    raise ValueError(f"Invalid filter type for {collection.sample_type.value} collection.")

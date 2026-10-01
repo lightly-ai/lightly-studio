@@ -5,6 +5,7 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 type UploadSuccessResult = {
     fileName: string;
     embedding: number[];
+    collectionId: string;
 };
 
 type UseImageUploadParams = {
@@ -108,7 +109,7 @@ export function useImageUpload({
             });
 
             setPreview(file.name, URL.createObjectURL(file));
-            onSuccess({ fileName: file.name, embedding });
+            onSuccess({ fileName: file.name, embedding, collectionId });
         } catch (error: unknown) {
             clear();
             const message = error instanceof Error ? error.message : 'Failed to upload image';

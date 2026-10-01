@@ -1,0 +1,159 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: >-
+          Package to release. The two release independently: their versions,
+          branches and tags share no namespace.
+        type: choice
+        options: [lightly-studio, lightly-studio-serve]
+        default: lightly-studio
+      bump:
+        description: >-
+          Semver bump to apply. Nothing is inferred from the changelog -
+          pick "minor" deliberately when you know the [Unreleased] entries
+          add or change something notable, "patch" otherwise.
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: >-
+          Explicit version override, e.g. for a release candidate such as
+          1.0.0rc1. Takes precedence over "bump" when set.
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Per package, so preparing one release does not wait behind the other's.
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.package }}
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/.github/scripts
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+          enable-cache: true
+
+      - name: Lint and test the prepare_release tooling
+        working-directory: .github/scripts
+        run: |
+          make static-checks
+          make test
+
+      # Everything that differs between the packages comes from here.
+      - name: Resolve the package
+        id: package
+        run: |
+          python3 -m prepare_release package-config \
+            --package "${{ inputs.package }}" >> "$GITHUB_OUTPUT"
+
+      - name: Guard against a git-pinned Labelformat
+        run: |
+          python3 -m prepare_release check-labelformat-pin \
+            --pyproject "${{ steps.package.outputs.pyproject }}"
+
+      - name: Resolve inputs
+        id: resolved
+        working-directory: ${{ steps.package.outputs.directory }}
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BUMP: ${{ inputs.bump }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            version="$(uv version "$INPUT_VERSION" --dry-run --frozen --short)"
+          else
+            version="$(uv version --bump "$INPUT_BUMP" --dry-run --frozen --short)"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "branch=${{ steps.package.outputs.branch_prefix }}v$version" >> "$GITHUB_OUTPUT"
+          echo "### Preparing ${{ inputs.package }} v$version" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create release branch
+        run: git checkout -b "${{ steps.resolved.outputs.branch }}"
+
+      - name: Promote changelog
+        run: |
+          python3 -m prepare_release promote-changelog \
+            --changelog "${{ steps.package.outputs.changelog }}" \
+            --version "${{ steps.resolved.outputs.version }}" \
+            --date "$(date -u +%F)"
+
+      - name: Bump pyproject.toml version
+        working-directory: ${{ steps.package.outputs.directory }}
+        run: uv version "${{ steps.resolved.outputs.version }}" --frozen
+
+      - name: Snapshot uv.lock before sync
+        run: cp uv.lock /tmp/uv.lock.before
+
+      - name: uv sync
+        working-directory: ${{ steps.package.outputs.directory }}
+        run: uv sync
+
+      - name: Assert uv.lock diff is narrow
+        run: |
+          python3 -m prepare_release assert-lock-diff \
+            --before /tmp/uv.lock.before \
+            --after uv.lock \
+            --package "${{ inputs.package }}"
+
+      - name: Confirm exactly the expected files changed
+        env:
+          CHANGELOG: ${{ steps.package.outputs.changelog }}
+          PYPROJECT: ${{ steps.package.outputs.pyproject }}
+        run: |
+          changed="$(git status --porcelain | awk '{print $2}' | sort)"
+          expected="$(printf '%s\n' "$CHANGELOG" "$PYPROJECT" uv.lock | sort)"
+          if [ "$changed" != "$expected" ]; then
+            echo "::error::Unexpected file set changed. Got:"
+            echo "$changed"
+            exit 1
+          fi
+
+      - name: Render PR body
+        run: |
+          python3 -m prepare_release render-pr-body \
+            --changelog "${{ steps.package.outputs.changelog }}" \
+            --version "${{ steps.resolved.outputs.version }}" \
+            --package "${{ inputs.package }}" \
+            --output /tmp/pr_body.md
+
+      - name: Commit changes
+        env:
+          CHANGELOG: ${{ steps.package.outputs.changelog }}
+          PYPROJECT: ${{ steps.package.outputs.pyproject }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$CHANGELOG" "$PYPROJECT" uv.lock
+          git commit -m "Bump ${{ inputs.package }} version to ${{ steps.resolved.outputs.version }}"
+          git push origin "${{ steps.resolved.outputs.branch }}"
+
+      - name: Open release PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Bump ${{ inputs.package }} version to ${{ steps.resolved.outputs.version }}" \
+            --body-file /tmp/pr_body.md \
+            --base main \
+            --head "${{ steps.resolved.outputs.branch }}"

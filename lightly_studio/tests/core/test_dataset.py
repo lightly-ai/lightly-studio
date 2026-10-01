@@ -12,7 +12,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.image import image_dataset
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
-from lightly_studio.dataset import embedding_manager
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
@@ -367,6 +367,7 @@ class TestDataset:
             session=dataset.session,
             collection_id=dataset.collection_id,
             embedding_model_name="example_embedding_model",
+            set_as_default=True,
         )
         create_samples_with_embeddings(
             session=dataset.session,
@@ -394,6 +395,7 @@ class TestDataset:
             session=dataset.session,
             collection_id=dataset.collection_id,
             embedding_model_name="example_embedding_model",
+            set_as_default=True,
         )
         create_samples_with_embeddings(
             session=dataset.session,
@@ -456,8 +458,8 @@ def test_generate_embeddings__no_generator(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
     mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
+        EmbedderRegistry,
+        "get_image_path_embedder",
         return_value=None,
     )
 
@@ -478,7 +480,7 @@ def test_generate_embeddings__empty_sample_ids(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    spy_load_model = mocker.spy(embedding_manager, "_load_embedding_generator_from_env")
+    spy_get_embedder = mocker.spy(EmbedderRegistry, "get_image_path_embedder")
 
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
@@ -489,5 +491,33 @@ def test_generate_embeddings__empty_sample_ids(
         sample_ids=[],
     )
 
-    # Model loading should be skipped when sample_ids is empty
-    spy_load_model.assert_not_called()
+    # Embedder resolution should be skipped when sample_ids is empty.
+    spy_get_embedder.assert_not_called()
+
+
+def test_generate_embeddings__rerun_embeds_missing_samples(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    session = db_manager.persistent_session()
+    dataset = create_collection(session=session)
+    image1 = create_image(
+        session=session, collection_id=dataset.collection_id, file_path_abs="/path/to/1.png"
+    )
+    image_dataset._generate_embeddings_image(
+        session=session,
+        collection_id=dataset.collection_id,
+        sample_ids=[image1.sample_id],
+    )
+    # This image has no embedding, as after an embedder failure
+    image2 = create_image(
+        session=session, collection_id=dataset.collection_id, file_path_abs="/path/to/2.png"
+    )
+
+    image_dataset._generate_embeddings_image(
+        session=session,
+        collection_id=dataset.collection_id,
+        sample_ids=[],
+    )
+
+    assert len(image1.sample.embeddings) == 1
+    assert len(image2.sample.embeddings) == 1

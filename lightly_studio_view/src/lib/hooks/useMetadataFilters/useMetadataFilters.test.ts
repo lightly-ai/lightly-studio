@@ -83,6 +83,18 @@ describe('createMetadataFilters', () => {
         expect(filters).toHaveLength(0);
     });
 
+    it('combines numeric ranges with one OR predicate per non-empty categorical key', () => {
+        const filters = createMetadataFilters(
+            { temperature: { min: 20, max: 100 } },
+            { city: ['Zurich', 'Berlin', '__missing__'], ignored: [] }
+        );
+
+        expect(filters).toEqual([
+            { key: 'temperature', value: 20, op: '>=' },
+            { key: 'city', value: ['Zurich', 'Berlin', '__missing__'], op: 'in' }
+        ]);
+    });
+
     it('should only create min filter when min is not at bound', () => {
         const metadataValues: MetadataValues = {
             temperature: { min: 20, max: 100 } // Only min is not at bound

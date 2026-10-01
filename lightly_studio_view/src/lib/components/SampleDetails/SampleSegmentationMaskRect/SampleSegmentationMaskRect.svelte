@@ -19,6 +19,7 @@
         useDeleteAnnotation
     } from '$lib/hooks';
     import { page } from '$app/state';
+    import { usePostHog } from '$lib/hooks';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
@@ -59,7 +60,10 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
-    const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
+    const { trackEvent } = usePostHog();
+    let drawStartFired = false;
+
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
 
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
@@ -78,9 +82,9 @@
         enabled: !!activeAnnotationId
     }));
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
-    );
+    const { refetch: refetchRootCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
 
     const {
         open: selectClassDialogOpen,
@@ -213,6 +217,7 @@
 
     const handleStrokeComplete = (e: PointerEvent) => {
         releasePointerCapture(e);
+        drawStartFired = false;
         resetPreviewState({ clearDrawing: false });
 
         const targetAnnotation = resolveSelectedAnnotation();
@@ -252,6 +257,7 @@
 
     const handleStrokeCancel = (e: PointerEvent) => {
         releasePointerCapture(e);
+        drawStartFired = false;
         resetPreviewState();
     };
 </script>
@@ -347,6 +353,14 @@
             return;
         }
 
+        if (!drawStartFired) {
+            trackEvent('annotation_draw_started', {
+                collection_id: collectionId,
+                tool: 'brush',
+                parent_sample_type: page.params.collection_type
+            });
+            drawStartFired = true;
+        }
         setIsDrawing(true);
         lastBrushPoint = point;
         isPreviewVisible = false;

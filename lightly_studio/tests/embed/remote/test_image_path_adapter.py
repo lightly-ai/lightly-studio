@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+import io
+import logging
+from collections.abc import Iterator
+from pathlib import Path
+
+import numpy as np
+import pytest
+from lightly_studio_serve.embedder import ImageBytesEmbedder, ImagePathEmbedder
+from lightly_studio_serve.protocol import ServerLimits
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+
+from lightly_studio.embed.remote import connection, image_path_adapter
+from lightly_studio.embed.remote.embedder import RemoteEmbedder
+from lightly_studio.embed.remote.transport import RemoteTransport
+from tests.embed.remote import threaded_server
+from tests.embed.remote.helpers import DIMENSION, SPACE_KEY, FakeImageEmbedder, FakeServer
+
+# Small limits, so that a test batch fills more than one request.
+LIMITS = ServerLimits(max_batch_size=2, max_request_bytes=1024)
+
+
+class ChunkedFile(io.BytesIO):
+    """Gives at most 3 bytes for each read, the way an HTTP stream can."""
+
+    def read(self, size: int | None = -1) -> bytes:
+        return super().read(3 if size is None or size < 0 else min(size, 3))
+
+
+class CustomRemoteEmbedder(RemoteEmbedder, ImageBytesEmbedder):
+    """A remote embedder that a caller writes by hand, and not ``connect``."""
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        raise NotImplementedError
+
+
+class LengthEmbedder(ImageBytesEmbedder):
+    """Embeds an image as its length in bytes, and records each batch of images."""
+
+    def __init__(self) -> None:
+        self.batches: list[list[bytes]] = []
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION)
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        self.batches.append(images.copy())
+        embeddings = np.array(
+            [[float(len(image)), 0.0] for image in images], dtype=np.float32
+        ).reshape(len(images), DIMENSION)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(images))))
+
+
+@pytest.fixture(scope="module")
+def server_embedder() -> LengthEmbedder:
+    return LengthEmbedder()
+
+
+@pytest.fixture(scope="module")
+def remote(server_embedder: LengthEmbedder) -> Iterator[RemoteEmbedder]:
+    """One server and one client for the tests of this module."""
+    with (
+        threaded_server.serve(embedder=server_embedder, limits=LIMITS) as url,
+        connection.build_client(url=url) as client,
+    ):
+        yield RemoteEmbedder.connect(client=client)
+
+
+@pytest.fixture
+def adapted(remote: RemoteEmbedder, server_embedder: LengthEmbedder) -> ImagePathEmbedder:
+    server_embedder.batches.clear()
+    embedder = remote.with_route(route=image_path_adapter.ImagePathRoute)
+    assert isinstance(embedder, ImagePathEmbedder)
+    return embedder
+
+
+class TestImagePathRoute:
+    def test_embed_images(
+        self, tmp_path: Path, adapted: ImagePathEmbedder, server_embedder: LengthEmbedder
+    ) -> None:
+        paths = [
+            _write(path=tmp_path / "a.png", data=b"a" * 10),
+            _write(path=tmp_path / "b.png", data=b"b" * 20),
+            _write(path=tmp_path / "c.png", data=b"c" * 30),
+        ]
+
+        result = adapted.embed_images(paths=paths)
+
+        assert result.kept_indices == [0, 1, 2]
+        np.testing.assert_array_equal(
+            result.embeddings,
+            np.array([[10.0, 0.0], [20.0, 0.0], [30.0, 0.0]], dtype=np.float32),
+        )
+        # One request holds at most `max_batch_size` images.
+        assert server_embedder.batches == [[b"a" * 10, b"b" * 20], [b"c" * 30]]
+
+    def test_embed_images__skips_unreadable(
+        self, tmp_path: Path, adapted: ImagePathEmbedder, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        missing = str(tmp_path / "missing.png")
+        paths = [missing, _write(path=tmp_path / "a.png", data=b"a" * 10)]
+
+        with caplog.at_level(logging.WARNING, logger=image_path_adapter.__name__):
+            result = adapted.embed_images(paths=paths)
+
+        assert result.kept_indices == [1]
+        np.testing.assert_array_equal(result.embeddings, np.array([[10.0, 0.0]], dtype=np.float32))
+        assert f"Cannot read the image {missing}" in caplog.text
+
+    def test_embed_images__skips_too_large(
+        self, tmp_path: Path, adapted: ImagePathEmbedder, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        too_large = _write(path=tmp_path / "large.png", data=b"l" * 2 * LIMITS.max_request_bytes)
+        paths = [too_large, _write(path=tmp_path / "a.png", data=b"a" * 10)]
+
+        with caplog.at_level(logging.WARNING, logger=image_path_adapter.__name__):
+            result = adapted.embed_images(paths=paths)
+
+        assert result.kept_indices == [1]
+        np.testing.assert_array_equal(result.embeddings, np.array([[10.0, 0.0]], dtype=np.float32))
+        assert f"Cannot embed the image {too_large}" in caplog.text
+
+    def test_embed_images__empty(
+        self, adapted: ImagePathEmbedder, server_embedder: LengthEmbedder
+    ) -> None:
+        result = adapted.embed_images(paths=[])
+
+        assert result.kept_indices == []
+        assert result.embeddings.shape == (0, DIMENSION)
+        assert server_embedder.batches == []
+
+
+def test_with_image_path(remote: RemoteEmbedder) -> None:
+    embedder = image_path_adapter.with_image_path(embedder=remote)
+
+    assert isinstance(embedder, ImagePathEmbedder)
+    assert isinstance(embedder, ImageBytesEmbedder)
+    assert embedder.embedding_space_spec() == remote.embedding_space_spec()
+    assert isinstance(embedder, RemoteEmbedder)
+    assert embedder.remote_endpoint() is not None
+    assert embedder.remote_endpoint() == remote.remote_endpoint()
+
+
+def test_with_image_path__local_embedder() -> None:
+    embedder = FakeImageEmbedder()
+
+    assert image_path_adapter.with_image_path(embedder=embedder) is embedder
+
+
+def test_with_image_path__remote_without_image_bytes() -> None:
+    with FakeServer(capabilities=["text"]).client() as client:
+        embedder = RemoteEmbedder.connect(client=client)
+
+    assert image_path_adapter.with_image_path(embedder=embedder) is embedder
+
+
+def test_with_image_path__custom_remote_subclass() -> None:
+    with FakeServer(capabilities=["image_bytes"]).client() as client:
+        embedder = CustomRemoteEmbedder(
+            transport=RemoteTransport(client=client),
+            spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION),
+            limits=LIMITS,
+        )
+
+    assert image_path_adapter.with_image_path(embedder=embedder) is embedder
+
+
+def test_read_at_most() -> None:
+    data = image_path_adapter._read_at_most(file=ChunkedFile(b"abcdefgh"), max_bytes=100)
+
+    assert data == b"abcdefgh"
+
+
+def test_read_at_most__stops_at_the_limit() -> None:
+    data = image_path_adapter._read_at_most(file=ChunkedFile(b"abcdefgh"), max_bytes=5)
+
+    assert data == b"abcde"
+
+
+def _write(path: Path, data: bytes) -> str:
+    path.write_bytes(data)
+    return str(path)

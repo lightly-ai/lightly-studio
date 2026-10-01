@@ -1,0 +1,17 @@
+{#-
+  smart_link(href, label, link_class): one anchor whose href is used as written
+  when it carries a URL scheme (https:, mailto:, tel:, ...) and rewritten as a
+  site-relative path otherwise. A scheme shows up as a colon in the first path
+  segment; a site-relative path never has one, so `mailto:` and `tel:` links are
+  classified as external rather than run through `url` and mangled into a broken
+  relative path.
+
+  Shared by `toc.html` (page actions) and `site_footer.html` (footer columns).
+-#}
+{% macro smart_link(href, label, link_class) -%}
+  {%- if ":" in href.split("/")[0] -%}
+    <a class="{{ link_class }}" href="{{ href }}">{{ label }}</a>
+  {%- else -%}
+    <a class="{{ link_class }}" href="{{ href | url }}">{{ label }}</a>
+  {%- endif -%}
+{%- endmacro %}

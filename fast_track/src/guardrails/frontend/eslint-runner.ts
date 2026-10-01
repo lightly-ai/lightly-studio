@@ -1,14 +1,6 @@
 import { createRequire } from 'node:module';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { ESLint } from 'eslint';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-export const FRONTEND_DIR = 'lightly_studio_view';
-// fast_track/src/guardrails/frontend -> fast_track/src/guardrails -> fast_track -> repo root -> lightly_studio_view
-export const FRONTEND_ABS = resolve(__dirname, '../../../..', FRONTEND_DIR);
-export const FRONTEND_PREFIX = FRONTEND_DIR + '/';
+import { FRONTEND_ABS, FRONTEND_DIR } from './shared';
 
 // Converts an absolute ESLint file path to a repo-relative path (e.g. lightly_studio_view/src/foo.ts).
 export function repoRelPath(absPath: string): string {

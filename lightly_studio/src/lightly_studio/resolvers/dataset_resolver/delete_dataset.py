@@ -4,6 +4,9 @@ This is an enterprise-only / PostgreSQL-only operation. It deletes everything be
 dataset with server-side, set-based ``DELETE``s scoped by subquery, so no rows cross the Python
 boundary. All deletes run in a single transaction with one final commit.
 
+The one exception is ``export_job``: its row is the only reference to where its on-disk artifact
+lives, so the affected paths are selected into Python and removed before the rows are deleted.
+
 The per-table scoping below is the source of truth for what gets deleted. If a new table with a
 dataset/sample/collection FK is added, add a delete here; ``verify_table_coverage()`` fails fast
 until you do.
@@ -11,13 +14,19 @@ until you do.
 
 from __future__ import annotations
 
+import logging
+import shutil
+import tempfile
+from pathlib import Path
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlmodel import Session, col, delete, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -29,17 +38,32 @@ from lightly_studio.models.annotation_collection_coverage import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
+from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
+from lightly_studio.models.group_component_definition import (
+    GroupComponentDefinitionTable,
+)
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
@@ -50,6 +74,8 @@ from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
 # of deleted rows. Nothing is loaded in this session, so we disable synchronization and the delete
 # runs entirely server-side with bounded memory regardless of dataset size.
 _DELETE_EXECUTION_OPTIONS = {"synchronize_session": False}
+
+logger = logging.getLogger(__name__)
 
 
 def delete_dataset(
@@ -81,6 +107,8 @@ def delete_dataset(
     # 1. Tables that reference annotation_base.
     _delete_object_detection_annotations(session=session, dataset_id=dataset_id)
     _delete_segmentation_annotations(session=session, dataset_id=dataset_id)
+    _delete_cuboid_3d_annotations(session=session, dataset_id=dataset_id)
+    _delete_temporal_spans(session=session, dataset_id=dataset_id)
     _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
     _delete_evaluation_annotation_metrics(session=session, dataset_id=dataset_id)
 
@@ -89,6 +117,8 @@ def delete_dataset(
     _delete_sample_tag_links(session=session, dataset_id=dataset_id)
     # Must precede groups (SampleGroupLinkTable.parent_sample_id -> GroupTable).
     _delete_sample_group_links(session=session, dataset_id=dataset_id)
+    # Must precede sequences (SampleSequenceLinkTable.sequence_sample_id -> SequenceTable).
+    _delete_sample_sequence_links(session=session, dataset_id=dataset_id)
 
     # 3. Sample attachments.
     _delete_sample_embeddings(session=session, dataset_id=dataset_id)
@@ -100,16 +130,34 @@ def delete_dataset(
 
     # 4. Sample type tables.
     _delete_groups(session=session, dataset_id=dataset_id)
+    # Must precede recordings and mcap_group_component_definitions, both deleted in step 5
+    # (sensor_calibration FKs to recording_id and to mcap_group_component_definition.collection_id;
+    # static_transform FKs to recording_id only).
+    _delete_sensor_calibrations(session=session, dataset_id=dataset_id)
+    _delete_static_transforms(session=session, dataset_id=dataset_id)
+    # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable) and
+    # recordings, deleted in step 5 (McapGroupSequenceTable.recording_id -> RecordingTable).
+    _delete_mcap_group_sequences(session=session, dataset_id=dataset_id)
+    _delete_sequences(session=session, dataset_id=dataset_id)
     _delete_videos(session=session, dataset_id=dataset_id)
     _delete_images(session=session, dataset_id=dataset_id)
+    _delete_mcaps(session=session, dataset_id=dataset_id)
 
     # 5. Samples and collection/dataset-scoped entities.
     _delete_samples(session=session, dataset_id=dataset_id)
+    _delete_recordings(session=session, dataset_id=dataset_id)
     _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, dataset_id=dataset_id)
+    # Must precede embedding_model and collections (FKs to both, deleted below and in step 6).
+    _delete_collection_embedding_models(session=session, dataset_id=dataset_id)
     _delete_embedding_models(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
+    _delete_export_jobs(session=session, dataset_id=dataset_id)
+    # Must precede collections (FK to collection, deleted in step 6).
+    # MCAP extension first: FK to group_component_definition.
+    _delete_mcap_group_component_definitions(session=session, dataset_id=dataset_id)
+    _delete_group_component_definitions(session=session, dataset_id=dataset_id)
 
     # 6. Collections (single statement; self-FK satisfied at statement end).
     _delete_collections(session=session, dataset_id=dataset_id)
@@ -134,6 +182,11 @@ def _sample_ids_subquery(dataset_id: UUID) -> SelectOfScalar[UUID]:
     )
 
 
+def _recording_ids_subquery(dataset_id: UUID) -> SelectOfScalar[UUID]:
+    """Subquery selecting all recording IDs belonging to the dataset."""
+    return select(RecordingTable.recording_id).where(col(RecordingTable.dataset_id) == dataset_id)
+
+
 def _delete_sample_tag_links(session: Session, dataset_id: UUID) -> None:
     """Delete sample-tag links for the dataset's samples."""
     session.exec(
@@ -149,6 +202,16 @@ def _delete_sample_group_links(session: Session, dataset_id: UUID) -> None:
     session.exec(
         delete(SampleGroupLinkTable).where(
             col(SampleGroupLinkTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_sample_sequence_links(session: Session, dataset_id: UUID) -> None:
+    """Delete sample-sequence links for the dataset's samples."""
+    session.exec(
+        delete(SampleSequenceLinkTable).where(
+            col(SampleSequenceLinkTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
@@ -194,6 +257,26 @@ def _delete_segmentation_annotations(session: Session, dataset_id: UUID) -> None
     )
 
 
+def _delete_cuboid_3d_annotations(session: Session, dataset_id: UUID) -> None:
+    """Delete cuboid 3D annotation details for the dataset's samples."""
+    session.exec(
+        delete(Cuboid3DAnnotationTable).where(
+            col(Cuboid3DAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_temporal_spans(session: Session, dataset_id: UUID) -> None:
+    """Delete temporal spans for the dataset's samples."""
+    session.exec(
+        delete(TemporalSpanTable).where(
+            col(TemporalSpanTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
 def _delete_annotation_base(session: Session, dataset_id: UUID) -> None:
     """Delete annotation base records for the dataset's samples."""
     session.exec(
@@ -212,6 +295,14 @@ def _delete_annotation_collection_coverage(session: Session, dataset_id: UUID) -
                 _collection_ids_subquery(dataset_id)
             )
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_recordings(session: Session, dataset_id: UUID) -> None:
+    """Delete recordings for the given dataset."""
+    session.exec(
+        delete(RecordingTable).where(col(RecordingTable.dataset_id) == dataset_id),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
@@ -252,6 +343,49 @@ def _delete_groups(session: Session, dataset_id: UUID) -> None:
     )
 
 
+def _delete_sensor_calibrations(session: Session, dataset_id: UUID) -> None:
+    """Delete sensor calibration rows tied to the dataset via recording or collection."""
+    session.exec(
+        delete(SensorCalibrationTable).where(
+            or_(
+                col(SensorCalibrationTable.recording_id).in_(_recording_ids_subquery(dataset_id)),
+                col(SensorCalibrationTable.collection_id).in_(_collection_ids_subquery(dataset_id)),
+            )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_static_transforms(session: Session, dataset_id: UUID) -> None:
+    """Delete static transform rows for the dataset's recordings."""
+    session.exec(
+        delete(StaticTransformTable).where(
+            col(StaticTransformTable.recording_id).in_(_recording_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcap_group_sequences(session: Session, dataset_id: UUID) -> None:
+    """Delete MCAP group sequence rows for the dataset's sequences."""
+    session.exec(
+        delete(McapGroupSequenceTable).where(
+            col(McapGroupSequenceTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_sequences(session: Session, dataset_id: UUID) -> None:
+    """Delete sequence records for the dataset's samples."""
+    session.exec(
+        delete(SequenceTable).where(
+            col(SequenceTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
 def _delete_videos(session: Session, dataset_id: UUID) -> None:
     """Delete videos for the dataset's samples."""
     session.exec(
@@ -264,6 +398,14 @@ def _delete_images(session: Session, dataset_id: UUID) -> None:
     """Delete images for the dataset's samples."""
     session.exec(
         delete(ImageTable).where(col(ImageTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcaps(session: Session, dataset_id: UUID) -> None:
+    """Delete mcap rows for the dataset's samples."""
+    session.exec(
+        delete(McapTable).where(col(McapTable.sample_id).in_(_sample_ids_subquery(dataset_id))),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
@@ -294,12 +436,46 @@ def _delete_tags(session: Session, dataset_id: UUID) -> None:
     )
 
 
-def _delete_embedding_models(session: Session, dataset_id: UUID) -> None:
-    """Delete embedding models for the dataset's collections."""
+def _delete_collection_embedding_models(session: Session, dataset_id: UUID) -> None:
+    """Delete all embedding-model links for the dataset's collections."""
     session.exec(
-        delete(EmbeddingModelTable).where(
-            col(EmbeddingModelTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        delete(CollectionEmbeddingModelTable).where(
+            col(CollectionEmbeddingModelTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
         ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_mcap_group_component_definitions(session: Session, dataset_id: UUID) -> None:
+    """Delete MCAP group component definitions for the dataset's collections."""
+    session.exec(
+        delete(McapGroupComponentDefinitionTable).where(
+            col(McapGroupComponentDefinitionTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_group_component_definitions(session: Session, dataset_id: UUID) -> None:
+    """Delete group component definitions for the dataset's collections."""
+    session.exec(
+        delete(GroupComponentDefinitionTable).where(
+            col(GroupComponentDefinitionTable.collection_id).in_(
+                _collection_ids_subquery(dataset_id)
+            )
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_embedding_models(session: Session, dataset_id: UUID) -> None:
+    """Delete embedding models for the dataset."""
+    session.exec(
+        delete(EmbeddingModelTable).where(col(EmbeddingModelTable.dataset_id) == dataset_id),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
@@ -352,6 +528,52 @@ def _delete_evaluation_runs(session: Session, dataset_id: UUID) -> None:
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
+
+
+def _delete_export_jobs(session: Session, dataset_id: UUID) -> None:
+    """Remove export artifacts, then delete export jobs for the dataset's collections."""
+    export_paths = session.exec(
+        select(ExportJobTable.export_path).where(
+            col(ExportJobTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        )
+    ).all()
+    for export_path in export_paths:
+        _remove_export_artifact(export_path)
+    session.exec(
+        delete(ExportJobTable).where(
+            col(ExportJobTable.collection_id).in_(_collection_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _remove_export_artifact(export_path: str) -> None:
+    """Best-effort removal of an export job's on-disk artifact.
+
+    Every ``export_path`` is generated under the system temp directory (see
+    ``lightly_studio.api.routes.api.export``); paths outside of it are left untouched rather than
+    removed, since they cannot be confirmed to be export-owned.
+
+    Args:
+        export_path: Absolute path to the export job's file or directory.
+    """
+    resolved_path = Path(export_path).resolve()
+    temp_dir = Path(tempfile.gettempdir()).resolve()
+    try:
+        relative_path = resolved_path.relative_to(temp_dir)
+    except ValueError:
+        logger.warning("Skipping export artifact outside the temp directory: %s", export_path)
+        return
+    if relative_path == Path():
+        # Equality is not raised by `relative_to`; reject the temp directory root itself.
+        logger.warning(
+            "Skipping export artifact that is the temp directory itself: %s", export_path
+        )
+        return
+    if resolved_path.is_dir():
+        shutil.rmtree(resolved_path, ignore_errors=True)
+    else:
+        resolved_path.unlink(missing_ok=True)
 
 
 def _delete_collections(session: Session, dataset_id: UUID) -> None:

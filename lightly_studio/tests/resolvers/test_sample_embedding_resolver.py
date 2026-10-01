@@ -89,6 +89,39 @@ def test_create_many_sample_embeddings(db_session: Session) -> None:
         ]
 
 
+def test_create_many__skips_existing_embeddings(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    embedding_model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=2
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 2.0],
+    )
+
+    sample_embedding_resolver.create_many(
+        session=db_session,
+        sample_embeddings=[
+            SampleEmbeddingCreate(
+                sample_id=image.sample_id,
+                embedding_model_id=embedding_model.embedding_model_id,
+                embedding=np.array([3.0, 4.0], dtype=np.float32),
+            )
+        ],
+    )
+
+    # The first embedding stays and the insert does not fail
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session,
+        sample_ids=[image.sample_id],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    assert [list(row.embedding) for row in rows] == [[1.0, 2.0]]
+
+
 def test_add_sample_embedding_to_sample(db_session: Session) -> None:
     # This test checks if the relationship between a sample and its embeddings
     # is correctly set up and we can read embedding out of the sample after it
@@ -253,9 +286,17 @@ def test_get_embedding_count(db_session: Session) -> None:
     create_images(db_session=db_session, collection_id=col2_id, images=[ImageStub("sample.png")])
 
     # Create an embedding models
-    embedding_model_1 = create_embedding_model(session=db_session, collection_id=col1_id)
+    embedding_model_1 = create_embedding_model(
+        session=db_session,
+        collection_id=col1_id,
+        embedding_model_name="model_1",
+    )
     embedding_model_1_id = embedding_model_1.embedding_model_id
-    embedding_model_2 = create_embedding_model(session=db_session, collection_id=col1_id)
+    embedding_model_2 = create_embedding_model(
+        session=db_session,
+        collection_id=col1_id,
+        embedding_model_name="model_2",
+    )
     embedding_model_2_id = embedding_model_2.embedding_model_id
 
     # Create embeddings for col1

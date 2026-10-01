@@ -5,7 +5,9 @@ from __future__ import annotations
 from uuid import UUID
 
 from lightly_studio.core.dataset import Dataset
+from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video.video_frame_sample import VideoFrameSample
+from lightly_studio.export.video_frame_dataset_export import VideoFrameDatasetExport
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_frame_resolver
 
@@ -59,3 +61,20 @@ class VideoFrameDataset(Dataset[VideoFrameSample]):
         """
         inner = video_frame_resolver.get_by_id(session=self.session, sample_id=sample_id)
         return VideoFrameSample(inner=inner)
+
+    def export(
+        self, query: DatasetQuery[VideoFrameSample] | None = None
+    ) -> VideoFrameDatasetExport:
+        """Return a VideoFrameDatasetExport which can export the frames in various formats.
+
+        Args:
+            query:
+                The dataset query to export. If None, the default query `self.query()` is used.
+        """
+        if query is None:
+            query = self.query()
+        return VideoFrameDatasetExport(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            samples=query,
+        )

@@ -3,7 +3,10 @@ import { resolveEffectiveColorBySource } from '$lib/utils';
 
 interface GetSampleClassificationPillsParams {
     annotations: AnnotationView[];
-    selectedCollectionIds: string[];
+    /** Whether annotations from a given source should be shown. */
+    isSourceVisible: (sourceId: string) => boolean;
+    /** Whether more than one source is visible, which switches pill colors to per-source. */
+    multipleSourcesVisible: boolean;
     collectionIdToName: Record<string, string>;
     enforceColoringByClass: boolean;
 }
@@ -30,13 +33,6 @@ export interface SampleClassificationPill {
     displayLabel: string;
     colorKey: string;
     title: string;
-}
-
-function isVisibleAnnotation(annotation: AnnotationView, selectedCollectionIds: string[]): boolean {
-    return (
-        selectedCollectionIds.length === 0 ||
-        selectedCollectionIds.includes(annotation.annotation_collection_id)
-    );
 }
 
 function isClassificationAnnotation(annotation: AnnotationView): boolean {
@@ -77,18 +73,19 @@ function dedupeAndSortPills(pills: SampleClassificationPill[]): SampleClassifica
 
 export function getSampleClassificationPills({
     annotations,
-    selectedCollectionIds,
+    isSourceVisible,
+    multipleSourcesVisible,
     collectionIdToName,
     enforceColoringByClass
 }: GetSampleClassificationPillsParams): SampleClassificationPill[] {
     const showSourceColors = resolveEffectiveColorBySource({
-        multipleSourcesVisible: selectedCollectionIds.length > 1,
+        multipleSourcesVisible,
         enforceColoringByClass
     });
 
     return dedupeAndSortPills(
         annotations
-            .filter((annotation) => isVisibleAnnotation(annotation, selectedCollectionIds))
+            .filter((annotation) => isSourceVisible(annotation.annotation_collection_id))
             .filter(isClassificationAnnotation)
             .map((annotation) =>
                 createSampleClassificationPill({

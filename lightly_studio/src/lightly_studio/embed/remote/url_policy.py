@@ -1,0 +1,205 @@
+"""The address policy of ``RemoteEmbedder``.
+
+LightlyStudio opens a connection to an address that a user gives it. Without a check, that
+address can name the loopback interface of our own host, a machine inside our own network,
+or the metadata endpoint of the cloud that runs us. The two functions here are the control
+against that reach.
+
+``LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS`` chooses the mode. It is ``True`` by
+default, because a self-hosted LightlyStudio and its model usually share a box or a
+private network, and such an address is then the normal one. A hosted deployment, where
+the address arrives from a user, sets it to ``False``.
+
+The strict mode requires https for the reach, not for the privacy of the batches. The
+addresses of a host are read once, and httpx reads them again when it connects. Over plain
+HTTP a name can answer with a public address for the check and with an address of this
+network for the connection. Over TLS that second address has to hold a certificate for the
+name, which the metadata endpoint and a service of this network do not.
+
+A refused address raises ``ValueError``, not a ``RemoteEmbedderError``. Nothing was sent
+and no server answered: the configuration is wrong, so no retry and no other server helps.
+"""
+
+from __future__ import annotations
+
+import ipaddress
+import socket
+import urllib.parse
+import warnings
+from urllib.parse import SplitResult
+
+import httpx
+
+from lightly_studio.dataset import env
+
+_HTTPS_SCHEME = "https"
+
+# The only name that is an address. Any other name is not one.
+_LOOPBACK_HOST_NAME = "localhost"
+
+
+def check_url(url: str, api_key: str | None) -> None:
+    """Check the address of an embedding server against the policy.
+
+    The strict mode refuses an address that reaches this host or this network. The
+    permissive mode allows it and only warns about a plain HTTP address that other hosts
+    can reach.
+
+    Args:
+        url: The address of the server, the one that requests really go to.
+        api_key: The token that the client sends, or ``None`` for a server that wants
+            none. Only the warning reads it.
+
+    Raises:
+        ValueError: If ``url`` is not a usable address, or if the strict mode refuses it.
+    """
+    parsed = urllib.parse.urlsplit(url)
+    if not parsed.scheme or not parsed.hostname:
+        raise ValueError(
+            f"{url!r} is not a usable address for an embedding server. Give a scheme and a "
+            f"host, such as 'https://models.example.com:8080'."
+        )
+    if not env.LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS:
+        _check_public(parsed=parsed)
+    _warn_on_clear_text(parsed=parsed, api_key=api_key)
+
+
+def check_no_redirects(client: httpx.Client) -> None:
+    """Refuse a client that follows a redirect.
+
+    ``False`` is the default of ``httpx.Client``, but it is not the default everywhere:
+    ``fastapi.testclient.TestClient`` follows redirects. The value is therefore checked
+    and not assumed, whichever client a caller hands to ``connect``. A redirect would carry
+    the batch, and the bearer token with it, to an address that nobody configured, which is
+    the same reach that ``check_url`` closes.
+
+    Args:
+        client: The client that carries the requests.
+
+    Raises:
+        ValueError: If ``client`` follows redirects.
+    """
+    if client.follow_redirects:
+        raise ValueError(
+            "The client of a remote embedder must not follow redirects. A redirect would "
+            "send the batch, and the bearer token with it, to an address that nobody "
+            "configured. Build the client with follow_redirects=False."
+        )
+
+
+def _check_public(parsed: SplitResult) -> None:
+    """Refuse what the strict mode refuses: plain HTTP, and a host inside this network.
+
+    The addresses are read once, here, when the embedder is built. A name that answers with
+    another address afterwards is out of reach of this check. The ban on redirects and the
+    single read of ``/v1/describe`` are what keep that window small.
+
+    Args:
+        parsed: The address of the server.
+
+    Raises:
+        ValueError: If the scheme is not ``https``, or if the host reaches an address that
+            is not public.
+    """
+    if parsed.scheme != _HTTPS_SCHEME:
+        raise ValueError(
+            f"{parsed.geturl()!r} is not https. "
+            f"LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS is false, so an embedding "
+            f"server must be reached over TLS."
+        )
+    host = parsed.hostname
+    assert host is not None
+    # `169.254.169.254`, the metadata endpoint of the cloud, is link-local.
+    for address in _resolved_addresses(host=host):
+        if _reaches_this_network(address=address):
+            raise ValueError(
+                f"The host {host!r} of the embedding server resolves to {address}, which is "
+                f"not a public address. LIGHTLY_STUDIO_REMOTE_EMBEDDER_ALLOW_PRIVATE_URLS is "
+                f"false, so an embedding server must not be reachable from inside this "
+                f"network."
+            )
+
+
+def _resolved_addresses(host: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    """Every address that ``host`` names.
+
+    Args:
+        host: An address literal, or a name to resolve.
+
+    Returns:
+        The address itself for a literal. For a name, every address of every record it
+        carries, because one name can answer with more than one.
+
+    Raises:
+        ValueError: If ``host`` is a name that does not resolve.
+    """
+    try:
+        return [ipaddress.ip_address(host)]
+    except ValueError:
+        pass
+    try:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except socket.gaierror as error:
+        raise ValueError(
+            f"The host {host!r} of the embedding server does not resolve: {error}"
+        ) from error
+    # An IPv6 address can carry a zone, such as `fe80::1%eth0`, which is not part of it.
+    return [ipaddress.ip_address(str(info[4][0]).partition("%")[0]) for info in infos]
+
+
+def _reaches_this_network(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """Whether an address fails to name a host on the public internet.
+
+    ``is_global`` covers every range that stays inside a network, the shared range of
+    RFC 6598 among them. It is true for multicast, which names a group and no host.
+    """
+    return not address.is_global or address.is_multicast
+
+
+def _warn_on_clear_text(parsed: SplitResult, api_key: str | None) -> None:
+    """Name every risk of an address that carries the batches in the clear.
+
+    The twin of ``_warn_public_bind`` in ``lightly_studio_serve.server``: that one warns
+    the host that serves the model, this one warns the host that calls it, and each names
+    every risk rather than the first one. A loopback address needs neither warning,
+    because no other host can reach the port.
+
+    Plain HTTP with a token is the worse of the two cases, not the safer one: the token is
+    reusable, it goes out with every request, and any host on the path reads it.
+    """
+    if parsed.scheme == _HTTPS_SCHEME or _is_loopback(parsed=parsed):
+        return
+    address = parsed.geturl()
+    risks = [
+        f"Calling the embedding server at {address} over plain HTTP. The batches, and the "
+        f"vectors that come back, go over the network in clear text."
+    ]
+    if api_key is None:
+        risks.append("No api_key is set, so every host that can reach the port can use the model.")
+    else:
+        risks.append(
+            "The bearer token goes with every request, so any host on the path can read it "
+            "and reuse it."
+        )
+    risks.append(
+        "Give an https address, end TLS at a proxy in front of the server, or serve the "
+        "model on a loopback address."
+    )
+    warnings.warn(" ".join(risks), stacklevel=4)
+
+
+def _is_loopback(parsed: SplitResult) -> bool:
+    """Whether a port on the host of this address is out of reach for other hosts.
+
+    A name other than ``localhost`` that resolves to loopback is not read as one, so it
+    gets a warning that it does not need. That is the safe side of the two.
+    """
+    host = parsed.hostname
+    if host is None:
+        return False
+    if host == _LOOPBACK_HOST_NAME:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False

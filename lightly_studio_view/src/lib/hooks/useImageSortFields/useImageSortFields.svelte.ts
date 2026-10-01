@@ -1,0 +1,99 @@
+import { derived, writable, type Readable } from 'svelte/store';
+import type {
+    ImageSortFieldExpr,
+    EvaluationRunMetricsInfoView
+} from '$lib/api/lightly_studio_local';
+import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
+
+export interface ColumnSortField {
+    source: ImageSortFieldExpr['source'];
+    value: string;
+    label: string;
+}
+
+export interface EvalSortField {
+    source: 'evaluation_metric';
+    evaluation_run_name: string;
+    metric_name: string;
+    label: string;
+}
+
+export type SortField = ColumnSortField | EvalSortField;
+
+interface UseImageSortFieldsParams {
+    datasetId: () => string;
+}
+
+interface UseImageSortFieldsReturn {
+    allSortFields: Readable<SortField[]>;
+    /** Dispose the detached $effect.root. Call on cleanup to prevent leaks. */
+    dispose: () => void;
+}
+
+export const IMAGE_SORT_FIELDS: ColumnSortField[] = [
+    { source: 'image', value: 'file_name', label: 'file name' },
+    { source: 'image', value: 'file_path_abs', label: 'file path' },
+    { source: 'image', value: 'created_at', label: 'created at' },
+    { source: 'image', value: 'width', label: 'width' },
+    { source: 'image', value: 'height', label: 'height' }
+];
+
+export function formatEvaluationMetricLabel(evaluationRunName: string, metricName: string): string {
+    return `${evaluationRunName}.${metricName}`;
+}
+
+function mapRunsToEvalFields(runs: EvaluationRunMetricsInfoView[]): EvalSortField[] {
+    return runs.flatMap((run) =>
+        run.metrics.map(
+            (metric): EvalSortField => ({
+                source: 'evaluation_metric',
+                evaluation_run_name: run.run_name,
+                metric_name: metric.metric_name,
+                label: formatEvaluationMetricLabel(run.run_name, metric.metric_name)
+            })
+        )
+    );
+}
+
+export function useImageSortFields({
+    datasetId
+}: UseImageSortFieldsParams): UseImageSortFieldsReturn {
+    const { metadataInfo } = useMetadataFilters();
+    const metricsInfo = useEvaluationSampleMetricsInfo({ datasetId });
+
+    const metadataSortFields = derived(metadataInfo, ($metadataInfo) =>
+        ($metadataInfo ?? [])
+            .filter((info) => ['integer', 'float', 'string', 'boolean'].includes(info.type))
+            .map(
+                (info): ColumnSortField => ({
+                    source: 'metadata' as ImageSortFieldExpr['source'],
+                    value: info.name,
+                    label: `metadata.${info.name}`
+                })
+            )
+    );
+
+    // In TanStack v6, query results are reactive objects, not Svelte stores.
+    // Bridge to a writable store via $effect.root so it integrates with derived().
+    // $effect.root is used instead of $effect because this hook may be called
+    // outside a component context (e.g. in tests).
+    const evalSortFields = writable<EvalSortField[]>([]);
+    const disposeEffect = $effect.root(() => {
+        $effect(() => {
+            void metricsInfo.dataUpdatedAt;
+            evalSortFields.set(mapRunsToEvalFields(metricsInfo.data ?? []));
+        });
+    });
+
+    const allSortFields = derived(
+        [metadataSortFields, evalSortFields],
+        ([$metadataSortFields, $evalSortFields]) => [
+            ...IMAGE_SORT_FIELDS,
+            ...$metadataSortFields,
+            ...$evalSortFields
+        ]
+    );
+
+    return { allSortFields, dispose: disposeEffect };
+}

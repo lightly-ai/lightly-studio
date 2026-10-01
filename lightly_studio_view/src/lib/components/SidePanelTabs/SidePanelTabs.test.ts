@@ -23,46 +23,88 @@ describe('SidePanelTabs', () => {
 
     it('renders the Query button only when isImages is true', () => {
         const { unmount } = render(SidePanelTabs, {
-            props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: true
+            }
         });
         expect(screen.getByTestId('side-panel-tabs-query')).toBeInTheDocument();
         unmount();
 
         render(SidePanelTabs, {
-            props: { isImages: false, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+            props: {
+                collectionId: 'col1',
+                isImages: false,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: false
+            }
         });
         expect(screen.queryByTestId('side-panel-tabs-query')).not.toBeInTheDocument();
     });
 
     it('renders the Embed button only when hasMediaWithEmbeddings is true', () => {
         const { unmount } = render(SidePanelTabs, {
-            props: { isImages: false, hasMediaWithEmbeddings: true, supportsEvaluation: false }
+            props: {
+                collectionId: 'col1',
+                isImages: false,
+                hasMediaWithEmbeddings: true,
+                supportsEvaluation: false,
+                supportsDistribution: false
+            }
         });
         expect(screen.getByTestId('side-panel-tabs-embed')).toBeInTheDocument();
         unmount();
 
         render(SidePanelTabs, {
-            props: { isImages: false, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+            props: {
+                collectionId: 'col1',
+                isImages: false,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: false
+            }
         });
         expect(screen.queryByTestId('side-panel-tabs-embed')).not.toBeInTheDocument();
     });
 
     it('renders the Eval button only when supportsEvaluation is true', () => {
         const { unmount } = render(SidePanelTabs, {
-            props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: true }
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: true,
+                supportsDistribution: true
+            }
         });
         expect(screen.getByTestId('side-panel-tabs-eval')).toBeInTheDocument();
         unmount();
 
         render(SidePanelTabs, {
-            props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: true
+            }
         });
         expect(screen.queryByTestId('side-panel-tabs-eval')).not.toBeInTheDocument();
     });
 
     it('calls setActivePanel with queryEditor when Query button is clicked', async () => {
         render(SidePanelTabs, {
-            props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: true
+            }
         });
 
         await fireEvent.click(screen.getByTestId('side-panel-tabs-query'));
@@ -72,7 +114,13 @@ describe('SidePanelTabs', () => {
     it('calls setActivePanel with none when the active Query button is clicked again', async () => {
         activePanel.set('queryEditor');
         render(SidePanelTabs, {
-            props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: false }
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: true
+            }
         });
 
         await fireEvent.click(screen.getByTestId('side-panel-tabs-query'));
@@ -81,16 +129,68 @@ describe('SidePanelTabs', () => {
 
     it('calls setActivePanel with embeddingPlot when Embed button is clicked', async () => {
         render(SidePanelTabs, {
-            props: { isImages: false, hasMediaWithEmbeddings: true, supportsEvaluation: false }
+            props: {
+                collectionId: 'col1',
+                isImages: false,
+                hasMediaWithEmbeddings: true,
+                supportsEvaluation: false,
+                supportsDistribution: false
+            }
         });
 
         await fireEvent.click(screen.getByTestId('side-panel-tabs-embed'));
         expect(setActivePanel).toHaveBeenCalledWith('embeddingPlot');
     });
 
+    it('renders the Distribution button only when supportsDistribution is true', () => {
+        const { unmount } = render(SidePanelTabs, {
+            props: {
+                collectionId: 'col1',
+                isImages: false,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: true
+            }
+        });
+        expect(screen.getByTestId('side-panel-tabs-distribution')).toBeInTheDocument();
+        unmount();
+
+        render(SidePanelTabs, {
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: false
+            }
+        });
+        expect(screen.queryByTestId('side-panel-tabs-distribution')).not.toBeInTheDocument();
+    });
+
+    it('calls setActivePanel with distribution when the Distribution button is clicked', async () => {
+        render(SidePanelTabs, {
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: false,
+                supportsDistribution: true
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('side-panel-tabs-distribution'));
+        expect(setActivePanel).toHaveBeenCalledWith('distribution');
+    });
+
     it('calls setActivePanel with evaluationRuns when Eval button is clicked', async () => {
         render(SidePanelTabs, {
-            props: { isImages: true, hasMediaWithEmbeddings: false, supportsEvaluation: true }
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: false,
+                supportsEvaluation: true,
+                supportsDistribution: true
+            }
         });
 
         await fireEvent.click(screen.getByTestId('side-panel-tabs-eval'));
@@ -100,7 +200,13 @@ describe('SidePanelTabs', () => {
     it('marks the active panel button with aria-pressed', async () => {
         activePanel.set('embeddingPlot');
         render(SidePanelTabs, {
-            props: { isImages: true, hasMediaWithEmbeddings: true, supportsEvaluation: true }
+            props: {
+                collectionId: 'col1',
+                isImages: true,
+                hasMediaWithEmbeddings: true,
+                supportsEvaluation: true,
+                supportsDistribution: true
+            }
         });
 
         expect(screen.getByTestId('side-panel-tabs-embed')).toHaveAttribute('aria-pressed', 'true');

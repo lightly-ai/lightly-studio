@@ -21,7 +21,10 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,
 )
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers import embedding_model_resolver
+from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
+    embedding_model_resolver,
+)
 
 
 @pytest.fixture
@@ -55,12 +58,23 @@ def fine_tuning_embeddings() -> list[SampleEmbeddingTable]:
 def embedding_model(db_session: Session, collection: CollectionTable) -> EmbeddingModelTable:
     """Fixture to create an embedding model."""
     embedding_model = EmbeddingModelCreate(
-        embedding_model_hash="mock_hash",
         name="test_model",
-        collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         embedding_dimension=3,
     )
-    return embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
+    created = embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
+    # Link it and register it as the collection's default so it resolves as the model.
+    collection_embedding_model_resolver.get_or_add_collection_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=created.embedding_model_id,
+    )
+    collection_embedding_model_resolver.set_default(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=created.embedding_model_id,
+    )
+    return created
 
 
 @pytest.fixture

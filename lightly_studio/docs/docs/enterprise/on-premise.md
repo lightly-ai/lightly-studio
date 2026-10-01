@@ -4,6 +4,10 @@ The on-premise deployment model is for teams that want to run LightlyStudio Ente
 on their own infrastructure. This gives you full control over the deployment, data
 storage, and security. You can run it fully offline or air-gapped if needed.
 
+For hardware guidance, see [Hardware Requirements](hardware-requirements.md). The
+requirements for the deployment host are separate from those for the machine
+running the Python client.
+
 ## Components of the On-Premise Deployment
 
 ![On-Premise Service Layout](../_static/lightly_studio_on_premise_service_layout.svg){ width="100%" }

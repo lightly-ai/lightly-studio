@@ -5,7 +5,6 @@ import type { Guardrail, GuardrailContext } from './context/types';
 import { runGuardrails } from './run-guardrails';
 
 const context: GuardrailContext = {
-    baseRef: 'origin/main',
     changedFiles: async () => []
 };
 
@@ -13,7 +12,6 @@ const context: GuardrailContext = {
 const stub = (name: string, status: GuardrailStatus, required = true): Guardrail => ({
     name,
     required,
-    needsPrContext: false,
     run: async () => ({ status, summary: '' })
 });
 
@@ -21,7 +19,6 @@ const stub = (name: string, status: GuardrailStatus, required = true): Guardrail
 const throwing = (name: string, required = true): Guardrail => ({
     name,
     required,
-    needsPrContext: false,
     run: async () => {
         throw new Error('boom');
     }

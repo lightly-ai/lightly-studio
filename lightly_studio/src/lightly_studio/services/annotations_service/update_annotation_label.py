@@ -13,6 +13,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    evaluation_run_resolver,
 )
 
 
@@ -34,6 +35,9 @@ def update_annotation_label(
     if annotation is None:
         raise ValueError(f"Annotation with id {annotation_id} does not exist.")
 
+    # Capture collection_id before the update; the resolver returns a detached copy.
+    collection_id = annotation.annotation_collection_id
+
     # Get dataset ID from the annotation's current label
     dataset_id = annotation.annotation_label.dataset_id
     annotation_label = annotation_label_resolver.get_by_label_name(
@@ -51,8 +55,13 @@ def update_annotation_label(
             ),
         )
 
-    return annotation_resolver.update_annotation_label(
+    result = annotation_resolver.update_annotation_label(
         session,
         annotation_id,
         annotation_label.annotation_label_id,
     )
+    evaluation_run_resolver.mark_stale_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+    )
+    return result

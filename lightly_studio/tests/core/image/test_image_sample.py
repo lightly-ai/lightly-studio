@@ -13,7 +13,9 @@ from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnot
 from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver, image_resolver
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -641,3 +643,91 @@ class TestImageSample:
 
         # Verify it's gone.
         assert len(image.annotations) == 0
+
+    def test_add_annotations__marks_evaluation_run_stale(
+        self,
+        db_session: Session,
+    ) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        image = ImageSample(inner=image_table)
+        gt_collection = collection_resolver.create(
+            session=db_session,
+            collection=CollectionCreate(
+                name="gt",
+                sample_type=SampleType.ANNOTATION,
+                parent_collection_id=collection.collection_id,
+            ),
+        )
+        pred_collection = create_collection(
+            session=db_session,
+            sample_type=SampleType.ANNOTATION,
+            parent_collection_id=collection.collection_id,
+        )
+        run = evaluation_run_resolver.create(
+            session=db_session,
+            evaluation_run_input=EvaluationRunCreate(
+                name="run",
+                gt_annotation_collection_id=gt_collection.collection_id,
+                pred_annotation_collection_id=pred_collection.collection_id,
+                dataset_id=collection.dataset_id,
+                task_type=EvaluationTaskType.OBJECT_DETECTION,
+            ),
+        )
+        assert run.stale_since is None
+
+        image.add_annotations(
+            [CreateClassification(class_name="cat")],
+            annotation_source="gt",
+        )
+
+        refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+        assert refreshed is not None
+        assert refreshed.stale_since is not None
+
+    def test_delete_annotation__marks_evaluation_run_stale(
+        self,
+        db_session: Session,
+    ) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        image = ImageSample(inner=image_table)
+        image.add_annotation(
+            CreateClassification(class_name="cat"),
+            annotation_source="gt",
+        )
+        gt_collection_id = collection_resolver.get_or_create_child_collection(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_type=SampleType.ANNOTATION,
+            name="gt",
+        )
+        pred_collection = create_collection(
+            session=db_session,
+            sample_type=SampleType.ANNOTATION,
+            parent_collection_id=collection.collection_id,
+        )
+        run = evaluation_run_resolver.create(
+            session=db_session,
+            evaluation_run_input=EvaluationRunCreate(
+                name="run",
+                gt_annotation_collection_id=gt_collection_id,
+                pred_annotation_collection_id=pred_collection.collection_id,
+                dataset_id=collection.dataset_id,
+                task_type=EvaluationTaskType.OBJECT_DETECTION,
+            ),
+        )
+        assert run.stale_since is None
+
+        annotation = image.annotations[0]
+        image.delete_annotation(annotation)
+
+        refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+        assert refreshed is not None
+        assert refreshed.stale_since is not None

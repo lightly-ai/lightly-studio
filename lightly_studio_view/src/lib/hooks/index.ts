@@ -2,11 +2,16 @@ export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
 export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+export { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
+export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution';
+export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution';
+export { useMetadataDistributionsBySampleTags } from '$lib/hooks/useMetadataDistributionsBySampleTags';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
 export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
@@ -18,16 +23,22 @@ export { useFileDrop } from '$lib/hooks/useFileDrop/useFileDrop';
 export { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
 export { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
 export { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
-export { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
 export { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 export { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
 export { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 export { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+export { useSeedAnnotationSourceFilter } from '$lib/hooks/useSeedAnnotationSourceFilter/useSeedAnnotationSourceFilter.svelte';
 export { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
-export { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
+export {
+    useEvaluationRuns,
+    useInvalidateEvaluationRunsQueries
+} from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 export { useEvaluationConfusionMatrix } from '$lib/hooks/useEvaluationConfusionMatrix/useEvaluationConfusionMatrix.svelte';
-export { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
-export { useSortFields } from '$lib/hooks/useSortFields/useSortFields.svelte';
+export { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
+export {
+    useImageSortFields,
+    formatEvaluationMetricLabel
+} from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
 export { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
 export { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
 export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
@@ -39,7 +50,37 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
+export { usePostHog } from '$lib/hooks/usePostHog';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
+export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+export { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotationSortBy';
+export { useAnnotationEvaluationMetricsInfo } from '$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo.svelte';
+export { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotationOrderBy.svelte';
+export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
+export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications';
+export {
+    useImageAnnotationCounts,
+    useImageAnnotationCountsQueryKey
+} from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
+export { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+export { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+export { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount';
+export { useVideoOrderBy } from '$lib/hooks/useVideoOrderBy/useVideoOrderBy';
+export { useVideoSortFields } from '$lib/hooks/useVideoSortFields/useVideoSortFields';
+export {
+    createOperatorFromMetadata,
+    type Operator,
+    type OperatorParameter,
+    type OperatorParameterColumn,
+    type OperatorParameterType
+} from '$lib/hooks/useOperators';
+export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
+export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte';
+export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
+export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';
+export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
+export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';

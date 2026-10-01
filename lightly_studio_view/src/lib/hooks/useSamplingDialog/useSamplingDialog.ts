@@ -1,19 +1,47 @@
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
+import { usePostHog } from '$lib/hooks';
 
+// Module-level stores are intentional: multiple invocations of useSamplingDialog()
+// (e.g. from SamplingCombinationDialog and useSamplingCombinationDialog) must share
+// the same state. wasSubmitted mirrors this pattern so that markSubmitted() called
+// from one invocation is visible to closeSamplingDialog() in another.
 const isSamplingDialogOpen = writable(false);
+const wasSubmitted = writable(false);
+
+interface OpenDialogAnalytics extends Record<string, unknown> {
+    collection_id: string;
+    filtered_sample_count: number;
+}
+
+interface CloseDialogAnalytics extends Record<string, unknown> {
+    collection_id: string;
+    strategy_count: number;
+}
 
 export function useSamplingDialog() {
-    const openSamplingDialog = () => {
+    const { trackEvent } = usePostHog();
+
+    const openSamplingDialog = (analytics?: OpenDialogAnalytics) => {
+        wasSubmitted.set(false);
         isSamplingDialogOpen.set(true);
+        if (analytics) {
+            trackEvent('sampling_dialog_opened', analytics);
+        }
     };
 
-    const closeSamplingDialog = () => {
+    const markSubmitted = () => wasSubmitted.set(true);
+
+    const closeSamplingDialog = (analytics?: CloseDialogAnalytics) => {
+        if (!get(wasSubmitted) && analytics) {
+            trackEvent('sampling_dialog_dismissed', analytics);
+        }
         isSamplingDialogOpen.set(false);
     };
 
     return {
         isSamplingDialogOpen,
         openSamplingDialog,
-        closeSamplingDialog
+        closeSamplingDialog,
+        markSubmitted
     };
 }

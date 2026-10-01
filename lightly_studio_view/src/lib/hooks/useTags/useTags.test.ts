@@ -1,3 +1,8 @@
+const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
+vi.mock('$lib/hooks', () => ({
+    usePostHog: () => ({ trackEvent })
+}));
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useTags } from './useTags';
 import { get } from 'svelte/store';
@@ -37,6 +42,7 @@ describe('useTags Hook', () => {
         vi.clearAllMocks();
         vi.resetAllMocks();
         setup();
+        trackEvent.mockClear();
 
         const { tags } = useGlobalStorage();
         tags.set({});
@@ -242,6 +248,56 @@ describe('useTags Hook', () => {
         expect(get(tags1SelectedAgain).has('1')).toBe(true);
         expect(get(tags1SelectedAgain).has('2')).toBe(true);
         expect(get(tags1SelectedAgain).size).toBe(2);
+    });
+
+    it('fires grid_filter_toggled with action selected when tag is not yet selected', async () => {
+        const { tagSelectionToggle, clearTagsSelected, tags } = useTags({ collection_id: '123' });
+        clearTagsSelected();
+        await waitFor(() => expect(get(tags)).toEqual(mockTags));
+
+        tagSelectionToggle('1');
+
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: '123',
+            filter_type: 'tag',
+            filter_value: 'Tag 1',
+            action: 'selected',
+            active_count: 1
+        });
+    });
+
+    it('fires grid_filter_toggled with action unselected when tag is already selected', async () => {
+        const { tagSelectionToggle, clearTagsSelected, tags } = useTags({ collection_id: '123' });
+        clearTagsSelected();
+        await waitFor(() => expect(get(tags)).toEqual(mockTags));
+
+        tagSelectionToggle('1');
+        trackEvent.mockClear();
+        tagSelectionToggle('1');
+
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: '123',
+            filter_type: 'tag',
+            filter_value: 'Tag 1',
+            action: 'unselected',
+            active_count: 0
+        });
+    });
+
+    it('uses tag_id as filter_value when tag is not found in loaded tags', () => {
+        const { tagSelectionToggle, clearTagsSelected } = useTags({ collection_id: 'empty-col' });
+        clearTagsSelected();
+
+        tagSelectionToggle('unknown-id');
+
+        expect(trackEvent).toHaveBeenCalledWith(
+            'grid_filter_toggled',
+            expect.objectContaining({
+                filter_type: 'tag',
+                filter_value: 'unknown-id',
+                action: 'selected'
+            })
+        );
     });
 
     it('should prune stale selected tags after reloading tags', async () => {

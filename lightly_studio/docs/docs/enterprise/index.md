@@ -10,6 +10,8 @@ We offer it in two deployment variants:
 
 Contact [sales@lightly.ai](mailto:sales@lightly.ai) to find the right option for your team.
 
+Not registered yet? [Start for free](https://www.lightly.ai/studio-signup) to get access.
+
 ## A Look Inside
 
 === "Single Sign-On"
@@ -24,7 +26,7 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to find the right option for
 
 === "User Management"
 
-    ![Multi-user management with roles and permissions](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_user_management_v1.0.0.png){ width="100%" }
+    ![Multi-user management with roles and permissions](https://storage.googleapis.com/lightly-public/studio/docs/enterprise_user_management_v1.0.2.png){ width="100%" }
     _Onboard your team with roles and permissions._
 
 === "Samples Grid"
@@ -45,6 +47,7 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to find the right option for
 ## Getting Started
 
 - [Connect from Python](connect.md)
+- [Hardware Requirements](hardware-requirements.md)
 - [Security and Architecture](security.md)
 - [On-Premise Deployment](on-premise.md)
 - [Local Storage](local_storage.md)

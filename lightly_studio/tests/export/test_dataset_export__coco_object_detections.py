@@ -1,0 +1,192 @@
+"""Tests for exporting object detections to COCO format via `DatasetExport`."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from pytest_mock import MockerFixture
+from sqlmodel import Session
+
+from lightly_studio.core.dataset_query import ImageSampleField
+from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.image.image_dataset import ImageDataset
+from lightly_studio.export import dataset_export
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreate,
+    AnnotationType,
+)
+from lightly_studio.models.collection import CollectionTable
+from lightly_studio.resolvers import annotation_resolver
+from tests.helpers_resolvers import (
+    ImageStub,
+    create_annotation_label,
+    create_collection,
+    create_images,
+)
+
+
+class TestDatasetExport:
+    def test_to_coco_object_detections(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Tests exporting object detections to COCO format."""
+        dataset = ImageDataset.create(name="test_dataset")
+        images_to_create = [
+            ImageStub(path="image0.jpg", width=100, height=100),
+            ImageStub(path="image1.jpg", width=200, height=200),
+            ImageStub(path="image2.jpg", width=300, height=300),
+        ]
+        images = create_images(
+            db_session=dataset.session, collection_id=dataset.collection_id, images=images_to_create
+        )
+        label = create_annotation_label(
+            session=dataset.session, root_collection_id=dataset.collection_id, label_name="dog"
+        )
+        # TODO(lukas 9/2025): make this into a function
+        annotation_resolver.create_many(
+            session=dataset.session,
+            parent_collection_id=dataset.collection_id,
+            annotations=[
+                AnnotationCreate(
+                    parent_sample_id=images[0].sample_id,
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.OBJECT_DETECTION,
+                    confidence=None,
+                    x=10,
+                    y=10,
+                    width=10,
+                    height=10,
+                ),
+            ],
+        )
+
+        output_json = tmp_path / "task_obj_det_1.json"
+        query = dataset.query().match(ImageSampleField.height <= 200)
+        ImageDatasetExport(
+            session=dataset.session, dataset_id=dataset.dataset_id, samples=query
+        ).to_coco_object_detections(output_json=output_json)
+
+        # Load the generated JSON and verify its content
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        # Last image is not included due to filtered out height
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "image0.jpg", "width": 100, "height": 100},
+                {"id": 1, "file_name": "image1.jpg", "width": 200, "height": 200},
+            ],
+            "categories": [{"id": 0, "name": "dog"}],
+            "annotations": [
+                {"image_id": 0, "category_id": 0, "bbox": [10.0, 10.0, 10.0, 10.0]},
+            ],
+        }
+
+    def test_to_coco_object_detections__str_path(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Tests that a string output path is accepted."""
+        dataset = ImageDataset.create(name="test_dataset")
+        images = [ImageStub(path="image0.jpg", width=100, height=100)]
+        create_images(
+            db_session=dataset.session, collection_id=dataset.collection_id, images=images
+        )
+
+        output_json = tmp_path / "export.json"
+        # Provide the export path as a string
+        ImageDatasetExport(
+            session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
+        ).to_coco_object_detections(output_json=str(output_json))
+
+        # Verify the file exists
+        assert output_json.exists()
+
+    def test_to_coco_object_detections__default_path(
+        self,
+        mocker: MockerFixture,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Tests that the default output path is used when none is provided."""
+        dataset = ImageDataset.create(name="test_dataset")
+
+        # Patch the writer so no file is created and assert the default path is used.
+        mock_output = mocker.patch.object(dataset_export, "COCOObjectDetectionOutput")
+
+        # Don't provide the export path.
+        ImageDatasetExport(
+            session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
+        ).to_coco_object_detections()
+
+        mock_output.assert_called_once_with(output_file=Path("coco_export.json"))
+
+    def test_to_coco_object_detections__multiple_categories(
+        self,
+        db_session: Session,
+        collection_with_annotations: CollectionTable,
+        tmp_path: Path,
+    ) -> None:
+        """Tests that multiple sorted categories and confidence scores are exported."""
+        collection = collection_with_annotations
+
+        output_json = tmp_path / "task_obj_det_1.json"
+        ImageDatasetExport(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+        ).to_coco_object_detections(output_json=output_json, annotation_collection_id=None)
+
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "img1", "width": 100, "height": 100},
+                {"id": 1, "file_name": "img2", "width": 200, "height": 200},
+                {"id": 2, "file_name": "img3", "width": 300, "height": 300},
+            ],
+            "categories": [
+                {"id": 0, "name": "cat"},
+                {"id": 1, "name": "dog"},
+                {"id": 2, "name": "zebra"},
+            ],
+            "annotations": [
+                {"image_id": 0, "category_id": 1, "bbox": [10.0, 10.0, 10.0, 10.0]},
+                {"image_id": 0, "category_id": 0, "bbox": [20.0, 20.0, 20.0, 20.0], "score": 0.25},
+                {"image_id": 1, "category_id": 1, "bbox": [30.0, 30.0, 30.0, 30.0], "score": 0.375},
+            ],
+        }
+
+    def test_to_coco_object_detections__no_annotations(
+        self,
+        db_session: Session,
+        tmp_path: Path,
+    ) -> None:
+        """Tests exporting to COCO format when there are no annotations."""
+        collection = create_collection(session=db_session)
+        images = [
+            ImageStub(path="img1", width=100, height=100),
+            ImageStub(path="img2", width=200, height=200),
+        ]
+        create_images(db_session=db_session, collection_id=collection.collection_id, images=images)
+
+        output_json = tmp_path / "task_no_ann.json"
+        ImageDatasetExport(
+            session=db_session,
+            dataset_id=collection.dataset_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+        ).to_coco_object_detections(output_json=output_json, annotation_collection_id=None)
+
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "img1", "width": 100, "height": 100},
+                {"id": 1, "file_name": "img2", "width": 200, "height": 200},
+            ],
+            "categories": [],
+            "annotations": [],
+        }

@@ -105,7 +105,8 @@ describe('useSegmentationMaskBrush', () => {
         vi.mocked(applySegmentationMaskConstraints).mockResolvedValue([]);
 
         createAnnotation.mockResolvedValue({
-            sample_id: 'new-annotation-id'
+            sample_id: 'new-annotation-id',
+            annotation_type: 'segmentation_mask'
         });
 
         createLabel.mockResolvedValue({
@@ -502,7 +503,7 @@ describe('useSegmentationMaskBrush', () => {
         const actions = get(reversibleActions);
         await executeReversibleAction(actions[0].id);
 
-        expect(deleteAnnotation).toHaveBeenCalledWith('new-annotation-id');
+        expect(deleteAnnotation).toHaveBeenCalledWith('new-annotation-id', 'segmentation_mask');
         expect(get(reversibleActions)).toHaveLength(0);
         expect(annotationLabelContext.annotationId).toBeNull();
     });

@@ -12,7 +12,7 @@ from lightly_studio.evaluation.object_detection_metric import (
     BoundingBox,
     DetectionMatch,
     MatchingResult,
-    _get_annotation_metric_records,
+    get_annotation_metric_records,
 )
 
 
@@ -608,7 +608,7 @@ def test_compute_iou_matrix__negative_coordinates() -> None:
 def test_get_annotation_metric_records__empty_matching_result() -> None:
     evaluation_run_id = uuid4()
     sample_id = uuid4()
-    records = _get_annotation_metric_records(
+    records = get_annotation_metric_records(
         evaluation_run_id=evaluation_run_id,
         sample_id=sample_id,
         matching_result=MatchingResult(),
@@ -624,7 +624,7 @@ def test_get_annotation_metric_records__tp_produces_iou_record() -> None:
     matching_result = MatchingResult(
         matches=[DetectionMatch(pred_id=pred_id, gt_id=gt_id, iou=0.75)],
     )
-    records = _get_annotation_metric_records(
+    records = get_annotation_metric_records(
         evaluation_run_id=evaluation_run_id,
         sample_id=sample_id,
         matching_result=matching_result,
@@ -641,7 +641,7 @@ def test_get_annotation_metric_records__fp_has_only_pred_id() -> None:
     sample_id = uuid4()
     pred_id = uuid4()
     matching_result = MatchingResult(unmatched_prediction_ids=[pred_id])
-    records = _get_annotation_metric_records(
+    records = get_annotation_metric_records(
         evaluation_run_id=evaluation_run_id,
         sample_id=sample_id,
         matching_result=matching_result,
@@ -658,7 +658,7 @@ def test_get_annotation_metric_records__fn_has_only_gt_id() -> None:
     sample_id = uuid4()
     gt_id = uuid4()
     matching_result = MatchingResult(unmatched_gt_ids=[gt_id])
-    records = _get_annotation_metric_records(
+    records = get_annotation_metric_records(
         evaluation_run_id=evaluation_run_id,
         sample_id=sample_id,
         matching_result=matching_result,
@@ -683,7 +683,7 @@ def test_get_annotation_metric_records__mixed_result() -> None:
         unmatched_prediction_ids=[pred_fp_id],
         unmatched_gt_ids=[gt_fn_id],
     )
-    records = _get_annotation_metric_records(
+    records = get_annotation_metric_records(
         evaluation_run_id=evaluation_run_id,
         sample_id=sample_id,
         matching_result=matching_result,

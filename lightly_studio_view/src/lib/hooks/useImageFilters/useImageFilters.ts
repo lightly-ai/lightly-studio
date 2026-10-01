@@ -11,7 +11,7 @@ import type {
     QueryExpr,
     SampleFilter
 } from '$lib/api/lightly_studio_local';
-import type { SortExpr } from '../useImagesInfinite/types';
+import type { ImageSortExpr } from '../useImagesInfinite/types';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
@@ -103,8 +103,11 @@ const imageFilter = derived(
             sampleFilter.confusion_cell = confusionCell;
         }
 
-        if ($filterParams.metadata_values) {
-            const metadataFilters = createMetadataFilters($filterParams.metadata_values);
+        if ($filterParams.metadata_values || $filterParams.categorical_metadata_values) {
+            const metadataFilters = createMetadataFilters(
+                $filterParams.metadata_values ?? {},
+                $filterParams.categorical_metadata_values ?? {}
+            );
             if (metadataFilters.length > 0) {
                 sampleFilter.metadata_filters = metadataFilters;
             }
@@ -122,12 +125,11 @@ const imageFilter = derived(
     }
 );
 
-const imageSortBy = writable<SortExpr[] | null>([
+const imageSortBy = writable<ImageSortExpr[] | null>([
     {
         source: 'image',
         field_name: 'file_path_abs',
-        direction: SortDirection.ASC,
-        is_numeric: false
+        direction: SortDirection.ASC
     }
 ]);
 
@@ -203,7 +205,7 @@ export const useImageFilters = () => {
         filterParams.set(newParams);
     };
 
-    const updateSortBy = (sort: SortExpr[] | null) => {
+    const updateSortBy = (sort: ImageSortExpr[] | null) => {
         imageSortBy.set(sort);
     };
 

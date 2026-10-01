@@ -1,15 +1,27 @@
+import logging
+from uuid import uuid4
+
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.api.routes.api import image_embedding
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_GATEWAY,
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_OK,
+    HTTP_STATUS_PAYLOAD_TOO_LARGE,
 )
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManager,
-    EmbeddingManagerProvider,
+from lightly_studio.embed import embed_samples
+from lightly_studio.embed.errors import (
+    MissingCapabilityError,
+    NoDefaultEmbeddingModelError,
+    RemoteEmbedderUnavailableError,
 )
+from lightly_studio.embed.remote.errors import RemoteEmbedderUnreachableError
 from tests import helpers_resolvers
 
 
@@ -20,17 +32,9 @@ def test_embed_image_from_file(
 ) -> None:
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
-    # Initialize the embedding_manager with a mock variant so it does not update
-    # the singleton.
-    mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
-    )
-    # Mock the EmbeddingManager return value.
-    mocker.patch.object(
-        EmbeddingManager,
-        "compute_image_embedding",
+    embed_image = mocker.patch.object(
+        embed_samples,
+        "embed_image_for_collection",
         return_value=[0.1, 0.2, 0.3],
     )
 
@@ -44,6 +48,8 @@ def test_embed_image_from_file(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [0.1, 0.2, 0.3]
+    # The upload is forwarded as bytes, so the route never touches the filesystem.
+    assert embed_image.call_args.kwargs["image_bytes"] == b"fake image content"
 
 
 def test_embed_image_from_file_error(
@@ -54,13 +60,8 @@ def test_embed_image_from_file_error(
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
     mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
-    )
-    mocker.patch.object(
-        EmbeddingManager,
-        "compute_image_embedding",
+        embed_samples,
+        "embed_image_for_collection",
         side_effect=ValueError("Embedding failed"),
     )
 
@@ -73,3 +74,152 @@ def test_embed_image_from_file_error(
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
     assert "Embedding failed" in response.json()["detail"]
+
+
+def test_embed_image_from_file__not_embedded(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    """An upload the embedder drops is a bad request, and the file name is reported."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+
+    mocker.patch.object(
+        embed_samples,
+        "embed_image_for_collection",
+        side_effect=embed_samples.ImageNotEmbeddedError("The embedder returned no embedding."),
+    )
+
+    files = {"file": ("broken.jpg", b"not an image", "image/jpeg")}
+
+    response = test_client.post(
+        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+        files=files,
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert "broken.jpg" in response.json()["detail"]
+
+
+def test_embed_image_from_file__too_large(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    """An upload above the size limit is refused before it is read into memory."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    mocker.patch.object(image_embedding, "_MAX_UPLOAD_BYTES", 8)
+    embed_image = mocker.patch.object(embed_samples, "embed_image_for_collection")
+
+    files = {"file": ("large.jpg", b"123456789", "image/jpeg")}
+
+    response = test_client.post(
+        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+        files=files,
+    )
+
+    assert response.status_code == HTTP_STATUS_PAYLOAD_TOO_LARGE
+    assert "large.jpg" in response.json()["detail"]
+    embed_image.assert_not_called()
+
+
+def test_embed_image_from_file__at_size_limit(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+) -> None:
+    """An upload of exactly the size limit is accepted."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    mocker.patch.object(image_embedding, "_MAX_UPLOAD_BYTES", 8)
+    mocker.patch.object(embed_samples, "embed_image_for_collection", return_value=[0.1, 0.2, 0.3])
+
+    files = {"file": ("small.jpg", b"12345678", "image/jpeg")}
+
+    response = test_client.post(
+        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+        files=files,
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+
+
+def test_embed_image_from_file__large_upload_logs_warning(
+    db_session: Session,
+    mocker: MockerFixture,
+    test_client: TestClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An upload above the warning size is embedded and logged."""
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    mocker.patch.object(image_embedding, "_LARGE_UPLOAD_WARNING_BYTES", 8)
+    mocker.patch.object(embed_samples, "embed_image_for_collection", return_value=[0.1, 0.2, 0.3])
+
+    files = {"file": ("large.jpg", b"123456789", "image/jpeg")}
+
+    with caplog.at_level(logging.WARNING, logger=image_embedding.__name__):
+        response = test_client.post(
+            f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+            files=files,
+        )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert "'large.jpg' is 9 bytes" in caplog.text
+
+
+def test_embed_image_from_file__model_override_not_supported(test_client: TestClient) -> None:
+    # A per-request embedding model override is not supported: passing an
+    # embedding_model_id must raise instead of silently using the collection default.
+    files = {"file": ("test_image.jpg", b"fake image content", "image/jpeg")}
+
+    with pytest.raises(NotImplementedError, match="model override is not supported"):
+        test_client.post(
+            f"/api/image_embedding/from_file/for_collection/{uuid4()!s}",
+            params={"embedding_model_id": str(uuid4())},
+            files=files,
+        )
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "message"),
+    [
+        (
+            MissingCapabilityError(space_key="my-space", query_kind="images"),
+            HTTP_STATUS_CONFLICT,
+            "The embedding space 'my-space' of this collection cannot embed images.",
+        ),
+        (
+            NoDefaultEmbeddingModelError("No default model."),
+            HTTP_STATUS_CONFLICT,
+            "No default model.",
+        ),
+        (
+            RemoteEmbedderUnavailableError(space_key="my-space", url="http://embedder.test"),
+            HTTP_STATUS_BAD_GATEWAY,
+            "The embedding server at 'http://embedder.test' for the embedding space 'my-space' "
+            "cannot be used.",
+        ),
+        # The upstream detail stays out of the answer
+        (
+            RemoteEmbedderUnreachableError("Traceback from the server."),
+            HTTP_STATUS_BAD_GATEWAY,
+            "The embedding server did not give embeddings.",
+        ),
+    ],
+)
+def test_embed_image_from_file__embedder_error(
+    mocker: MockerFixture,
+    test_client: TestClient,
+    error: Exception,
+    status_code: int,
+    message: str,
+) -> None:
+    collection_id = uuid4()
+    mocker.patch.object(embed_samples, "embed_image_for_collection", side_effect=error)
+
+    response = test_client.post(
+        f"/api/image_embedding/from_file/for_collection/{collection_id!s}",
+        files={"file": ("test_image.jpg", b"fake image content", "image/jpeg")},
+    )
+
+    assert response.status_code == status_code
+    assert response.json()["error"] == message

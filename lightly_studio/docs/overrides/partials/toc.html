@@ -1,0 +1,37 @@
+{#-
+  A copy of Material 9.7.5's `partials/toc.html`, with a page-actions list added
+  under the heading list and nothing else changed. The one insertion is marked
+  below. Re-diff it against upstream when bumping mkdocs-material.
+
+  The actions are what Material otherwise renders as `partials/actions.html`: a
+  bare pencil icon floating over the first paragraph of the article, which reads
+  as an editing control for the page rather than a link to its source.
+  `custom.css` hides that copy.
+-#}
+{% import "partials/page_actions.html" as page_actions with context %}
+{% set title = lang.t("toc") %}
+{% if config.mdx_configs.toc and config.mdx_configs.toc.title %}
+  {% set title = config.mdx_configs.toc.title %}
+{% endif %}
+<nav class="md-nav md-nav--secondary" aria-label="{{ title | e }}">
+  {% set toc = page.toc %}
+  {% set first = toc | first %}
+  {% if first and first.level == 1 %}
+    {% set toc = first.children %}
+  {% endif %}
+  {% if toc %}
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      {{ title }}
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      {% for toc_item in toc %}
+        {% include "partials/toc-item.html" %}
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {#- ADDED: page actions, the copy that sits beside the article. The one under
+      it comes from `main.html`; `partials/page_actions.html` says why there are
+      two. -#}
+  {{ page_actions.page_actions("aside") }}
+</nav>

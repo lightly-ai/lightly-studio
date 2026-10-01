@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import ConfusionMatrix from '../ConfusionMatrix.svelte';
     import type { ConfusionCellSelection, ConfusionMatrix as ConfusionMatrixData } from '../types';
     import ClassSetDialog from '../ClassSetDialog/ClassSetDialog.svelte';
@@ -15,13 +16,29 @@
         showLegend?: boolean;
         /** Forwarded to the underlying chart; fires on a real class-by-class cell click. */
         onCellClick?: (cell: ConfusionCellSelection) => void;
+        /** Called when the user clicks the expand button. */
+        onExpand?: (data: { visibleClassCount: number; totalClassCount: number }) => void;
+        /** Called when the user applies new class-filter or color settings. */
+        onConfigApplied?: (data: {
+            mode: 'topN' | 'manual';
+            n: number;
+            sortBy: string;
+            visibleClassCount: number;
+        }) => void;
     }
 
-    const { matrix, topN = 5, showLegend = false, onCellClick }: Props = $props();
+    const {
+        matrix,
+        topN = 5,
+        showLegend = false,
+        onCellClick,
+        onExpand,
+        onConfigApplied
+    }: Props = $props();
 
     let config: ClassSetConfig = $state({
         mode: 'topN',
-        n: topN,
+        n: untrack(() => topN),
         sortBy: 'most-confused',
         manualClasses: []
     });
@@ -36,6 +53,21 @@
     const applyConfig = (nextConfig: ClassSetConfig, nextColor: ColorConfig) => {
         config = nextConfig;
         color = nextColor;
+        const newVisibleClasses = selectVisibleClasses(matrix, nextConfig);
+        onConfigApplied?.({
+            mode: nextConfig.mode,
+            n: nextConfig.n,
+            sortBy: nextConfig.sortBy,
+            visibleClassCount: newVisibleClasses.length
+        });
+    };
+
+    const handleExpand = () => {
+        onExpand?.({
+            visibleClassCount: visibleClasses.length,
+            totalClassCount: realClasses.length
+        });
+        expandOpen = true;
     };
 </script>
 
@@ -45,7 +77,7 @@
     realClassCount={realClasses.length}
     visibleClassCount={visibleClasses.length}
     onConfigure={() => (configDialogOpen = true)}
-    onExpand={() => (expandOpen = true)}
+    onExpand={handleExpand}
 />
 <ConfusionMatrix
     matrix={subMatrix}

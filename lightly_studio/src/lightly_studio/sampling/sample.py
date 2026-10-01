@@ -8,14 +8,18 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.resolvers import collection_resolver
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     AnnotationClassToTarget,
     EmbeddingDeduplicationStrategy,
     EmbeddingDiversityStrategy,
+    MetadataBalancingStrategy,
+    MetadataValueToTarget,
     MetadataWeightingStrategy,
     SamplingConfig,
     SamplingStrategy,
+    SubpartDiversityStrategy,
 )
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
 
@@ -29,7 +33,9 @@ class Sampling:
     combined to form more complex sampling strategies.
 
     The result of a sampling is stored as a tag on the selected samples in the database.
-    The `sampling_result_tag_name` must be a unique tag name that is not used yet.
+    The `sampling_result_tag_name` must be a tag name that is not used yet, with one
+    exception: reusing the `preselected_tag_name` adds the newly selected samples to
+    that tag, which lets a selection grow over repeated runs.
 
     # Creation of a Sampling instance.
 
@@ -73,6 +79,13 @@ class Sampling:
         sampling_result_tag_name="balanced sampling",
         target_distribution="uniform",
     )
+    # Select 100 samples balanced over the values of the "weather" metadata
+    sampling.metadata_balancing(
+        n_samples_to_select=100,
+        sampling_result_tag_name="balanced weather sampling",
+        metadata_key="weather",
+        target_distribution="uniform",
+    )
     ```
 
     # Performing multi-strategy samplings.
@@ -94,6 +107,20 @@ class Sampling:
             EmbeddingDiversityStrategy(),
             MetadataWeightingStrategy(metadata_key="difficulty"),
         ],
+    )
+    ```
+
+    # Video sequence sampling.
+
+    On video frame collections, `diverse()` can select whole frame sequences by setting
+    `selected_sequence_length` to the number of frames per sequence; leaving it as `None`
+    selects individual frames. `n_samples_to_select` still counts frames and must be a
+    multiple of the sequence length. Only diversity strategies support sequences.
+    ```python
+    frames.query().sampling().diverse(
+        n_samples_to_select=100,
+        sampling_result_tag_name="sequence_clips",
+        selected_sequence_length=50,
     )
     ```
     """
@@ -121,6 +148,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         metadata_key: str,
+        preselected_tag_name: str | None = None,
     ) -> None:
         """Select a subset based on numeric metadata weights.
 
@@ -128,12 +156,16 @@ class Sampling:
             n_samples_to_select: Number of samples to select.
             sampling_result_tag_name: Tag name for the sampling result.
             metadata_key: Metadata key used as weights (float or int values).
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are included in the result tag,
+                together with the newly selected samples.
         """
         strategy = MetadataWeightingStrategy(metadata_key=metadata_key)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
         )
 
     def diverse(
@@ -141,6 +173,8 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         embedding_model_name: str | None = None,
+        preselected_tag_name: str | None = None,
+        selected_sequence_length: int | None = None,
     ) -> None:
         """Select a diverse subset using embeddings.
 
@@ -149,12 +183,22 @@ class Sampling:
             sampling_result_tag_name: Tag name for the sampling result.
             embedding_model_name: Optional embedding model name. If None, uses the only
                 available model or raises if multiple exist.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are included in the result tag,
+                together with the newly selected samples.
+            selected_sequence_length: Number of frames per selected sequence, at least
+                2. ``None`` selects individual samples. When set, selection happens over
+                video-frame sequences formed per video from the candidate frames in
+                frame-number order, while ``n_samples_to_select`` still counts frames and
+                must be a multiple of this value.
         """
         strategy = EmbeddingDiversityStrategy(embedding_model_name=embedding_model_name)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
+            selected_sequence_length=selected_sequence_length,
         )
 
     def deduplicate(
@@ -163,6 +207,7 @@ class Sampling:
         sampling_result_tag_name: str,
         stopping_condition_minimum_distance: float,
         embedding_model_name: str | None = None,
+        preselected_tag_name: str | None = None,
     ) -> None:
         """Select a deduplicated subset using embeddings.
 
@@ -180,6 +225,9 @@ class Sampling:
                 least this far from the already selected samples.
             embedding_model_name: Optional embedding model name. If None, uses the only
                 available model or raises if multiple exist.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are included in the result tag,
+                together with the newly selected samples.
         """
         strategy = EmbeddingDeduplicationStrategy(
             embedding_model_name=embedding_model_name,
@@ -189,6 +237,7 @@ class Sampling:
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
         )
 
     def annotation_balancing(
@@ -196,6 +245,7 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"],
+        preselected_tag_name: str | None = None,
     ) -> None:
         """Select a subset using annotation class balancing.
 
@@ -204,12 +254,104 @@ class Sampling:
             sampling_result_tag_name: Tag name for the sampling result.
             target_distribution: Can be 'uniform', 'input',
                 or a dictionary mapping class names to target ratios.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are included in the result tag,
+                together with the newly selected samples.
         """
         strategy = AnnotationClassBalancingStrategy(target_distribution=target_distribution)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
             sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
+        )
+
+    def metadata_balancing(
+        self,
+        n_samples_to_select: int,
+        sampling_result_tag_name: str,
+        metadata_key: str,
+        target_distribution: MetadataValueToTarget | Literal["uniform"] | Literal["input"],
+        preselected_tag_name: str | None = None,
+    ) -> None:
+        """Select a subset using categorical metadata balancing.
+
+        Args:
+            n_samples_to_select: Number of samples to select.
+            sampling_result_tag_name: Tag name for the sampling result.
+            metadata_key: Metadata key to balance. Must be categorical (string or
+                boolean values).
+            target_distribution: Can be 'uniform', 'input', or a dictionary mapping
+                metadata values to target ratios. The values of a boolean key are named
+                with True and False or with the lowercase strings 'true' and 'false'.
+                Values without a ratio share the ratio remaining to 1.0.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are included in the result tag,
+                together with the newly selected samples.
+        """
+        strategy = MetadataBalancingStrategy(
+            metadata_key=metadata_key,
+            target_distribution=target_distribution,
+        )
+        self.multi_strategies(
+            n_samples_to_select=n_samples_to_select,
+            sampling_result_tag_name=sampling_result_tag_name,
+            sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
+        )
+
+    def subpart_diversity(
+        self,
+        n_samples_to_select: int,
+        sampling_result_tag_name: str,
+        embedding_model_name: str | None = None,
+        annotation_source: str | None = None,
+        preselected_tag_name: str | None = None,
+    ) -> None:
+        """Select a diverse subset based on the embeddings of annotated subparts (crops).
+
+        Each parent image contributes the embeddings of all its annotation crops.
+        Sampling maximizes diversity across those crop embeddings so that selected
+        images collectively cover a broad range of objects, not just a broad range
+        of scene-level appearance.
+
+        When `annotation_source` is omitted, crops from all annotation sources
+        are merged. Pass `annotation_source` to restrict to one specific annotation source.
+
+        Args:
+            n_samples_to_select: Number of samples to select.
+            sampling_result_tag_name: Tag name for the sampling result.
+            embedding_model_name: Name of the embedding model to use for crop samples.
+                If None, uses the only available model or raises if multiple exist.
+            annotation_source: Optional annotation source name. When set, only
+                crops from that annotation source contribute embeddings. When omitted, crops
+                from all annotation sources are merged.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are included in the result tag,
+                together with the newly selected samples.
+
+        Raises:
+            ValueError: If `annotation_source` is given but no annotation source with
+                that name exists in the dataset.
+        """
+        annotation_source_id = None
+        if annotation_source is not None:
+            annotation_source_id = collection_resolver.get_by_name(
+                session=self._session,
+                name=annotation_source,
+                parent_collection_id=self._dataset_id,
+            )
+            if annotation_source_id is None:
+                raise ValueError(f"Annotation source {annotation_source!r} not found.")
+        strategy = SubpartDiversityStrategy(
+            embedding_model_name=embedding_model_name,
+            annotation_source_id=annotation_source_id,
+        )
+        self.multi_strategies(
+            n_samples_to_select=n_samples_to_select,
+            sampling_result_tag_name=sampling_result_tag_name,
+            sampling_strategies=[strategy],
+            preselected_tag_name=preselected_tag_name,
         )
 
     def multi_strategies(
@@ -217,6 +359,8 @@ class Sampling:
         n_samples_to_select: int,
         sampling_result_tag_name: str,
         sampling_strategies: list[SamplingStrategy],
+        preselected_tag_name: str | None = None,
+        selected_sequence_length: int | None = None,
     ) -> None:
         """Select a subset based on multiple strategies.
 
@@ -224,12 +368,23 @@ class Sampling:
             n_samples_to_select: Number of samples to select.
             sampling_result_tag_name: Tag name for the sampling result.
             sampling_strategies: Strategies to compose for sampling.
+            preselected_tag_name: Optional tag containing samples that should be treated
+                as already selected. These samples are included in the result tag,
+                together with the newly selected samples.
+            selected_sequence_length: Number of frames per selected sequence, at least
+                2. ``None`` selects individual samples. When set, selection happens over
+                video-frame sequences formed per video from the candidate frames in
+                frame-number order and only diversity strategies are supported, while
+                ``n_samples_to_select`` still counts frames and must be a multiple of
+                this value.
         """
         config = SamplingConfig(
             collection_id=self._dataset_id,
             n_samples_to_select=n_samples_to_select,
             sampling_result_tag_name=sampling_result_tag_name,
+            preselected_tag_name=preselected_tag_name,
             strategies=sampling_strategies,
+            selected_sequence_length=selected_sequence_length,
         )
         sampling_via_database(
             session=self._session,

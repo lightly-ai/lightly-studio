@@ -5,50 +5,62 @@ your data workflows from curation, annotation and management. Built with Rust fo
 efficiency, it lets you work seamlessly with datasets like COCO and ImageNet, even on a MacBook Pro
 with an M1 chip and 16 GB of memory.
 
-<div style="width: 100%; aspect-ratio: 16 / 9; overflow: hidden;">
-  <iframe
-    style="width: 100%; height: 100%; border: 0;"
-    src="https://www.youtube.com/embed/iUS9hjI4VQ4?autoplay=1&mute=1&playsinline=1&rel=0"
-    title="LightlyStudio overview"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    referrerpolicy="strict-origin-when-cross-origin"
-    allowfullscreen
-  ></iframe>
-</div>
+Working in a team and looking for collaboration features, role-based access permissions, and
+centrally managed cloud credentials? Check out [LightlyStudio Enterprise](enterprise/index.md)
+and [start for free with your team](https://www.lightly.ai/studio-signup).
+
+<p align="center">
+  <video src="_static/hero_showcase.mp4" width="100%" autoplay loop muted playsinline></video>
+</p>
+
+<p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
+<p align="center"><strong>⚡ Works smoothly with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
 
 ## Installation
 
-Ensure you have **Python 3.9 to 3.14**. We recommend **Python 3.10** for the best compatibility with plugins such as SAM autolabeling. We strongly recommend using a virtual environment.
+LightlyStudio works on Windows, Linux, and macOS with **Python 3.9 to 3.14**. We recommend
+**Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
 
-The library is OS-independent and works on Windows, Linux, and macOS.
+```shell
+pip install lightly-studio
+```
 
-=== "Linux/macOS"
+??? tip "Recommended: install into a virtual environment"
+    A virtual environment keeps LightlyStudio and its dependencies separate from other
+    Python projects on your machine:
 
-    ```shell
-    # 1. Create and activate a virtual environment (Recommended)
-    python3 -m venv venv
-    source venv/bin/activate
+    === "Linux/macOS"
 
-    # 2. Install LightlyStudio
-    pip install lightly_studio
-    ```
+        ```shell
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install lightly-studio
+        ```
 
-=== "Windows"
+    === "Windows"
 
-    ```powershell
-    # 1. Create and activate a virtual environment (Recommended)
-    python -m venv venv
-    .\venv\Scripts\activate
+        ```powershell
+        python -m venv venv
+        .\venv\Scripts\activate
+        pip install lightly-studio
+        ```
 
-    # 2. Install LightlyStudio
-    pip install lightly_studio
-    ```
+## Try it in 60 seconds
+
+Want to try LightlyStudio instantly? Run:
+
+```shell
+lightly-studio quickstart
+```
+
+This downloads the COCO example dataset, loads it, and opens the GUI in your browser. Run
+`lightly-studio quickstart --help` for the available options.
 
 ## Quickstart
 
-The examples below download the required example data the first time you run them. You can also
-directly use your own image, video, or YOLO/COCO dataset.
+The examples below use the same example dataset by default, downloaded on the first run. Point
+them at your own image, video, or YOLO/COCO dataset by changing the input path.
 
 === "COCO Object Detection"
 
@@ -95,7 +107,9 @@ directly use your own image, video, or YOLO/COCO dataset.
     1. Run `python example_yolo.py` in your terminal.
     1. Click on the printed URL to open the app in your browser.
 
-=== "Image Folder"
+=== "Raw Images"
+
+    *Add images that have no annotations. LightlyStudio indexes and embeds them.*
 
     1. Create a file named `example_image.py` with the following contents:
 
@@ -119,7 +133,9 @@ directly use your own image, video, or YOLO/COCO dataset.
     1. Run `python example_image.py` in your terminal.
     1. Click on the printed URL to open the app in your browser.
 
-=== "Video Folder"
+=== "Raw Videos"
+
+    *Add videos that have no annotations. LightlyStudio indexes and embeds them.*
 
     1. Create a file named `example_video.py` with the following contents:
 
@@ -141,8 +157,13 @@ directly use your own image, video, or YOLO/COCO dataset.
     1. Click on the printed URL to open the app in your browser.
 
 !!! tip
-    Call `lightly-studio gui` from the command line instead of `ls.start_gui()` in Python
-    to skip reindexing your dataset.
+    Call `lightly-studio gui` instead of `ls.start_gui()` in Python to skip reindexing
+    an already-loaded dataset.
+
+Ready for a complete, end-to-end workflow? Follow the tutorial
+[Curate a Traffic CCTV Dataset for YOLO Training](tutorials/yolo-traffic-cctv-object-detection.md)
+to explore embeddings, remove near-duplicates, auto-label, and train a model — or browse
+[all tutorials](tutorials/index.md).
 
 ## How It Works
 
@@ -160,13 +181,13 @@ directly use your own image, video, or YOLO/COCO dataset.
 
 <div class="grid cards small" markdown>
 
--   **[Image Dataset](dataset_setup/image_dataset.md)**
+-   **[Image Dataset](workflows/image_dataset.md)**
 
-    [![Image Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png)](dataset_setup/image_dataset.md)
+    [![Image Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png)](workflows/image_dataset.md)
 
--   **[Video Dataset](dataset_setup/video_dataset.md)**
+-   **[Video Dataset](workflows/video_dataset.md)**
 
-    [![Video Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png)](dataset_setup/video_dataset.md)
+    [![Video Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png)](workflows/video_dataset.md)
 
 </div>
 
@@ -174,21 +195,25 @@ directly use your own image, video, or YOLO/COCO dataset.
 
 <div class="grid cards small" markdown>
 
--   **[Annotations](concepts_and_tools/annotations.md)**
+-   **[Annotations](workflows/annotations.md)**
 
-    [![Annotations](https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png)](concepts_and_tools/annotations.md)
+    [![Annotations](https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png)](workflows/annotations.md)
 
--   **[Tags](concepts_and_tools/tags.md)**
+-   **[Tags](core_concepts/tags.md)**
 
-    [![Tags](https://storage.googleapis.com/lightly-public/studio/docs_cards/tags.png)](concepts_and_tools/tags.md)
+    [![Tags](https://storage.googleapis.com/lightly-public/studio/docs_cards/tags.png)](core_concepts/tags.md)
 
--   **[Captions](concepts_and_tools/captions.md)**
+-   **[Captions](workflows/captions.md)**
 
-    [![Captions](https://storage.googleapis.com/lightly-public/studio/docs_cards/captions.png)](concepts_and_tools/captions.md)
+    [![Captions](https://storage.googleapis.com/lightly-public/studio/docs_cards/captions.png)](workflows/captions.md)
 
--   **[Metadata](concepts_and_tools/metadata.md)**
+-   **[Metadata](core_concepts/metadata.md)**
 
-    [![Metadata](https://storage.googleapis.com/lightly-public/studio/docs_cards/metadata.png)](concepts_and_tools/metadata.md)
+    [![Metadata](https://storage.googleapis.com/lightly-public/studio/docs_cards/metadata.png)](core_concepts/metadata.md)
+
+-   **[Embeddings](core_concepts/embeddings.md)**
+
+    [![Embeddings](https://storage.googleapis.com/lightly-public/studio/docs_cards/embeddings.png)](core_concepts/embeddings.md)
 
 </div>
 
@@ -196,25 +221,25 @@ directly use your own image, video, or YOLO/COCO dataset.
 
 <div class="grid cards small" markdown>
 
--   **[Search and Filter](concepts_and_tools/search_and_filter.md)**
+-   **[Search and Filter](workflows/search_and_filter.md)**
 
-    [![Search and Filter](https://storage.googleapis.com/lightly-public/studio/docs_cards/search_and_filter.png)](concepts_and_tools/search_and_filter.md)
+    [![Search and Filter](https://storage.googleapis.com/lightly-public/studio/docs_cards/search_and_filter.png)](workflows/search_and_filter.md)
 
--   **[Export](concepts_and_tools/export.md)**
+-   **[Export](workflows/export.md)**
 
-    [![Export](https://storage.googleapis.com/lightly-public/studio/docs_cards/export.png)](concepts_and_tools/export.md)
+    [![Export](https://storage.googleapis.com/lightly-public/studio/docs_cards/export.png)](workflows/export.md)
 
--   **[Sampling](concepts_and_tools/sampling.md)**
+-   **[Sampling](workflows/sampling.md)**
 
-    [![Sampling](https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png)](concepts_and_tools/sampling.md)
+    [![Sampling](https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png)](workflows/sampling.md)
 
--   **[Plugins](concepts_and_tools/plugins.md)**
+-   **[Plugins](ecosystem/plugins.md)**
 
-    [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](concepts_and_tools/plugins.md)
+    [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](ecosystem/plugins.md)
 
--   **[Model Evaluation](concepts_and_tools/evaluation.md)**
+-   **[Model Evaluation](workflows/evaluation.md)**
 
-    [![Model Evaluation](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](concepts_and_tools/evaluation.md)
+    [![Model Evaluation](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](workflows/evaluation.md)
 
 </div>
 
@@ -222,4 +247,4 @@ directly use your own image, video, or YOLO/COCO dataset.
 
 LightlyStudio has a powerful [Python interface](api/dataset.md). You can not only index datasets but
 also query and manipulate them using code. It supports local and cloud-hosted image and video
-folders; see [Using Cloud Storage](dataset_setup/cloud_storage.md) for setup and limitations.
+folders; see [Using Cloud Storage](ecosystem/cloud_storage.md) for setup and limitations.

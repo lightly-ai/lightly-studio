@@ -2,95 +2,283 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import NamedTuple
 from uuid import UUID
 
-from sqlalchemy import func
+import sqlalchemy
+from sqlalchemy import Integer, cast, func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_json
 from lightly_studio.models.metadata import (
+    NUMERIC_TYPE_NAMES,
+    HistogramView,
     MetadataInfoView,
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+
+# Number of bins used for numeric metadata histograms.
+_HISTOGRAM_BIN_COUNT = 20
 
 
-def get_all_metadata_keys_and_schema(
+class _NumericMetadataStats(NamedTuple):
+    """Unfiltered numeric metadata statistics used to build a response."""
+
+    min_value: float
+    max_value: float
+    value_count: int
+
+
+def get_metadata_info(
     session: Session,
     collection_id: UUID,
 ) -> list[MetadataInfoView]:
     """Get all unique metadata keys and their schema for a collection.
 
+    For numerical types (``integer`` and ``float``) the returned info also
+    contains the min/max values for numerical types. Histograms are computed by
+    :func:`get_metadata_histograms`.
+
     Args:
         session: The database session.
         collection_id: The collection's UUID.
 
     Returns:
-        List of dicts with 'name', 'type', and optionally 'min'/'max' for numerical types.
+        List of metadata info objects with 'name', 'type', and, for numerical
+        types, 'min' and 'max'.
     """
-    # Query all metadata_schema dicts for samples in the collection
-    rows = session.exec(
-        select(SampleMetadataTable.metadata_schema)
-        .select_from(SampleTable)
-        .join(
-            SampleMetadataTable,
-            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
-        )
-        .where(SampleTable.collection_id == collection_id)
-    ).all()
-    # Merge all schemas
-    merged: dict[str, str] = {}
-    for schema_dict in rows:
-        merged.update(schema_dict)
+    merged = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
 
-    # Get min and max values for numerical metadata
+    numeric_keys = [key for key, kind in merged.items() if kind in NUMERIC_TYPE_NAMES]
+    bounds = _get_metadata_min_max_counts(
+        session=session, collection_id=collection_id, metadata_keys=numeric_keys
+    )
+
     result = []
     for key, metadata_type in merged.items():
         metadata_info = MetadataInfoView(name=key, type=metadata_type)
 
-        # Add min and max for numerical types
-        if metadata_type in ["integer", "float"]:
-            min_max_values = _get_metadata_min_max_values(
-                session, collection_id, key, metadata_type
-            )
-            if min_max_values:
-                metadata_info.min = min_max_values[0]
-                metadata_info.max = min_max_values[1]
-
+        # Add min and max for numerical types.
+        if metadata_type in NUMERIC_TYPE_NAMES:
+            stats = bounds.get(key)
+            if stats is not None:
+                cast_type = int if metadata_type == "integer" else float
+                metadata_info.min = cast_type(stats.min_value)
+                metadata_info.max = cast_type(stats.max_value)
         result.append(metadata_info)
 
     return result
 
 
-def _get_metadata_min_max_values(
+def get_metadata_histograms(
     session: Session,
     collection_id: UUID,
-    metadata_key: str,
-    metadata_type: str,
-) -> tuple[int, int] | tuple[float, float] | None:
-    """Get min and max values for a specific numerical metadata key.
+    filters: ImageFilter | VideoFilter | None = None,
+    bin_count: int = _HISTOGRAM_BIN_COUNT,
+    fields: list[str] | None = None,
+) -> dict[str, HistogramView]:
+    """Compute value-distribution histograms for selected numeric metadata keys.
+
+    Bin edges always span the full (unfiltered) value range of each key, so
+    the chart's x-axis stays stable while the counts change with the active
+    filters. Each key's own metadata filter is excluded from its histogram
+    (faceted-search behavior): the full shape of the field being adjusted
+    stays visible while every other filter applies.
 
     Args:
         session: The database session.
         collection_id: The collection's UUID.
-        metadata_key: The metadata key to get min/max for.
-        metadata_type: The metadata type ("integer" or "float").
+        filters: Optional sample filters restricting which values are counted.
+        bin_count: Number of equal-width bins per histogram.
+        fields: Optional numeric metadata keys to include; unknown and nonnumeric keys are ignored.
 
     Returns:
-        Tuple with 'min' and 'max' values, or None if no values found.
+        Mapping of metadata key to its histogram.
     """
-    json_value_expr = db_json.json_extract(
-        column=SampleMetadataTable.data, field=metadata_key, cast_to_float=True
+    merged = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
+
+    numeric_keys = [
+        key
+        for key, kind in merged.items()
+        if kind in NUMERIC_TYPE_NAMES and (fields is None or key in fields)
+    ]
+    bounds = _get_metadata_min_max_counts(
+        session=session, collection_id=collection_id, metadata_keys=numeric_keys
     )
-    json_not_null_expr = db_json.json_extract(
-        column=SampleMetadataTable.data, field=metadata_key
+    histograms: dict[str, HistogramView] = {}
+    for key, stats in bounds.items():
+        histograms[key] = _compute_histogram(
+            session=session,
+            collection_id=collection_id,
+            metadata_key=key,
+            stats=stats,
+            filters=metadata_helpers.without_metadata_key_filter(filters=filters, metadata_key=key),
+            bin_count=bin_count,
+        )
+    return histograms
+
+
+def _get_metadata_min_max_counts(
+    session: Session,
+    collection_id: UUID,
+    metadata_keys: Sequence[str],
+) -> dict[str, _NumericMetadataStats]:
+    """Aggregate min, max, and non-null count for numerical metadata keys.
+
+    Args:
+        session: The database session.
+        collection_id: The collection's UUID.
+        metadata_keys: The numerical metadata keys to aggregate.
+
+    Returns:
+        A mapping from each key with at least one value to its numeric statistics.
+        Keys with no values are omitted.
+    """
+    if not metadata_keys:
+        return {}
+
+    aggregates: list[sqlalchemy.ColumnElement[float] | sqlalchemy.ColumnElement[int]] = []
+    aggregate_labels: list[tuple[str, str, str]] = []
+    for index, key in enumerate(metadata_keys):
+        value = db_json.json_extract_key_as_float(column=SampleMetadataTable.data, key=key)
+        # Each aggregate ignores its own NULLs so sparse keys remain independent.
+        labels = (f"min_{index}", f"max_{index}", f"count_{index}")
+        aggregate_labels.append(labels)
+        aggregates.extend(
+            (
+                func.min(value).label(labels[0]),
+                func.max(value).label(labels[1]),
+                func.count(value).label(labels[2]),
+            )
+        )
+    query = (
+        sqlalchemy.select(*aggregates)
+        .select_from(SampleTable)
+        .join(
+            SampleMetadataTable,
+            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+        )
+        .where(col(SampleTable.collection_id) == collection_id)
+    )
+    row = session.execute(query).mappings().one()
+    values = {label: row[label] for labels in aggregate_labels for label in labels}
+    stats: dict[str, _NumericMetadataStats] = {}
+    for key, labels in zip(metadata_keys, aggregate_labels):
+        count = int(values[labels[2]])
+        if count > 0:
+            stats[key] = _NumericMetadataStats(
+                min_value=float(values[labels[0]]),
+                max_value=float(values[labels[1]]),
+                value_count=count,
+            )
+    return stats
+
+
+def _compute_histogram(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    metadata_key: str,
+    stats: _NumericMetadataStats,
+    filters: ImageFilter | VideoFilter | None = None,
+    bin_count: int = _HISTOGRAM_BIN_COUNT,
+) -> HistogramView:
+    """Compute a value-distribution histogram entirely in SQL.
+
+    Bucketing is expressed with dialect-independent SQLAlchemy functions
+    (``floor``/``least``/``greatest``) so it works on both DuckDB and
+    PostgreSQL without materializing every value in Python. Bin ``i`` covers
+    the half-open interval ``[bin_edges[i], bin_edges[i + 1])``; the last bin
+    includes its right edge, matching the value at ``max``.
+
+    When all values are equal the range is degenerate, so a single bin holding
+    every value is returned.
+
+    Args:
+        session: The database session.
+        collection_id: The collection's UUID.
+        metadata_key: The metadata key to bin.
+        stats: The unfiltered numeric statistics returned by
+            ``_get_metadata_min_max_counts``. The min/max always describe the
+            unfiltered domain so the bin edges stay stable while filters change.
+        filters: Optional sample filters restricting which values are counted.
+        bin_count: Number of equal-width bins.
+
+    Returns:
+        The histogram with bin edges and per-bin counts.
+    """
+    min_value = stats.min_value
+    max_value = stats.max_value
+    total_count = stats.value_count
+    if max_value == min_value:
+        count = (
+            total_count
+            if filters is None
+            else _count_metadata_values(
+                session=session,
+                collection_id=collection_id,
+                metadata_key=metadata_key,
+                filters=filters,
+            )
+        )
+        return HistogramView(bin_edges=[min_value, max_value], counts=[count])
+
+    width = (max_value - min_value) / bin_count
+
+    value_expr = db_json.json_extract_key_as_float(
+        column=SampleMetadataTable.data, key=metadata_key
+    )
+    json_not_null_expr = db_json.json_extract_key_as_text(
+        column=SampleMetadataTable.data, key=metadata_key
     ).isnot(None)
 
+    # Bucket index in [0, bin_count - 1]; values equal to max map to the last bin.
+    raw_bucket = cast(func.floor((value_expr - min_value) / width), Integer)
+    bucket_expr = func.least(func.greatest(raw_bucket, 0), bin_count - 1)
+
     query = (
-        select(
-            func.min(json_value_expr),
-            func.max(json_value_expr),
+        select(bucket_expr.label("bucket"), func.count())
+        .select_from(SampleTable)
+        .join(
+            SampleMetadataTable,
+            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
         )
+        .where(
+            SampleTable.collection_id == collection_id,
+            json_not_null_expr,
+        )
+        .group_by(bucket_expr)
+    )
+    query = metadata_helpers.apply_collection_filter(
+        query=query, collection_id=collection_id, filters=filters
+    )
+
+    counts_by_bucket = {int(bucket): int(count) for bucket, count in session.exec(query).all()}
+    counts = [counts_by_bucket.get(i, 0) for i in range(bin_count)]
+
+    bin_edges = [min_value + (max_value - min_value) * i / bin_count for i in range(bin_count + 1)]
+    # Guard against float drift so the last edge is exactly the max value.
+    bin_edges[-1] = max_value
+
+    return HistogramView(bin_edges=bin_edges, counts=counts)
+
+
+def _count_metadata_values(
+    session: Session,
+    collection_id: UUID,
+    metadata_key: str,
+    filters: ImageFilter | VideoFilter | None,
+) -> int:
+    """Count non-null values for a metadata key under the given filters."""
+    json_not_null_expr = db_json.json_extract_key_as_text(
+        column=SampleMetadataTable.data, key=metadata_key
+    ).isnot(None)
+    query = (
+        select(func.count())
         .select_from(SampleTable)
         .join(
             SampleMetadataTable,
@@ -101,14 +289,7 @@ def _get_metadata_min_max_values(
             json_not_null_expr,
         )
     )
-
-    result = session.exec(query).first()
-
-    if result and result[0] is not None and result[1] is not None:
-        # Convert to appropriate type
-        if metadata_type == "integer":
-            return int(result[0]), int(result[1])
-        if metadata_type == "float":
-            return float(result[0]), float(result[1])
-
-    return None
+    query = metadata_helpers.apply_collection_filter(
+        query=query, collection_id=collection_id, filters=filters
+    )
+    return int(session.exec(query).one())

@@ -1,11 +1,14 @@
 import { derived, get, writable } from 'svelte/store';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
     AnnotationsFilter,
     SampleFilter,
     VideoFilter,
-    VideoFieldsBoundsView
-} from '$lib/api/lightly_studio_local/types.gen';
+    VideoFieldsBoundsView,
+    VideoSortFieldExpr
+} from '$lib/api/lightly_studio_local';
+import type { CategoricalMetadataValues } from '$lib/services/types';
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFilterParams = {
@@ -15,6 +18,7 @@ export type VideoFilterParams = {
         annotation_frames_label_ids?: string[];
         sample_ids?: string[];
         metadata_values?: MetadataValues;
+        categorical_metadata_values?: CategoricalMetadataValues;
     };
     video_bounds?: VideoFieldsBoundsView | null;
 };
@@ -69,8 +73,14 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
         sampleFilter.tag_ids = tagIds;
     }
 
-    if ($filterParams.filters?.metadata_values) {
-        const metadataFilters = createMetadataFilters($filterParams.filters.metadata_values);
+    if (
+        $filterParams.filters?.metadata_values ||
+        $filterParams.filters?.categorical_metadata_values
+    ) {
+        const metadataFilters = createMetadataFilters(
+            $filterParams.filters.metadata_values ?? {},
+            $filterParams.filters.categorical_metadata_values ?? {}
+        );
         if (metadataFilters.length > 0) {
             sampleFilter.metadata_filters = metadataFilters;
         }
@@ -94,6 +104,14 @@ const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
     buildVideoFilter($filterParams)
 );
 
+const videoSortBy = writable<VideoSortFieldExpr[] | null>([
+    {
+        source: 'video',
+        field_name: 'file_path_abs',
+        direction: SortDirection.ASC
+    }
+]);
+
 export const useVideoFilters = () => {
     const updateFilterParams = (params: VideoFilterParams) => {
         filterParams.set(params);
@@ -115,10 +133,16 @@ export const useVideoFilters = () => {
         filterParams.set(newParams);
     };
 
+    const updateSortBy = (sort: VideoSortFieldExpr[] | null) => {
+        videoSortBy.set(sort);
+    };
+
     return {
         filterParams,
         videoFilter,
+        videoSortBy,
         updateFilterParams,
-        updateSampleIds
+        updateSampleIds,
+        updateSortBy
     };
 };

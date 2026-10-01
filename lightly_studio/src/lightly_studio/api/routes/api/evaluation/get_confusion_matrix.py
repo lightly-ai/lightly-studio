@@ -13,7 +13,6 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
-from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import (
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
@@ -54,10 +53,7 @@ def get_evaluation_confusion_matrix(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Evaluation run {evaluation_run_id} not found.",
         )
-    if run.task_type in (
-        EvaluationTaskType.OBJECT_DETECTION,
-        EvaluationTaskType.CLASSIFICATION,
-    ):
+    if evaluation_annotation_metric_resolver.supports_confusion_matrix(run.task_type):
         return evaluation_annotation_metric_resolver.get_confusion_matrix(
             session=session,
             evaluation_run_id=evaluation_run_id,

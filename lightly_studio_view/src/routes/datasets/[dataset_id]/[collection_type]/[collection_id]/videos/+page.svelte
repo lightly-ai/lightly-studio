@@ -26,7 +26,7 @@
         })
     );
 
-    const { metadataValues } = useMetadataFilters();
+    const { metadataValues, categoricalMetadataValues } = useMetadataFilters();
     const { selectedAnnotationFilterIdsArray: selectedAnnotationsFilterIds } =
         useSelectedAnnotationsFilter();
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
@@ -42,7 +42,8 @@
                 ? $selectedAnnotationsFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            metadata_values: $metadataValues
+            metadata_values: $metadataValues,
+            categorical_metadata_values: $categoricalMetadataValues
         },
         video_bounds: $videoBoundsValues
     });
@@ -54,7 +55,7 @@
         };
     };
 
-    const { filterParams, updateFilterParams } = useVideoFilters();
+    const { filterParams, videoSortBy, updateFilterParams } = useVideoFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local videos parameters
@@ -117,7 +118,8 @@
     const { data, query, loadMore, totalCount } = useVideos(() => ({
         collection_id: collectionId,
         filter: currentVideoFilter,
-        text_embedding: $textEmbedding?.embedding
+        text_embedding: $textEmbedding?.embedding,
+        sort_by: $textEmbedding ? undefined : ($videoSortBy ?? undefined)
     }));
     const { setfilteredSampleCount } = useGlobalStorage();
 
@@ -159,7 +161,9 @@
         handleSampleSelect({ sampleId, index, shiftKey: event.shiftKey });
     }
 
-    const filterHash = $derived(JSON.stringify($filterParams));
+    // TODO(Mihnea, 09/2026): hash the effective metadata filters, not raw $filterParams.
+    // Same fix as Images.svelte's filterHash.
+    const filterHash = $derived(JSON.stringify({ filters: $filterParams, sortBy: $videoSortBy }));
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
         initialize();
@@ -201,7 +205,7 @@
             <Grid
                 itemCount={items.length}
                 {columnCount}
-                overScan={20}
+                overScan={2}
                 onScroll={handleScroll}
                 {initialScrollPosition}
                 {scrollResetKey}

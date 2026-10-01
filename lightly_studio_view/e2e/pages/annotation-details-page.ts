@@ -50,6 +50,24 @@ export class AnnotationDetailsPage {
         return this.page.getByTestId('confirm-delete-annotation');
     }
 
+    async deleteCurrentAnnotation() {
+        // Open the confirmation popover.
+        await this.getAnnotationDeleteButton().click();
+
+        // Assert the backend actually deleted the annotation. A failed delete
+        // returns a non-200 status.
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'DELETE' &&
+                response.url().includes('/annotations/') &&
+                response.status() === 200
+        );
+
+        await this.getAnnotationConfirmDeleteButton().click();
+
+        await responsePromise;
+    }
+
     getAnnotationHeight() {
         return this.page.getByTestId('annotation-metadata-height');
     }

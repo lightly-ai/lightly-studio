@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pytest_mock import MockerFixture
+
 import lightly_studio.utils.executor as executor_module
 from lightly_studio.utils.executor import get_media_executor
 
@@ -26,3 +28,9 @@ def test_get_media_executor_isolates_different_prefixes() -> None:
     video_executor = get_media_executor("video_frame")
 
     assert image_executor is not video_executor
+
+
+def test_get_media_worker_count_uses_shared_worker_policy(mocker: MockerFixture) -> None:
+    mocker.patch("lightly_studio.utils.executor.os.cpu_count", return_value=8)
+
+    assert executor_module.get_media_worker_count() == 7

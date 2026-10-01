@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Octokit } from './api-context';
+import type { Octokit } from '../../shared/octokit';
 import { ApiGuardrailContext, toChangedFile } from './api-context';
 
 /** A `pulls.listFiles` entry, with the extra fields the mapper ignores. */
@@ -40,6 +40,12 @@ describe('toChangedFile', () => {
         expect(
             toChangedFile({ filename: 'src/foo.ts', status: 'removed', additions: 0, deletions: 5 })
         ).toEqual({ path: 'src/foo.ts', status: 'deleted', additions: 0, deletions: 5 });
+    });
+
+    it("maps an unknown status (e.g. 'changed') to 'modified'", () => {
+        expect(
+            toChangedFile({ filename: 'src/foo.ts', status: 'changed', additions: 1, deletions: 1 })
+        ).toEqual({ path: 'src/foo.ts', status: 'modified', additions: 1, deletions: 1 });
     });
 });
 

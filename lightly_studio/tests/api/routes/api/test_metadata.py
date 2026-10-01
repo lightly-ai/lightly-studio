@@ -1,15 +1,30 @@
 from __future__ import annotations
 
 import re
+from unittest.mock import ANY
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
-from lightly_studio.models.metadata import MetadataInfoView
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
+from lightly_studio.models.collection import SampleType
+from lightly_studio.models.metadata import (
+    HistogramView,
+    MetadataInfoView,
+    MetadataValueCountsView,
+    MetadataValueCountView,
+)
+from lightly_studio.models.range import FloatRange
 from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
+from lightly_studio.resolvers.image_filter import FilterDimensions
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
     create_collection,
     create_tag,
@@ -21,14 +36,20 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
     """Test get_metadata_info endpoint."""
     collection_id = uuid4()
     # Create mock metadata objects that will be returned by
-    # get_all_metadata_keys_and_schema.
+    # get_metadata_info.
     mock_metadata = [
         MetadataInfoView(name="key1", type="string"),
-        MetadataInfoView(name="key2", type="integer", min=0, max=100),
+        MetadataInfoView(
+            name="key2",
+            type="integer",
+            min=0,
+            max=100,
+            histogram=HistogramView(bin_edges=[0.0, 50.0, 100.0], counts=[3, 7]),
+        ),
         MetadataInfoView(name="key3", type="float", min=0.0, max=1.0),
     ]
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
         return_value=mock_metadata,
     )
 
@@ -44,14 +65,38 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
         assert data[i]["type"] == metadata.type
         assert data[i].get("min") == metadata.min
         assert data[i].get("max") == metadata.max
+        if metadata.histogram is None:
+            assert data[i].get("histogram") is None
+        else:
+            assert data[i]["histogram"]["bin_edges"] == metadata.histogram.bin_edges
+            assert data[i]["histogram"]["counts"] == metadata.histogram.counts
+
+
+def test_get_metadata_info__omits_histograms(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
+        return_value=[MetadataInfoView(name="score", type="float", min=0.0, max=1.0)],
+    )
+    response = test_client.get(f"/api/collections/{collection_id}/metadata/info")
+    assert response.status_code == HTTP_STATUS_OK
+    metadata = response.json()[0]
+    assert metadata["name"] == "score"
+    assert metadata["type"] == "float"
+    assert metadata["min"] == 0.0
+    assert metadata["max"] == 1.0
+    assert metadata.get("histogram") is None
+    assert resolver.call_args.kwargs == {"session": ANY, "collection_id": collection_id}
 
 
 def test_get_metadata_info__empty_response(test_client: TestClient, mocker: MockerFixture) -> None:
     """Test get_metadata_info endpoint with no metadata."""
     collection_id = uuid4()
-    # Mock get_all_metadata_keys_and_schema to return an empty list.
+    # Mock get_metadata_info to return an empty list.
     mocker.patch(
-        "lightly_studio.api.routes.api.metadata.get_all_metadata_keys_and_schema",
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_info",
         return_value=[],
     )
 
@@ -62,6 +107,220 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
     assert response.status_code == HTTP_STATUS_OK
     data = response.json()
     assert data == []
+
+
+def test_get_metadata_histograms__video_filter(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_histograms",
+        return_value={"score": HistogramView(bin_edges=[0.0, 1.0], counts=[3])},
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/histograms",
+        json={
+            "filters": {"filter_type": "video", "duration_s": {"min": 1.0, "max": 5.0}},
+            "fields": ["score"],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"score": {"bin_edges": [0.0, 1.0], "counts": [3]}}
+    called_filters = resolver.call_args.kwargs["filters"]
+    assert isinstance(called_filters, VideoFilter)
+    assert called_filters.duration_s == FloatRange(min=1.0, max=5.0)
+
+
+def test_get_metadata_histograms__video_filter_on_image_collection_returns_400(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata.metadata_info_resolver.get_metadata_histograms",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/histograms",
+        json={"filters": {"filter_type": "video"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {"error": "Invalid filter type for image collection."}
+    resolver.assert_not_called()
+
+
+def test_get_metadata_histograms__missing_filter_type_returns_422(
+    test_client: TestClient,
+) -> None:
+    response = test_client.post(
+        f"/api/collections/{uuid4()}/metadata/histograms",
+        json={"filters": {"sample_filter": {"tag_ids": []}}},
+    )
+
+    assert response.status_code == 422
+
+
+def test_get_metadata_value_counts(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={
+            "city": MetadataValueCountsView(
+                value_counts=[MetadataValueCountView(value="Zurich", count=2)],
+            )
+        },
+    )
+    filters = {
+        "filter_type": "image",
+        "sample_filter": {"metadata_filters": [{"key": "country", "op": "==", "value": "CH"}]},
+    }
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"filters": filters},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "city": {
+            "value_counts": [{"value": "Zurich", "count": 2}],
+        }
+    }
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=ANY, fields=None, limit=20
+    )
+    assert resolver.call_args.kwargs["collection_id"] == collection_id
+    called_filters = resolver.call_args.kwargs["filters"]
+    assert called_filters.model_dump(exclude_none=True) == {
+        "filter_type": "image",
+        "sample_filter": {
+            "filter_type": "sample",
+            "metadata_filters": [{"key": "country", "op": "==", "value": "CH"}],
+        },
+    }
+
+
+def test_get_metadata_value_counts__video_filter(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={},
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"filters": {"filter_type": "video", "width": {"min": 100}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    called_filters = resolver.call_args.kwargs["filters"]
+    assert isinstance(called_filters, VideoFilter)
+    assert called_filters.width == FilterDimensions(min=100)
+
+
+def test_get_metadata_value_counts__image_filter_on_video_collection_returns_400(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"filters": {"filter_type": "image"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {"error": "Invalid filter type for video collection."}
+    resolver.assert_not_called()
+
+
+def test_get_metadata_value_counts__optional_body(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={},
+    )
+
+    response = test_client.post(f"/api/collections/{collection_id}/metadata/value-counts")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {}
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=None, fields=None, limit=20
+    )
+
+
+@pytest.mark.parametrize("limit", [1, 5, 30, None])
+def test_get_metadata_value_counts__limit(
+    test_client: TestClient, mocker: MockerFixture, limit: int | None
+) -> None:
+    collection_id = uuid4()
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_value_counts_resolver.get_metadata_value_counts",
+        return_value={},
+    )
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={"limit": limit, "fields": ["city"]},
+    )
+    assert response.status_code == HTTP_STATUS_OK
+    resolver.assert_called_once_with(
+        session=ANY, collection_id=collection_id, filters=None, fields=["city"], limit=limit
+    )
+
+
+@pytest.mark.parametrize("limit", [0, -1, 1.5, "invalid"])
+def test_get_metadata_value_counts__invalid_limit(
+    test_client: TestClient, limit: int | float | str
+) -> None:
+    response = test_client.post(
+        f"/api/collections/{uuid4()}/metadata/value-counts", json={"limit": limit}
+    )
+    assert response.status_code == 422
+
+
+def test_metadata_value_counts__openapi_models(test_client: TestClient) -> None:
+    openapi = test_client.get("/openapi.json").json()
+    schemas = openapi["components"]["schemas"]
+    assert "MetadataValueCountView" in schemas
+    assert "MetadataValueCountsView" in schemas
+
+
+def test_metadata_filter__invalid_in_value_returns_422(test_client: TestClient) -> None:
+    collection_id = uuid4()
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/value-counts",
+        json={
+            "filters": {
+                "filter_type": "image",
+                "sample_filter": {"metadata_filters": [{"key": "city", "op": "in", "value": []}]},
+            }
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["type"] == "metadata_in_value"
 
 
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`

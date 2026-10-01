@@ -2,6 +2,8 @@ import type { TagView as Tag, TagKind } from '$lib/services/types';
 import { derived, get, readonly, writable, type Readable } from 'svelte/store';
 import { readTags } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '../useGlobalStorage';
+import { usePostHog } from '$lib/hooks';
+import { toggleTagSelection } from './toggleTagSelection';
 
 interface UseTagsOptions {
     collection_id: string;
@@ -25,6 +27,7 @@ const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 export function useTags(options: UseTagsOptions): UseTagsReturn {
     const { collection_id, kind } = options;
     const { tags: tagsData } = useGlobalStorage();
+    const { trackEvent } = usePostHog();
     const isLoaded = writable(false);
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
@@ -88,8 +91,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         const allTags = $tagsData[collection_id] ?? [];
         if (!kind) return allTags;
 
-        const _tags = allTags.filter((tag: Tag) => kind.includes(tag.kind));
-        return _tags;
+        return allTags.filter((tag) => kind.includes(tag.kind));
     });
 
     const tagsSelectedForCollection = derived(
@@ -100,17 +102,18 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
     );
 
     const tagSelectionToggle = (tag_id: string) => {
-        tagsSelectedByCollection.update((selectedByCollection) => {
-            const selected = selectedByCollection[collection_id] ?? new Set<string>();
-            if (selected.has(tag_id)) {
-                selected.delete(tag_id);
-            } else {
-                selected.add(tag_id);
-            }
-            return {
-                ...selectedByCollection,
-                [collection_id]: new Set([...selected])
-            };
+        toggleTagSelection({
+            tagId: tag_id,
+            collectionId: collection_id,
+            currentSelected: get(tagsSelectedByCollection)[collection_id] ?? new Set<string>(),
+            allTags: get(tagsData)[collection_id] ?? [],
+            updateSelected: (collectionId, newSelected) => {
+                tagsSelectedByCollection.update((selectedByCollection) => ({
+                    ...selectedByCollection,
+                    [collectionId]: newSelected
+                }));
+            },
+            trackEvent
         });
     };
 

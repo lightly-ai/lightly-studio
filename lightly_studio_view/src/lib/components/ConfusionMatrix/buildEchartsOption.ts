@@ -1,4 +1,5 @@
 import type { EChartsCoreOption } from 'echarts/core';
+import { CHART_AXIS_LABEL, CHART_EMPHASIS, CHART_LINE_COLOR, CHART_TEXT_COLOR } from '$lib/utils';
 import { SENTINELS } from './topNMatrix';
 import { type ConfusionMatrix } from './types';
 
@@ -89,9 +90,9 @@ export function buildEchartsOption(
             name: 'Prediction',
             nameLocation: 'middle',
             nameGap,
-            nameTextStyle: { color: '#9ca3af', fontSize: 13, fontWeight: 'bold' },
-            axisLabel: { rotate: 45, interval: 0, color: '#9ca3af', fontSize: 12 },
-            axisLine: { lineStyle: { color: '#374151' } },
+            nameTextStyle: { color: CHART_TEXT_COLOR, fontSize: 13, fontWeight: 'bold' },
+            axisLabel: { ...CHART_AXIS_LABEL, rotate: 45, interval: 0 },
+            axisLine: { lineStyle: { color: CHART_LINE_COLOR } },
             splitArea: { show: false }
         },
         yAxis: {
@@ -101,9 +102,9 @@ export function buildEchartsOption(
             nameLocation: 'middle',
             nameGap,
             nameRotate: 90,
-            nameTextStyle: { color: '#9ca3af', fontSize: 13, fontWeight: 'bold' },
-            axisLabel: { interval: 0, color: '#9ca3af', fontSize: 12 },
-            axisLine: { lineStyle: { color: '#374151' } },
+            nameTextStyle: { color: CHART_TEXT_COLOR, fontSize: 13, fontWeight: 'bold' },
+            axisLabel: { ...CHART_AXIS_LABEL, interval: 0 },
+            axisLine: { lineStyle: { color: CHART_LINE_COLOR } },
             splitArea: { show: false }
         },
         visualMap: [
@@ -130,14 +131,14 @@ export function buildEchartsOption(
                 name: 'TP',
                 data: tpData,
                 label: { show: false },
-                emphasis: { itemStyle: { shadowBlur: 6, shadowColor: 'rgba(0,0,0,0.3)' } }
+                emphasis: CHART_EMPHASIS
             },
             {
                 type: 'heatmap',
                 name: 'FP/FN',
                 data: fpFnData,
                 label: { show: false },
-                emphasis: { itemStyle: { shadowBlur: 6, shadowColor: 'rgba(0,0,0,0.3)' } }
+                emphasis: CHART_EMPHASIS
             }
         ]
     };

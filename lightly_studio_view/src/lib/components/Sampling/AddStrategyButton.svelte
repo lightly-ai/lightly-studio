@@ -10,7 +10,10 @@
         similarityDisabledReason?: string;
         metadataWeightingDisabledReason?: string;
         classBalancingDisabledReason?: string;
+        metadataBalancingDisabledReason?: string;
+        subpartDiversityDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
+        onMenuOpen?: () => void;
     }
     let {
         diversityDisabledReason,
@@ -18,7 +21,10 @@
         similarityDisabledReason,
         metadataWeightingDisabledReason,
         classBalancingDisabledReason,
-        onAdd
+        metadataBalancingDisabledReason,
+        subpartDiversityDisabledReason,
+        onAdd,
+        onMenuOpen
     }: Props = $props();
 
     let isOpen = $state(false);
@@ -34,6 +40,8 @@
         if (type === 'similarity') return similarityDisabledReason;
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;
+        if (type === 'metadata_balancing') return metadataBalancingDisabledReason;
+        if (type === 'subpart_diversity') return subpartDiversityDisabledReason;
         return undefined;
     }
 
@@ -69,7 +77,8 @@
     }}
     onOpenChange={(open) => {
         isOpen = open;
-        if (!open) handleMouseLeave();
+        if (open) onMenuOpen?.();
+        else handleMouseLeave();
     }}
 >
     {#snippet children()}

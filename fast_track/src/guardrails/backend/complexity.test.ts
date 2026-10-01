@@ -20,21 +20,20 @@ vi.mock('node:fs', async (importOriginal) => {
 const { execFile } = await import('node:child_process');
 const { existsSync } = await import('node:fs');
 
-const backendFile: ChangedFile = {
-    path: 'lightly_studio/src/model.py',
-    status: 'modified',
-    additions: 5,
-    deletions: 0
-};
+function changed(path: string): ChangedFile {
+    return { path, status: 'modified', additions: 5, deletions: 0 };
+}
+
+const backendFile = changed('lightly_studio/src/model.py');
+const serveFile = changed('lightly_studio_serve/src/lightly_studio_serve/server.py');
 
 function makeCtx(files: ChangedFile[] = [backendFile]): GuardrailContext {
-    return { baseRef: 'origin/main', changedFiles: async () => files };
+    return { changedFiles: async () => files };
 }
 
 describe('backendComplexityGuardrail', () => {
-    it('is required and runs locally', () => {
+    it('is required', () => {
         expect(backendComplexityGuardrail.required).toBe(true);
-        expect(backendComplexityGuardrail.needsPrContext).toBe(false);
     });
 
     it('passes immediately when no backend files changed', async () => {
@@ -83,8 +82,23 @@ describe('backendComplexityGuardrail', () => {
         );
     });
 
+    it('lints each member from its own directory, so its ruff config applies', async () => {
+        const cwds: string[] = [];
+        vi.mocked(execFile).mockImplementation((_cmd, _args, opts, cb) => {
+            cwds.push(String((opts as { cwd: string }).cwd));
+            (cb as unknown as PromisifyCb)(null, { stdout: '[]' });
+            return undefined as unknown as ChildProcess;
+        });
+        const result = await backendComplexityGuardrail.run(makeCtx([backendFile, serveFile]));
+        expect(result.status).toBe('pass');
+        expect(cwds).toEqual([
+            resolve(REPO_ROOT, 'lightly_studio/'),
+            resolve(REPO_ROOT, 'lightly_studio_serve/')
+        ]);
+    });
+
     it('passes for a deleted backend file (does not exist on disk)', async () => {
-        vi.mocked(existsSync).mockReturnValueOnce(false);
+        vi.mocked(existsSync).mockImplementation((p) => !String(p).includes('model.py'));
         const result = await backendComplexityGuardrail.run(makeCtx());
         expect(result.status).toBe('pass');
         expect(result.summary).toContain('deleted');

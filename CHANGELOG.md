@@ -9,12 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Python SDK: `limit` parameter on `ImageDataset.add_samples_from*` methods to index only the first N samples of a dataset.
-- Python dataset queries now support model evaluation queries on the annotation level.
+- Add `quickstart-enterprise` CLI command to seed a remote enterprise instance with a demo dataset.
+- Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
+- Python SDK: Attach 3D cuboids from annotation MCAPs with `dataset.add_labels_from_folder(...)`. A later call skips sequences that already have that annotation source.
+- Python SDK: Embed search queries on a remote embedding server with `register_remote_embedder`.
+- Python SDK: Enable metric recomputing for instance-segmentation.
+- Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
+- Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
+- Python SDK: Store the URL and API key of a remote embedder that `register_default_embedder` registered before an import, so that a later process, such as `lightly-studio gui`, searches on the server with no new registration.
 
 ### Changed
 
-- Embedding plot legend is now compact and scrollable, and the WebGPU fallback message is no longer shown.
+- Redesign the embedding plot selection tools as visible, sticky Pan, Rectangle, and Lasso buttons in the GUI.
+- Show the Rectangle and Lasso drag shortcuts in the embedding plot tool tooltips.
+- Show categorical metadata filters in the image sidebar with an optional field picker and expanded value lists.
 
 ### Deprecated
 
@@ -22,7 +30,223 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Disable the subpart diversity sampling strategy when no object detection or segmentation annotation sources exist in the collection.
+- Combine typicality and similarity computation and sampling into one backend request that continues if the frontend disconnects.
+- Fix the `Values` field in the distribution panel using a larger font than the other fields.
+- Fix the focus outline of the bulk annotation panel controls missing its left and right edges.
+- Fix instance segmentation masks that cannot be selected with a click when their bounding boxes are hidden in the GUI.
+- Fix undoing an annotation deletion restoring it to the default source instead of its original one.
+- Return 409 instead of 500 for text and image search on a collection whose embedding space cannot embed the query, and 502 when its embedding server cannot be used.
+- Python SDK: Keep the image embeddings stored before an embedder failure, and embed only the images without an embedding when the images are added again with `embed=True`.
+
+
 ### Security
+
+## \[1.1.2\] - 2026-09-21
+
+### Added
+
+- Choose how many categorical metadata values to show in distribution plots.
+- Python SDK: Read aggregate evaluation metrics (per-class and micro-averaged precision, recall, and F1, plus classification accuracy) with `dataset.evaluate().metrics(run_id)`.
+- Python SDK: Evaluate instance-segmentation predictions with `dataset.evaluate().instance_segmentation(...)`, matching predicted masks to ground truth by mask IoU and storing per-image and per-mask metrics.
+- Add an optional preselected tag selector to the sampling dialog.
+
+### Changed
+
+- Speed up coloring the embedding plot by tags on large datasets by up to 2x.
+- Show loading spinners in distribution plots in the GUI. 
+- Preselected samples are now part of the sampling result.
+- Move each docs page into a folder named for its nav section. The old URLs redirect.
+- Speed up video embedding by decoding videos in parallel, overlapping decoding with the model forward (up to about 2.4× faster when embedding many videos).
+- Register a custom embedder with `register_default_embedder` and the capability interfaces from `lightly_studio_serve.embedder`, replacing `set_default_embedding_model` and the `EmbeddingGenerator` protocols.
+
+### Fixed
+
+- Categorical distribution requests are now up to 80% faster by fetching only the selected field.
+- Fix `hf://` directory ingest reporting every file as missing.
+- Fix the distribution panel and annotation class counts not updating when a filter changes.
+- Speed up the initial page load in the GUI by up to ~3.5 seconds by no longer loading the query editor on every page.
+- Grid thumbnails no longer start a native image drag when the pointer moves slightly during a click, so quick selection clicks are not lost.
+
+## \[1.1.1\] - 2026-09-14
+
+### Added
+
+- Add a Split dataset menu action to divide images or videos into tagged splits using the current filters.
+- Add a Glossary page to the docs.
+- Add bulk classification editing for selected images in the GUI.
+
+### Changed
+
+- Reduce peak memory usage during image indexing by up to 45% by clearing unused GPU cache.
+- Reduce grid-view overscan prefetching for videos and frames from 20 additional rows to 2, lowering initial frontend load by avoiding unnecessary backend-rendered videos.
+- Increase max_concurrency of requests to the backend from 100 to 128 to reduce chance of seeing 503 errors in the frontend.
+- Improved metadata loading by reducing latency by up to 70% and increasing throughput by up to 4× under concurrent requests.
+- Speed up distribution plot tag comparisons by up to 4.9x by requesting and calculating only the metadata field being viewed.
+- Speed up Python SDK iteration and sampling setup with remote databases by avoiding an extra database query for each sample.
+- Improved categorical metadata loading performance, reducing database work and page-load latency for large datasets.
+- Improved metadata loading by reducing numeric database queries from 13 to 8 and making responses up to 25% faster.
+- Speed up metadata-weighting sampling by reading all metadata values in one query instead of one query per sample.
+- Change the video decoding backend for the GUI from OpenCV to PyAV, resulting in up to 6× faster decoding performance for parallel streams when loading the grid view and scrolling.
+
+### Removed
+
+- Improved initial metadata loading performance by up to 30% for large datasets by removing duplicate histogram calculations.
+
+### Fixed
+
+- Fix sampling, typicality, similarity, few-shot classification and the 2D embedding view crashing on PostgreSQL. New installs on Python 3.10 or later got pgvector 0.5.0, which reads embeddings in a format LightlyStudio does not support yet, so pgvector is now pinned below 0.5.0.
+- Fixed keyboard input in a plugin dialog triggering the keyboard shortcuts behind it.
+
+## \[1.1.0\] - 2026-09-07
+
+### Added
+
+- Distribution plot
+    - Compare the annotation class distribution by sample tag.
+    - Compare metadata distributions by sample tag.
+    - Make annotation classes selectable in distribution plot.
+    - Switch categorical and numerical metadata distributions between sample counts and percentages.
+
+- Sampling
+    - Python SDK: Continue sampling from an existing tagged selection with the `preselected_tag_name` parameter. Passing the same name as `sampling_result_tag_name` grows that tag with the newly selected samples instead of requiring a fresh tag.
+    - Python SDK: Select video-frame sequences with `selected_sequence_length` on `Sampling.diverse()`. It defaults to `None`, which selects individual frames. `n_samples_to_select` still counts frames and must be a multiple of the sequence length.
+    - Python SDK: Balance a sampling over the values of a categorical metadata field with `Sampling.metadata_balancing()`, using the same `uniform`, `input`, and explicit target distributions as annotation class balancing.
+    - Add the Metadata Balancing strategy to the sampling dialog, to balance a selection over the values of a categorical metadata field such as weather or city.
+    - Python SDK: Select images by the diversity of their annotation crop embeddings with `Sampling.subpart_diversity()`.
+
+- Sort annotations and samples
+    - Sort the annotations grid by a per-annotation evaluation metric, such as IoU.
+    - Python SDK: Order video queries by `VideoSampleField.created_at`.
+    - Add an order-by control to the videos grid.
+
+- Other
+    - Report anonymous usage data on app launch. Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+    - Azure Blob Storage is supported in the LightlyStudio Enterprise version.
+    - Python SDK: Read stored evaluation runs and their confusion matrix with `dataset.evaluate().list_runs()` and `dataset.evaluate().confusion_matrix(run_id)`.
+    - Recompute stale evaluation runs from the GUI or API after annotation changes.
+    - Python SDK: Create and read MCAP locator samples.
+
+### Changed
+
+- Performance
+    - BREAKING: Change embedding model schema in the database. DuckDB users need to re-index their data. PostgreSQL users (Enterprise) are unaffected, the migration is automatic.
+    - Speed up cloud storage (S3, GCS, Azure blob) indexing by enabling parallel requests.
+    - Speed up cloud image indexing by reading image dimensions in small chunks instead of downloading most of each image.
+    - Speed up object embeddings by loading input images in parallel.
+    - Speed up the previous and next navigation in the GUI for large datasets.
+    - Bump lightly-mundig to 0.1.15; its sampling algorithms are up to 7x faster.
+
+- Python SDK
+    - Python SDK: `ImageDataset.add_images_from_path` now accepts `tag_depth > 1` to tag images by several leading directory levels (previously only `tag_depth=1` was supported).
+    - Python SDK: COCO and YOLO imports now accept `tag_depth > 1` to tag samples by several leading directory levels.
+    - Python SDK (beta): Simplified embedding generator interface. Implement `embedding_space_spec`, returning the new `EmbeddingSpaceSpec` (`space_key`, `dimension`) instead of the former `get_embedding_model_input`.
+    - Python SDK: Split a dataset into new sample tags with `DatasetQuery.split()`
+
+### Deprecated
+
+### Removed
+
+- Remove the LightlyEdge classifier export format. Downloading a classifier no longer asks for a
+  format and always writes the scikit-learn format, which is the only one LightlyStudio can load.
+- Drop the legacy `embedding_model_hash` field from the classifier export format. Classifiers
+  exported by older versions can no longer be loaded.
+
+### Fixed
+
+- Distribution plot
+    - Numerical metadata distributions in percentage mode now scale each compared tag independently, so bars match the tooltip.
+    - Categorical metadata distributions now include aggregated "Other" and "Missing" bars, so percentages are shares of all samples instead of only the values shown.
+
+- Permissions
+    - Viewer users can no longer create or delete tags; existing tags remain visible.
+
+- Other
+    - Fix requests failing intermittently while the GUI is under load, caused by concurrent access to a shared database session.
+    - Hide every bounding box and its annotation counts when all annotation sources are unchecked, instead of showing them all.
+    - Keep long-lived PostgreSQL connections alive.
+    - Fix a bug where the "Load Classifier (.pkl)" button failed to open the file picker.
+
+- Security
+    - Scope export downloads to the collection they were prepared for, so an export key from one collection can no longer be used to download an export prepared for a different collection.
+
+## \[1.0.5\] - 2026-08-14
+
+### Added
+- Show indexed categorical metadata values in distribution panel.
+- Add the `lightly-studio quickstart` CLI command, which downloads the COCO example dataset and launches the GUI in one step. Pass `--no-browser` to skip opening the browser.
+- Export image and video classification annotations to CSV via the GUI and Python SDK.
+- Python SDK: Export video frames as image files via `VideoFrameDataset.export().to_image_files()` with support for PNG, JPEG, WEBP, BMP, and TIFF formats. Returns the paths of the created files.
+- Google Cloud Storage (GCS) is supported in the LightlyStudio Enterprise version.
+- Python SDK: Connect to LightlyStudio Enterprise with a long-lived API key by passing `api_key` to `lightly_studio.connect()` or setting `LIGHTLY_STUDIO_API_KEY`.
+- Python SDK: Add support for table parameters in plugins, allowing users to pass multiple rows of input.
+
+### Changed
+
+- Show a busy indicator on save/delete/export/execute buttons while their action is running (caption, tag, operator, evaluation, and export actions).
+
+### Removed
+
+- The ignored `is_numeric` field on sort expressions in the images-list and adjacent-samples
+  request bodies. Requests that still send it keep working; it is dropped during validation.
+- The `cast_to_float` argument of `OrderByMetadataField`. Top-level numeric fields are now
+  detected automatically, so `OrderByMetadataField("score", cast_to_float=True)` becomes
+  `OrderByMetadataField("score")`. Nested fields (e.g. `stats.score`) now always sort
+  lexicographically.
+
+### Fixed
+
+- Left and right arrow keys no longer navigate between samples while editing text or using an open
+  dialog, menu, or listbox.
+- Sorting by a numeric metadata field now orders numerically (e.g. `9` before `10`) without
+  the caller declaring the field type.
+- Tagging by embedding region now correctly limits samples to the selected area.
+- Export downloads are no longer blocked by popup blockers.
+- Grid annotation overlays now render at tile resolution to bound memory usage for large source images.
+- Annotation class names no longer overflow in class selection.
+- Autofocus lets users create their first annotation faster.
+- Opening a DuckDB database that another lightly_studio process already has open now raises a clear error instead of a raw DuckDB traceback.
+- Coloring the 2D embedding plot by annotations or metadata now loads faster, especially for large datasets.
+- Changing annotation colors is now smoother and shows a live preview while dragging the color picker.
+- Hover previews in the annotations embedding plot now show the relevant image crop and annotation overlay, matching the annotations grid.
+- Custom annotation color opacity is now applied to segmentation masks in the detail view. Contributed by @sam-watts.
+
+## \[1.0.4\] - 2026-07-27
+
+### Added
+
+- Python SDK: Allow embedding video frames by adding the `embed_frames` parameter to `VideoDataset.add_videos_from_path` and `VideoDataset.add_videos_from_youtube_vis`.
+- Python dataset queries can now filter annotation evaluation results for false positives and false negatives.
+- Show numeric metadata values in distribution panel.
+- Add a selector for the numeric metadata histogram bin count.
+- Introduce button to see expanded distribution for numeric metadata values.
+- Add metadata filter chips to the left sidebar
+- Display classification annotations in the annotations grid.
+- Show a preview image when hovering over the 2d embedding plot.
+- Python SDK: `ImageDataset.add_samples_from_coco` and `add_samples_from_yolo` now accept `tag_depth` to tag imported samples by their folder structure, in addition to the split tag.
+
+### Changed
+
+- The left filter panel can now be collapsed entirely to reclaim space for the grid; a "Filters" button in the grid header restores it.
+- Image and video opening paths (indexing and embedding) now handle errors consistently: broken files are tolerated and skipped instead of breaking the whole operation.
+
+### Fixed
+
+- Class distribution bar chart: tooltip was clipped when hovering a chart with a single class.
+- Long tags shown in the left side menu are truncated.
+
+## \[1.0.3\] - 2026-07-10
+
+### Added
+
+- Python SDK: `limit` parameter on `ImageDataset.add_samples_from*` methods to index only the first N samples of a dataset.
+- Python dataset queries now support model evaluation queries on the annotation level.
+- View class distribution for image classification.
+- Custom embedding models can be registered.
+
+### Changed
+
+- Embedding plot legend is now compact and scrollable, and the WebGPU fallback message is no longer shown.
 
 ## \[1.0.2\] - 2026-07-02
 

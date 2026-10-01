@@ -1,18 +1,18 @@
 """Test metadata info resolver."""
 
 import pytest
+import sqlalchemy
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import (
-    get_all_metadata_keys_and_schema,
-)
+from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import get_metadata_info
 from tests.helpers_resolvers import (
     create_collection,
     create_image,
 )
 
 
-def test_get_all_metadata_keys_and_schema__with_numerical_values(
+def test_get_metadata_info__with_numerical_values(
     db_session: Session,
 ) -> None:
     """Test getting metadata keys and schema with min/max values for numerical types."""
@@ -50,7 +50,7 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     sample3["is_processed"] = True
 
     # Get metadata info
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
 
     # Verify the result structure.
     assert len(result) == 4  # temperature, count, location, is_processed
@@ -82,7 +82,61 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     assert is_processed_info.max is None
 
 
-def test_get_all_metadata_keys_and_schema__no_numerical_values(
+def test_get_metadata_info__sparse_numerical_values(
+    db_session: Session,
+) -> None:
+    """Each numeric key keeps its own bounds when values are sparse across samples."""
+    collection = create_collection(session=db_session)
+    first = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/sparse-1.png"
+    ).sample
+    second = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/sparse-2.png"
+    ).sample
+    first["temperature"] = -2.5
+    second["count"] = 4
+    db_session.commit()
+
+    result = get_metadata_info(session=db_session, collection_id=collection.collection_id)
+    by_name = {item.name: item for item in result}
+    assert by_name["temperature"].min == pytest.approx(-2.5)
+    assert by_name["temperature"].max == pytest.approx(-2.5)
+    assert by_name["count"].min == 4
+    assert by_name["count"].max == 4
+
+
+def test_get_metadata_info__batches_numeric_bounds(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Info uses one schema query and one bounds query."""
+    collection = create_collection(session=db_session)
+    for index in range(2):
+        sample = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/batch-{index}.png",
+        ).sample
+        sample["temperature"] = float(index)
+        sample["count"] = index
+    db_session.commit()
+    collection_id = collection.collection_id
+
+    listener = mocker.Mock()
+    engine = db_session.get_bind()
+    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+    try:
+        result = get_metadata_info(session=db_session, collection_id=collection_id)
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+    assert listener.call_count == 2
+    assert {item.name: (item.min, item.max) for item in result} == {
+        "temperature": (0.0, 1.0),
+        "count": (0, 1),
+    }
+    assert all(item.histogram is None for item in result)
+
+
+def test_get_metadata_info__no_numerical_values(
     db_session: Session,
 ) -> None:
     """Test getting metadata keys and schema with only non-numerical types."""
@@ -102,7 +156,7 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
     sample["tags"] = ["tag1", "tag2"]
 
     # Get metadata info.
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
 
     # Verify the result structure.
     assert len(result) == 3  # location, is_processed, tags
@@ -113,7 +167,7 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
         assert item.max is None
 
 
-def test_get_all_metadata_keys_and_schema__empty_collection(
+def test_get_metadata_info__empty_collection(
     db_session: Session,
 ) -> None:
     """Test getting metadata keys and schema for collection with no metadata."""
@@ -128,7 +182,76 @@ def test_get_all_metadata_keys_and_schema__empty_collection(
     )
 
     # Get metadata info.
-    result = get_all_metadata_keys_and_schema(session=db_session, collection_id=collection_id)
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
 
     # Should return empty list.
     assert result == []
+
+
+def test_get_metadata_info__numeric_bounds(
+    db_session: Session,
+) -> None:
+    """Test that numeric metadata info returns stable bounds."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    # Create samples with integer values 0..9.
+    values = list(range(10))
+    for i in values:
+        sample = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        sample["score"] = i
+
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
+    score_info = next(item for item in result if item.name == "score")
+
+    assert score_info.min == pytest.approx(0.0)
+    assert score_info.max == pytest.approx(9.0)
+
+
+def test_get_metadata_info__constant_numeric_bounds(
+    db_session: Session,
+) -> None:
+    """Test bounds for a constant numeric field."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    for i in range(3):
+        sample = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        sample["score"] = 7.0
+
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
+    score_info = next(item for item in result if item.name == "score")
+
+    assert score_info.min == pytest.approx(7.0)
+    assert score_info.max == pytest.approx(7.0)
+
+
+def test_get_metadata_info__key_with_dot(
+    db_session: Session,
+) -> None:
+    """A dot in the key is part of the key, so the stats read the value it holds."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    for i in range(3):
+        sample = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        ).sample
+        sample["sensor.temp"] = float(i)
+
+    result = get_metadata_info(session=db_session, collection_id=collection_id)
+    temp_info = next(item for item in result if item.name == "sensor.temp")
+
+    assert temp_info.type == "float"
+    assert temp_info.min == pytest.approx(0.0)
+    assert temp_info.max == pytest.approx(2.0)

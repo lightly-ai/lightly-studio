@@ -21,8 +21,10 @@ PATH_SEPARATOR = "/"
 # Glob pattern characters
 GLOB_CHARS = ["*", "?", "[", "]"]
 
-# Cloud storage protocols
-CLOUD_PROTOCOLS = ("s3", "gs", "gcs", "azure", "abfs")
+# Remote protocols whose listings come back without a scheme, so discovery has to
+# re-attach one before the path leaves this module.
+CLOUD_PROTOCOLS = ("s3", "gs", "gcs", "abfs", "abfss", "az", "hf")
+FILESYSTEM_PROTOCOL_ALIASES = {"abfss": "abfs"}
 
 # Image file extensions
 IMAGE_EXTENSIONS = {
@@ -235,6 +237,7 @@ def _get_filesystem(path: str) -> fsspec.AbstractFileSystem:
     if isinstance(protocol, (list, tuple)):
         protocol = protocol[0]
 
+    protocol = FILESYSTEM_PROTOCOL_ALIASES.get(protocol, protocol)
     return fsspec.filesystem(protocol)
 
 

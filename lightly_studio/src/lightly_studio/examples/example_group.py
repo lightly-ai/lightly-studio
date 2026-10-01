@@ -11,7 +11,7 @@ env = Env()
 env.read_env()
 
 # Set the path to the dataset directory
-dataset_path = env.path("EXAMPLES_MIDV_PATH", "/path/to/midv/dataset")
+dataset_path = env.path("EXAMPLES_MIDV_PATH")
 
 # Cleanup an existing database
 ls.db_manager.connect(cleanup_existing=True)

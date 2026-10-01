@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from typing import Generic, cast
+from uuid import UUID
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy import orm
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
@@ -147,6 +148,7 @@ class DatasetQuery(Generic[T]):
         self.match_expression: MatchExpression | None = None
         self.order_by_expressions: list[OrderByExpression] | None = None
         self._slice: _SliceType | None = None
+        self._sample_ids_subquery: SelectOfScalar[UUID] | None = None
         if sample_class is None:
             # TODO(lukas 12/2025): Remove once we introduce ImageDatasetQuery. Right now
             # T=ImageSample is the default, so this is fine.
@@ -190,6 +192,25 @@ class DatasetQuery(Generic[T]):
             raise ValueError("order_by() can only be called once per DatasetQuery instance")
 
         self.order_by_expressions = list(order_by)
+        return self
+
+    def filter_by_sample_ids(self, sample_ids_subquery: SelectOfScalar[UUID]) -> Self:
+        """Restrict results to samples whose IDs appear in *sample_ids_subquery*.
+
+        Args:
+            sample_ids_subquery: A subquery returning the ``sample_id`` values to keep.
+
+        Returns:
+            Self for method chaining.
+
+        Raises:
+            ValueError: If filter_by_sample_ids() has already been called on this instance.
+        """
+        if self._sample_ids_subquery is not None:
+            raise ValueError(
+                "filter_by_sample_ids() can only be called once per DatasetQuery instance"
+            )
+        self._sample_ids_subquery = sample_ids_subquery
         return self
 
     def slice(self, offset: int = 0, limit: int | None = None) -> Self:
@@ -253,10 +274,12 @@ class DatasetQuery(Generic[T]):
         Returns:
             Iterator of Sample objects from the database.
         """
+        # Reuse the joined base sample so wrapper construction needs no per-sample query.
         if self.dataset.sample_type == SampleType.IMAGE:
             image_query: SelectOfScalar[ImageTable] = (
                 select(ImageTable)
                 .join(ImageTable.sample)
+                .options(orm.contains_eager(ImageTable.sample))
                 .where(SampleTable.collection_id == self.dataset.collection_id)
             )
             image_query = self._compose_query(image_query)
@@ -267,6 +290,7 @@ class DatasetQuery(Generic[T]):
             video_query: SelectOfScalar[VideoTable] = (
                 select(VideoTable)
                 .join(VideoTable.sample)
+                .options(orm.contains_eager(VideoTable.sample))
                 .where(SampleTable.collection_id == self.dataset.collection_id)
             )
             video_query = self._compose_query(video_query)
@@ -277,6 +301,7 @@ class DatasetQuery(Generic[T]):
             group_query: SelectOfScalar[GroupTable] = (
                 select(GroupTable)
                 .join(GroupTable.sample)
+                .options(orm.contains_eager(GroupTable.sample))
                 .where(SampleTable.collection_id == self.dataset.collection_id)
             )
             group_query = self._compose_query(group_query)
@@ -287,10 +312,11 @@ class DatasetQuery(Generic[T]):
             video_frame_query: SelectOfScalar[VideoFrameTable] = (
                 select(VideoFrameTable)
                 .join(VideoFrameTable.sample)
+                .options(orm.contains_eager(VideoFrameTable.sample))
                 .where(SampleTable.collection_id == self.dataset.collection_id)
                 # Eager-load the parent video so VideoFrameSample.parent_video does not
                 # trigger a query per frame (many-to-one, so no row multiplication).
-                .options(joinedload(VideoFrameTable.video))
+                .options(orm.joinedload(VideoFrameTable.video))
             )
             video_frame_query = self._compose_query(video_frame_query)
             for video_frame_table in self.session.exec(video_frame_query):
@@ -306,6 +332,10 @@ class DatasetQuery(Generic[T]):
         # Apply filter if present
         if self.match_expression:
             query = query.where(self.match_expression.get())
+
+        # Apply sample ID subquery filter if present
+        if self._sample_ids_subquery is not None:
+            query = query.where(col(SampleTable.sample_id).in_(self._sample_ids_subquery))
 
         # Apply ordering
         if self.order_by_expressions:
@@ -361,6 +391,33 @@ class DatasetQuery(Generic[T]):
         # Use resolver to bulk assign tag (handles validation and edge cases)
         tag_resolver.add_sample_ids_to_tag_id(
             session=self.session, tag_id=tag.tag_id, sample_ids=sample_ids
+        )
+
+    def split(self, tag_sizes: Mapping[str, int], seed: int | None = None) -> dict[str, int]:
+        """Partition the current query result into newly-created sample tags.
+
+        Args:
+            tag_sizes: Ordered tag names and their positive relative sizes.
+            seed: Optional seed for reproducible assignments.
+
+        Returns:
+            The number of samples assigned to each created tag.
+
+        Raises:
+            ValueError: If this query is not for images or videos, split definitions
+                are invalid, a tag already exists, or the query is empty.
+        """
+        if self.dataset.sample_type not in {SampleType.IMAGE, SampleType.VIDEO}:
+            raise ValueError("Splitting is only supported for image and video datasets.")
+        return tag_resolver.split_samples(
+            session=self.session,
+            collection_id=self.dataset.collection_id,
+            sample_ids=[sample.sample_id for sample in self],
+            splits=[
+                tag_resolver.SplitDefinition(tag_name=name, relative_size=size)
+                for name, size in tag_sizes.items()
+            ],
+            seed=seed,
         )
 
     def sampling(self) -> Sampling:

@@ -36,7 +36,22 @@ describe('UserAvatar', () => {
         expect(signOutButton).toBeTruthy();
     });
 
-    it('should render users menu item for admin user', async () => {
+    it('should keep menu icons as direct children so gap-2 applies', async () => {
+        const { getByTitle, getByRole } = render(UserAvatar, { props: { user: mockUser } });
+
+        await fireEvent.click(getByTitle('admin'));
+
+        // The button's `gap-2` only spaces the icon from the label while both are
+        // its flex children; a wrapper around them collapses the spacing.
+        expect(
+            getByRole('button', { name: /sign out/i }).querySelector(':scope > svg')
+        ).toBeInTheDocument();
+        expect(
+            getByRole('link', { name: /users/i }).querySelector(':scope > svg')
+        ).toBeInTheDocument();
+    });
+
+    it('should render admin menu items for admin user', async () => {
         const { getByTitle, getByRole } = render(UserAvatar, { props: { user: mockUser } });
         const avatarButton = getByTitle('admin');
 
@@ -45,6 +60,9 @@ describe('UserAvatar', () => {
         const usersButton = getByRole('link', { name: /users/i });
         expect(usersButton).toBeTruthy();
         expect(usersButton.getAttribute('href')).toBe('/workspace/users');
+
+        const apiKeysButton = getByRole('link', { name: /api keys/i });
+        expect(apiKeysButton.getAttribute('href')).toBe('/workspace/api-keys');
     });
 
     it('should not render users menu item for editor user', async () => {
@@ -77,7 +95,7 @@ describe('UserAvatar', () => {
         expect(usersButton).toBeNull();
     });
 
-    it('should not render users menu item for viewer user', async () => {
+    it('should not render admin menu items for viewer user', async () => {
         const viewerUser = {
             username: 'viewer',
             email: 'viewer@example.com',
@@ -90,5 +108,6 @@ describe('UserAvatar', () => {
 
         const usersButton = queryByRole('link', { name: /users/i });
         expect(usersButton).toBeNull();
+        expect(queryByRole('link', { name: /api keys/i })).toBeNull();
     });
 });

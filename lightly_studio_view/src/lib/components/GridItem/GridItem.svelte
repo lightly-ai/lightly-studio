@@ -65,6 +65,14 @@
         event.preventDefault();
         onSelect(event);
     }
+
+    // Browsers start a native drag on an <img> once the pointer drifts a few pixels between
+    // mousedown and mouseup, and a started drag swallows the click. The item owns the
+    // selection click, so it cancels native drags of whatever thumbnail it renders.
+    // Drag-to-search runs on pointer events and is unaffected.
+    function handleDragStart(event: DragEvent) {
+        event.preventDefault();
+    }
 </script>
 
 <div class="select-none" {style}>
@@ -85,6 +93,7 @@
         onpointerup={drag.handlePointerUp}
         onpointercancel={drag.handlePointerCancel}
         onlostpointercapture={drag.handleLostPointerCapture}
+        ondragstart={handleDragStart}
         onkeydown={handleKeyDown}
         aria-label={ariaLabel}
         role="button"

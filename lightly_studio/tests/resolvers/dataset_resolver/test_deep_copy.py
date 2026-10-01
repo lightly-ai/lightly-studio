@@ -3,7 +3,7 @@
 import uuid
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -15,8 +15,20 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
+from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     dataset_resolver,
     embedding_model_resolver,
@@ -24,8 +36,10 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
     metadata_resolver,
     object_track_resolver,
+    recording_resolver,
     sample_embedding_resolver,
     sample_resolver,
 )
@@ -68,6 +82,89 @@ def test_deep_copy__empty_collection(db_session: Session) -> None:
     assert copied.name == "copied"
     assert copied.sample_type == original.sample_type
     assert copied.parent_collection_id is None
+
+
+def test_deep_copy__with_parent_object_track(db_session: Session) -> None:
+    original = create_collection(session=db_session, collection_name="original")
+    parent_id, child_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(object_track_number=1, dataset_id=original.dataset_id),
+            ObjectTrackCreate(object_track_number=2, dataset_id=original.dataset_id),
+        ],
+    )
+    child = object_track_resolver.get_by_id(session=db_session, object_track_id=child_id)
+    assert child is not None
+    child.parent_object_track_id = parent_id
+    db_session.add(child)
+    db_session.commit()
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=copied.dataset_id,
+    )
+    copied_by_number = {track.object_track_number: track for track in copied_tracks}
+    assert copied_by_number[2].parent_object_track_id == copied_by_number[1].object_track_id
+
+
+def test_deep_copy__with_recordings(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        uri="/data/original.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - one recording copied with a fresh id, remapped dataset_id, same uri/format
+    copied_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=copied.dataset_id
+    )
+    assert len(copied_recordings) == 1
+    copied_recording = copied_recordings[0]
+    assert copied_recording.recording_id != recording_id
+    assert copied_recording.dataset_id == copied.dataset_id
+    assert copied_recording.uri == "/data/original.mcap"
+    assert copied_recording.format == RecordingFormat.MCAP
+
+    # Assert - original recording untouched
+    original_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=original.dataset_id
+    )
+    assert len(original_recordings) == 1
+    assert original_recordings[0].recording_id == recording_id
+
+
+def test_deep_copy__without_recordings(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - classic dataset copies fine with zero recording rows
+    assert (
+        recording_resolver.get_all_by_dataset_id(session=db_session, dataset_id=copied.dataset_id)
+        == []
+    )
 
 
 def test_deep_copy__with_images(db_session: Session) -> None:
@@ -316,15 +413,18 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     )
 
     # Assert - embedding model is copied with new ID
-    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
-    assert len(copied_embedding_models) == 1
-    copied_model = copied_embedding_models[0]
+    assert len(copied_model_ids) == 1
+    copied_model = embedding_model_resolver.get_by_id(
+        session=db_session, embedding_model_id=copied_model_ids[0]
+    )
+    assert copied_model is not None
     assert copied_model.embedding_model_id != embedding_model.embedding_model_id
+    assert copied_model.dataset_id == copied.dataset_id
     assert copied_model.name == embedding_model.name
-    assert copied_model.embedding_model_hash == embedding_model.embedding_model_hash
     assert copied_model.embedding_dimension == embedding_model.embedding_dimension
 
     # Assert - embeddings copied
@@ -351,6 +451,359 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     original_sample_ids = {img1.sample_id, img2.sample_id}
     copied_sample_ids = {emb.sample_id for emb in copied_embeddings}
     assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+
+def test_deep_copy__with_default_embedding_space(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=original.collection_id,
+        embedding_model_name="test_model",
+        embedding_dimension=512,
+        set_as_default=True,
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copied collection's default resolves to the copied model, not the original.
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=copied.collection_id,
+    )
+    assert len(copied_model_ids) == 1
+    copied_model_id = copied_model_ids[0]
+    assert copied_model_id != embedding_model.embedding_model_id
+
+    copied_default_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=copied.collection_id
+    )
+    assert copied_default_id == copied_model_id
+
+
+def test_deep_copy__with_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(
+        session=db_session, collection_name="original", sample_type=SampleType.GROUP
+    )
+    original_components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=original.collection_id,
+        components=[("front_camera", SampleType.IMAGE)],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copied group has its own component definition, not the original's.
+    copied_components = collection_resolver.get_group_components(
+        session=db_session, parent_collection_id=copied.collection_id
+    )
+    assert len(copied_components) == 1
+    copied_component = copied_components["front_camera"]
+    assert copied_component.collection_id != original_components["front_camera"].collection_id
+    assert copied_component.group_component_definition is not None
+    assert copied_component.group_component_definition.group_component_name == "front_camera"
+    assert copied_component.group_component_definition.group_component_index == 0
+    assert db_session.get(McapGroupComponentDefinitionTable, copied_component.collection_id) is None
+
+
+def test_deep_copy__with_mcap_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(
+        session=db_session, collection_name="original", sample_type=SampleType.GROUP
+    )
+    original_components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=original.collection_id,
+        components=[
+            ("image", SampleType.MCAP),
+            ("point_cloud", SampleType.MCAP),
+        ],
+    )
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=original_components["image"].collection_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            frame_id="main",
+            channel_id=3,
+        )
+    )
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=original_components["point_cloud"].collection_id,
+            mcap_data_type=McapDataType.POINT_CLOUD,
+            channel_id=5,
+        )
+    )
+    db_session.commit()
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - remapped collection_id, types, frame_id and channel_id kept.
+    copied_components = collection_resolver.get_group_components(
+        session=db_session, parent_collection_id=copied.collection_id
+    )
+    assert len(copied_components) == 2
+    copied_image = copied_components["image"]
+    copied_point_cloud = copied_components["point_cloud"]
+    assert copied_image.collection_id != original_components["image"].collection_id
+    assert copied_point_cloud.collection_id != original_components["point_cloud"].collection_id
+
+    copied_image_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, copied_image.collection_id
+    )
+    copied_point_cloud_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, copied_point_cloud.collection_id
+    )
+    assert copied_image_mcap is not None
+    assert copied_image_mcap.mcap_data_type == McapDataType.VIDEO_FRAME
+    assert copied_image_mcap.frame_id == "main"
+    assert copied_image_mcap.channel_id == 3
+    assert copied_point_cloud_mcap is not None
+    assert copied_point_cloud_mcap.mcap_data_type == McapDataType.POINT_CLOUD
+    assert copied_point_cloud_mcap.frame_id is None
+    assert copied_point_cloud_mcap.channel_id == 5
+
+    original_image_mcap = db_session.get(
+        McapGroupComponentDefinitionTable, original_components["image"].collection_id
+    )
+    assert original_image_mcap is not None
+
+
+def test_deep_copy__with_sequences(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id) for _ in range(3)],
+    )
+    sequence = SequenceTable(sample_id=sample_ids[0])
+    db_session.add(sequence)
+    db_session.flush()
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=sample_ids[1],
+            sequence_sample_id=sequence.sample_id,
+            seq_number=0,
+            timestamp_ns=1785699091646722462,
+        )
+    )
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=sample_ids[2], sequence_sample_id=sequence.sample_id, seq_number=1
+        )
+    )
+    db_session.commit()
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copy has its own sequence, keyed by a fresh sample_id.
+    copied_sequences = db_session.exec(
+        select(SequenceTable)
+        .join(SampleTable, col(SequenceTable.sample_id) == col(SampleTable.sample_id))
+        .where(col(SampleTable.collection_id) == copied.collection_id)
+    ).all()
+    assert len(copied_sequences) == 1
+    copied_sequence_id = copied_sequences[0].sample_id
+    assert copied_sequence_id != sequence.sample_id
+
+    # Assert - the copied links point at the copied samples, in the original order.
+    copied_links = db_session.exec(
+        select(SampleSequenceLinkTable)
+        .where(col(SampleSequenceLinkTable.sequence_sample_id) == copied_sequence_id)
+        .order_by(col(SampleSequenceLinkTable.seq_number).asc())
+    ).all()
+    assert [link.seq_number for link in copied_links] == [0, 1]
+    assert [link.timestamp_ns for link in copied_links] == [1785699091646722462, None]
+    assert {link.sample_id for link in copied_links}.isdisjoint(sample_ids)
+
+
+def test_deep_copy__with_mcap_group_sequences(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    mcap_sample_id = mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=collection.collection_id,
+        recording_id=recording_id,
+    )
+    classic_sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id)],
+    )
+    db_session.add(SequenceTable(sample_id=classic_sample_ids[0]))
+    db_session.commit()
+    original_ids = {mcap_sample_id, classic_sample_ids[0]}
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_sequences = db_session.exec(
+        select(SequenceTable)
+        .join(SampleTable, col(SequenceTable.sample_id) == col(SampleTable.sample_id))
+        .where(col(SampleTable.collection_id) == copied.collection_id)
+    ).all()
+    assert len(copied_sequences) == 2
+    copied_ids = {sequence.sample_id for sequence in copied_sequences}
+    assert copied_ids.isdisjoint(original_ids)
+
+    copied_mcap_rows = db_session.exec(
+        select(McapGroupSequenceTable).where(col(McapGroupSequenceTable.sample_id).in_(copied_ids))
+    ).all()
+    assert len(copied_mcap_rows) == 1
+    assert copied_mcap_rows[0].recording_id != recording_id
+    copied_recording = recording_resolver.get_by_id(
+        session=db_session, recording_id=copied_mcap_rows[0].recording_id
+    )
+    assert copied_recording is not None
+    assert copied_recording.uri == "/bags/drive_001.mcap"
+    assert copied_mcap_rows[0].sample_id != mcap_sample_id
+
+
+def test_deep_copy__with_sensor_calibrations(db_session: Session) -> None:
+    root = create_collection(session=db_session, collection_name="calib_root")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=root.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    group = create_collection(
+        session=db_session, parent_collection_id=root.collection_id, sample_type=SampleType.GROUP
+    )
+    slot_children = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group.collection_id,
+        components=[("front_camera", SampleType.MCAP)],
+    )
+    front_slot_id = slot_children["front_camera"].collection_id
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=front_slot_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            frame_id="main",
+            channel_id=3,
+        )
+    )
+    k = [500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0]
+    db_session.add(
+        SensorCalibrationTable(
+            recording_id=recording_id,
+            collection_id=front_slot_id,
+            width=1920,
+            height=1080,
+            k=k,
+        )
+    )
+    db_session.commit()
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=root.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=copied.dataset_id
+    )
+    assert len(copied_recordings) == 1
+    copied_recording_id = copied_recordings[0].recording_id
+    assert copied_recording_id != recording_id
+
+    copied_calibrations = db_session.exec(
+        select(SensorCalibrationTable).where(
+            col(SensorCalibrationTable.recording_id) == copied_recording_id
+        )
+    ).all()
+    assert len(copied_calibrations) == 1
+    assert copied_calibrations[0].width == 1920
+    assert copied_calibrations[0].height == 1080
+    assert copied_calibrations[0].k == k
+    assert copied_calibrations[0].collection_id != front_slot_id
+    copied_gcd = db_session.get(
+        McapGroupComponentDefinitionTable, copied_calibrations[0].collection_id
+    )
+    assert copied_gcd is not None
+    assert copied_gcd.frame_id == "main"
+
+
+def test_deep_copy__with_static_transforms(db_session: Session) -> None:
+    root = create_collection(session=db_session, collection_name="tf_root")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=root.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    db_session.add(
+        StaticTransformTable(
+            recording_id=recording_id,
+            parent="livox_front_left",
+            child="main",
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            tx=0.1,
+            ty=0.2,
+            tz=0.3,
+        )
+    )
+    db_session.commit()
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=root.dataset_id,
+        copy_name="copied",
+    )
+
+    copied_recordings = recording_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=copied.dataset_id
+    )
+    assert len(copied_recordings) == 1
+    copied_recording_id = copied_recordings[0].recording_id
+    assert copied_recording_id != recording_id
+
+    copied_transforms = db_session.exec(
+        select(StaticTransformTable).where(
+            col(StaticTransformTable.recording_id) == copied_recording_id
+        )
+    ).all()
+    assert len(copied_transforms) == 1
+    assert copied_transforms[0].parent == "livox_front_left"
+    assert copied_transforms[0].child == "main"
+    assert (
+        copied_transforms[0].tx,
+        copied_transforms[0].ty,
+        copied_transforms[0].tz,
+    ) == pytest.approx((0.1, 0.2, 0.3))
 
 
 def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
@@ -431,15 +884,15 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
     )
 
     # Assert - copied collection still has embeddings
-    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    copied_model_ids = collection_embedding_model_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
     )
-    assert len(copied_embedding_models) == 1
+    assert len(copied_model_ids) == 1
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=copied.collection_id,
-        embedding_model_id=copied_embedding_models[0].embedding_model_id,
+        embedding_model_id=copied_model_ids[0],
     )
     assert len(copied_embeddings) == 1
 
@@ -548,6 +1001,8 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
                 sample_id=img.sample_id,
                 annotation_label_id=label.annotation_label_id,
                 annotation_type=AnnotationType.CLASSIFICATION,
+                start_time_s=1.5,
+                end_time_s=4.0,
             ),
             AnnotationDetails(
                 sample_id=img.sample_id,
@@ -599,11 +1054,15 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     # Build lookup by annotation type for copied annotations
     copied_by_type = {a.annotation_type: a for a in result.annotations}
 
-    # Assert - classification annotation copied (no detail tables)
+    # Assert - classification annotation copied (no bbox/mask detail tables) with its temporal span
     copied_cls = copied_by_type[AnnotationType.CLASSIFICATION]
     assert copied_cls.annotation_type == AnnotationType.CLASSIFICATION
     assert copied_cls.object_detection_details is None
     assert copied_cls.segmentation_details is None
+    copied_span = db_session.get(TemporalSpanTable, copied_cls.sample_id)
+    assert copied_span is not None
+    assert copied_span.start_time_s == 1.5
+    assert copied_span.end_time_s == 4.0
 
     # Assert - object detection detail table copied
     copied_od = copied_by_type[AnnotationType.OBJECT_DETECTION]
@@ -783,7 +1242,7 @@ def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> N
     create_annotation_metrics(
         session=db_session,
         run_id=run.id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
                 metrics={"iou": 0.8},

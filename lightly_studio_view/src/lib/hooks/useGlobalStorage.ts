@@ -7,6 +7,7 @@ import { useSessionStorage } from './useSessionStorage/useSessionStorage';
 import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
+import type { CategoricalMetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
 import type { CollectionView, SampleType, TagByFilterBody } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
@@ -50,9 +51,19 @@ const sampleSize = useSessionStorage<{
     height: 6
 });
 
+// Whether the left filter panel is fully collapsed (hidden) to reclaim grid width.
+const filterPanelCollapsed = useSessionStorage<boolean>(
+    'lightlyStudio_filterPanelCollapsed',
+    false
+);
+
 // Metadata stores
 const metadataBounds = useSessionStorage<MetadataBounds>('lightlyStudio_metadata_bounds', {});
 const metadataValues = useSessionStorage<MetadataValues>('lightlyStudio_metadata_values', {});
+const categoricalMetadataValues = useSessionStorage<CategoricalMetadataValues>(
+    'lightlyStudio_categorical_metadata_values',
+    {}
+);
 const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_info', []);
 
 // Store the most recently selected annotation label.
@@ -103,7 +114,12 @@ export type TextEmbedding = {
     queryText: string;
 };
 
-export type PanelType = 'none' | 'embeddingPlot' | 'evaluationRuns' | 'queryEditor';
+export type PanelType =
+    | 'none'
+    | 'embeddingPlot'
+    | 'evaluationRuns'
+    | 'queryEditor'
+    | 'distribution';
 
 const activePanel = writable<PanelType>('none');
 const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');
@@ -126,6 +142,9 @@ export const useGlobalStorage = () => {
     // Metadata update methods
     const updateMetadataValues = (values: MetadataValues) => {
         metadataValues.set(values);
+    };
+    const updateCategoricalMetadataValues = (values: CategoricalMetadataValues) => {
+        categoricalMetadataValues.set(values);
     };
     const updateMetadataBounds = (bounds: MetadataBounds) => {
         metadataBounds.set(bounds);
@@ -223,8 +242,10 @@ export const useGlobalStorage = () => {
         // Metadata stores
         metadataBounds,
         metadataValues,
+        categoricalMetadataValues,
         metadataInfo,
         updateMetadataValues,
+        updateCategoricalMetadataValues,
         updateMetadataBounds,
         updateMetadataInfo,
         filteredFramesCount,
@@ -374,6 +395,13 @@ export const useGlobalStorage = () => {
 
         isEditingMode,
         setIsEditingMode,
+
+        // Left filter panel collapse state
+        filterPanelCollapsed,
+        toggleFilterPanelCollapsed: () => {
+            filterPanelCollapsed.update((collapsed) => !collapsed);
+        },
+
         activePanel,
         setActivePanel: (panel: PanelType) => activePanel.set(panel),
         showEmbeddingPlot,

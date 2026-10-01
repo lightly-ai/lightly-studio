@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.export import coco_captions
+from lightly_studio.export import coco_captions, image_dataset_export
 from tests.helpers_resolvers import (
     ImageStub,
     create_caption,
@@ -12,7 +12,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_to_coco_caption_dict(
+def test_to_coco_captions_dict(
     db_session: Session,
 ) -> None:
     """Tests conversion to COCO captions format."""
@@ -42,7 +42,9 @@ def test_to_coco_caption_dict(
 
     # Call the function under test
     samples = DatasetQuery(dataset=collection, session=db_session)
-    coco_dict = coco_captions.to_coco_captions_dict(samples=samples)
+    coco_dict = coco_captions.to_coco_captions_dict(
+        samples=samples, sample_to_image=image_dataset_export.image_sample_to_image
+    )
 
     assert coco_dict == {
         "images": [
@@ -56,14 +58,16 @@ def test_to_coco_caption_dict(
     }
 
 
-def test_to_coco_caption_dict__empty(
+def test_to_coco_captions_dict__empty(
     db_session: Session,
 ) -> None:
-    """Tests conversion to COCO captions format."""
+    """Tests conversion to COCO captions format when there are no captions."""
     collection = create_collection(session=db_session)
 
     # Call the function under test
     samples = DatasetQuery(dataset=collection, session=db_session)
-    coco_dict = coco_captions.to_coco_captions_dict(samples=samples)
+    coco_dict = coco_captions.to_coco_captions_dict(
+        samples=samples, sample_to_image=image_dataset_export.image_sample_to_image
+    )
 
     assert coco_dict == {"images": [], "annotations": []}

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import {
         getAllFrames,
@@ -7,8 +8,11 @@
         type VideoFrameView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
+    import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
+    import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
     import { routeHelpers } from '$lib/routes';
-    import { getSimilarityColor } from '$lib/utils';
+    import { isWholeVideoClassificationAnnotation } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { goto } from '$app/navigation';
     import Video from '../Video/Video.svelte';
@@ -38,7 +42,7 @@
     const HOVER_DELAY = 200;
     let isHovering = false;
     // Start it with the initial frame
-    let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
+    let frames = $state<FrameView[]>(untrack(() => (video.frame == null ? [] : [video.frame])));
 
     async function handleMouseEnter() {
         isHovering = true;
@@ -142,6 +146,10 @@
     const caption = $derived(
         showCaption && video.sample.captions?.length ? video.sample.captions[0] : null
     );
+
+    const videoClassificationAnnotations = $derived(
+        (video.sample.annotations ?? []).filter(isWholeVideoClassificationAnnotation)
+    );
 </script>
 
 <div
@@ -173,17 +181,17 @@
             showLabel={false}
         />
     {/if}
-    {#if video.similarity_score !== undefined && video.similarity_score !== null}
-        <div
-            class="absolute bottom-1 right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
-        >
-            <span
-                class="mr-1.5 block h-2 w-2 rounded-full"
-                style="background-color: {getSimilarityColor(video.similarity_score)}"
-            ></span>
-            {video.similarity_score.toFixed(2)}
-        </div>
-    {/if}
+    <SampleClassificationPills
+        sample={{ annotations: videoClassificationAnnotations }}
+        hasBottomOverlay={Boolean(caption)}
+        hasRightOverlay={hasValueBadge(video.order_value, video.similarity_score)}
+        showAllSources
+    />
+    <SampleValueBadge
+        orderValue={video.order_value}
+        similarityScore={video.similarity_score}
+        hasBottomOverlay={Boolean(caption)}
+    />
     {#if caption}
         <div
             class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"

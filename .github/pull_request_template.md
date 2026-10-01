@@ -4,7 +4,7 @@
 
 ## How has it been tested?
 
-(Delete this: Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration.)
+(Delete this: Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration. If there are frontend changes, please include screenshots or video demos.)
 
 ## Did you update [CHANGELOG.md](../CHANGELOG.md)?
 

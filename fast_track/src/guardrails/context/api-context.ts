@@ -1,6 +1,5 @@
-import type { ChangedFile, FileStatus, GuardrailContext, Octokit } from './types';
-
-export type { Octokit };
+import type { Octokit } from '../../shared/octokit';
+import type { ChangedFile, FileStatus, GuardrailContext } from './types';
 
 /** `pulls.listFiles` caps per_page at 100. */
 const PER_PAGE = 100;
@@ -29,7 +28,7 @@ export interface ApiGuardrailContextParams {
  */
 export class ApiGuardrailContext implements GuardrailContext {
     readonly baseRef: string;
-    readonly octokit: Octokit;
+    private readonly octokit: Octokit;
     private readonly owner: string;
     private readonly repo: string;
     private readonly prNumber: number;
@@ -71,7 +70,18 @@ export function toChangedFile(file: ListedFile): ChangedFile {
     };
 }
 
-/** GitHub's API uses 'removed' for deleted files; normalise to the shared FileStatus value. */
+/** Maps GitHub's file status (which uses 'removed' for deletions) onto the shared FileStatus value. */
 function toFileStatus(status: string): FileStatus {
-    return status === 'removed' ? 'deleted' : (status as FileStatus);
+    switch (status) {
+        case 'added':
+            return 'added';
+        case 'removed':
+            return 'deleted';
+        case 'renamed':
+            return 'renamed';
+        case 'copied':
+            return 'copied';
+        default:
+            return 'modified';
+    }
 }

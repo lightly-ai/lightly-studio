@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom';
+import { configure } from '@testing-library/dom';
 import { vi } from 'vitest';
+
+// `waitFor`/`findBy*` default to a 1s timeout, independent of vitest's testTimeout.
+// Heavy tests (e.g. the point-cloud workspace lazy-loading a Three.js module ~1s)
+// blow past 1s under a loaded machine. Widen it so async assertions stay stable.
+configure({ asyncUtilTimeout: 5000 });
 
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -19,6 +25,17 @@ vi.mock('$env/static/public', () => ({
     PUBLIC_SAMPLES_URL: 'http://mock-url.com',
     PUBLIC_LIGHTLY_STUDIO_API_URL: 'http://mock-url.com/api'
 }));
+
+// jsdom does not implement HTMLMediaElement playback methods. Stub them so
+// components that call pause()/play() in effects don't throw "Not implemented".
+Object.defineProperty(window.HTMLMediaElement.prototype, 'pause', {
+    writable: true,
+    value: vi.fn()
+});
+Object.defineProperty(window.HTMLMediaElement.prototype, 'play', {
+    writable: true,
+    value: vi.fn().mockResolvedValue(undefined)
+});
 
 // jsdom has no ResizeObserver. Track instances so tests can trigger the callback manually
 // (jsdom reports scrollWidth/clientWidth as 0, so observers never fire on their own).
@@ -51,18 +68,35 @@ Object.defineProperty(Element.prototype, 'scrollIntoView', {
 
 Object.defineProperty(Element.prototype, 'animate', {
     writable: true,
-    value: vi.fn().mockImplementation(() => {
-        const animation = {
+    // Use a plain function (not vi.fn()) so vi.restoreAllMocks() cannot clear the
+    // implementation. If vi.fn() were used, afterEach(vi.restoreAllMocks) would reset it,
+    // causing microtask-queued onfinish callbacks to call element.animate() and get
+    // undefined back, then crash when Svelte sets animation.onfinish on the result.
+    value: function () {
+        const animation: {
+            finished: Promise<void>;
+            cancel: () => void;
+            finish: () => void;
+            pause: () => void;
+            play: () => void;
+            reverse: () => void;
+            addEventListener: () => void;
+            removeEventListener: () => void;
+            onfinish: ((event: Event) => void) | null;
+            oncancel: ((event: Event) => void) | null;
+            effect: unknown;
+        } = {
             finished: Promise.resolve(),
-            cancel: vi.fn(),
-            finish: vi.fn(),
-            pause: vi.fn(),
-            play: vi.fn(),
-            reverse: vi.fn(),
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-            onfinish: null as ((event: Event) => void) | null,
-            oncancel: null as ((event: Event) => void) | null
+            cancel: () => {},
+            finish: () => {},
+            pause: () => {},
+            play: () => {},
+            reverse: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            onfinish: null,
+            oncancel: null,
+            effect: null
         };
 
         queueMicrotask(() => {
@@ -70,5 +104,5 @@ Object.defineProperty(Element.prototype, 'animate', {
         });
 
         return animation;
-    })
+    }
 });

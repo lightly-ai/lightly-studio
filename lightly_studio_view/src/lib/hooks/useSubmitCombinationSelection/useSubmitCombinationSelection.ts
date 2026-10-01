@@ -4,7 +4,8 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
-import { computeStrategyMetadata } from './computeStrategyMetadata';
+import { usePostHog } from '$lib/hooks';
+import { getMetadataComputations } from './getMetadataComputations';
 import { toApiStrategy } from './strategyApiMapping';
 
 type SelectionError = { error: string };
@@ -14,6 +15,7 @@ interface UseSubmitCombinationSelectionParams {
     setTagSelected: (tagId: string, isSelected: boolean) => void;
     loadTags: () => Promise<void>;
     closeSelectionDialog: () => void;
+    filteredSampleCount: Readable<number>;
 }
 
 interface SubmitParams {
@@ -23,24 +25,7 @@ interface SubmitParams {
     nSamplesToSelect: number;
     selectionResultTagName: string;
     selectionFilter: SamplingRequest['filter'];
-}
-
-async function computeAllStrategiesMetadata(
-    instances: StrategyInstance[],
-    collectionId: string,
-    isVideoCollection: boolean,
-    onProgress: (message: string) => void
-): Promise<boolean> {
-    for (const instance of instances) {
-        const ok = await computeStrategyMetadata({
-            instance,
-            collectionId,
-            isVideoCollection,
-            onProgress
-        });
-        if (!ok) return false;
-    }
-    return true;
+    preselectedTagId?: string;
 }
 
 async function handleSelectionSuccess(
@@ -55,30 +40,52 @@ async function handleSelectionSuccess(
 }
 
 export function useSubmitCombinationSelection(params: UseSubmitCombinationSelectionParams) {
+    const { trackEvent } = usePostHog();
+    const { filteredSampleCount } = params;
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
     async function submit(submitParams: SubmitParams): Promise<boolean> {
         if (get(_isSubmitting)) return false;
+
+        _isSubmitting.set(true);
+
         const {
             collectionId,
             isVideoCollection,
             instances,
             nSamplesToSelect,
             selectionResultTagName,
-            selectionFilter
+            selectionFilter,
+            preselectedTagId
         } = submitParams;
 
-        _isSubmitting.set(true);
+        const filteredCount = get(filteredSampleCount);
+
+        function reportFailure(errorMessage: string): false {
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                filtered_sample_count: filteredCount,
+                success: false,
+                error_message: errorMessage
+            });
+            toast.error(errorMessage);
+            return false;
+        }
+
+        trackEvent('sampling_submitted', {
+            collection_id: collectionId,
+            strategies: instances.map((i) => i.type),
+            n_samples: nSamplesToSelect,
+            filtered_sample_count: filteredCount
+        });
 
         try {
-            const metadataOk = await computeAllStrategiesMetadata(
-                instances,
-                collectionId,
-                isVideoCollection,
-                (message) => _loadingMessage.set(message)
-            );
-            if (!metadataOk) return false;
+            if (isVideoCollection && instances.some((instance) => instance.type === 'similarity')) {
+                return reportFailure('Similarity is only available for image collections.');
+            }
 
             _loadingMessage.set('Creating selection...');
             const response = await createSampling({
@@ -87,22 +94,44 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                     n_samples_to_select: nSamplesToSelect,
                     sampling_result_tag_name: selectionResultTagName,
                     strategies: instances.map(toApiStrategy),
-                    filter: selectionFilter ?? undefined
+                    metadata_computations: getMetadataComputations(instances),
+                    filter: selectionFilter ?? undefined,
+                    preselected_tag_id: preselectedTagId
                 }
             });
 
             if (response.error) {
-                toast.error(
-                    (response.error as SelectionError).error ?? 'Failed to create selection'
-                );
-                return false;
+                const errorMessage =
+                    (response.error as SelectionError).error ?? 'Failed to create selection';
+                return reportFailure(errorMessage);
             }
 
-            await handleSelectionSuccess(selectionResultTagName, params);
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                filtered_sample_count: filteredCount,
+                success: true,
+                error_message: null
+            });
+            try {
+                await handleSelectionSuccess(selectionResultTagName, params);
+            } catch (uiError) {
+                console.error('Unexpected error in handleSelectionSuccess:', uiError);
+            }
             return true;
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            trackEvent('sampling_triggered', {
+                collection_id: collectionId,
+                strategies: instances.map((i) => i.type),
+                n_samples: nSamplesToSelect,
+                filtered_sample_count: filteredCount,
+                success: false,
+                error_message: errorMessage
+            });
             console.error('Unexpected error in useSubmitCombinationSelection.submit:', error);
-            toast.error('Failed to create selection: ' + (error as Error).message);
+            toast.error('Failed to create selection: ' + errorMessage);
             return false;
         } finally {
             _isSubmitting.set(false);

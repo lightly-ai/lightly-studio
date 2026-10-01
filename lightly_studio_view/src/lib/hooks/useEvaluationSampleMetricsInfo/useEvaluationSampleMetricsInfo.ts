@@ -3,7 +3,7 @@ import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local
 import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
 
 interface UseEvaluationSampleMetricsInfoParams {
-    datasetId: string;
+    datasetId: () => string;
 }
 
 export const useEvaluationSampleMetricsInfo = ({
@@ -14,7 +14,7 @@ export const useEvaluationSampleMetricsInfo = ({
 > => {
     return createQuery(() =>
         getEvaluationSampleMetricsInfoOptions({
-            path: { dataset_id: datasetId }
+            path: { dataset_id: datasetId() }
         })
     );
 };

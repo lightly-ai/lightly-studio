@@ -12,9 +12,13 @@
     import { page } from '$app/state';
     import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
     import FrameDetailsNavigation from '$lib/components/FrameDetailsNavigation/FrameDetailsNavigation.svelte';
+    import { useTrackSampleInspected } from '$lib/hooks';
+    import { isVideoFramesRoute } from '$lib/routes';
 
     const { data }: { data: PageData } = $props();
     const { collection_id, sampleId } = $derived(data);
+
+    useTrackSampleInspected(() => collection_id, 'video_frame', isVideoFramesRoute);
     const { refetch, videoFrame } = useFrame(() => sampleId);
 
     const sample = $derived(videoFrame.data);

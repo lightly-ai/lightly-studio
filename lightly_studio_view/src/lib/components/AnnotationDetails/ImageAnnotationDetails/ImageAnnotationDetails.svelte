@@ -36,6 +36,7 @@
     {updateAnnotation}
     {refetch}
     collectionId={collection.collection_id!}
+    collectionDatasetId={collection.dataset_id}
     parentSample={{
         width: image.width,
         height: image.height,

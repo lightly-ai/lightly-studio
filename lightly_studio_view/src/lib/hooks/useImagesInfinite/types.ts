@@ -4,10 +4,10 @@ import type {
     QueryExpr,
     ReadImagesRequest,
     SampleFilter,
-    SortFieldExpr
+    ImageSortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
-import type { MetadataValues } from '$lib/services/types';
+import type { CategoricalMetadataValues, MetadataValues } from '$lib/services/types';
 
 export interface ClassifierSamples {
     positiveSampleIds: string[];
@@ -25,6 +25,7 @@ export type ImagesInfiniteParams = {
     sort_by?: ReadImagesRequest['sort_by'];
     text_embedding?: ReadImagesRequest['text_embedding'];
     metadata_values?: MetadataValues;
+    categorical_metadata_values?: CategoricalMetadataValues;
 } & (
     | { mode: 'normal'; filters?: NormalModeFilters }
     | { mode: 'classifier'; classifierSamples?: ClassifierSamples }
@@ -36,11 +37,13 @@ export type SamplesQueryKey = readonly [
     ImagesInfiniteParams['mode'],
     NormalModeFilters | ClassifierSamples | undefined,
     {
-        metadata_values?: MetadataValues;
+        metadata_filters?: SampleFilter['metadata_filters'];
         text_embedding?: ReadImagesRequest['text_embedding'];
         query_expr?: QueryExpr;
     },
     ReadImagesRequest['sort_by']
 ];
 
-export type SortExpr = SortFieldExpr | ({ source: 'evaluation_metric' } & EvaluationMetricSortExpr);
+export type ImageSortExpr =
+    | ImageSortFieldExpr
+    | ({ source: 'evaluation_metric' } & EvaluationMetricSortExpr);

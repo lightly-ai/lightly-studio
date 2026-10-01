@@ -7,6 +7,9 @@ from lightly_studio.models.sample import (  # noqa: I001
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.annotation.cuboid_3d import (
+    Cuboid3DAnnotationTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,  # noqa: F401, required for SQLModel to work properly
 )
@@ -19,20 +22,48 @@ from lightly_studio.models.collection import (
 from lightly_studio.models.dataset import (
     DatasetTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.collection_embedding_model import (
+    CollectionEmbeddingModelTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.group_component_definition import (
+    GroupComponentDefinitionTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.image import (
     ImageTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.mcap import (
+    McapTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.mcap_group_sequence import (
+    McapGroupSequenceTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.metadata import (
     SampleMetadataTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.recording import (
+    RecordingTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.sensor_calibration import (
+    SensorCalibrationTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.sequence import (
+    SampleSequenceLinkTable,  # noqa: F401, required for SQLModel to work properly
+    SequenceTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.settings import (
     SettingTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.static_transform import (
+    StaticTransformTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.tag import (
     TagTable,  # noqa: F401, required for SQLModel to work properly
@@ -48,4 +79,10 @@ from lightly_studio.models.evaluation_annotation_metric import (
 )
 from lightly_studio.models.evaluation_sample_metric import (
     EvaluationSampleMetricTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.temporal_span import (
+    TemporalSpanTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.export_job import (
+    ExportJobTable,  # noqa: F401, required for SQLModel to work properly
 )

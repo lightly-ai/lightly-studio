@@ -312,7 +312,7 @@ operator_registry.register(operator=DemoVideoOperator())
 operator_registry.register(operator=DemoAnnotationOperator())
 operator_registry.register(operator=DemoGroupOperator())
 
-dataset_path = env.path("EXAMPLES_MIDV_PATH", "/path/to/midv/dataset")
+dataset_path = env.path("EXAMPLES_MIDV_PATH")
 
 dataset = ls.GroupDataset.create(
     components=[

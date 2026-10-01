@@ -1,4 +1,11 @@
-import { writable, type Readable } from 'svelte/store';
+import { writable, get, type Readable } from 'svelte/store';
+import { usePostHog } from '$lib/hooks';
+import type { PlotColorByType } from '../PlotColorByPopover/usePlotColorByType/usePlotColorByType';
+
+interface UseCategoryVisibilityParams {
+    getCollectionId: () => string;
+    getColorByType: () => PlotColorByType | null;
+}
 
 interface UseCategoryVisibilityReturn {
     hiddenCategories: Readable<Set<number>>;
@@ -10,7 +17,11 @@ interface UseCategoryVisibilityReturn {
 /**
  * Tracks hidden plot categories and exposes focused visibility helpers for the PlotPanel.
  */
-export const useCategoryVisibility = (): UseCategoryVisibilityReturn => {
+export const useCategoryVisibility = ({
+    getCollectionId,
+    getColorByType
+}: UseCategoryVisibilityParams): UseCategoryVisibilityReturn => {
+    const { trackEvent } = usePostHog();
     const hiddenCategories = writable(new Set<number>());
 
     const getToggledHiddenCategories = (
@@ -53,12 +64,22 @@ export const useCategoryVisibility = (): UseCategoryVisibilityReturn => {
     };
 
     const toggleCategoryVisibility = (category: number) => {
+        const action = get(hiddenCategories).has(category) ? 'show' : 'hide';
+        trackEvent('legend_category_toggled', {
+            collection_id: getCollectionId(),
+            color_by_type: getColorByType(),
+            action
+        });
         hiddenCategories.update((currentHiddenCategories) =>
             getToggledHiddenCategories(currentHiddenCategories, category)
         );
     };
 
     const focusCategoryVisibility = (categories: number[], category: number) => {
+        trackEvent('legend_category_isolated', {
+            collection_id: getCollectionId(),
+            color_by_type: getColorByType()
+        });
         hiddenCategories.update((currentHiddenCategories) =>
             getFocusedHiddenCategories(currentHiddenCategories, categories, category)
         );

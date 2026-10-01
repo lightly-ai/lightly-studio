@@ -4,7 +4,10 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { usePostHog } from '$lib/hooks';
     import { resolveEffectiveColorBySource } from '$lib/utils';
+    import { get } from 'svelte/store';
+    import { handleAnnotationSourceFilterChange } from './handleAnnotationSourceFilterChange';
 
     interface Props {
         collectionId: string;
@@ -17,32 +20,39 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
 
-    const { setSelectedCollectionIds, selectedCollectionIds, seedSelectionIfNeeded } =
+    const { setSelectedCollectionIds, selectedCollectionIds, multipleSourcesVisible } =
         useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
+    const { trackEvent } = usePostHog();
 
+    // Checkboxes are only worth showing when there is a choice to make. The selection itself is
+    // filled by useSeedAnnotationSourceFilter in the collection layout, which runs for every
+    // collection including those with a single source.
     const isEnabled = $derived(items.length > 1);
 
-    // Seed all sources the first time this collection is shown; remounts (e.g. returning
-    // from image details) keep the user's existing selection. See seedSelectionIfNeeded.
-    $effect(() => {
-        if (isEnabled) {
-            seedSelectionIfNeeded(collectionId, items);
-        }
-    });
+    const handleChangeSelectedItems = (newIds: string[]) => {
+        handleAnnotationSourceFilterChange({
+            newIds,
+            prevIds: get(selectedCollectionIds),
+            items,
+            collectionId,
+            setSelectedCollectionIds,
+            trackEvent
+        });
+    };
 </script>
 
 {#if isEnabled}
     <Segment title="Annotation Sources">
         <SideMenu
             showColorMarker={resolveEffectiveColorBySource({
-                multipleSourcesVisible: $selectedCollectionIds.length > 1,
+                multipleSourcesVisible: $multipleSourcesVisible,
                 enforceColoringByClass: $enforceColoringByClassStore
             })}
             enableColorPicker
             {items}
             selectedItemsIds={$selectedCollectionIds}
-            onChangeSelectedItems={setSelectedCollectionIds}
+            onChangeSelectedItems={handleChangeSelectedItems}
         />
     </Segment>
 {/if}

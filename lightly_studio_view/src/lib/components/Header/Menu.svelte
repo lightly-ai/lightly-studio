@@ -1,16 +1,22 @@
 <script lang="ts">
+    import { useDatasetSplitDialog } from '$lib/components/DatasetSplit/useDatasetSplitDialog';
+    import { page } from '$app/state';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { get } from 'svelte/store';
+    import { useGlobalStorage } from '$lib/hooks';
     import {
+        Split as SplitIcon,
         Puzzle as PuzzleIcon,
         Download as DownloadIcon,
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
-        WandSparkles as WandSparklesIcon
+        WandSparkles as WandSparklesIcon,
+        Menu as MenuIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -31,13 +37,19 @@
         user?: LightlyEnterpriseSession['user'];
     }>();
 
+    const { openDatasetSplitDialog } = useDatasetSplitDialog();
     const { openClassifiersMenu } = useClassifiersMenu();
     const { openSamplingDialog } = useSamplingDialog();
+    const { filteredSampleCount } = useGlobalStorage();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
 
     type MenuAction = SelectItem & { onSelect: () => void };
+
+    const addAction = (items: MenuAction[], enabled: boolean, action: MenuAction) => {
+        if (enabled) items.push(action);
+    };
 
     const hasClassifier = $derived(isImages && hasEmbeddings);
     const hasSampling = $derived(isImages || isVideos);
@@ -52,55 +64,61 @@
     const menuActions = $derived.by<MenuAction[]>(() => {
         const items: MenuAction[] = [];
 
-        if (hasClassifier && isEditor) {
-            items.push({
-                value: 'menu-classifiers',
-                label: 'Few Shot Classifier',
-                icon: BrainCircuitIcon,
-                testId: 'menu-classifiers',
-                onSelect: openClassifiersMenu
-            });
-        }
+        addAction(items, hasClassifier && isEditor, {
+            value: 'menu-classifiers',
+            label: 'Few Shot Classifier',
+            icon: BrainCircuitIcon,
+            testId: 'menu-classifiers',
+            onSelect: openClassifiersMenu
+        });
 
-        if (hasSampling && isEditor) {
-            items.push({
-                value: 'menu-sampling',
-                label: 'Sampling',
-                icon: WandSparklesIcon,
-                testId: 'menu-sampling',
-                onSelect: openSamplingDialog
-            });
-        }
+        addAction(items, hasSampling && isEditor, {
+            value: 'menu-sampling',
+            label: 'Sampling',
+            icon: WandSparklesIcon,
+            testId: 'menu-sampling',
+            onSelect: () =>
+                openSamplingDialog({
+                    collection_id: page.params.collection_id!,
+                    filtered_sample_count: get(filteredSampleCount)
+                })
+        });
 
-        if (isEditor) {
-            items.push({
-                value: 'menu-operators',
-                label: 'Plugins',
-                icon: PuzzleIcon,
-                testId: 'menu-operators',
-                onSelect: openOperatorsDialog
-            });
-        }
+        addAction(
+            items,
+            hasSampling && isEditor && ['image', 'video'].includes(collection.sample_type),
+            {
+                value: 'menu-dataset-split',
+                label: 'Split dataset',
+                icon: SplitIcon,
+                testId: 'menu-dataset-split',
+                onSelect: () => openDatasetSplitDialog(collection.collection_id)
+            }
+        );
 
-        if (hasExport) {
-            items.push({
-                value: 'menu-export',
-                label: 'Export',
-                icon: DownloadIcon,
-                testId: 'menu-export',
-                onSelect: openExportDialog
-            });
-        }
+        addAction(items, isEditor, {
+            value: 'menu-operators',
+            label: 'Plugins',
+            icon: PuzzleIcon,
+            testId: 'menu-operators',
+            onSelect: openOperatorsDialog
+        });
 
-        if (isEditor) {
-            items.push({
-                value: 'menu-settings',
-                label: 'Settings',
-                icon: SettingsIcon,
-                testId: 'menu-settings',
-                onSelect: openSettingsDialog
-            });
-        }
+        addAction(items, hasExport, {
+            value: 'menu-export',
+            label: 'Export',
+            icon: DownloadIcon,
+            testId: 'menu-export',
+            onSelect: () => openExportDialog({ collectionId: collection.collection_id })
+        });
+
+        addAction(items, isEditor, {
+            value: 'menu-settings',
+            label: 'Settings',
+            icon: SettingsIcon,
+            testId: 'menu-settings',
+            onSelect: openSettingsDialog
+        });
 
         return items;
     });
@@ -121,9 +139,11 @@
         items={menuActions}
         hideSelectionMarker
         itemsAsLinks
+        icon={MenuIcon}
+        selectProps={{ 'aria-label': 'Menu' }}
         onValueChange={handleValueChange}
         variant="ghost"
-        class="nav-button w-[100px]"
+        class="nav-button menu-trigger w-[100px]"
         testId="menu-trigger"
     />
 {/if}

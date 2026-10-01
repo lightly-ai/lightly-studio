@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
+
     type SteppingNavigationProps = {
         hasPrevious: boolean;
         hasNext: boolean;
@@ -10,7 +12,13 @@
         $props();
 
     const handleKeyDownEvent = (event: KeyboardEvent) => {
-        if (isDrawing) return;
+        if (
+            event.defaultPrevented ||
+            isDrawing ||
+            isTextInputTarget(event.target) ||
+            isOverlayTarget(event.target)
+        )
+            return;
         switch (event.key) {
             case 'ArrowRight':
                 onNext();

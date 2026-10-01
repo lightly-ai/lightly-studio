@@ -135,7 +135,7 @@ class TestDataset:
 
         log_text = caplog.text
         assert "added=0, already_present=1" in log_text
-        assert "Example already_present paths:" in log_text
+        assert "Examples 'already_present':" in log_text
         assert "/fake/path/images/image.jpg" in log_text
 
     def test_from_labelformat__annotations_synced_images(

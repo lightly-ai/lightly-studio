@@ -30,6 +30,29 @@ describe('useFeatureFlags', () => {
         expect(spy).toHaveBeenCalled();
     });
 
+    it('should resolve ready once the flags have landed', async () => {
+        const mockFeatures = ['feature1'];
+        vi.spyOn(sdkModule, 'getFeatures').mockResolvedValueOnce({
+            data: mockFeatures,
+            request: new Request('http://localhost'),
+            response: new Response()
+        });
+
+        const { featureFlags, ready } = useFeatureFlags();
+        await ready;
+
+        expect(get(featureFlags)).toEqual(mockFeatures);
+    });
+
+    it('should resolve ready when the API call fails', async () => {
+        vi.spyOn(sdkModule, 'getFeatures').mockRejectedValueOnce(new Error('API Error'));
+
+        const { featureFlags, ready } = useFeatureFlags();
+        await ready;
+
+        expect(get(featureFlags)).toEqual([]);
+    });
+
     it('should handle API call failure gracefully', async () => {
         const _error: Error = new Error('API Error');
         const spy = vi.spyOn(sdkModule, 'getFeatures').mockRejectedValueOnce(_error);

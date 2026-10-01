@@ -1,16 +1,25 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import Button from '$lib/components/ui/button/button.svelte';
+    import { Button } from '$lib/components';
     import { Input } from '$lib/components/ui/input';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { ArrowLeft, ArrowRight } from '@lucide/svelte';
+    import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
+        type DataPoint,
+        type OverlayProxy,
         type Point,
         type Rectangle,
         type ViewportState
     } from 'embedding-atlas/svelte';
+    import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
+    import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
+    import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
+    import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -40,12 +49,14 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import { writable } from 'svelte/store';
+    import { writable, get } from 'svelte/store';
+    import { usePostHog } from '$lib/hooks';
 
     let { collectionId }: { collectionId: string } = $props();
+    const { trackEvent } = usePostHog();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
-    const rangeSelection = getRangeSelection(collectionId);
+    const rangeSelection = $derived(getRangeSelection(collectionId));
     const setRangeSelection = (selection: Point[] | null) => {
         setRangeSelectionForCollection(collectionId, selection);
     };
@@ -75,8 +86,9 @@
     );
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
-    const { annotationFilter: selectedAnnotationsFilter } =
-        useSelectedAnnotationsFilter(collectionId);
+    const { annotationFilter: selectedAnnotationsFilter } = $derived.by(() =>
+        useSelectedAnnotationsFilter(collectionId)
+    );
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
     const filter = $derived.by(() => {
@@ -104,11 +116,11 @@
         };
     });
 
-    const { selectedColorByType } = usePlotColorByType(collectionId);
+    const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
     // Annotation samples carry annotation-kind tags. Captured once at mount, like
     // collectionId above.
     const { tags } = useTags({
-        collection_id: collectionId,
+        collection_id: untrack(() => collectionId),
         kind: isAnnotationsRoute(page.route?.id ?? null) ? ['annotation'] : ['sample']
     });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
@@ -239,7 +251,10 @@
         toggleCategoryVisibility,
         focusCategoryVisibility,
         resetCategoryVisibility
-    } = useCategoryVisibility();
+    } = useCategoryVisibility({
+        getCollectionId: () => collectionId,
+        getColorByType: () => get(selectedColorByType)
+    });
 
     // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
     // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
@@ -348,8 +363,16 @@
                 }
             } else if (!isEqual($selectedSampleIds, currentSampleIds)) {
                 videoFilters.updateSampleIds($selectedSampleIds);
+                if (pendingSelectionType) {
+                    trackEvent('embedding_selection_made', {
+                        collection_id: collectionId,
+                        selection_type: pendingSelectionType,
+                        selected_count: selectedCount
+                    });
+                }
             }
             setRangeSelection(null);
+            pendingSelectionType = null;
             return;
         }
 
@@ -357,8 +380,16 @@
             clearRegion();
         } else {
             commitRegion(polygon, selectedCount);
+            if (pendingSelectionType) {
+                trackEvent('embedding_selection_made', {
+                    collection_id: collectionId,
+                    selection_type: pendingSelectionType,
+                    selected_count: selectedCount
+                });
+            }
         }
         setRangeSelection(null);
+        pendingSelectionType = null;
     };
 
     let plotContainer: HTMLDivElement | null = $state(null);
@@ -422,11 +453,17 @@
 
     const isReady = true;
 
+    // Lives here, not in PlotToolPill: a new filter (a tag, a region) starts a fresh embeddings
+    // query, and the plot unmounts while it loads. State inside the pill would not survive that.
+    let activeTool = $state<ToolMode>('pan');
+
     type RangeSelection = Rectangle | Point[] | null;
 
     const isRectangleSelection = (selection: RangeSelection): selection is Rectangle => {
         return selection !== null && !Array.isArray(selection);
     };
+
+    let pendingSelectionType = $state<'lasso' | 'rectangle' | null>(null);
 
     const getPolygonFromRectangle = (rect: Rectangle) => {
         return [
@@ -472,8 +509,17 @@
         // we clear selection
         if (!selection && $rangeSelection) {
             clearSelection();
+            pendingSelectionType = null;
             return;
         }
+        const nextType = isRectangleSelection(selection) ? 'rectangle' : 'lasso';
+        if (pendingSelectionType === null) {
+            trackEvent('embedding_selection_started', {
+                collection_id: collectionId,
+                selection_type: nextType
+            });
+        }
+        pendingSelectionType = nextType;
         const normalizedSelection = isRectangleSelection(selection)
             ? getPolygonFromRectangle(selection)
             : selection;
@@ -529,6 +575,45 @@
             top: height / 2 - (ref.y - vp.y) * aY * (height / 2)
         }));
     });
+
+    // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
+    // The array-based EmbeddingView only emits hover tooltips when querySelection
+    // is provided; ours returns the nearest visible point with its sample ID.
+    let tooltip: DataPoint | null = $state(null);
+    const onTooltip = (value: DataPoint | null) => {
+        tooltip = value;
+    };
+    // The card is rendered by this component (not the library's tooltip container)
+    // so it always sits directly above the hovered point; the overlay proxy
+    // provides the data → pixel conversion.
+    let overlayProxy: OverlayProxy | null = $state(null);
+    const OverlayProxyReporter = createOverlayProxyReporter((proxy) => {
+        overlayProxy = proxy;
+    });
+    // Tailwind's h-32/w-32 size the card's border box to 128px.
+    const PREVIEW_CARD_SIZE = 128;
+    const hoverPreview = $derived.by(() =>
+        getHoverPreviewState({
+            tooltip,
+            rangeSelectionActive: $rangeSelection !== null,
+            proxy: overlayProxy,
+            cardSize: PREVIEW_CARD_SIZE
+        })
+    );
+    const querySelection = $derived.by(() =>
+        createQuerySelection({
+            x: $arrowData?.x as Float32Array | undefined,
+            y: $arrowData?.y as Float32Array | undefined,
+            sampleIds: $arrowData?.sample_id as string[] | undefined,
+            category: $plotData?.category as Uint8Array | undefined
+        })
+    );
+    const resolveThumbnail = $derived.by(() =>
+        createThumbnailResolver({
+            route: isAnnotations ? 'annotations' : isVideos ? 'videos' : 'images',
+            collectionId
+        })
+    );
 
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
@@ -596,10 +681,12 @@
         </div>
         <Button
             variant="ghost"
-            size="icon"
-            onclick={handleClose}
-            class="h-8 w-8"
-            data-testid="plot-close-button"
+            buttonProps={{
+                size: 'icon',
+                onclick: handleClose,
+                class: 'h-8 w-8',
+                'data-testid': 'plot-close-button'
+            }}
         >
             ✕
         </Button>
@@ -627,7 +714,11 @@
                             {categoryCount}
                             data={$plotData}
                             {categoryColors}
-                            tooltip={null}
+                            tooltip={$rangeSelection ? null : tooltip}
+                            {onTooltip}
+                            {querySelection}
+                            customTooltip={NoopTooltip}
+                            customOverlay={OverlayProxyReporter}
                             theme={embeddingTheme}
                             {onRangeSelection}
                             {onViewportState}
@@ -636,20 +727,38 @@
                         />
                     </div>
 
-                    <PlotPanelLegend
-                        {categoryColors}
-                        {includedLabel}
-                        {legendEntries}
-                        excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
-                        includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
-                        onToggleCategory={toggleCategoryVisibility}
-                        onDoubleClickCategory={(category) => {
-                            focusCategoryVisibility(
-                                legendEntries.map((entry) => entry.cat),
-                                category
-                            );
-                        }}
-                    />
+                    {#if hoverPreview}
+                        <div
+                            class="pointer-events-none absolute z-10 -translate-x-1/2"
+                            style="left: {hoverPreview.left}px; top: {hoverPreview.top}px"
+                        >
+                            <PlotHoverPreview sampleId={hoverPreview.sampleId} {resolveThumbnail} />
+                        </div>
+                    {/if}
+
+                    <!-- Legend and pill share the bottom edge, so they sit in one row rather
+                         than in two absolute corners: the legend then shrinks on a narrow plot
+                         instead of running under the pill. -->
+                    <div
+                        class="pointer-events-none absolute inset-2 z-10 flex items-end justify-between gap-2"
+                    >
+                        <PlotPanelLegend
+                            {categoryColors}
+                            {includedLabel}
+                            {legendEntries}
+                            excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
+                            includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
+                            onToggleCategory={toggleCategoryVisibility}
+                            onDoubleClickCategory={(category) => {
+                                focusCategoryVisibility(
+                                    legendEntries.map((entry) => entry.cat),
+                                    category
+                                );
+                            }}
+                        />
+
+                        <PlotToolPill {plotContainer} bind:activeTool />
+                    </div>
                 {/if}
                 {#if projectedReferences.length > 0}
                     <!-- LIG-9502 prototype: reference markers. The outer div is a zero-size anchor
@@ -751,7 +860,7 @@
     </div>
     {#if isReady}
         <div
-            class="mt-1 flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto text-sm text-muted-foreground"
+            class="mt-1 flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground"
             data-testid="plot-panel-controls"
         >
             <PlotColorByPopover
@@ -765,11 +874,13 @@
             />
             <Button
                 variant="outline"
-                size="sm"
-                onclick={reset}
-                data-testid="plot-reset-zoom-button"
-                class="px-2.5"
-                title="Reset zoom"
+                buttonProps={{
+                    size: 'sm',
+                    onclick: reset,
+                    'data-testid': 'plot-reset-zoom-button',
+                    class: 'px-2.5',
+                    title: 'Reset zoom'
+                }}
             >
                 Reset zoom
             </Button>
@@ -780,24 +891,18 @@
 <svelte:window onmouseup={handleMouseUp} onkeydown={onWindowKeyDown} />
 
 <style>
-    :global(.embedding-view button) {
-        width: 20px !important;
-        height: 20px !important;
-    }
-    :global(.embedding-view button svg) {
-        width: 18px !important;
-        height: 18px !important;
-    }
+    /*
+        embedding-atlas renders its own bottom strip: a WebGPU/WebGL status message, the
+        rectangle + lasso tool buttons, a scale bar, and a point count. This hides all of
+        it: the selection tools now live in the glass tool pill and the rest is noise.
+        Keep the strip in the DOM (so `selectTool` can .click() the hidden
+        tool buttons and drive the library's sticky selection mode), but make it invisible
+        and non-interactive. Use opacity/pointer-events, NOT display:none or
+        visibility:hidden: the buttons stay laid out and clickable, and Playwright still
+        reports them visible (LIG-7691 e2e asserts the tool buttons toBeVisible).
+    */
     :global(.embedding-view div[style*='bottom: 0px'][style*='position: absolute']) {
-        font-size: 15px !important;
-        height: 25px !important;
-        line-height: 25px !important;
-    }
-    /* Hide the library's status message slot (e.g. "WebGPU is unavailable. Falling back
-       to WebGL.") while keeping the selection tools, scale, and point count visible. */
-    :global(
-        .embedding-view div[style*='bottom: 0px'][style*='position: absolute'] > div:first-child
-    ) {
-        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 </style>

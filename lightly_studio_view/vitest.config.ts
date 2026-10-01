@@ -14,6 +14,11 @@ export default defineConfig({
         globals: true,
         environment: 'jsdom',
         setupFiles: ['src/setupTests.ts'],
+        // The point-cloud workspace test dynamically imports a Three.js-heavy module
+        // (~1s alone); under a loaded machine the default 5s timeout starves it and
+        // drags lighter userEvent tests past the limit too. Widen it to stay stable.
+        testTimeout: 15000,
+        hookTimeout: 15000,
         coverage: {
             provider: 'v8',
             ignoreEmptyLines: true

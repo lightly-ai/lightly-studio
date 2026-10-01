@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { type MenuItemType } from '../types';
     import type { HTMLAttributes } from 'svelte/elements';
@@ -27,7 +28,7 @@
         enableColorPicker
     }: SideMenuProps = $props();
 
-    let internalSelectedItemsIds = $state(initialSelectedItemsIds ?? []);
+    let internalSelectedItemsIds = $state(untrack(() => initialSelectedItemsIds ?? []));
     const selected = $derived(selectedItemsIds ?? internalSelectedItemsIds);
 
     const handleCheckedChange = (id: string) => {

@@ -1,7 +1,6 @@
 <script lang="ts">
     import { type FrameView } from '$lib/api/lightly_studio_local';
-    import { Segment } from '$lib/components';
-    import { Button } from '$lib/components/ui';
+    import { Button, Segment } from '$lib/components';
 
     let {
         frame,
@@ -25,7 +24,10 @@
         </div>
     </div>
 
-    <Button variant="secondary" class="mt-4 w-full" href={frameURL} data-testid="view-frame-button">
+    <Button
+        variant="secondary"
+        buttonProps={{ class: 'mt-4 w-full', href: frameURL, 'data-testid': 'view-frame-button' }}
+    >
         View frame
     </Button>
 </Segment>

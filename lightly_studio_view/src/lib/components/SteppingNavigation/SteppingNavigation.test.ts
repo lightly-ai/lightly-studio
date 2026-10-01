@@ -61,4 +61,53 @@ describe('SampleDetailsNavigation', () => {
 
         expect(onPrevious).toHaveBeenCalled();
     });
+
+    it('does not navigate from a handled keyboard event', () => {
+        const onNext = vi.fn();
+        render(SampleDetailsNavigation, {
+            hasPrevious: true,
+            hasNext: true,
+            onNext,
+            onPrevious: vi.fn()
+        });
+        const event = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+        event.preventDefault();
+
+        window.dispatchEvent(event);
+
+        expect(onNext).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate from text inputs or overlays', async () => {
+        const onNext = vi.fn();
+        const onPrevious = vi.fn();
+        render(SampleDetailsNavigation, {
+            hasPrevious: true,
+            hasNext: true,
+            onNext,
+            onPrevious
+        });
+        const fixture = document.createElement('div');
+        fixture.innerHTML = `<input><textarea></textarea><div contenteditable="true"></div>
+            <div role="dialog"><button></button><div><button></button></div></div>
+            <div role="menu"><button></button><div><button></button></div></div>
+            <div role="listbox"><button></button><div><button></button></div></div>
+            <div data-popover-content><button></button></div>`;
+        document.body.append(fixture);
+        (fixture.querySelector('[contenteditable]') as HTMLElement).contentEditable = 'true';
+
+        try {
+            for (const target of fixture.querySelectorAll(
+                'input, textarea, [contenteditable], [role="dialog"] button, [role="menu"] button, [role="listbox"] button, [data-popover-content] button'
+            )) {
+                await fireEvent.keyDown(target, { key: 'ArrowLeft' });
+                await fireEvent.keyDown(target, { key: 'ArrowRight' });
+            }
+        } finally {
+            fixture.remove();
+        }
+
+        expect(onPrevious).not.toHaveBeenCalled();
+        expect(onNext).not.toHaveBeenCalled();
+    });
 });

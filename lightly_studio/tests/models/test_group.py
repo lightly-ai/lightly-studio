@@ -4,6 +4,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import ComponentCollectionView, SampleType
 from lightly_studio.models.group import GroupComponentView
+from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.models.image import ImageView
 from lightly_studio.models.video import VideoView
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
@@ -13,9 +14,13 @@ from tests.resolvers.video.helpers import VideoStub, create_video
 def test_component_collection_view_from_collection_table(db_session: Session) -> None:
     """Test ComponentCollectionView.from_collection_table() factory method."""
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    collection.group_component_name = "front_camera"
-    collection.group_component_index = 0
-    db_session.add(collection)
+    db_session.add(
+        GroupComponentDefinitionTable(
+            collection_id=collection.collection_id,
+            group_component_name="front_camera",
+            group_component_index=0,
+        )
+    )
     db_session.commit()
 
     result = ComponentCollectionView.from_collection_table(collection=collection)
@@ -31,10 +36,6 @@ def test_component_collection_view_from_collection_table(db_session: Session) ->
 def test_group_component_view_from_image_table(db_session: Session) -> None:
     """Test GroupComponentView.from_image_table() factory method."""
     collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
-    collection.group_component_name = "front_camera"
-    collection.group_component_index = 0
-    db_session.add(collection)
-    db_session.commit()
 
     image = create_images(
         db_session=db_session,
@@ -68,10 +69,6 @@ def test_group_component_view_from_image_table(db_session: Session) -> None:
 def test_group_component_view_from_video_table(db_session: Session) -> None:
     """Test GroupComponentView.from_video_table() factory method."""
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    collection.group_component_name = "rear_camera"
-    collection.group_component_index = 1
-    db_session.add(collection)
-    db_session.commit()
 
     video = create_video(
         session=db_session,

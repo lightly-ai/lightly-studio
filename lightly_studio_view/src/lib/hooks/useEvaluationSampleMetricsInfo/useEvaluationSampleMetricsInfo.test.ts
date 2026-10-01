@@ -23,28 +23,45 @@ describe('useEvaluationSampleMetricsInfo', () => {
     });
 
     it('creates the query with the correct query key for the given dataset id', () => {
-        const datasetId = 'dataset-1';
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
 
-        useEvaluationSampleMetricsInfo({ datasetId });
+        useEvaluationSampleMetricsInfo({ datasetId: () => 'dataset-1' });
 
         const optionsArg = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
         const expectedOptions = getEvaluationSampleMetricsInfoOptions({
-            path: { dataset_id: datasetId }
+            path: { dataset_id: 'dataset-1' }
         });
 
         expect(optionsArg.queryKey).toEqual(expectedOptions.queryKey);
     });
 
+    it('reacts to datasetId getter changes — query key switches to the new id', () => {
+        const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
+
+        let datasetId = 'ds1';
+        useEvaluationSampleMetricsInfo({ datasetId: () => datasetId });
+
+        const optionsFn = createQuerySpy.mock.calls[0][0] as () => CreateQueryOptions;
+
+        expect(optionsFn().queryKey).toEqual(
+            getEvaluationSampleMetricsInfoOptions({ path: { dataset_id: 'ds1' } }).queryKey
+        );
+
+        datasetId = 'ds2';
+
+        expect(optionsFn().queryKey).toEqual(
+            getEvaluationSampleMetricsInfoOptions({ path: { dataset_id: 'ds2' } }).queryKey
+        );
+    });
+
     it('calls the SDK function with the correct dataset id', async () => {
-        const datasetId = 'dataset-2';
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
 
         vi.mocked(getEvaluationSampleMetricsInfo).mockResolvedValue(
             [] as unknown as Awaited<ReturnType<typeof getEvaluationSampleMetricsInfo>>
         );
 
-        useEvaluationSampleMetricsInfo({ datasetId });
+        useEvaluationSampleMetricsInfo({ datasetId: () => 'dataset-2' });
 
         const optionsArg = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
 
@@ -60,7 +77,7 @@ describe('useEvaluationSampleMetricsInfo', () => {
 
         expect(getEvaluationSampleMetricsInfo).toHaveBeenCalledWith(
             expect.objectContaining({
-                path: { dataset_id: datasetId },
+                path: { dataset_id: 'dataset-2' },
                 throwOnError: true,
                 signal: expect.any(AbortSignal)
             })
@@ -68,7 +85,7 @@ describe('useEvaluationSampleMetricsInfo', () => {
     });
 
     it('returns the result of createQuery', () => {
-        const result = useEvaluationSampleMetricsInfo({ datasetId: 'dataset-3' });
+        const result = useEvaluationSampleMetricsInfo({ datasetId: () => 'dataset-3' });
 
         expect(result).toMatchObject({ data: [], isSuccess: true });
     });

@@ -11,7 +11,7 @@ export const MAX_ADDED_LOC = 215;
  * Directory prefixes end with '/' and match any file underneath them.
  */
 const EXCLUDED: string[] = [
-    'lightly_studio/uv.lock',
+    'uv.lock',
     'lightly_studio_view/package-lock.json',
     'fast_track/package-lock.json',
     'lightly_studio/tests/benchmarks/',
@@ -25,7 +25,6 @@ export function isExcluded(path: string): boolean {
 export const diffSizeGuardrail: Guardrail = {
     name: NAME,
     required: true,
-    needsPrContext: false,
     async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
         const files = await ctx.changedFiles();
         const totalAdditions = files

@@ -159,8 +159,7 @@ describe('buildRequestBody', () => {
                 {
                     source: 'image' as const,
                     field_name: 'score',
-                    direction: 'desc' as const,
-                    is_numeric: false
+                    direction: 'desc' as const
                 }
             ];
             const result = buildRequestBody(

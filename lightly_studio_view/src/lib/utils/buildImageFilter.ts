@@ -1,7 +1,9 @@
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import {
     type AnnotationsFilter,
-    type ImageFilter
+    type ConfusionCell,
+    type ImageFilter,
+    type QueryExpr
 } from '$lib/api/lightly_studio_local/types.gen.js';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
 
@@ -11,13 +13,19 @@ export function buildImageFilter({
     dimensionsValues,
     annotationFilter,
     metadataFilters,
-    sampleIds
+    sampleIds,
+    tagIds,
+    confusionCell,
+    queryExpr
 }: {
     dimensionsValues: DimensionBounds | null | undefined;
     annotationFilter: AnnotationsFilter | undefined;
     metadataFilters: MetadataFilters | undefined;
     sampleIds?: string[];
-}): ImageFilter | undefined {
+    tagIds?: string[];
+    confusionCell?: ConfusionCell | null;
+    queryExpr?: QueryExpr | null;
+}): (ImageFilter & { filter_type: 'image' }) | undefined {
     const filter: ImageFilter = {};
 
     if (dimensionsValues) {
@@ -59,5 +67,27 @@ export function buildImageFilter({
         };
     }
 
-    return Object.keys(filter).length > 0 ? filter : undefined;
+    if (tagIds && tagIds.length > 0) {
+        filter.sample_filter = {
+            ...(filter.sample_filter ?? {}),
+            tag_ids: tagIds
+        };
+    }
+
+    if (confusionCell) {
+        filter.sample_filter = {
+            ...(filter.sample_filter ?? {}),
+            confusion_cell: confusionCell
+        };
+    }
+
+    if (queryExpr) {
+        filter.sample_filter = {
+            ...(filter.sample_filter ?? {}),
+            query_expr: queryExpr
+        };
+    }
+
+    // The tag lets endpoints that accept image and video filters tell them apart.
+    return Object.keys(filter).length > 0 ? { ...filter, filter_type: 'image' } : undefined;
 }

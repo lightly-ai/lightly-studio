@@ -1,3 +1,11 @@
+# The uv workspace shares one virtual environment, at the repository root.
+.venv
+dist
+__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
 # OS
 .DS_Store
 Thumbs.db
@@ -14,7 +22,12 @@ lightly_studio/.env
 dataset_examples_studio
 
 .claude/settings.local.json
-.claude/settings.json
 
 # Top-level tmp dir.
 /tmp/
+
+# Coverage artifacts, written into whichever workspace member the suite ran in.
+.coverage
+coverage.json
+
+.local.gitignore

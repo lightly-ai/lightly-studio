@@ -7,7 +7,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { onMount, type Snippet } from 'svelte';
+    import { onMount, untrack, type Snippet } from 'svelte';
 
     import { get } from 'svelte/store';
     import { getAnnotations } from '../SampleAnnotation/utils';
@@ -28,6 +28,7 @@
         type ToolbarStatus
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
+    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
         sampleId,
@@ -79,10 +80,16 @@
     const { settingsStore } = useSettings();
     const { isEditingMode, lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
 
-    // Annotation details must use the first annotation from sample.annotations
-    const annotationLabelContext = createAnnotationLabelContext({
-        isOnAnnotationDetailsView: isOnAnnotationDetailsView,
-        annotationId: isOnAnnotationDetailsView ? sample.annotations![0].sample_id : null
+    // Annotation details must use the first annotation from sample.annotations.
+    // isOnAnnotationDetailsView is re-synced via $effect when the prop changes.
+    const annotationLabelContext = createAnnotationLabelContext(
+        untrack(() => ({
+            isOnAnnotationDetailsView,
+            annotationId: isOnAnnotationDetailsView ? sample.annotations![0].sample_id : null
+        }))
+    );
+    $effect(() => {
+        annotationLabelContext.isOnAnnotationDetailsView = isOnAnnotationDetailsView;
     });
     createSampleDetailsToolbarContext();
 
@@ -97,6 +104,9 @@
     let previousToolbarStatus: ToolbarStatus;
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
+        // Typing in a field or in an overlay must not trigger the shortcuts behind it.
+        if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
+
         switch (event.key) {
             // Check for escape key
             case get(settingsStore).key_go_back:
@@ -141,7 +151,8 @@
     };
 
     const handleKeyUpEvent = (event: KeyboardEvent) => {
-        if (event.key === ' ') {
+        // Restore only if a keydown started pan mode.
+        if (event.key === ' ' && isPanModeEnabled) {
             isPanModeEnabled = false;
             sampleDetailsToolbarContext.status = previousToolbarStatus;
             annotationLabelContext.annotationType = previousAnnotationType;
@@ -175,7 +186,11 @@
             isOnAnnotationDetailsView
         )
             return;
-        selectAnnotation({ annotationId, annotations: sample.annotations ?? [], collectionId });
+        selectAnnotation({
+            annotationId,
+            annotations: sample.annotations ?? [],
+            collectionId
+        });
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);

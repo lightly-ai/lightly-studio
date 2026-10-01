@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import posixpath
 from collections.abc import Mapping
 from pathlib import Path
 from uuid import UUID
 
-import fsspec
 import yaml
 from labelformat.model.instance_segmentation import (
     ImageInstanceSegmentation,
@@ -17,23 +17,39 @@ from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
 )
+from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import labelformat_helpers
+from lightly_studio.core import labelformat_helpers, path_utils
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
     collection_resolver,
+    evaluation_run_resolver,
     image_resolver,
 )
 from lightly_studio.type_definitions import PathLike
 
+logger = logging.getLogger(__name__)
+
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
+
+
+def skip_and_warn_unreadable_image(path: Path, error: Exception) -> None:
+    """``on_error`` hook for annotation ingest: log and skip an unreadable image.
+
+    Args:
+        path: The path of the unreadable image.
+        error: The error raised while reading the image.
+    """
+    if not isinstance(error, ImageDimensionError):
+        raise error
+    logger.warning(f"Skipping annotation for unreadable image '{path}': {error}")
 
 
 def add_annotations_from_labelformat(  # noqa: PLR0913
@@ -65,7 +81,13 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         A list of file_path_abs values from input_labels that had no matching sample in
         the collection. An empty list means all images were found.
     """
-    images_root_abs = normalize_images_root(images_root=images_root)
+    images_root_abs = path_utils.normalize_path_root(images_root)
+
+    # Some formats (e.g. YOLO) open every image during the get_labels() scan. Set a skip+log hook so
+    # a broken image is skipped instead of aborting the ingest.
+    if getattr(input_labels, "on_error", "unsupported") is None:
+        input_labels.on_error = skip_and_warn_unreadable_image  # type: ignore[union-attr]
+
     label_map = labelformat_helpers.create_label_map(
         session=session,
         root_collection_id=root_collection_id,
@@ -104,24 +126,6 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         )
 
     return missing_paths
-
-
-def normalize_images_root(images_root: PathLike) -> str:
-    """Return absolute local roots and preserve remote roots.
-
-    Local paths are returned in posix form (forward slashes) so they can be
-    safely joined with `posixpath.join` and compared across platforms. On
-    Windows, `str(Path(...).absolute())` yields backslashes that, when joined
-    with posix-separated relative paths, produce mixed-separator strings that
-    fail to match what was stored at ingestion time.
-    """
-    images_root_str = str(images_root)
-    protocol, _ = fsspec.core.split_protocol(images_root_str)
-    if protocol is None:
-        return Path(images_root_str).absolute().as_posix()
-    if protocol == "file":
-        return Path(fsspec.core.strip_protocol(images_root_str)).absolute().as_posix()
-    return images_root_str
 
 
 def resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
@@ -227,5 +231,10 @@ def _process_annotation_batch(  # noqa: PLR0913
             annotation_collection_id=annotation_collection_id,
             parent_sample_ids=matched_sample_ids,
         )
+        if annotations_to_create:
+            evaluation_run_resolver.mark_stale_by_collection_id(
+                session=session,
+                collection_id=annotation_collection_id,
+            )
 
     return missing_paths

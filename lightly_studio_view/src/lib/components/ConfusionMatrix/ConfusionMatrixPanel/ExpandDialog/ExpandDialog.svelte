@@ -26,13 +26,14 @@
                 Scroll or pinch inside the chart to zoom · hover a cell for details
             </Dialog.Description>
         </Dialog.Header>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="flex min-h-0 flex-1 flex-col">
             <ConfusionMatrix
                 {matrix}
                 {showLegend}
                 colorIntensity={color.intensity}
                 logScale={color.logScale}
                 zoomable
+                fillHeight
                 {onCellClick}
             />
         </div>

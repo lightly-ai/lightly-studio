@@ -13,11 +13,13 @@ from sqlmodel import Session
 from lightly_studio.core.annotation import CreateAnnotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
     collection_resolver,
+    evaluation_run_resolver,
     metadata_resolver,
     tag_resolver,
 )
@@ -305,6 +307,16 @@ class Sample(ABC):
             annotations=annotation_creates,
             collection_name=annotation_source,
         )
+        annotation_collection_id = collection_resolver.get_or_create_child_collection(
+            session=session,
+            collection_id=self.collection_id,
+            sample_type=SampleType.ANNOTATION,
+            name=annotation_source,
+        )
+        evaluation_run_resolver.mark_stale_by_collection_id(
+            session=session,
+            collection_id=annotation_collection_id,
+        )
 
     def delete_annotation(self, annotation: Annotation) -> None:
         """Delete an annotation from this sample.
@@ -314,9 +326,14 @@ class Sample(ABC):
         """
         session = self.get_object_session()
         annotation_id = annotation.annotation_base.sample_id
+        collection_id = annotation.annotation_base.annotation_collection_id
         annotation_resolver.delete_annotation(
             session=session,
             annotation_id=annotation_id,
+        )
+        evaluation_run_resolver.mark_stale_by_collection_id(
+            session=session,
+            collection_id=collection_id,
         )
 
 

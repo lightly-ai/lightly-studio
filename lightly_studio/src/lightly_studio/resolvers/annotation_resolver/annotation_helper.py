@@ -18,8 +18,10 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import annotation_resolver
 
 
@@ -70,6 +72,38 @@ def update_annotation_object(
         else None
     )
 
+    cuboid_details = annotation_copy.cuboid_3d_details
+    cuboid = (
+        Cuboid3DAnnotationTable(
+            sample_id=annotation_copy.sample_id,
+            frame_id=cuboid_details.frame_id,
+            px=cuboid_details.px,
+            py=cuboid_details.py,
+            pz=cuboid_details.pz,
+            qx=cuboid_details.qx,
+            qy=cuboid_details.qy,
+            qz=cuboid_details.qz,
+            qw=cuboid_details.qw,
+            sx=cuboid_details.sx,
+            sy=cuboid_details.sy,
+            sz=cuboid_details.sz,
+            interpolated=cuboid_details.interpolated,
+        )
+        if annotation_type == AnnotationType.CUBOID_3D and cuboid_details
+        else None
+    )
+
+    temporal_span_row = annotation_copy.temporal_span_details
+    temporal_span = (
+        TemporalSpanTable(
+            sample_id=annotation_copy.sample_id,
+            start_time_s=temporal_span_row.start_time_s,
+            end_time_s=temporal_span_row.end_time_s,
+        )
+        if temporal_span_row
+        else None
+    )
+
     annotation_resolver.delete_annotation(session, annotation.sample_id, delete_sample=False)
 
     new_annotation = AnnotationBaseTable(
@@ -88,6 +122,12 @@ def update_annotation_object(
 
     if object_detection:
         session.add(object_detection)
+
+    if cuboid:
+        session.add(cuboid)
+
+    if temporal_span:
+        session.add(temporal_span)
 
     session.commit()
     session.flush()

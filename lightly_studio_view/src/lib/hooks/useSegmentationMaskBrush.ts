@@ -34,14 +34,14 @@ export function useSegmentationMaskBrush({
     refetch: () => void;
     /** Must be a stable reference (not recreated on re-renders) to ensure undo closures
      *  call the live mutation rather than a disposed one. */
-    deleteAnnotation: (annotationId: string) => Promise<void>;
+    deleteAnnotation: (annotationId: string, annotationType: string) => Promise<void>;
     onAnnotationCreated?: () => void;
     /** Called when no label is currently selected. Should show a class-picker and resolve with
      *  the chosen class, or null if the user cancelled. */
     requestLabel?: () => Promise<{ label: string } | null>;
 }) {
-    const { createLabel } = useCreateLabel({ collectionId });
-    const { createAnnotation } = useCreateAnnotation({ collectionId });
+    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
     const {
         context: annotationLabelContext,
@@ -51,7 +51,9 @@ export function useSegmentationMaskBrush({
         setAnnotationId,
         setAnnotationType
     } = useAnnotationLabelContext();
-    const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
+    const { updateAnnotations } = useUpdateAnnotationsMutation({
+        getCollectionId: () => collectionId
+    });
 
     const finishBrush = async (
         workingMask: Uint8Array | null,

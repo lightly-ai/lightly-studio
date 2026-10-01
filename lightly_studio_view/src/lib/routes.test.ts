@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { routes, routeHelpers } from './routes';
+import {
+    routes,
+    routeHelpers,
+    APP_ROUTES,
+    isImagesRoute,
+    isAnnotationsRoute,
+    isVideosRoute,
+    isVideoFramesRoute,
+    isGroupsRoute,
+    isSampleDetailsRoute,
+    isAnnotationDetailsRoute,
+    isVideoDetailsRoute,
+    isFrameDetailsRoute,
+    isPointCloudsRoute,
+    isPointCloudLabelingRoute
+} from './routes';
 
 describe('routes', () => {
     describe('route definitions', () => {
@@ -13,6 +28,60 @@ describe('routes', () => {
             expect(
                 routes.collection.annotations(testDatasetId, testCollectionType, testCollectionId)
             ).toBe('/datasets/root-123/image/123/annotations');
+        });
+    });
+
+    describe('route classification', () => {
+        describe('collection-grid routes', () => {
+            it('images route is classified as a grid route', () => {
+                expect(isImagesRoute(APP_ROUTES.images)).toBe(true);
+            });
+
+            it('annotations route is classified as a grid route', () => {
+                expect(isAnnotationsRoute(APP_ROUTES.annotations)).toBe(true);
+            });
+
+            it('videos route is classified as a grid route', () => {
+                expect(isVideosRoute(APP_ROUTES.videos)).toBe(true);
+            });
+
+            it('frames route is classified as a grid route', () => {
+                expect(isVideoFramesRoute(APP_ROUTES.frames)).toBe(true);
+            });
+
+            it('groups route is classified as a grid route', () => {
+                expect(isGroupsRoute(APP_ROUTES.groups)).toBe(true);
+            });
+        });
+
+        describe('details routes', () => {
+            it('image details route is classified as a sample-details route', () => {
+                expect(isSampleDetailsRoute(APP_ROUTES.imageDetails)).toBe(true);
+            });
+
+            it('image details route is not classified as a grid route', () => {
+                expect(isImagesRoute(APP_ROUTES.imageDetails)).toBe(false);
+            });
+
+            it('annotation details route is classified as an annotation-details route', () => {
+                expect(isAnnotationDetailsRoute(APP_ROUTES.annotationDetails)).toBe(true);
+            });
+
+            it('video details route is classified as a video-details route', () => {
+                expect(isVideoDetailsRoute(APP_ROUTES.videoDetails)).toBe(true);
+            });
+
+            it('frame details route is classified as a frame-details route', () => {
+                expect(isFrameDetailsRoute(APP_ROUTES.framesDetails)).toBe(true);
+            });
+
+            it('point-cloud labeling route is classified as a point-cloud-labeling route', () => {
+                expect(isPointCloudLabelingRoute(APP_ROUTES.pointCloudLabeling)).toBe(true);
+            });
+
+            it('point-cloud labeling route is not classified as a point-clouds grid route', () => {
+                expect(isPointCloudsRoute(APP_ROUTES.pointCloudLabeling)).toBe(false);
+            });
         });
     });
 
@@ -58,6 +127,46 @@ describe('routes', () => {
                 })
             ).toBe(
                 `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/annotations/${annotationId}`
+            );
+        });
+
+        it('should generate correct point-clouds route', () => {
+            expect(
+                routeHelpers.toPointClouds(testDatasetId, testCollectionType, testCollectionId)
+            ).toBe(
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/point-clouds`
+            );
+        });
+
+        it('should generate correct point-cloud labeling route', () => {
+            const testSampleId = '456';
+            const testSequenceId = 'seq-789';
+            expect(
+                routeHelpers.toPointCloudLabeling({
+                    sampleId: testSampleId,
+                    datasetId: testDatasetId,
+                    collectionId: testCollectionId,
+                    sequenceId: testSequenceId
+                })
+            ).toBe(
+                `/datasets/${testDatasetId}/point-clouds/${testCollectionId}/${testSampleId}?sequence_id=${testSequenceId}`
+            );
+        });
+
+        it('should generate correct point-cloud labeling route with collection type and group id', () => {
+            const testSampleId = '456';
+            const testSequenceId = 'seq-789';
+            expect(
+                routeHelpers.toPointCloudLabeling({
+                    sampleId: testSampleId,
+                    datasetId: testDatasetId,
+                    collectionId: testCollectionId,
+                    sequenceId: testSequenceId,
+                    collectionType: testCollectionType,
+                    groupId: 'group-1'
+                })
+            ).toBe(
+                `/datasets/${testDatasetId}/point-clouds/${testCollectionId}/${testSampleId}?sequence_id=${testSequenceId}&collection_type=${testCollectionType}&group_id=group-1`
             );
         });
     });

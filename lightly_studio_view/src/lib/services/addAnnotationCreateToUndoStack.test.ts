@@ -49,7 +49,7 @@ describe('addAnnotationCreateToUndoStack', () => {
         const action = addReversibleAction.mock.calls[0][0] as ReversibleAction;
         await action.execute();
 
-        expect(deleteAnnotation).toHaveBeenCalledWith('annotation-123');
+        expect(deleteAnnotation).toHaveBeenCalledWith('annotation-123', 'object_detection');
         expect(refetch).toHaveBeenCalled();
     });
 

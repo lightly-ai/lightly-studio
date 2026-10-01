@@ -21,6 +21,7 @@
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
+    import { usePostHog } from '$lib/hooks';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -52,6 +53,8 @@
 
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
+    let drawStartFired = false;
+    const { trackEvent } = usePostHog();
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
     const {
@@ -61,13 +64,9 @@
         handleCancel: handleClassDialogCancel
     } = useSelectClassDialog();
 
-    const { createLabel } = useCreateLabel({ collectionId });
-    const { createAnnotation } = useCreateAnnotation({
-        collectionId
-    });
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
+    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
 
     const {
@@ -84,12 +83,13 @@
     const cancelDrag = () => {
         setIsDrawing(false);
         temporaryBbox = null;
+        drawStartFired = false;
     };
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
-    );
+    const { refetch: refetchRootCollection } = useCollectionWithChildren({
+        getCollectionId: () => datasetId
+    });
 
     const BOX_MIN_SIZE_PX = 4;
     const setupDragBehavior = () => {
@@ -105,6 +105,14 @@
                 // Remove focus from any selected annotation.
                 setAnnotationId(null);
                 setIsDrawing(true);
+                if (!drawStartFired) {
+                    trackEvent('annotation_draw_started', {
+                        collection_id: collectionId,
+                        tool: 'bounding-box',
+                        parent_sample_type: page.params.collection_type
+                    });
+                    drawStartFired = true;
+                }
                 // Get mouse position relative to the SVG element
                 const svgRect = interactionRect!.getBoundingClientRect();
                 const clientX = event.sourceEvent.clientX;
@@ -156,6 +164,7 @@
 
                 cancelDrag();
                 startPoint = null;
+                drawStartFired = false;
             });
 
         rectSelection.call(dragBehavior);

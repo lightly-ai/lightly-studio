@@ -1,5 +1,5 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useGlobalStorage } from '$lib/hooks';
 import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
 import { isStrategyInstanceValid, type StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
@@ -11,6 +11,10 @@ interface UseSamplingCombinationDialogParams {
     getIsVideoCollection: () => boolean;
     instances: Readable<StrategyInstance[]>;
     onSubmitSuccess: () => void;
+}
+
+function computePercentage(count: number, total: number): number {
+    return total > 0 ? Math.round((count / total) * 100) : 0;
 }
 
 export function useSamplingCombinationDialog({
@@ -25,37 +29,70 @@ export function useSamplingCombinationDialog({
     });
 
     const { filteredSampleCount } = useGlobalStorage();
-    const { closeSamplingDialog } = useSamplingDialog();
+    const { closeSamplingDialog, markSubmitted } = useSamplingDialog();
     const { buildSelectionFilter } = useSelectionFilter(getIsVideoCollection);
+
+    const closeAfterSubmit = () => {
+        markSubmitted();
+        closeSamplingDialog();
+    };
 
     const { isSubmitting, loadingMessage, submit } = useSubmitCombinationSelection({
         tags,
         setTagSelected,
         loadTags,
-        closeSelectionDialog: closeSamplingDialog
+        closeSelectionDialog: closeAfterSubmit,
+        filteredSampleCount
     });
 
-    const nSamplesToSelect = writable<number>(10);
-    const percentageToSelect = derived([nSamplesToSelect, filteredSampleCount], ([$n, $total]) =>
-        $total > 0 ? Math.round(($n / $total) * 100) : 0
-    );
+    const nSamplesToSelect = writable<number | null>(10);
+    // Null means the user hasn't explicitly typed a percentage; percentageToSelect
+    // then derives reactively from nSamplesToSelect and filteredSampleCount so that
+    // the display stays correct when filteredSampleCount loads after mount.
+    // A non-null value locks the display to what the user typed, preventing
+    // background filteredSampleCount updates (e.g. grid refetches) from overwriting it.
+    const userEnteredPercentage = writable<number | null>(null);
     const selectionResultTagName = writable('');
+    const preselectedTagId = writable<string | undefined>();
 
+    const percentageToSelect = derived(
+        [nSamplesToSelect, filteredSampleCount, userEnteredPercentage],
+        ([$n, $total, $userPct]) => {
+            if ($userPct !== null) return $userPct;
+            if ($n === null) return null;
+            return computePercentage($n, $total);
+        }
+    );
     function updateAbsolute(count: number) {
-        nSamplesToSelect.set(Number.isFinite(count) ? count : 0);
+        if (!Number.isFinite(count)) {
+            nSamplesToSelect.set(null);
+            userEnteredPercentage.set(null);
+            return;
+        }
+        nSamplesToSelect.set(count);
+        userEnteredPercentage.set(null); // let percentage re-derive from count
     }
 
     function updatePercentage(percentage: number) {
+        if (!Number.isFinite(percentage)) {
+            nSamplesToSelect.set(null);
+            userEnteredPercentage.set(null);
+            return;
+        }
         const total = get(filteredSampleCount);
         const result = total > 0 ? Math.round((percentage / 100) * total) : 0;
-        nSamplesToSelect.set(Number.isFinite(result) ? result : 0);
+        nSamplesToSelect.set(result);
+        // Lock the display to what the user typed so that background
+        // filteredSampleCount changes don't overwrite their entry.
+        userEnteredPercentage.set(percentage);
     }
 
     const noSamples = derived(filteredSampleCount, ($count) => $count === 0);
 
+    // TODO: Subtract preselected samples from the available count when validating the request.
     const notEnoughSamples = derived(
         [filteredSampleCount, nSamplesToSelect],
-        ([$count, $n]) => $count > 0 && $n > $count
+        ([$count, $n]) => $count > 0 && $n !== null && $n > $count
     );
 
     const sampleCountLabel = derived(
@@ -68,6 +105,7 @@ export function useSamplingCombinationDialog({
         ([$instances, $n, $name]) =>
             $instances.length > 0 &&
             $instances.every(isStrategyInstanceValid) &&
+            $n !== null &&
             $n > 0 &&
             $name.trim().length > 0
     );
@@ -78,7 +116,7 @@ export function useSamplingCombinationDialog({
             if ($instances.length === 0) return 'Add at least 1 strategy to create a selection.';
             if (!$instances.every(isStrategyInstanceValid))
                 return 'Complete the required fields in all strategies.';
-            if ($n <= 0) return 'Enter a number of samples greater than 0.';
+            if ($n === null || $n <= 0) return 'Enter a number of samples greater than 0.';
             if ($name.trim().length === 0) return 'Enter a tag name.';
             return '';
         }
@@ -87,7 +125,9 @@ export function useSamplingCombinationDialog({
     function resetForm() {
         onSubmitSuccess();
         nSamplesToSelect.set(10);
+        userEnteredPercentage.set(null); // let percentage re-derive from count
         selectionResultTagName.set('');
+        preselectedTagId.set(undefined);
     }
 
     async function submitSelection() {
@@ -95,9 +135,10 @@ export function useSamplingCombinationDialog({
             collectionId: getCollectionId(),
             isVideoCollection: getIsVideoCollection(),
             instances: get(instances),
-            nSamplesToSelect: get(nSamplesToSelect),
+            nSamplesToSelect: get(nSamplesToSelect) ?? 0,
             selectionResultTagName: get(selectionResultTagName),
-            selectionFilter: buildSelectionFilter()
+            selectionFilter: buildSelectionFilter(),
+            preselectedTagId: get(preselectedTagId)
         });
         if (success) resetForm();
     }
@@ -116,6 +157,7 @@ export function useSamplingCombinationDialog({
         updateAbsolute,
         updatePercentage,
         selectionResultTagName,
+        preselectedTagId,
         filteredSampleCount,
         noSamples,
         notEnoughSamples,

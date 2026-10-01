@@ -1,0 +1,55 @@
+<script lang="ts">
+    import FilterChip from '$lib/components/FilterChip/FilterChip.svelte';
+    import Segment from '$lib/components/Segment/Segment.svelte';
+    import { useMetadataFilterChips } from './useMetadataFilterChips.svelte';
+
+    interface Props {
+        collectionId?: string;
+        isImageCollection?: boolean;
+        categoricalKeys?: string[];
+    }
+
+    const { collectionId, isImageCollection = false, categoricalKeys = [] }: Props = $props();
+
+    const hook = $derived.by(() => useMetadataFilterChips(collectionId));
+    const visibleChips = $derived(
+        hook.chips.filter(
+            (chip) =>
+                chip.kind === 'numeric' ||
+                !isImageCollection ||
+                (chip.active && !categoricalKeys.includes(chip.key))
+        )
+    );
+</script>
+
+{#if visibleChips.length > 0}
+    <Segment title="Metadata filters">
+        <div class="space-y-2">
+            {#each visibleChips as chip (chip.key)}
+                <FilterChip
+                    testId="metadata-filter-chip-{chip.key}"
+                    checked={chip.active}
+                    title={chip.key}
+                    checkboxLabel={chip.active
+                        ? `Disable ${chip.key} filter`
+                        : `Enable ${chip.key} filter`}
+                    onCheckedChange={(checked) => hook.handleToggle(chip.key, checked)}
+                    onClear={() => hook.handleClear(chip.key)}
+                >
+                    {#snippet subtitle()}
+                        <div class="truncate text-xs text-muted-foreground">
+                            {#if chip.kind === 'categorical'}
+                                {hook.formatCategoricalValues(chip.values)}
+                            {:else if chip.range}
+                                {hook.formatValue(chip.key, chip.range.min)} – {hook.formatValue(
+                                    chip.key,
+                                    chip.range.max
+                                )}
+                            {/if}
+                        </div>
+                    {/snippet}
+                </FilterChip>
+            {/each}
+        </div>
+    </Segment>
+{/if}

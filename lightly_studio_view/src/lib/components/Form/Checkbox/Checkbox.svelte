@@ -20,8 +20,8 @@
     } = $props();
 </script>
 
-<div class="flex flex-col gap-2">
-    <div class="flex gap-2">
+<div class="flex min-w-0 flex-col gap-2">
+    <div class="flex min-w-0 gap-2">
         <Checkbox
             id={name}
             aria-labelledby={`${name}-label`}
@@ -32,8 +32,9 @@
         <Label
             id={`${name}-label`}
             for={name}
-            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            class="min-w-0 flex-1 truncate text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             data-testid="tags-menu-label"
+            title={label}
         >
             {label}
         </Label>

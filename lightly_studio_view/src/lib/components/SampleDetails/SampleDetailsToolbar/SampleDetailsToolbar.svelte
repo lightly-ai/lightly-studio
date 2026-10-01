@@ -1,15 +1,33 @@
 <script lang="ts">
     import { AnnotationType } from '$lib/api/lightly_studio_local';
-    import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
+    import { SampleDetailsToolbarTooltip } from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { isTextInputTarget } from '$lib/utils';
+    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
+    import SlicToolbarButton from '../SlicToolbarButton/SlicToolbarButton.svelte';
+
+    import { getSlicEngine } from '@lightly-ai/slic';
+
+    let slicAvailable = $state(false);
+    onMount(() => {
+        let active = true;
+        void getSlicEngine().then(
+            () => {
+                if (active) slicAvailable = true;
+            },
+            // Unsupported or blocked WASM keeps the toolbar entry hidden.
+            () => {}
+        );
+        return () => {
+            active = false;
+        };
+    });
 
     const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
 
@@ -17,12 +35,17 @@
     let isSpacePressed = false;
 
     const onKeyDown = (e: KeyboardEvent) => {
+        // Typing in a field or in an overlay must not trigger the shortcuts behind it.
+        if (isTextInputTarget(e.target) || isOverlayTarget(e.target)) {
+            return;
+        }
+
         if (e.code === 'Space') {
             isSpacePressed = true;
             return;
         }
 
-        if (isSpacePressed || isTextInputTarget(e.target)) {
+        if (isSpacePressed) {
             return;
         }
 
@@ -32,11 +55,11 @@
             onClickCursor();
         } else if (key === $settingsStore.key_toolbar_bounding_box) {
             e.preventDefault();
-            onClickBoundingBox();
+            activateBoundingBox();
         } else if (key === $settingsStore.key_toolbar_segmentation_mask) {
             if (!showSegmentationTool) return;
             e.preventDefault();
-            onClickBrush();
+            activateBrush();
         } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
@@ -92,7 +115,8 @@
             setBrushMode('brush');
         } else if (
             sampleDetailsToolbarContext.status === 'bounding-box' ||
-            sampleDetailsToolbarContext.status === 'brush'
+            sampleDetailsToolbarContext.status === 'brush' ||
+            sampleDetailsToolbarContext.status === 'slic'
         ) {
             setLastCreatedAnnotationId(null);
             if (sampleDetailsToolbarContext.status === 'bounding-box') {
@@ -102,6 +126,9 @@
                 setBrushMode('brush');
             } else if (sampleDetailsToolbarContext.status === 'brush') {
                 setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+            } else if (sampleDetailsToolbarContext.status === 'slic') {
+                setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+                setBrushMode('brush');
             }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
@@ -109,7 +136,7 @@
         }
     });
 
-    const onClickBoundingBox = () => {
+    const activateBoundingBox = () => {
         if (annotationLabelContext.isOnAnnotationDetailsView) return;
 
         setStatus('bounding-box');
@@ -117,6 +144,8 @@
         setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
+
+    const onClickBoundingBox = () => activateBoundingBox();
 
     const onClickCursor = () => {
         setStatus('cursor');
@@ -126,12 +155,29 @@
         setStatus('drag');
     };
 
-    const onClickBrush = () => {
+    const activateBrush = () => {
         if (!showSegmentationTool) return;
 
         setStatus('brush');
         setAnnotationType(AnnotationType.SEGMENTATION_MASK);
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
+        setLastCreatedAnnotationId(null);
+    };
+
+    const onClickBrush = () => activateBrush();
+
+    const onClickSlic = () => {
+        if (!showSegmentationTool) return;
+
+        const shouldKeepSelectedAnnotation =
+            annotationLabelContext.annotationId != null &&
+            annotationLabelContext.annotationType === AnnotationType.SEGMENTATION_MASK;
+
+        setStatus('slic');
+        setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+        if (!annotationLabelContext.isOnAnnotationDetailsView && !shouldKeepSelectedAnnotation) {
+            setAnnotationId(null);
+        }
         setLastCreatedAnnotationId(null);
     };
 </script>
@@ -173,6 +219,18 @@
                 action="draw"
             >
                 <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
+            </SampleDetailsToolbarTooltip>
+        {/if}
+        {#if showSegmentationTool && slicAvailable}
+            <SampleDetailsToolbarTooltip
+                label="AI-Assisted labeling"
+                action="toggle superpixels"
+                hint="Computes SLIC superpixels for click-to-toggle mask edits"
+            >
+                <SlicToolbarButton
+                    onclick={onClickSlic}
+                    isActive={sampleDetailsToolbarContext.status === 'slic'}
+                />
             </SampleDetailsToolbarTooltip>
         {/if}
         {#if showSegmentationTool}

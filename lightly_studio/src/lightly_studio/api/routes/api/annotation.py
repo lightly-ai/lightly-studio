@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
+from sqlmodel import col
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -21,18 +22,23 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
+from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
-    embedding_model_resolver,
     sample_embedding_resolver,
 )
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
+from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
+    AnnotationOrdering,
+)
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
+from lightly_studio.resolvers.annotations import annotation_metric_sort
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -43,6 +49,8 @@ from lightly_studio.services.annotations_service.update_annotation import (
 
 annotations_router = APIRouter(prefix="/collections/{collection_id}", tags=["annotations"])
 annotations_router.include_router(annotations_module.create_annotation_router)
+annotations_router.include_router(annotations_module.bulk_create_classifications_router)
+annotations_router.include_router(annotations_module.annotation_metrics_info_router)
 
 
 @annotations_router.get(
@@ -91,6 +99,7 @@ class ReadAnnotationsWithPayloadRequest(BaseModel):
     # list of selected annotation sample ids; resolved to sample ids server-side (LIG-9903).
     embedding_region: EmbeddingRegion | None = None
     text_embedding: list[float] | None = None
+    sort_by: AnnotationEvaluationMetricSortExpr | None = None
 
 
 @annotations_router.get(
@@ -152,6 +161,16 @@ def read_annotations_with_payload(
     body: ReadAnnotationsWithPayloadRequest,
 ) -> AnnotationWithPayloadAndCountView:
     """Retrieve annotations with payload and optional similarity or sample filters."""
+    order_by = None
+    if body.sort_by is not None:
+        # An invalid sort raises ValueError, which the registered handler turns into a 400.
+        order_by = annotation_metric_sort.sort_expr_to_order_by(
+            session=session,
+            annotation_collection_id=collection_id,
+            sort_expr=body.sort_by,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        )
+
     return annotation_resolver.get_all_with_payload(
         session=session,
         pagination=Paginated(
@@ -166,7 +185,10 @@ def read_annotations_with_payload(
             embedding_region=body.embedding_region,
         ),
         collection_id=collection_id,
-        text_embedding=body.text_embedding,
+        ordering=AnnotationOrdering(
+            text_embedding=body.text_embedding,
+            order_by=order_by,
+        ),
     )
 
 
@@ -186,11 +208,11 @@ def read_annotation_embedding(
     Used for drag-to-search self-similarity: searching with an annotation's own
     stored embedding.
     """
-    embedding_models = embedding_model_resolver.get_all_by_collection_id(
+    embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=session,
         collection_id=collection_id,
     )
-    if not embedding_models:
+    if embedding_model_id is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail="No embedding model is registered for this collection.",
@@ -199,7 +221,7 @@ def read_annotation_embedding(
     embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
         sample_ids=[sample_id],
-        embedding_model_id=embedding_models[0].embedding_model_id,
+        embedding_model_id=embedding_model_id,
     )
     if not embeddings:
         raise HTTPException(
@@ -218,6 +240,8 @@ class AnnotationUpdateInput(BaseModel):
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
     segmentation_mask: list[int] | None = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
 
 @annotations_router.put(
@@ -241,6 +265,8 @@ def update_annotations(
                 label_name=annotation_update_input.label_name,
                 bounding_box=annotation_update_input.bounding_box,
                 segmentation_mask=annotation_update_input.segmentation_mask,
+                start_time_s=annotation_update_input.start_time_s,
+                end_time_s=annotation_update_input.end_time_s,
             )
             for annotation_update_input in annotation_update_inputs
         ],

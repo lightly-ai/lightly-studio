@@ -1,16 +1,28 @@
 from __future__ import annotations
 
+import uuid
+from typing import Any
+
 from duckdb_engine import Dialect as DuckDBDialect
-from sqlmodel import select
+from sqlalchemy import Select
+from sqlalchemy import select as sa_select
+from sqlmodel import col, select
+from sqlmodel.sql.expression import SelectOfScalar
+from typing_extensions import assert_type
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
     ORDER_VALUE_LABEL,
+    OrderByAnnotationEvaluationMetricField,
     OrderByEvaluationMetricField,
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationSide
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 
 
 class TestOrderByField:
@@ -25,6 +37,20 @@ class TestOrderByField:
         assert "select image" in sql
         assert "image.file_name" in sql
         assert f"as {ORDER_VALUE_LABEL}" in sql
+
+    def test_apply_with_order_value__preserves_image_row_type(self) -> None:
+        # A single-entity image select stays typed as its entity plus the sort value,
+        # so the caller reads `row[0]` as an `ImageTable` rather than `Any`.
+        query: SelectOfScalar[ImageTable] = select(ImageTable)
+        result = OrderByField(ImageSampleField.file_name).apply_with_order_value(query)
+        assert_type(result, Select[tuple[ImageTable, Any]])
+
+    def test_apply_with_order_value__preserves_video_row_type(self) -> None:
+        # The video grid selects the video and its thumbnail frame together; both
+        # entities survive in the row type, with the sort value appended last.
+        query = sa_select(VideoTable, VideoFrameTable)
+        result = OrderByField(VideoSampleField.duration_s).apply_with_order_value(query)
+        assert_type(result, Select[tuple[VideoTable, VideoFrameTable, Any]])
 
     def test_apply_joins__no_joins(self) -> None:
         """Test that apply_joins does not add JOINs for image fields."""
@@ -44,17 +70,17 @@ class TestOrderByField:
         returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "order by image.file_name asc" in sql
+        assert "order by image.file_name asc nulls last" in sql
 
     def test_apply__descending(self) -> None:
-        """Test descending ordering via desc() method."""
+        """Descending ordering pins NULLs last, which DuckDB and PostgreSQL default differently."""
         query = select(ImageTable)
         order_by = OrderByField(ImageSampleField.file_name).desc()
 
         returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "order by image.file_name desc" in sql
+        assert "order by image.file_name desc nulls last" in sql
 
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
@@ -64,85 +90,111 @@ class TestOrderByField:
         returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "order by image.file_name asc" in sql
+        assert "order by image.file_name asc nulls last" in sql
 
 
 class TestOrderByMetadataField:
     dialect = DuckDBDialect()
 
+    # The key is bound, so it only appears as a literal under literal_binds. DuckDB reads
+    # it as a one-segment JSON Pointer, hence the leading slash.
+    _NUMERIC_KEY = (
+        "cast(case when (cast((metadata_1.metadata_schema ->> '/brightness') as varchar)"
+        " in ('integer', 'float')) then cast(metadata_1.data ->> '/brightness' as varchar) end"
+        " as double precision)"
+    )
+    _RAW_KEY = "cast(metadata_1.data ->> '/brightness' as varchar)"
+
+    def _compile(self, query: object) -> str:
+        return str(
+            query.compile(  # type: ignore[attr-defined]
+                dialect=self.dialect, compile_kwargs={"literal_binds": True}
+            )
+        ).lower()
+
     def test_apply_joins__metadata_join(self) -> None:
         """Test that apply_joins adds the metadata outer join."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness", cast_to_float=False)
+        order_by = OrderByMetadataField("brightness")
 
         returned_query = order_by.apply_joins(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "left outer join metadata" in sql
+        assert "left outer join metadata" in self._compile(returned_query)
 
     def test_apply_with_order_value(self) -> None:
-        """Test that apply_with_order_value selects the labeled JSON extract expression."""
+        """Test that the labeled order value is the numerical value of the field."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("score", cast_to_float=True)
+        order_by = OrderByMetadataField("brightness")
 
         returned_query = order_by.apply_with_order_value(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
+        sql = self._compile(returned_query)
         assert "left outer join metadata" in sql
-        assert "json_extract(metadata_1.data, '$.score')" in sql
-        assert f"as {ORDER_VALUE_LABEL}" in sql
+        assert f"{self._NUMERIC_KEY} as {ORDER_VALUE_LABEL}" in sql
 
     def test_apply__default_ascending(self) -> None:
-        """Test that default ordering is ascending."""
+        """Test that the numerical key leads and the raw value breaks ties, both ascending."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness", cast_to_float=False)
+        order_by = OrderByMetadataField("brightness")
 
         returned_query = order_by.apply(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "order by json_extract(metadata_1.data, '$.brightness') asc" in sql
+        assert (
+            f"order by {self._NUMERIC_KEY} asc nulls last, {self._RAW_KEY} asc nulls last"
+            in self._compile(returned_query)
+        )
 
     def test_apply__descending(self) -> None:
-        """Test descending ordering via desc() method."""
+        """Test that desc() applies to every sort key, not just the first."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness", cast_to_float=False).desc()
+        order_by = OrderByMetadataField("brightness").desc()
 
         returned_query = order_by.apply(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "order by json_extract(metadata_1.data, '$.brightness') desc" in sql
+        assert (
+            f"order by {self._NUMERIC_KEY} desc nulls last, {self._RAW_KEY} desc nulls last"
+            in self._compile(returned_query)
+        )
 
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness", cast_to_float=False).desc().asc()
+        order_by = OrderByMetadataField("brightness").desc().asc()
 
         returned_query = order_by.apply(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
-        ).lower()
-        assert "order by json_extract(metadata_1.data, '$.brightness') asc" in sql
+        assert (
+            f"order by {self._NUMERIC_KEY} asc nulls last, {self._RAW_KEY} asc nulls last"
+            in self._compile(returned_query)
+        )
 
-    def test_apply__cast_to_float(self) -> None:
-        """Test that cast_to_float produces a CAST expression in the ORDER BY clause."""
+    def test_apply__cast_wraps_the_case(self) -> None:
+        """Test that the cast is applied to the CASE result, not inside a branch.
+
+        A non-numerical value must never reach the cast, whatever order the engine
+        chooses to evaluate in.
+        """
         query = select(ImageTable)
-        order_by = OrderByMetadataField("score", cast_to_float=True)
+        order_by = OrderByMetadataField("brightness")
 
         returned_query = order_by.apply(query)
 
-        sql = str(
-            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        sql = self._compile(returned_query)
+        assert "cast(case when" in sql
+        assert "case when" not in sql.replace("cast(case when", "")
+
+    def test_to_column_elements__two_keys(self) -> None:
+        """Test that a metadata sort contributes both keys, without any JOIN."""
+        order_by = OrderByMetadataField("brightness")
+
+        elements = order_by.to_column_elements()
+
+        assert len(elements) == 2
+        sql = " ".join(
+            str(element.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True}))
+            for element in elements
         ).lower()
-        assert "order by cast(json_extract(metadata_1.data, '$.score') as float) asc" in sql
+        assert "join" not in sql
 
 
 class TestOrderByEvaluationMetricField:
@@ -175,7 +227,7 @@ class TestOrderByEvaluationMetricField:
         assert "left outer join evaluation_run" in sql
         assert "left outer join evaluation_sample_metric" in sql
         assert "evaluation_sample_metric_1.metric_name = 'score'" in sql
-        assert "order by evaluation_sample_metric_1.value asc" in sql
+        assert "order by evaluation_sample_metric_1.value asc nulls last" in sql
 
     def test_apply__descending(self) -> None:
         """Test descending ordering via desc() method."""
@@ -187,7 +239,7 @@ class TestOrderByEvaluationMetricField:
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
-        assert "order by evaluation_sample_metric_1.value desc" in sql
+        assert "order by evaluation_sample_metric_1.value desc nulls last" in sql
 
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
@@ -199,14 +251,77 @@ class TestOrderByEvaluationMetricField:
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
-        assert "order by evaluation_sample_metric_1.value asc" in sql
+        assert "order by evaluation_sample_metric_1.value asc nulls last" in sql
 
-    def test_to_column_element__ascending(self) -> None:
-        """Test that to_column_element returns only the column element without any JOIN."""
+    def test_to_column_elements__ascending(self) -> None:
+        """Test that to_column_elements returns only the column element without any JOIN."""
         order_by = OrderByEvaluationMetricField("run1", "score")
 
-        col_element = order_by.to_column_element()
+        (col_element,) = order_by.to_column_elements()
 
         sql = str(col_element.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "evaluation_sample_metric_1.value asc" in sql
+        assert "evaluation_sample_metric_1.value asc nulls last" in sql
         assert "join" not in sql
+
+
+class TestOrderByAnnotationEvaluationMetricField:
+    dialect = DuckDBDialect()
+
+    def test_apply__ground_truth_side(self) -> None:
+        """Test the join, the metric name guard and the default ascending order."""
+        order_by = OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=uuid.uuid4(),
+            metric_name="iou",
+            side=EvaluationAnnotationSide.GROUND_TRUTH,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        )
+
+        returned_query = order_by.apply(select(AnnotationBaseTable))
+
+        sql = str(
+            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        ).lower()
+        assert sql.count("left outer join evaluation_annotation_metric") == 1
+        assert "evaluation_annotation_metric_1.gt_annotation_id = annotation_base.sample_id" in sql
+        assert "pred_annotation_id" not in sql
+        assert (
+            "(evaluation_annotation_metric_1.metric_name = 'iou' "
+            "or evaluation_annotation_metric_1.metric_name is null)" in sql
+        )
+        assert "order by case when" in sql
+        assert "end asc nulls last" in sql
+
+    def test_apply__prediction_side(self) -> None:
+        """Test that the join is keyed on pred_annotation_id for predictions."""
+        order_by = OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=uuid.uuid4(),
+            metric_name="iou",
+            side=EvaluationAnnotationSide.PREDICTION,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        )
+
+        returned_query = order_by.apply(select(AnnotationBaseTable))
+
+        sql = str(
+            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        ).lower()
+        assert (
+            "evaluation_annotation_metric_1.pred_annotation_id = annotation_base.sample_id" in sql
+        )
+        assert "gt_annotation_id" not in sql
+
+    def test_apply__descending(self) -> None:
+        """Test that descending ordering also places nulls last."""
+        order_by = OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=uuid.uuid4(),
+            metric_name="iou",
+            side=EvaluationAnnotationSide.GROUND_TRUTH,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        ).desc()
+
+        returned_query = order_by.apply(select(AnnotationBaseTable))
+
+        sql = str(
+            returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
+        ).lower()
+        assert "end desc nulls last" in sql

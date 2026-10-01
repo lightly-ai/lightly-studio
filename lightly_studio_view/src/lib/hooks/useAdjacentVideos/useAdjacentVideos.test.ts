@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { SampleType } from '$lib/api/lightly_studio_local';
-import type { VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
+import type { VideoFilter, VideoSortFieldExpr } from '$lib/api/lightly_studio_local';
 import type { TextEmbedding } from '../useGlobalStorage';
 
 const useAdjacentSamplesMock = vi.fn();
 const videoFilterStore = writable<VideoFilter | null>(null);
+const videoSortByStore = writable<VideoSortFieldExpr[] | null>(null);
 const textEmbeddingStore = writable<TextEmbedding | undefined>(undefined);
 
 vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
@@ -14,7 +15,8 @@ vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
 
 vi.mock('../useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: () => ({
-        videoFilter: videoFilterStore
+        videoFilter: videoFilterStore,
+        videoSortBy: videoSortByStore
     })
 }));
 
@@ -34,6 +36,7 @@ describe('useAdjacentVideos', () => {
             filter_type: 'video',
             sample_filter: { tag_ids: ['t1'] }
         });
+        videoSortByStore.set(null);
         textEmbeddingStore.set({ embedding: [0.11, 0.22], queryText: 'query' });
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
@@ -51,7 +54,8 @@ describe('useAdjacentVideos', () => {
                         filter_type: 'video',
                         sample_filter: { tag_ids: ['t1'] }
                     },
-                    text_embedding: [0.11, 0.22]
+                    text_embedding: [0.11, 0.22],
+                    sort_by: undefined
                 }
             }
         });
@@ -73,9 +77,64 @@ describe('useAdjacentVideos', () => {
                     filters: {
                         filter_type: 'video'
                     },
-                    text_embedding: undefined
+                    text_embedding: undefined,
+                    sort_by: undefined
                 }
             }
         });
+    });
+
+    it('passes sort_by to useAdjacentSamples when videoSortBy is set and text embedding is inactive', () => {
+        textEmbeddingStore.set(undefined);
+        const sort: VideoSortFieldExpr[] = [
+            { source: 'video', field_name: 'duration_s', direction: 'desc' }
+        ];
+        videoSortByStore.set(sort);
+
+        useAdjacentVideos({ sampleId: 'video-123', collectionId: 'collection-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ sort_by: sort })
+                })
+            })
+        );
+    });
+
+    it('passes sort_by as undefined when videoSortBy is null', () => {
+        textEmbeddingStore.set(undefined);
+        videoSortByStore.set(null);
+
+        useAdjacentVideos({ sampleId: 'video-123', collectionId: 'collection-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ sort_by: undefined })
+                })
+            })
+        );
+    });
+
+    it('passes sort_by as undefined when text embedding is active, even if videoSortBy is set', () => {
+        textEmbeddingStore.set({ embedding: [0.11, 0.22], queryText: 'query' });
+        const sort: VideoSortFieldExpr[] = [
+            { source: 'video', field_name: 'duration_s', direction: 'desc' }
+        ];
+        videoSortByStore.set(sort);
+
+        useAdjacentVideos({ sampleId: 'video-123', collectionId: 'collection-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({
+                        sort_by: undefined,
+                        text_embedding: [0.11, 0.22]
+                    })
+                })
+            })
+        );
     });
 });

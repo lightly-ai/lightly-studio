@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +12,10 @@ from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.api.routes.api.validators import Paginated
+
+# Aliased because `order_by` is also a local variable name in this module.
+from lightly_studio.core.dataset_query import order_by as order_by_module
+from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationView,
@@ -25,6 +31,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver, embedding_region_resolver
+from lightly_studio.resolvers.annotations import annotation_ordering
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -35,12 +42,29 @@ from lightly_studio.resolvers.similarity_utils import (
 )
 
 
+@dataclass
+class AnnotationOrdering:
+    """How annotations are ordered before the tiebreaker chain.
+
+    Similarity search dominates: while ``text_embedding`` is set, ``order_by`` is ignored,
+    as in the sample grid where the text query has to be cleared before another sort applies.
+
+    Args:
+        text_embedding: Optional embedding; when given, annotations are ordered by cosine
+            distance of their embedding to it.
+        order_by: Optional order by expression, e.g. an evaluation metric value.
+    """
+
+    text_embedding: list[float] | None = None
+    order_by: OrderByExpression | None = None
+
+
 def get_all_with_payload(
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
-    text_embedding: list[float] | None = None,
+    ordering: AnnotationOrdering | None = None,
 ) -> AnnotationWithPayloadAndCountView:
     """Get all annotations with payload from the database.
 
@@ -49,12 +73,12 @@ def get_all_with_payload(
         pagination: Optional pagination parameters
         filters: Optional filters to apply to the query
         collection_id: ID of the collection to get annotations for
-        text_embedding: Optional embedding; when given, annotations are ordered by
-            cosine distance of their embedding to it.
+        ordering: Optional ordering applied before the tiebreaker chain.
 
     Returns:
         List of annotations matching the filters with payload
     """
+    ordering = ordering or AnnotationOrdering()
     parent_collection = collection_resolver.get_parent_collection_id(
         session=session, collection_id=collection_id
     )
@@ -76,8 +100,9 @@ def get_all_with_payload(
         base_query = filters.apply(base_query)
 
     embedding_model_id, distance_expr = get_distance_expression(
-        session=session, collection_id=collection_id, text_embedding=text_embedding
+        session=session, collection_id=collection_id, text_embedding=ordering.text_embedding
     )
+    order_by = ordering.order_by if distance_expr is None else None
     if distance_expr is not None:
         base_query = apply_similarity_join(
             query=base_query,
@@ -85,13 +110,23 @@ def get_all_with_payload(
             embedding_model_id=embedding_model_id,
         )
 
-    # Type is loosened to Any because similarity search appends a distance column,
-    # changing the row shape from 2-tuple to 3-tuple.
-    annotations_query: Any = base_query.order_by(
-        *([distance_expr] if distance_expr is not None else []),
-        *_extra_order_by(sample_type=sample_type),
-        col(AnnotationBaseTable.created_at).asc(),
-        col(AnnotationBaseTable.sample_id).asc(),
+    # Sort joins stay out of the count query below: they cannot change the count, so joining
+    # there would only run the join a second time per page. The type is loosened to Any
+    # because the sort value and the similarity distance are appended as extra columns,
+    # changing the row shape from a 2-tuple.
+    rows_query: Any = base_query
+    if order_by is not None:
+        # Appends the sort value to the SELECT and orders by it, so the tiebreaker chain
+        # below is appended after the sort key.
+        rows_query = order_by.apply_with_order_value(rows_query)
+
+    annotations_query: Any = rows_query.order_by(
+        *annotation_ordering.build_order_by(
+            file_path_abs=annotation_ordering.file_path_abs_expression(sample_type=sample_type),
+            created_at=col(AnnotationBaseTable.created_at),
+            annotation_sample_id=col(AnnotationBaseTable.sample_id),
+            leading_order_key=distance_expr,
+        ),
     )
     if distance_expr is not None:
         annotations_query = annotations_query.add_columns(distance_expr)
@@ -108,28 +143,44 @@ def get_all_with_payload(
 
     rows = session.exec(annotations_query).all()
 
+    return AnnotationWithPayloadAndCountView(
+        total_count=total_count,
+        next_cursor=next_cursor,
+        annotations=_build_annotation_views(
+            rows=rows, sample_type=sample_type, has_distance=distance_expr is not None
+        ),
+    )
+
+
+def _build_annotation_views(
+    rows: Sequence[Any],
+    sample_type: SampleType,
+    has_distance: bool,
+) -> list[AnnotationWithPayloadView]:
+    """Turn query rows into views, unpacking the distance column when present.
+
+    The sort value is read by label, so it is ``None`` whenever no sort is active.
+    """
     annotation_views = []
     for row in rows:
-        if distance_expr is not None:
+        if has_distance:
             annotation, payload, distance = row
             similarity_score = distance_to_similarity(distance)
         else:
-            annotation, payload = row
+            annotation, payload = row[0], row[1]
             similarity_score = None
         annotation_views.append(
             AnnotationWithPayloadView(
                 parent_sample_type=sample_type,
-                annotation=AnnotationView.from_annotation_table(annotation=annotation),
+                annotation=AnnotationView.from_annotation_table(
+                    annotation=annotation,
+                    order_value=order_by_module.get_order_value(row=row),
+                ),
                 parent_sample_data=_serialize_annotation_payload(payload=payload),
                 similarity_score=similarity_score,
             )
         )
-
-    return AnnotationWithPayloadAndCountView(
-        total_count=total_count,
-        next_cursor=next_cursor,
-        annotations=annotation_views,
-    )
+    return annotation_views
 
 
 def _build_base_query(
@@ -178,21 +229,6 @@ def _build_base_query(
         )
 
     raise NotImplementedError(f"Unsupported sample type: {sample_type}")
-
-
-def _extra_order_by(sample_type: SampleType) -> list[Any]:
-    """Return extra order by clauses for the query."""
-    if sample_type == SampleType.IMAGE:
-        return [
-            col(ImageTable.file_path_abs).asc(),
-        ]
-
-    if sample_type in (SampleType.VIDEO_FRAME, SampleType.VIDEO):
-        return [
-            col(VideoTable.file_path_abs).asc(),
-        ]
-
-    return []
 
 
 def _serialize_annotation_payload(

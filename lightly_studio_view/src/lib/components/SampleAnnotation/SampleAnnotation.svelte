@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import {
         SampleAnnotationBox,
         SampleAnnotationLabel,
@@ -11,7 +12,7 @@
     import { getColorByLabel, withAlpha } from '$lib/utils';
     import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
-    import { getBoundingBox } from './utils';
+    import { getBoundingBox, rleToSvgPath } from './utils';
 
     const {
         annotation,
@@ -25,7 +26,8 @@
         highlight = 'auto',
         prerenderedDataUrl,
         prerenderedHeight,
-        colorBySource
+        colorBySource,
+        isSelectable = false
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -41,20 +43,23 @@
         // Overrides when to color by annotation source instead of by label. When
         // undefined, falls back to the global rule (2+ sources selected in the grid).
         colorBySource?: boolean;
+        // Renders a click target shaped like the mask when its bounding box is hidden.
+        // Only set it inside a selectable parent, so other overlays stay click-through.
+        isSelectable?: boolean;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { multipleSourcesVisible, collectionIdToName } = useAnnotationCollectionsFilter();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
     const colorLabel = $derived.by(() => {
-        const bySource = colorBySource ?? $selectedCollectionIds.length >= 2;
+        const bySource = colorBySource ?? $multipleSourcesVisible;
         if (!bySource) return label;
         return $collectionIdToName[annotation.annotation_collection_id] ?? label;
     });
 
-    const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
+    const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
 
     const annotationId = $derived(annotation.sample_id);
 
@@ -81,7 +86,8 @@
             return 0.15;
         }
 
-        return segmentationMask ? 0.65 : ($customLabelColorsStore[colorLabel]?.alpha ?? 1.0) * 0.6;
+        const alpha = $customLabelColorsStore[colorLabel]?.alpha ?? 1.0;
+        return alpha * 0.6;
     });
 
     // Do not fill the bounding box if the annotation contains a segmentation mask.
@@ -89,7 +95,7 @@
         segmentationMask ? 0 : ($customLabelColorsStore[colorLabel]?.alpha ?? 1.0) * 0.4
     );
 
-    let boundingBox = $state<BoundingBox>(getBoundingBox(annotation));
+    let boundingBox = $state<BoundingBox>(untrack(() => getBoundingBox(annotation)));
 
     const onResize = (newBbox: BoundingBox) => {
         boundingBox = constraintBox
@@ -116,6 +122,12 @@
         boundingBox.width,
         boundingBox.height
     ]);
+
+    const maskHitPath = $derived(
+        isSelectable && !showBoundingBox && segmentationMask
+            ? rleToSvgPath(segmentationMask, imageWidth)
+            : undefined
+    );
 
     const showAnnotationLabel = $derived(
         showLabel &&
@@ -169,5 +181,12 @@
                 opacity={boundingBoxOpacity}
             />
         {/if}
+    {:else if maskHitPath}
+        <path
+            d={maskHitPath}
+            fill="transparent"
+            pointer-events="visibleFill"
+            data-testid="annotation_mask_hit_area"
+        />
     {/if}
 </g>

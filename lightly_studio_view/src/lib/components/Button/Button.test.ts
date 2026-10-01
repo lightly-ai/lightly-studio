@@ -9,13 +9,13 @@ const iconSelector = 'button > svg';
 const progressSelector = '[data-testid="button-progress"]';
 
 describe('Button', () => {
-    it('renders label children inside a span', () => {
+    it('renders label children unwrapped when the label never collapses', () => {
         const { container } = render(ButtonTestWrapper, { props: { label: 'Click me' } });
 
         const button = container.querySelector('button');
         expect(button).toBeInTheDocument();
         expect(button).toHaveTextContent('Click me');
-        expect(container.querySelector(labelSelector)).toHaveTextContent('Click me');
+        expect(container.querySelector(labelSelector)).toBeNull();
     });
 
     it('renders the icon when provided', () => {
@@ -40,12 +40,13 @@ describe('Button', () => {
             props: { label: 'Open', iconAfter: ChevronDown }
         });
 
-        const children = Array.from(container.querySelector('button')?.children ?? []);
-        const labelIndex = children.findIndex((el) => el.tagName === 'SPAN');
-        const svgIndex = children.findIndex((el) => el.tagName === 'svg' || el.tagName === 'SVG');
+        const button = container.querySelector('button');
+        const nodes = Array.from(button?.childNodes ?? []);
+        const labelIndex = nodes.findIndex((node) => node.textContent?.trim() === 'Open');
+        const svgIndex = nodes.findIndex((node) => node === button?.querySelector('svg'));
         expect(labelIndex).toBeGreaterThan(-1);
         expect(svgIndex).toBeGreaterThan(labelIndex);
-        expect(children[svgIndex]).toHaveClass('size-4');
+        expect(button?.lastElementChild).toHaveClass('size-4');
     });
 
     it('renders both leading and trailing icons when both are provided', () => {
@@ -111,14 +112,25 @@ describe('Button', () => {
         expect(onclick).toHaveBeenCalledOnce();
     });
 
-    it('does not apply a collapse class when collapseAt is "never"', () => {
+    it('does not wrap the label when collapseAt is "never"', () => {
         const { container } = render(ButtonTestWrapper, {
             props: { label: 'Edit', collapseAt: 'never' }
         });
 
-        const span = container.querySelector(labelSelector);
-        expect(span).toBeInTheDocument();
-        expect(span?.className).not.toMatch(/max-\w+:(?:sr-only|hidden)/);
+        expect(container.querySelector(labelSelector)).toBeNull();
+        expect(container.querySelector('button')).toHaveTextContent('Edit');
+    });
+
+    it('wraps the label only when collapseAt is a breakpoint', () => {
+        const { container: never } = render(ButtonTestWrapper, {
+            props: { label: 'Edit', collapseAt: 'never' }
+        });
+        const { container: md } = render(ButtonTestWrapper, {
+            props: { label: 'Edit', collapseAt: 'md' }
+        });
+
+        expect(never.querySelector(labelSelector)).toBeNull();
+        expect(md.querySelector(labelSelector)).toHaveTextContent('Edit');
     });
 
     it.each([
@@ -205,10 +217,9 @@ describe('Button', () => {
             });
 
             expect(container.querySelector(iconSelector)).toBeInTheDocument();
-            const label = container.querySelector(labelSelector);
-            expect(label).toHaveTextContent('Save');
-            expect(label?.className).not.toContain('invisible');
-            expect(label?.className).not.toContain('hidden');
+            const button = container.querySelector('button');
+            expect(button).toHaveTextContent('Save');
+            expect(button?.className).not.toContain('invisible');
         });
 
         it('keeps the button disabled even when buttonProps.disabled is false', () => {

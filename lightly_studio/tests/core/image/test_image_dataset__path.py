@@ -10,6 +10,9 @@ from pytest_mock import MockerFixture as Mocker
 from lightly_studio import ImageDataset
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_images
+from lightly_studio.embed import embedder_registry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.random_embedder import RandomEmbedder
 
 
 class TestDataset:
@@ -180,7 +183,7 @@ class TestDataset:
 
         log_text = caplog.text
         assert "added=2, already_present=4" in log_text
-        assert "Example already_present paths:" in log_text
+        assert "Examples 'already_present':" in log_text
         assert f"{images_path}" in log_text
 
     def test_dataset_add_images_from_path__dont_embed(
@@ -197,6 +200,36 @@ class TestDataset:
         samples = dataset.query().to_list()
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
+
+    def test_dataset_add_images_from_path__embedder_dimension_mismatch(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: Mocker,
+        tmp_path: Path,
+    ) -> None:
+        _create_sample_images(image_paths=[tmp_path / "first" / "image1.jpg"])
+        dataset = ImageDataset.create(name="test_dataset")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
+        dataset.add_images_from_path(path=tmp_path / "first")
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=4))
+        _create_sample_images(image_paths=[tmp_path / "second" / "image2.jpg"])
+
+        with pytest.raises(ValueError, match=r"does not match"):
+            dataset.add_images_from_path(path=tmp_path / "second")
+        # The new image is stored without an embedding
+        assert _embedding_count_by_file_name(dataset=dataset) == {
+            "image1.jpg": 1,
+            "image2.jpg": 0,
+        }
+
+        _patch_registry(mocker=mocker, embedder=RandomEmbedder(dimension=3))
+        dataset.add_images_from_path(path=tmp_path / "second")
+
+        # Adding the images again with the right embedder embeds the image
+        assert _embedding_count_by_file_name(dataset=dataset) == {
+            "image1.jpg": 1,
+            "image2.jpg": 1,
+        }
 
     def test_dataset_add_images_from_path__limit(
         self,
@@ -251,6 +284,17 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"limit must be greater than 0"):
             dataset.add_images_from_path(path=tmp_path, limit=limit)
 
+    @pytest.mark.parametrize("tag_depth", [-1, -5])
+    def test_dataset_add_images_from_path__invalid_tag_depth(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        tag_depth: int,
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match="tag_depth must be non-negative"):
+            dataset.add_images_from_path(path=tmp_path, tag_depth=tag_depth)
+
     def test_add_images_from_path_calls_tag_samples_by_directory(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -278,3 +322,17 @@ def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:
         image_path.parent.mkdir(parents=True, exist_ok=True)
         Image.new("RGB", (10, 10)).save(image_path)
+
+
+def _patch_registry(mocker: Mocker, embedder: RandomEmbedder) -> None:
+    """Replace the process-wide registry with one that holds only ``embedder``."""
+    registry = EmbedderRegistry()
+    registry.register(embedder=embedder)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+
+def _embedding_count_by_file_name(dataset: ImageDataset) -> dict[str, int]:
+    return {
+        sample.file_name: len(sample.sample_table.embeddings)
+        for sample in dataset.query().to_list()
+    }

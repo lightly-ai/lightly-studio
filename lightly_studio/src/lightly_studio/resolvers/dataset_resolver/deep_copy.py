@@ -32,6 +32,7 @@ from sqlmodel import Session, SQLModel, col, select
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -43,6 +44,7 @@ from lightly_studio.models.annotation_collection_coverage import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import (
@@ -51,11 +53,24 @@ from lightly_studio.models.evaluation_annotation_metric import (
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
+from lightly_studio.models.group_component_definition import (
+    GroupComponentDefinitionTable,
+)
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
@@ -66,6 +81,7 @@ _MAP_COLLECTION = "deep_copy_map_collection"
 _MAP_SAMPLE = "deep_copy_map_sample"
 _MAP_TAG = "deep_copy_map_tag"
 _MAP_OBJECT_TRACK = "deep_copy_map_object_track"
+_MAP_RECORDING = "deep_copy_map_recording"
 _MAP_ANNOTATION_LABEL = "deep_copy_map_annotation_label"
 _MAP_EMBEDDING_MODEL = "deep_copy_map_embedding_model"
 _MAP_EVALUATION_RUN = "deep_copy_map_evaluation_run"
@@ -114,20 +130,26 @@ def deep_copy(
         now=now,
     )
     _copy_tags(session=session, now=now)
+    _copy_recordings(session=session, new_dataset_id=new_dataset_id)
     _copy_object_tracks(session=session, new_dataset_id=new_dataset_id)
     _copy_annotation_labels(session=session, new_dataset_id=new_dataset_id)
-    _copy_embedding_models(session=session, now=now)
+    _copy_embedding_models(session=session, new_dataset_id=new_dataset_id, now=now)
     _copy_samples(session=session, now=now)
     _copy_evaluation_runs(session=session, new_dataset_id=new_dataset_id, now=now)
 
     _copy_images(session=session, now=now)
+    _copy_mcaps(session=session, now=now)
     _copy_videos(session=session)
     _copy_video_frames(session=session)
     _copy_groups(session=session)
+    _copy_sequences(session=session)
+    _copy_mcap_group_sequences(session=session)
     _copy_captions(session=session, now=now)
     _copy_annotations(session=session, now=now)
     _copy_annotation_details(session=session, detail_table=ObjectDetectionAnnotationTable)
     _copy_annotation_details(session=session, detail_table=SegmentationAnnotationTable)
+    _copy_annotation_details(session=session, detail_table=Cuboid3DAnnotationTable)
+    _copy_annotation_details(session=session, detail_table=TemporalSpanTable)
 
     _copy_sample_embeddings(session=session)
     _copy_metadata(session=session, now=now)
@@ -136,7 +158,13 @@ def deep_copy(
 
     _copy_sample_tag_links(session=session)
     _copy_sample_group_links(session=session)
+    _copy_sample_sequence_links(session=session)
     _copy_annotation_collection_coverage(session=session)
+    _copy_default_embedding_spaces(session=session)
+    _copy_group_component_definitions(session=session)
+    _copy_mcap_group_component_definitions(session=session)
+    _copy_sensor_calibrations(session=session)
+    _copy_static_transforms(session=session)
 
     # Commit so the ON COMMIT DROP map tables are released and a subsequent deep_copy in
     # the same session can recreate them.
@@ -183,6 +211,13 @@ def _build_id_maps(session: Session, old_dataset_id: UUID) -> None:
     )
     _create_id_map(
         session=session,
+        source_table="recording",
+        id_column="recording_id",
+        where_sql="dataset_id = :old_dataset_id",
+        params=dataset_params,
+    )
+    _create_id_map(
+        session=session,
         source_table="annotation_label",
         id_column="annotation_label_id",
         where_sql="dataset_id = :old_dataset_id",
@@ -192,7 +227,8 @@ def _build_id_maps(session: Session, old_dataset_id: UUID) -> None:
         session=session,
         source_table="embedding_model",
         id_column="embedding_model_id",
-        where_sql=in_collection_map,
+        where_sql="dataset_id = :old_dataset_id",
+        params=dataset_params,
     )
     _create_id_map(
         session=session,
@@ -395,17 +431,42 @@ def _copy_tags(session: Session, now: datetime) -> None:
 
 
 def _copy_object_tracks(session: Session, new_dataset_id: UUID) -> None:
-    """Copy object tracks, remapping dataset_id."""
+    """Copy object tracks, remapping dataset_id and parent_object_track_id."""
     src = _table(ObjectTrackTable).alias("src")
     map_track = _map(_MAP_OBJECT_TRACK)
-    from_clause = src.join(map_track, map_track.c.old_id == src.c["object_track_id"])
+    map_parent_track = _map(_MAP_OBJECT_TRACK, alias="map_parent_track")
+    from_clause = src.join(map_track, map_track.c.old_id == src.c["object_track_id"]).outerjoin(
+        map_parent_track, map_parent_track.c.old_id == src.c["parent_object_track_id"]
+    )
     overrides = {
         "object_track_id": map_track.c.new_id,
         "dataset_id": literal(new_dataset_id),
+        "parent_object_track_id": map_parent_track.c.new_id,
     }
     _copy_table(
         session=session,
         target=ObjectTrackTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_recordings(session: Session, new_dataset_id: UUID) -> None:
+    """Copy recordings, remapping dataset_id.
+
+    ``format``, ``uri``, and ``reference_frame_ids`` are copied verbatim.
+    """
+    src = _table(RecordingTable).alias("src")
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"])
+    overrides = {
+        "recording_id": map_recording.c.new_id,
+        "dataset_id": literal(new_dataset_id),
+    }
+    _copy_table(
+        session=session,
+        target=RecordingTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,
@@ -434,17 +495,14 @@ def _copy_annotation_labels(session: Session, new_dataset_id: UUID) -> None:
     )
 
 
-def _copy_embedding_models(session: Session, now: datetime) -> None:
-    """Copy embedding models, remapping collection_id."""
+def _copy_embedding_models(session: Session, new_dataset_id: UUID, now: datetime) -> None:
+    """Copy embedding models, remapping the id and dataset_id."""
     src = _table(EmbeddingModelTable).alias("src")
     map_model = _map(_MAP_EMBEDDING_MODEL)
-    map_collection = _map(_MAP_COLLECTION)
-    from_clause = src.join(map_model, map_model.c.old_id == src.c["embedding_model_id"]).join(
-        map_collection, map_collection.c.old_id == src.c["collection_id"]
-    )
+    from_clause = src.join(map_model, map_model.c.old_id == src.c["embedding_model_id"])
     overrides = {
         "embedding_model_id": map_model.c.new_id,
-        "collection_id": map_collection.c.new_id,
+        "dataset_id": literal(new_dataset_id),
         "created_at": literal(now),
     }
     _copy_table(
@@ -502,6 +560,25 @@ def _copy_images(session: Session, now: datetime) -> None:
     )
 
 
+def _copy_mcaps(session: Session, now: datetime) -> None:
+    """Copy mcap rows, remapping sample_id."""
+    src = _table(McapTable).alias("src")
+    map_sample = _map(_MAP_SAMPLE)
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"])
+    overrides = {
+        "sample_id": map_sample.c.new_id,
+        "created_at": literal(now),
+        "updated_at": literal(now),
+    }
+    _copy_table(
+        session=session,
+        target=McapTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
 def _copy_videos(session: Session) -> None:
     """Copy videos, remapping sample_id."""
     src = _table(VideoTable).alias("src")
@@ -547,6 +624,42 @@ def _copy_groups(session: Session) -> None:
     _copy_table(
         session=session,
         target=GroupTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_sequences(session: Session) -> None:
+    """Copy sequences, remapping sample_id."""
+    src = _table(SequenceTable).alias("src")
+    map_sample = _map(_MAP_SAMPLE)
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"])
+    overrides = {"sample_id": map_sample.c.new_id}
+    _copy_table(
+        session=session,
+        target=SequenceTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_mcap_group_sequences(session: Session) -> None:
+    """Copy MCAP group sequences, remapping sample_id and recording_id."""
+    src = _table(McapGroupSequenceTable).alias("src")
+    map_sample = _map(_MAP_SAMPLE)
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"]).join(
+        map_recording, map_recording.c.old_id == src.c["recording_id"]
+    )
+    overrides = {
+        "sample_id": map_sample.c.new_id,
+        "recording_id": map_recording.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=McapGroupSequenceTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,
@@ -605,7 +718,7 @@ def _copy_annotations(session: Session, now: datetime) -> None:
 
 
 def _copy_annotation_details(session: Session, detail_table: type[SQLModel]) -> None:
-    """Copy an annotation detail table (object detection / segmentation), remapping sample_id."""
+    """Copy an annotation detail table, remapping sample_id."""
     src = _table(detail_table).alias("src")
     map_sample = _map(_MAP_SAMPLE)
     from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"])
@@ -756,6 +869,31 @@ def _copy_sample_group_links(session: Session) -> None:
     )
 
 
+def _copy_sample_sequence_links(session: Session) -> None:
+    """Copy sample-sequence links, remapping sample_id and sequence_sample_id.
+
+    ``seq_number`` and ``timestamp_ns`` are copied verbatim, so the copied sequence keeps
+    the order and the timestamps of the original.
+    """
+    src = _table(SampleSequenceLinkTable).alias("src")
+    map_sample = _map(_MAP_SAMPLE)
+    map_sequence = _map(_MAP_SAMPLE, alias="map_sequence")
+    from_clause = src.join(map_sample, map_sample.c.old_id == src.c["sample_id"]).join(
+        map_sequence, map_sequence.c.old_id == src.c["sequence_sample_id"]
+    )
+    overrides = {
+        "sample_id": map_sample.c.new_id,
+        "sequence_sample_id": map_sequence.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=SampleSequenceLinkTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
 def _copy_annotation_collection_coverage(session: Session) -> None:
     """Copy annotation collection coverage rows, remapping collection and sample ids."""
     src = _table(AnnotationCollectionCoverageTable).alias("src")
@@ -771,6 +909,105 @@ def _copy_annotation_collection_coverage(session: Session) -> None:
     _copy_table(
         session=session,
         target=AnnotationCollectionCoverageTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_default_embedding_spaces(session: Session) -> None:
+    """Copy default embedding spaces, remapping collection_id and embedding_model_id.
+
+    The inner joins on the collection and embedding-model maps drop any row whose
+    collection or model is not part of the dataset.
+    """
+    src = _table(CollectionEmbeddingModelTable).alias("src")
+    map_collection = _map(_MAP_COLLECTION)
+    map_model = _map(_MAP_EMBEDDING_MODEL)
+    from_clause = src.join(map_collection, map_collection.c.old_id == src.c["collection_id"]).join(
+        map_model, map_model.c.old_id == src.c["embedding_model_id"]
+    )
+    overrides = {
+        "collection_id": map_collection.c.new_id,
+        "embedding_model_id": map_model.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=CollectionEmbeddingModelTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_group_component_definitions(session: Session) -> None:
+    """Copy group component definitions, remapping collection_id."""
+    src = _table(GroupComponentDefinitionTable).alias("src")
+    map_collection = _map(_MAP_COLLECTION)
+    from_clause = src.join(map_collection, map_collection.c.old_id == src.c["collection_id"])
+    overrides = {"collection_id": map_collection.c.new_id}
+    _copy_table(
+        session=session,
+        target=GroupComponentDefinitionTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_mcap_group_component_definitions(session: Session) -> None:
+    """Copy MCAP group component definitions, remapping collection_id.
+
+    ``mcap_data_type``, ``frame_id``, and ``channel_id`` are copied verbatim. Classic
+    IMAGE/VIDEO definitions have no row here, so they copy nothing.
+    """
+    src = _table(McapGroupComponentDefinitionTable).alias("src")
+    map_collection = _map(_MAP_COLLECTION)
+    from_clause = src.join(map_collection, map_collection.c.old_id == src.c["collection_id"])
+    overrides = {"collection_id": map_collection.c.new_id}
+    _copy_table(
+        session=session,
+        target=McapGroupComponentDefinitionTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_sensor_calibrations(session: Session) -> None:
+    """Copy sensor calibrations, remapping recording_id and collection_id."""
+    src = _table(SensorCalibrationTable).alias("src")
+    map_recording = _map(_MAP_RECORDING)
+    map_collection = _map(_MAP_COLLECTION)
+    from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"]).join(
+        map_collection, map_collection.c.old_id == src.c["collection_id"]
+    )
+    overrides = {
+        "sensor_calibration_id": func.gen_random_uuid(),
+        "recording_id": map_recording.c.new_id,
+        "collection_id": map_collection.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=SensorCalibrationTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_static_transforms(session: Session) -> None:
+    """Copy static transforms, remapping recording_id and generating a new PK."""
+    src = _table(StaticTransformTable).alias("src")
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"])
+    overrides = {
+        "static_transform_id": func.gen_random_uuid(),
+        "recording_id": map_recording.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=StaticTransformTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

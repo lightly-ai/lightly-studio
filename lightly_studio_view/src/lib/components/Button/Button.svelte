@@ -31,7 +31,8 @@
          * Hide the label at and below the given Tailwind breakpoint while
          * keeping the icon visible. The label remains in the DOM as visually
          * hidden text so screen readers still announce it. `never` (default)
-         * keeps the label visible at all sizes.
+         * keeps the label visible at all sizes and renders the children
+         * unwrapped, so they stay direct flex children of the button.
          */
         collapseAt?: CollapseAt;
         /**
@@ -91,7 +92,13 @@
         <Icon class="size-4" />
     {/if}
     {#if children}
-        <span class={labelCollapseClass[collapseAt]}>{@render children()}</span>
+        {#if collapseAt === 'never'}
+            <!-- Rendered unwrapped so the caller's own children stay direct flex
+                 children of the button (`justify-between`, `gap-*`, `truncate`). -->
+            {@render children()}
+        {:else}
+            <span class={labelCollapseClass[collapseAt]}>{@render children()}</span>
+        {/if}
     {/if}
     {#if IconAfter}
         <IconAfter class={cn('size-4', iconAfterClass)} />

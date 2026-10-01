@@ -4,28 +4,25 @@ from __future__ import annotations
 
 import io
 import json
+from collections.abc import Callable
 from typing import Annotated
 from uuid import UUID
 
 import numpy as np
 import pyarrow as pa
-from fastapi import APIRouter, Depends, HTTPException, Path, Response
+from fastapi import APIRouter, HTTPException, Path, Response
 
 from pyarrow import ipc
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
-from lightly_studio.dataset.embedding_manager import (
-    EmbeddingManager,
-    EmbeddingManagerProvider,
-    TextEmbedQuery,
-)
+from lightly_studio.embed import embed_samples
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.resolvers import (
     annotation_resolver,
-    embedding_model_resolver,
+    collection_embedding_model_resolver,
     image_resolver,
     twodim_embedding_resolver,
     video_resolver,
@@ -40,11 +37,6 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 embeddings2d_router = APIRouter()
-
-EmbeddingManagerDep = Annotated[
-    EmbeddingManager,
-    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),  # noqa: PLW0108
-]
 
 
 class TextAxis(BaseModel):
@@ -89,7 +81,6 @@ def get_2d_embeddings(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="Collection Id")],
     body: GetEmbeddings2DRequest,
-    embedding_manager: EmbeddingManagerDep,
 ) -> Response:
     """Return 2D embeddings serialized as an Arrow stream."""
     collection = session.get(CollectionTable, collection_id)
@@ -101,19 +92,16 @@ def get_2d_embeddings(
     _validate_filter_type(collection=collection, filters=body.filters)
 
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
-    embedding_model = embedding_model_resolver.get_default_by_collection_id(
+    embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=session,
         collection_id=collection_id,
     )
-    if embedding_model is None:
+    if embedding_model_id is None:
         raise ValueError("No embedding model configured.")
 
     def _embed(text: str) -> list[float]:
-        return embedding_manager.embed_text(
-            collection_id=collection_id,
-            text_query=TextEmbedQuery(
-                text=text, embedding_model_id=embedding_model.embedding_model_id
-            ),
+        return embed_samples.embed_text_for_collection(
+            session=session, collection_id=collection_id, text=text
         )
 
     label_marker_names = body.reference_label_names or []
@@ -121,18 +109,8 @@ def get_2d_embeddings(
 
     reference_points: list[dict[str, object]] = []
     if body.nlp_axes is not None:
-        direction_x, x_words = _project_text_axis(
-            axis=body.nlp_axes.x,
-            collection_id=collection_id,
-            embedding_model_id=embedding_model.embedding_model_id,
-            embedding_manager=embedding_manager,
-        )
-        direction_y, y_words = _project_text_axis(
-            axis=body.nlp_axes.y,
-            collection_id=collection_id,
-            embedding_model_id=embedding_model.embedding_model_id,
-            embedding_manager=embedding_manager,
-        )
+        direction_x, x_words = _project_text_axis(axis=body.nlp_axes.x, embed=_embed)
+        direction_y, y_words = _project_text_axis(axis=body.nlp_axes.y, embed=_embed)
         # Axis markers: cartesian product of axis anchor words (e.g. "young male").
         axis_marker_labels = [f"{x_word} {y_word}" for x_word in x_words for y_word in y_words]
         axis_marker_embeddings = [_embed(label) for label in axis_marker_labels]
@@ -143,7 +121,7 @@ def get_2d_embeddings(
             twodim_embedding_resolver.get_twodim_embeddings_nlp(
                 session=session,
                 collection_id=collection_id,
-                embedding_model_id=embedding_model.embedding_model_id,
+                embedding_model_id=embedding_model_id,
                 direction_x=direction_x,
                 direction_y=direction_y,
                 reference_embeddings=combined_embeddings,
@@ -163,7 +141,7 @@ def get_2d_embeddings(
             twodim_embedding_resolver.get_twodim_embeddings_pca(
                 session=session,
                 collection_id=collection_id,
-                embedding_model_id=embedding_model.embedding_model_id,
+                embedding_model_id=embedding_model_id,
                 text_embeddings=text_embeddings,
                 reference_embeddings=label_marker_embeddings,
             )
@@ -176,7 +154,7 @@ def get_2d_embeddings(
         x_array, y_array, sample_ids, centroids = twodim_embedding_resolver.get_twodim_embeddings(
             session=session,
             collection_id=collection_id,
-            embedding_model_id=embedding_model.embedding_model_id,
+            embedding_model_id=embedding_model_id,
             reference_embeddings=label_marker_embeddings,
         )
         reference_points = [
@@ -249,9 +227,7 @@ def get_2d_embeddings(
 
 def _project_text_axis(
     axis: TextAxis,
-    collection_id: UUID,
-    embedding_model_id: UUID,
-    embedding_manager: EmbeddingManager,
+    embed: Callable[[str], list[float]],
 ) -> tuple[list[float], list[str]]:
     """Embed a TextAxis and return its direction vector and its anchor words.
 
@@ -260,25 +236,13 @@ def _project_text_axis(
     for a single-anchor axis and two (negative, positive) for a contrastive axis — used to
     build reference-marker labels via the cartesian product of the two axes.
     """
-    positive = np.asarray(
-        embedding_manager.embed_text(
-            collection_id=collection_id,
-            text_query=TextEmbedQuery(text=axis.positive, embedding_model_id=embedding_model_id),
-        )
-    )
+    positive = np.asarray(embed(axis.positive))
     negative_text = (axis.negative or "").strip()
     if not negative_text:
         direction = positive
         words = [axis.positive]
     else:
-        negative = np.asarray(
-            embedding_manager.embed_text(
-                collection_id=collection_id,
-                text_query=TextEmbedQuery(
-                    text=negative_text, embedding_model_id=embedding_model_id
-                ),
-            )
-        )
+        negative = np.asarray(embed(negative_text))
         direction = positive - negative
         words = [negative_text, axis.positive]
     return [float(v) for v in direction.tolist()], words

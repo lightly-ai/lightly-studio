@@ -1,6 +1,5 @@
 <script lang="ts">
     import { toast } from 'svelte-sonner';
-    import { Card, CardContent } from '$lib/components';
     import type { CaptionView, SampleView, VideoView } from '$lib/api/lightly_studio_local';
     import type { ImageSample } from '$lib/services/types';
     import { SampleType } from '$lib/api/lightly_studio_local';
@@ -118,9 +117,9 @@
     }
 </script>
 
-<div style={`height: ${maxHeight}; max-height: ${maxHeight};`}>
-    <Card className="h-full">
-        <CardContent className="h-full flex min-h-0 flex-row items-center dark:[color-scheme:dark]">
+<article style={`height: ${maxHeight}; max-height: ${maxHeight};`} data-testid="caption-row">
+    <div class="h-full border-b border-border-hard">
+        <div class="flex h-full min-h-0 flex-row items-center dark:[color-scheme:dark]">
             {#if isVideoView(item)}
                 {#if videoQuery.data}
                     <div class="sample-image">
@@ -165,26 +164,29 @@
                     data-testid="video-frame-image"
                 />
             {/if}
-            <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
-                {#each captions as caption (caption.sample_id)}
-                    <CaptionField
-                        {caption}
-                        onDeleteCaption={() => onDeleteCaption(caption.sample_id)}
-                        {onUpdate}
-                    />
-                {/each}
-                {#if $isEditingMode}
-                    <CreateCaptionField
-                        onCreate={(text) => onCreateCaption(item.sample_id, text)}
-                        {isCreatingCaption}
-                        {onCreatingCaptionChange}
-                        {canStartDraft}
-                    />
-                {/if}
+            <div class="flex h-full min-w-0 flex-1 flex-col overflow-hidden px-4 py-4">
+                <h2 class="mb-2 text-sm font-medium">Captions</h2>
+                <div class="min-h-0 flex-1 overflow-y-auto pr-2" data-testid="caption-scroll-area">
+                    {#each captions as caption (caption.sample_id)}
+                        <CaptionField
+                            {caption}
+                            onDeleteCaption={() => onDeleteCaption(caption.sample_id)}
+                            {onUpdate}
+                        />
+                    {/each}
+                    {#if $isEditingMode}
+                        <CreateCaptionField
+                            onCreate={(text) => onCreateCaption(item.sample_id, text)}
+                            {isCreatingCaption}
+                            {onCreatingCaptionChange}
+                            {canStartDraft}
+                        />
+                    {/if}
+                </div>
             </div>
-        </CardContent>
-    </Card>
-</div>
+        </div>
+    </div>
+</article>
 
 <style>
     .sample-image {

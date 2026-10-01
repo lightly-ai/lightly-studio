@@ -5,18 +5,17 @@ import { guardrails, selectGuardrails } from './registry';
 import { runGuardrails } from './run-guardrails';
 
 // Local CLI: judges the branch's committed changes from a plain checkout — no
-// GitHub API. The CI entry that writes the verdict artifact lands in a later PR.
+// GitHub API. The CI entry that writes the verdict artifact lives in ci.ts.
 
 /** Base ref to diff against; overridable so stacked branches can pick their base. */
 const DEFAULT_BASE_REF = 'origin/main';
 
-/** Print the registry (name, required-ness, availability) and exit. */
+/** Print the registry (name, required-ness) and exit. */
 function listGuardrails(): void {
     console.log('Registered guardrails:');
     for (const g of guardrails) {
         const required = g.required ? 'required' : 'optional';
-        const availability = g.needsPrContext ? 'pr-only' : 'local';
-        console.log(`  ${g.name}  (${required}, ${availability})`);
+        console.log(`  ${g.name}  (${required})`);
     }
 }
 
@@ -41,16 +40,14 @@ async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
     // Validate the base ref before judging: an empty or unresolvable ref would
     // otherwise diff against nothing and report a vacuous pass (see git-context).
     await context.assertBaseRefResolves();
-    // Local runs have no PR API, so pr-only guardrails are filtered out. An
-    // explicit GUARDRAILS name that needs PR context fails fast (see selectGuardrails).
     const selected = selectGuardrails(guardrails, {
-        hasPrContext: false,
         guardrailNames: selectedNames(env.GUARDRAILS)
     });
 
-    console.log(`Fast Track guardrails — base ref: ${baseRef}\n`);
+    console.log(`Fast Track guardrails — base ref: ${baseRef}`);
     const { status, guardrails: results } = await runGuardrails(context, selected);
 
+    console.log('\nGuardrail results:');
     for (const result of results) {
         const mark = result.status === 'pass' ? '✓' : '✗';
         console.log(`  ${mark} ${result.name}  ${result.status}  ${result.summary}`);

@@ -4,7 +4,9 @@ import { readonly, writable } from 'svelte/store';
 export const useFeatureFlags = () => {
     const featureFlags = writable([] as string[]);
     const error = writable<Error | null>(null);
-    getFeatures()
+    // Handed back as `ready` so a caller that has to act on the answer can await it instead of
+    // reading the store before the request lands.
+    const ready = getFeatures()
         .then((response) => {
             if (response.data) {
                 featureFlags.set(response.data);
@@ -16,6 +18,7 @@ export const useFeatureFlags = () => {
 
     return {
         error,
-        featureFlags: readonly(featureFlags)
+        featureFlags: readonly(featureFlags),
+        ready
     };
 };

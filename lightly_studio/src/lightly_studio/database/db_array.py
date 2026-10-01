@@ -31,7 +31,7 @@ class in_array(ColumnElement[bool]):  # noqa: N801
      expanding IN clause, which DuckDB handles efficiently.
     """
 
-    # Holds a raw Python list, which is not safely cache-keyable (like db_json.json_extract).
+    # Holds a raw Python list, which is not safely cache-keyable.
     inherit_cache = False
     type = Boolean()
 

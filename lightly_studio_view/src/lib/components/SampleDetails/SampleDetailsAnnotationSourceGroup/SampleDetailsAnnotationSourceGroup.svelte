@@ -7,7 +7,7 @@
     import { ColorMarker } from '$lib/components/SideMenu';
     import { ChevronDown, Eye, EyeOff } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import type { Snippet } from 'svelte';
+    import { untrack, type Snippet } from 'svelte';
     import { slide } from 'svelte/transition';
 
     interface Props {
@@ -36,12 +36,12 @@
         children
     }: Props = $props();
 
-    let open = $state(initiallyOpen);
+    let open = $state(untrack(() => initiallyOpen));
 
     // The component is reused across samples (the parent's {#each} is keyed by source id), so
     // re-apply the seeded collapse on sample change. Tracked by sampleId so a manual toggle
     // persists within a sample and the chevron stays independent of the eye.
-    let appliedSampleId = sampleId;
+    let appliedSampleId = $state(untrack(() => sampleId));
     $effect(() => {
         if (appliedSampleId === sampleId) return;
         appliedSampleId = sampleId;

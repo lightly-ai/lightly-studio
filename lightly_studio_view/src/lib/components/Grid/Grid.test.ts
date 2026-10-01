@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/svelte';
+import { act, render, waitFor } from '@testing-library/svelte';
 import GridTestWrapper from './GridTestWrapper.test.svelte';
 
 class MockResizeObserver {
@@ -33,6 +33,7 @@ describe('Grid', () => {
         vi.restoreAllMocks();
         global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
         Element.prototype.scrollTo = vi.fn();
+        vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
 
         vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
             callback(0);
@@ -48,6 +49,31 @@ describe('Grid', () => {
 
         const firstItem = container.querySelector('[data-testid="grid-item-0"]');
         expect(firstItem).toBeInTheDocument();
+    });
+
+    it('waits for layout before mounting only visible and overscan items', async () => {
+        const observers: MockResizeObserver[] = [];
+        const observe = vi
+            .spyOn(MockResizeObserver.prototype, 'observe')
+            .mockImplementation(function (this: MockResizeObserver) {
+                observers.push(this);
+            });
+        const { container } = render(GridTestWrapper, {
+            props: { itemCount: 100, columnCount: 6, overScan: 2 }
+        });
+        expect(container.querySelectorAll('[data-testid^="grid-item-"]')).toHaveLength(0);
+
+        await act(() => {
+            observe.mockRestore();
+            for (const observer of observers) {
+                observer.observe(container);
+            }
+        });
+
+        await waitFor(() => {
+            // 804px width gives 134px cells: five visible rows plus two overscan rows.
+            expect(container.querySelectorAll('[data-testid^="grid-item-"]')).toHaveLength(42);
+        });
     });
 
     it('renders the footer snippet', () => {

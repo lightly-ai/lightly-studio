@@ -6,17 +6,25 @@ from typing import Annotated
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-from sqlmodel import Session
+from sqlmodel import Session, col
 
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByAnnotationEvaluationMetricField,
+    OrderByExpression,
+)
+from lightly_studio.models import sort
 from lightly_studio.models.adjacents import AdjacentResultView
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.sort import SortExpr, sort_expr_to_order_by
+from lightly_studio.models.sort import AdjacentSortExpr, SortFieldSource
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.resolvers.annotations import annotation_metric_sort
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -38,7 +46,83 @@ class AdjacentRequest(BaseModel):
         | None
     ) = None
     text_embedding: list[float] | None = None
-    sort_by: list[SortExpr] | None = None
+    sort_by: list[AdjacentSortExpr] | None = None
+    annotation_sort_by: AnnotationEvaluationMetricSortExpr | None = None
+
+
+def _build_annotation_order_by(
+    session: Session,
+    filters: AnnotationsFilter,
+    annotation_sort_by: AnnotationEvaluationMetricSortExpr | None,
+) -> OrderByAnnotationEvaluationMetricField | None:
+    """Resolve the order-by clause for an annotation adjacent query.
+
+    Normalises the collection ID list from the filter and, when a sort
+    expression is present, translates it into a database-backed order-by
+    expression tied to the first collection.
+
+    Args:
+        session: Database session used to look up the evaluation run.
+        filters: The annotation filters carrying the collection IDs.
+        annotation_sort_by: Optional sort expression from the request.
+
+    Returns:
+        An order-by expression, or None when no sort should be applied.
+    """
+    collection_ids = filters.collection_ids or []
+    if not (annotation_sort_by and collection_ids):
+        return None
+    if len(collection_ids) > 1:
+        raise ValueError(
+            "annotation_sort_by is not supported when multiple collection_ids are provided"
+        )
+    return annotation_metric_sort.sort_expr_to_order_by(
+        session=session,
+        annotation_collection_id=collection_ids[0],
+        sort_expr=annotation_sort_by,
+        annotation_id_column=col(AnnotationBaseTable.sample_id),
+    )
+
+
+# Field sources each sample type can sort by. The shared request accepts any source, so
+# one the target grid cannot reach must be rejected rather than translated to a field on
+# a table absent from the query (see the SortFieldExprBase docstring).
+_ALLOWED_SORT_SOURCES: dict[SampleType, set[SortFieldSource]] = {
+    SampleType.IMAGE: {
+        SortFieldSource.image,
+        SortFieldSource.metadata,
+        SortFieldSource.evaluation_metric,
+    },
+    SampleType.VIDEO: {SortFieldSource.video, SortFieldSource.metadata},
+}
+
+
+def _build_sort_order_by(
+    sort_by: list[AdjacentSortExpr] | None,
+    sample_type: SampleType,
+) -> list[OrderByExpression] | None:
+    """Translate the requested sort, rejecting sources the sample type cannot reach.
+
+    Args:
+        sort_by: The sort expressions from the request, or None.
+        sample_type: The sample type whose grid ordering the adjacency must match.
+
+    Returns:
+        The translated order-by expressions, or None when no sort was requested.
+
+    Raises:
+        ValueError: If a sort expression uses a source the sample type cannot sort by.
+    """
+    if not sort_by:
+        return None
+    allowed = _ALLOWED_SORT_SOURCES[sample_type]
+    for expr in sort_by:
+        if expr.source not in allowed:
+            raise ValueError(
+                f"Sort field source '{expr.source.value}' is not valid"
+                f" for sample type '{sample_type.value}'."
+            )
+    return [sort.adjacent_sort_expr_to_order_by(expr) for expr in sort_by]
 
 
 def get_adjacent_samples(
@@ -60,9 +144,7 @@ def get_adjacent_samples(
                 "Invalid filter provided. Expected ImageFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
-        order_by = (
-            [sort_expr_to_order_by(expr) for expr in request.sort_by] if request.sort_by else None
-        )
+        order_by = _build_sort_order_by(sort_by=request.sort_by, sample_type=SampleType.IMAGE)
         return image_resolver.get_adjacent_images(
             session=session,
             sample_id=sample_id,
@@ -77,12 +159,14 @@ def get_adjacent_samples(
                 "Invalid filter provided. Expected VideoFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
+        order_by = _build_sort_order_by(sort_by=request.sort_by, sample_type=SampleType.VIDEO)
         return video_resolver.get_adjacent_videos(
             session=session,
             sample_id=sample_id,
             collection_id=request.collection_id,
             filters=request.filters,
             text_embedding=request.text_embedding,
+            order_by=order_by,
         )
     if request.sample_type == SampleType.VIDEO_FRAME:
         if not isinstance(request.filters, VideoFrameAdjacentFilter):
@@ -105,6 +189,11 @@ def get_adjacent_samples(
             session=session,
             filters=request.filters,
             sample_id=sample_id,
+            order_by=_build_annotation_order_by(
+                session=session,
+                filters=request.filters,
+                annotation_sort_by=request.annotation_sort_by,
+            ),
         )
     raise NotImplementedError(
         f"Adjacent samples retrieval is not implemented for sample type: {request.sample_type}"

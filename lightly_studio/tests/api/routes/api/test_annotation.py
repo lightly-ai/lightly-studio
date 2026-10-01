@@ -319,6 +319,7 @@ def test_read_annotation_embedding__returns_stored_vector(
         session=db_session,
         collection_id=annotation_collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
     create_sample_embedding(
         session=db_session,
@@ -355,6 +356,7 @@ def test_read_annotation_embedding__missing_returns_404(
         session=db_session,
         collection_id=annotation_collection_id,
         embedding_dimension=3,
+        set_as_default=True,
     )
 
     response = test_client.get(

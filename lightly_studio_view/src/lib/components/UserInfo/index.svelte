@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { Button } from '$lib/components/ui/button/index.js';
+    import { Button } from '$lib/components';
 </script>
 
 <div class="flex-shrink-0">
     <span>User Name</span>
-    <Button>Logout</Button>
+    <Button variant="default">Logout</Button>
 </div>

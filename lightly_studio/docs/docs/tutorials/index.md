@@ -14,4 +14,26 @@ unlabeled data to a trained and evaluated model.
 
     Explore embeddings, remove near-duplicates, auto-label with a detection plugin, and review annotations before training.
 
+-   **[Evaluate YOLO26 on Your Dataset with LightlyStudio](yolo26-model-evaluation.md)**
+
+    [![Evaluate YOLO26 on Your Dataset with LightlyStudio](https://storage.googleapis.com/lightly-public/studio/tutorials/detection-model-evaluation/confusion-matrix-overview-crop.jpg)](yolo26-model-evaluation.md)
+
+    Compare predictions against ground truth, use the confusion matrix and embeddings to find failure patterns, and export issues for relabeling.
+</div>
+
+## Embeddings
+
+<div class="grid cards wide" markdown>
+
+-   **[Explore LightlyTrain Embeddings in LightlyStudio](lightlytrain-embeddings.md)**
+
+    [![Explore LightlyTrain Embeddings in LightlyStudio](https://storage.googleapis.com/lightly-public/studio/tutorials/lightlytrain-embeddings/dinov3-tiny-after-distill.png)](lightlytrain-embeddings.md)
+
+    Distill a large embedding model into a small one with LightlyTrain, then visualize and curate its embeddings — find clusters and outliers, and select a diverse subset.
+
+-   **[Explore and Annotate Images with Embeddings](imagenette-image-embeddings.md)**
+
+    [![Explore and Annotate Images with Embeddings](https://storage.googleapis.com/lightly-public/studio/docs/embedding_plot_v1.0.4.png)](imagenette-image-embeddings.md)
+
+    Explore Imagenette in the embedding plot, use the lasso and legend to inspect groups of similar images, and annotate them group by group.
 </div>

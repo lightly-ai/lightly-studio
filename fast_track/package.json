@@ -14,7 +14,8 @@
         "test": "vitest run",
         "guardrails": "tsx src/guardrails/cli.ts",
         "list-guardrails": "tsx src/guardrails/cli.ts --list",
-        "guardrails-ci": "tsx src/guardrails/ci.ts"
+        "guardrails-ci": "tsx src/guardrails/ci.ts",
+        "bot-ci": "tsx src/bot/ci.ts"
     },
     "dependencies": {
         "@actions/github": "^6.0.1",

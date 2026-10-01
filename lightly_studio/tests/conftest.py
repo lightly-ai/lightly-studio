@@ -15,13 +15,15 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session, SQLModel
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
+from lightly_studio.analytics import tracking
 from lightly_studio.api import features
 from lightly_studio.api.app import app
+from lightly_studio.api.routes.api import analytics
 from lightly_studio.database import db_manager
 from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
-from lightly_studio.dataset import embedding_manager
-from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
-from lightly_studio.dataset.embedding_manager import EmbeddingManager, EmbeddingManagerProvider
+from lightly_studio.embed import embedder_registry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
@@ -68,6 +70,18 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     for item in items:
         if "postgres_only" in item.keywords:
             item.add_marker(skip_marker)
+
+
+@pytest.fixture(autouse=True)
+def _disable_analytics(mocker: MockerFixture) -> None:
+    """Keep the suite off the network whatever the developer's environment configures.
+
+    Runs before any module level fixture, so a test that patches these itself still wins. The route
+    is switched off too, so that no test leaves an install id in the developer's cache directory.
+    """
+    mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
+    mocker.patch.object(analytics, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
+    mocker.patch.object(tracking, "_tracker", None)
 
 
 @pytest.fixture(scope="session")
@@ -223,7 +237,7 @@ def collections(db_session: Session) -> list[CollectionTable]:
 def embedding_model_input(collection: CollectionTable) -> EmbeddingModelCreate:
     """Create an EmbeddingModelCreate instance."""
     return EmbeddingModelCreate(
-        collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         embedding_dimension=3,
         name="test_model",
     )
@@ -433,6 +447,10 @@ def annotations_test_data(
                 annotation.width = 150
                 annotation.height = 250
                 annotation.segmentation_mask = [1, 2, 3, 4]
+            elif annotation_type == AnnotationType.CLASSIFICATION:
+                # Classification annotations carry an optional temporal span.
+                annotation.start_time_s = 1.5
+                annotation.end_time_s = 4.0
             if i % 2 == 0:
                 annotations_to_create_first_collection.append(annotation)
             else:
@@ -539,18 +557,13 @@ def patch_collection(
         return_value=_db_engine,
     )
 
-    # Create a test-specific EmbeddingManager singleton.
+    # Create a test-specific EmbedderRegistry with the random embedder registered.
+    test_registry = EmbedderRegistry()
+    test_registry.register(embedder=RandomEmbedder())
     mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
-    )
-
-    # Fake the default embedding generator.
-    mocker.patch.object(
-        embedding_manager,
-        "_load_embedding_generator_from_env",
-        return_value=RandomEmbeddingGenerator(),
+        embedder_registry,
+        "get_registry",
+        return_value=test_registry,
     )
 
     # Create test-specific lightly_studio_active_features.

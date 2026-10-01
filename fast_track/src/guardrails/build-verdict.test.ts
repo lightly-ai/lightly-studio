@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import type { RunResult } from './run-guardrails';
 import { buildVerdict } from './build-verdict';
 
-const routing = { prNumber: 42, headSha: 'deadbeef' };
+const routing = {
+    prNumber: 42,
+    headSha: 'deadbeef',
+    baseRef: 'main',
+    baseSha: 'base123'
+};
 
 describe('buildVerdict', () => {
     it('carries the status, breakdown, and routing on a pass — no reason', () => {
@@ -16,7 +21,9 @@ describe('buildVerdict', () => {
             verdict: 'pass',
             guardrails: [{ name: 'dummy', status: 'pass', summary: 'ok' }],
             pr_number: 42,
-            head_sha: 'deadbeef'
+            head_sha: 'deadbeef',
+            base_ref: 'main',
+            base_sha: 'base123'
         });
     });
 

@@ -92,18 +92,13 @@ def main() -> None:
     db_manager.connect(cleanup_existing=True)
 
     # Define data paths
-    images_path = env.path("EXAMPLES_PASCALVOC_IMAGES_PATH", "/path/to/your/dataset/images")
-    gt_masks_path = env.path("EXAMPLES_PASCALVOC_MASKS_PATH", "/path/to/your/dataset/masks")
-    pred_masks_path = env.path(
-        "EXAMPLES_PASCALVOC_PRED_MASKS_PATH", "/path/to/your/dataset/pred_masks"
-    )
+    images_path = env.path("EXAMPLES_PASCALVOC_IMAGES_PATH")
+    gt_masks_path = env.path("EXAMPLES_PASCALVOC_MASKS_PATH")
+    pred_masks_path = env.path("EXAMPLES_PASCALVOC_PRED_MASKS_PATH")
 
     # A mapping from class IDs to class names must be provided. We load it from a JSON file,
     # the file is not part of the Pascal VOC format.
-    class_id_to_name_path = env.path(
-        "EXAMPLES_PASCALVOC_CATEGORIES_JSON_PATH",
-        "/path/to/your/dataset/class_id_to_name.json",
-    )
+    class_id_to_name_path = env.path("EXAMPLES_PASCALVOC_CATEGORIES_JSON_PATH")
     json_dict = json.loads(Path(class_id_to_name_path).read_text())
     class_id_to_name = {int(k): v for k, v in json_dict.items()}
 

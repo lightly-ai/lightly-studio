@@ -3,7 +3,9 @@
 Pipeline steps route each per-item file operation through
 `FileOutcomeReport.track`. The body classifies *why* a file ended where it did
 by raising one of the typed signals defined here; the report does pure
-bookkeeping and decides the all-failed raise policy. It has no knowledge of I/O.
+bookkeeping and decides the all-failed raise policy. The `FileOutcomeReport`
+itself performs no I/O; the module also exposes `BROKEN_IMAGE_ERRORS`, the shared
+tuple of Pillow exceptions image-open sites map to a broken-file outcome.
 
 Each tracked file ends in exactly one `FileOutcome`:
 
@@ -37,10 +39,12 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from os import PathLike
+
+from PIL import Image, UnidentifiedImageError
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +73,15 @@ class BrokenInputFileError(InputFileError):
     """Signal that an input file is present but unreadable/undecodable."""
 
 
+# Pillow exceptions for a present-but-undecodable image; `DecompressionBombError`
+# subclasses `Exception` directly, so it is not covered by `OSError`.
+BROKEN_IMAGE_ERRORS: tuple[type[Exception], ...] = (
+    OSError,
+    UnidentifiedImageError,
+    Image.DecompressionBombError,
+)
+
+
 class AllInputFilesFailedError(Exception):
     """Raised when every attempted input file failed (all missing or broken)."""
 
@@ -94,9 +107,13 @@ class FileOutcomeReport:
     Attributes:
         max_examples_per_outcome: Maximum number of example paths kept per
             outcome.
+        label_overrides: Per-outcome display-label overrides used only by
+            `log_summary()`; any outcome absent from the dict falls back to
+            `outcome.value`. Defaults to empty (add-images behavior).
     """
 
     max_examples_per_outcome: int = DEFAULT_MAX_EXAMPLES_PER_OUTCOME
+    label_overrides: Mapping[FileOutcome, str] = field(default_factory=dict)
     _counts: dict[FileOutcome, int] = field(
         default_factory=lambda: dict.fromkeys(FileOutcome, 0),
         init=False,
@@ -173,9 +190,17 @@ class FileOutcomeReport:
 
     def log_summary(self) -> None:
         """Log a single end-of-run summary of counts and example paths."""
-        counts = ", ".join(f"{outcome.value}={self._counts[outcome]}" for outcome in FileOutcome)
-        logger.info(f"File outcomes: {counts}.")
+        counts = ", ".join(
+            f"{self._label(outcome)}={self._counts[outcome]}" for outcome in FileOutcome
+        )
+        logger.info(f"File processing result: {counts}.")
         for outcome in FileOutcome:
+            if outcome == FileOutcome.ADDED:
+                continue
             examples = self._example_paths[outcome]
             if examples:
-                logger.info(f"Example {outcome.value} paths: {', '.join(examples)}.")
+                logger.info(f"Examples '{self._label(outcome)}': {', '.join(examples)}.")
+
+    def _label(self, outcome: FileOutcome) -> str:
+        """Return the display label for `outcome`, honoring `label_overrides`."""
+        return self.label_overrides.get(outcome, outcome.value)

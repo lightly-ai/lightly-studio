@@ -3,7 +3,6 @@ import type {
     ImageView,
     TagView as TagViewType,
     TagCreateBody,
-    ExportFilter as ExportFilterType,
     SampleIdsBody as SampleIdsBodyType,
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
@@ -11,7 +10,6 @@ import type {
     AnnotationLabelTable,
     EmbeddingClassifier,
     UpdateAnnotationsRequest,
-    SaveClassifierToFileData,
     MetadataInfoView
 } from '$lib/api/lightly_studio_local/types.gen';
 import type { Readable } from 'svelte/store';
@@ -20,7 +18,6 @@ export type Collection = CollectionTable;
 export type ImageSample = ImageView;
 export type TagView = TagViewType;
 export type TagInputBody = TagCreateBody;
-export type ExportFilter = ExportFilterType;
 export type TagKind = TagCreateBody['kind'];
 export type SampleIdsBody = SampleIdsBodyType;
 export type Annotation = AnnotationView;
@@ -37,7 +34,6 @@ export type LoadResult<T> = {
 export type ClassifierInfo = EmbeddingClassifier;
 export type AnnotatedSamples = UpdateAnnotationsRequest;
 export type RefineMode = 'temp' | 'existing';
-export type ClassifierExportType = SaveClassifierToFileData['path']['export_type'];
 
 type AnnotationObjectDetection = Annotation & {
     object_detection_details: ObjectDetectionAnnotationView;
@@ -87,3 +83,7 @@ export type SideEffectHook<T, I = unknown> = (params: I) => SideEffectHookResult
 export type MetadataInfo = MetadataInfoView;
 export type MetadataBounds = Record<string, { min: number; max: number }>;
 export type MetadataValues = Record<string, { min: number; max: number }>;
+export const MISSING_CATEGORICAL_VALUE = '__missing__' as const;
+export const OTHER_CATEGORICAL_VALUE = '__other__' as const;
+export type CategoricalMetadataValue = string | boolean | null;
+export type CategoricalMetadataValues = Record<string, CategoricalMetadataValue[]>;

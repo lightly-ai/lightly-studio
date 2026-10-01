@@ -10,6 +10,7 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationDeleteNavigation } from '$lib/hooks/useAnnotationDeleteNavigation/useAnnotationDeleteNavigation';
+    import { useAnnotationCollections } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
@@ -54,14 +55,12 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
+    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
+    const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const { addReversibleAction } = useGlobalStorage();
-    const { createAnnotation } = useCreateAnnotation({
-        collectionId
-    });
+    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const eraserApi = $derived.by(() =>
         useSegmentationMaskEraser({
             collectionId,
@@ -154,7 +153,7 @@
         refetch();
     };
 
-    const datasetId = $derived(page.params.dataset_id);
+    const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
     const currentAnnotationId = $derived(
         annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id ?? ''
@@ -182,12 +181,13 @@
             addAnnotationDeleteToUndoStack({
                 annotation: annotation!,
                 labels: labels!,
+                sources: annotationSources,
                 addReversibleAction,
                 createAnnotation,
                 refetch
             });
 
-            await deleteAnnotation(annotation!.sample_id);
+            await deleteAnnotation(annotation!.sample_id, annotation!.annotation_type);
             toast.success('Annotation deleted successfully');
 
             if (annotationLabelContext.isOnAnnotationDetailsView) return gotoNextAnnotation();

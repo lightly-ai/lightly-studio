@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import type { AnnotationView, ImageAnnotationView } from '$lib/api/lightly_studio_local';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useSettings } from '$lib/hooks/useSettings';
     import { getGridImageURL, getGridThumbnailRequestSize } from '$lib/utils';
@@ -32,8 +34,8 @@
     const { gridViewThumbnailQualityStore } = useSettings();
 
     // Store collection version for cache busting
-    let collectionVersion = $state(cachedCollectionVersion);
-    let collectionVersionLoaded = $state(!!cachedCollectionVersion);
+    let collectionVersion = $state(untrack(() => cachedCollectionVersion));
+    let collectionVersionLoaded = $state(untrack(() => !!cachedCollectionVersion));
 
     // Component is loaded when both collection version and image are loaded
     const isLoaded = $derived(collectionVersionLoaded);
@@ -89,4 +91,6 @@
         {selected}
         {onCropWindowChange}
     />
+    <!-- No `hasBottomOverlay`: the annotation class label sits on the bounding box, not the tile's bottom edge. -->
+    <SampleValueBadge orderValue={annotation.order_value} />
 {/if}

@@ -9,7 +9,15 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.adjacents import AdjacentResultView
+from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sort import (
+    AdjacentSortExpr,
+    ImageSortFieldExpr,
+    SortFieldSource,
+    VideoSortFieldExpr,
+)
+from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -108,6 +116,57 @@ def test_get_adjacent_samples__delegates_to_video_resolver(
         collection_id=collection_id,
         filters=filters,
         text_embedding=text_embedding,
+        order_by=None,
+    )
+
+
+def test_get_adjacent_samples__translates_video_sort_by_before_delegating(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    expected = _make_adjacent_result()
+    mock_get_adjacent_videos = mocker.patch(
+        "lightly_studio.resolvers.video_resolver.get_adjacent_videos",
+        return_value=expected,
+    )
+    fake_order_by = mocker.MagicMock()
+    mock_translate = mocker.patch(
+        "lightly_studio.models.sort.adjacent_sort_expr_to_order_by",
+        return_value=fake_order_by,
+    )
+
+    sample_id = uuid4()
+    collection_id = uuid4()
+    filters = VideoFilter()
+    sort_by: list[AdjacentSortExpr] = [
+        VideoSortFieldExpr(
+            source=SortFieldSource.video,
+            field_name="duration_s",
+            direction=SortDirection.desc,
+        )
+    ]
+    request = AdjacentRequest(
+        sample_type=SampleType.VIDEO,
+        collection_id=collection_id,
+        filters=filters,
+        sort_by=sort_by,
+    )
+
+    result = get_adjacent_samples(
+        session=db_session,
+        sample_id=sample_id,
+        request=request,
+    )
+
+    assert result == expected
+    mock_translate.assert_called_once_with(sort_by[0])
+    mock_get_adjacent_videos.assert_called_once_with(
+        session=db_session,
+        sample_id=sample_id,
+        collection_id=collection_id,
+        filters=filters,
+        text_embedding=None,
+        order_by=[fake_order_by],
     )
 
 
@@ -177,7 +236,89 @@ def test_get_adjacent_samples__delegates_to_annotation_resolver(
         session=db_session,
         filters=filters,
         sample_id=sample_id,
+        order_by=None,
     )
+
+
+def test_get_adjacent_samples__translates_annotation_sort_by_before_delegating(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    expected = _make_adjacent_result()
+    mock_get_adjacent_annotations = mocker.patch(
+        "lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations",
+        return_value=expected,
+    )
+    fake_order_by = mocker.MagicMock()
+    mock_sort_expr_to_order_by = mocker.patch(
+        "lightly_studio.resolvers.annotations.annotation_metric_sort.sort_expr_to_order_by",
+        return_value=fake_order_by,
+    )
+
+    sample_id = uuid4()
+    collection_id = uuid4()
+    evaluation_run_id = uuid4()
+    filters = AnnotationsFilter(collection_ids=[collection_id])
+    annotation_sort_by = AnnotationEvaluationMetricSortExpr(
+        evaluation_run_id=evaluation_run_id,
+        metric_name="iou",
+        direction=SortDirection.desc,
+    )
+    request = AdjacentRequest(
+        sample_type=SampleType.ANNOTATION,
+        collection_id=uuid4(),
+        filters=filters,
+        annotation_sort_by=annotation_sort_by,
+    )
+
+    result = get_adjacent_samples(
+        session=db_session,
+        sample_id=sample_id,
+        request=request,
+    )
+
+    assert result == expected
+    mock_sort_expr_to_order_by.assert_called_once_with(
+        session=db_session,
+        annotation_collection_id=collection_id,
+        sort_expr=annotation_sort_by,
+        annotation_id_column=mocker.ANY,
+    )
+    mock_get_adjacent_annotations.assert_called_once_with(
+        session=db_session,
+        filters=filters,
+        sample_id=sample_id,
+        order_by=fake_order_by,
+    )
+
+
+def test_get_adjacent_samples__raises_when_annotation_sort_by_with_multiple_collection_ids(
+    db_session: Session,
+) -> None:
+    collection_id_a = uuid4()
+    collection_id_b = uuid4()
+    filters = AnnotationsFilter(collection_ids=[collection_id_a, collection_id_b])
+    annotation_sort_by = AnnotationEvaluationMetricSortExpr(
+        evaluation_run_id=uuid4(),
+        metric_name="iou",
+        direction=SortDirection.desc,
+    )
+    request = AdjacentRequest(
+        sample_type=SampleType.ANNOTATION,
+        collection_id=uuid4(),
+        filters=filters,
+        annotation_sort_by=annotation_sort_by,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="annotation_sort_by is not supported when multiple collection_ids are provided",
+    ):
+        get_adjacent_samples(
+            session=db_session,
+            sample_id=uuid4(),
+            request=request,
+        )
 
 
 def test_get_adjacent_samples__raises_for_image_with_wrong_filter_type(
@@ -265,3 +406,43 @@ def test_get_adjacent_samples__raises_not_implemented_for_unsupported_type(
             sample_id=uuid4(),
             request=request,
         )
+
+
+def test_get_adjacent_samples__raises_for_video_with_image_sort_source(
+    db_session: Session,
+) -> None:
+    request = AdjacentRequest(
+        sample_type=SampleType.VIDEO,
+        collection_id=uuid4(),
+        filters=VideoFilter(),
+        sort_by=[
+            ImageSortFieldExpr(
+                source=SortFieldSource.image,
+                field_name="file_name",
+                direction=SortDirection.asc,
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match=r"Sort field source 'image' is not valid"):
+        get_adjacent_samples(session=db_session, sample_id=uuid4(), request=request)
+
+
+def test_get_adjacent_samples__raises_for_image_with_video_sort_source(
+    db_session: Session,
+) -> None:
+    request = AdjacentRequest(
+        sample_type=SampleType.IMAGE,
+        collection_id=uuid4(),
+        filters=ImageFilter(),
+        sort_by=[
+            VideoSortFieldExpr(
+                source=SortFieldSource.video,
+                field_name="duration_s",
+                direction=SortDirection.asc,
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match=r"Sort field source 'video' is not valid"):
+        get_adjacent_samples(session=db_session, sample_id=uuid4(), request=request)

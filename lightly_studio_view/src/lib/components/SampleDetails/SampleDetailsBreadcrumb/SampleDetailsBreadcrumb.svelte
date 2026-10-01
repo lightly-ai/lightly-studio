@@ -26,7 +26,7 @@
 
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentImages({
-            sampleId: page.params.sampleId,
+            sampleId: page.params.sampleId!,
             collectionId
         })
     );

@@ -29,6 +29,8 @@ QueryType = TypeVar(
     Select[tuple[VideoTable, VideoFrameTable]],
     SelectOfScalar[VideoFrameTable],
     Select[tuple[Any, int]],
+    Select[tuple[int, int]],
+    Select[tuple[str, int]],
     Select[tuple[UUID, int]],
     Select[tuple[AnnotationBaseTable, Any]],
     Select[tuple[ImageTable, Any]],

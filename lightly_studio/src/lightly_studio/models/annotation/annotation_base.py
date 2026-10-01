@@ -9,8 +9,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Index, Relationship, SQLModel
 
+from lightly_studio.models.annotation.cuboid_3d import (
+    Cuboid3DAnnotationTable,
+    Cuboid3DAnnotationView,
+    Cuboid3DCreate,
+)
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
     ObjectDetectionAnnotationView,
@@ -22,6 +27,7 @@ from lightly_studio.models.annotation.segmentation import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.temporal_span import TemporalSpanTable, TemporalSpanView
 from lightly_studio.models.video import VideoFrameTable
 
 if TYPE_CHECKING:
@@ -43,12 +49,31 @@ class AnnotationType(str, Enum):
     CLASSIFICATION = "classification"
     SEGMENTATION_MASK = "segmentation_mask"
     OBJECT_DETECTION = "object_detection"
+    CUBOID_3D = "cuboid_3d"
+
+
+# Annotation types that have a bounding box and can be cropped for embedding.
+CROPPABLE_ANNOTATION_TYPES = [
+    AnnotationType.OBJECT_DETECTION,
+    AnnotationType.SEGMENTATION_MASK,
+]
 
 
 class AnnotationBaseTable(SQLModel, table=True):
     """Base class for all annotation models."""
 
     __tablename__ = "annotation_base"
+    # Composite index on the adjacency sort keys that live on the annotation itself. The
+    # keyset seek walks the parent media in path order and looks up each parent's
+    # annotations here, already ordered by the remaining tiebreakers. See LIG-10067.
+    __table_args__ = (
+        Index(
+            "ix_annotation_base_parent_sample_id_created_at_sample_id",
+            "parent_sample_id",
+            "created_at",
+            "sample_id",
+        ),
+    )
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
@@ -88,10 +113,26 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
+    # Details about 3D cuboids.
+    cuboid_3d_details: Mapped[Optional["Cuboid3DAnnotationTable"]] = Relationship(
+        back_populates="annotation_base",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+
     # Details about segmentation.
     segmentation_details: Mapped[Optional["SegmentationAnnotationTable"]] = Relationship(
         back_populates="annotation_base",
         sa_relationship_kwargs={"lazy": "select"},
+    )
+
+    # Optional temporal bounds for this annotation's sample.
+    temporal_span_details: Mapped[Optional["TemporalSpanTable"]] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "AnnotationBaseTable.sample_id == foreign(TemporalSpanTable.sample_id)",
+            "lazy": "selectin",
+            "uselist": False,
+            "viewonly": True,
+        },
     )
 
     # The track this annotation belongs to, if any.
@@ -126,6 +167,13 @@ class AnnotationCreate(ABC, SQLModel):
     # Optional properties for segmentation.
     segmentation_mask: Optional[list[int]] = None
 
+    # Optional properties for temporal annotations.
+    start_time_s: Optional[float] = None
+    end_time_s: Optional[float] = None
+
+    # Optional properties for cuboid_3d.
+    cuboid_3d: Optional[Cuboid3DCreate] = None
+
 
 class AnnotationView(BaseModel):
     """Response model for bounding box annotation."""
@@ -149,28 +197,49 @@ class AnnotationView(BaseModel):
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
     confidence: Optional[float] = None
+    order_value: Optional[float] = None
     created_at: datetime
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
+    cuboid_3d_details: Optional[Cuboid3DAnnotationView] = None
     segmentation_details: Optional[SegmentationAnnotationView] = None
+    temporal_span_details: Optional[TemporalSpanView] = None
     object_track_id: Optional[UUID] = None
     object_track_number: Optional[int] = None
 
     tags: list[AnnotationViewTag] = []
 
     @classmethod
-    def from_annotation_table(cls, annotation: "AnnotationBaseTable") -> "AnnotationView":
-        """Convert an AnnotationBaseTable to an AnnotationView."""
+    def from_annotation_table(
+        cls,
+        annotation: "AnnotationBaseTable",
+        order_value: Optional[float] = None,
+    ) -> "AnnotationView":
+        """Convert an AnnotationBaseTable to an AnnotationView.
+
+        Args:
+            annotation: The annotation row to convert.
+            order_value: Primary sort value for the current grid sort, when provided by the
+                resolver. Mutually exclusive with the payload view's ``similarity_score``
+                for the grid overlay.
+        """
         return cls(
             parent_sample_id=annotation.parent_sample_id,
             sample_id=annotation.sample_id,
             annotation_collection_id=annotation.sample.collection_id,
             annotation_type=annotation.annotation_type,
             confidence=annotation.confidence,
+            order_value=order_value,
             created_at=annotation.created_at,
             object_track_id=annotation.object_track_id,
             object_track_number=annotation.object_track.object_track_number
             if annotation.object_track
+            else None,
+            temporal_span_details=TemporalSpanView(
+                start_time_s=annotation.temporal_span_details.start_time_s,
+                end_time_s=annotation.temporal_span_details.end_time_s,
+            )
+            if annotation.temporal_span_details
             else None,
             annotation_label=cls.AnnotationLabel(
                 annotation_label_name=annotation.annotation_label.annotation_label_name
@@ -182,6 +251,22 @@ class AnnotationView(BaseModel):
                 height=annotation.object_detection_details.height,
             )
             if annotation.object_detection_details
+            else None,
+            cuboid_3d_details=Cuboid3DAnnotationView(
+                frame_id=annotation.cuboid_3d_details.frame_id,
+                px=annotation.cuboid_3d_details.px,
+                py=annotation.cuboid_3d_details.py,
+                pz=annotation.cuboid_3d_details.pz,
+                qx=annotation.cuboid_3d_details.qx,
+                qy=annotation.cuboid_3d_details.qy,
+                qz=annotation.cuboid_3d_details.qz,
+                qw=annotation.cuboid_3d_details.qw,
+                sx=annotation.cuboid_3d_details.sx,
+                sy=annotation.cuboid_3d_details.sy,
+                sz=annotation.cuboid_3d_details.sz,
+                interpolated=annotation.cuboid_3d_details.interpolated,
+            )
+            if annotation.cuboid_3d_details
             else None,
             segmentation_details=SegmentationAnnotationView(
                 width=annotation.segmentation_details.width,

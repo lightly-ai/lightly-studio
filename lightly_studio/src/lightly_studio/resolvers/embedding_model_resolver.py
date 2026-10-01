@@ -22,57 +22,77 @@ def create(session: Session, embedding_model: EmbeddingModelCreate) -> Embedding
 
 
 def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> EmbeddingModelTable:
-    """Retrieve an existing EmbeddingModel by hash or create a new one if it does not exist."""
-    db_model = get_by_model_hash(
+    """Retrieve an existing EmbeddingModel by name or create a new one if it does not exist."""
+    db_model = get_by_name(
         session=session,
-        collection_id=embedding_model.collection_id,
-        embedding_model_hash=embedding_model.embedding_model_hash,
+        dataset_id=embedding_model.dataset_id,
+        name=embedding_model.name,
     )
     if db_model is None:
         return create(session=session, embedding_model=embedding_model)
 
     # Validate that the existing model matches the provided data.
-    if (
-        db_model.name != embedding_model.name
-        or db_model.parameter_count_in_mb != embedding_model.parameter_count_in_mb
-        or db_model.embedding_dimension != embedding_model.embedding_dimension
-    ):
+    if db_model.embedding_dimension != embedding_model.embedding_dimension:
         raise ValueError(
-            "An embedding model with the same hash but different parameters already exists."
+            "An embedding model with the same name but different parameters already exists."
         )
     return db_model
 
 
-def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[EmbeddingModelTable]:
-    """Retrieve all embedding models."""
-    embedding_models = session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .order_by(col(EmbeddingModelTable.created_at).asc())
-    ).all()
-    return list(embedding_models)
+def set_api_key(
+    session: Session, embedding_model_id: UUID, api_key: str | None
+) -> EmbeddingModelTable:
+    """Set the API key of an embedding model, replacing any key already stored.
 
+    Args:
+        session: The database session.
+        embedding_model_id: The embedding model to update.
+        api_key: The bearer token for the remote embedding backend, or None to clear it.
 
-def get_default_by_collection_id(
-    session: Session, collection_id: UUID
-) -> EmbeddingModelTable | None:
-    """Return the collection's default embedding model, or None if it has none.
+    Returns:
+        The updated embedding model.
 
-    The default is the oldest model (``created_at`` ascending), which makes the choice
-    deterministic when a collection has multiple embedding models. Endpoints that resolve
-    a selection against a cached 2D projection (embeddings2d, embedding regions) must all
-    agree on this same model so the projections line up. ``embedding_model_id`` breaks ties
-    when models share the same ``created_at`` (e.g. bulk-created in one transaction).
+    Raises:
+        ValueError: If no embedding model with the given ID exists.
     """
-    return session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .order_by(
-            col(EmbeddingModelTable.created_at).asc(),
-            col(EmbeddingModelTable.embedding_model_id).asc(),
-        )
-        .limit(1)
-    ).first()
+    db_embedding_model = get_by_id(session=session, embedding_model_id=embedding_model_id)
+    if db_embedding_model is None:
+        raise ValueError(f"Embedding model with id {embedding_model_id} not found.")
+
+    db_embedding_model.api_key = api_key
+    session.add(db_embedding_model)
+    session.commit()
+    session.refresh(db_embedding_model)
+    return db_embedding_model
+
+
+def set_remote_embedder(
+    session: Session, embedding_model_id: UUID, url: str, api_key: str | None
+) -> EmbeddingModelTable:
+    """Point an embedding model at a remote embedding backend.
+
+    Args:
+        session: The database session.
+        embedding_model_id: The embedding model to update.
+        url: The base URL of the remote embedding backend.
+        api_key: The bearer token for the backend, or None if it needs none.
+
+    Returns:
+        The updated embedding model.
+
+    Raises:
+        ValueError: If no embedding model with the given ID exists.
+    """
+    db_embedding_model = get_by_id(session=session, embedding_model_id=embedding_model_id)
+    if db_embedding_model is None:
+        raise ValueError(f"Embedding model with id {embedding_model_id} not found.")
+
+    db_embedding_model.remote_embedder_url = url
+    db_embedding_model.api_key = api_key
+    session.add(db_embedding_model)
+    session.commit()
+    session.refresh(db_embedding_model)
+    return db_embedding_model
 
 
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
@@ -84,63 +104,30 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
     ).one_or_none()
 
 
-def get_by_model_hash(
-    session: Session, collection_id: UUID, embedding_model_hash: str
-) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash and collection."""
-    query = select(EmbeddingModelTable).where(
-        EmbeddingModelTable.embedding_model_hash == embedding_model_hash
-    )
-    query = query.where(EmbeddingModelTable.collection_id == collection_id)
-    return session.exec(query).one_or_none()
-
-
-def get_by_name(
-    session: Session, collection_id: UUID, embedding_model_name: str | None
-) -> EmbeddingModelTable:
-    """Helper function to resolve the embedding model name to its ID.
+def get_by_name(session: Session, dataset_id: UUID, name: str) -> EmbeddingModelTable | None:
+    """Retrieve a single embedding model by name within a dataset.
 
     Args:
         session: The database session.
-        collection_id: The ID of the collection.
-        embedding_model_name: The name of the embedding model.
-            If None, expects the collection to have exactly one embedding model and
-            returns it. Otherwise raises a ValueError.
-            If set, expects the collection to have an embedding model with the given name.
-            Otherwise raises a ValueError.
+        dataset_id: The dataset in which to search for the embedding model.
+        name: The name identifying the embedding model.
 
     Returns:
-        The embedding model with the given name.
+        The matching embedding model, or None if no matching model exists.
     """
-    embedding_models = get_all_by_collection_id(
-        session=session,
-        collection_id=collection_id,
+    query = (
+        select(EmbeddingModelTable)
+        .where(EmbeddingModelTable.name == name)
+        .where(EmbeddingModelTable.dataset_id == dataset_id)
     )
+    return session.exec(query).one_or_none()
 
-    if embedding_model_name is None:
-        if len(embedding_models) != 1:
-            raise ValueError(
-                f"Expected exactly one embedding model, "
-                f"but found {len(embedding_models)} with names "
-                f"{[model.name for model in embedding_models]}."
-            )
-        return embedding_models[0]
 
-    embedding_model_with_name = next(
-        (model for model in embedding_models if model.name == embedding_model_name), None
+def get_all_by_dataset_id(session: Session, dataset_id: UUID) -> list[EmbeddingModelTable]:
+    """Retrieve all embedding models of a dataset, ordered by name."""
+    query = (
+        select(EmbeddingModelTable)
+        .where(EmbeddingModelTable.dataset_id == dataset_id)
+        .order_by(col(EmbeddingModelTable.name))
     )
-    if embedding_model_with_name is None:
-        raise ValueError(f"Embedding model with name `{embedding_model_name}` not found.")
-
-    return embedding_model_with_name
-
-
-def delete(session: Session, embedding_model_id: UUID) -> bool:
-    """Delete an embedding model."""
-    embedding_model = get_by_id(session=session, embedding_model_id=embedding_model_id)
-    if not embedding_model:
-        return False
-
-    session.delete(embedding_model)
-    session.commit()
-    return True
+    return list(session.exec(query).all())

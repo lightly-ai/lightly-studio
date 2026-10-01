@@ -102,6 +102,12 @@ def print_evaluation_metrics(
     for metric in sorted(metric_list, key=lambda x: x.metric_name):
         print(f"- {metric.metric_name}: min={metric.min_value:.2f}, max={metric.max_value:.2f}")
 
+    metrics = dataset.evaluate().metrics(run_id=evaluation_run.id)
+    print("\n=== Aggregate Metrics ===")
+    print(f"- precision={metrics.precision:.3f}, recall={metrics.recall:.3f}, f1={metrics.f1:.3f}")
+    if metrics.accuracy is not None:
+        print(f"- accuracy={metrics.accuracy:.3f}")
+
     print_per_sample_metrics(
         dataset=dataset,
         evaluation_run=evaluation_run,
@@ -135,7 +141,7 @@ def main() -> None:
 
     db_manager.connect(cleanup_existing=True)
 
-    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/images")
+    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH")
 
     dataset = ImageDataset.create(name=DATASET_NAME)
     dataset.add_images_from_path(path=images_path)

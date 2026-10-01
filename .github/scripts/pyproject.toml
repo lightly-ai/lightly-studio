@@ -1,0 +1,26 @@
+# Tooling config only - this directory is CI-internal tooling for the
+# "Prepare Release" workflow, not a distributed package, so there's no
+# [project] table here.
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+select = ["E", "F", "W", "C90", "I", "N", "D", "UP", "B", "A", "C4", "DTZ", "T10", "PIE", "PT", "RET", "SLF", "SIM", "TID", "ARG", "PL", "RUF"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["D104"]
+"tests/**/*.py" = ["D100", "D101", "D102", "D103", "D107", "PLR2004", "SLF001"]
+
+[tool.mypy]
+strict = true
+disallow_untyped_defs = true

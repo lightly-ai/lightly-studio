@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get, writable } from 'svelte/store';
 import type { AnnotationLabel } from '$lib/services/types';
 
+const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
+vi.mock('$lib/hooks', () => ({
+    usePostHog: () => ({ trackEvent })
+}));
+
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const setSelectedAnnotationFilterIds = vi.fn((id: string) => {
     selectedAnnotationFilterIds.update((state) => {
@@ -118,6 +123,7 @@ describe('useAnnotationsFilter', () => {
         vi.clearAllMocks();
         selectedAnnotationFilterIds.set(new Set());
         annotationLabels = writable<AnnotationLabel[] | undefined>(mockLabels);
+        trackEvent.mockClear();
     });
 
     it('returns empty annotationFilterRows when no counts set', () => {
@@ -197,6 +203,59 @@ describe('useAnnotationsFilter', () => {
         expect(get(annotationFilterLabels)).toEqual({});
     });
 
+    it('pruneInvalidSelections keeps labels present in counts even at zero current_count', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1', 'id-2']));
+
+        const { setAnnotationCounts, pruneInvalidSelections } = useAnnotationsFilter({
+            annotationLabels
+        });
+
+        setAnnotationCounts([
+            { label_name: 'cat', total_count: 10, current_count: 5 },
+            { label_name: 'dog', total_count: 8, current_count: 0 }
+        ]);
+        pruneInvalidSelections();
+
+        // Both labels are present in the (source-scoped) counts, so neither is
+        // deselected: a class can't prune itself just because the active filter
+        // currently matches none of its rows.
+        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1', 'id-2']));
+    });
+
+    it('pruneInvalidSelections removes selections whose label is missing from counts', () => {
+        // Mirrors switching to an annotation source that does not contain 'dog':
+        // its label drops out of the source-scoped counts and gets deselected.
+        selectedAnnotationFilterIds.set(new Set(['id-2']));
+
+        const { setAnnotationCounts, pruneInvalidSelections } = useAnnotationsFilter({
+            annotationLabels
+        });
+
+        setAnnotationCounts([{ label_name: 'cat', total_count: 10, current_count: 5 }]);
+        pruneInvalidSelections();
+
+        expect(setSelectedAnnotationFilterIds).toHaveBeenCalledWith('id-2');
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set());
+    });
+
+    it('pruneInvalidSelections keeps valid selections and is a no-op without counts', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1']));
+
+        const { setAnnotationCounts, pruneInvalidSelections } = useAnnotationsFilter({
+            annotationLabels
+        });
+
+        // No counts set yet: nothing should be toggled.
+        pruneInvalidSelections();
+        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
+
+        setAnnotationCounts([{ label_name: 'cat', total_count: 10, current_count: 5 }]);
+        pruneInvalidSelections();
+        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+    });
+
     it('selectedAnnotationFilterNames returns selected label names', () => {
         selectedAnnotationFilterIds.set(new Set(['id-2']));
 
@@ -205,5 +264,55 @@ describe('useAnnotationsFilter', () => {
         });
 
         expect(get(selectedAnnotationFilterNames)).toEqual(['dog']);
+    });
+
+    it('fires grid_filter_toggled with action selected when label is not yet selected', () => {
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        toggleAnnotationFilterSelection('cat', 'col-1');
+
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_label',
+            filter_value: 'cat',
+            action: 'selected',
+            active_count: 1
+        });
+    });
+
+    it('fires grid_filter_toggled with action unselected when label is already selected', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1']));
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        toggleAnnotationFilterSelection('cat', 'col-1');
+
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_label',
+            filter_value: 'cat',
+            action: 'unselected',
+            active_count: 0
+        });
+    });
+
+    it('does not fire grid_filter_toggled for unknown label', () => {
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        toggleAnnotationFilterSelection('unknown', 'col-1');
+
+        expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('passes collectionId to grid_filter_toggled event', () => {
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        toggleAnnotationFilterSelection('cat', 'my-collection');
+
+        expect(trackEvent).toHaveBeenCalledWith(
+            'grid_filter_toggled',
+            expect.objectContaining({
+                collection_id: 'my-collection'
+            })
+        );
     });
 });

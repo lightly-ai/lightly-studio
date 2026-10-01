@@ -38,6 +38,25 @@ describe('SelectList', () => {
         expect(button.textContent).toContain(label);
     });
 
+    it('keeps the label and the chevron as direct children of the trigger', () => {
+        render(SelectList, {
+            props: {
+                items: mockItems,
+                label: 'Choose a cat'
+            }
+        });
+
+        // `justify-between` and the label ellipsis only work while both are flex
+        // children of the button, so a wrapper around them is a layout regression.
+        const trigger = screen.getByTestId('select-list-trigger');
+        const label = trigger.querySelector(':scope > span');
+        const chevron = trigger.querySelector(':scope > svg');
+
+        expect(label).toHaveTextContent('Choose a cat');
+        expect(label).toHaveClass('min-w-0', 'flex-1', 'truncate');
+        expect(chevron).toBeInTheDocument();
+    });
+
     it('renders with custom placeholder', async () => {
         const placeholder = 'Search frameworks...';
         const user = userEvent.setup();

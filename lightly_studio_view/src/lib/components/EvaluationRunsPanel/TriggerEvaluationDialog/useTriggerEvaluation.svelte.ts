@@ -6,6 +6,7 @@ import {
 import type { CreateEvaluationRunData } from '$lib/api/lightly_studio_local/types.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
+import { usePostHog } from '$lib/hooks';
 
 type EvaluationRunRequest = CreateEvaluationRunData['body'];
 
@@ -22,9 +23,18 @@ interface UseTriggerEvaluationParams {
 export const useTriggerEvaluation = (getParams: () => UseTriggerEvaluationParams) => {
     const mutation = createMutation(() => createEvaluationRunMutation());
     const client = useQueryClient();
+    const { trackEvent } = usePostHog();
 
-    const trigger = (body: EvaluationRunRequest): Promise<boolean> =>
-        new Promise((resolve) => {
+    const trigger = (body: EvaluationRunRequest): Promise<boolean> => {
+        trackEvent('evaluation_run_started', {
+            collection_id: body.collection_id,
+            evaluation_type: body.task_type,
+            iou_threshold:
+                body.task_type === 'object_detection' ? (body.config?.iou_threshold ?? null) : null,
+            class_wise:
+                body.task_type === 'object_detection' ? (body.config?.classwise ?? null) : null
+        });
+        return new Promise((resolve) => {
             const { datasetId } = getParams();
             mutation.mutate(
                 { path: { dataset_id: datasetId }, body },
@@ -51,6 +61,7 @@ export const useTriggerEvaluation = (getParams: () => UseTriggerEvaluationParams
                 }
             );
         });
+    };
 
     return { mutation, trigger };
 };

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from functools import cached_property
 from typing import Any
 from uuid import UUID
 
@@ -10,22 +11,28 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.evaluation import (
+    aggregate_metrics,
     classification_metric,
+    instance_segmentation_metric,
     object_detection_metric,
     semantic_segmentation_metric,
     validators,
 )
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
+from lightly_studio.models.evaluation_metrics import EvaluationMetrics
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
+    EvaluationRunView,
     EvaluationTaskType,
 )
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
     collection_resolver,
+    evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
 )
 
@@ -87,6 +94,20 @@ class SemanticSegmentationEvaluationConfig(BaseModel):
     """
 
 
+class InstanceSegmentationEvaluationConfig(BaseModel):
+    """Configuration for instance-segmentation evaluation runs.
+
+    Attributes:
+        iou_threshold: Mask IoU threshold used to match predictions to ground
+            truths. Stored in the run config for reproducibility.
+        classwise: If True, match predictions and ground truths only within the
+            same annotation class. If False, match across all annotation classes.
+    """
+
+    iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    classwise: bool = True
+
+
 class ImageDatasetEvaluate:
     """Task-specific evaluation entry points for image datasets.
 
@@ -104,11 +125,17 @@ class ImageDatasetEvaluate:
         """
         self.session = session
         self.collection_id = collection_id
+        self._sample_ids_source: Iterable[UUID] = sample_ids
+
+    @cached_property
+    def sample_ids(self) -> set[UUID]:
+        """The IDs of the samples selected for evaluation, materialized once on first read."""
         # Materialize once: callers may pass a single-use generator, and the
         # facade can be reused across task methods (object_detection(),
         # classification(), ...). Without this, the second call would see an
-        # exhausted iterator and silently evaluate zero samples.
-        self.sample_ids: set[UUID] = set(sample_ids)
+        # exhausted iterator and silently evaluate zero samples. Deferred to the first
+        # read so readback methods (list_runs(), confusion_matrix()) do not scan.
+        return set(self._sample_ids_source)
 
     def object_detection(
         self,
@@ -211,6 +238,130 @@ class ImageDatasetEvaluate:
         )
         return EvaluationResult.from_evaluation_data(data)
 
+    def instance_segmentation(
+        self,
+        name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
+        config: InstanceSegmentationEvaluationConfig | None = None,
+    ) -> EvaluationResult:
+        """Create an instance-segmentation evaluation run and persist per-image metrics.
+
+        Args:
+            name: Display name of the evaluation run.
+            gt_annotation_source: Name of the annotation source containing ground truth masks.
+            pred_annotation_source: Name of the annotation source containing predictions.
+            config: Optional instance segmentation evaluation config. If omitted,
+                defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
+        """
+        config = config or InstanceSegmentationEvaluationConfig()
+        data = self._prepare_evaluation_data(
+            name=name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
+            task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+            config_json=config.model_dump(),
+        )
+        instance_segmentation_metric.create_and_persist_instance_segmentation_metrics_per_sample(
+            session=self.session,
+            data=data,
+            iou_threshold=config.iou_threshold,
+            classwise=config.classwise,
+        )
+        return EvaluationResult.from_evaluation_data(data)
+
+    def list_runs(self) -> list[EvaluationRunView]:
+        """List the evaluation runs stored for this dataset, newest first.
+
+        Returns:
+            A view per run, with its id, name, configuration, creation time, and
+            resolved ground-truth and prediction source names.
+        """
+        return evaluation_run_resolver.list_views_by_dataset_id(
+            session=self.session,
+            dataset_id=self._dataset_id(),
+        )
+
+    def confusion_matrix(self, run_id: UUID) -> ConfusionMatrix:
+        """Return the confusion matrix of an evaluation run.
+
+        The matrix aggregates the run's persisted ground-truth/prediction
+        annotation pairings by label. Object detection, classification, and
+        instance segmentation are supported; semantic segmentation does not
+        produce a confusion matrix.
+
+        Args:
+            run_id: ID of the evaluation run.
+
+        Returns:
+            The confusion matrix, with a shared class axis and synthetic
+            false-positive and false-negative axes.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run's task type has no confusion matrix.
+        """
+        _, matrix = self._confusion_matrix_with_run(run_id)
+        return matrix
+
+    def metrics(self, run_id: UUID) -> EvaluationMetrics:
+        """Return aggregate metrics for an evaluation run.
+
+        Derives per-class and micro-averaged precision, recall, and F1 from the
+        run's confusion matrix, plus accuracy for classification runs. Object
+        detection and classification are supported; segmentation tasks have no
+        confusion matrix and so no confusion-derived metrics.
+
+        Args:
+            run_id: ID of the evaluation run.
+
+        Returns:
+            The aggregate metrics for the run.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run's task type has no confusion matrix.
+        """
+        run, matrix = self._confusion_matrix_with_run(run_id)
+        return aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
+            matrix=matrix,
+            task_type=run.task_type,
+        )
+
+    def _confusion_matrix_with_run(
+        self, run_id: UUID
+    ) -> tuple[EvaluationRunTable, ConfusionMatrix]:
+        """Fetch a run and its confusion matrix, validating the run and its task type.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+            NotImplementedError: If the run's task type has no confusion matrix.
+        """
+        run = evaluation_run_resolver.get_by_id(session=self.session, evaluation_id=run_id)
+        if run is None or run.dataset_id != self._dataset_id():
+            raise ValueError(f"Evaluation run {run_id} not found in this dataset.")
+        if not evaluation_annotation_metric_resolver.supports_confusion_matrix(run.task_type):
+            raise NotImplementedError(
+                f"Evaluation task type {run.task_type.value!r} has no confusion matrix."
+            )
+        matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
+            session=self.session,
+            evaluation_run_id=run_id,
+        )
+        return run, matrix
+
+    def _dataset_id(self) -> UUID:
+        """Resolve the dataset ID of the evaluated collection."""
+        collection = collection_resolver.get_by_id(
+            session=self.session, collection_id=self.collection_id
+        )
+        if collection is None:
+            raise ValueError(f"Collection {self.collection_id} not found.")
+        return collection.dataset_id
+
     def _prepare_evaluation_data(
         self,
         name: str,
@@ -225,6 +376,7 @@ class ImageDatasetEvaluate:
         and then calls its task-specific metric module with the returned data.
         """
         annotation_type = validators.get_annotation_type_for_task(task_type)
+        selected_sample_ids = set(self.sample_ids)
         gt_collection_id, pred_collection_id, evaluation_run = self._create_evaluation_run(
             name=name,
             gt_annotation_source=gt_annotation_source,
@@ -233,7 +385,6 @@ class ImageDatasetEvaluate:
             config_json=config_json,
         )
 
-        selected_sample_ids = self.sample_ids
         gt_covered_sample_ids = set(
             annotation_collection_coverage_resolver.list_by_collection_id(
                 session=self.session,
@@ -312,19 +463,13 @@ class ImageDatasetEvaluate:
             collection_name=pred_annotation_source,
             task_type=task_type,
         )
-        collection = collection_resolver.get_by_id(
-            session=self.session, collection_id=self.collection_id
-        )
-        if collection is None:
-            raise ValueError(f"Collection {self.collection_id} not found")
-
         evaluation_run = evaluation_run_resolver.create(
             session=self.session,
             evaluation_run_input=EvaluationRunCreate(
                 name=name,
                 gt_annotation_collection_id=gt_collection_id,
                 pred_annotation_collection_id=pred_collection_id,
-                dataset_id=collection.dataset_id,
+                dataset_id=self._dataset_id(),
                 task_type=task_type,
                 config_json=config_json,
             ),

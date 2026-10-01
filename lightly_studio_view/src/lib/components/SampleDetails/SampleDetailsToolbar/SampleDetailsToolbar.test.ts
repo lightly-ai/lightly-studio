@@ -1,14 +1,21 @@
-import { render, fireEvent } from '@testing-library/svelte';
+import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
 import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { BrushMode, ToolbarStatus } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
+const { initializeSlic } = vi.hoisted(() => ({ initializeSlic: vi.fn(async () => ({})) }));
+vi.mock('@lightly-ai/slic', () => ({ getSlicEngine: initializeSlic }));
+
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush',
+    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'slic',
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
+    },
+    slic: {
+        level: 'medium' as 'coarse' | 'medium' | 'fine',
+        status: 'idle' as 'idle' | 'computing' | 'ready' | 'error'
     }
 };
 
@@ -121,6 +128,50 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
+    });
+
+    it('hides AI-Assisted labeling until WASM initialization succeeds', async () => {
+        let ready: (value: object) => void = () => {};
+        initializeSlic.mockImplementationOnce(
+            () =>
+                new Promise((resolve) => {
+                    ready = resolve;
+                })
+        );
+        const view = render(SampleDetailsToolbar);
+        expect(view.queryByLabelText('AI-Assisted labeling')).not.toBeInTheDocument();
+        ready({});
+        expect(await view.findByLabelText('AI-Assisted labeling')).toBeInTheDocument();
+    });
+
+    it('keeps AI-Assisted labeling hidden when WASM initialization fails', async () => {
+        initializeSlic.mockRejectedValueOnce(new Error('WASM unavailable'));
+        const view = render(SampleDetailsToolbar);
+        await waitFor(() => expect(initializeSlic).toHaveBeenCalled());
+        expect(view.queryByLabelText('AI-Assisted labeling')).not.toBeInTheDocument();
+    });
+
+    it('activates the SLIC tool and sets segmentation mask type', async () => {
+        const { findByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(await findByLabelText('AI-Assisted labeling'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
+    });
+
+    it('keeps the selected segmentation annotation when activating the SLIC tool', async () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.annotationType = AnnotationType.SEGMENTATION_MASK;
+
+        const { findByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(await findByLabelText('AI-Assisted labeling'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
     it('activates drag tool', async () => {
@@ -246,6 +297,21 @@ describe('SampleDetailsToolbar', () => {
 
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
+
+    it.each(['<input />', '<div role="dialog"><button>Run</button></div>'])(
+        'ignores shortcuts and space tracking inside %s',
+        async (html) => {
+            const { container } = render(SampleDetailsToolbar);
+            const wrapper = container.appendChild(document.createElement('div'));
+            wrapper.innerHTML = html;
+            const target = wrapper.querySelector('input, button')!;
+            await fireEvent.keyDown(target, { key: 'd', code: 'KeyD' });
+            expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+            await fireEvent.keyDown(target, { key: ' ', code: 'Space' });
+            await fireEvent.keyDown(window, { key: 'd', code: 'KeyD' });
+            expect(mockSampleDetailsToolbarContext.status).toBe('drag');
+        }
+    );
 
     it('does not trigger toolbar shortcuts while space is held', async () => {
         render(SampleDetailsToolbar);

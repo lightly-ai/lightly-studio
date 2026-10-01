@@ -3,16 +3,16 @@ import { SampleType } from '$lib/api/lightly_studio_local';
 import { routeHelpers } from '$lib/routes';
 import type { PageLoad } from './$types';
 
-const sampleTypeRoutes: Record<
-    SampleType,
-    (datasetId: string, collectionType: string, collectionId: string) => string
+const sampleTypeRoutes: Partial<
+    Record<SampleType, (datasetId: string, collectionType: string, collectionId: string) => string>
 > = {
     [SampleType.VIDEO]: routeHelpers.toVideos,
     [SampleType.VIDEO_FRAME]: routeHelpers.toFrames,
     [SampleType.IMAGE]: routeHelpers.toImages,
     [SampleType.ANNOTATION]: routeHelpers.toAnnotations,
     [SampleType.CAPTION]: routeHelpers.toCaptions,
-    [SampleType.GROUP]: routeHelpers.toGroups
+    [SampleType.GROUP]: routeHelpers.toGroups,
+    [SampleType.SEQUENCE]: routeHelpers.toPointClouds
 };
 
 export const load: PageLoad = async ({ parent, params }) => {

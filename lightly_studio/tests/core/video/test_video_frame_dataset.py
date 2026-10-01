@@ -69,7 +69,7 @@ class TestVideoFrameDataset:
         )
 
         dataset = VideoDataset.create(name="real_dataset")
-        dataset.add_videos_from_path(path=tmp_path, embed=False)
+        dataset.add_videos_from_path(path=tmp_path, embed=False, embed_frames=False)
 
         frame_list = list(dataset.frames())
         assert len(frame_list) > 0

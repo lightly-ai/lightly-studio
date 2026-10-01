@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -11,35 +12,17 @@ from lightly_studio.api.routes.api.collection import get_and_validate_collection
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import image_resolver, video_resolver
+from lightly_studio.resolvers.grid_filter import CollectionFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import (
-    AnnotationClassBalancingStrategy,
-    EmbeddingDeduplicationStrategy,
-    EmbeddingDiversityStrategy,
-    EmbeddingSimilarityStrategy,
-    MetadataWeightingStrategy,
     SamplingConfig,
+    Strategy,
 )
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
+from lightly_studio.services import sampling_metadata, sampling_service
 
 sampling_router = APIRouter()
-
-Strategy = Annotated[
-    Union[
-        AnnotationClassBalancingStrategy,
-        EmbeddingDeduplicationStrategy,
-        EmbeddingDiversityStrategy,
-        EmbeddingSimilarityStrategy,
-        MetadataWeightingStrategy,
-    ],
-    Field(discriminator="strategy_name"),
-]
-
-CollectionFilter = Annotated[
-    Union[ImageFilter, VideoFilter],
-    Field(discriminator="filter_type"),
-]
 
 
 class SamplingRequest(BaseModel):
@@ -48,7 +31,15 @@ class SamplingRequest(BaseModel):
     n_samples_to_select: int = Field(gt=0, description="Number of samples to select")
     sampling_result_tag_name: str = Field(min_length=1, description="Name for the result tag")
     strategies: list[Strategy]
+    metadata_computations: list[sampling_metadata.MetadataComputation] = Field(default_factory=list)
     filter: CollectionFilter | None = None
+    preselected_tag_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Sample tag whose samples should be considered already selected and included in the "
+            "result"
+        ),
+    )
 
 
 @sampling_router.post(
@@ -117,19 +108,23 @@ def create_sampling(
             filters=video_filter,
         )
     input_sample_ids = list(all_samples_result)
-    # Validate we have enough samples to select from.
-    if len(input_sample_ids) < request.n_samples_to_select:
-        raise HTTPException(
-            status_code=400,
-            detail=f"collection has only {len(input_sample_ids)} samples, "
-            f"cannot select {request.n_samples_to_select}",
-        )
+    preselected_tag_name = sampling_service.validate_preselection(
+        session=session,
+        collection_id=collection.collection_id,
+        preselected_tag_id=request.preselected_tag_id,
+        input_sample_ids=input_sample_ids,
+        n_samples_to_select=request.n_samples_to_select,
+    )
     # Create SamplingConfig with diversity strategy.
     config = SamplingConfig(
         collection_id=collection.collection_id,
         n_samples_to_select=request.n_samples_to_select,
         sampling_result_tag_name=request.sampling_result_tag_name,
         strategies=request.strategies,
+        preselected_tag_name=preselected_tag_name,
     )
-    # Perform sampling via database.
+    # Keep preparation and selection in one request so closing the browser cannot skip selection.
+    sampling_metadata.compute_metadata(
+        session=session, collection=collection, computations=request.metadata_computations
+    )
     sampling_via_database(session=session, config=config, input_sample_ids=input_sample_ids)

@@ -22,6 +22,8 @@ class AnnotationUpdate(BaseModel):
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
     segmentation_mask: list[int] | None = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
 
 def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> AnnotationBaseTable:
@@ -54,6 +56,15 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
             session=session,
             annotation_id=annotation_update.annotation_id,
             segmentation_mask=annotation_update.segmentation_mask,
+        )
+    if (annotation_update.start_time_s is None) != (annotation_update.end_time_s is None):
+        raise ValueError("Both start_time_s and end_time_s must be provided together.")
+    if annotation_update.start_time_s is not None and annotation_update.end_time_s is not None:
+        result = annotations_service.update_temporal_span(
+            session=session,
+            annotation_id=annotation_update.annotation_id,
+            start_time_s=annotation_update.start_time_s,
+            end_time_s=annotation_update.end_time_s,
         )
 
     if result is None:

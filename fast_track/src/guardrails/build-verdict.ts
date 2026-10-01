@@ -1,23 +1,18 @@
-import type { GuardrailResult, Verdict } from '../shared/verdict';
+import type { GuardrailResult, Verdict, VerdictRouting } from '../shared/verdict';
 import type { RunResult } from './run-guardrails';
-
-/** UNTRUSTED: written in PR context, re-derived by the bot against the trusted commit (design §3). */
-export interface VerdictRouting {
-    prNumber: number;
-    headSha: string;
-}
 
 /**
  * Wrap a {@link RunResult} into the wire {@link Verdict}, adding the routing
- * fields and a {@link reason} for the PR comment on a non-pass. `opt_out` is
- * never produced here — it's an author-label override the bot applies (design §2.3).
+ * fields and a {@link reason} for the PR comment on a non-pass.
  */
 export function buildVerdict(run: RunResult, routing: VerdictRouting): Verdict {
     const verdict: Verdict = {
         verdict: run.status,
         guardrails: run.guardrails,
         pr_number: routing.prNumber,
-        head_sha: routing.headSha
+        head_sha: routing.headSha,
+        base_ref: routing.baseRef,
+        base_sha: routing.baseSha
     };
     if (run.status !== 'pass') {
         verdict.reason = buildReason(run.guardrails);

@@ -35,7 +35,8 @@ vi.mock('$app/state', () => ({
 }));
 
 vi.mock('$lib/hooks', () => ({
-    useEvaluationConfusionMatrix: vi.fn(() => queryState)
+    useEvaluationConfusionMatrix: vi.fn(() => queryState),
+    usePostHog: vi.fn(() => ({ trackEvent: vi.fn(), init: vi.fn() }))
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
@@ -63,7 +64,7 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     } as unknown as typeof ResizeObserver;
 }
 
-const defaultProps = { evaluationRunId: 'run-1' };
+const defaultProps = { evaluationRunId: 'run-1', datasetId: 'ds-1' };
 
 describe('EvaluationRunConfusionMatrixSection', () => {
     beforeEach(() => {

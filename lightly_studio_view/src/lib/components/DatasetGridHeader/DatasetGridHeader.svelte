@@ -1,13 +1,22 @@
 <script lang="ts">
-    import { CollectionSearch, GridHeader, OrderBy } from '$lib/components';
+    import {
+        AnnotationOrderBy,
+        CollectionSearch,
+        GridHeader,
+        ImageOrderBy,
+        VideoOrderBy
+    } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
 
     type SearchImage = { name: string; previewUrl: string };
 
     interface Props {
+        collectionId: string;
         canSelectAll: boolean;
         isSelectionActive: boolean;
         isImages: boolean;
+        isVideos: boolean;
+        isAnnotations: boolean;
         hasMediaWithEmbeddings: boolean;
         collectionDatasetId: string;
         onSelectAll: () => Promise<void>;
@@ -23,9 +32,12 @@
     }
 
     const {
+        collectionId,
         canSelectAll,
         isSelectionActive,
         isImages,
+        isVideos,
+        isAnnotations,
         hasMediaWithEmbeddings,
         onSelectAll,
         onDeselectAll,
@@ -54,7 +66,11 @@
     {/snippet}
     {#snippet auxControls()}
         {#if isImages}
-            <OrderBy datasetId={collectionDatasetId} />
+            <ImageOrderBy {collectionId} datasetId={collectionDatasetId} />
+        {:else if isVideos}
+            <VideoOrderBy {collectionId} />
+        {:else if isAnnotations}
+            <AnnotationOrderBy {collectionId} datasetId={collectionDatasetId} />
         {/if}
     {/snippet}
     {#if hasMediaWithEmbeddings}

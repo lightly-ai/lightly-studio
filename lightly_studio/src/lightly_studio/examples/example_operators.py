@@ -107,7 +107,7 @@ for i in range(20):
     operator_registry.register(operator=TestOperator(name=f"test_{i}"))
 
 # Define data path
-dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
+dataset_path = env.path("EXAMPLES_DATASET_PATH")
 
 # Create a DatasetLoader from a path
 dataset = ls.ImageDataset.create()

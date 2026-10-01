@@ -1,23 +1,42 @@
 """Tests for delete_dataset resolver."""
 
 import uuid
+from pathlib import Path
 
 import pytest
-from sqlmodel import Session
+from pytest_mock import MockerFixture
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
+from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
+from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
+from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
+from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTable
+from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     dataset_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
+    export_job_resolver,
+    mcap_group_sequence_resolver,
     metadata_resolver,
+    object_track_resolver,
+    recording_resolver,
     sample_embedding_resolver,
     sample_resolver,
     tag_resolver,
@@ -59,6 +78,55 @@ def test_delete_dataset__empty_collection(db_session: Session) -> None:
 
     # Assert - collection deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+
+
+def test_delete_dataset__with_parent_object_track(db_session: Session) -> None:
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    parent_id, child_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(object_track_number=1, dataset_id=dataset.dataset_id),
+            ObjectTrackCreate(
+                object_track_number=2,
+                dataset_id=dataset.dataset_id,
+                parent_object_track_id=None,
+            ),
+        ],
+    )
+    child = object_track_resolver.get_by_id(session=db_session, object_track_id=child_id)
+    assert child is not None
+    child.parent_object_track_id = parent_id
+    db_session.add(child)
+    db_session.commit()
+
+    dataset_id = dataset.dataset_id  # Capture before delete
+
+    dataset_resolver.delete_dataset(session=db_session, dataset_id=dataset_id)
+
+    assert not object_track_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=dataset_id,
+    )
+
+
+def test_delete_dataset__with_recordings(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        uri="/data/to_delete.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - recording deleted along with the dataset
+    assert recording_resolver.get_by_id(session=db_session, recording_id=recording_id) is None
 
 
 def test_delete_dataset__with_images_and_annotations(db_session: Session) -> None:
@@ -185,6 +253,307 @@ def test_delete_dataset__with_embeddings(db_session: Session) -> None:
     assert len(embeddings) == 0
 
 
+def test_delete_dataset__with_default_embedding_space(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="test_model",
+        embedding_dimension=512,
+        set_as_default=True,
+    )
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - collection and its default embedding space deleted
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=collection_id
+        )
+        is None
+    )
+
+
+def test_delete_dataset__with_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(
+        session=db_session, collection_name="to_delete", sample_type=SampleType.GROUP
+    )
+    collection_id = dataset.collection_id  # Capture before delete
+    dataset_id = dataset.dataset_id  # Capture before delete
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=collection_id,
+        components=[("front_camera", SampleType.IMAGE)],
+    )
+    component_collection_id = components["front_camera"].collection_id  # Capture before delete
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset_id,
+    )
+
+    # Assert - collection, its component, and the component definition are all deleted
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=component_collection_id)
+        is None
+    )
+    assert db_session.get(GroupComponentDefinitionTable, component_collection_id) is None
+
+
+def test_delete_dataset__with_mcap_group_component_definitions(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(
+        session=db_session, collection_name="to_delete", sample_type=SampleType.GROUP
+    )
+    collection_id = dataset.collection_id
+    dataset_id = dataset.dataset_id
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=collection_id,
+        components=[
+            ("image", SampleType.MCAP),
+            ("point_cloud", SampleType.MCAP),
+        ],
+    )
+    image_id = components["image"].collection_id
+    point_cloud_id = components["point_cloud"].collection_id
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=image_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            channel_id=3,
+        )
+    )
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=point_cloud_id,
+            mcap_data_type=McapDataType.POINT_CLOUD,
+            channel_id=5,
+        )
+    )
+    db_session.commit()
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset_id,
+    )
+
+    # Assert
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert collection_resolver.get_by_id(session=db_session, collection_id=image_id) is None
+    assert db_session.get(GroupComponentDefinitionTable, image_id) is None
+    assert db_session.get(McapGroupComponentDefinitionTable, image_id) is None
+    assert db_session.get(McapGroupComponentDefinitionTable, point_cloud_id) is None
+
+
+def test_delete_dataset__with_sequences(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sequence_id = mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=collection.collection_id,
+        recording_id=recording_id,
+    )
+    linked_sample_ids = sample_resolver.create_many(
+        session=db_session,
+        samples=[SampleCreate(collection_id=collection.collection_id)],
+    )
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=linked_sample_ids[0], sequence_sample_id=sequence_id, seq_number=0
+        )
+    )
+    db_session.commit()
+    collection_id = collection.collection_id
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+    )
+
+    # Assert - collection, sequence, MCAP specialisation, and links are all deleted
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert db_session.get(SequenceTable, sequence_id) is None
+    assert db_session.get(McapGroupSequenceTable, sequence_id) is None
+    assert (
+        db_session.exec(
+            select(SampleSequenceLinkTable).where(
+                col(SampleSequenceLinkTable.sequence_sample_id) == sequence_id
+            )
+        ).all()
+        == []
+    )
+
+
+def test_delete_dataset__with_sensor_calibrations(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    group = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    slot_children = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group.collection_id,
+        components=[("front_camera", SampleType.MCAP)],
+    )
+    front_slot_id = slot_children["front_camera"].collection_id
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=front_slot_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            channel_id=3,
+        )
+    )
+    db_session.add(
+        SensorCalibrationTable(
+            recording_id=recording_id,
+            collection_id=front_slot_id,
+            width=1920,
+            height=1080,
+            k=[500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0],
+        )
+    )
+    db_session.commit()
+    calibration_id = db_session.exec(
+        select(SensorCalibrationTable.sensor_calibration_id).where(
+            col(SensorCalibrationTable.recording_id) == recording_id
+        )
+    ).one()
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+    )
+
+    # Assert - calibration row deleted; the GCD row (from a different dataset) is untouched.
+    assert db_session.get(SensorCalibrationTable, calibration_id) is None
+    remaining_group = collection_resolver.get_by_id(
+        session=db_session, collection_id=group.collection_id
+    )
+    assert remaining_group is not None
+
+
+def test_delete_dataset__with_sensor_calibrations__deletes_when_component_dataset_deleted(
+    db_session: Session,
+) -> None:
+    # Recording on one dataset, GCD slot on another; calibration links across them.
+    recording_root = create_collection(session=db_session)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=recording_root.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    group = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    slot_children = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group.collection_id,
+        components=[("front_camera", SampleType.MCAP)],
+    )
+    front_slot_id = slot_children["front_camera"].collection_id
+    db_session.add(
+        McapGroupComponentDefinitionTable(
+            collection_id=front_slot_id,
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            channel_id=3,
+        )
+    )
+    db_session.add(
+        SensorCalibrationTable(
+            recording_id=recording_id,
+            collection_id=front_slot_id,
+            width=1920,
+            height=1080,
+            k=[500.0, 0.0, 320.0, 0.0, 500.0, 240.0, 0.0, 0.0, 1.0],
+        )
+    )
+    db_session.commit()
+    calibration_id = db_session.exec(
+        select(SensorCalibrationTable.sensor_calibration_id).where(
+            col(SensorCalibrationTable.recording_id) == recording_id
+        )
+    ).one()
+
+    # Act - delete the component-definition dataset; recording dataset remains.
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=group.dataset_id,
+    )
+
+    # Assert - calibration removed so GCD delete does not FK-fail; recording stays.
+    assert db_session.get(SensorCalibrationTable, calibration_id) is None
+    assert (
+        collection_resolver.get_by_id(
+            session=db_session, collection_id=recording_root.collection_id
+        )
+        is not None
+    )
+    assert recording_resolver.get_by_id(session=db_session, recording_id=recording_id) is not None
+
+
+def test_delete_dataset__with_static_transforms(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(session=db_session)
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    db_session.add(
+        StaticTransformTable(
+            recording_id=recording_id,
+            parent="livox_front_left",
+            child="main",
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            tx=0.1,
+            ty=0.2,
+            tz=0.3,
+        )
+    )
+    db_session.commit()
+    transform_id = db_session.exec(
+        select(StaticTransformTable.static_transform_id).where(
+            col(StaticTransformTable.recording_id) == recording_id
+        )
+    ).one()
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+    )
+
+    # Assert
+    assert db_session.get(StaticTransformTable, transform_id) is None
+
+
 def test_delete_dataset__with_tags(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="to_delete")
@@ -203,6 +572,89 @@ def test_delete_dataset__with_tags(db_session: Session) -> None:
     # Assert - collection and tags deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
     assert tag_resolver.get_by_id(session=db_session, tag_id=tag_id) is None
+
+
+def test_delete_dataset__with_export_job(db_session: Session, tmp_path: Path) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    export_path = tmp_path / "coco.json"
+    export_path.write_text("{}")
+    job = export_job_resolver.create(
+        session=db_session,
+        collection_id=collection_id,
+        export_path=str(export_path),
+    )
+    export_key = job.export_key  # Capture before delete
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - collection, export job, and its on-disk artifact are all gone
+    assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
+    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
+    assert not export_path.exists()
+
+
+def test_delete_dataset__with_export_job__removes_directory_artifact(
+    db_session: Session, tmp_path: Path
+) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    export_dir = tmp_path / "yolo"
+    export_dir.mkdir()
+    (export_dir / "labels.txt").write_text("cat")
+    job = export_job_resolver.create(
+        session=db_session,
+        collection_id=collection_id,
+        export_path=str(export_dir),
+    )
+    export_key = job.export_key  # Capture before delete
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - export job and its directory artifact are both gone
+    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
+    assert not export_dir.exists()
+
+
+def test_delete_dataset__with_export_job__leaves_artifact_outside_temp_dir(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    # Arrange - the fake temp directory does not contain the export artifact below
+    mocker.patch(
+        "lightly_studio.resolvers.dataset_resolver.delete_dataset.tempfile.gettempdir",
+        return_value=str(tmp_path / "temp"),
+    )
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = dataset.collection_id  # Capture before delete
+    export_path = tmp_path / "outside" / "coco.json"
+    export_path.parent.mkdir()
+    export_path.write_text("{}")
+    job = export_job_resolver.create(
+        session=db_session,
+        collection_id=collection_id,
+        export_path=str(export_path),
+    )
+    export_key = job.export_key  # Capture before delete
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - the DB row is gone but the untrusted artifact path is left untouched
+    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
+    assert export_path.exists()
 
 
 def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> None:
@@ -356,7 +808,7 @@ def test_delete_dataset__with_evaluation_annotation_metrics(db_session: Session)
     create_annotation_metrics(
         session=db_session,
         run_id=run_id,
-        true_positive_metric_stubs=[
+        pair_metric_stubs=[
             TruePositiveMetricStub(
                 sample_id=image.sample_id,
                 metrics={"iou": 0.8},

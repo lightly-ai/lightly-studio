@@ -5,6 +5,7 @@
   image chip + pending state.
 -->
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { useFileDrop } from '$lib/hooks';
     import { CollectionSearchInput, CollectionSearchImage } from '$lib/components';
 
@@ -35,8 +36,8 @@
         onError
     }: Props = $props();
 
-    let queryText = $state(initialQueryText);
-    let submittedQueryText = $state(initialQueryText);
+    let queryText = $state(untrack(() => initialQueryText));
+    let submittedQueryText = $state(untrack(() => initialQueryText));
     let fileInput = $state<HTMLInputElement | null>(null);
 
     const { dragOver, handleDragOver, handleDragLeave, handleDrop, handlePaste, handleFileSelect } =
@@ -44,7 +45,7 @@
             onFileAccepted: async (file) => {
                 await onSubmitFile(file);
             },
-            onError
+            onError: (message) => onError(message)
         });
 
     const handleClear = () => {

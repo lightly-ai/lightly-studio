@@ -1,5 +1,9 @@
 """Resolvers for database operations."""
 
+from lightly_studio.resolvers.annotation_resolver.bulk_create_classifications import (
+    BulkCreateClassificationsResult,
+    bulk_create_classifications,
+)
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
     delete_annotation,
@@ -23,7 +27,11 @@ from lightly_studio.resolvers.annotation_resolver.get_all_by_object_track_id imp
 from lightly_studio.resolvers.annotation_resolver.get_all_by_parent_sample_ids import (
     get_all_by_parent_sample_ids,
 )
+from lightly_studio.resolvers.annotation_resolver.get_all_by_parent_sample_ids_and_annotation_collection_id import (  # noqa: E501
+    get_all_by_parent_sample_ids_and_annotation_collection_id,
+)
 from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
+    AnnotationOrdering,
     get_all_with_payload,
 )
 from lightly_studio.resolvers.annotation_resolver.get_annotation_crops import (
@@ -33,6 +41,9 @@ from lightly_studio.resolvers.annotation_resolver.get_annotation_crops import (
 from lightly_studio.resolvers.annotation_resolver.get_by_id import get_by_id, get_by_ids
 from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import (
     get_by_id_with_payload,
+)
+from lightly_studio.resolvers.annotation_resolver.get_label_ids_by_sample_ids import (
+    get_label_ids_by_sample_ids,
 )
 from lightly_studio.resolvers.annotation_resolver.get_sample_ids import (
     build_sample_ids_query,
@@ -50,10 +61,16 @@ from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
 from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask import (
     update_segmentation_mask,
 )
+from lightly_studio.resolvers.annotation_resolver.update_temporal_span import (
+    update_temporal_span,
+)
 
 __all__ = [
     "AnnotationCrop",
+    "AnnotationOrdering",
+    "BulkCreateClassificationsResult",
     "build_sample_ids_query",
+    "bulk_create_classifications",
     "create_many",
     "delete_annotation",
     "delete_annotations",
@@ -63,14 +80,17 @@ __all__ = [
     "get_all_by_collection_name",
     "get_all_by_object_track_id",
     "get_all_by_parent_sample_ids",
+    "get_all_by_parent_sample_ids_and_annotation_collection_id",
     "get_all_with_payload",
     "get_annotation_crops_for_ids",
     "get_by_id",
     "get_by_id_with_payload",
     "get_by_ids",
+    "get_label_ids_by_sample_ids",
     "get_sample_ids",
     "get_unembedded_annotation_ids",
     "update_annotation_label",
     "update_bounding_box",
     "update_segmentation_mask",
+    "update_temporal_span",
 ]
