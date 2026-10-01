@@ -21,6 +21,7 @@ def test_get_mcap_sequence_summary(db_session: Session) -> None:
 
     assert summary is not None
     assert summary.recording_id == fixture.recording_id
+    assert summary.file_name == "drive_001.mcap"
     assert [channel.group_component_name for channel in summary.camera_channels] == ["front"]
     assert [channel.group_component_name for channel in summary.lidar_channels] == ["pcl_front"]
 

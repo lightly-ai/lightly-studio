@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Boxes, Database, Home, Maximize2, Minimize2, X } from '@lucide/svelte';
+    import { Boxes, ComponentIcon, Database, Home, Maximize2, Minimize2 } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import {
         Breadcrumb,
@@ -12,24 +12,25 @@
     import type { WorkspaceCrumb } from '../types';
 
     interface Props {
-        sampleId: string;
+        sequenceId: string;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
         isFullscreen: boolean;
         onToggleFullscreen: () => void;
-        onExit: () => void;
     }
 
-    let { sampleId, sourcePath = [], isFullscreen, onToggleFullscreen, onExit }: Props = $props();
+    let { sequenceId, sourcePath = [], isFullscreen, onToggleFullscreen }: Props = $props();
 
     const iconFor = (index: number) => {
         if (index === 0) return Home;
-        return index === sourcePath.length - 1 ? Boxes : Database;
+        if (index === 1) return Database;
+        if (index === 2) return ComponentIcon;
+        return Boxes;
     };
 </script>
 
 <header
-    class="flex h-11 shrink-0 items-center justify-between gap-3 border-b bg-background px-3"
+    class="flex shrink-0 items-center justify-between border-b pb-2"
     data-testid="workspace-header"
 >
     {#if sourcePath.length > 0}
@@ -59,7 +60,7 @@
     {:else}
         <div class="flex items-center gap-2 truncate text-sm font-medium">
             <span class="truncate">Point-cloud labeling</span>
-            <span class="truncate text-xs text-muted-foreground">· {sampleId}</span>
+            <span class="truncate text-xs text-muted-foreground">· {sequenceId}</span>
         </div>
     {/if}
     <div class="flex shrink-0 items-center gap-1">
@@ -68,12 +69,6 @@
             icon={isFullscreen ? Minimize2 : Maximize2}
             ariaLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             buttonProps={{ onclick: onToggleFullscreen, size: 'sm', class: 'h-8 w-8 p-0' }}
-        />
-        <Button
-            variant="ghost"
-            icon={X}
-            ariaLabel="Close labeling workspace"
-            buttonProps={{ onclick: onExit, size: 'sm', class: 'h-8 w-8 p-0' }}
         />
     </div>
 </header>

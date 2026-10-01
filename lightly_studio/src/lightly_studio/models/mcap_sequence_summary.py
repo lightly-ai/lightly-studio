@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import posixpath
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -46,6 +47,9 @@ class MCAPSequenceSummary(BaseModel):
     """
 
     recording_id: UUID = Field(description="The MCAP sequence this summary describes.")
+    file_name: str = Field(
+        description="The recording's file name, e.g. `run-2026-04-18.mcap`, from its bag path."
+    )
     format: RecordingFormat = Field(description="The sequence's file format.")
     start_log_time_ns: int | None = Field(
         description="The earliest log_time_ns across all indexed ticks, in nanoseconds. "
@@ -82,6 +86,7 @@ class MCAPSequenceSummary(BaseModel):
 
         return cls(
             recording_id=info.recording.recording_id,
+            file_name=posixpath.basename(info.recording.uri),
             format=info.recording.format,
             start_log_time_ns=start_log_time_ns,
             lidar_channels=lidar_channels,

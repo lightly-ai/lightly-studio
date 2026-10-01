@@ -50,7 +50,7 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     })
 }));
 
-const defaultProps = { sampleId: 'sample-1', datasetId: 'dataset-1', sequenceId: 'sequence-1' };
+const defaultProps = { datasetId: 'dataset-1', sequenceId: 'sequence-1' };
 
 describe('PointCloudLabelingWorkspace', () => {
     afterEach(() => vi.useRealTimers());
@@ -60,10 +60,7 @@ describe('PointCloudLabelingWorkspace', () => {
 
     it('renders the chrome and the empty state by default', () => {
         render(PointCloudLabelingWorkspace, {
-            props: {
-                ...defaultProps,
-                onExit: vi.fn()
-            }
+            props: defaultProps
         });
 
         expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument();
@@ -90,8 +87,7 @@ describe('PointCloudLabelingWorkspace', () => {
                     { label: 'Home', href: '/datasets/d1/mcap/d1' },
                     { label: 'Recordings', href: '/datasets/d1/mcap/c1' },
                     { label: 'sample-1' }
-                ],
-                onExit: vi.fn()
+                ]
             }
         });
 
@@ -101,24 +97,20 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(breadcrumb).toHaveTextContent('sample-1');
     });
 
-    it('falls back to the sample id when no source path is given', () => {
+    it('falls back to the sequence id when no source path is given', () => {
         render(PointCloudLabelingWorkspace, {
-            props: {
-                ...defaultProps,
-                onExit: vi.fn()
-            }
+            props: defaultProps
         });
 
         expect(screen.queryByTestId('workspace-breadcrumb')).not.toBeInTheDocument();
-        expect(screen.getByTestId('workspace-header')).toHaveTextContent('sample-1');
+        expect(screen.getByTestId('workspace-header')).toHaveTextContent('sequence-1');
     });
 
     it('shows the unsupported state and does not render the panel layout', () => {
         render(PointCloudLabelingWorkspace, {
             props: {
                 ...defaultProps,
-                status: 'unsupported',
-                onExit: vi.fn()
+                status: 'unsupported'
             }
         });
 
@@ -136,7 +128,6 @@ describe('PointCloudLabelingWorkspace', () => {
             props: {
                 ...defaultProps,
                 status: 'error',
-                onExit: vi.fn(),
                 onRetry
             }
         });
@@ -147,19 +138,6 @@ describe('PointCloudLabelingWorkspace', () => {
         );
         screen.getByRole('button', { name: /retry/i }).click();
         expect(onRetry).toHaveBeenCalledOnce();
-    });
-
-    it('calls onExit when the close button is clicked', () => {
-        const onExit = vi.fn();
-        render(PointCloudLabelingWorkspace, {
-            props: {
-                ...defaultProps,
-                onExit
-            }
-        });
-
-        screen.getByRole('button', { name: /close labeling workspace/i }).click();
-        expect(onExit).toHaveBeenCalledOnce();
     });
 
     it('navigates through the loaded ticks from the timeline controls', async () => {
@@ -214,10 +192,7 @@ describe('PointCloudLabelingWorkspace', () => {
         'resets the LiDAR selection when the source changes to $datasetId/$sequenceId',
         async (next) => {
             const user = userEvent.setup();
-            const props = {
-                ...defaultProps,
-                onExit: vi.fn()
-            };
+            const props = defaultProps;
             const { rerender } = render(PointCloudLabelingWorkspace, { props });
 
             await user.click(screen.getByTestId('workspace-lidar-select'));
