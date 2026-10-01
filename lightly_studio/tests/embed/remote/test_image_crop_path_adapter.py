@@ -11,6 +11,7 @@ from lightly_studio_serve.embedder import ImageBytesEmbedder, ImageCropPathEmbed
 from lightly_studio_serve.protocol import ServerLimits
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from PIL import Image
+from pytest_mock import MockerFixture
 
 from lightly_studio.embed.remote import (
     connection,
@@ -145,6 +146,24 @@ class TestImageCropPathRoute:
         np.testing.assert_array_equal(result.embeddings, np.array([[3.0, 3.0]], dtype=np.float32))
         assert "Cannot embed the crop" in caplog.text
 
+    def test_embed_image_crops__skips_unencodable(
+        self, tmp_path: Path, adapted: ImageCropPathEmbedder, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # A JPEG side can be at most 65500 pixels
+        wide = _write_image(path=tmp_path / "wide.png", width=65501, height=1)
+        path = _write_image(path=tmp_path / "a.png", width=10, height=10)
+        crops = [
+            ImageCrop(filepath=wide, x=0, y=0, width=65501, height=1),
+            ImageCrop(filepath=path, x=0, y=0, width=3, height=3),
+        ]
+
+        with caplog.at_level(logging.WARNING, logger=image_crop_path_adapter.__name__):
+            result = adapted.embed_image_crops(crops=crops)
+
+        assert result.kept_indices == [1]
+        np.testing.assert_array_equal(result.embeddings, np.array([[3.0, 3.0]], dtype=np.float32))
+        assert "Cannot encode the crop" in caplog.text
+
     def test_embed_image_crops__skips_a_box_with_no_area(
         self, tmp_path: Path, adapted: ImageCropPathEmbedder
     ) -> None:
@@ -167,6 +186,23 @@ class TestImageCropPathRoute:
         assert result.kept_indices == []
         assert result.embeddings.shape == (0, DIMENSION)
         assert server_embedder.formats == []
+
+
+def test_encode_crops__encodes_one_crop_at_a_time(mocker: MockerFixture) -> None:
+    spy = mocker.spy(image_crop_path_adapter, "_encode_crop")
+    crops = [
+        (index, ImageCrop(filepath="a.png", x=0, y=0, width=2, height=2)) for index in range(3)
+    ]
+    decoded_file = image_crop_path_adapter._DecodedFile(
+        image=Image.new("RGB", (10, 10)), indexed_crops=crops
+    )
+
+    encoded = image_crop_path_adapter._encode_crops(decoded_files=[decoded_file])
+
+    assert next(encoded)[0] == 0
+    assert spy.call_count == 1
+    assert [index for index, _ in encoded] == [1, 2]
+    assert spy.call_count == 3
 
 
 def _write_image(path: Path, width: int, height: int) -> str:

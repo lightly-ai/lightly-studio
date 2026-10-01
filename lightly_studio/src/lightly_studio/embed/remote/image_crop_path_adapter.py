@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import logging
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 import fsspec
@@ -35,6 +36,14 @@ class _FileCrops:
     indexed_crops: list[tuple[int, ImageCrop]]
 
 
+@dataclass(frozen=True)
+class _DecodedFile:
+    """The decoded image of one file, or None if the file cannot be read, and its crops."""
+
+    image: Image.Image | None
+    indexed_crops: list[tuple[int, ImageCrop]]
+
+
 class ImageCropPathRoute(PreparedImageRoute, ImageCropPathEmbedder):
     """Adds the image-crop-path capability, which reaches the server as image bytes."""
 
@@ -42,16 +51,18 @@ class ImageCropPathRoute(PreparedImageRoute, ImageCropPathEmbedder):
         """Cut a batch of crops out of their images and embed the crops on the server.
 
         Each file is read once, on a thread pool, a small number of files ahead of the
-        requests. A crop is not embedded if its file cannot be read, if its box gives no
-        image, or if it is larger than one request.
+        requests. Each crop is encoded only when a request takes it, so the memory use
+        does not depend on the number of crops in one file. A crop is not embedded if its
+        file cannot be read, if its box gives no image, if its JPEG cannot be encoded, or
+        if it is larger than one request.
         """
-        encoded_files = parallelize.thread_imap_lazy(
-            function=_encode_file_crops,
+        decoded_files = parallelize.thread_imap_lazy(
+            function=_decode_file,
             iterable=_group_by_file(crops=crops),
             max_workers=executor.get_media_worker_count(),
         )
         result = self._embed_prepared(
-            images=(image for encoded_file in encoded_files for image in encoded_file),
+            images=_encode_crops(decoded_files=decoded_files),
             name_of=lambda index: f"the crop {crops[index]}",
         )
         # The crops of one file are sent together, which changes the order of the inputs
@@ -73,17 +84,23 @@ def _group_by_file(crops: list[ImageCrop]) -> list[_FileCrops]:
     ]
 
 
-def _encode_file_crops(file_crops: _FileCrops) -> list[tuple[int, bytes]]:
-    """Read one image file and encode each of its crops. A file that cannot be read gives none."""
-    image = _open_rgb(filepath=file_crops.filepath)
-    if image is None:
-        return []
-    with image:
-        encoded = (
-            (index, _encode_crop(image=image, crop=crop))
-            for index, crop in file_crops.indexed_crops
-        )
-        return [(index, data) for index, data in encoded if data is not None]
+def _decode_file(file_crops: _FileCrops) -> _DecodedFile:
+    """Read and decode one image file. A file that cannot be read gives no image."""
+    return _DecodedFile(
+        image=_open_rgb(filepath=file_crops.filepath), indexed_crops=file_crops.indexed_crops
+    )
+
+
+def _encode_crops(decoded_files: Iterable[_DecodedFile]) -> Iterator[tuple[int, bytes]]:
+    """Encode the crops of each decoded file, one crop at a time."""
+    for decoded_file in decoded_files:
+        if decoded_file.image is None:
+            continue
+        with decoded_file.image:
+            for index, crop in decoded_file.indexed_crops:
+                data = _encode_crop(image=decoded_file.image, crop=crop)
+                if data is not None:
+                    yield index, data
 
 
 def _open_rgb(filepath: str) -> Image.Image | None:
@@ -106,14 +123,19 @@ def _encode_crop(image: Image.Image, crop: ImageCrop) -> bytes | None:
             extends past the image is filled with black.
 
     Returns:
-        The JPEG bytes of the crop, or None if the box gives no image to embed.
+        The JPEG bytes of the crop, or None if the box gives no image to embed or if the
+        JPEG encoder rejects the crop, for example a side longer than 65,500 pixels.
     """
     corners = (crop.x, crop.y, crop.x + crop.width, crop.y + crop.height)
     if corners[0] >= corners[2] or corners[1] >= corners[3]:
         return None
     image_crop = image.crop(corners)
     with io.BytesIO() as buffer:
-        image_crop.save(buffer, format="JPEG", quality=_JPEG_QUALITY)
+        try:
+            image_crop.save(buffer, format="JPEG", quality=_JPEG_QUALITY)
+        except OSError as error:
+            logger.warning("Cannot encode the crop %s as JPEG: %s", crop, error)
+            return None
         return buffer.getvalue()
 
 
