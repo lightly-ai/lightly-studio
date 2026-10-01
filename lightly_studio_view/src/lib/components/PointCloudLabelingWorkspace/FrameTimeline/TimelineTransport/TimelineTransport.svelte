@@ -8,6 +8,7 @@
         frameLabel: string;
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
+        playbackIntervalMs: number;
         /** Whether the sequence has any ticks; disables playback when it has none. */
         hasTicks: boolean;
         /** Whether stepping to the previous frame is possible. */
@@ -20,17 +21,20 @@
         onNextFrame: () => void;
         /** Toggle playback between playing and paused. */
         onPlayToggle: () => void;
+        onPlaybackIntervalChange: (intervalMs: number) => void;
     }
 
     let {
         frameLabel,
         isPlaying,
+        playbackIntervalMs,
         hasTicks,
         canGoPrevious,
         canGoNext,
         onPreviousFrame,
         onNextFrame,
-        onPlayToggle
+        onPlayToggle,
+        onPlaybackIntervalChange
     }: Props = $props();
 </script>
 
@@ -57,6 +61,25 @@
             class: 'h-7 w-7 p-0'
         }}
     />
+    <label class="ml-1 flex items-center gap-1 text-xs text-muted-foreground">
+        Interval
+        <input
+            aria-label="Playback interval in seconds"
+            class="h-7 w-14 rounded border bg-background px-1 text-foreground"
+            type="number"
+            min="0.1"
+            max="5"
+            step="0.1"
+            value={playbackIntervalMs / 1000}
+            oninput={(event) => {
+                const seconds = Number(event.currentTarget.value);
+                if (Number.isFinite(seconds)) {
+                    onPlaybackIntervalChange(Math.min(5000, Math.max(100, seconds * 1000)));
+                }
+            }}
+        />
+        s
+    </label>
     <Button
         variant="ghost"
         icon={ChevronRight}

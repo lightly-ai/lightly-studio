@@ -25,10 +25,12 @@ export interface PointCloudWorkspaceContext {
     readonly ticks: TickView[];
     readonly currentTick: number;
     readonly isPlaying: boolean;
+    readonly playbackIntervalMs: number;
     goToFrame: (seqNumber: number) => void;
     goToPreviousFrame: () => void;
     goToNextFrame: () => void;
     togglePlayback: () => void;
+    setPlaybackIntervalMs: (intervalMs: number) => void;
     /** Re-fetch the sequence summary, ticks, and active frame after a recoverable error. */
     retry: () => void;
 }

@@ -28,6 +28,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from numpy.typing import NDArray
 
 from lightly_studio.embed.remote import batching, composition, connection, url_policy
+from lightly_studio.embed.remote.endpoint import RemoteEndpoint
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderBatchTooLargeError,
     RemoteEmbedderCapabilityError,
@@ -120,6 +121,25 @@ class RemoteEmbedder(Embedder):
             The space that ``/v1/describe`` reported at construction.
         """
         return self._spec
+
+    def remote_endpoint(self) -> RemoteEndpoint | None:
+        """Get the address and the token of the server, for a dataset to store.
+
+        A later process builds the embedder again from the stored endpoint with ``connect``,
+        and so reaches the server with no registration. A class that a caller wrote by hand,
+        or that has a route that a caller added with ``with_route``, names no endpoint.
+
+        Returns:
+            The endpoint that every request of the transport carries, or None for a class
+            that a build from the endpoint does not compose again.
+        """
+        # The build from a stored endpoint drops the methods that a caller wrote. For
+        # example, a class that adds "a photo of" to each text query loses it after a
+        # restart, and search then gives other results with no error. A text route that
+        # turns a query into an image is lost too, and text search then fails.
+        if not composition.is_rebuildable(cls=type(self)):
+            return None
+        return self._transport.endpoint()
 
     def with_route(self, route: type[RemoteEmbedder]) -> RemoteEmbedder:
         """Build an embedder of the same server that also has the methods of ``route``.
@@ -335,6 +355,7 @@ _CAPABILITY_TO_BASE: dict[Capability, type[RemoteEmbedder]] = {
     Capability.IMAGE_BYTES: _ImageBytesRoute,
     Capability.VIDEO_BYTES: _VideoBytesRoute,
 }
+composition.add_rebuildable_routes(routes=_CAPABILITY_TO_BASE.values())
 
 
 def _embedder_for(

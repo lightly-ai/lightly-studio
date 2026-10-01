@@ -39,7 +39,6 @@ class TickChannelView(BaseModel):
     # round-trip through a JavaScript `number` (see McapGroupSequence.keyframe_log_time_ns).
     log_time_ns: str = Field(description="Log time of the message, in nanoseconds.")
     keyframe_log_time_ns: str | None = Field(
-        default=None,
         description=(
             "Log time of the keyframe to seek to before decoding. `None` for non-video channels."
         ),
