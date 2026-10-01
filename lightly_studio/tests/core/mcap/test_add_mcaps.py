@@ -341,14 +341,14 @@ def test_index_recording__skips_static_transforms_without_frame_id(
                 child_frame_id="camera",
                 translation=(0.0, 0.0, 0.0),
                 rotation=(0.0, 0.0, 0.0, 1.0),
-                log_time_ns=0,
+                timestamp_ns=0,
             ),
             StaticTransform(
                 parent_frame_id="base_link",
                 child_frame_id="lidar",
                 translation=(0.0, 1.0, 2.0),
                 rotation=(0.0, 0.0, 0.0, 1.0),
-                log_time_ns=0,
+                timestamp_ns=0,
             ),
         ],
     )
