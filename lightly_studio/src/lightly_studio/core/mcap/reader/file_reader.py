@@ -296,9 +296,9 @@ class McapFileReader:
         """Returns dynamic edges read from the start of a topic until frames are seen.
 
         Reading stops once every frame id has appeared as a parent or a child. The pose
-        and the stamp are not read. A topic that is not in the file, or an empty
-        `frame_ids`, returns no edges. If the topic ends first, the edges seen so far
-        are returned.
+        and the stamp are not read. An edge with a blank frame name is skipped. A topic
+        that is not in the file, or an empty `frame_ids`, returns no edges. If the
+        topic ends first, the edges seen so far are returned.
 
         Args:
             frame_ids: The coordinate frames to find.

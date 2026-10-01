@@ -30,8 +30,8 @@ def dynamic_edges_until(
     """Returns dynamic edges read from the start of a topic until frames are seen.
 
     Reading stops once every frame id has appeared as a parent or a child. The pose
-    and the stamp are not read. If the topic ends first, the edges seen so far are
-    returned.
+    and the stamp are not read. An edge with a blank frame name is skipped. If the
+    topic ends first, the edges seen so far are returned.
 
     Args:
         mcap_reader: The seeking reader of the open file.
@@ -157,7 +157,10 @@ def _collect_frame_edges(
     edges: dict[tuple[str, str], None],
     seen: set[str],
 ) -> None:
-    """Adds the frame names of one message, or skips a message that has none."""
+    """Adds the frame names of one message, or skips a message that has none.
+
+    An edge with a blank parent or child frame name is skipped.
+    """
     try:
         message_edges = transforms.frame_edges(decoded_message)
     except McapAccessError:
@@ -168,6 +171,8 @@ def _collect_frame_edges(
         )
         return
     for parent_frame_id, child_frame_id in message_edges:
+        if not parent_frame_id.strip() or not child_frame_id.strip():
+            continue
         edges.setdefault((parent_frame_id, child_frame_id), None)
         seen.add(parent_frame_id)
         seen.add(child_frame_id)

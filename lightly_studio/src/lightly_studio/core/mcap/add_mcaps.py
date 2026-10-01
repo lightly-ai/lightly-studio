@@ -411,11 +411,7 @@ def _dynamic_edges(
     missing = [frame_id for frame_id in reference_frame_ids if frame_id not in known]
     if not missing:
         return []
-    return [
-        (parent, child)
-        for parent, child in reader.read_dynamic_edges_until(frame_ids=missing)
-        if parent.strip() and child.strip()
-    ]
+    return reader.read_dynamic_edges_until(frame_ids=missing)
 
 
 def _reference_frame_ids(
