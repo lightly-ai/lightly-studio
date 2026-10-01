@@ -54,7 +54,7 @@ for sample in dataset:
 ### The COCO caption format
 
 Image datasets in COCO caption format can be loaded with `add_samples_from_coco_caption`. This
-method imports both the images and their associated captions.
+method ingests both the images and their associated captions.
 
 ```python
 import lightly_studio as ls

@@ -43,7 +43,7 @@
         {#if $allSourcesHidden}
             <!-- The rows are empty here because every source is unchecked, not because the
                  dataset has no annotations. Say so, otherwise the message below sends the user
-                 off to import annotations they already have. -->
+                 off to add annotations they already have. -->
             <p class="text-sm text-diffuse-foreground" data-testid="labels-menu-no-sources">
                 No annotation sources selected. Select one to see its annotation classes.
             </p>
@@ -56,7 +56,7 @@
                     rel="noreferrer"
                     class="text-primary underline-offset-4 hover:underline"
                 >
-                    Label samples directly in LightlyStudio or import annotations from code.
+                    Label samples directly in LightlyStudio or add annotations from code.
                 </a>
             </p>
         {:else}

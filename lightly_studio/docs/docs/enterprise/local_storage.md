@@ -102,7 +102,7 @@ absolute paths under your storage root.
     dataset.add_videos_from_path(path="/mnt/datasets/dataset_b/videos")
     ```
 
-=== "COCO Import"
+=== "COCO Dataset"
 
     ```python
     import lightly_studio as ls

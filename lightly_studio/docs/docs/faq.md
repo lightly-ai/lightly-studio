@@ -120,10 +120,10 @@ also [use your own embeddings](core_concepts/embeddings.md#using-your-own-embedd
 
 ## Data and formats
 
-### What data formats can I import and export?
+### What data formats can I ingest and export?
 
-You can import [images](workflows/image_dataset.md#from-a-folder) and
-[videos](workflows/video_dataset.md#from-a-folder) from folders or cloud storage. You can also import
+You can ingest [images](workflows/image_dataset.md#from-a-folder) and
+[videos](workflows/video_dataset.md#from-a-folder) from folders or cloud storage. You can also add
 [image annotations](workflows/image_dataset.md#from-an-annotation-format) from COCO, YOLO, Pascal VOC,
 and the Lightly format, and [video annotations](workflows/video_dataset.md#from-an-annotation-format)
 from YouTube-VIS. For any other format, you can attach annotations from Python. You can

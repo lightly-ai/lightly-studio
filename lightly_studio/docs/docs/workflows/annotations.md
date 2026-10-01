@@ -7,7 +7,7 @@ LightlyStudio supports three annotation types:
 - segmentation.
 
 You can inspect and edit annotations in the GUI, or add and read them in Python. For dataset-level
-imports such as COCO, YOLO, and Label Studio format, see [Image Dataset](image_dataset.md)
+ingestion from formats such as COCO, YOLO, and Label Studio, see [Image Dataset](image_dataset.md)
 and [Video Dataset](video_dataset.md).
 
 !!! info "Terminology"
@@ -35,7 +35,7 @@ Annotations are shown in sample detail view and in the annotation-focused views.
 
 ## Annotations in Python
 
-Use the [Python API](../api/annotation.md) to create annotations and predictions directly, import them from model
+Use the [Python API](../api/annotation.md) to create annotations and predictions directly, add them from model
 outputs, or inspect them programmatically.
 
 ### Classification
@@ -118,7 +118,7 @@ sample.add_annotation(
 )
 ```
 
-To import object detection annotations at the dataset level, use
+To add object detection annotations at the dataset level, use
 [add_annotations_from_coco](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_coco),
 [add_annotations_from_yolo](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_yolo),
 or
@@ -179,7 +179,7 @@ If you already have RLE masks, use
     [1, 2, 1, 4]
     ```
 
-To import segmentation annotations at the dataset level, use
+To add segmentation annotations at the dataset level, use
 [add_annotations_from_coco](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_coco),
 [add_annotations_from_labelformat](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_labelformat),
 or
@@ -191,8 +191,8 @@ or
 Predictions are represented by the same objects as annotations. The only difference is that
 predictions can include a `confidence` value and are usually stored in their own annotation source.
 
-For image datasets, the `add_annotations_from_*` methods are the easiest way to import 
-predictions into a named source:
+For image datasets, the `add_annotations_from_*` methods are the easiest way to add
+predictions to a named source:
 
 ```python
 import lightly_studio as ls
