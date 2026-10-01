@@ -162,6 +162,8 @@
                                     colorMode={workspace.cloudPointFrame.data.batch.colors
                                         ? 'rgb'
                                         : 'intensity'}
+                                    pointCloudBounds={workspace.cloudPointFrame.data.bounds ??
+                                        undefined}
                                 />
                             {:else}
                                 <WorkspaceStatusPanel status="empty" {onExit} />
