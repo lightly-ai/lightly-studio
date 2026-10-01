@@ -11,7 +11,7 @@ from uuid import UUID
 
 import numpy as np
 import pytest
-from lightly_studio_serve.embedder import ImageBytesEmbedder, TextEmbedder
+from lightly_studio_serve.embedder import Capability, ImageBytesEmbedder, TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 
@@ -20,6 +20,7 @@ from lightly_studio import ImageDataset
 from lightly_studio.core.annotation import CreateObjectDetection
 from lightly_studio.embed import embed_samples, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
 from lightly_studio.models.collection import SampleType
@@ -143,6 +144,50 @@ def test_embed_annotation_collection__after_restart(
         embedding_model_id=crop_model.embedding_model_id,
     )
     assert embedding_count == 6
+
+
+def test_embed_annotation_collection__new_collection_after_restart(
+    dataset: ImageDataset, server_url: str, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    annotation_collection_id = _add_box_to_each_image(dataset=dataset)
+
+    embed_samples.embed_annotation_collection(
+        session=dataset.session, annotation_collection_id=annotation_collection_id
+    )
+
+    # Nothing is registered, so the new crops take the model row of the images
+    crop_model = _default_model(dataset=dataset, collection_id=annotation_collection_id)
+    image_model = _default_model(dataset=dataset, collection_id=dataset.collection_id)
+    assert crop_model.embedding_model_id == image_model.embedding_model_id
+    assert crop_model.remote_embedder_url == server_url
+    embedding_count = sample_embedding_resolver.get_embedding_count(
+        session=dataset.session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=crop_model.embedding_model_id,
+    )
+    assert embedding_count == 3
+
+
+def test_embed_annotation_collection__new_collection_after_restart_with_registration(
+    dataset: ImageDataset, mocker: MockerFixture
+) -> None:
+    registry = EmbedderRegistry()
+    registry.register(
+        embedder=RandomEmbedder(dimension=4), bootstrap_for={Capability.IMAGE_CROP_PATH}
+    )
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    annotation_collection_id = _add_box_to_each_image(dataset=dataset)
+
+    embed_samples.embed_annotation_collection(
+        session=dataset.session, annotation_collection_id=annotation_collection_id
+    )
+
+    # The registered crop embedder wins over the server of the images
+    crop_model = _default_model(dataset=dataset, collection_id=annotation_collection_id)
+    assert crop_model.name == "random_model"
+    assert crop_model.embedding_dimension == 4
+    assert crop_model.remote_embedder_url is None
 
 
 def test_text_search__after_restart(

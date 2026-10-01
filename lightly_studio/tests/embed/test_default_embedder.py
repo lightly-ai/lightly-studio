@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from lightly_studio_serve import server
-from lightly_studio_serve.embedder import TextEmbedder
+from lightly_studio_serve.embedder import Capability, TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -184,6 +184,68 @@ def test_resolve_default_embedder__missing_collection_raises(
             collection_id=uuid.uuid4(),
             get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
         )
+
+
+def test_resolve_default_embedder__parent_model_without_server_uses_bootstrap(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    parent = create_collection(session=db_session)
+    child = create_collection(session=db_session, parent_collection_id=parent.collection_id)
+    create_embedding_model(
+        session=db_session,
+        collection_id=parent.collection_id,
+        embedding_model_name="local/model@v1",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    builtin = RandomEmbedder(dimension=3)
+    mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=builtin)
+
+    result = default_embedder.resolve_default_embedder(
+        session=db_session,
+        collection_id=child.collection_id,
+        get_embedder_fn=EmbedderRegistry.get_image_crop_path_embedder,
+        capability=Capability.IMAGE_CROP_PATH,
+    )
+
+    # The parent model stores no server, so the child gets the bootstrap embedder
+    assert result is not None
+    returned_embedder, model_id = result
+    assert returned_embedder is builtin
+    registered = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=model_id)
+    assert registered is not None
+    assert registered.name == "random_model"
+
+
+def test_resolve_default_embedder__unusable_parent_server_skips(
+    db_session: Session, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    parent = create_collection(session=db_session)
+    child = create_collection(session=db_session, parent_collection_id=parent.collection_id)
+    _create_remote_default_model(session=db_session, collection_id=parent.collection_id)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    mocker.patch.object(
+        embedder_config, "build_remote", side_effect=RemoteEmbedderUnreachableError("down")
+    )
+
+    with caplog.at_level(logging.WARNING, logger=default_embedder.__name__):
+        result = default_embedder.resolve_default_embedder(
+            session=db_session,
+            collection_id=child.collection_id,
+            get_embedder_fn=EmbedderRegistry.get_image_crop_path_embedder,
+            capability=Capability.IMAGE_CROP_PATH,
+        )
+
+    assert result is None
+    # The child gets no default model, so that a later call tries the server again
+    assert (
+        collection_embedding_model_resolver.get_default_model_by_collection_id(
+            session=db_session, collection_id=child.collection_id
+        )
+        is None
+    )
+    assert "on the server http://embedder.test of its parent collection" in caplog.text
 
 
 def test_resolve_query_embedder__uses_existing_default(
