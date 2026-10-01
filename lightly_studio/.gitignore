@@ -26,3 +26,7 @@ coverage.json
 
 # docs build
 /docs/site
+
+# cache for the builds
+.openapi.json.signature
+.ui-build-cache-signature
