@@ -146,5 +146,7 @@ def _create_tracker() -> Tracker:
         return NoOpTracker()
 
 
-# The tracker is ready before GUI startup.
-_get_tracker()
+# The tracker initializes eagerly so all events fired before start_gui() reach PostHog.
+# When analytics is off (e.g. in the test suite), no PostHogTracker is built at import time.
+if LIGHTLY_STUDIO_ANALYTICS_ENABLED:
+    _get_tracker()
