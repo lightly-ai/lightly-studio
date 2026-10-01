@@ -3,7 +3,15 @@ import { PointCloudWorkspace } from './pointCloudWorkspace.svelte';
 
 // The workspace wraps useMcapSequenceSummary; stub it so the class can be built without a live
 // TanStack query client. `summaryState` is mutable so each test drives the derived status/channels.
-const { summaryState, tickDetailsState, refetch, tickRefetch, cloudRefetch } = vi.hoisted(() => ({
+const {
+    summaryState,
+    ticksState,
+    tickDetailsState,
+    refetch,
+    ticksRefetch,
+    tickRefetch,
+    cloudRefetch
+} = vi.hoisted(() => ({
     summaryState: { data: undefined, isLoading: false, isError: false } as {
         data: unknown;
         isLoading: boolean;
@@ -18,7 +26,21 @@ const { summaryState, tickDetailsState, refetch, tickRefetch, cloudRefetch } = v
         isLoading: boolean;
         isError: boolean;
     },
+    ticksState: {
+        data: {
+            ticks: [
+                { seq_number: 0, timestamp_ns: 10 },
+                { seq_number: 4, timestamp_ns: 20 },
+                { seq_number: 9, timestamp_ns: 30 }
+            ]
+        }
+    } as {
+        data: {
+            ticks: Array<{ seq_number: number; timestamp_ns: number }>;
+        };
+    },
     refetch: vi.fn(),
+    ticksRefetch: vi.fn(),
     tickRefetch: vi.fn(),
     cloudRefetch: vi.fn()
 }));
@@ -30,6 +52,9 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({
         tickDetails: { ...tickDetailsState, refetch: tickRefetch }
     })
+}));
+vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
+    useMcapSequenceTicks: () => ({ ticks: ticksState, refetch: ticksRefetch })
 }));
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
@@ -104,20 +129,31 @@ describe('PointCloudWorkspace', () => {
         expect(workspace.currentTick).toBe(3);
     });
 
-    it('advances and rewinds within bounds, clamped at both ends', () => {
+    it('navigates directly to a requested tick', () => {
+        const workspace = createWorkspace();
+
+        workspace.goToFrame(9);
+
+        expect(workspace.currentTick).toBe(9);
+    });
+
+    it('advances and rewinds through the ordered ticks, including sparse sequence numbers', () => {
         const workspace = createWorkspace();
         expect(workspace.currentTick).toBe(0);
         expect(workspace.isPlaying).toBe(false);
-        expect(workspace.ticks).toHaveLength(24);
+        expect(workspace.ticks).toEqual(ticksState.data.ticks);
 
         // Clamped at the first tick.
         workspace.goToPreviousFrame();
         workspace.goToNextFrame();
-        expect(workspace.currentTick).toBe(1);
+        expect(workspace.currentTick).toBe(4);
 
         // Clamped at the last tick.
-        for (let i = 0; i < 30; i += 1) workspace.goToNextFrame();
-        expect(workspace.currentTick).toBe(workspace.ticks.length - 1);
+        workspace.goToNextFrame();
+        workspace.goToNextFrame();
+        expect(workspace.currentTick).toBe(9);
+        workspace.goToPreviousFrame();
+        expect(workspace.currentTick).toBe(4);
     });
 
     it('toggles playback', () => {
@@ -136,6 +172,7 @@ describe('PointCloudWorkspace', () => {
         createWorkspace().retry();
 
         expect(refetch).toHaveBeenCalledOnce();
+        expect(ticksRefetch).toHaveBeenCalledOnce();
         expect(tickRefetch).toHaveBeenCalledOnce();
         expect(cloudRefetch).toHaveBeenCalledOnce();
     });
@@ -155,6 +192,7 @@ describe('PointCloudWorkspace', () => {
         workspace.retry();
 
         expect(refetch).toHaveBeenCalledOnce();
+        expect(ticksRefetch).toHaveBeenCalledOnce();
         expect(tickRefetch).toHaveBeenCalledOnce();
         expect(cloudRefetch).not.toHaveBeenCalled();
     });

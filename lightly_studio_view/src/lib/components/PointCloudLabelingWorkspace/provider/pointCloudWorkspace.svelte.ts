@@ -1,4 +1,9 @@
-import { useCloudPointFrame, useMcapSequenceSummary, useTickDetails } from '$lib/hooks';
+import {
+    useCloudPointFrame,
+    useMcapSequenceSummary,
+    useMcapSequenceTicks,
+    useTickDetails
+} from '$lib/hooks';
 import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local/types.gen';
 import type { PointCloudWorkspaceContext, WorkspaceStatus } from './types';
 
@@ -14,6 +19,7 @@ export type GetInputs = () => {
 };
 
 type SequenceSummary = ReturnType<typeof useMcapSequenceSummary>['summary'];
+type SequenceTicks = ReturnType<typeof useMcapSequenceTicks>['ticks'];
 type TickDetails = ReturnType<typeof useTickDetails>['tickDetails'];
 type CloudPointQuery = ReturnType<typeof useCloudPointFrame>['query'];
 type CloudPointFrameParams = ReturnType<Parameters<typeof useCloudPointFrame>[0]>;
@@ -63,12 +69,14 @@ function createCloudPointFrameParamsGetter(
 
 function createRetryHandler(
     refetchSummary: () => unknown,
+    refetchTicks: () => unknown,
     tickDetails: TickDetails,
     cloudPointFrame: CloudPointQuery,
     getCloudPointFrameParams: () => CloudPointFrameParams
 ): () => void {
     return () => {
         void refetchSummary();
+        void refetchTicks();
         void tickDetails.refetch();
         const { datasetId, recordingId, channels } = getCloudPointFrameParams();
         if (datasetId && recordingId && channels.length > 0) void cloudPointFrame.refetch();
@@ -78,22 +86,18 @@ function createRetryHandler(
 /**
  * Owns the shared data and playback state for the point-cloud labeling workspace.
  *
- * Wraps `useMcapSequenceSummary` so the summary is fetched once at the root and flows to every pane
+ * Fetches the sequence summary and ordered ticks once at the root so they flow to every pane
  * without prop drilling. Owns the transport position (`currentTick`, `isPlaying`) and loads the
  * active tick's point-cloud data. Instantiate via `createPointCloudWorkspaceContext`.
  */
 export class PointCloudWorkspace implements PointCloudWorkspaceContext {
-    // Placeholder ruler until browser-side MCAP frame loading lands (child issues of LIG-10657).
-    readonly ticks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
-        seq_number: index,
-        timestamp_ns: null
-    }));
-
     currentTick = $state(0);
     isPlaying = $state(false);
+    playbackIntervalMs = $state(300);
 
     readonly #getInputs: GetInputs;
     readonly #summary: ReturnType<typeof useMcapSequenceSummary>['summary'];
+    readonly #sequenceTicks: SequenceTicks;
     readonly tickDetails: ReturnType<typeof useTickDetails>['tickDetails'];
     readonly cloudPointFrame: ReturnType<typeof useCloudPointFrame>['query'];
     readonly retry: () => void;
@@ -108,11 +112,14 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         if (this.#summary.isLoading) return 'loading';
         if (this.#summary.isError) return 'error';
         if (!this.#summary.data || this.#summary.data.lidar_channels.length === 0) return 'empty';
+        if (this.#sequenceTicks.isLoading) return 'loading';
+        if (this.#sequenceTicks.isError) return 'error';
         return 'ready';
     });
 
     readonly lidarChannels = $derived.by(() => this.#summary.data?.lidar_channels ?? []);
     readonly cameraChannels = $derived.by(() => this.#summary.data?.camera_channels ?? []);
+    readonly ticks: TickView[] = $derived.by(() => this.#sequenceTicks.data?.ticks ?? []);
 
     constructor(getInputs: GetInputs) {
         const { summary, refetch } = useMcapSequenceSummary({
@@ -121,6 +128,11 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         });
         this.#getInputs = getInputs;
         this.#summary = summary;
+        const { ticks, refetch: refetchTicks } = useMcapSequenceTicks({
+            getDatasetId: () => getInputs().datasetId,
+            getSequenceId: () => getInputs().sequenceId
+        });
+        this.#sequenceTicks = ticks;
         // Read once at construction: this is the starting position, not a reactive binding.
         this.currentTick = getInputs().initialTick ?? 0;
         const tickDetails = createTickDetails(getInputs, () => this.currentTick);
@@ -134,6 +146,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         this.cloudPointFrame = cloudPointFrame;
         this.retry = createRetryHandler(
             refetch,
+            refetchTicks,
             tickDetails,
             cloudPointFrame,
             getCloudPointFrameParams
@@ -148,15 +161,36 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         return this.#getInputs().sequenceId;
     }
 
-    goToPreviousFrame(): void {
-        if (this.currentTick > 0) this.currentTick -= 1;
-    }
+    goToFrame = (seqNumber: number): void => {
+        this.currentTick = seqNumber;
+    };
 
-    goToNextFrame(): void {
-        if (this.currentTick < this.ticks.length - 1) this.currentTick += 1;
-    }
+    goToPreviousFrame = (): void => {
+        const index = this.ticks.findIndex((tick) => tick.seq_number === this.currentTick);
+        if (index > 0) this.currentTick = this.ticks[index - 1].seq_number;
+        else if (index === -1) this.currentTick = this.ticks[0]?.seq_number ?? this.currentTick;
+    };
 
-    togglePlayback(): void {
+    goToNextFrame = (): void => {
+        const index = this.ticks.findIndex((tick) => tick.seq_number === this.currentTick);
+        if (index === -1) this.currentTick = this.ticks[0]?.seq_number ?? this.currentTick;
+        else if (index < this.ticks.length - 1) {
+            this.currentTick = this.ticks[index + 1].seq_number;
+        }
+    };
+
+    togglePlayback = (): void => {
+        if (
+            !this.isPlaying &&
+            this.ticks.length > 0 &&
+            this.currentTick === this.ticks.at(-1)?.seq_number
+        ) {
+            this.currentTick = this.ticks[0].seq_number;
+        }
         this.isPlaying = !this.isPlaying;
-    }
+    };
+
+    setPlaybackIntervalMs = (intervalMs: number): void => {
+        this.playbackIntervalMs = intervalMs;
+    };
 }

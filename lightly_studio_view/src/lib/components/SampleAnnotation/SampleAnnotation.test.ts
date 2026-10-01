@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import type { ComponentProps } from 'svelte';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 import { getColorByLabel } from '$lib/utils';
 import SampleAnnotation from './SampleAnnotation.svelte';
+import SelectableSampleAnnotationHarness from './SelectableSampleAnnotationHarness.svelte';
 
 const BASE_ANNOTATION_FIELDS = {
     parent_sample_id: 'parent-sample-1',
@@ -93,6 +94,24 @@ describe('SampleAnnotation', () => {
         });
 
         expect(screen.queryByTestId('svg-annotation-text')).not.toBeInTheDocument();
+    });
+
+    it('selects an instance-segmentation mask on a click on it when bounding boxes are hidden', async () => {
+        const onSelect = vi.fn();
+        const annotation = createSegmentationMaskAnnotationWithMask();
+        render(SelectableSampleAnnotationHarness, {
+            props: {
+                annotation,
+                imageWidth: 100,
+                prerenderedDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
+                prerenderedHeight: 12,
+                onSelect
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('annotation_mask_hit_area'));
+
+        expect(onSelect).toHaveBeenCalledWith(annotation.sample_id);
     });
 
     it('shows instance-segmentation label when bounding boxes are shown', () => {

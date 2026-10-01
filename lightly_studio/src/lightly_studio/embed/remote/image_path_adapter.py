@@ -88,6 +88,10 @@ class ImagePathRoute(RemoteEmbedder, ImagePathEmbedder):
             yield index, image
 
 
+# `EmbedderRegistry` adds this route again when it builds the embedder from a stored endpoint
+composition.add_rebuildable_routes(routes=[ImagePathRoute])
+
+
 def with_image_path(embedder: Embedder) -> Embedder:
     """Give a remote embedder with the image-bytes route the image-path capability.
 

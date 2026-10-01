@@ -21,6 +21,9 @@ from lightly_studio.resolvers.video_resolver.get_table_fields_bounds import (
     get_table_fields_bounds,
 )
 from lightly_studio.resolvers.video_resolver.get_view_by_id import get_view_by_id
+from lightly_studio.resolvers.video_resolver.resolve_embedding_region import (
+    resolve_embedding_region,
+)
 
 __all__ = [
     "build_sample_ids_query",
@@ -36,4 +39,5 @@ __all__ = [
     "get_sample_ids_by_stems",
     "get_table_fields_bounds",
     "get_view_by_id",
+    "resolve_embedding_region",
 ]

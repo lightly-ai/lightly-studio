@@ -22,6 +22,7 @@ from lightly_studio_serve import protocol
 from lightly_studio_serve.protocol import DescribeResponse, EmbeddingsResponse, EmbedTextsRequest
 from pydantic import BaseModel, ValidationError
 
+from lightly_studio.embed.remote.endpoint import RemoteEndpoint
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderAuthError,
     RemoteEmbedderBatchTooLargeError,
@@ -120,10 +121,19 @@ class RemoteTransport:
                 the one of a client that the caller passes in.
         """
         self._client = client
+        self._api_key = api_key
         # A header of the request, not of the client: the caller owns the client, and a
         # transport must not put a token on a client that it was lent.
         self._headers = {} if api_key is None else {"Authorization": f"Bearer {api_key}"}
         self._timeouts = timeouts if timeouts is not None else DEFAULT_TIMEOUTS
+
+    def endpoint(self) -> RemoteEndpoint:
+        """Get the address and the token that every request of this transport carries.
+
+        Returns:
+            The ``base_url`` of the client, and the token.
+        """
+        return RemoteEndpoint(url=str(self._client.base_url), api_key=self._api_key)
 
     def describe(self) -> DescribeResponse:
         """Read the identity, the capabilities and the limits of the server.
