@@ -101,43 +101,61 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
 
 describe('point-cloud sequence page load', () => {
     // The route dataset slot carries a collection id; the dataset id comes from the loaded collection.
-    const loadWith = (search: string): ReturnType<typeof load> =>
+    const loadWith = (search: string, parentData: unknown): ReturnType<typeof load> =>
         load({
             params: {
-                dataset_id: 'collection',
+                dataset_id: 'root-collection',
                 collection_type: 'group',
-                collection_id: 'collection',
+                collection_id: 'group-collection',
                 sequence_id: 'sequence'
             },
             url: new URL(
-                `http://localhost/datasets/collection/group/collection/point-clouds/sequence${search}`
+                `http://localhost/datasets/root-collection/group/group-collection/point-clouds/sequence${search}`
             ),
-            parent: async () => ({
-                collection: { dataset_id: 'dataset', name: 'Collection name' }
-            })
+            parent: async () => parentData
         } as unknown as Parameters<typeof load>[0]);
 
-    it('maps route and query parameters to page data, deriving the dataset id from the collection', async () => {
-        const result = await loadWith('?group_id=group');
+    it('keeps a sequence collection as the breadcrumb target and derives the dataset id', async () => {
+        const result = await loadWith('?group_id=group', {
+            collection: {
+                dataset_id: 'dataset',
+                collection_id: 'sequence-collection',
+                name: 'Sequences',
+                sample_type: 'sequence',
+                parent_collection_id: 'root-collection'
+            },
+            collectionHierarchy: []
+        });
 
         expect(result).toEqual({
             datasetId: 'dataset',
-            collectionName: 'Collection name',
-            collectionType: 'group',
-            collectionId: 'collection',
+            collectionName: 'Sequences',
+            collectionType: 'sequence',
+            collectionId: 'sequence-collection',
             sequenceId: 'sequence',
             groupId: 'group'
         });
     });
 
-    it('leaves optional query values undefined when absent', async () => {
-        const result = await loadWith('');
+    it('points the breadcrumb at the parent sequence collection when reached from a group', async () => {
+        const result = await loadWith('', {
+            collection: {
+                dataset_id: 'dataset',
+                collection_id: 'group-collection',
+                name: 'Group',
+                sample_type: 'group',
+                parent_collection_id: 'sequence-collection'
+            },
+            collectionHierarchy: [
+                { collection_id: 'sequence-collection', name: 'Sequences', sample_type: 'sequence' }
+            ]
+        });
 
         expect(result).toEqual({
             datasetId: 'dataset',
-            collectionName: 'Collection name',
-            collectionType: 'group',
-            collectionId: 'collection',
+            collectionName: 'Sequences',
+            collectionType: 'sequence',
+            collectionId: 'sequence-collection',
             sequenceId: 'sequence',
             groupId: undefined
         });

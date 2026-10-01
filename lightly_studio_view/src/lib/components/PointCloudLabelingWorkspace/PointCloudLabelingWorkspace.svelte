@@ -206,7 +206,7 @@
                     </PaneGroup>
                 </Pane>
                 <PaneResizer
-                    class="bg-cardtransition-colors group relative flex w-2 cursor-col-resize items-center justify-center hover:bg-card"
+                    class="group relative flex w-2 cursor-col-resize items-center justify-center bg-card transition-colors hover:bg-card"
                 >
                     <div
                         class="flex flex-col gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
