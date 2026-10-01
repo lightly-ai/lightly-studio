@@ -13,7 +13,6 @@ from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import matching
-from lightly_studio.core.mcap import reader as reader_module
 from lightly_studio.core.mcap.errors import (
     ChannelNotFoundError,
     DataNotLoadedError,
@@ -21,6 +20,7 @@ from lightly_studio.core.mcap.errors import (
     TopicNotFoundError,
 )
 from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
+from lightly_studio.core.mcap.reader import session as session_module
 from tests.core.mcap import helpers
 
 # The bucket and key the recording is uploaded to, to read it back over S3.
@@ -560,11 +560,11 @@ def test_mcap_file_reader__read_pattern_random(mcap_path: Path) -> None:
 
 
 def test_read_cache_options() -> None:
-    assert reader_module._read_cache_options(ReadPattern.SEQUENTIAL) == {}
+    assert session_module._read_cache_options(ReadPattern.SEQUENTIAL) == {}
 
 
 def test_read_cache_options__random() -> None:
-    options = reader_module._read_cache_options(ReadPattern.RANDOM)
+    options = session_module._read_cache_options(ReadPattern.RANDOM)
 
     assert options["cache_type"] == "readahead"
     assert 0 < options["block_size"] <= 4 * 1024 * 1024
