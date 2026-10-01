@@ -29,3 +29,6 @@ coverage.json
 
 # cache for the schema export
 .openapi.json.signature
+
+# cache for the frontend build
+.ui-build-cache-signature
