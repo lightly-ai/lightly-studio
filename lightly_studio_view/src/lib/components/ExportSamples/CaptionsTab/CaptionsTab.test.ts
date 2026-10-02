@@ -43,7 +43,8 @@ describe('CaptionsTab', () => {
 
     it('calls the API with correct arguments on download and triggers the download URL', async () => {
         mocks.exportCollectionCaptionsPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
-        render(CaptionsTab);
+        const onExportTriggered = vi.fn();
+        render(CaptionsTab, { props: { onExportTriggered } });
         await fireEvent.click(screen.getByTestId('submit-button-captions'));
         await waitFor(() => {
             expect(mocks.exportCollectionCaptionsPrepare).toHaveBeenCalledWith({
@@ -53,15 +54,18 @@ describe('CaptionsTab', () => {
             expect(mocks.triggerDownload).toHaveBeenCalledWith(
                 expect.stringContaining('/export/download/key123')
             );
+            expect(onExportTriggered).toHaveBeenCalledWith(true);
         });
     });
 
     it('shows an error message when the API fails', async () => {
         mocks.exportCollectionCaptionsPrepare.mockRejectedValue(new Error('Network error'));
-        render(CaptionsTab);
+        const onExportTriggered = vi.fn();
+        render(CaptionsTab, { props: { onExportTriggered } });
         await fireEvent.click(screen.getByTestId('submit-button-captions'));
         await waitFor(() => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
+            expect(onExportTriggered).toHaveBeenCalledWith(false);
         });
     });
 
@@ -82,21 +86,5 @@ describe('CaptionsTab', () => {
         render(CaptionsTab, { props: { onDownloadClick } });
         await fireEvent.click(screen.getByTestId('submit-button-captions'));
         expect(onDownloadClick).toHaveBeenCalledOnce();
-    });
-
-    it('calls onExportTriggered with true on success', async () => {
-        mocks.exportCollectionCaptionsPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
-        const onExportTriggered = vi.fn();
-        render(CaptionsTab, { props: { onExportTriggered } });
-        await fireEvent.click(screen.getByTestId('submit-button-captions'));
-        await waitFor(() => expect(onExportTriggered).toHaveBeenCalledWith(true));
-    });
-
-    it('calls onExportTriggered with false on failure', async () => {
-        mocks.exportCollectionCaptionsPrepare.mockRejectedValue(new Error('Network error'));
-        const onExportTriggered = vi.fn();
-        render(CaptionsTab, { props: { onExportTriggered } });
-        await fireEvent.click(screen.getByTestId('submit-button-captions'));
-        await waitFor(() => expect(onExportTriggered).toHaveBeenCalledWith(false));
     });
 });

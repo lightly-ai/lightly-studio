@@ -54,13 +54,25 @@
     );
     let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
 
-    const handleExportTriggered = (success: boolean) =>
+    // Snapshot of exportType and sampleCount captured at click time, before the async
+    // request runs. Both values can change while the request is pending (the select is
+    // still enabled), so handleExportTriggered must not read the live reactive values.
+    let exportSnapshot: { type: ExportType; sampleCount: number } | null = null;
+
+    const handleDownloadClick = () => {
+        exportSnapshot = { type: exportType, sampleCount: $filteredSampleCount };
+        tracking.handleAnnotationDownloadClick(exportType);
+    };
+
+    const handleExportTriggered = (success: boolean) => {
+        if (!exportSnapshot) return;
         tracking.trackExportTriggered({
-            exportType,
+            exportType: exportSnapshot.type,
             tagNameToExport: null,
-            sampleCount: $filteredSampleCount,
+            sampleCount: exportSnapshot.sampleCount,
             success
         });
+    };
 </script>
 
 <Dialog.Root
@@ -110,8 +122,7 @@
 
                     <Tabs.Content value="samples" class="pt-0">
                         <SamplesTab
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
+                            onDownloadClick={handleDownloadClick}
                             onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
@@ -124,8 +135,7 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-classifications"
                             sampleType={supportsVideoClassifications ? 'video' : 'image'}
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
+                            onDownloadClick={handleDownloadClick}
                             onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
@@ -138,8 +148,7 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-annotations-coco"
                             sampleType="image"
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
+                            onDownloadClick={handleDownloadClick}
                             onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
@@ -152,8 +161,7 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-annotations-yolo"
                             sampleType="image"
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
+                            onDownloadClick={handleDownloadClick}
                             onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
@@ -166,8 +174,7 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-instance-segmentations"
                             sampleType="image"
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
+                            onDownloadClick={handleDownloadClick}
                             onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
@@ -180,16 +187,14 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-semantic-segmentations"
                             sampleType="image"
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
+                            onDownloadClick={handleDownloadClick}
                             onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
 
                     <Tabs.Content value="captions" class="pt-0">
                         <CaptionsTab
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
+                            onDownloadClick={handleDownloadClick}
                             onExportTriggered={handleExportTriggered}
                         />
                     </Tabs.Content>
@@ -197,8 +202,7 @@
                     {#if isVideoCollection}
                         <Tabs.Content value="youtube_vis_segmentation" class="pt-0">
                             <YoutubeVisTab
-                                onDownloadClick={() =>
-                                    tracking.handleAnnotationDownloadClick(exportType)}
+                                onDownloadClick={handleDownloadClick}
                                 onExportTriggered={handleExportTriggered}
                             />
                         </Tabs.Content>

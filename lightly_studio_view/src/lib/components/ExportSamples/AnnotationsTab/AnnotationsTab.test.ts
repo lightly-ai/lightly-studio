@@ -79,7 +79,8 @@ describe('AnnotationsTab', () => {
         mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
             data: { export_key: 'key123' }
         });
-        render(AnnotationsTab, { props: defaultProps });
+        const onExportTriggered = vi.fn();
+        render(AnnotationsTab, { props: { ...defaultProps, onExportTriggered } });
         await fireEvent.click(screen.getByTestId('submit-button-annotations'));
         await waitFor(() => {
             expect(mocks.exportCollectionAnnotationsPrepare).toHaveBeenCalledWith({
@@ -93,6 +94,7 @@ describe('AnnotationsTab', () => {
             expect(mocks.triggerDownload).toHaveBeenCalledWith(
                 expect.stringContaining('/export/download/key123')
             );
+            expect(onExportTriggered).toHaveBeenCalledWith(true);
         });
     });
 
@@ -143,10 +145,12 @@ describe('AnnotationsTab', () => {
 
     it('shows an error message when the API fails', async () => {
         mocks.exportCollectionAnnotationsPrepare.mockRejectedValue(new Error('Network error'));
-        render(AnnotationsTab, { props: defaultProps });
+        const onExportTriggered = vi.fn();
+        render(AnnotationsTab, { props: { ...defaultProps, onExportTriggered } });
         await fireEvent.click(screen.getByTestId('submit-button-annotations'));
         await waitFor(() => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
+            expect(onExportTriggered).toHaveBeenCalledWith(false);
         });
     });
 
@@ -158,23 +162,5 @@ describe('AnnotationsTab', () => {
         render(AnnotationsTab, { props: { ...defaultProps, onDownloadClick } });
         await fireEvent.click(screen.getByTestId('submit-button-annotations'));
         expect(onDownloadClick).toHaveBeenCalledOnce();
-    });
-
-    it('calls onExportTriggered with true on success', async () => {
-        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
-            data: { export_key: 'key123' }
-        });
-        const onExportTriggered = vi.fn();
-        render(AnnotationsTab, { props: { ...defaultProps, onExportTriggered } });
-        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
-        await waitFor(() => expect(onExportTriggered).toHaveBeenCalledWith(true));
-    });
-
-    it('calls onExportTriggered with false on failure', async () => {
-        mocks.exportCollectionAnnotationsPrepare.mockRejectedValue(new Error('Network error'));
-        const onExportTriggered = vi.fn();
-        render(AnnotationsTab, { props: { ...defaultProps, onExportTriggered } });
-        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
-        await waitFor(() => expect(onExportTriggered).toHaveBeenCalledWith(false));
     });
 });
