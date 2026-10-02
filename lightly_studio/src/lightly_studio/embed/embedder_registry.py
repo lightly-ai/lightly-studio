@@ -29,7 +29,8 @@ from lightly_studio_serve.embedder import (
 
 from lightly_studio.embed import embedder_config
 from lightly_studio.embed.embedder_config import EmbedderConfig
-from lightly_studio.embed.remote.errors import RemoteEmbedderError
+from lightly_studio.embed.remote import local_routes
+from lightly_studio.embed.remote.errors import RemoteEmbedderCapabilityError, RemoteEmbedderError
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,8 @@ class EmbedderRegistry:
     for preselected capabilities. Bootstraps are updated when a custom embedder is registered.
 
     Calling a getter with the stored ``config`` of a space adds a third source, and the
-    three rank: a registration wins over a configuration, which wins over a built-in.
+    three rank per capability: a registration wins for the capabilities it implements,
+    a configuration wins over a built-in.
     A registration is process-global and keyed on the space alone, while a configured
     embedder is cached per dataset, because the same space key in two datasets can name
     two backends.
@@ -80,7 +82,8 @@ class EmbedderRegistry:
         self._space_key_to_embedder: dict[str, Embedder] = {}
         self._space_key_to_builtin: dict[str, Embedder] = {}
         self._config_to_embedder: dict[tuple[UUID, str], tuple[EmbedderConfig, Embedder]] = {}
-        self._config_to_failure: dict[tuple[UUID, str], tuple[EmbedderConfig, float]] = {}
+        # The flag is False for a server that answers but serves no usable capability
+        self._config_to_failure: dict[tuple[UUID, str], tuple[EmbedderConfig, float, bool]] = {}
         self._bootstrap_spaces = dict(_INITIAL_BOOTSTRAP_SPACES)
         self._build_locks: dict[tuple[UUID | None, str], threading.Lock] = {}
         self._lock = threading.Lock()
@@ -93,7 +96,9 @@ class EmbedderRegistry:
         """Register an embedder for its embedding space.
 
         The embedding space is read from ``embedder.embedding_space_spec()``. If an
-        embedder is already registered for the same space, it is replaced.
+        embedder is already registered for the same space, it is replaced. A remote
+        embedder that ``RemoteEmbedder.connect`` built and that embeds image bytes also
+        gets the image-path and the image-crop-path capabilities.
 
         Args:
             embedder: The embedder to register.
@@ -107,6 +112,7 @@ class EmbedderRegistry:
                 a ``space_key`` with an embedder the registry already holds, registered
                 or built-in, but does not match its spec.
         """
+        embedder = local_routes.with_local_routes(embedder=embedder)
         spec = embedder.embedding_space_spec()
         space_key = spec.space_key
         capabilities = _capabilities_of(embedder=embedder)
@@ -183,6 +189,17 @@ class EmbedderRegistry:
         )
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
+    def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
+        """Get whether the embedding server of the configuration failed inside the retry window.
+
+        The getters return None for an unusable server and for a space without the capability.
+        This tells the two apart.
+        """
+        with self._lock:
+            if not self._failed_recently(config=config):
+                return False
+            return self._config_to_failure[(config.dataset_id, config.space_key)][2]
+
     def preload_builtin_embedders(self) -> None:
         """Load and cache the built-in bootstrap embedders.
 
@@ -200,8 +217,8 @@ class EmbedderRegistry:
             space_key: The space to resolve. None selects the bootstrap space of the
                 capability, and a ``config`` names its own space.
             capability: The capability the caller needs. It selects the bootstrap space.
-            config: The stored configuration of the space, used only when no embedder is
-                registered for it.
+            config: The stored configuration of the space, used only when no embedder
+                registered for it implements the capability.
 
         Returns:
             The embedder of the space, or None if no source has one.
@@ -215,7 +232,9 @@ class EmbedderRegistry:
                 space_key = self._bootstrap_spaces.get(capability)
             if space_key is None:
                 return None
-            embedder = self._cached_embedder(space_key=space_key, config=config)
+            embedder = self._cached_embedder(
+                space_key=space_key, capability=capability, config=config
+            )
             if embedder is not None:
                 return embedder
             if config is not None and self._failed_recently(config=config):
@@ -225,7 +244,9 @@ class EmbedderRegistry:
             )
         with build_lock:
             with self._lock:
-                embedder = self._cached_embedder(space_key=space_key, config=config)
+                embedder = self._cached_embedder(
+                    space_key=space_key, capability=capability, config=config
+                )
                 if embedder is not None:
                     return embedder
                 if config is not None and self._failed_recently(config=config):
@@ -235,16 +256,21 @@ class EmbedderRegistry:
             else:
                 self._build_builtin(space_key=space_key)
         with self._lock:
-            return self._cached_embedder(space_key=space_key, config=config)
+            return self._cached_embedder(space_key=space_key, capability=capability, config=config)
 
-    def _cached_embedder(self, space_key: str, config: EmbedderConfig | None) -> Embedder | None:
+    def _cached_embedder(
+        self, space_key: str, capability: Capability, config: EmbedderConfig | None
+    ) -> Embedder | None:
         """Get the embedder the caches hold for the space, or None. Needs ``_lock``.
 
-        A configuration is served only by the embedder built from that same configuration,
+        A registration that lacks the capability gives way to a configuration. A
+        configuration is served only by the embedder built from that same configuration,
         so a changed URL or a rotated key misses.
         """
         registered = self._space_key_to_embedder.get(space_key)
-        if registered is not None:
+        if registered is not None and (
+            config is None or isinstance(registered, _CAPABILITY_TO_TYPE[capability])
+        ):
             return registered
         if config is None:
             return self._space_key_to_builtin.get(space_key)
@@ -259,7 +285,7 @@ class EmbedderRegistry:
         failure = self._config_to_failure.get((config.dataset_id, config.space_key))
         if failure is None:
             return False
-        failed_config, failed_at = failure
+        failed_config, failed_at, _ = failure
         if failed_config != config:
             return False
         return time.monotonic() - failed_at < _REMOTE_RETRY_DELAY_SECONDS
@@ -270,8 +296,10 @@ class EmbedderRegistry:
         # embedder gains a teardown hook.
         key = (config.dataset_id, config.space_key)
         try:
-            embedder = embedder_config.build_remote(config=config)
-        except RemoteEmbedderError:
+            embedder = local_routes.with_local_routes(
+                embedder=embedder_config.build_remote(config=config)
+            )
+        except RemoteEmbedderError as error:
             logger.warning(
                 "Cannot use the embedding server at %s for space %r.",
                 config.url,
@@ -279,7 +307,11 @@ class EmbedderRegistry:
                 exc_info=True,
             )
             with self._lock:
-                self._config_to_failure[key] = (config, time.monotonic())
+                self._config_to_failure[key] = (
+                    config,
+                    time.monotonic(),
+                    not isinstance(error, RemoteEmbedderCapabilityError),
+                )
             return
         with self._lock:
             self._config_to_embedder[key] = (config, embedder)

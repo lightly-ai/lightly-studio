@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from lightly_studio.core.mcap import message_fields
+from lightly_studio.core.mcap import capture_time, message_fields
 from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
 from lightly_studio.core.mcap.type_definitions import StaticTransform
 
@@ -141,6 +141,28 @@ class TransformTree:
         return None
 
 
+def frame_edges(decoded_message: Any) -> list[tuple[str, str]]:
+    """Returns the parent and child frame of each edge in a transform message.
+
+    Does not read the translation, the rotation, or the stamp. `from_decoded_message`
+    reads those when a pose is needed.
+
+    Args:
+        decoded_message: A decoded transform message, holding either a single transform
+            or a list of them.
+
+    Returns:
+        The parent frame id and the child frame id of each edge.
+
+    Raises:
+        McapAccessError: If an entry does not name a parent and a child frame.
+    """
+    entries = message_fields.get_field(decoded_message, _TRANSFORMS_FIELDS)
+    if entries is None:
+        return [_frame_edge(decoded_message)]
+    return [_frame_edge(entry) for entry in entries]
+
+
 def from_decoded_message(decoded_message: Any, log_time_ns: int) -> list[StaticTransform]:
     """Extracts the transforms from a decoded transform message.
 
@@ -151,7 +173,8 @@ def from_decoded_message(decoded_message: Any, log_time_ns: int) -> list[StaticT
     Args:
         decoded_message: A decoded transform message, holding either a single transform
             or a list of them.
-        log_time_ns: The time the message was logged, in nanoseconds.
+        log_time_ns: The time the message was logged, in nanoseconds. The timestamp
+            of a transform that has no stamp, or a stamp of zero.
 
     Returns:
         One transform per edge in the message.
@@ -187,7 +210,8 @@ def _transform(decoded_transform: Any, log_time_ns: int) -> StaticTransform:
     Args:
         decoded_transform: A decoded transform, either a Foxglove `FrameTransform` or a
             ROS `TransformStamped`.
-        log_time_ns: The time the transform was logged, in nanoseconds.
+        log_time_ns: The time the transform was logged, in nanoseconds. The timestamp
+            of a transform that has no stamp, or a stamp of zero.
 
     Returns:
         The transform.
@@ -210,13 +234,26 @@ def _transform(decoded_transform: Any, log_time_ns: int) -> StaticTransform:
             f"Transform from child frame '{child_frame_id}' has a non-finite translation or "
             "rotation."
         )
+
+    # ROS carries the time in `header.stamp`, Foxglove in `timestamp`. Some publishers
+    # leave the time out or set it to zero.
+    try:
+        timestamp_ns = capture_time.from_decoded_message(decoded_transform)
+    except McapAccessError:
+        timestamp_ns = 0
     return StaticTransform(
         parent_frame_id=_parent_frame_id(decoded_transform),
         child_frame_id=str(child_frame_id),
         translation=translation,
         rotation=rotation,
-        log_time_ns=log_time_ns,
+        timestamp_ns=timestamp_ns if timestamp_ns != 0 else log_time_ns,
     )
+
+
+def _frame_edge(decoded_transform: Any) -> tuple[str, str]:
+    """Returns the parent and child frame of one decoded transform."""
+    child_frame_id = message_fields.require_field(decoded_transform, _CHILD_FRAME_ID_FIELDS)
+    return (_parent_frame_id(decoded_transform), str(child_frame_id))
 
 
 def _parent_frame_id(decoded_transform: Any) -> str:

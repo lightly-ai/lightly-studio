@@ -125,6 +125,35 @@ def test_build_remote__unreachable_url(url: str) -> None:
         embedder_config.build_remote(config=config)
 
 
+def test_describe_remote(mocker: MockerFixture) -> None:
+    serving = _serving(embedder=_ServerEmbedder(), mocker=mocker)
+
+    with serving:
+        spec = embedder_config.describe_remote(url=URL, api_key=None)
+
+        assert serving.is_closed
+    assert spec == EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION)
+
+
+def test_describe_remote__unreachable_url() -> None:
+    with pytest.raises(RemoteEmbedderConfigError, match=r"is not an http or https address"):
+        embedder_config.describe_remote(url="embedder.test", api_key=None)
+
+
+def test_check_identity() -> None:
+    embedder_config.check_identity(
+        spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION), config=_config()
+    )
+
+
+def test_check_identity__dimension_mismatch() -> None:
+    with pytest.raises(RemoteEmbedderConfigError, match=r"dimension 3"):
+        embedder_config.check_identity(
+            spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION + 1),
+            config=_config(),
+        )
+
+
 def _config(api_key: str | None = None) -> EmbedderConfig:
     return EmbedderConfig(
         dataset_id=uuid.uuid4(),
@@ -136,7 +165,7 @@ def _config(api_key: str | None = None) -> EmbedderConfig:
 
 
 def _serving(embedder: TextEmbedder, mocker: MockerFixture) -> TestClient:
-    """Serve ``embedder`` to every client that ``build_remote`` opens."""
+    """Serve ``embedder`` to every client that ``connection.build_client`` opens."""
     client = TestClient(server.create_app(embedder=embedder), follow_redirects=False)
     mocker.patch.object(connection, "build_client", return_value=client)
     return client

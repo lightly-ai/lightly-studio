@@ -66,4 +66,42 @@ describe('PlotToolPill.svelte', () => {
         // The pill still shows: the container arrives one tick after the plot mounts.
         expect(screen.getByTestId('plot-tool-pill')).toBeInTheDocument();
     });
+
+    it('shows the drag shortcut when hovering a selection tool', async () => {
+        const user = userEvent.setup();
+        const { container } = buildPlotContainer();
+        render(PlotToolPill, { props: { plotContainer: container, activeTool: 'pan' } });
+
+        await user.hover(screen.getByTestId('plot-tool-lasso'));
+
+        expect(screen.getByText('Lasso select')).toBeInTheDocument();
+        expect(screen.getByText(/^Shift \+ (⌘|Win)$/)).toBeInTheDocument();
+        expect(screen.getByText(/to drag a lasso/)).toBeInTheDocument();
+    });
+
+    it('shows the shortcut on keyboard focus and describes the focused tool with it', async () => {
+        const user = userEvent.setup();
+        const { container } = buildPlotContainer();
+        render(PlotToolPill, { props: { plotContainer: container, activeTool: 'pan' } });
+
+        await user.tab();
+        await user.tab();
+
+        const rectangle = screen.getByTestId('plot-tool-rectangle');
+        expect(rectangle).toHaveFocus();
+        const tooltip = screen.getByRole('tooltip');
+        expect(tooltip).toHaveTextContent('Hold Shift to drag a rectangle');
+        expect(rectangle).toHaveAttribute('aria-describedby', tooltip.id);
+    });
+
+    it('shows no shortcut for pan', async () => {
+        const user = userEvent.setup();
+        const { container } = buildPlotContainer();
+        render(PlotToolPill, { props: { plotContainer: container, activeTool: 'pan' } });
+
+        await user.hover(screen.getByTestId('plot-tool-pan'));
+
+        expect(screen.getByText('Pan')).toBeInTheDocument();
+        expect(screen.queryByText(/Hold/)).not.toBeInTheDocument();
+    });
 });

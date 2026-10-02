@@ -21,6 +21,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 
 from lightly_studio.embed.remote import transport
+from lightly_studio.embed.remote.endpoint import RemoteEndpoint
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderAuthError,
     RemoteEmbedderBatchTooLargeError,
@@ -74,6 +75,12 @@ class FakeBytesEmbedder(ImageBytesEmbedder, VideoBytesEmbedder):
 
 
 class TestRemoteTransport:
+    def test_endpoint(self) -> None:
+        with httpx.Client(base_url=BASE_URL) as client:
+            endpoint = RemoteTransport(client=client, api_key=API_KEY).endpoint()
+
+        assert endpoint == RemoteEndpoint(url=BASE_URL, api_key=API_KEY)
+
     def test_describe(self) -> None:
         embedder = FakeTextEmbedder()
         with TestClient(server.create_app(embedder=embedder)) as client:
@@ -172,7 +179,6 @@ class TestRemoteTransport:
         client = _client_answering(
             responses=[
                 httpx.Response(status_code=503, headers={"Retry-After": "0"}),
-                httpx.Response(status_code=503, headers={"Retry-After": "0"}),
                 httpx.Response(status_code=200, json=_embeddings_body()),
             ]
         )
@@ -180,8 +186,7 @@ class TestRemoteTransport:
         response = RemoteTransport(client=client).embed_texts(texts=["a dog"])
 
         assert response.kept_indices == [0]
-        # One wait for each of the two answers that said "later".
-        assert mock_sleep.call_count == 2
+        mock_sleep.assert_called_once_with(1.0)
 
     @pytest.mark.parametrize("status_code", [429, 503])
     def test_embed_texts__stays_busy(self, status_code: int, mocker: MockerFixture) -> None:
@@ -192,14 +197,53 @@ class TestRemoteTransport:
         with pytest.raises(RemoteEmbedderUnreachableError, match="stayed busy"):
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
 
-    def test_embed_texts__connection_failed(self) -> None:
+    def test_embed_texts__connection_failed(self, mocker: MockerFixture) -> None:
+        mock_sleep = mocker.patch.object(time, "sleep")
+        attempts: list[httpx.Request] = []
+
         def refuse(request: httpx.Request) -> httpx.Response:
+            attempts.append(request)
             raise httpx.ConnectError("Connection refused", request=request)
 
         client = httpx.Client(transport=httpx.MockTransport(refuse), base_url=BASE_URL)
 
         with pytest.raises(RemoteEmbedderUnreachableError, match="did not answer"):
             RemoteTransport(client=client).embed_texts(texts=["a dog"])
+
+        assert len(attempts) == 2
+        mock_sleep.assert_called_once_with(1.0)
+
+    def test_embed_image_bytes__connection_lost_once(self, mocker: MockerFixture) -> None:
+        mocker.patch.object(time, "sleep")
+        attempts: list[httpx.Request] = []
+
+        def drop_first(request: httpx.Request) -> httpx.Response:
+            attempts.append(request)
+            if len(attempts) == 1:
+                raise httpx.RemoteProtocolError("Server disconnected", request=request)
+            return httpx.Response(status_code=200, json=_embeddings_body())
+
+        client = httpx.Client(transport=httpx.MockTransport(drop_first), base_url=BASE_URL)
+
+        response = RemoteTransport(client=client).embed_image_bytes(images=[b"\x89PNG"])
+
+        assert response.kept_indices == [0]
+        assert len(attempts) == 2
+
+    def test_embed_image_bytes__connection_failed(self, mocker: MockerFixture) -> None:
+        mocker.patch.object(time, "sleep")
+        attempts: list[httpx.Request] = []
+
+        def refuse(request: httpx.Request) -> httpx.Response:
+            attempts.append(request)
+            raise httpx.ConnectError("Connection refused", request=request)
+
+        client = httpx.Client(transport=httpx.MockTransport(refuse), base_url=BASE_URL)
+
+        with pytest.raises(RemoteEmbedderUnreachableError, match="did not answer"):
+            RemoteTransport(client=client).embed_image_bytes(images=[b"\x89PNG"])
+
+        assert len(attempts) == 3
 
     def test_embed_image_bytes(self) -> None:
         embedder = FakeBytesEmbedder()

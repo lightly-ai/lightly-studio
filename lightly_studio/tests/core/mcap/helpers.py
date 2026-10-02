@@ -6,6 +6,9 @@ compiled schemas.
 
 from __future__ import annotations
 
+import json
+import struct
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +20,12 @@ CAMERA_INFO_TOPIC = "/cam/front/camera_info"
 LIDAR_POINTS_TOPIC = "/lidar/points"
 CAMERA_IMAGE_TOPIC = "/cam/front/compressed_image"
 STATIC_TRANSFORM_TOPIC = "/tf_static"
+DYNAMIC_TRANSFORM_TOPIC = "/tf"
 
 CAMERA_FRAME_ID = "cam_front_optical"
 LIDAR_FRAME_ID = "livox_front_left"
 BASE_FRAME_ID = "base_link"
+WORLD_FRAME_ID = "map"
 
 # The log times of the video frames, one frame every 100 ms. The frames at index 0 and
 # 2 are keyframes.
@@ -137,11 +142,26 @@ float64 w
 )
 
 
-def write_mcap(path: Path) -> Path:
+def write_mcap(
+    path: Path,
+    lidar_stamp_offset_ns: int = 0,
+    video_stamp_offset_ns: int = 0,
+    base_link_poses: Sequence[tuple[int, tuple[float, float, float]]] = (),
+    tf_stamp_offset_ns: int = 0,
+) -> Path:
     """Writes an indexed MCAP file with a camera, a lidar, and static transforms.
 
     Args:
         path: The path to write the file to.
+        lidar_stamp_offset_ns: Added to each lidar log time to form `header.stamp`.
+            Zero keeps the stamp equal to the log time.
+        video_stamp_offset_ns: Added to each video log time to form `timestamp`.
+            Zero keeps the stamp equal to the log time.
+        base_link_poses: `(log_time_ns, translation)` pairs, in log-time order. Each
+            pair is written on `/tf` as the position of the base frame in the world
+            frame, without rotation. Empty writes no `/tf` topic.
+        tf_stamp_offset_ns: Added to each `/tf` log time to form `header.stamp`.
+            Zero keeps the stamp equal to the log time.
 
     Returns:
         The path of the written file.
@@ -166,6 +186,23 @@ def write_mcap(path: Path) -> Path:
         message=_static_transforms_message(),
         log_time=STATIC_TRANSFORM_LOG_TIME_NS,
     )
+    for log_time_ns, translation in base_link_poses:
+        writer.write_message(
+            topic=DYNAMIC_TRANSFORM_TOPIC,
+            schema=tf_schema,
+            message={
+                "transforms": [
+                    _transform_stamped(
+                        child_frame_id=BASE_FRAME_ID,
+                        translation=translation,
+                        rotation=(0.0, 0.0, 0.0, 1.0),
+                        parent_frame_id=WORLD_FRAME_ID,
+                        stamp_ns=log_time_ns + tf_stamp_offset_ns,
+                    )
+                ]
+            },
+            log_time=log_time_ns,
+        )
     writer.write_message(
         topic=CAMERA_INFO_TOPIC,
         schema=camera_info_schema,
@@ -176,14 +213,16 @@ def write_mcap(path: Path) -> Path:
         writer.write_message(
             topic=CAMERA_VIDEO_TOPIC,
             schema=video_schema,
-            message=_compressed_video_message(log_time_ns=log_time_ns),
+            message=_compressed_video_message(
+                log_time_ns=log_time_ns, stamp_ns=log_time_ns + video_stamp_offset_ns
+            ),
             log_time=log_time_ns,
         )
     for log_time_ns in LIDAR_LOG_TIMES_NS:
         writer.write_message(
             topic=LIDAR_POINTS_TOPIC,
             schema=point_cloud_schema,
-            message=_point_cloud_message(),
+            message=_point_cloud_message(stamp_ns=log_time_ns + lidar_stamp_offset_ns),
             log_time=log_time_ns,
         )
     writer.finish()
@@ -330,14 +369,15 @@ def write_mcap_with_undecodable_camera_info(path: Path) -> Path:
     return path
 
 
-def write_mcap_with_malformed_json_video(path: Path) -> Path:
+def write_mcap_with_malformed_json_video(path: Path, payload: bytes = b"not valid json") -> Path:
     """Writes an MCAP whose video topic is JSON-encoded with malformed payloads.
 
     The schema name marks the topic as video, and its encoding has a decoder, but
-    the payloads are not valid JSON, so no keyframe can be detected.
+    the payloads are not valid video messages.
 
     Args:
         path: The path to write the file to.
+        payload: The payload of each video message. The default is not valid JSON.
 
     Returns:
         The path of the written file.
@@ -356,7 +396,42 @@ def write_mcap_with_malformed_json_video(path: Path) -> Path:
                 channel_id=channel_id,
                 log_time=log_time_ns,
                 publish_time=log_time_ns,
-                data=b"not valid json",
+                data=payload,
+            )
+        writer.finish()
+    return path
+
+
+def write_json_mcap(
+    path: Path,
+    topic: str,
+    schema_name: str,
+    messages: Sequence[tuple[int, dict[str, Any]]],
+) -> Path:
+    """Writes an indexed MCAP whose messages are JSON-encoded dicts.
+
+    Args:
+        path: The path to write the file to.
+        topic: The topic the messages are published on.
+        schema_name: The schema name recorded on the channel.
+        messages: `(log_time_ns, payload)` pairs, in log-time order.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        schema_id = writer.register_schema(name=schema_name, encoding="jsonschema", data=b"{}")
+        channel_id = writer.register_channel(
+            topic=topic, message_encoding="json", schema_id=schema_id
+        )
+        for log_time_ns, payload in messages:
+            writer.add_message(
+                channel_id=channel_id,
+                log_time=log_time_ns,
+                publish_time=log_time_ns,
+                data=json.dumps(payload).encode(),
             )
         writer.finish()
     return path
@@ -396,10 +471,11 @@ def _compressed_image_message(log_time_ns: int) -> dict[str, Any]:
     }
 
 
-def _compressed_video_message(log_time_ns: int) -> dict[str, Any]:
+def _compressed_video_message(log_time_ns: int, stamp_ns: int | None = None) -> dict[str, Any]:
     is_keyframe = log_time_ns in VIDEO_KEYFRAME_LOG_TIMES_NS
+    timestamp_ns = log_time_ns if stamp_ns is None else stamp_ns
     return {
-        "timestamp": _time(log_time_ns),
+        "timestamp": _time(timestamp_ns),
         "frame_id": CAMERA_FRAME_ID,
         "data": h265_keyframe() if is_keyframe else h265_delta_frame(),
         "format": "h265",
@@ -428,16 +504,19 @@ def _camera_info_message() -> dict[str, Any]:
     }
 
 
-def _point_cloud_message() -> dict[str, Any]:
+def _point_cloud_message(stamp_ns: int) -> dict[str, Any]:
     return {
-        "header": {"stamp": _time(LIDAR_LOG_TIMES_NS[0]), "frame_id": LIDAR_FRAME_ID},
+        "header": {"stamp": _time(stamp_ns), "frame_id": LIDAR_FRAME_ID},
         "height": 1,
         "width": 1,
-        "fields": [{"name": "x", "offset": 0, "datatype": 7, "count": 1}],
+        "fields": [
+            {"name": name, "offset": index * 4, "datatype": 7, "count": 1}
+            for index, name in enumerate(("x", "y", "z"))
+        ],
         "is_bigendian": False,
-        "point_step": 4,
-        "row_step": 4,
-        "data": b"\x00\x00\x00\x00",
+        "point_step": 12,
+        "row_step": 12,
+        "data": struct.pack("<fff", 1.0, 2.0, 3.0),
         "is_dense": True,
     }
 
@@ -468,13 +547,15 @@ def _transform_stamped(
     child_frame_id: str,
     translation: tuple[float, float, float],
     rotation: tuple[float, float, float, float],
+    parent_frame_id: str = BASE_FRAME_ID,
+    stamp_ns: int = STATIC_TRANSFORM_LOG_TIME_NS,
 ) -> dict[str, Any]:
     x, y, z = translation
     quaternion_x, quaternion_y, quaternion_z, quaternion_w = rotation
     return {
         "header": {
-            "stamp": _time(STATIC_TRANSFORM_LOG_TIME_NS),
-            "frame_id": BASE_FRAME_ID,
+            "stamp": _time(stamp_ns),
+            "frame_id": parent_frame_id,
         },
         "child_frame_id": child_frame_id,
         "transform": {

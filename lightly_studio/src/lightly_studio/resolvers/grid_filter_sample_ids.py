@@ -7,10 +7,11 @@ from uuid import UUID
 from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
-from lightly_studio.resolvers import embedding_region_resolver
+from lightly_studio.resolvers import embedding_region_resolver, video_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.grid_filter import GridFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
 def build_sample_ids_query(
@@ -20,6 +21,14 @@ def build_sample_ids_query(
     # Resolve any embedding-plot region selection to concrete sample ids before building
     # the query (the point-in-polygon test needs the session, which `apply` lacks).
     if (
+        isinstance(grid_filter, VideoFilter)
+        and grid_filter.sample_filter is not None
+        and grid_filter.sample_filter.embedding_region is not None
+    ):
+        video_resolver.resolve_embedding_region(
+            session=session, collection_id=collection_id, video_filter=grid_filter
+        )
+    elif (
         isinstance(grid_filter, ImageFilter)
         and grid_filter.sample_filter is not None
         and grid_filter.sample_filter.embedding_region is not None

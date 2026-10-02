@@ -1,4 +1,4 @@
-"""Example of importing ActivityNet-style temporal annotations."""
+"""Example of adding ActivityNet-style temporal annotations."""
 
 from __future__ import annotations
 

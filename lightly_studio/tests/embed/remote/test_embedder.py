@@ -21,12 +21,15 @@ from pytest_mock import MockerFixture
 from lightly_studio.dataset import env
 from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
-from lightly_studio.embed.remote import composition, embedder
+from lightly_studio.embed.remote import batching, composition, embedder
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
+from lightly_studio.embed.remote.endpoint import PersistableEmbedder, RemoteEndpoint
 from lightly_studio.embed.remote.errors import (
+    RemoteEmbedderBatchTooLargeError,
     RemoteEmbedderCapabilityError,
     RemoteEmbedderProtocolError,
 )
+from lightly_studio.embed.remote.transport import RemoteTransport
 from tests.embed.remote import helpers
 from tests.embed.remote.helpers import (
     BASE_URL,
@@ -41,6 +44,10 @@ from tests.embed.remote.helpers import (
     FakeVideoEmbedder,
     SkippingTextEmbedder,
 )
+
+
+class _ExtraRoute(RemoteEmbedder):
+    """A route that no server advertises, to test ``with_route``."""
 
 
 class TestRemoteEmbedder:
@@ -75,6 +82,39 @@ class TestRemoteEmbedder:
             second = RemoteEmbedder.connect(client=client)
 
         assert type(first) is type(second)
+
+    def test_connect__remote_endpoint(self) -> None:
+        server = FakeServer(capabilities=["text"])
+
+        remote = RemoteEmbedder.connect(client=server.client(), api_key="secret-token")
+
+        assert isinstance(remote, PersistableEmbedder)
+        assert remote.remote_endpoint() == RemoteEndpoint(url=BASE_URL, api_key="secret-token")
+
+    def test_remote_endpoint__class_written_by_hand(self) -> None:
+        # A rebuild through `connect` would drop the methods of such a class.
+        with FakeServer(capabilities=["text"]).client() as client:
+            remote = _ExtraRoute(
+                transport=RemoteTransport(client=client, api_key="secret-token"),
+                spec=EmbeddingSpaceSpec(space_key=SPACE_KEY, dimension=DIMENSION),
+                limits=ServerLimits(),
+            )
+
+        assert remote.remote_endpoint() is None
+
+    def test_with_route(self) -> None:
+        with _test_client(server.create_app(embedder=FakeTextImageEmbedder())) as client:
+            remote = RemoteEmbedder.connect(client=client)
+
+        routed = remote.with_route(route=_ExtraRoute)
+
+        assert isinstance(routed, TextEmbedder)
+        assert isinstance(routed, ImageBytesEmbedder)
+        assert isinstance(routed, _ExtraRoute)
+        assert type(routed).__name__ == "RemoteTextImageBytesExtraEmbedder"
+        assert routed.embedding_space_spec() == remote.embedding_space_spec()
+        # A build from the stored endpoint would not compose `_ExtraRoute` again
+        assert routed.remote_endpoint() is None
 
     def test_connect__text_and_video_bytes(self) -> None:
         with _test_client(server.create_app(embedder=FakeTextVideoEmbedder())) as client:
@@ -178,6 +218,31 @@ class TestRemoteEmbedder:
         assert fake.batches == [["one", "two"], ["three", "four"], ["five"]]
         assert result.kept_indices == [0, 2, 4]
         assert result.embeddings.shape == (3, DIMENSION)
+
+    def test_embed_text__splits_again_on_413(self, mocker: MockerFixture) -> None:
+        # With no envelope in the estimate, four texts fit the limit, but the body does not.
+        mocker.patch.object(batching, "ITEM_ENVELOPE_BYTES", 0)
+        fake = SkippingTextEmbedder()
+        app = server.create_app(embedder=fake, limits=ServerLimits(max_request_bytes=4010))
+        texts = [letter * 1000 for letter in "abcd"]
+        with _test_client(app) as client:
+            remote = RemoteEmbedder.connect(client=client)
+            assert isinstance(remote, TextEmbedder)
+            result = remote.embed_text(texts=texts)
+
+        assert fake.batches == [texts[:2], texts[2:]]
+        assert result.kept_indices == [0, 2]
+
+    def test_embed_text__one_item_too_large(self) -> None:
+        app = server.create_app(
+            embedder=FakeTextEmbedder(), limits=ServerLimits(max_request_bytes=1000)
+        )
+        with _test_client(app) as client:
+            remote = RemoteEmbedder.connect(client=client)
+            assert isinstance(remote, TextEmbedder)
+
+            with pytest.raises(RemoteEmbedderBatchTooLargeError):
+                remote.embed_text(texts=["a dog", "a" * 2000])
 
     def test_embed_text__other_space_key(self) -> None:
         body = helpers.embeddings_body(
@@ -337,8 +402,10 @@ def test_register_and_resolve() -> None:
     text_embedder: object = registry.get_text_embedder()
     image_embedder: object = registry.get_image_bytes_embedder()
 
-    assert text_embedder is remote
-    assert image_embedder is remote
+    # `register` adds the image-path capability, so the registry holds a new embedder.
+    assert isinstance(text_embedder, RemoteEmbedder)
+    assert text_embedder.embedding_space_spec() == remote.embedding_space_spec()
+    assert image_embedder is text_embedder
 
 
 def _test_client(app: FastAPI) -> TestClient:

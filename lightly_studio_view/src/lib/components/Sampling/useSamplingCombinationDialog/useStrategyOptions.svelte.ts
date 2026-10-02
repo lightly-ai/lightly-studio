@@ -58,6 +58,7 @@ export function useStrategyOptions(getCollectionId: () => string) {
             )
             .map((c) => ({ id: c.collection_id, name: c.name }))
     );
+    const hasCroppableAnnotationSources = $derived(croppableAnnotationSourceOptions.length > 0);
 
     return {
         get metadataFieldNames() {
@@ -86,6 +87,9 @@ export function useStrategyOptions(getCollectionId: () => string) {
         },
         get croppableAnnotationSourceOptions() {
             return croppableAnnotationSourceOptions;
+        },
+        get hasCroppableAnnotationSources() {
+            return hasCroppableAnnotationSources;
         }
     };
 }

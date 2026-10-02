@@ -1,4 +1,7 @@
-import { deleteAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import {
+    deleteAnnotationMutation,
+    readAnnotationCollectionsQueryKey
+} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 import { usePostHog } from '$lib/hooks';
@@ -17,6 +20,9 @@ export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () =
         invalidateAnnotationGridQueries(collectionId);
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
+        });
+        client.invalidateQueries({
+            queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: collectionId } })
         });
         // Annotation mutations can mark evaluation runs as stale, so refresh the runs list.
         invalidateEvaluationRunsQueries();

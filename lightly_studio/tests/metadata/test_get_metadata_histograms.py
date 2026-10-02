@@ -6,12 +6,16 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.range import FloatRange
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.resolvers.metadata_resolver.sample import get_metadata_info
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import create_collection, create_image
+from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 def _create_samples_with_scores(db_session: Session, collection_id: UUID) -> None:
@@ -25,6 +29,17 @@ def _create_samples_with_scores(db_session: Session, collection_id: UUID) -> Non
         sample["score"] = float(i)
         sample["even_score"] = i % 2
         sample["constant"] = 5.0
+
+
+def _create_videos_with_scores(db_session: Session, collection_id: UUID) -> None:
+    """Create 4 videos with score 0..3 and duration 1..4 seconds."""
+    for i in range(4):
+        video = create_video(
+            session=db_session,
+            collection_id=collection_id,
+            video=VideoStub(path=f"/path/to/video{i}.mp4", duration_s=float(i + 1)),
+        )
+        video.sample["score"] = float(i)
 
 
 def _create_sample_with_raw_metadata(
@@ -123,6 +138,46 @@ def test_get_metadata_histograms__own_key_filter_is_excluded(db_session: Session
     # The parity histogram ignores its own filter but applies the score one:
     # scores >= 8 leave two samples (8 even, 9 odd).
     assert sum(histograms["even_score"].counts) == 2
+
+
+def test_get_metadata_histograms__video_filter_reduces_counts_keeps_edges(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    _create_videos_with_scores(db_session=db_session, collection_id=collection.collection_id)
+
+    histograms = get_metadata_info.get_metadata_histograms(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=VideoFilter(duration_s=FloatRange(min=3.0, max=4.0)),
+    )
+
+    score = histograms["score"]
+    assert score.bin_edges[0] == pytest.approx(0.0)
+    assert score.bin_edges[-1] == pytest.approx(3.0)
+    # Only the videos with duration 3 s and 4 s remain.
+    assert sum(score.counts) == 2
+
+
+def test_get_metadata_histograms__video_own_key_filter_is_excluded(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    _create_videos_with_scores(db_session=db_session, collection_id=collection.collection_id)
+
+    histograms = get_metadata_info.get_metadata_histograms(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=VideoFilter(
+            duration_s=FloatRange(min=1.0, max=3.0),
+            sample_filter=SampleFilter(
+                metadata_filters=[MetadataFilter(key="score", op=">=", value=3)]
+            ),
+        ),
+    )
+
+    # The score filter is ignored, the duration filter keeps 3 of 4 videos.
+    assert sum(histograms["score"].counts) == 3
 
 
 def test_get_metadata_histograms__constant_field_counts_filtered(

@@ -13,6 +13,12 @@ from sqlmodel import Session
 from lightly_studio.embed import embedder_config, embedder_registry
 from lightly_studio.embed.embedder_config import EmbedderConfig
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.errors import (
+    MissingCapabilityError,
+    NoDefaultEmbeddingModelError,
+    RemoteEmbedderUnavailableError,
+)
+from lightly_studio.embed.remote.endpoint import PersistableEmbedder
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -39,7 +45,8 @@ def resolve_default_embedder(
 
     - The collection has a default model in the DB: its embedding space selects the embedder.
     - The collection has no default in the DB yet: the registry's bootstrap embedder is used and
-      registered as the collection's default.
+      registered as the collection's default. The model stores the server of an embedder that
+      names one, see ``PersistableEmbedder``.
 
     Logs a warning and returns None when the registry has no matching embedder, so the
     caller only needs to return on None.
@@ -87,6 +94,7 @@ def resolve_query_embedder(
     get_embedder_fn: Callable[
         [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
     ],
+    query_kind: str,
 ) -> _EmbedderT:
     """Resolve the embedder for an interactive query, without mutating the collection.
 
@@ -100,28 +108,33 @@ def resolve_query_embedder(
         collection_id: The collection whose default embedding model is used.
         get_embedder_fn: The typed getter of the needed capability, as described in
             ``resolve_default_embedder``.
+        query_kind: What the query embeds, such as "text" or "images". Used in errors.
 
     Returns:
         The embedder for the collection's default embedding space.
 
     Raises:
-        ValueError: If the collection has no default embedding model, no embedder resolves
-            for that model's space, or the embedder's dimension does not match the space's
-            stored dimension (a wrongly registered embedder).
+        NoDefaultEmbeddingModelError: If the collection has no default embedding model.
+        RemoteEmbedderUnavailableError: If the embedding server of the space cannot be used.
+        MissingCapabilityError: If no embedder of the space has the needed capability.
+        ValueError: If the embedder's dimension does not match the space's stored dimension
+            (a wrongly registered embedder).
     """
     default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection_id
     )
     if default_model is None:
-        raise ValueError("The collection has no default embedding model.")
+        raise NoDefaultEmbeddingModelError("The collection has no default embedding model.")
 
     embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
-    if embedder is None:
-        raise ValueError(
-            f"No embedder resolves for the collection's default embedding space "
-            f"{default_model.name!r}."
-        )
-    return embedder
+    if embedder is not None:
+        return embedder
+    config = embedder_config.from_embedding_model(embedding_model=default_model)
+    if config.url is not None and embedder_registry.get_registry().is_remote_unavailable(
+        config=config
+    ):
+        raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=config.url)
+    raise MissingCapabilityError(space_key=default_model.name, query_kind=query_kind)
 
 
 def _embedder_for_model(
@@ -165,7 +178,8 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
     """Register the embedder's space as the collection's default model and return its id.
 
     Gets or creates the embedding model for the embedder's space in the collection's
-    dataset, links it to the collection, and marks it the default.
+    dataset, stores the server of the embedder on it, links it to the collection, and marks
+    it the default.
 
     Raises:
         ValueError: If the collection does not exist, or if the dataset already has a model
@@ -185,6 +199,7 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
         ),
     )
     model_id = db_model.embedding_model_id
+    _store_remote_endpoint(session=session, embedding_model=db_model, embedder=embedder)
     collection_embedding_model_resolver.get_or_add_collection_model(
         session=session, collection_id=collection_id, embedding_model_id=model_id
     )
@@ -192,3 +207,29 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
         session=session, collection_id=collection_id, embedding_model_id=model_id
     )
     return model_id
+
+
+def _store_remote_endpoint(
+    session: Session, embedding_model: EmbeddingModelTable, embedder: Embedder
+) -> None:
+    """Store the server of the embedder on the model, so that a later process reaches it.
+
+    The model keeps the URL and the API key in plain text, the same write that
+    ``register_remote_embedder`` makes. An embedder that names no server leaves the model
+    unchanged, so a local embedder does not clear a server that the model already stores. A
+    model that already stores a server keeps it, so that only ``register_remote_embedder``
+    changes it.
+    """
+    if embedding_model.remote_embedder_url is not None:
+        return
+    if not isinstance(embedder, PersistableEmbedder):
+        return
+    endpoint = embedder.remote_endpoint()
+    if endpoint is None:
+        return
+    embedding_model_resolver.set_remote_embedder(
+        session=session,
+        embedding_model_id=embedding_model.embedding_model_id,
+        url=endpoint.url,
+        api_key=endpoint.api_key,
+    )

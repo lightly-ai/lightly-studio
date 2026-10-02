@@ -34,14 +34,17 @@ def test_get_tick_details(test_client: TestClient, db_session: Session) -> None:
     assert set(body["channels"].keys()) == {"front", "pcl_front"}
     assert body["channels"]["front"] == {
         "channel_id": 3,
-        "log_time_ns": _TIMESTAMP_NS,
-        "keyframe_log_time_ns": _TIMESTAMP_NS,
+        "group_component_name": "front",
+        "log_time_ns": str(_TIMESTAMP_NS),
+        "keyframe_log_time_ns": str(_TIMESTAMP_NS),
     }
     assert body["channels"]["pcl_front"] == {
         "channel_id": 7,
-        "log_time_ns": _TIMESTAMP_NS + 1,
+        "group_component_name": "pcl_front",
+        "log_time_ns": str(_TIMESTAMP_NS + 1),
         "keyframe_log_time_ns": None,
     }
+    assert body["annotations"] == []
 
 
 def test_get_tick_details__unknown_sequence(test_client: TestClient) -> None:

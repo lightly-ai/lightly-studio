@@ -4,7 +4,8 @@ import {
     encodeBinaryMaskToRLE,
     decodeRLEToBinaryMask,
     maskToDataUrl,
-    interpolateLineBetweenPoints
+    interpolateLineBetweenPoints,
+    rleToSvgPath
 } from '$lib/components/SampleAnnotation/utils';
 
 describe('SampleAnnotationUtils', () => {
@@ -58,6 +59,13 @@ describe('SampleAnnotationUtils', () => {
         //  3 ones  -> [1, 1, 1]
         //  1 zero  -> [0]
         expect(mask).toEqual(new Uint8Array([0, 0, 1, 1, 1, 0]));
+    });
+
+    it('converts an RLE mask to a path that covers only the mask pixels', () => {
+        // 4px wide: row 0 = 0011, row 1 = 1100, row 2 = 0100.
+        const path = rleToSvgPath([2, 4, 3, 1], 4);
+
+        expect(path).toBe('M2 0h2v1h-2zM0 1h2v1h-2zM1 2h1v1h-1z');
     });
 
     it('interpolates points along a line', () => {

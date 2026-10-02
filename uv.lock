@@ -3174,6 +3174,8 @@ dependencies = [
     { name = "labelformat" },
     { name = "lightly-mundig" },
     { name = "lightly-studio-serve" },
+    { name = "mcap" },
+    { name = "mcap-ros2-support" },
     { name = "open-clip-torch" },
     { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "opencv-python-headless", version = "4.13.0.92", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -3211,10 +3213,6 @@ cloud-storage = [
     { name = "gcsfs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "s3fs", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "s3fs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-]
-mcap = [
-    { name = "mcap" },
-    { name = "mcap-ros2-support" },
 ]
 
 [package.dev-dependencies]
@@ -3277,8 +3275,8 @@ requires-dist = [
     { name = "labelformat", specifier = ">=0.1.17" },
     { name = "lightly-mundig", specifier = "==0.1.16" },
     { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
-    { name = "mcap", marker = "extra == 'mcap'", specifier = ">=1.2.0,<2.0" },
-    { name = "mcap-ros2-support", marker = "extra == 'mcap'", specifier = ">=0.5.0,<0.6" },
+    { name = "mcap", specifier = ">=1.2.0,<2.0" },
+    { name = "mcap-ros2-support", specifier = ">=0.5.0,<0.6" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
     { name = "pandas", specifier = ">=2.2.3,<3.0" },
@@ -3300,7 +3298,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.32.1" },
     { name = "xxhash", specifier = ">=3.5.0" },
 ]
-provides-extras = ["cloud-storage", "mcap"]
+provides-extras = ["cloud-storage"]
 
 [package.metadata.requires-dev]
 dev = [
