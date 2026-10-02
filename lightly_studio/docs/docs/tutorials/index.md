@@ -36,9 +36,9 @@ unlabeled data to a trained and evaluated model.
 
 <div class="grid cards wide" markdown>
 
--   **[Explore EPIC-KITCHENS-100 Video Clips in LightlyStudio](epic-kitchens-100.md)**
+-   **[QA Large-Scale Egocentric Video Data with EPIC-KITCHENS-100](epic-kitchens-100.md)**
 
-    [![Explore EPIC-KITCHENS-100 Video Clips in LightlyStudio](https://cdn.prod.website-files.com/62cd5ce03261cb3e98188470/69b01574349707d3b4f67b82_00_selection.gif)](epic-kitchens-100.md)
+    [![QA Large-Scale Egocentric Video Data with EPIC-KITCHENS-100](https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_overview.png)](epic-kitchens-100.md)
 
-    Cut egocentric kitchen videos into action clips, load them with captions and metadata, and explore them with the embedding plot, text search, and diversity selection.
+    Do QA on 37000 egocentric kitchen clips: find near-duplicates, low-quality clips, and narrations that do not match the video.
 </div>

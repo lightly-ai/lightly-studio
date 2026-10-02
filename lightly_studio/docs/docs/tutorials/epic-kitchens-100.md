@@ -1,39 +1,30 @@
-# Explore EPIC-KITCHENS-100 Video Clips in LightlyStudio
+# QA Large-Scale Egocentric Video Data with EPIC-KITCHENS-100
 
-In this tutorial, we show how to download preprocessed EPIC-KITCHENS-100 video clips from HuggingFace and visualize them in LightlyStudio.
+In this tutorial, we show how to do QA on a large egocentric video dataset with LightlyStudio. We use EPIC-KITCHENS-100: more than 37000 video clips of kitchen activities, each with a narration that describes the action in the clip.
 
-At the end, we will have loaded and explored a dataset of more than 37000 video clips, each with a caption describing the action in the clip. We show how to explore the embedding plot and slice and dice the dataset for further analysis.
+We show how to:
 
-![Selecting video clips in the LightlyStudio embedding plot](https://cdn.prod.website-files.com/62cd5ce03261cb3e98188470/69b01574349707d3b4f67b82_00_selection.gif){ width="100%" }
+- Download the preprocessed clips and narrations from HuggingFace and load them into LightlyStudio
+- Explore the dataset with the embedding plot, text search, and sampling
+- Find near-duplicate clips and correlations with the embedding plot and metadata
+- Find low-quality clips, for example dark or blurry clips
+- Find narrations that do not match the video, with a plugin that calculates the alignment between the narration and the video
+
+<video autoplay loop muted playsinline controls style="width: 100%;" onloadedmetadata="this.defaultPlaybackRate = 2; this.playbackRate = 2;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_overview_full.mp4" type="video/mp4">
+</video>
 
 ## Understanding Different EpicKitchens Datasets
 
-For a newcomer, the structure of the EpicKitchens dataset can be a bit overwhelming. In fact, EpicKitchens is a **collection of datasets**, each with its own structure and annotations, and different ways to access the data.
+EpicKitchens is a collection of datasets. The main datasets with egocentric video recordings are:
 
-The main datasets with video recordings are:
+| Dataset | Released | Videos | Description |
+|---|---|---|---|
+| [EPIC-KITCHENS-55](https://data.bris.ac.uk/data/dataset/3h91syskeag572hl6tvuovwv4d) | 2018 | 55 hours | Recorded with a head-mounted GoPro, with action labels and narrations |
+| [EPIC-KITCHENS-100](https://epic-kitchens.github.io/) | 2020 | 100 hours | Extends EPIC-KITCHENS-55 with more participants and annotations |
+| [HD-EPIC](https://hd-epic.github.io/) | 2025 | 41 hours | Recorded with an Aria headset, with denser annotations and 3D digital twins |
 
-- **EPIC-KITCHENS-55**
-    - 55 hours of videos collected with a head-mounted GoPro camera by multiple participants in their kitchens
-    - Video segments annotated with action labels (verb-noun pairs) and free-form captions
-    - Released in 2018
-    - Hosted on DataBris: [https://data.bris.ac.uk/data/dataset/3h91syskeag572hl6tvuovwv4d](https://data.bris.ac.uk/data/dataset/3h91syskeag572hl6tvuovwv4d)
-- **EPIC-KITCHENS-100**
-    - Extension of EPIC-KITCHENS-55 with more participants, and more annotations for a total of 100 hours of videos
-    - Released in 2020
-    - Website: [https://epic-kitchens.github.io/](https://epic-kitchens.github.io/)
-    - Hosted on DataBris: [https://data.bris.ac.uk/data/dataset/2g1n6qdydwa9u22shpxqzp0t8m](https://data.bris.ac.uk/data/dataset/2g1n6qdydwa9u22shpxqzp0t8m)
-- **HDEpic**
-    - 41 hours of egocentric videos collected with an Aria headset
-    - Compared with EPIC-KITCHENS, it has denser annotations and also provides 3D digital twins of the scenes, and more
-    - Released in 2025
-    - Website: [https://hd-epic.github.io/](https://hd-epic.github.io/)
-    - Hosted on DataBris: [https://data.bris.ac.uk/data/dataset/3cqb5b81wk2dc2379fx1mrxh47](https://data.bris.ac.uk/data/dataset/3cqb5b81wk2dc2379fx1mrxh47)
-
-Moreover, separate, derived datasets annotating the data from EPIC-KITCHENS-100 are available, such as:
-
-- **VISOR** - Dense instance segmentation annotations
-- **EPIC-Sounds** - Audio annotations
-- **EPIC-Fields** - 3D digital twins
+Other datasets add annotations to EPIC-KITCHENS-100, for example VISOR (instance segmentation), EPIC-Sounds (audio), and EPIC-Fields (3D digital twins). In this tutorial, we use EPIC-KITCHENS-100.
 
 ## Download the Clips from HuggingFace
 
@@ -42,42 +33,43 @@ We have already cut the EPIC-KITCHENS-100 videos into clips and uploaded them to
 - `clips/`: 37455 video clips (24 GB), one for each annotated action, stored as `{participant_id}/{narration_id}.mp4`. The clips are downscaled to 854x480px.
 - `epic-kitchens-100-annotations/`: The original action annotations in `EPIC_100_train.csv` and `EPIC_100_validation.csv`.
 - `requirements.txt`: The Python dependencies for the loading scripts.
-- `lightly_studio_1_load_videos.py`, `lightly_studio_2_load_anotations_fast.py`, `lightly_studio_3_start_gui.py`: Scripts to load the clips into LightlyStudio.
+- `lightly_studio_1_load_videos.py`, `lightly_studio_2_load_anotations_fast.py`, `lightly_studio_3_start_gui.py`: Scripts to load the clips into LightlyStudio and start the GUI.
+- `embedding_model.py`: Loads the large Perception Encoder model, which the scripts use to embed the clips and the text queries.
+- `caption_similarity_plugin.py`: A plugin that calculates the alignment score between the narration and the video of each clip.
 - `cut_clips.py`: The script that we used to cut the clips from the original videos.
 
 !!! note
     The dataset is published under the [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) license, the same as the original EPIC-KITCHENS-100 dataset. You cannot use it for commercial purposes.
 
-Install the [HuggingFace CLI](https://huggingface.co/docs/huggingface_hub/en/guides/cli) and download the full dataset:
+Download the dataset (24 GB) with the HuggingFace CLI or with Git:
 
-```bash
-# Install HuggingFace CLI
-curl -LsSf https://hf.co/cli/install.sh | bash
+=== "HuggingFace CLI"
 
-# Download clips, annotations, and scripts (24 GB)
-hf download lightly-ai/epic-kitchens-100-clips \
-    --repo-type dataset \
-    --local-dir ./epic-kitchens-100-clips
-```
+    Install the [HuggingFace CLI](https://huggingface.co/docs/huggingface_hub/en/guides/cli) and download the dataset:
 
-To try the tutorial with less data, download only the clips of one participant. For example, participant `P01` has 2401 clips (1.7 GB):
+    ```bash
+    # Install HuggingFace CLI
+    curl -LsSf https://hf.co/cli/install.sh | bash
 
-```bash
-hf download lightly-ai/epic-kitchens-100-clips \
-    --repo-type dataset \
-    --include "clips/P01/*" \
-    --include "epic-kitchens-100-annotations/*" \
-    --include "*.py" \
-    --include "requirements.txt" \
-    --local-dir ./epic-kitchens-100-clips
-```
+    # Download clips, annotations, and scripts
+    hf download lightly-ai/epic-kitchens-100-clips \
+        --repo-type dataset \
+        --local-dir ./epic-kitchens-100-clips
+    ```
 
-Alternatively, clone the dataset with Git. Make sure that [Git LFS](https://git-lfs.com/) is installed, because the clips are stored as LFS files:
+=== "Git"
 
-```bash
-git lfs install
-git clone https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips
-```
+    HuggingFace stores the large files with Xet. Install [Git LFS](https://git-lfs.com/) and the [Git Xet extension](https://huggingface.co/docs/hub/git-xet), then clone the dataset:
+
+    ```bash
+    # Install Git LFS and Git Xet (macOS, for other systems see the links above)
+    brew install git-lfs git-xet
+    git lfs install
+    git xet install
+
+    # Clone clips, annotations, and scripts
+    git clone https://huggingface.co/datasets/lightly-ai/epic-kitchens-100-clips
+    ```
 
 After the download, you have the following folder structure:
 
@@ -91,7 +83,9 @@ epic-kitchens-100-clips/
 ├── epic-kitchens-100-annotations/
 │   ├── EPIC_100_train.csv
 │   └── EPIC_100_validation.csv
+├── caption_similarity_plugin.py
 ├── cut_clips.py
+├── embedding_model.py
 ├── lightly_studio_1_load_videos.py
 ├── lightly_studio_2_load_anotations_fast.py
 ├── lightly_studio_3_start_gui.py
@@ -186,9 +180,9 @@ pip install -r requirements.txt
 
 All commands below run from this folder, so that the relative paths `./clips` and `./epic-kitchens-100-annotations` resolve correctly.
 
-### Load the Full Dataset with the Provided Scripts
+### Run the Loading Scripts
 
-For the full dataset, run the three scripts from the HuggingFace dataset in order:
+Run the three scripts from the HuggingFace dataset in order:
 
 ```bash
 # Add the clips to a new video dataset
@@ -201,93 +195,85 @@ python lightly_studio_2_load_anotations_fast.py
 python lightly_studio_3_start_gui.py
 ```
 
-The first script creates the dataset and computes the embeddings for all clips, this is the slowest step. The second script loads the annotations in bulk, which is much faster than adding them one-by-one. Run the first script only once, because it creates a new dataset.
-
-### Understand the Loading Code
-
-For a subset, or to understand what the scripts do, you can also use a single script. Create a Python script `load_clips.py` with the following content:
-
-```python title="load_clips.py"
-import lightly_studio as ls
-import pandas as pd
-from tqdm import tqdm
-
-# Load video clips into a LightlyStudio dataset
-dataset = ls.VideoDataset.load_or_create()
-dataset.add_videos_from_path(path="./clips")
-
-# Load narration CSVs
-train_csv = pd.read_csv("./epic-kitchens-100-annotations/EPIC_100_train.csv")
-val_csv = pd.read_csv("./epic-kitchens-100-annotations/EPIC_100_validation.csv")
-file_name_to_row = {}
-for _, row in pd.concat([train_csv, val_csv], ignore_index=True).iterrows():
-    filename = f"{row['narration_id']}.mp4"
-    file_name_to_row[filename] = row.to_dict()
-
-# Add metadata to each video
-for video in tqdm(dataset, "Loading annotations"):
-    row = file_name_to_row[video.file_name]
-
-    # Add a caption
-    video.add_caption(row["narration"])
-
-    # Add metadata
-    for key, value in row.items():
-        video.metadata[key] = value
-
-# Start the LightlyStudio GUI
-ls.start_gui()
-```
-
-We first create a video dataset and add the videos from the clips folder. Then we load the annotations from the two CSV files into a mapping from file name to CSV row. Finally, we loop through the videos in the dataset and add the `narration` column as the video caption, and populate video metadata with all the other columns from the CSV. Finally, we start the LightlyStudio GUI:
-
-```bash
-python load_clips.py
-```
-
-!!! note
-    Loading annotations one-by-one is slow for the full dataset. Use the provided scripts above for all 37455 clips.
-
-### Restart the GUI
-
-Once the data is loaded, it is persisted in the `lightly_studio.db` file. The GUI server can be safely stopped by pressing Ctrl+C in the terminal, and restarted without loading the data again:
-
-```bash
-python lightly_studio_3_start_gui.py
-```
+The first script creates the dataset and computes the embeddings for all clips with the large Perception Encoder model from `embedding_model.py`. This is the slowest step. The second script loads the annotations in bulk, which is much faster than adding them one-by-one. The third script registers the plugin from `caption_similarity_plugin.py` and starts the GUI, so that the plugin is available in the GUI. Run the first script only once, because it creates a new dataset. The data is stored in the `lightly_studio.db` file, so to restart the GUI later, run only `python lightly_studio_3_start_gui.py`.
 
 ## Exploring EpicKitchens with LightlyStudio
 
 ### Get a Quick Overview
 
-On the initial screen, we see a grid of all the videos together with their captions. The bottom left shows that we loaded 37455 videos. We can hover over each video to see it playing, and double-click to open the video details page. There we can see all metadata loaded from the CSV.
+The grid shows all 37455 clips with their narrations. Hover over a clip to play it, and double-click it to see all metadata from the CSV. LightlyStudio computes embeddings for all clips with the [Perception Encoder model](https://github.com/facebookresearch/perception_models). The embedding plot shows these embeddings in 2D, and similar clips form clusters. Lasso-select a cluster to see its clips in the grid and tag them. With text search, you can find clips with specific content: LightlyStudio compares the embedding of your text with the clip embeddings and shows a similarity score between 0 and 1 for each clip. The dataset is too large to look at each clip. To get a small, representative subset, go to Menu → Sampling and select 100 clips with the "Diversity" strategy.
 
-![Grid view of the EPIC-KITCHENS-100 video clips](https://cdn.prod.website-files.com/62cd5ce03261cb3e98188470/69b014edb344464e241c7644_01_grid_view.gif){ width="100%" }
+!!! note "Embedding model"
+    By default, LightlyStudio embeds videos with the tiny `PE-Core-T16-384` variant of Perception Encoder. For this tutorial, we use the large `PE-Core-L14-336` variant, which the scripts load from `embedding_model.py`. It gives better results for the alignment score between narrations and videos, and for the other workflows that use embeddings. To learn how to use your own model, see [Using Your Own Embeddings](../core_concepts/embeddings.md#using-your-own-embeddings).
 
-Captions can be also inspected in a dedicated tab, where long captions are displayed in full. If there were multiple captions per video, they would all be displayed here. Caption editing is supported.
-
-![Caption editing in LightlyStudio](https://cdn.prod.website-files.com/62cd5ce03261cb3e98188470/699c250b9e2f67547df17d93_02_captions_800%20(1).gif){ width="100%" }
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_overview_full.mp4" type="video/mp4">
+</video>
 
 ### Understand the Dataset
 
-LightlyStudio computes embeddings with the [Perception Encoder model](https://github.com/facebookresearch/perception_models) for all the videos, so that they can be easily visualized and searched. In the embedding plot, which shows embeddings projected to 2D with PacMAP, we see that the videos are organized in clusters. We can lasso-select a cluster to see which videos are in it. Selected data can be easily tagged.
+To learn more about the quality of the dataset, for example how repetitive it is, we can use more of the tools in LightlyStudio.
 
-![Lasso selection of a cluster in the embedding plot](https://cdn.prod.website-files.com/62cd5ce03261cb3e98188470/69b015125d280736cfcbbc9f_03_embeddings_1080.gif){ width="100%" }
+#### Find Near-Duplicate Clips
 
-We can also use text search to find videos with specific content. When submitting a query, the text is embedded with Perception Encoder and compared with indexed video embeddings stored in a local database for high performance. You can notice the similarity score between zero and one shown for every video.
+First, we look at the embedding plot in more detail. Besides the large clusters, there are many very small clusters. When we lasso-select one of them, we see that it contains very short clips from the same video. The clips show almost the same scene, with only small differences in the action.
 
-![Text search over the video clips](https://cdn.prod.website-files.com/62cd5ce03261cb3e98188470/69b015daec76fdb40df5a8ee_04_text_search.gif){ width="100%" }
+These clusters are interesting because they have very low diversity. They can also be a problem: very short clips give little information, and the near-duplicates give the same scene too much weight during training.
 
-The dataset is quite big to scroll through fully. To get an overview of samples in it, we can use the "Selection" feature to get a smaller, representative sample. Navigate to Menu → Selection and choose 100 videos using the "Diversity" strategy. This performs the selection in Rust, selected images are tagged with a chosen tag. Note that the selection takes about one minute, we cut the waiting time from the gif below.
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_nearduplicates.m4v" type="video/mp4">
+</video>
 
-![Diversity selection of 100 video clips](https://cdn.prod.website-files.com/62cd5ce03261cb3e98188470/69b014bbdc2b6df1f56b8e61_05_selection_1080.gif){ width="100%" }
+#### Find Correlations with Metadata
+
+Next, we use the embedding plot to see how the metadata values are distributed. In the embedding plot, use `Color by` and select the `participant_id` metadata field. The colors show that the clusters form mainly by participant. Thus, the clips from one participant are highly correlated: same kitchen, same objects, and similar recordings.
+
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_emebd_participant_corr.m4v" type="video/mp4">
+</video>
+
+#### Find Low-Quality Clips with Text Search
+
+We can also use text search to find clips with bad image quality. For example, search for `dark kitchen` to find clips with bad lighting, or for `blurry video` to find clips with motion blur from fast head movements. Steam from cooking can also make the view blurry. Search for `steam` to find these clips. Tag the results, so that you can examine them later or remove them from the dataset.
+
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_difficult_text.mp4" type="video/mp4">
+</video>
+
+#### Find Mismatches Between Narrations and Videos
+
+An important question when we do QA on narrations is: does the narration describe what happens in the video? To find mismatches, we compare the text embedding of the narration with the video embedding. A low alignment score shows a narration that is ambiguous or does not match the video.
+
+The plugin in `caption_similarity_plugin.py` calculates this alignment score for each clip and stores it as a new metadata field. `lightly_studio_3_start_gui.py` registers the plugin, so you can run it from the plugin menu at the top right of the GUI.
+
+After the plugin runs, sort or filter the clips by the new metadata field to see the clips with the lowest alignment first.
+
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_cpation_sim.mp4" type="video/mp4">
+</video>
+
+Most of the clips with a low score are very short, and the described action is short or ambiguous. For example:
+
+- `pick up fork`, but the person actually cleans the fork while washing the dishes
+- `pick up phone`, but there is no phone in the clip
+
+Thus, we find ambiguous and mismatched narrations even in EPIC-KITCHENS-100, a highly curated and widely used dataset. In your own dataset, with auto-generated captions or human narrations, you can expect to find many more of them.
+
+Besides sorting, we can also filter by the alignment score and look at the [dataset distributions](../workflows/dataset_distributions.md) of the clips with a low score. The distribution of the `verb` metadata field shows that some verbs often have a low score, for example `open`, `close`, and `shake`. These verbs are often ambiguous, or they describe only one part of a longer action.
+
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_distributions.mp4" type="video/mp4">
+</video>
 
 ## Conclusion
 
 To summarise, we have shown how to:
 
-- Overcome the difficulties of loading the EPIC-KITCHENS-100 dataset
-- Download the preprocessed clips and annotations from HuggingFace
-- Load and explore the dataset in LightlyStudio
+- Download the preprocessed EPIC-KITCHENS-100 clips and narrations from HuggingFace and load them into LightlyStudio
+- Find near-duplicate clips and see that the clips form clusters by participant
+- Find low-quality clips, such as dark or blurry clips, with text search
+- Find ambiguous and mismatched narrations with the alignment score, and the verbs that cause them most often
+
+Even a highly curated and widely used dataset such as EPIC-KITCHENS-100 has these problems. You can use the same workflow to do QA on your own video dataset, with auto-generated captions or human narrations.
 
 This only scratches the surface of the capabilities of LightlyStudio. To see how to edit captions, export the annotations, and more, check out the rest of this documentation, for example [Add Captions](../workflows/captions.md), [Sampling](../workflows/sampling.md), and [Export](../workflows/export.md).
