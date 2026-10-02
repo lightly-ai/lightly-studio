@@ -65,8 +65,11 @@ class TickDetailView(BaseModel):
     timestamp_ns: int | None = Field(
         description="Capture time of the tick's sync component, in nanoseconds."
     )
-    channels: dict[str, TickChannelView] = Field(
-        description="MCAP locators keyed by component name, e.g. `front` or `pcl_front`."
+    camera_channels: dict[str, TickChannelView] = Field(
+        description="Image and video channel locators keyed by component name, e.g. `front`."
+    )
+    lidar_channels: dict[str, TickChannelView] = Field(
+        description="Point-cloud channel locators keyed by component name, e.g. `pcl_front`."
     )
     annotations: list[AnnotationView] = Field(
         description="Annotations attached to the tick, e.g. 3D cuboids."
