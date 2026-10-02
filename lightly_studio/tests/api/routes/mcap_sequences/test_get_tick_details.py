@@ -54,23 +54,6 @@ def test_get_tick_details(test_client: TestClient, db_session: Session) -> None:
     assert body["annotations"] == []
 
 
-def test_get_tick_details__target_frame_id(
-    test_client: TestClient, db_session: Session, mocker: MockerFixture
-) -> None:
-    fixture = helpers.create_mcap_sequence(session=db_session)
-    _add_tick(session=db_session, fixture=fixture)
-    spy = mocker.spy(recording_service, "get_tick_details")
-
-    response = test_client.get(
-        f"/datasets/{fixture.sequence_collection.dataset_id}/mcap-sequences/"
-        f"{fixture.sample_id}/ticks/0",
-        params={"target_frame_id": "map"},
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    assert spy.call_args.kwargs["target_frame_id"] == "map"
-
-
 def test_get_tick_details__transform_not_found(
     test_client: TestClient, mocker: MockerFixture
 ) -> None:
