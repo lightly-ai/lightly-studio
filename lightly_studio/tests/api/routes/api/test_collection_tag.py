@@ -29,6 +29,7 @@ from tests.helpers_resolvers import (
     create_samples_with_embeddings,
     create_tag,
 )
+from tests.resolvers.video.helpers import VideoStub, create_videos_with_embeddings
 
 
 def test_add_samples_by_filter__image_empty_filter_tags_whole_collection(
@@ -107,6 +108,36 @@ def test_add_samples_by_filter__image_similarity_threshold(
 
     assert response.status_code == HTTP_STATUS_CREATED
     assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {similar.sample_id}
+
+
+def test_add_samples_by_filter__video_similarity_threshold(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    similar_id, _ = create_videos_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        videos_and_embeddings=[
+            (VideoStub(path="/path/to/similar.mp4"), [1.0, 0.1]),
+            (VideoStub(path="/path/to/dissimilar.mp4"), [0.0, 1.0]),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
+        json={
+            "filter": {
+                "filter_type": "video",
+                "sample_filter": {"text_embedding": [1.0, 0.0], "min_similarity": 0.9},
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {similar_id}
 
 
 def test_add_samples_by_filter__idempotent_on_rerun(

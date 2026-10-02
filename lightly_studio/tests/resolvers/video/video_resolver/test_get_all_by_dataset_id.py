@@ -23,7 +23,12 @@ from tests.helpers_resolvers import (
     create_embedding_model,
     create_sample_embedding,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, create_videos
+from tests.resolvers.video.helpers import (
+    VideoStub,
+    create_video_with_frames,
+    create_videos,
+    create_videos_with_embeddings,
+)
 
 
 def test_get_all_by_collection_id(db_session: Session) -> None:
@@ -511,6 +516,32 @@ def test_get_all_by_collection_id__with_embedding_sort(db_session: Session) -> N
     assert result.samples[0].similarity_score == pytest.approx(1.0, abs=0.01)
     assert result.samples[0].similarity_score >= result.samples[1].similarity_score
     assert result.samples[1].similarity_score >= result.samples[2].similarity_score
+
+
+def test_get_all_by_collection_id__similarity_threshold(db_session: Session) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    similar_id, _ = create_videos_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        videos_and_embeddings=[
+            (VideoStub(path="/path/to/similar.mp4"), [1.0, 0.1]),
+            (VideoStub(path="/path/to/dissimilar.mp4"), [0.0, 1.0]),
+        ],
+    )
+
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=VideoFilter(
+            sample_filter=SampleFilter(text_embedding=[1.0, 0.0], min_similarity=0.9),
+        ),
+        text_embedding=[1.0, 0.0],
+    )
+
+    assert [sample.sample_id for sample in result.samples] == [similar_id]
+    assert result.total_count == 1
 
 
 def test_get_all_by_collection_id__with_classification_annotation(db_session: Session) -> None:

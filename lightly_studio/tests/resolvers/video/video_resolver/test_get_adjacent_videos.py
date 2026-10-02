@@ -307,6 +307,36 @@ def test_get_adjacent_videos__with_similarity(db_session: Session) -> None:
     assert result.total_count == 3
 
 
+def test_get_adjacent_videos__similarity_threshold(db_session: Session) -> None:
+    collection_id = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    similar_a, _, similar_b = video_helpers.create_videos_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        videos_and_embeddings=[
+            (video_helpers.VideoStub(path="/videos/a.mp4"), [1.0, 0.0]),
+            (video_helpers.VideoStub(path="/videos/b.mp4"), [0.0, 1.0]),
+            (video_helpers.VideoStub(path="/videos/c.mp4"), [1.0, 0.1]),
+        ],
+    )
+
+    result = video_resolver.get_adjacent_videos(
+        session=db_session,
+        sample_id=similar_a,
+        collection_id=collection_id,
+        filters=VideoFilter(
+            sample_filter=SampleFilter(text_embedding=[1.0, 0.0], min_similarity=0.9),
+        ),
+        text_embedding=[1.0, 0.0],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id is None
+    assert result.next_sample_id == similar_b
+    assert result.total_count == 2
+
+
 def test_get_adjacent_videos__similarity_ignores_order_by(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(
         session=db_session, sample_type=SampleType.VIDEO

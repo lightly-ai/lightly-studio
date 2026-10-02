@@ -395,6 +395,58 @@ def test_get_adjacent_video_frames__uses_video_text_embedding(db_session: Sessio
     assert result.total_count == 3
 
 
+def test_get_adjacent_video_frames__parent_video_similarity_threshold(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    videos = [
+        video_helpers.create_video_with_frames(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video=video_helpers.VideoStub(path=path, duration_s=1.0, fps=1),
+        )
+        for path in ["/videos/a.mp4", "/videos/b.mp4"]
+    ]
+    for video, embedding in zip(videos, [[0.0, 1.0], [1.0, 0.0]]):
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=video.video_sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+    similar_video = videos[1]
+
+    result = video_frame_resolver.get_adjacent_video_frames(
+        session=db_session,
+        sample_id=similar_video.frame_sample_ids[0],
+        filters=VideoFrameAdjacentFilter(
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=similar_video.video_frames_collection_id,
+                filter=VideoFrameFilter(),
+            ),
+            video_filter=FilterWithCollectionId(
+                collection_id=collection.collection_id,
+                filter=VideoFilter(
+                    sample_filter=SampleFilter(text_embedding=[1.0, 0.0], min_similarity=0.9),
+                ),
+            ),
+        ),
+    )
+
+    assert result is not None
+    assert result.previous_sample_id is None
+    assert result.next_sample_id is None
+    assert result.total_count == 1
+
+
 def test_get_adjacent_video_frames__requires_resolvable_collection_for_text_embedding(
     db_session: Session,
 ) -> None:

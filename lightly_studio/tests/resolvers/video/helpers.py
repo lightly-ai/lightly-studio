@@ -17,6 +17,7 @@ from lightly_studio.resolvers import (
     video_resolver,
 )
 from lightly_studio.type_definitions import PathLike
+from tests import helpers_resolvers
 
 
 @dataclass
@@ -89,6 +90,43 @@ def create_videos(
             for video in videos
         ],
     )
+
+
+def create_videos_with_embeddings(
+    session: Session,
+    collection_id: UUID,
+    videos_and_embeddings: list[tuple[VideoStub, list[float]]],
+) -> list[UUID]:
+    """Creates videos with embeddings from a new default embedding model.
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection to add the videos to.
+        videos_and_embeddings: The videos and their embeddings. All embeddings must have the
+            same dimension.
+
+    Returns:
+        The sample IDs of the created videos.
+    """
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_dimension=len(videos_and_embeddings[0][1]),
+        set_as_default=True,
+    )
+    sample_ids = create_videos(
+        session=session,
+        collection_id=collection_id,
+        videos=[video for video, _ in videos_and_embeddings],
+    )
+    for sample_id, (_, embedding) in zip(sample_ids, videos_and_embeddings):
+        helpers_resolvers.create_sample_embedding(
+            session=session,
+            sample_id=sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+    return sample_ids
 
 
 @dataclass

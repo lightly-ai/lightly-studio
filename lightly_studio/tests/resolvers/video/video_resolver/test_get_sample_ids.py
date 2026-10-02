@@ -5,9 +5,10 @@ from sqlmodel import Session
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.image_filter import FilterDimensions
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import create_collection
-from tests.resolvers.video.helpers import VideoStub, create_videos
+from tests.resolvers.video.helpers import VideoStub, create_videos, create_videos_with_embeddings
 
 
 def test_get_sample_ids(db_session: Session) -> None:
@@ -42,6 +43,30 @@ def test_get_sample_ids(db_session: Session) -> None:
         ),
     )
     assert filtered_sample_ids == {created_video_ids[1]}
+
+
+def test_get_sample_ids__similarity_threshold(db_session: Session) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    similar_id, _ = create_videos_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        videos_and_embeddings=[
+            (VideoStub(path="/path/to/similar.mp4"), [1.0, 0.1]),
+            (VideoStub(path="/path/to/dissimilar.mp4"), [0.0, 1.0]),
+        ],
+    )
+
+    sample_ids = video_resolver.get_sample_ids(
+        session=db_session,
+        collection_id=collection_id,
+        filters=VideoFilter(
+            sample_filter=SampleFilter(text_embedding=[1.0, 0.0], min_similarity=0.9),
+        ),
+    )
+
+    assert sample_ids == {similar_id}
 
 
 def test_build_sample_ids_query(db_session: Session) -> None:
