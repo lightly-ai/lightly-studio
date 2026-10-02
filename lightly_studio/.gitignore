@@ -1,5 +1,6 @@
 dist
 build
+sourcemaps
 .venv
 *.egg-info
 __pycache__
