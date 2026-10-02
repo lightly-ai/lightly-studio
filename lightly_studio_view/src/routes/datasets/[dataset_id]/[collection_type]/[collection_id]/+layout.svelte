@@ -36,6 +36,7 @@
         isSampleDetailsRoute,
         isImagesRoute,
         isPointCloudsRoute,
+        isPointCloudLabelingRoute,
         isVideoFramesRoute,
         isVideosRoute,
         isGroupsRoute,
@@ -141,6 +142,7 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
@@ -549,7 +551,7 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails}
+    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails || isPointCloudLabeling}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">

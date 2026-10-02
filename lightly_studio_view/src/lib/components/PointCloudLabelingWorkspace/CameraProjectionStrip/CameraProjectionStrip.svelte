@@ -31,14 +31,11 @@
 </script>
 
 <div
-    class="flex h-full min-h-0 flex-col border-t bg-background"
+    class="flex h-full min-h-0 flex-col border-t bg-background p-2"
     data-testid="workspace-projection-strip"
 >
-    <div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-        <span class="font-medium text-foreground">Cameras</span>
-    </div>
     {#if recordingId}
-        <div class="flex min-h-0 flex-1 gap-2 overflow-x-auto px-3 pb-2">
+        <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-auto">
             {#each cameraChannels as channel}
                 <CameraProjectionFrame
                     {datasetId}

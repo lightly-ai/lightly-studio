@@ -3,7 +3,6 @@ import { getURL } from './utils';
 
 const COLLECTION_BASE_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]';
 const POINT_CLOUD_BASE_ROUTE = `${COLLECTION_BASE_ROUTE}/point-clouds`;
-const POINT_CLOUD_LABELING_BASE_ROUTE = '/datasets/[dataset_id]/point-clouds/[collection_id]';
 
 type SampleWithAnnotationParams = {
     datasetId: string;
@@ -31,10 +30,9 @@ type VideosDetailsParams = {
 
 type PointCloudLabelingDetailsParams = {
     datasetId: string;
+    collectionType: string;
     collectionId: string;
-    sampleId: string;
     sequenceId: string;
-    collectionType?: string;
     groupId?: string;
 };
 
@@ -51,7 +49,7 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`,
     groups: `${COLLECTION_BASE_ROUTE}/groups`,
     pointClouds: `${POINT_CLOUD_BASE_ROUTE}`,
-    pointCloudLabeling: `${POINT_CLOUD_LABELING_BASE_ROUTE}/[sample_id]`
+    pointCloudLabeling: `${POINT_CLOUD_BASE_ROUTE}/[sequence_id]`
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -186,16 +184,13 @@ export const routes = {
             datasetId,
             collectionType,
             collectionId,
-            sampleId,
-            groupId,
-            sequenceId
+            sequenceId,
+            groupId
         }: PointCloudLabelingDetailsParams) => {
             const queryParams: Record<string, string> = {};
-            queryParams['sequence_id'] = sequenceId;
-            if (collectionType !== undefined) queryParams['collection_type'] = collectionType;
             if (groupId !== undefined) queryParams['group_id'] = groupId;
             return getURL(
-                `/datasets/${datasetId}/point-clouds/${collectionId}/${sampleId}`,
+                `/datasets/${datasetId}/${collectionType}/${collectionId}/point-clouds/${sequenceId}`,
                 Object.keys(queryParams).length > 0 ? queryParams : undefined
             );
         },

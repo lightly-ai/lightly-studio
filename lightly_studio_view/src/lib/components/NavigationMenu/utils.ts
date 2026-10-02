@@ -78,7 +78,7 @@ export function getMenuItem(
             };
         case SampleType.SEQUENCE:
             return {
-                title: groupComponentName || 'Sequences',
+                title: groupComponentName || 'Point clouds',
                 id: elementId,
                 href: routeHelpers.toPointClouds(datasetId, collectionType, collectionId),
                 isSelected,

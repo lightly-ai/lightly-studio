@@ -28,7 +28,7 @@
     };
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-2 py-1.5">
+<div class="scrollbar-thin flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-2 py-1.5">
     <div class="relative flex h-4 shrink-0 items-end gap-px">
         {#each ticks as tick (tick.seq_number)}
             <span

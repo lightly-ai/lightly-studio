@@ -41,7 +41,7 @@ describe('usePointCloudNavigation', () => {
             })
         ).toBe(true);
         expect(gotoMock).toHaveBeenCalledWith(
-            '/datasets/dataset/point-clouds/collection/sample?sequence_id=sample&collection_type=group&group_id=group',
+            '/datasets/dataset/group/collection/point-clouds/sample?group_id=group',
             { invalidateAll: true }
         );
     });
