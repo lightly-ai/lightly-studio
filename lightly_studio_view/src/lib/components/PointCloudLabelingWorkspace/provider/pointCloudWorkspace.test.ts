@@ -56,6 +56,7 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
 vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
     useMcapSequenceTicks: () => ({ ticks: ticksState, refetch: ticksRefetch })
 }));
+
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
         query: { data: undefined, isLoading: false, isError: false, refetch: cloudRefetch }
