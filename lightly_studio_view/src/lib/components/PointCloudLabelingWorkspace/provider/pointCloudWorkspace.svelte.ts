@@ -54,7 +54,8 @@ function getChannelLocators(
 function createCloudPointFrameParamsGetter(
     getInputs: GetInputs,
     tickDetails: TickDetails,
-    summary: SequenceSummary
+    summary: SequenceSummary,
+    getTargetFrameId: () => string
 ): () => CloudPointFrameParams {
     return () => ({
         datasetId: getInputs().datasetId,
@@ -63,7 +64,8 @@ function createCloudPointFrameParamsGetter(
             summary.data?.lidar_channels ?? [],
             tickDetails.data,
             getInputs().selectedLidarChannels
-        )
+        ),
+        targetFrameId: getTargetFrameId() || undefined
     });
 }
 
@@ -94,6 +96,9 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     currentTick = $state(0);
     isPlaying = $state(false);
     playbackIntervalMs = $state(300);
+    // The first frame is the default. A pick is kept only while it is still in the list, and
+    // it is keyed by its source so it resets when the dataset or the sequence changes.
+    #pickedReferenceFrame = $state<{ source: string; frameId: string } | null>(null);
 
     readonly #getInputs: GetInputs;
     readonly #summary: ReturnType<typeof useMcapSequenceSummary>['summary'];
@@ -119,6 +124,25 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
 
     readonly lidarChannels = $derived.by(() => this.#summary.data?.lidar_channels ?? []);
     readonly cameraChannels = $derived.by(() => this.#summary.data?.camera_channels ?? []);
+    readonly referenceFrames = $derived.by(() => this.#summary.data?.reference_frames ?? []);
+    readonly referenceFrameId = $derived.by(() => {
+        const frames = this.referenceFrames;
+        const picked = this.#pickedReferenceFrame;
+        if (
+            picked?.source === `${this.datasetId}/${this.sequenceId}` &&
+            frames.some((frame) => frame.name === picked.frameId)
+        ) {
+            return picked.frameId;
+        }
+        return frames[0]?.name ?? '';
+    });
+    // True when the frame could not be loaded in the reference frame, so the hook loaded
+    // it in the sensor frames instead.
+    readonly isShowingSensorFrames = $derived.by(() => {
+        const frameId = this.referenceFrameId;
+        const channels = this.cloudPointFrame.data?.channels ?? [];
+        return frameId !== '' && channels.some((channel) => channel.frameId !== frameId);
+    });
     readonly ticks: TickView[] = $derived.by(() => this.#sequenceTicks.data?.ticks ?? []);
 
     constructor(getInputs: GetInputs) {
@@ -139,7 +163,8 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         const getCloudPointFrameParams = createCloudPointFrameParamsGetter(
             getInputs,
             tickDetails,
-            summary
+            summary,
+            () => this.referenceFrameId
         );
         const cloudPointFrame = useCloudPointFrame(getCloudPointFrameParams).query;
         this.tickDetails = tickDetails;
@@ -160,6 +185,15 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     get sequenceId(): string {
         return this.#getInputs().sequenceId;
     }
+
+    selectReferenceFrame = (frameId: string): void => {
+        if (this.referenceFrames.some((frame) => frame.name === frameId)) {
+            this.#pickedReferenceFrame = {
+                source: `${this.datasetId}/${this.sequenceId}`,
+                frameId
+            };
+        }
+    };
 
     goToFrame = (seqNumber: number): void => {
         this.currentTick = seqNumber;
