@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from uuid import UUID
 
-import numpy as np
-from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.core.mcap import capture_time
 from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
-from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.resolvers import recording_resolver
@@ -20,6 +16,7 @@ from lightly_studio.services.recording_service import (
     point_cloud_value,
     reader_cache,
     serialize_point_cloud,
+    transform_to_target_frame,
 )
 from lightly_studio.services.recording_service.point_cloud_types import PointCloudPayload
 
@@ -85,7 +82,7 @@ def get_point_cloud(  # noqa: PLR0913
         transform_timestamp_ns = (
             capture_time.from_decoded_message(message.decoded_message) or message.log_time_ns
         )
-    transform = _transform_to_target_frame(
+    transform = transform_to_target_frame.transform_to_target_frame(
         reader=reader,
         source_frame_id=source_frame_id,
         target_frame_id=target_frame_id,
@@ -99,27 +96,4 @@ def get_point_cloud(  # noqa: PLR0913
         log_time_ns=message.log_time_ns,
         transform=transform,
         frame_id=target_frame_id,
-    )
-
-
-def _transform_to_target_frame(
-    reader: McapFileReader,
-    source_frame_id: str,
-    target_frame_id: str | None,
-    timestamp_ns: int,
-    static_transforms: Sequence[StaticTransform],
-) -> NDArray[np.float64] | None:
-    """Return the transform from the sensor frame to the target frame at a time.
-
-    Returns `None` if the points stay in the sensor frame, so a recording without
-    transforms can still serve points in their own frame. The static edges come from
-    the database. The dynamic edges are read from the recording at `timestamp_ns`.
-    """
-    if target_frame_id is None or target_frame_id == source_frame_id:
-        return None
-    return reader.get_transform_at(
-        parent_frame_id=target_frame_id,
-        child_frame_id=source_frame_id,
-        timestamp_ns=timestamp_ns,
-        static_transforms=static_transforms,
     )
