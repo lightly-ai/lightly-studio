@@ -341,7 +341,7 @@ the key of a stored server.
     - Without `ImageBytesEmbedder` on the server or locally, image search is not available.
     - Images embed on the server at ingestion only if the server implements
       `ImageBytesEmbedder` and no local embedder registered for the same space embeds
-      images. Annotation crops and video frames still embed locally.
+      images. Annotation crops follow the same rule. Video frames still embed locally.
 
 `register_remote_embedder` raises a `RemoteEmbedderError` from
 `lightly_studio.embed.remote.errors` and stores nothing if the URL is malformed or

@@ -1,20 +1,27 @@
 """Adds the routes that prepare image bytes in this process to a remote embedder.
 
-The import asks for capabilities that do not cross the wire, such as an image path. A
-remote embedder that embeds image bytes gets a route for each of them.
+The import asks for capabilities that do not cross the wire, such as an image path or a
+crop. A remote embedder that embeds image bytes gets a route for each of them.
 """
 
 from __future__ import annotations
 
-from lightly_studio_serve.embedder import Embedder, ImageBytesEmbedder, ImagePathEmbedder
+from lightly_studio_serve.embedder import (
+    Embedder,
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+)
 
 from lightly_studio.embed.remote import composition
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
+from lightly_studio.embed.remote.image_crop_path_adapter import ImageCropPathRoute
 from lightly_studio.embed.remote.image_path_adapter import ImagePathRoute
 
 # Each capability interface with the route that serves it through the image-bytes route
 _LOCAL_ROUTES: tuple[tuple[type[Embedder], type[RemoteEmbedder]], ...] = (
     (ImagePathEmbedder, ImagePathRoute),
+    (ImageCropPathEmbedder, ImageCropPathRoute),
 )
 
 
