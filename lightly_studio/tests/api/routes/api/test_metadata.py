@@ -27,6 +27,7 @@ from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
     create_collection,
+    create_image,
     create_tag,
     fill_db_with_samples_and_embeddings,
 )
@@ -321,6 +322,80 @@ def test_metadata_filter__invalid_in_value_returns_422(test_client: TestClient) 
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["type"] == "metadata_in_value"
+
+
+def test_get_metadata_joint_distribution(test_client: TestClient, db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    for month, year in [("April", 2025), ("April", 2026), ("March", 2025)]:
+        image = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/{month}-{year}.png",
+        )
+        image.sample["month"] = month
+        image.sample["year"] = year
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/joint-distribution",
+        json={"x_key": "month", "y_key": "year", "filters": {"filter_type": "image"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    body = response.json()
+    assert [bucket["value"] for bucket in body["x_axis"]["buckets"]] == ["April", "March"]
+    assert [(bucket["min"], bucket["max"]) for bucket in body["y_axis"]["buckets"]] == [
+        (2025, 2025),
+        (2026, 2026),
+    ]
+    assert body["counts"] == [[1, 1], [1, 0]]
+
+
+def test_get_metadata_joint_distribution__same_key_returns_400(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/joint-distribution",
+        json={"x_key": "month", "y_key": "month"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {
+        "error": "The two axes of a joint distribution must use different metadata keys."
+    }
+
+
+def test_get_metadata_joint_distribution__image_filter_on_video_collection_returns_400(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    resolver = mocker.patch(
+        "lightly_studio.api.routes.api.metadata."
+        "metadata_joint_distribution_resolver.get_metadata_joint_distribution",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/joint-distribution",
+        json={"x_key": "month", "y_key": "year", "filters": {"filter_type": "image"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {"error": "Invalid filter type for video collection."}
+    resolver.assert_not_called()
+
+
+@pytest.mark.parametrize("bin_count", [0, 51])
+def test_get_metadata_joint_distribution__invalid_bin_count(
+    test_client: TestClient, bin_count: int
+) -> None:
+    response = test_client.post(
+        f"/api/collections/{uuid4()}/metadata/joint-distribution",
+        json={"x_key": "month", "y_key": "year", "bin_count": bin_count},
+    )
+    assert response.status_code == 422
 
 
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`

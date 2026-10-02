@@ -33,7 +33,7 @@ _MISSING_VALUE_SENTINEL = "__missing__"
 
 
 @dataclass(frozen=True)
-class _GroupedValueCount:
+class GroupedValueCount:
     """A grouped metadata value and its count."""
 
     value: str | None
@@ -41,10 +41,10 @@ class _GroupedValueCount:
 
 
 @dataclass(frozen=True)
-class _GroupedValueCounts:
+class GroupedValueCounts:
     """Grouped values together with totals for the complete result."""
 
-    values: list[_GroupedValueCount]
+    values: list[GroupedValueCount]
     total_count: int
     missing_count: int
 
@@ -91,7 +91,7 @@ def get_metadata_value_counts(
             filters=filters, metadata_key=key
         )
         value_expr = db_json.json_extract_key_as_text(column=SampleMetadataTable.data, key=key)
-        grouped_counts = _get_top_value_counts(
+        grouped_counts = get_top_value_counts(
             session=session,
             collection_id=collection_id,
             value_expr=value_expr,
@@ -104,37 +104,25 @@ def get_metadata_value_counts(
     return result
 
 
-def _build_value_counts(
-    grouped_counts: _GroupedValueCounts, metadata_type: str
-) -> MetadataValueCountsView:
-    """Append Other and Missing so counts include every sample in scope."""
-    value_counts = [
-        MetadataValueCountView(
-            value=_parse_value(value=row.value, metadata_type=metadata_type), count=row.count
-        )
-        for row in grouped_counts.values
-        if row.value is not None
-    ]
-    total_count = grouped_counts.total_count
-    missing_count = grouped_counts.missing_count
-    other_count = total_count - missing_count - sum(entry.count for entry in value_counts)
-    if other_count > 0:
-        value_counts.append(MetadataValueCountView(value=_OTHER_VALUE_SENTINEL, count=other_count))
-    if missing_count > 0:
-        value_counts.append(
-            MetadataValueCountView(value=_MISSING_VALUE_SENTINEL, count=missing_count)
-        )
-    return MetadataValueCountsView(value_counts=value_counts)
-
-
-def _get_top_value_counts(
+def get_top_value_counts(
     session: Session,
     collection_id: UUID,
     value_expr: ColumnElement[str],
     filters: ImageFilter | VideoFilter | None,
     limit: int | None,
-) -> _GroupedValueCounts:
-    """Return top concrete groups plus totals from the complete grouped result."""
+) -> GroupedValueCounts:
+    """Return top concrete groups plus totals from the complete grouped result.
+
+    Args:
+        session: The database session.
+        collection_id: The collection whose sample metadata is grouped.
+        value_expr: The text expression of the metadata value to group by.
+        filters: Optional image or video filters restricting the counted samples.
+        limit: Maximum number of returned groups. None returns all groups.
+
+    Returns:
+        The most frequent groups first, then the NULL group, with the totals of all groups.
+    """
     count_expr = func.count().label("value_count")
     query = (
         sqlmodel.select(value_expr.label("value"), count_expr)
@@ -162,7 +150,7 @@ def _get_top_value_counts(
         total_count_expr,
         missing_count_expr,
     ).order_by(value.is_(None), count.desc(), value.asc())
-    grouped_values: list[_GroupedValueCount] = []
+    grouped_values: list[GroupedValueCount] = []
     total_count = 0
     missing_count = 0
     for value, count, total, missing in session.execute(totals_query.limit(limit)):
@@ -170,19 +158,51 @@ def _get_top_value_counts(
             total_count = int(total)
             missing_count = int(missing)
         grouped_values.append(
-            _GroupedValueCount(
+            GroupedValueCount(
                 value=str(value) if value is not None else None,
                 count=int(count),
             )
         )
-    return _GroupedValueCounts(
+    return GroupedValueCounts(
         values=grouped_values,
         total_count=total_count,
         missing_count=missing_count,
     )
 
 
-def _parse_value(value: str, metadata_type: str) -> str | bool:
+def parse_value(value: str, metadata_type: str) -> str | bool:
+    """Convert a metadata value read as JSON text back to its categorical type.
+
+    Args:
+        value: The metadata value as JSON text, for example ``"true"`` for a boolean.
+        metadata_type: The metadata type name of the key.
+
+    Returns:
+        A bool for ``boolean`` keys, else the text unchanged.
+    """
     if metadata_type == "boolean":
         return value.lower() == "true"
     return value
+
+
+def _build_value_counts(
+    grouped_counts: GroupedValueCounts, metadata_type: str
+) -> MetadataValueCountsView:
+    """Append Other and Missing so counts include every sample in scope."""
+    value_counts = [
+        MetadataValueCountView(
+            value=parse_value(value=row.value, metadata_type=metadata_type), count=row.count
+        )
+        for row in grouped_counts.values
+        if row.value is not None
+    ]
+    total_count = grouped_counts.total_count
+    missing_count = grouped_counts.missing_count
+    other_count = total_count - missing_count - sum(entry.count for entry in value_counts)
+    if other_count > 0:
+        value_counts.append(MetadataValueCountView(value=_OTHER_VALUE_SENTINEL, count=other_count))
+    if missing_count > 0:
+        value_counts.append(
+            MetadataValueCountView(value=_MISSING_VALUE_SENTINEL, count=missing_count)
+        )
+    return MetadataValueCountsView(value_counts=value_counts)

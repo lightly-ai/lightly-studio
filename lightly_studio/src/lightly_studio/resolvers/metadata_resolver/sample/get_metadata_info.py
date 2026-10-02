@@ -26,7 +26,7 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 _HISTOGRAM_BIN_COUNT = 20
 
 
-class _NumericMetadataStats(NamedTuple):
+class NumericMetadataStats(NamedTuple):
     """Unfiltered numeric metadata statistics used to build a response."""
 
     min_value: float
@@ -55,7 +55,7 @@ def get_metadata_info(
     merged = metadata_helpers.get_merged_schema(session=session, collection_id=collection_id)
 
     numeric_keys = [key for key, kind in merged.items() if kind in NUMERIC_TYPE_NAMES]
-    bounds = _get_metadata_min_max_counts(
+    bounds = get_metadata_min_max_counts(
         session=session, collection_id=collection_id, metadata_keys=numeric_keys
     )
 
@@ -107,7 +107,7 @@ def get_metadata_histograms(
         for key, kind in merged.items()
         if kind in NUMERIC_TYPE_NAMES and (fields is None or key in fields)
     ]
-    bounds = _get_metadata_min_max_counts(
+    bounds = get_metadata_min_max_counts(
         session=session, collection_id=collection_id, metadata_keys=numeric_keys
     )
     histograms: dict[str, HistogramView] = {}
@@ -123,11 +123,11 @@ def get_metadata_histograms(
     return histograms
 
 
-def _get_metadata_min_max_counts(
+def get_metadata_min_max_counts(
     session: Session,
     collection_id: UUID,
     metadata_keys: Sequence[str],
-) -> dict[str, _NumericMetadataStats]:
+) -> dict[str, NumericMetadataStats]:
     """Aggregate min, max, and non-null count for numerical metadata keys.
 
     Args:
@@ -167,11 +167,11 @@ def _get_metadata_min_max_counts(
     )
     row = session.execute(query).mappings().one()
     values = {label: row[label] for labels in aggregate_labels for label in labels}
-    stats: dict[str, _NumericMetadataStats] = {}
+    stats: dict[str, NumericMetadataStats] = {}
     for key, labels in zip(metadata_keys, aggregate_labels):
         count = int(values[labels[2]])
         if count > 0:
-            stats[key] = _NumericMetadataStats(
+            stats[key] = NumericMetadataStats(
                 min_value=float(values[labels[0]]),
                 max_value=float(values[labels[1]]),
                 value_count=count,
@@ -183,7 +183,7 @@ def _compute_histogram(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     metadata_key: str,
-    stats: _NumericMetadataStats,
+    stats: NumericMetadataStats,
     filters: ImageFilter | VideoFilter | None = None,
     bin_count: int = _HISTOGRAM_BIN_COUNT,
 ) -> HistogramView:
@@ -203,7 +203,7 @@ def _compute_histogram(  # noqa: PLR0913
         collection_id: The collection's UUID.
         metadata_key: The metadata key to bin.
         stats: The unfiltered numeric statistics returned by
-            ``_get_metadata_min_max_counts``. The min/max always describe the
+            ``get_metadata_min_max_counts``. The min/max always describe the
             unfiltered domain so the bin edges stay stable while filters change.
         filters: Optional sample filters restricting which values are counted.
         bin_count: Number of equal-width bins.

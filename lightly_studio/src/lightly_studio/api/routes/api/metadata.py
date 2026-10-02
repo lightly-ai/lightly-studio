@@ -18,6 +18,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.metadata import (
     HistogramView,
     MetadataInfoView,
+    MetadataJointDistributionView,
     MetadataValueCountsView,
 )
 from lightly_studio.resolvers import collection_embedding_model_resolver, collection_resolver
@@ -28,6 +29,9 @@ from lightly_studio.resolvers.metadata_resolver.sample import (
 )
 from lightly_studio.resolvers.metadata_resolver.sample import (
     get_metadata_info as metadata_info_resolver,
+)
+from lightly_studio.resolvers.metadata_resolver.sample import (
+    get_metadata_joint_distribution as metadata_joint_distribution_resolver,
 )
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -147,6 +151,58 @@ def get_metadata_value_counts(
         collection_id=collection_id,
         filters=request.filters,
         fields=request.fields,
+        limit=request.limit,
+    )
+
+
+class MetadataJointDistributionRequest(BaseModel):
+    """Request body for computing the joint distribution of two metadata keys."""
+
+    x_key: str = Field(description="Metadata key of the horizontal axis")
+    y_key: str = Field(description="Metadata key of the vertical axis")
+    filters: CollectionFilter | None = Field(None, description="Filter parameters for samples")
+    bin_count: int = Field(
+        metadata_joint_distribution_resolver.DEFAULT_JOINT_BIN_COUNT,
+        ge=1,
+        le=50,
+        description="Maximum number of buckets of a numeric axis",
+    )
+    limit: int = Field(
+        metadata_joint_distribution_resolver.DEFAULT_JOINT_VALUE_LIMIT,
+        ge=1,
+        le=50,
+        description="Maximum number of value buckets of a categorical axis",
+    )
+
+
+@metadata_router.post("/metadata/joint-distribution", response_model=MetadataJointDistributionView)
+def get_metadata_joint_distribution(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    request: MetadataJointDistributionRequest,
+) -> MetadataJointDistributionView:
+    """Count the samples for each pair of buckets of two metadata keys.
+
+    The axes span the full (unfiltered) collection so they stay stable; the counts
+    reflect the given filters. The metadata filters of both keys are excluded from
+    the counts (faceted-search behavior).
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection.
+        request: Request body with the two keys, the sample filters and the bucket limits.
+
+    Returns:
+        The two axes and the sample count of each bucket pair.
+    """
+    _validate_filter_type(session=session, collection_id=collection_id, filters=request.filters)
+    return metadata_joint_distribution_resolver.get_metadata_joint_distribution(
+        session=session,
+        collection_id=collection_id,
+        x_key=request.x_key,
+        y_key=request.y_key,
+        filters=request.filters,
+        bin_count=request.bin_count,
         limit=request.limit,
     )
 

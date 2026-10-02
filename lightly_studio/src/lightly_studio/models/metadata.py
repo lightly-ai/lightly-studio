@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
@@ -237,6 +237,43 @@ class MetadataValueCountsView(BaseModel):
 
     value_counts: list[MetadataValueCountView] = Field(
         description="Top concrete values, then the __other__ and __missing__ aggregates"
+    )
+
+
+class MetadataJointAxisBucketView(BaseModel):
+    """One bucket on an axis of a joint metadata distribution.
+
+    Attributes:
+        kind: ``value`` for one categorical value, ``range`` for a numeric range,
+            ``other`` for the less frequent categorical values, and ``missing`` for
+            samples without a categorical value.
+        value: The categorical value. Set only for ``value`` buckets.
+        min: The lower bound of a ``range`` bucket.
+        max: The upper bound of a ``range`` bucket. Integer buckets include both
+            bounds. Float buckets cover ``[min, max)``, the last one includes ``max``.
+    """
+
+    kind: Literal["value", "range", "other", "missing"] = Field(description="Bucket kind")
+    value: str | bool | None = Field(None, description="Categorical value of a value bucket")
+    min: float | None = Field(None, description="Lower bound of a range bucket")
+    max: float | None = Field(None, description="Upper bound of a range bucket")
+
+
+class MetadataJointAxisView(BaseModel):
+    """One axis of a joint metadata distribution."""
+
+    key: str = Field(description="The metadata key on this axis")
+    type: str = Field(description="The metadata type of the key")
+    buckets: list[MetadataJointAxisBucketView] = Field(description="The buckets in axis order")
+
+
+class MetadataJointDistributionView(BaseModel):
+    """Sample counts for each pair of buckets of two metadata keys."""
+
+    x_axis: MetadataJointAxisView = Field(description="The horizontal axis")
+    y_axis: MetadataJointAxisView = Field(description="The vertical axis")
+    counts: list[list[int]] = Field(
+        description="Sample counts, indexed as counts[y_bucket_index][x_bucket_index]"
     )
 
 
