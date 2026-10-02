@@ -8,9 +8,10 @@
 
     interface Props {
         onDownloadClick?: () => void;
+        onExportTriggered?: (success: boolean) => void;
     }
 
-    let { onDownloadClick }: Props = $props();
+    let { onDownloadClick, onExportTriggered }: Props = $props();
 
     const collectionId = page.params.collection_id!;
     const { videoFilter } = useVideoFilters();
@@ -36,9 +37,10 @@
     <ExportDownloadButton
         isLoading={$isLoading}
         errorMessage={$errorMessage}
-        onclick={() => {
+        onclick={async () => {
             onDownloadClick?.();
-            handleDownload();
+            const success = await handleDownload();
+            onExportTriggered?.(success);
         }}
         testId="submit-button-youtube-vis-instance-segmentations"
     />

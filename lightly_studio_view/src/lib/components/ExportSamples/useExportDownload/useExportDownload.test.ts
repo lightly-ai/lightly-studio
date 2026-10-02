@@ -22,10 +22,10 @@ describe('triggerDownload', () => {
 describe('useExportDownload', () => {
     beforeEach(vi.resetAllMocks);
 
-    it('calls prepare when handleDownload is called', async () => {
+    it('calls prepare when handleDownload is called and returns true on success', async () => {
         const prepare = vi.fn().mockResolvedValue(undefined);
         const { handleDownload } = useExportDownload(prepare);
-        await handleDownload();
+        expect(await handleDownload()).toBe(true);
         expect(prepare).toHaveBeenCalledOnce();
     });
 
@@ -45,10 +45,10 @@ describe('useExportDownload', () => {
         expect(get(isLoading)).toBe(false);
     });
 
-    it('sets errorMessage when prepare throws', async () => {
+    it('sets errorMessage and returns false when prepare throws', async () => {
         const prepare = vi.fn().mockRejectedValue(new Error('API error'));
         const { errorMessage, handleDownload } = useExportDownload(prepare);
-        await handleDownload();
+        expect(await handleDownload()).toBe(false);
         expect(get(errorMessage)).toBe('Export failed: Error: API error');
     });
 

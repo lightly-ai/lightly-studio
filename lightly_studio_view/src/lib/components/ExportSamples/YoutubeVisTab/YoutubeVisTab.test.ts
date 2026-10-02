@@ -52,7 +52,8 @@ describe('YoutubeVisTab', () => {
         mocks.exportCollectionYoutubeVisPrepare.mockResolvedValue({
             data: { export_key: 'key123' }
         });
-        render(YoutubeVisTab);
+        const onExportTriggered = vi.fn();
+        render(YoutubeVisTab, { props: { onExportTriggered } });
         await fireEvent.click(
             screen.getByTestId('submit-button-youtube-vis-instance-segmentations')
         );
@@ -64,6 +65,7 @@ describe('YoutubeVisTab', () => {
             expect(mocks.triggerDownload).toHaveBeenCalledWith(
                 expect.stringContaining('/export/download/key123')
             );
+            expect(onExportTriggered).toHaveBeenCalledWith(true);
         });
     });
 
@@ -94,12 +96,14 @@ describe('YoutubeVisTab', () => {
 
     it('shows an error message when the API fails', async () => {
         mocks.exportCollectionYoutubeVisPrepare.mockRejectedValue(new Error('Network error'));
-        render(YoutubeVisTab);
+        const onExportTriggered = vi.fn();
+        render(YoutubeVisTab, { props: { onExportTriggered } });
         await fireEvent.click(
             screen.getByTestId('submit-button-youtube-vis-instance-segmentations')
         );
         await waitFor(() => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
+            expect(onExportTriggered).toHaveBeenCalledWith(false);
         });
     });
 
