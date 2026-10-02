@@ -15,6 +15,7 @@ from uuid import UUID
 
 import numpy as np
 from lightly_studio_serve.embedder import (
+    Capability,
     Embedder,
     ImageBytesEmbedder,
     ImageCropPathEmbedder,
@@ -183,9 +184,10 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
     """Embed the crops of an annotation collection and store the result.
 
     When the collection has a default embedding model, its space selects the embedder.
-    Otherwise the registry's default crop embedder is used and registered as the
-    collection's default. Does nothing (and logs a warning) if no crop embedder is
-    available.
+    Otherwise, if no embedder is registered for crops and the default model of the parent
+    collection stores a server, that model becomes the collection's default. Else the
+    registry's default crop embedder is used and registered as the collection's default.
+    Does nothing (and logs a warning) if no crop embedder is available.
 
     Args:
         session: Database session for resolver operations.
@@ -195,6 +197,7 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
         session=session,
         collection_id=annotation_collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_crop_path_embedder,
+        inherit_parent_space_for=Capability.IMAGE_CROP_PATH,
     )
     if default_embedder_and_model_id is None:
         return
@@ -278,9 +281,10 @@ def embed_frame_samples(
     """Embed the frames of a single video and store the result.
 
     When the collection has a default embedding model, its space selects the embedder.
-    Otherwise the registry's default PIL embedder is used and registered as the
-    collection's default. Does nothing (and logs a warning) if no PIL embedder is
-    available.
+    Otherwise, if no embedder is registered for frames and the default model of the parent
+    collection stores a server, that model becomes the collection's default. Else the
+    registry's default PIL embedder is used and registered as the collection's default.
+    Does nothing (and logs a warning) if no PIL embedder is available.
 
     Args:
         session: Database session for resolver operations.
@@ -302,6 +306,7 @@ def embed_frame_samples(
         session=session,
         collection_id=collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
+        inherit_parent_space_for=Capability.IMAGE_PIL,
     )
     if default_embedder_and_model_id is None:
         return
@@ -340,6 +345,7 @@ def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
             session=session,
             collection_id=collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
+            inherit_parent_space_for=Capability.IMAGE_PIL,
         )
         is not None
     )

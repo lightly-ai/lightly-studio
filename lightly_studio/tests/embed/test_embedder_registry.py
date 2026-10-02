@@ -547,6 +547,22 @@ class TestEmbedderRegistry:
         assert registry.get_image_path_embedder(space_key="mobileclip_s0") is builtin
         assert registry.get_image_path_embedder() is custom
 
+    def test_is_bootstrap_registered(self) -> None:
+        registry = EmbedderRegistry()
+        assert registry.is_bootstrap_registered(capability=Capability.IMAGE_PATH) is False
+
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"))
+
+        assert registry.is_bootstrap_registered(capability=Capability.IMAGE_PATH) is True
+        assert registry.is_bootstrap_registered(capability=Capability.TEXT) is False
+
+    def test_is_bootstrap_registered__empty_bootstrap_set(self) -> None:
+        registry = EmbedderRegistry()
+
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"), bootstrap_for=set())
+
+        assert registry.is_bootstrap_registered(capability=Capability.IMAGE_PATH) is False
+
     def test_is_remote_unavailable__after_failure(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()
         mocker.patch.object(
