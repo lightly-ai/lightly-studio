@@ -98,7 +98,7 @@ class TestRecording:
                     child_frame_id="lidar",
                     translation=(1.0, 2.0, 3.0),
                     rotation=(0.0, 0.0, 0.6, 0.8),
-                    log_time_ns=900,
+                    timestamp_ns=900,
                 )
             ]
         )
