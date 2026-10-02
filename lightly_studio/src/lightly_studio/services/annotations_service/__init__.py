@@ -6,6 +6,9 @@ from lightly_studio.services.annotations_service.create_annotation import (
 from lightly_studio.services.annotations_service.delete_annotation import (
     delete_annotation,
 )
+from lightly_studio.services.annotations_service.delete_annotations import (
+    delete_annotations,
+)
 from lightly_studio.services.annotations_service.get_annotation_by_id import (
     get_annotation_by_id,
 )
@@ -31,6 +34,7 @@ from lightly_studio.services.annotations_service.update_temporal_span import (
 __all__ = [
     "create_annotation",
     "delete_annotation",
+    "delete_annotations",
     "get_annotation_by_id",
     "update_annotation",
     "update_annotation_bounding_box",

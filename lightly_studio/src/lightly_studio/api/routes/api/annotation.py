@@ -51,6 +51,7 @@ annotations_router = APIRouter(prefix="/collections/{collection_id}", tags=["ann
 annotations_router.include_router(annotations_module.create_annotation_router)
 annotations_router.include_router(annotations_module.bulk_create_classifications_router)
 annotations_router.include_router(annotations_module.annotation_metrics_info_router)
+annotations_router.include_router(annotations_module.delete_annotations_router)
 
 
 @annotations_router.get(

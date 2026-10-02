@@ -11,6 +11,9 @@ from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
 from lightly_studio.resolvers.annotation_resolver.delete_annotations import (
     delete_annotations,
 )
+from lightly_studio.resolvers.annotation_resolver.delete_annotations_by_ids import (
+    delete_annotations_by_ids,
+)
 from lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations import (
     get_adjacent_annotations,
 )
@@ -74,6 +77,7 @@ __all__ = [
     "create_many",
     "delete_annotation",
     "delete_annotations",
+    "delete_annotations_by_ids",
     "get_adjacent_annotations",
     "get_all",
     "get_all_by_collection_id_and_parent_sample_ids",
