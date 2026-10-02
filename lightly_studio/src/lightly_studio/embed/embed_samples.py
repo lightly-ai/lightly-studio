@@ -197,7 +197,7 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
         session=session,
         collection_id=annotation_collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_crop_path_embedder,
-        capability=Capability.IMAGE_CROP_PATH,
+        inherit_parent_space_for=Capability.IMAGE_CROP_PATH,
     )
     if default_embedder_and_model_id is None:
         return
@@ -306,7 +306,7 @@ def embed_frame_samples(
         session=session,
         collection_id=collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
-        capability=Capability.IMAGE_PIL,
+        inherit_parent_space_for=Capability.IMAGE_PIL,
     )
     if default_embedder_and_model_id is None:
         return
@@ -345,7 +345,7 @@ def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
             session=session,
             collection_id=collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
-            capability=Capability.IMAGE_PIL,
+            inherit_parent_space_for=Capability.IMAGE_PIL,
         )
         is not None
     )

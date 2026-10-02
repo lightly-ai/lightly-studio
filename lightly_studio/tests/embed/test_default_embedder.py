@@ -206,7 +206,7 @@ def test_resolve_default_embedder__parent_model_without_server_uses_bootstrap(
         session=db_session,
         collection_id=child.collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_crop_path_embedder,
-        capability=Capability.IMAGE_CROP_PATH,
+        inherit_parent_space_for=Capability.IMAGE_CROP_PATH,
     )
 
     # The parent model stores no server, so the child gets the bootstrap embedder
@@ -234,7 +234,7 @@ def test_resolve_default_embedder__unusable_parent_server_skips(
             session=db_session,
             collection_id=child.collection_id,
             get_embedder_fn=EmbedderRegistry.get_image_crop_path_embedder,
-            capability=Capability.IMAGE_CROP_PATH,
+            inherit_parent_space_for=Capability.IMAGE_CROP_PATH,
         )
 
     assert result is None

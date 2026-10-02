@@ -37,7 +37,7 @@ def resolve_default_embedder(
     get_embedder_fn: Callable[
         [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
     ],
-    capability: Capability | None = None,
+    inherit_parent_space_for: Capability | None = None,
 ) -> tuple[_EmbedderT, UUID] | None:
     """Resolve the embedder and model id an embed function should use, or None to skip.
 
@@ -47,9 +47,9 @@ def resolve_default_embedder(
     - The collection has a default model in the DB: its embedding space selects the embedder.
     - The collection has no default in the DB yet, and its parent collection has a default
       model that stores a server: that model becomes the collection's default. This applies
-      only if the caller gives ``capability`` and no registration set the bootstrap space of
-      ``capability``. Thus crops and frames that a later process adds use the server of
-      their parent.
+      only if the caller gives ``inherit_parent_space_for`` and no registration set the
+      bootstrap space of that capability. Thus crops and frames that a later process adds
+      use the server of their parent.
     - Else: the registry's bootstrap embedder is used and registered as the collection's
       default. The model stores the server of an embedder that names one, see
       ``PersistableEmbedder``.
@@ -64,8 +64,9 @@ def resolve_default_embedder(
         get_embedder_fn: The typed getter of the needed capability. It takes the registry, the
             space key (None for the capability's bootstrap space) and the stored
             configuration of that space (None when there is none).
-        capability: The capability of ``get_embedder_fn``. Give it to let a collection
-            without a default model take the server of its parent. None disables this.
+        inherit_parent_space_for: Give it to let a collection without a default model
+            take the embedding space of its parent, see above. It is the capability of
+            ``get_embedder_fn``. None, the default, never takes the space of the parent.
 
     Returns:
         The embedder and the model id to store embeddings under, or None to skip.
@@ -87,7 +88,9 @@ def resolve_default_embedder(
         return embedder, default_model.embedding_model_id
 
     parent_model = _parent_server_model(
-        session=session, collection_id=collection_id, capability=capability
+        session=session,
+        collection_id=collection_id,
+        inherit_parent_space_for=inherit_parent_space_for,
     )
     if parent_model is not None:
         return _resolve_from_parent(
@@ -234,15 +237,15 @@ def _resolve_from_parent(
 
 
 def _parent_server_model(
-    session: Session, collection_id: UUID, capability: Capability | None
+    session: Session, collection_id: UUID, inherit_parent_space_for: Capability | None
 ) -> EmbeddingModelTable | None:
     """Give the default model of the parent collection if the collection can take it.
 
-    The collection can take it if ``capability`` is given, no registration set the
-    bootstrap space of ``capability``, and the model stores a server.
+    The collection can take it if ``inherit_parent_space_for`` is given, no registration
+    set the bootstrap space of that capability, and the model stores a server.
     """
-    if capability is None or embedder_registry.get_registry().is_bootstrap_registered(
-        capability=capability
+    if inherit_parent_space_for is None or embedder_registry.get_registry().is_bootstrap_registered(
+        capability=inherit_parent_space_for
     ):
         return None
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
