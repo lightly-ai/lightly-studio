@@ -26,15 +26,15 @@ const tickDetails: TickDetailView = {
     recording_id: 'recording-1',
     seq_number: 0,
     timestamp_ns: 1000,
-    channels: {
-        // Video channel with a keyframe locator: renders, seeking to the keyframe.
+    camera_channels: {
+        // Camera channel with a keyframe locator: renders, seeking to the keyframe.
         front: {
             channel_id: 1,
             group_component_name: 'front',
             log_time_ns: '2000',
             keyframe_log_time_ns: '1500'
         },
-        // Non-video channel has no keyframe locator, so its tile is skipped.
+        // Camera channel with no keyframe locator, so its tile is skipped.
         rear: {
             channel_id: 2,
             group_component_name: 'rear',
@@ -42,6 +42,7 @@ const tickDetails: TickDetailView = {
             keyframe_log_time_ns: null
         }
     },
+    lidar_channels: {},
     annotations: []
 };
 

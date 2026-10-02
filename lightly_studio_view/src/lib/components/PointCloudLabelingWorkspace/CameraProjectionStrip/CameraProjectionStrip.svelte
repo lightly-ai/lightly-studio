@@ -26,7 +26,7 @@
     });
     const recordingId = $derived(tickDetails.data?.recording_id);
     const cameraChannels: TickChannelView[] = $derived(
-        tickDetails.data?.channels ? Object.values(tickDetails.data?.channels) : []
+        tickDetails.data?.camera_channels ? Object.values(tickDetails.data.camera_channels) : []
     );
 </script>
 

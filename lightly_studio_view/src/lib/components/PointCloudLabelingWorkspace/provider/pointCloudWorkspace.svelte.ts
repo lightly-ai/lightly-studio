@@ -44,7 +44,7 @@ function getChannelLocators(
                 selectedChannels === undefined || selectedChannels.includes(channel.channel_id)
         )
         .flatMap((channel) => {
-            const locator = details.channels[channel.group_component_name];
+            const locator = details.lidar_channels[channel.group_component_name];
             return locator
                 ? [{ channelId: locator.channel_id, timestampNs: locator.log_time_ns }]
                 : [];

@@ -61,6 +61,7 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
 vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
     useMcapSequenceTicks: () => ({ ticks: ticksState, refetch: ticksRefetch })
 }));
+
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
         query: {
@@ -223,7 +224,7 @@ describe('PointCloudWorkspace', () => {
         summaryState.data = summaryWithChannels;
         tickDetailsState.data = {
             recording_id: 'rec-1',
-            channels: { lidar: { channel_id: 1, log_time_ns: '10' } }
+            lidar_channels: { lidar: { channel_id: 1, log_time_ns: '10' } }
         };
 
         createWorkspace().retry();
@@ -238,7 +239,7 @@ describe('PointCloudWorkspace', () => {
         summaryState.data = summaryWithChannels;
         tickDetailsState.data = {
             recording_id: 'rec-1',
-            channels: { lidar: { channel_id: 1, log_time_ns: '10' } }
+            lidar_channels: { lidar: { channel_id: 1, log_time_ns: '10' } }
         };
         const workspace = new PointCloudWorkspace(() => ({
             datasetId: 'dataset-1',

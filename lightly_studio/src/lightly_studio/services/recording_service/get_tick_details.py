@@ -12,6 +12,7 @@ from sqlmodel import Session
 from lightly_studio.core.mcap import transforms
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.models.annotation.annotation_base import AnnotationView
+from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.mcap_sequence_ticks import TickChannelView, TickDetailView
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -78,6 +79,14 @@ def get_tick_details(
         return None
 
     channel_mcaps = mcap_resolver.get_tick_channels(session=session, group_sample_id=link.sample_id)
+    camera_channels: dict[str, TickChannelView] = {}
+    lidar_channels: dict[str, TickChannelView] = {}
+    for name, (mcap, data_type) in channel_mcaps.items():
+        channel = TickChannelView.from_mcap_table(mcap=mcap, group_component_name=name)
+        if data_type is McapDataType.POINT_CLOUD:
+            lidar_channels[name] = channel
+        elif data_type is McapDataType.VIDEO_FRAME:
+            camera_channels[name] = channel
     annotations = [
         AnnotationView.from_annotation_table(annotation=annotation)
         for annotation in annotation_resolver.get_all_by_parent_sample_ids(
@@ -96,10 +105,8 @@ def get_tick_details(
         recording_id=mcap_sequence.recording_id,
         seq_number=link.seq_number,
         timestamp_ns=link.timestamp_ns,
-        channels={
-            name: TickChannelView.from_mcap_table(mcap=mcap, group_component_name=name)
-            for name, mcap in channel_mcaps.items()
-        },
+        camera_channels=camera_channels,
+        lidar_channels=lidar_channels,
         annotations=annotations,
     )
 
