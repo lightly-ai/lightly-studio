@@ -17,6 +17,8 @@
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import { buildDistributionSources } from '../distributionSources';
+    import MetadataJointDistribution from '../MetadataJointDistribution/MetadataJointDistribution.svelte';
+    import { selectJointMetadataKeys } from '../MetadataJointDistribution/jointSelection';
     import {
         selectHistogramRange,
         toCategoryCounts,
@@ -380,10 +382,18 @@
         })
     );
 
+    // The joint distribution needs two metadata fields, one for each axis.
+    const jointDistributionSource = $derived<DistributionSource | null>(
+        selectJointMetadataKeys($metadataInfo).length >= 2
+            ? { id: 'metadata-2d', label: 'Metadata 2D', content: jointDistribution }
+            : null
+    );
+
     const distributionSources = $derived<DistributionSource[]>(
         buildDistributionSources({
             classSource: classDistributionSource,
             metadataSource: metadataDistributionSource,
+            jointSource: jointDistributionSource,
             hasAnnotationClasses
         })
     );
@@ -416,6 +426,10 @@
         });
     };
 </script>
+
+{#snippet jointDistribution()}
+    <MetadataJointDistribution {collectionId} {filter} />
+{/snippet}
 
 <DatasetDistributionPanel
     sources={distributionSources}

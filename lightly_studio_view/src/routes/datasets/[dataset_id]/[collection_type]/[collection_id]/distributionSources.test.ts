@@ -28,4 +28,25 @@ describe('buildDistributionSources', () => {
             })
         ).toEqual([classSource]);
     });
+
+    it('adds the joint metadata source after the metadata source, with or without classes', () => {
+        const jointSource: DistributionSource = { id: 'metadata-2d', label: 'Metadata 2D' };
+
+        expect(
+            buildDistributionSources({
+                classSource,
+                metadataSource,
+                jointSource,
+                hasAnnotationClasses: true
+            })
+        ).toEqual([classSource, metadataSource, jointSource]);
+        expect(
+            buildDistributionSources({
+                classSource,
+                metadataSource,
+                jointSource,
+                hasAnnotationClasses: false
+            })
+        ).toEqual([metadataSource, jointSource]);
+    });
 });

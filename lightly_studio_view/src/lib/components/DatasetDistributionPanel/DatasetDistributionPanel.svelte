@@ -474,7 +474,9 @@
             </p>
         {/if}
     {/if}
-    {#if activeHistogram}
+    {#if activeSource.content}
+        {@render activeSource.content()}
+    {:else if activeHistogram}
         <HistogramToolbar
             histogram={activeHistogram}
             {histogramTotal}
@@ -553,68 +555,72 @@
             />
         </div>
     {/if}
-    <DistributionPlotContainer loading={plotLoading}>
-        <div
-            class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
-            bind:clientHeight={chartHeight}
-            bind:clientWidth
-        >
-            {#if activeHistogram}
-                <Histogram
-                    data={activeHistogram}
-                    series={activeHistogramSeries}
-                    selectedRange={activeHistogramRange}
-                    heightPx={chartHeight || 240}
-                    showAxes
-                    valueMode={activeHistogramValueMode}
-                    onRangeSelect={onHistogramRangeSelect ? handleHistogramRangeSelect : undefined}
-                />
-            {:else if activeCategorical?.error && activeCategorical.buckets.length === 0}
-                <div class="space-y-2 p-8 text-center text-sm" role="alert">
-                    <p class="text-destructive">Could not load metadata distribution.</p>
-                    {#if onCategoricalRetry}
-                        <Button
-                            variant="secondary"
-                            buttonProps={{
-                                size: 'sm',
-                                class: 'max-sm:min-h-11',
-                                onclick: onCategoricalRetry,
-                                'data-testid': 'metadata-categorical-retry'
-                            }}>Retry</Button
-                        >
+    {#if !activeSource.content}
+        <DistributionPlotContainer loading={plotLoading}>
+            <div
+                class="min-h-0 flex-1 overflow-y-auto dark:[color-scheme:dark]"
+                bind:clientHeight={chartHeight}
+                bind:clientWidth
+            >
+                {#if activeHistogram}
+                    <Histogram
+                        data={activeHistogram}
+                        series={activeHistogramSeries}
+                        selectedRange={activeHistogramRange}
+                        heightPx={chartHeight || 240}
+                        showAxes
+                        valueMode={activeHistogramValueMode}
+                        onRangeSelect={onHistogramRangeSelect
+                            ? handleHistogramRangeSelect
+                            : undefined}
+                    />
+                {:else if activeCategorical?.error && activeCategorical.buckets.length === 0}
+                    <div class="space-y-2 p-8 text-center text-sm" role="alert">
+                        <p class="text-destructive">Could not load metadata distribution.</p>
+                        {#if onCategoricalRetry}
+                            <Button
+                                variant="secondary"
+                                buttonProps={{
+                                    size: 'sm',
+                                    class: 'max-sm:min-h-11',
+                                    onclick: onCategoricalRetry,
+                                    'data-testid': 'metadata-categorical-retry'
+                                }}>Retry</Button
+                            >
+                        {/if}
+                    </div>
+                {:else if !plotLoading || activeData.length > 0}
+                    {#if activeCategorical}
+                        <ul class="sr-only" aria-label="Categorical metadata value counts">
+                            {#each activeCategorical.buckets as bucket (bucket.id)}
+                                <li>
+                                    {bucket.label}: {bucket.count} samples{bucket.kind === 'other'
+                                        ? ', aggregated and not selectable'
+                                        : activeCategorical.selectedValues.some((value) =>
+                                                Object.is(value, bucket.value)
+                                            )
+                                          ? ', selected'
+                                          : ''}
+                                </li>
+                            {/each}
+                        </ul>
                     {/if}
-                </div>
-            {:else if !plotLoading || activeData.length > 0}
-                {#if activeCategorical}
-                    <ul class="sr-only" aria-label="Categorical metadata value counts">
-                        {#each activeCategorical.buckets as bucket (bucket.id)}
-                            <li>
-                                {bucket.label}: {bucket.count} samples{bucket.kind === 'other'
-                                    ? ', aggregated and not selectable'
-                                    : activeCategorical.selectedValues.some((value) =>
-                                            Object.is(value, bucket.value)
-                                        )
-                                      ? ', selected'
-                                      : ''}
-                            </li>
-                        {/each}
-                    </ul>
+                    <BarChart
+                        data={visible}
+                        orientation={activeViewConfig.orientation}
+                        maxHeightPx={chartHeight || undefined}
+                        maxWidthPx={clientWidth || undefined}
+                        {totalCount}
+                        series={visibleSeries}
+                        valueMode={activeViewConfig.valueMode}
+                        onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
+                        emptyState={activeCategorical ? categoricalEmptyState : undefined}
+                        gridTopPx={4}
+                    />
                 {/if}
-                <BarChart
-                    data={visible}
-                    orientation={activeViewConfig.orientation}
-                    maxHeightPx={chartHeight || undefined}
-                    maxWidthPx={clientWidth || undefined}
-                    {totalCount}
-                    series={visibleSeries}
-                    valueMode={activeViewConfig.valueMode}
-                    onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
-                    emptyState={activeCategorical ? categoricalEmptyState : undefined}
-                    gridTopPx={4}
-                />
-            {/if}
-        </div>
-    </DistributionPlotContainer>
+            </div>
+        </DistributionPlotContainer>
+    {/if}
 </div>
 {#if !activeHistogram}
     <DistributionConfigDialog

@@ -1,3 +1,4 @@
+import type { Snippet } from 'svelte';
 import type { CategoryCount } from '$lib/components/BarChart';
 import type { BarChartValueMode } from '$lib/components/BarChart/buildEchartsOption';
 import type { ClassSetSelection } from '$lib/components/ClassSetConfig';
@@ -146,6 +147,12 @@ export interface DistributionSource {
     valueNoun?: string;
     /** Optional label for the sub-group picker (e.g. 'Metadata key'). */
     groupLabel?: string;
+    /**
+     * Custom content that replaces the chart and its controls, for a source with its
+     * own view such as the joint metadata distribution. The panel shows it only after
+     * the user selects the source.
+     */
+    content?: Snippet;
 }
 
 /** User-configurable view options for the distribution panel. */

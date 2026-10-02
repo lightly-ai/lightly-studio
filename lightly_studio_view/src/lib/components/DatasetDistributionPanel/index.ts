@@ -1,4 +1,5 @@
 export { default as DatasetDistributionPanel } from './DatasetDistributionPanel.svelte';
+export { default as DistributionPlotContainer } from './DistributionPlotContainer/DistributionPlotContainer.svelte';
 export {
     buildCategoricalComparisonBuckets,
     buildCategoricalComparisonSeries

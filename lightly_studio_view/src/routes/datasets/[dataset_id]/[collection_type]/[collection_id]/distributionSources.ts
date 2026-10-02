@@ -11,6 +11,8 @@ interface BuildDistributionSourcesParams {
      * and not just because the current filters happen to hide every class.
      */
     hasAnnotationClasses: boolean;
+    /** The joint metadata source, or null when the dataset has fewer than two metadata fields. */
+    jointSource?: DistributionSource | null;
 }
 
 /**
@@ -22,8 +24,12 @@ interface BuildDistributionSourcesParams {
 export function buildDistributionSources({
     classSource,
     metadataSource,
-    hasAnnotationClasses
+    hasAnnotationClasses,
+    jointSource = null
 }: BuildDistributionSourcesParams): DistributionSource[] {
-    if (!hasAnnotationClasses && metadataSource) return [metadataSource];
-    return metadataSource ? [classSource, metadataSource] : [classSource];
+    const metadataSources = [metadataSource, jointSource].filter(
+        (source): source is DistributionSource => source !== null
+    );
+    if (!hasAnnotationClasses && metadataSources.length > 0) return metadataSources;
+    return [classSource, ...metadataSources];
 }
