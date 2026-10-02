@@ -175,6 +175,7 @@
                                 {datasetId}
                                 {sequenceId}
                                 seqNumber={workspace.currentTick}
+                                targetFrameId={workspace.referenceFrameId}
                             />
                         </Pane>
                         <PaneResizer

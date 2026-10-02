@@ -5,15 +5,17 @@
         datasetId: string;
         sequenceId: string;
         seqNumber: number;
+        targetFrameId?: string;
         onReady: (result: ReturnType<typeof useTickDetails>) => void;
     }
 
-    let { datasetId, sequenceId, seqNumber, onReady }: Props = $props();
+    let { datasetId, sequenceId, seqNumber, targetFrameId, onReady }: Props = $props();
 
     const result = useTickDetails({
         getDatasetId: () => datasetId,
         getSequenceId: () => sequenceId,
-        getSeqNumber: () => seqNumber
+        getSeqNumber: () => seqNumber,
+        getTargetFrameId: () => targetFrameId
     });
 
     $effect(() => {
