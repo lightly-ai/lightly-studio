@@ -3,6 +3,7 @@
 import io
 import struct
 
+import numpy as np
 import pyarrow as pa
 import pytest
 from pyarrow import ipc
@@ -83,6 +84,35 @@ def test_serialize_point_cloud(is_bigendian: bool) -> None:
     assert metadata[b"topic"] == b"/points"
     assert metadata[b"log_time_ns"] == b"123"
     assert metadata[b"frame_id"] == b"map"
+
+
+def test_serialize_point_cloud__transform() -> None:
+    message = _message(data=struct.pack("<fff", 1.0, 2.0, 3.0), fields=_xyz_fields())
+    # Rotates by 90 degrees around the z axis, then moves by 10 m along x.
+    transform = np.array(
+        [
+            [0.0, -1.0, 0.0, 10.0],
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+
+    payload = serialize_point_cloud.serialize_point_cloud(
+        message=message,
+        channel_id=0,
+        topic="/points",
+        log_time_ns=0,
+        transform=transform,
+        frame_id="world",
+    )
+
+    table = _read_table(payload=payload)
+    assert table.column("x").to_pylist() == [8.0]
+    assert table.column("y").to_pylist() == [1.0]
+    assert table.column("z").to_pylist() == [3.0]
+    assert pa.types.is_float32(table.schema.field("x").type)
+    assert table.schema.metadata[b"frame_id"] == b"world"
 
 
 def test_serialize_point_cloud__propagates_invalid_message() -> None:
