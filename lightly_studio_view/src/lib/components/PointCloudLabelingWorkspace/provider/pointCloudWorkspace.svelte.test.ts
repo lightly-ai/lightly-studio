@@ -44,9 +44,12 @@ const {
     tickRefetch: vi.fn(),
     cloudRefetch: vi.fn()
 }));
-const { cloudState } = vi.hoisted(() => ({
+const { cloudState, tickDetailsParams } = vi.hoisted(() => ({
     cloudState: { data: undefined } as {
         data: { channels: Array<{ frameId: string }> } | undefined;
+    },
+    tickDetailsParams: { getTargetFrameId: undefined } as {
+        getTargetFrameId?: () => string | undefined;
     }
 }));
 
@@ -54,9 +57,10 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     useMcapSequenceSummary: () => ({ summary: summaryState, refetch })
 }));
 vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
-    useTickDetails: () => ({
-        tickDetails: { ...tickDetailsState, refetch: tickRefetch }
-    })
+    useTickDetails: (params: { getTargetFrameId?: () => string | undefined }) => {
+        tickDetailsParams.getTargetFrameId = params.getTargetFrameId;
+        return { tickDetails: { ...tickDetailsState, refetch: tickRefetch } };
+    }
 }));
 vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
     useMcapSequenceTicks: () => ({ ticks: ticksState, refetch: ticksRefetch })
@@ -123,6 +127,18 @@ describe('PointCloudWorkspace', () => {
 
         workspace.selectReferenceFrame('odom');
         expect(workspace.referenceFrameId).toBe('CABIN');
+    });
+
+    it('requests the tick details in the selected reference frame', () => {
+        createWorkspace();
+        expect(tickDetailsParams.getTargetFrameId?.()).toBeUndefined();
+
+        summaryState.data = summaryWithFrames;
+        const workspace = createWorkspace();
+        expect(tickDetailsParams.getTargetFrameId?.()).toBe('map');
+
+        workspace.selectReferenceFrame('CABIN');
+        expect(tickDetailsParams.getTargetFrameId?.()).toBe('CABIN');
     });
 
     it('resets the picked reference frame when the sequence changes', () => {
