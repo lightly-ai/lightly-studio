@@ -312,7 +312,7 @@ export-version:
 .PHONY: start-example
 start-example:
 	@echo "Starting server..."
-	uv run src/lightly_studio/examples/example.py
+	uv run src/lightly_studio/examples/example_metadata.py
 
 # Runs the MCAP sequence-indexing example from S3: uploads FLOCI_MCAP_FILES (see top of
 # this Makefile) to the local Floci S3 emulator, then points the example at the

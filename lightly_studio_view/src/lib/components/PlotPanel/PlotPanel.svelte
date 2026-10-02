@@ -2,6 +2,10 @@
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
+    import { Input } from '$lib/components/ui/input';
+    import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+    import { Checkbox } from '$lib/components/ui/checkbox';
+    import { ArrowLeft, ArrowRight } from '@lucide/svelte';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
@@ -41,9 +45,9 @@
     import { page } from '$app/state';
     import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable, get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
@@ -135,11 +139,102 @@
         annotationLabels
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
+    // LIG-9502 prototype: natural-language axes (Variant A) and PCA over active labels (Variant B).
+    // Throwaway UI.
+    type ProjectionMode = 'pacmap' | 'text' | 'labels';
+    let projectionMode = $state<ProjectionMode>('pacmap');
+    // Each axis can be a single anchor or a contrastive pair (positive vs negative).
+    // Direction = embed(positive) − embed(negative) when both are filled.
+    let nlpXPosDraft = $state('');
+    let nlpXNegDraft = $state('');
+    let nlpYPosDraft = $state('');
+    let nlpYNegDraft = $state('');
+    type NlpAxisInput = { positive: string; negative: string | null };
+    let committedNlpAxes: { x: NlpAxisInput; y: NlpAxisInput } | null = $state(null);
+
+    function commitNlpAxes() {
+        const xPos = nlpXPosDraft.trim();
+        const yPos = nlpYPosDraft.trim();
+        if (!xPos || !yPos) {
+            committedNlpAxes = null;
+            return;
+        }
+        const xNeg = nlpXNegDraft.trim();
+        const yNeg = nlpYNegDraft.trim();
+        committedNlpAxes = {
+            x: { positive: xPos, negative: xNeg || null },
+            y: { positive: yPos, negative: yNeg || null }
+        };
+    }
+
+    function onAxisKeyDown(event: KeyboardEvent) {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        commitNlpAxes();
+        (event.currentTarget as HTMLInputElement | null)?.blur();
+    }
+
+    // Variant B: PCA over text embeddings of all annotation label names in the collection.
+    // We deliberately use *all* labels (not just the selected/filtered ones), so that
+    // toggling the label filter does not also change the embedding-plot projection.
+    const allLabelNames = $derived.by(() => {
+        const labels = annotationLabelsQuery.data ?? [];
+        const names: string[] = [];
+        for (const label of labels) {
+            const name = label.annotation_label_name;
+            if (name) names.push(name);
+        }
+        return names;
+    });
+    const MIN_LABELS_FOR_PCA = 2;
+    const labelsModeDisabled = $derived(allLabelNames.length < MIN_LABELS_FOR_PCA);
+
+    function onProjectionModeChange(value: string) {
+        if (value === 'labels' && labelsModeDisabled) return;
+        projectionMode = value as ProjectionMode;
+        if (projectionMode !== 'text') {
+            committedNlpAxes = null;
+        } else {
+            commitNlpAxes();
+        }
+    }
+
+    // Fall back from labels mode automatically if the active labels drop below the threshold.
+    $effect(() => {
+        if (projectionMode === 'labels' && labelsModeDisabled) {
+            projectionMode = 'pacmap';
+        }
+    });
+
+    const effectiveNlpAxes = $derived(projectionMode === 'text' ? committedNlpAxes : null);
+    const effectivePcaAxes = $derived(
+        projectionMode === 'labels' && allLabelNames.length >= MIN_LABELS_FOR_PCA
+            ? { label_names: allLabelNames }
+            : null
+    );
+    // Independent toggle for the label-marker overlay (centroid of top-K samples per
+    // annotation label). Works in any projection mode; in Text mode coexists with the
+    // axis-anchor markers, distinguished by color.
+    let showLabelMarkers = $state(true);
+    const effectiveReferenceLabelNames = $derived(
+        showLabelMarkers && allLabelNames.length > 0 ? allLabelNames : null
+    );
+
+    const embeddingsData = $derived(
+        useEmbeddings(
+            collectionId,
+            filter,
+            $colorBy,
+            effectiveNlpAxes,
+            effectivePcaAxes,
+            effectiveReferenceLabelNames
+        )
+    );
 
     const {
         data: arrowData,
         colorLegend,
+        referencePoints,
         error: arrowError
     } = $derived(
         useArrowData({
@@ -348,6 +443,14 @@
         viewportState = null;
     };
 
+    // Reset zoom whenever the projection mode or any axis input changes — the new
+    // projection lives in a different coordinate range, so the prior viewport is stale.
+    $effect(() => {
+        void projectionMode;
+        void committedNlpAxes;
+        viewportState = null;
+    });
+
     const isReady = true;
 
     // Lives here, not in PlotToolPill: a new filter (a tag, a region) starts a fresh embeddings
@@ -428,6 +531,51 @@
         viewportState = state;
     };
 
+    // Autofit center+scale that mirrors embedding-atlas's defaultViewportState math
+    // (median + 3·σ of the data). Used when viewportState is null so reference markers
+    // track the same auto-framing embedding-atlas applies internally.
+    const autofit = $derived.by((): ViewportState | null => {
+        const xs = $arrowData?.x as Float32Array | undefined;
+        const ys = $arrowData?.y as Float32Array | undefined;
+        if (!xs || !ys || xs.length === 0) return null;
+        const median = (arr: Float32Array): number => {
+            const copy = Float32Array.from(arr);
+            copy.sort();
+            return copy[Math.floor(copy.length / 2)];
+        };
+        const meanStd = (arr: Float32Array): { mean: number; std: number } => {
+            let sum = 0;
+            for (let i = 0; i < arr.length; i++) sum += arr[i];
+            const mean = sum / arr.length;
+            let sq = 0;
+            for (let i = 0; i < arr.length; i++) sq += (arr[i] - mean) * (arr[i] - mean);
+            return { mean, std: Math.sqrt(sq / arr.length) };
+        };
+        const xStd = meanStd(xs).std;
+        const yStd = meanStd(ys).std;
+        const scale = 0.95 / (Math.max(xStd, yStd, 1e-3) * 3);
+        return { x: median(xs), y: median(ys), scale };
+    });
+
+    // Map (data_x, data_y) to (screen_x, screen_y) mirroring embedding-atlas's transform:
+    // the shorter plot axis maps 1 normalized unit to scale; the longer axis is boosted
+    // by the aspect ratio so the visible window matches the plot's rectangle.
+    const projectedReferences = $derived.by(() => {
+        const refs = $referencePoints;
+        if (!refs.length) return [];
+        const vp = viewportState ?? autofit;
+        if (!vp || width === 0 || height === 0) return [];
+        const isTall = width < height;
+        const aX = isTall ? vp.scale * (height / width) : vp.scale;
+        const aY = isTall ? vp.scale : vp.scale * (width / height);
+        return refs.map((ref) => ({
+            label: ref.label,
+            kind: ref.kind,
+            left: width / 2 + (ref.x - vp.x) * aX * (width / 2),
+            top: height / 2 - (ref.y - vp.y) * aY * (height / 2)
+        }));
+    });
+
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
     // The array-based EmbeddingView only emits hover tooltips when querySelection
     // is provided; ours returns the nearest visible point with its sample ID.
@@ -480,7 +628,57 @@
 
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="text-lg font-semibold">Embedding Plot</div>
+        <div class="flex items-center gap-3">
+            <div class="text-lg font-semibold">Embedding Plot</div>
+            <Select type="single" value={projectionMode} onValueChange={onProjectionModeChange}>
+                <SelectTrigger class="h-8 w-28" data-testid="plot-projection-mode-trigger">
+                    {projectionMode === 'pacmap'
+                        ? 'PacMap'
+                        : projectionMode === 'text'
+                          ? 'Text'
+                          : 'Labels'}
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="pacmap">PacMap</SelectItem>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem
+                        value="labels"
+                        disabled={labelsModeDisabled}
+                        title={labelsModeDisabled
+                            ? 'This collection needs at least 2 annotation labels to enable PCA-over-labels.'
+                            : undefined}
+                    >
+                        Labels
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+            <div class="flex items-center gap-2 text-sm">
+                <Checkbox
+                    checked={showLabelMarkers}
+                    onCheckedChange={(v) => (showLabelMarkers = v === true)}
+                    disabled={allLabelNames.length === 0}
+                    data-testid="plot-show-label-markers"
+                />
+                <span
+                    class="select-none {allLabelNames.length === 0
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'cursor-pointer'}"
+                    role="button"
+                    tabindex={allLabelNames.length === 0 ? -1 : 0}
+                    onclick={() => {
+                        if (allLabelNames.length > 0) showLabelMarkers = !showLabelMarkers;
+                    }}
+                    onkeydown={(e) => {
+                        if ((e.key === 'Enter' || e.key === ' ') && allLabelNames.length > 0) {
+                            e.preventDefault();
+                            showLabelMarkers = !showLabelMarkers;
+                        }
+                    }}
+                >
+                    Show label markers
+                </span>
+            </div>
+        </div>
         <Button
             variant="ghost"
             buttonProps={{
@@ -560,6 +758,97 @@
                         />
 
                         <PlotToolPill {plotContainer} bind:activeTool />
+                    </div>
+                {/if}
+                {#if projectedReferences.length > 0}
+                    <!-- LIG-9502 prototype: reference markers. The outer div is a zero-size anchor
+                         positioned exactly at the data point; the dot is centered on the anchor and
+                         the label hangs to its right so labels of different widths don't shift the
+                         visible rectangle corners. Axis markers (Text mode anchors) are amber;
+                         label markers (top-K-similar centroids per annotation label) are cyan. -->
+                    <div class="pointer-events-none absolute inset-0 z-20">
+                        {#each projectedReferences as ref (ref.kind + '|' + ref.label)}
+                            <div
+                                class="absolute"
+                                style="left: {ref.left}px; top: {ref.top}px;"
+                                data-testid="plot-reference-marker"
+                                data-marker-kind={ref.kind}
+                            >
+                                <div
+                                    class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-black {ref.kind ===
+                                    'axis'
+                                        ? 'h-6 w-6 bg-green-500'
+                                        : 'h-2 w-2 bg-cyan-400'}"
+                                ></div>
+                                <span
+                                    class="absolute top-0 -translate-y-1/2 whitespace-nowrap text-xs font-medium text-white {ref.kind ===
+                                    'axis'
+                                        ? 'left-4'
+                                        : 'left-2'}"
+                                    style="text-shadow: 0 0 2px #000, 0 0 2px #000;"
+                                >
+                                    {ref.label}
+                                </span>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+                {#if projectionMode === 'text'}
+                    <!-- LIG-9502 prototype: X-axis poles at bottom: [neg] ← → [pos] -->
+                    <div
+                        class="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center"
+                    >
+                        <div
+                            class="pointer-events-auto flex items-center gap-2 rounded bg-black/70 px-2 py-1"
+                        >
+                            <Input
+                                type="text"
+                                placeholder="X−  (e.g. young)"
+                                bind:value={nlpXNegDraft}
+                                onkeydown={onAxisKeyDown}
+                                class="h-8 w-32 text-xs"
+                                data-testid="plot-nlp-x-neg-input"
+                            />
+                            <ArrowLeft class="h-4 w-4 text-white" />
+                            <ArrowRight class="h-4 w-4 text-white" />
+                            <Input
+                                type="text"
+                                placeholder="X+  (e.g. old)"
+                                bind:value={nlpXPosDraft}
+                                onkeydown={onAxisKeyDown}
+                                class="h-8 w-32 text-xs"
+                                data-testid="plot-nlp-x-pos-input"
+                            />
+                        </div>
+                    </div>
+                    <!-- LIG-9502 prototype: Y-axis poles flush to the left border. The outer wrapper
+                         is a narrow vertical strip; the inner rotated content overflows it horizontally
+                         (in the unrotated layout) but visually stays inside the strip after rotation. -->
+                    <div
+                        class="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-10 items-center justify-center"
+                    >
+                        <div
+                            class="pointer-events-auto flex -rotate-90 items-center gap-2 whitespace-nowrap rounded bg-black/70 px-2 py-1"
+                        >
+                            <Input
+                                type="text"
+                                placeholder="Y−  (e.g. sad)"
+                                bind:value={nlpYNegDraft}
+                                onkeydown={onAxisKeyDown}
+                                class="h-8 w-32 text-xs"
+                                data-testid="plot-nlp-y-neg-input"
+                            />
+                            <ArrowLeft class="h-4 w-4 text-white" />
+                            <ArrowRight class="h-4 w-4 text-white" />
+                            <Input
+                                type="text"
+                                placeholder="Y+  (e.g. happy)"
+                                bind:value={nlpYPosDraft}
+                                onkeydown={onAxisKeyDown}
+                                class="h-8 w-32 text-xs"
+                                data-testid="plot-nlp-y-pos-input"
+                            />
+                        </div>
                     </div>
                 {/if}
             </div>

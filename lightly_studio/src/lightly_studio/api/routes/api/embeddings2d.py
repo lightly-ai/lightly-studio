@@ -4,18 +4,22 @@ from __future__ import annotations
 
 import io
 import json
+from collections.abc import Callable
 from typing import Annotated
 from uuid import UUID
 
+import numpy as np
 import pyarrow as pa
 from fastapi import APIRouter, HTTPException, Path, Response
+
 from pyarrow import ipc
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
-from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
-from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
+from lightly_studio.embed import embed_samples
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
@@ -24,10 +28,40 @@ from lightly_studio.resolvers import (
     video_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
+from lightly_studio.database.db_manager import SessionDep
+
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 embeddings2d_router = APIRouter()
+
+
+class TextAxis(BaseModel):
+    """One natural-language axis with an optional contrastive negative anchor."""
+
+    positive: str
+    negative: str | None = None
+
+
+class NlpAxes(BaseModel):
+    """Prototype natural-language axes for LIG-9502 Variant A.
+
+    Each axis is a TextAxis. If `negative` is provided, the axis direction is
+    ``embed(positive) - embed(negative)`` (concept axis). Otherwise the direction is
+    just ``embed(positive)``.
+    """
+
+    x: TextAxis
+    y: TextAxis
+
+
+class PcaAxes(BaseModel):
+    """Prototype PCA-over-text axes for LIG-9502 Variant B."""
+
+    label_names: list[str]
 
 
 class GetEmbeddings2DRequest(BaseModel):
@@ -37,6 +71,9 @@ class GetEmbeddings2DRequest(BaseModel):
         description="Filter parameters identifying matching samples"
     )
     color_by: ColorBy | None = None
+    nlp_axes: NlpAxes | None = None
+    pca_axes: PcaAxes | None = None
+    reference_label_names: list[str] | None = None
 
 
 @embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
@@ -62,11 +99,68 @@ def get_2d_embeddings(
     if embedding_model_id is None:
         raise ValueError("No embedding model configured.")
 
-    x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
-        session=session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model_id,
-    )
+    def _embed(text: str) -> list[float]:
+        return embed_samples.embed_text_for_collection(
+            session=session, collection_id=collection_id, text=text
+        )
+
+    label_marker_names = body.reference_label_names or []
+    label_marker_embeddings = [_embed(name) for name in label_marker_names]
+
+    reference_points: list[dict[str, object]] = []
+    if body.nlp_axes is not None:
+        direction_x, x_words = _project_text_axis(axis=body.nlp_axes.x, embed=_embed)
+        direction_y, y_words = _project_text_axis(axis=body.nlp_axes.y, embed=_embed)
+        # Axis markers: cartesian product of axis anchor words (e.g. "young male").
+        axis_marker_labels = [f"{x_word} {y_word}" for x_word in x_words for y_word in y_words]
+        axis_marker_embeddings = [_embed(label) for label in axis_marker_labels]
+        # Pack axis + label markers into a single reference_embeddings list so the resolver
+        # returns both sets of centroids in one pass.
+        combined_embeddings = axis_marker_embeddings + label_marker_embeddings
+        x_array, y_array, sample_ids, centroids = (
+            twodim_embedding_resolver.get_twodim_embeddings_nlp(
+                session=session,
+                collection_id=collection_id,
+                embedding_model_id=embedding_model_id,
+                direction_x=direction_x,
+                direction_y=direction_y,
+                reference_embeddings=combined_embeddings,
+            )
+        )
+        n_axis = len(axis_marker_labels)
+        reference_points = [
+            {"x": cx, "y": cy, "label": label, "kind": "axis"}
+            for (cx, cy), label in zip(centroids[:n_axis], axis_marker_labels)
+        ] + [
+            {"x": cx, "y": cy, "label": label, "kind": "label"}
+            for (cx, cy), label in zip(centroids[n_axis:], label_marker_names)
+        ]
+    elif body.pca_axes is not None and len(body.pca_axes.label_names) >= 2:  # noqa: PLR2004
+        text_embeddings = [_embed(label_name) for label_name in body.pca_axes.label_names]
+        x_array, y_array, sample_ids, centroids = (
+            twodim_embedding_resolver.get_twodim_embeddings_pca(
+                session=session,
+                collection_id=collection_id,
+                embedding_model_id=embedding_model_id,
+                text_embeddings=text_embeddings,
+                reference_embeddings=label_marker_embeddings,
+            )
+        )
+        reference_points = [
+            {"x": cx, "y": cy, "label": label, "kind": "label"}
+            for (cx, cy), label in zip(centroids, label_marker_names)
+        ]
+    else:
+        x_array, y_array, sample_ids, centroids = twodim_embedding_resolver.get_twodim_embeddings(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            reference_embeddings=label_marker_embeddings,
+        )
+        reference_points = [
+            {"x": cx, "y": cy, "label": label, "kind": "label"}
+            for (cx, cy), label in zip(centroids, label_marker_names)
+        ]
 
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
@@ -101,6 +195,7 @@ def get_2d_embeddings(
         ],
         metadata={
             "color_legend": json.dumps({str(k): v for k, v in color_legend.items()}),
+            "reference_points": json.dumps(reference_points),
         },
     )
     table = pa.table(
@@ -128,6 +223,29 @@ def get_2d_embeddings(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+def _project_text_axis(
+    axis: TextAxis,
+    embed: Callable[[str], list[float]],
+) -> tuple[list[float], list[str]]:
+    """Embed a TextAxis and return its direction vector and its anchor words.
+
+    The direction is ``embed(positive) - embed(negative)`` when a non-empty negative anchor
+    is provided, otherwise just ``embed(positive)``. The returned word list has one entry
+    for a single-anchor axis and two (negative, positive) for a contrastive axis — used to
+    build reference-marker labels via the cartesian product of the two axes.
+    """
+    positive = np.asarray(embed(axis.positive))
+    negative_text = (axis.negative or "").strip()
+    if not negative_text:
+        direction = positive
+        words = [axis.positive]
+    else:
+        negative = np.asarray(embed(negative_text))
+        direction = positive - negative
+        words = [negative_text, axis.positive]
+    return [float(v) for v in direction.tolist()], words
 
 
 def _get_matching_sample_ids(
