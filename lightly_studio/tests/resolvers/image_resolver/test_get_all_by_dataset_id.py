@@ -508,6 +508,53 @@ def test_get_all_by_collection_id_with_embedding_sort(
     assert result.samples[2].sample_id == image2.sample_id
 
 
+def test_get_all_by_collection_id__similarity_threshold(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    most_similar, similar, _ = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="most_similar.png"), [1.0, 0.0]),
+            (ImageStub(path="similar.png"), [1.0, 0.2]),
+            (ImageStub(path="dissimilar.png"), [0.0, 1.0]),
+        ],
+    )
+    text_embedding = [1.0, 0.0]
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(text_embedding=text_embedding, min_similarity=0.9)
+        ),
+        text_embedding=text_embedding,
+        pagination=Paginated(offset=0, limit=1),
+    )
+
+    assert [sample.sample_id for sample in result.samples] == [most_similar.sample_id]
+    assert result.total_count == 2
+    assert result.next_cursor == 1
+
+    next_page = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(text_embedding=text_embedding, min_similarity=0.9)
+        ),
+        text_embedding=text_embedding,
+        pagination=Paginated(offset=1, limit=1),
+    )
+    assert [sample.sample_id for sample in next_page.samples] == [similar.sample_id]
+    assert next_page.next_cursor is None
+
+
 def test_get_all_by_collection_id__similarity_pagination_with_tied_distances(
     db_session: Session,
 ) -> None:

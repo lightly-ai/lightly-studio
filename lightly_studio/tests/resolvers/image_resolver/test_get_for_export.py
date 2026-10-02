@@ -80,6 +80,45 @@ def test_get_for_export__with_image_filter(db_session: Session) -> None:
     assert {s.sample_id for s in result} == {large_image.sample_id}
 
 
+def test_get_for_export__with_similarity_threshold(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    similar = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/data/similar.jpg",
+    )
+    dissimilar = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/data/dissimilar.jpg",
+    )
+    for image, embedding in [(similar, [1.0, 0.1]), (dissimilar, [0.0, 1.0])]:
+        create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+
+    result = list(
+        image_resolver.get_for_export(
+            session=db_session,
+            collection_id=collection.collection_id,
+            collection_filter=ImageFilter(
+                sample_filter=SampleFilter(text_embedding=[1.0, 0.0], min_similarity=0.9)
+            ),
+        )
+    )
+
+    assert {s.sample_id for s in result} == {similar.sample_id}
+
+
 def test_get_for_export__with_embedding_region_filter(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     embedding_model = create_embedding_model(

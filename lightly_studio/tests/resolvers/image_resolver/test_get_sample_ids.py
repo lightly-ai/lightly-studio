@@ -5,7 +5,14 @@ from sqlmodel import Session
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
-from tests.helpers_resolvers import ImageStub, create_collection, create_images
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from tests.helpers_resolvers import (
+    ImageStub,
+    create_collection,
+    create_embedding_model,
+    create_images,
+    create_samples_with_embeddings,
+)
 
 
 def test_get_sample_ids(db_session: Session) -> None:
@@ -40,6 +47,35 @@ def test_get_sample_ids(db_session: Session) -> None:
         ),
     )
     assert filtered_sample_ids == {created_images[1].sample_id}
+
+
+def test_get_sample_ids__similarity_threshold(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    similar, _ = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="similar.png"), [1.0, 0.1]),
+            (ImageStub(path="dissimilar.png"), [0.0, 1.0]),
+        ],
+    )
+
+    sample_ids = image_resolver.get_sample_ids(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(text_embedding=[1.0, 0.0], min_similarity=0.9)
+        ),
+    )
+
+    assert sample_ids == {similar.sample_id}
 
 
 def test_build_sample_ids_query(db_session: Session) -> None:

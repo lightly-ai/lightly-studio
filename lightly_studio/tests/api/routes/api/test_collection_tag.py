@@ -74,6 +74,41 @@ def test_add_samples_by_filter__image_subset_filter_tags_only_subset(
     assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {wide.sample_id}
 
 
+def test_add_samples_by_filter__image_similarity_threshold(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    similar, _ = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="similar.png"), [1.0, 0.1]),
+            (ImageStub(path="dissimilar.png"), [0.0, 1.0]),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
+        json={
+            "filter": {
+                "filter_type": "image",
+                "sample_filter": {"text_embedding": [1.0, 0.0], "min_similarity": 0.9},
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {similar.sample_id}
+
+
 def test_add_samples_by_filter__idempotent_on_rerun(
     db_session: Session, test_client: TestClient
 ) -> None:
