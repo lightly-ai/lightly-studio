@@ -6,7 +6,8 @@
     import * as THREE from 'three';
     import { fitCameraToBounds } from './pointCloudCamera';
     import { createPointCloudBuffer } from './pointCloudBuffer';
-    import type { ColorMode } from './pointCloudUtils';
+    import { extractHighlightedPositions } from './pointCloudUtils';
+    import type { ColorMode, PointHighlight } from './pointCloudUtils';
     import type { PointBatch } from './types';
 
     interface Props {
@@ -18,9 +19,20 @@
         pointSize?: number;
         /** Min/max clamp for intensity-based coloring. */
         intensityRange?: [number, number];
+        /** Points drawn in a single color over the color mode. */
+        highlight?: PointHighlight;
+        /** Screen-space size of the highlighted points in pixels; defaults to 3x `pointSize`. */
+        highlightPointSize?: number;
     }
 
-    let { batch, colorMode = 'none', pointSize = 2, intensityRange }: Props = $props();
+    let {
+        batch,
+        colorMode = 'none',
+        pointSize = 2,
+        intensityRange,
+        highlight,
+        highlightPointSize
+    }: Props = $props();
 
     const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
     const { invalidate, renderer } = useThrelte();
@@ -28,6 +40,10 @@
     let controlsRef: ThreeOrbitControls | undefined = $state();
     const pointCloudBuffer = createPointCloudBuffer();
     let hasFitted = false;
+    // The highlighted points are drawn again on top, larger, since one material has one size.
+    const highlightGeometry = new THREE.BufferGeometry();
+    const highlightColor = $derived(new THREE.Color().setRGB(...(highlight?.color ?? [1, 1, 1])));
+    const highlightSize = $derived(highlightPointSize ?? pointSize * 3);
 
     $effect(() => {
         const canvas = renderer.domElement;
@@ -39,6 +55,7 @@
         return () => {
             canvas.removeEventListener('contextmenu', suppress);
             pointCloudBuffer.dispose();
+            highlightGeometry.dispose();
         };
     });
     // Position effect: copy batch into shared buffers, update draw range and bounds.
@@ -58,14 +75,45 @@
             invalidate();
         });
     });
-    // Color effect: rebuild colors when batch, colorMode, or intensityRange change.
+    // Color effect: rebuild colors when batch, colorMode, intensityRange, or highlight change.
     $effect(() => {
         const currentBatch = batch;
         const mode = colorMode;
         const range = intensityRange;
         const currentColors = currentBatch.colors;
+        const currentHighlight = highlight;
         untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentColors);
+            // DEBUG(cuboid-highlight): remove once the highlight is verified.
+            console.debug('[cuboid-highlight] scene recolor', {
+                count: currentBatch.count,
+                colorMode: mode,
+                hasHighlight: Boolean(currentHighlight),
+                maskLength: currentHighlight?.mask.length
+            });
+            pointCloudBuffer.updateColors(
+                currentBatch.count,
+                mode,
+                range,
+                currentColors,
+                currentHighlight
+            );
+            invalidate();
+        });
+    });
+    // Highlight effect: rebuild the highlighted points when batch or highlight change.
+    $effect(() => {
+        const currentBatch = batch;
+        const currentHighlight = highlight;
+        untrack(() => {
+            const positions = currentHighlight
+                ? extractHighlightedPositions(
+                      currentBatch.positions,
+                      currentBatch.count,
+                      currentHighlight.mask
+                  )
+                : new Float32Array(0);
+            highlightGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            highlightGeometry.computeBoundingSphere();
             invalidate();
         });
     });
@@ -98,4 +146,8 @@
 
 <T.Points geometry={pointCloudBuffer.geometry}>
     <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} />
+</T.Points>
+
+<T.Points geometry={highlightGeometry} visible={Boolean(highlight)}>
+    <T.PointsMaterial color={highlightColor} size={highlightSize} sizeAttenuation={false} />
 </T.Points>

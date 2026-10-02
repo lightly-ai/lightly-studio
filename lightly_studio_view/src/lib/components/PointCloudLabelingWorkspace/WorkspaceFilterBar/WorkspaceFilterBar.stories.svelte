@@ -41,7 +41,11 @@
             selectedLidarChannels: [],
             selectedCameraChannels: [],
             onToggleLidarChannel: fn(),
-            onToggleCameraChannel: fn()
+            onToggleCameraChannel: fn(),
+            accumulatePointClouds: false,
+            onAccumulatePointCloudsChange: fn(),
+            pointSize: 2,
+            onPointSizeChange: fn()
         }
     });
 </script>
@@ -63,3 +67,5 @@
 <Story name="Cameras only" args={{ cameraChannels, selectedCameraChannels: [2] }} />
 
 <Story name="Nothing selected" args={{ lidarChannels, cameraChannels }} />
+
+<Story name="Accumulating point clouds" args={{ lidarChannels, accumulatePointClouds: true }} />

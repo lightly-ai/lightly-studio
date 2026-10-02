@@ -1,7 +1,12 @@
 <script lang="ts">
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
-    import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
+    import type { ColorMode, PointBatch, PointHighlight } from '$lib/components/PointCloudViewer';
+    import { computePointsInsideCuboid } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidGeometry';
+    import {
+        highlightCuboidColor,
+        resolveCuboidColor
+    } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidColors';
     import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
     import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
     import GroundGrid from './GroundGrid/GroundGrid.svelte';
@@ -64,6 +69,37 @@
         onhover
     }: Props = $props();
 
+    // The points inside the selected cuboid take its selected edge color, so they stand out.
+    const highlight = $derived.by((): PointHighlight | undefined => {
+        const selected = cuboids.find((cuboid) => cuboid.id === selectedAnnotationId);
+        // DEBUG(cuboid-highlight): remove once the highlight is verified.
+        console.debug('[cuboid-highlight] selection', {
+            selectedAnnotationId,
+            cuboidIds: cuboids.map((cuboid) => cuboid.id),
+            found: Boolean(selected),
+            pointCount: batch.count
+        });
+        if (!selected) return undefined;
+        const color = highlightCuboidColor(
+            resolveCuboidColor(annotationClasses, selected.annotationClassId),
+            true,
+            false
+        );
+        const mask = computePointsInsideCuboid(batch.positions, batch.count, selected);
+        const insideCount = mask.reduce((total, inside) => total + inside, 0);
+        console.debug('[cuboid-highlight] points inside', {
+            id: selected.id,
+            center: selected.center,
+            size: selected.size,
+            rotation: selected.rotation,
+            insideCount,
+            pointCount: batch.count,
+            firstPoint: Array.from(batch.positions.subarray(0, 3)),
+            color: [color.r, color.g, color.b]
+        });
+        return { mask, color: [color.r, color.g, color.b] };
+    });
+
     let cursorX = $state(0);
     let cursorY = $state(0);
 
@@ -81,7 +117,7 @@
     onmousemove={handleMouseMove}
 >
     <Canvas>
-        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
+        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} {highlight} />
         <GroundGrid />
         <OriginAxes />
         <CuboidLayer

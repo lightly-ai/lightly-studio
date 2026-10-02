@@ -1,6 +1,6 @@
 import { Box3, BufferAttribute, BufferGeometry, Sphere } from 'three';
 import { buildColorBuffer, computeActiveBounds } from './pointCloudUtils';
-import type { ColorMode } from './pointCloudUtils';
+import type { ColorMode, PointHighlight } from './pointCloudUtils';
 
 /** A batch of points stored in pre-packed typed arrays. */
 export interface PointBatch {
@@ -21,7 +21,8 @@ export interface PointCloudBuffer {
         count: number,
         colorMode: ColorMode,
         intensityRange?: [number, number],
-        pointColors?: Float32Array
+        pointColors?: Float32Array,
+        highlight?: PointHighlight
     ) => void;
     dispose: () => void;
 }
@@ -75,7 +76,8 @@ export function createPointCloudBuffer(): PointCloudBuffer {
         count: number,
         colorMode: ColorMode,
         intensityRange?: [number, number],
-        pointColors?: Float32Array
+        pointColors?: Float32Array,
+        highlight?: PointHighlight
     ): void {
         if (count === 0) return;
 
@@ -86,7 +88,8 @@ export function createPointCloudBuffer(): PointCloudBuffer {
             colorMode,
             colors,
             intensityRange,
-            pointColors: pointColors ?? sourceColors
+            pointColors: pointColors ?? sourceColors,
+            highlight
         });
         colorAttribute.needsUpdate = true;
     }

@@ -67,6 +67,8 @@
     // The lidar selection lives in the workspace context because it drives which point clouds
     // load; the camera selection does not filter anything yet, so it stays local.
     let selectedCameraChannels = $state<number[]>([]);
+    // Point size only changes how the scene is drawn, so it stays local too.
+    let pointSize = $state(2);
 
     const lidarChannels = $derived(workspace.lidarChannels);
     const cameraChannels = $derived(workspace.cameraChannels);
@@ -119,6 +121,10 @@
         onToggleLidarChannel={(channelId) => workspace.toggleLidarChannel(channelId)}
         onToggleCameraChannel={(channelId) =>
             (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
+        accumulatePointClouds={workspace.accumulatePointClouds}
+        onAccumulatePointCloudsChange={workspace.setAccumulatePointClouds}
+        {pointSize}
+        onPointSizeChange={(size) => (pointSize = size)}
     />
     <div class="flex min-h-0 flex-1">
         {#if workspace.status === 'unsupported' || workspace.status === 'error'}
@@ -154,8 +160,9 @@
                                      because the previous points stay shown while the next load. -->
                                 {#key workspace.cloudPointFrame.data.channels[0]?.frameId}
                                     <SceneViewport
-                                        batch={workspace.cloudPointFrame.data.batch}
-                                        colorMode={workspace.cloudPointFrame.data.batch.colors
+                                        batch={workspace.displayedBatch}
+                                        {pointSize}
+                                        colorMode={workspace.displayedBatch?.colors
                                             ? 'rgb'
                                             : 'intensity'}
                                         cuboids={workspace.cuboids}

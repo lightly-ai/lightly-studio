@@ -32,7 +32,7 @@ function mergeFrameBounds(frames: NonEmptyFrames): CloudPointFrame['bounds'] {
 }
 
 /** Concatenates the active points of several batches into one packed batch. */
-function mergeBatches(batches: PointBatch[]): PointBatch {
+export function mergeBatches(batches: PointBatch[]): PointBatch {
     const count = batches.reduce((total, batch) => total + batch.count, 0);
     const positions = new Float32Array(count * 3);
     const intensities = new Float32Array(count);

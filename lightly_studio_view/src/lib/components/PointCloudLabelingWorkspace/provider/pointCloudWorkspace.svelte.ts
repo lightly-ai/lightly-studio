@@ -1,9 +1,14 @@
 import { useMcapSequenceSummary, useSequenceTicks, useTickDetails } from '$lib/hooks';
 import { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
+import type { PointBatch } from '$lib/components/PointCloudViewer';
 import {
     toAnnotationClasses,
     toCuboidAnnotations
 } from '$lib/components/PointCloudLabelingWorkspace/tickAnnotations/tickAnnotations';
+import {
+    accumulatePointCloud,
+    type PointCloudAccumulation
+} from '$lib/components/PointCloudLabelingWorkspace/pointCloudAccumulation/pointCloudAccumulation';
 import type { PointCloudWorkspaceContext, WorkspaceStatus } from './types';
 
 export type GetInputs = () => {
@@ -82,6 +87,26 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     );
     readonly annotationClasses = $derived.by(() => toAnnotationClasses(this.cuboids));
 
+    accumulatePointClouds = $state(false);
+    // Points shown so far while accumulating. Not reactive: `displayedBatch` updates it as a
+    // cache, and it is keyed so it resets when the source, frame, or channel pick changes.
+    #accumulation: PointCloudAccumulation | null = null;
+
+    readonly displayedBatch = $derived.by((): PointBatch | undefined => {
+        const frame = this.cloudPointFrame.data;
+        if (!frame || !this.accumulatePointClouds) {
+            this.#accumulation = null;
+            return frame?.batch;
+        }
+        // Placeholder data is the previous load, which can belong to another frame or pick.
+        if (this.cloudPointFrame.isPlaceholderData && this.#accumulation) {
+            return this.#accumulation.batch;
+        }
+        const key = `${this.#source}/${this.referenceFrameId}/${this.selectedLidarChannels.join(',')}`;
+        this.#accumulation = accumulatePointCloud(this.#accumulation, key, frame);
+        return this.#accumulation.batch;
+    });
+
     constructor(getInputs: GetInputs) {
         const { summary, refetch } = useMcapSequenceSummary({
             getDatasetId: () => getInputs().datasetId,
@@ -154,6 +179,11 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
                 : [...selected, channelId]
         };
     }
+
+    // Arrow function, because the filter bar passes it as an event handler without the instance.
+    setAccumulatePointClouds = (accumulate: boolean): void => {
+        this.accumulatePointClouds = accumulate;
+    };
 
     get #source(): string {
         return `${this.datasetId}/${this.sequenceId}`;

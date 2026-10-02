@@ -30,7 +30,11 @@ const defaultProps = {
     selectedLidarChannels: [] as number[],
     selectedCameraChannels: [] as number[],
     onToggleLidarChannel: vi.fn(),
-    onToggleCameraChannel: vi.fn()
+    onToggleCameraChannel: vi.fn(),
+    accumulatePointClouds: false,
+    onAccumulatePointCloudsChange: vi.fn(),
+    pointSize: 2,
+    onPointSizeChange: vi.fn()
 };
 
 describe('WorkspaceFilterBar', () => {
@@ -94,5 +98,27 @@ describe('WorkspaceFilterBar', () => {
 
         expect(screen.getByTestId('workspace-lidar-select')).toBeDisabled();
         expect(screen.getByTestId('workspace-camera-select')).toBeEnabled();
+    });
+
+    it('turns point-cloud accumulation on', async () => {
+        const user = userEvent.setup();
+        const onAccumulatePointCloudsChange = vi.fn();
+        render(WorkspaceFilterBar, { props: { ...defaultProps, onAccumulatePointCloudsChange } });
+
+        await user.click(screen.getByLabelText('Accumulate point clouds'));
+
+        expect(onAccumulatePointCloudsChange).toHaveBeenCalledExactlyOnceWith(true);
+    });
+
+    it('shows the point size and changes it from the keyboard', async () => {
+        const user = userEvent.setup();
+        const onPointSizeChange = vi.fn();
+        render(WorkspaceFilterBar, { props: { ...defaultProps, onPointSizeChange } });
+
+        expect(screen.getByText('2px')).toBeInTheDocument();
+        await user.click(screen.getByRole('slider'));
+        await user.keyboard('{ArrowRight}');
+
+        expect(onPointSizeChange).toHaveBeenLastCalledWith(2.5);
     });
 });

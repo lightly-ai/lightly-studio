@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { Box3, Vector3 } from 'three';
 import { turboInto } from './colormap';
-import { computeActiveBounds, computeCameraPlacement, buildColorBuffer } from './pointCloudUtils';
+import {
+    computeActiveBounds,
+    computeCameraPlacement,
+    buildColorBuffer,
+    extractHighlightedPositions
+} from './pointCloudUtils';
 
 function turboRgb(value: number): [number, number, number] {
     const out = new Float32Array(3);
@@ -66,6 +71,23 @@ describe('buildColorBuffer', () => {
         });
 
         expect(Array.from(colors)).toEqual([0.25, 0.5, 0.75, 0.125, 0.375, 1]);
+    });
+
+    it('draws the highlighted points in the highlight color', () => {
+        const positions = new Float32Array([1, 2, 3, 4, 5, 6]);
+        const intensities = new Float32Array([10, 20]);
+        const colors = new Float32Array(6);
+
+        buildColorBuffer({
+            positions,
+            intensities,
+            count: 2,
+            colorMode: 'none',
+            colors,
+            highlight: { mask: new Uint8Array([0, 1]), color: [1, 0, 0] }
+        });
+
+        expect(Array.from(colors)).toEqual([0.5, 0.5, 0.5, 1, 0, 0]);
     });
 
     it('produces different colors for intensity vs height modes', () => {
@@ -194,5 +216,15 @@ describe('computeCameraPlacement', () => {
         const placement = computeCameraPlacement(bounds);
 
         expect(placement.target).toEqual([5, 5, 5]);
+    });
+});
+
+describe('extractHighlightedPositions', () => {
+    it('keeps only the positions of the highlighted points', () => {
+        const positions = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+        const result = extractHighlightedPositions(positions, 3, new Uint8Array([1, 0, 1]));
+
+        expect(Array.from(result)).toEqual([1, 2, 3, 7, 8, 9]);
     });
 });

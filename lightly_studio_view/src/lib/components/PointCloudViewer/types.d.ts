@@ -1,5 +1,5 @@
 import type { Box3, BufferGeometry } from 'three';
-import type { ColorMode } from './pointCloudUtils';
+import type { ColorMode, PointHighlight } from './pointCloudUtils';
 
 /** A batch of points stored in pre-packed typed arrays. */
 export interface PointBatch {
@@ -24,7 +24,8 @@ export interface PointCloudBuffer {
         count: number,
         colorMode: ColorMode,
         intensityRange?: [number, number],
-        pointColors?: Float32Array
+        pointColors?: Float32Array,
+        highlight?: PointHighlight
     ) => void;
     /** Releases the underlying GPU resources. */
     dispose: () => void;

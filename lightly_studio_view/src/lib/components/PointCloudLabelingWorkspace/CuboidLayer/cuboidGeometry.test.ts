@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeCuboidVertices, createCuboidWireframeGeometry } from './cuboidGeometry';
+import {
+    computeCuboidVertices,
+    computePointsInsideCuboid,
+    createCuboidWireframeGeometry
+} from './cuboidGeometry';
 
 describe('cuboidGeometry', () => {
     it('computes world-space vertices from centre, size, and rotation', () => {
@@ -49,5 +53,24 @@ describe('cuboidGeometry', () => {
         } finally {
             geometry.dispose();
         }
+    });
+
+    it('marks the points inside a rotated cuboid', () => {
+        // 90� around z: the 4 m local x extent runs along world y.
+        const rotation = [0, 0, Math.SQRT1_2, Math.SQRT1_2] as const;
+        const positions = new Float32Array([
+            ...[10, 1.9, 0], // inside, along the long side
+            ...[11.9, 0, 0], // outside: past the 1 m half width along world x
+            ...[10, 0, 1], // on the top face
+            ...[10, 0, 1.1] // above the cuboid
+        ]);
+
+        const mask = computePointsInsideCuboid(positions, 4, {
+            center: [10, 0, 0],
+            size: [4, 2, 2],
+            rotation
+        });
+
+        expect(Array.from(mask)).toEqual([1, 0, 1, 0]);
     });
 });

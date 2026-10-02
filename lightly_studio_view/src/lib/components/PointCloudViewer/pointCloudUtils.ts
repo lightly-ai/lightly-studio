@@ -13,6 +13,14 @@ interface CameraPlacement {
     target: [number, number, number];
 }
 
+/** Points drawn in a single color over the color mode, e.g. the points inside a selected box. */
+export interface PointHighlight {
+    /** One entry per point; a non-zero entry marks the point as highlighted. */
+    mask: Uint8Array;
+    /** Linear RGB color of the highlighted points, each channel in [0, 1]. */
+    color: [number, number, number];
+}
+
 /** Inputs for {@link buildColorBuffer}. */
 interface BuildColorBufferParams {
     /** Flat positions [x0,y0,z0, x1,y1,z1, ...]. */
@@ -29,6 +37,8 @@ interface BuildColorBufferParams {
     intensityRange?: [number, number];
     /** Per-point linear RGB values used when colorMode is "rgb". */
     pointColors?: Float32Array;
+    /** Optional points to draw in a single color over the color mode. */
+    highlight?: PointHighlight;
 }
 
 /**
@@ -37,6 +47,12 @@ interface BuildColorBufferParams {
  * @param params - See {@link BuildColorBufferParams}.
  */
 export function buildColorBuffer(params: BuildColorBufferParams): void {
+    fillBaseColors(params);
+    if (params.highlight) applyHighlight(params.colors, params.count, params.highlight);
+}
+
+/** Color the buffer by the color mode alone. */
+function fillBaseColors(params: BuildColorBufferParams): void {
     const { colorMode, colors, count, pointColors } = params;
 
     if (colorMode === 'rgb' && pointColors) {
@@ -50,6 +66,52 @@ export function buildColorBuffer(params: BuildColorBufferParams): void {
         return;
     }
     fillGradient(params, colorMode === 'intensity');
+}
+
+/** Overwrite the colors of the highlighted points among the first count points. */
+function applyHighlight(colors: Float32Array, count: number, highlight: PointHighlight): void {
+    const [r, g, b] = highlight.color;
+    const end = Math.min(count, highlight.mask.length);
+    let painted = 0;
+    for (let i = 0; i < end; i++) {
+        if (!highlight.mask[i]) continue;
+        colors[i * 3] = r;
+        colors[i * 3 + 1] = g;
+        colors[i * 3 + 2] = b;
+        painted++;
+    }
+    // DEBUG(cuboid-highlight): remove once the highlight is verified.
+    console.debug('[cuboid-highlight] painted', {
+        painted,
+        count,
+        maskLength: highlight.mask.length
+    });
+}
+
+/**
+ * Copy the positions of the highlighted points into a packed buffer.
+ *
+ * @param positions - Flat positions [x0,y0,z0, x1,y1,z1, ...].
+ * @param count - Number of active points in `positions`.
+ * @param mask - One entry per point; a non-zero entry marks the point as highlighted.
+ * @returns Flat positions of the highlighted points only.
+ */
+export function extractHighlightedPositions(
+    positions: Float32Array,
+    count: number,
+    mask: Uint8Array
+): Float32Array {
+    const end = Math.min(count, mask.length);
+    let highlighted = 0;
+    for (let i = 0; i < end; i++) if (mask[i]) highlighted++;
+    const result = new Float32Array(highlighted * 3);
+    let offset = 0;
+    for (let i = 0; i < end; i++) {
+        if (!mask[i]) continue;
+        result.set(positions.subarray(i * 3, i * 3 + 3), offset);
+        offset += 3;
+    }
+    return result;
 }
 
 /** Color the buffer with a turbo gradient over intensity or height values. */

@@ -1,6 +1,7 @@
 import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local/types.gen';
 import type { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
 import type { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
+import type { PointBatch } from '$lib/components/PointCloudViewer';
 import type {
     AnnotationClass,
     CuboidAnnotation
@@ -28,6 +29,12 @@ export interface PointCloudWorkspaceContext {
     readonly tickDetails: ReturnType<typeof useTickDetails>['tickDetails'];
     /** Combined point cloud for the selected lidar channels in the active tick. */
     readonly cloudPointFrame: ReturnType<typeof useCloudPointFrame>['query'];
+    /** Whether new point clouds are added to the scene instead of replacing the shown ones. */
+    readonly accumulatePointClouds: boolean;
+    /** Turns accumulation on or off; turning it off shows only the active tick again. */
+    setAccumulatePointClouds: (accumulate: boolean) => void;
+    /** Points to render: the active tick, or every tick loaded so far while accumulating. */
+    readonly displayedBatch: PointBatch | undefined;
     /** Frames the point clouds and the cuboids can be shown in. */
     readonly referenceFrames: readonly { readonly id: string; readonly name: string }[];
     /** Frame the point clouds and the cuboids are shown in; one of `referenceFrames`. */
