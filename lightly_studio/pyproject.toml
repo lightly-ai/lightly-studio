@@ -144,6 +144,11 @@ ignore_missing_imports = true
 module = "pyarrow.*"
 ignore_missing_imports = true
 
+# scipy-stubs requires Python 3.10 or newer. Static checks run on Python 3.9.
+[[tool.mypy.overrides]]
+module = "scipy.*"
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 module = "sklearn.manifold.*"
 ignore_missing_imports = true
