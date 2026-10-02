@@ -54,17 +54,21 @@
     );
     let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
 
+    let isExporting = $state(false);
+
     // Snapshot of exportType and sampleCount captured at click time, before the async
-    // request runs. Both values can change while the request is pending (the select is
-    // still enabled), so handleExportTriggered must not read the live reactive values.
+    // request runs. exportType cannot change while isExporting is true (the select is
+    // disabled), but we still snapshot to bind the values to this attempt's callback.
     let exportSnapshot: { type: ExportType; sampleCount: number } | null = null;
 
     const handleDownloadClick = () => {
         exportSnapshot = { type: exportType, sampleCount: $filteredSampleCount };
+        isExporting = true;
         tracking.handleAnnotationDownloadClick(exportType);
     };
 
     const handleExportTriggered = (success: boolean) => {
+        isExporting = false;
         if (!exportSnapshot) return;
         tracking.trackExportTriggered({
             exportType: exportSnapshot.type,
@@ -102,6 +106,7 @@
                             value={exportType}
                             triggerLabel={exportTypeTriggerContent}
                             class="w-full"
+                            disabled={isExporting}
                             testId="export-type-select"
                             onOpenChange={(open) =>
                                 open && tracking.trackFormatSelectOpened(exportType)}
