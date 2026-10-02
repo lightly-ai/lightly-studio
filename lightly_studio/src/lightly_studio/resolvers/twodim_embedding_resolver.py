@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+from collections import OrderedDict
 from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID
@@ -18,25 +20,29 @@ from lightly_studio.resolvers import sample_embedding_resolver
 
 
 @dataclass(frozen=True)
-class _ImageMatrix:
+class _EmbeddingMatrix:
     """The high-dimensional embeddings of a collection, kept in memory.
 
     N is the number of samples with an embedding and D is the embedding dimension.
 
     Attributes:
         embedding_hash: The hash of the stored embeddings when they were loaded.
-        sample_ids: The ordered sample IDs of the rows of ``matrix``.
+        sample_ids: The sample IDs of the rows of ``matrix``, ordered by sample ID.
         matrix: The embeddings of shape (N, D).
     """
 
     embedding_hash: str
-    sample_ids: list[UUID]
+    sample_ids: tuple[UUID, ...]
     matrix: NDArray[np.float32]
 
 
-# One entry for each (collection_id, embedding_model_id). An entry is loaded again when the hash
-# of the stored embeddings changes, for example after new samples are embedded.
-_image_matrix_cache: dict[tuple[UUID, UUID], _ImageMatrix] = {}
+# The key is (collection_id, embedding_model_id). An entry is loaded again when the stored
+# embeddings change, for example after new samples are embedded. One entry can take more than
+# 1 GB, so only the most recently used entries stay in memory.
+_EMBEDDING_MATRIX_CACHE_SIZE = 2
+_embedding_matrix_cache: OrderedDict[tuple[UUID, UUID], _EmbeddingMatrix] = OrderedDict()
+# FastAPI runs sync routes in a thread pool, so requests can use the cache at the same time.
+_embedding_matrix_cache_lock = threading.Lock()
 
 
 def get_twodim_embeddings(
@@ -121,9 +127,10 @@ def get_twodim_embeddings_from_axes(
 ) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
     """Return 2D embeddings that are projections onto two axis directions.
 
-    D is the embedding dimension. The x and y values of a sample are the dot products of its
-    embedding with ``direction_x`` and ``direction_y``. The values are not rescaled, so the
-    spread of an axis shows how much the samples vary along its direction.
+    N is the number of samples with an embedding and D is the embedding dimension. The x and y
+    values of a sample are the dot products of its embedding with ``direction_x`` and
+    ``direction_y``. The values are not rescaled, so the spread of an axis shows how much the
+    samples vary along its direction.
 
     The result is not stored in the database, because the directions change with each query.
     The high-dimensional embeddings stay in memory until they change.
@@ -136,7 +143,8 @@ def get_twodim_embeddings_from_axes(
         direction_y: The Y axis direction of shape (D,).
 
     Returns:
-        Tuple of (x coordinates, y coordinates, ordered sample IDs).
+        Tuple of (x coordinates of shape (N,), y coordinates of shape (N,), the N ordered
+        sample IDs).
 
     Raises:
         ValueError: If the embedding model does not exist, or if a direction does not have
@@ -152,20 +160,19 @@ def get_twodim_embeddings_from_axes(
             f"got {len(direction_x)} and {len(direction_y)}."
         )
 
-    image_matrix = _load_image_matrix(
+    embedding_matrix = _load_embedding_matrix(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
-    if not image_matrix.sample_ids:
+    if not embedding_matrix.sample_ids:
         empty = np.array([], dtype=np.float32)
         return empty, empty, []
 
     directions = np.asarray([direction_x, direction_y], dtype=np.float32)
-    projected = image_matrix.matrix @ directions.T
-    x_values = np.ascontiguousarray(projected[:, 0], dtype=np.float32)
-    y_values = np.ascontiguousarray(projected[:, 1], dtype=np.float32)
-    return x_values, y_values, image_matrix.sample_ids
+    x_values, y_values = directions @ embedding_matrix.matrix.T
+    # Return a copy, so that a caller cannot change the sample IDs in the cache.
+    return x_values, y_values, list(embedding_matrix.sample_ids)
 
 
 def _calculate_2d_embeddings(
@@ -184,11 +191,11 @@ def _calculate_2d_embeddings(
     return embedding_calculator.calculate_2d_embedding()  # type: ignore[no-any-return]
 
 
-def _load_image_matrix(
+def _load_embedding_matrix(
     session: Session,
     collection_id: UUID,
     embedding_model_id: UUID,
-) -> _ImageMatrix:
+) -> _EmbeddingMatrix:
     """Return the embeddings of a collection, from memory if they did not change."""
     embedding_hash, sample_ids_with_embeddings = (
         sample_embedding_resolver.get_hash_by_collection_id(
@@ -198,21 +205,34 @@ def _load_image_matrix(
         )
     )
     key = (collection_id, embedding_model_id)
-    cached = _image_matrix_cache.get(key)
-    if cached is not None and cached.embedding_hash == embedding_hash:
-        return cached
+    with _embedding_matrix_cache_lock:
+        cached = _embedding_matrix_cache.get(key)
+        # The hash covers only the first value of each embedding, so also compare the sample
+        # IDs. This finds a sample that another sample with the same first value replaced.
+        if (
+            cached is not None
+            and cached.embedding_hash == embedding_hash
+            and cached.sample_ids == tuple(sample_ids_with_embeddings)
+        ):
+            _embedding_matrix_cache.move_to_end(key)
+            return cached
 
+    # Load outside the lock, so that a slow load does not block requests for other entries.
     sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
         sample_ids=sample_ids_with_embeddings,
         embedding_model_id=embedding_model_id,
     )
-    image_matrix = _ImageMatrix(
+    embedding_matrix = _EmbeddingMatrix(
         embedding_hash=embedding_hash,
-        sample_ids=[embedding.sample_id for embedding in sample_embeddings],
+        sample_ids=tuple(embedding.sample_id for embedding in sample_embeddings),
         matrix=np.asarray(
             [embedding.embedding for embedding in sample_embeddings], dtype=np.float32
         ),
     )
-    _image_matrix_cache[key] = image_matrix
-    return image_matrix
+    with _embedding_matrix_cache_lock:
+        _embedding_matrix_cache[key] = embedding_matrix
+        _embedding_matrix_cache.move_to_end(key)
+        while len(_embedding_matrix_cache) > _EMBEDDING_MATRIX_CACHE_SIZE:
+            _embedding_matrix_cache.popitem(last=False)
+    return embedding_matrix
