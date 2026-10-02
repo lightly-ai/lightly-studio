@@ -30,6 +30,9 @@
         component: WorkspaceFilterBar,
         tags: ['autodocs'],
         args: {
+            referenceFrames: [],
+            referenceFrameId: '',
+            onSelectReferenceFrame: fn(),
             lidarChannels: [],
             cameraChannels: [],
             selectedLidarChannels: [],
