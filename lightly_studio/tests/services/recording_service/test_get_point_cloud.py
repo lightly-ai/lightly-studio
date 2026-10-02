@@ -192,6 +192,53 @@ def test_get_point_cloud__target_frame(
     assert table.schema.metadata[b"frame_id"] == b"map"
 
 
+def test_get_point_cloud__target_frame_at_capture_time(
+    db_session: Session, dataset_id: UUID, tmp_path: Path
+) -> None:
+    # The lidar is captured at 1.0 s and logged at 1.05 s.
+    mcap_path = helpers.write_mcap(
+        path=tmp_path / "with_tf.mcap",
+        lidar_stamp_offset_ns=-50_000_000,
+        base_link_poses=[
+            (1_000_000_000, (10.0, 0.0, 0.0)),
+            (1_050_000_000, (20.0, 0.0, 0.0)),
+        ],
+    )
+    recording_id = _create_recording(session=db_session, dataset_id=dataset_id, uri=mcap_path)
+    static_transform_resolver.create_many(
+        session=db_session,
+        rows=[
+            StaticTransformCreate(
+                recording_id=recording_id,
+                parent="base_link",
+                child=helpers.LIDAR_FRAME_ID,
+                qx=0.0,
+                qy=0.0,
+                qz=0.0,
+                qw=1.0,
+                tx=0.0,
+                ty=0.0,
+                tz=0.0,
+            )
+        ],
+    )
+
+    point_cloud = get_point_cloud.get_point_cloud(
+        session=db_session,
+        dataset_id=dataset_id,
+        recording_id=recording_id,
+        channel_id=_channel_id(mcap_path=mcap_path, topic_name=helpers.LIDAR_POINTS_TOPIC),
+        timestamp_ns=1_050_000_000,
+        target_frame_id="map",
+    )
+
+    # The base frame is at x = 10 m in the map at the capture time of 1.0 s.
+    assert point_cloud is not None
+    assert point_cloud.log_time_ns == 1_050_000_000
+    table = _read_table(data=point_cloud.data)
+    assert table.column("x").to_pylist() == [11.0]
+
+
 def test_get_point_cloud__target_frame_is_sensor_frame(
     db_session: Session, dataset_id: UUID, recording_id: UUID, channel_id: int
 ) -> None:

@@ -9,6 +9,7 @@ import numpy as np
 from numpy.typing import NDArray
 from sqlmodel import Session
 
+from lightly_studio.core.mcap import capture_time
 from lightly_studio.core.mcap.errors import ChannelNotFoundError, McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.topic_kind import TopicKind
@@ -41,8 +42,8 @@ def get_point_cloud(  # noqa: PLR0913
         timestamp_ns: Log time of the message to read, in nanoseconds.
         target_frame_id: Coordinate frame to express the points in, e.g. the world
             frame. The points are mapped from the frame in the message header with the
-            static and dynamic transforms of the recording. ``None`` keeps the points
-            in the sensor frame.
+            static and dynamic transforms of the recording at the capture time of the
+            message. ``None`` keeps the points in the sensor frame.
 
     Returns:
         The decoded point-cloud payload, or ``None`` when the recording is
@@ -74,15 +75,21 @@ def get_point_cloud(  # noqa: PLR0913
         )
     )
     static_transforms: list[StaticTransform] = []
+    transform_timestamp_ns = message.log_time_ns
     if target_frame_id is not None and target_frame_id != source_frame_id:
         static_transforms = load_static_transforms.load_static_transforms(
             session=session, recording_id=recording_id
+        )
+        # TODO(Horatiu, 09/2026): We already have the capture time but only send the log time.
+        # Consider changing the API to also send the capture time, so that we can use it here.
+        transform_timestamp_ns = (
+            capture_time.from_decoded_message(message.decoded_message) or message.log_time_ns
         )
     transform = _transform_to_target_frame(
         reader=reader,
         source_frame_id=source_frame_id,
         target_frame_id=target_frame_id,
-        timestamp_ns=timestamp_ns,
+        timestamp_ns=transform_timestamp_ns,
         static_transforms=static_transforms,
     )
     return serialize_point_cloud.serialize_point_cloud(
