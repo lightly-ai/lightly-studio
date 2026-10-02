@@ -3,6 +3,7 @@
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
+    import GroundPlane from '$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.svelte';
     import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
     import type {
         AnnotationClass,
@@ -80,6 +81,7 @@
 >
     <Canvas>
         <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
+        <GroundPlane {pointCloudBounds} />
         <CuboidLayer
             {cuboids}
             {annotationClasses}

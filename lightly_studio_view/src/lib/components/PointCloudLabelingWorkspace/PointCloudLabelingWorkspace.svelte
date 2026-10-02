@@ -153,7 +153,11 @@
                                     colorMode={workspace.cloudPointFrame.data.batch.colors
                                         ? 'rgb'
                                         : 'intensity'}
+                                    pointCloudBounds={workspace.cloudPointFrame.data.bounds ??
+                                        undefined}
                                 />
+                            {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
+                                <WorkspaceStatusPanel status="loading" {onExit} />
                             {:else}
                                 <WorkspaceStatusPanel status="empty" />
                             {/if}
