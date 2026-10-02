@@ -26,7 +26,7 @@
 </script>
 
 <div
-    class="flex h-full flex-col overflow-y-auto border-l bg-background p-3 dark:[color-scheme:dark]"
+    class="scrollbar-thin flex h-full flex-col overflow-y-auto border-l bg-background p-3 dark:[color-scheme:dark]"
     data-testid="point-cloud-right-side-panel"
 >
     <div class="flex flex-1 flex-col">
