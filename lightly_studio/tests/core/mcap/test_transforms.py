@@ -288,12 +288,91 @@ def test_to_matrix() -> None:
     )
 
 
-def test_rotation_matrix__unnormalized_quaternion() -> None:
-    matrix = transforms._rotation_matrix((0.0, 0.0, 0.5, 0.5))
+def test_to_matrix__unnormalized_quaternion() -> None:
+    transform = _static_transform(
+        parent_frame_id="base",
+        child_frame_id="cam",
+        rotation=(0.0, 0.0, 0.5, 0.5),
+    )
 
-    assert np.allclose(matrix, [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
+    matrix = transforms.to_matrix(transform)
+
+    assert np.allclose(matrix[:3, :3], [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
 
 
-def test_rotation_matrix__zero_quaternion() -> None:
-    with pytest.raises(ValueError, match="must not be all zeros"):
-        transforms._rotation_matrix((0.0, 0.0, 0.0, 0.0))
+def test_to_matrix__zero_quaternion() -> None:
+    transform = _static_transform(
+        parent_frame_id="base",
+        child_frame_id="cam",
+        rotation=(0.0, 0.0, 0.0, 0.0),
+    )
+
+    with pytest.raises(ValueError, match="zero norm"):
+        transforms.to_matrix(transform)
+
+
+def test_transform_pose() -> None:
+    matrix = transforms.to_matrix(
+        _static_transform(
+            parent_frame_id="world",
+            child_frame_id="base",
+            translation=(1.0, 2.0, 3.0),
+            rotation=QUARTER_TURN_ROTATION,
+        )
+    )
+
+    position, rotation = transforms.transform_pose(
+        matrix=matrix, position=(1.0, 0.0, 0.0), rotation=QUARTER_TURN_ROTATION
+    )
+
+    # The pose is turned by 90 degrees and moved, so that it faces backwards in the target.
+    assert np.allclose(position, (1.0, 3.0, 3.0))
+    # A half turn has w = 0, so the quaternion and its negation are both valid results.
+    assert abs(np.dot(rotation, (0.0, 0.0, 1.0, 0.0))) == pytest.approx(1.0)
+
+
+def test_transform_pose__identity_keeps_unnormalized_orientation_as_unit() -> None:
+    position, rotation = transforms.transform_pose(
+        matrix=np.eye(4), position=(1.0, 2.0, 3.0), rotation=(0.0, 0.0, 0.5, 0.5)
+    )
+
+    assert position == (1.0, 2.0, 3.0)
+    assert np.allclose(rotation, QUARTER_TURN_ROTATION)
+
+
+def test_transform_pose__zero_quaternion() -> None:
+    with pytest.raises(ValueError, match="zero norm"):
+        transforms.transform_pose(
+            matrix=np.eye(4), position=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0, 0.0)
+        )
+
+
+@pytest.mark.parametrize(
+    "rotation",
+    [
+        (0.0, 0.0, 0.0, 1.0),
+        (1.0, 0.0, 0.0, 0.0),
+        (0.0, 1.0, 0.0, 0.0),
+        (0.0, 0.0, 1.0, 0.0),
+        (0.5, -0.5, 0.5, 0.5),
+    ],
+)
+def test_transform_pose__identity_preserves_rotation(
+    rotation: tuple[float, float, float, float],
+) -> None:
+    _, quaternion = transforms.transform_pose(
+        matrix=np.eye(4), position=(0.0, 0.0, 0.0), rotation=rotation
+    )
+
+    # Half turns have w = 0, so the quaternion and its negation are both valid results.
+    assert abs(np.dot(quaternion, rotation)) == pytest.approx(1.0)
+
+
+def test_transform_pose__negative_w() -> None:
+    _, quaternion = transforms.transform_pose(
+        matrix=np.eye(4),
+        position=(0.0, 0.0, 0.0),
+        rotation=(0.0, 0.0, -0.7071067811865476, -0.7071067811865476),
+    )
+
+    assert np.allclose(quaternion, QUARTER_TURN_ROTATION)
