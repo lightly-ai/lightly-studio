@@ -114,6 +114,10 @@
         onToggleFullscreen={toggleFullscreen}
     />
     <WorkspaceFilterBar
+        referenceFrames={workspace.referenceFrames}
+        referenceFrameId={workspace.referenceFrameId}
+        onSelectReferenceFrame={workspace.selectReferenceFrame}
+        isShowingSensorFrames={workspace.isShowingSensorFrames}
         {lidarChannels}
         {cameraChannels}
         selectedLidarChannels={selectedLidarChannels ??
