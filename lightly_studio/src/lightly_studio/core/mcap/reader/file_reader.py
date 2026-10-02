@@ -13,7 +13,10 @@ from numpy.typing import NDArray
 from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError
 from lightly_studio.core.mcap.matching import MatchFunction
 from lightly_studio.core.mcap.reader import calibration, frame_scan, session
-from lightly_studio.core.mcap.reader.calibration import STATIC_TRANSFORM_TOPIC
+from lightly_studio.core.mcap.reader.calibration import (
+    DYNAMIC_TRANSFORM_TOPIC,
+    STATIC_TRANSFORM_TOPIC,
+)
 from lightly_studio.core.mcap.reader.frame_scan import FrameScanner, TopicScanRequest
 from lightly_studio.core.mcap.reader.session import ReadPattern, TopicIndex
 from lightly_studio.core.mcap.topic_kind import TopicKind
@@ -273,7 +276,9 @@ class McapFileReader:
 
         A topic that is not in the file counts as a topic without transforms. The
         result is cached for the lifetime of the reader. The topic is read only if
-        `load_data_for_topics` did not read it already. Indexing stores these edges.
+        `load_data_for_topics` did not read it already. Indexing stores these edges
+        and `get_transform_at` composes the stored edges instead of reading the topic
+        again.
 
         Args:
             topic: The topic the static transforms are published on.
@@ -284,6 +289,85 @@ class McapFileReader:
             message that cannot be decoded, or holds no transform, is skipped.
         """
         return list(self._cached_static_transforms(topic=topic))
+
+    def read_dynamic_edges_until(
+        self,
+        frame_ids: Sequence[str],
+        topic: str = DYNAMIC_TRANSFORM_TOPIC,
+    ) -> list[tuple[str, str]]:
+        """Returns dynamic edges read from the start of a topic until frames are seen.
+
+        Reading stops once every frame id has appeared as a parent or a child. The pose
+        and the stamp are not read. An edge with a blank frame name is skipped. A topic
+        that is not in the file, or an empty `frame_ids`, returns no edges. If the
+        topic ends first, the edges seen so far are returned.
+
+        Args:
+            frame_ids: The coordinate frames to find.
+            topic: The topic the dynamic transforms are published on.
+
+        Returns:
+            The parent and child frame id of each edge seen, in order, once each.
+
+        Raises:
+            McapAccessError: If a message on the topic cannot be decoded.
+        """
+        if not frame_ids or not self._topic_index.has_topic(topic):
+            return []
+        return calibration.dynamic_edges_until(
+            mcap_reader=self._reader, path=self.path, topic=topic, frame_ids=frame_ids
+        )
+
+    def get_transform_at(
+        self,
+        parent_frame_id: str,
+        child_frame_id: str,
+        timestamp_ns: int,
+        static_transforms: Sequence[StaticTransform],
+        dynamic_topic: str = DYNAMIC_TRANSFORM_TOPIC,
+    ) -> NDArray[np.float64]:
+        """Returns the transform between two coordinate frames at a point in time.
+
+        Composes `static_transforms` with the dynamic transforms, e.g. the pose of a
+        moving vehicle in the world frame. The static transforms are the edges stored
+        for the recording. For each child frame, the dynamic transform whose capture
+        time, from `header.stamp` or `timestamp`, is closest to `timestamp_ns` is used.
+        Only the dynamic transforms captured within `_DYNAMIC_TRANSFORM_WINDOW_NS` of
+        `timestamp_ns` are used. A topic that is not in the file counts as a topic
+        without transforms.
+
+        Args:
+            parent_frame_id: The frame to map points to, e.g. the frame of a lidar.
+            child_frame_id: The frame to map points from, e.g. the world frame.
+            timestamp_ns: The capture time of the transform, in nanoseconds, e.g. the
+                `header.stamp` of a point cloud, which is the timestamp of a sequence
+                tick. A log time selects transforms that are offset by the logging
+                delay of the sensor.
+            static_transforms: The static edges to compose, e.g. the edges stored for
+                the recording when it was indexed.
+            dynamic_topic: The topic the dynamic transforms are published on.
+
+        Returns:
+            The 4x4 homogeneous transform that maps points from the child frame to the
+            parent frame.
+
+        Raises:
+            TransformNotFoundError: If no chain of transforms connects the two frames.
+            McapAccessError: If a message on the dynamic topic cannot be decoded.
+        """
+        tree = TransformTree(
+            [
+                *static_transforms,
+                *calibration.dynamic_transforms_near(
+                    mcap_reader=self._reader,
+                    path=self.path,
+                    topic=dynamic_topic,
+                    timestamp_ns=timestamp_ns,
+                    topic_in_file=self._topic_index.has_topic(dynamic_topic),
+                ),
+            ]
+        )
+        return tree.lookup(target_frame_id=parent_frame_id, source_frame_id=child_frame_id)
 
     def get_decoded_message_at(
         self,

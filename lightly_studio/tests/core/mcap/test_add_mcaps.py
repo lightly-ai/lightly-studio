@@ -10,6 +10,7 @@ from pytest_mock import MockerFixture
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.mcap import add_mcaps, mcap_dataset
 from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.mcap_sample import McapSample
 from lightly_studio.core.mcap.reader import McapFileReader
@@ -247,6 +248,83 @@ def test_index_recording__stores_the_static_transforms(
     )
     by_child = {row.child: row for row in rows}
     assert set(by_child) == {helpers.CAMERA_FRAME_ID, helpers.LIDAR_FRAME_ID}
+    # Without `reference_frame_ids`, no frames are stored.
+    assert recordings[0].reference_frame_ids == []
+
+
+def test_index_recording__accepts_a_reference_frame_from_tf(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    mcap_path = helpers.write_mcap(
+        tmp_path / "with_tf.mcap", base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))]
+    )
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    add_mcaps.index_recording(
+        dataset=dataset,
+        mcap_path=str(mcap_path),
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        reference_frame_ids=["map", "base_link"],
+    )
+
+    session = db_manager.persistent_session()
+    recordings = recording_resolver.get_all_by_dataset_id(
+        session=session, dataset_id=dataset.dataset_id
+    )
+    # `map` is a parent only on `/tf`, so the check also reads the dynamic edges.
+    assert recordings[0].reference_frame_ids == ["map", "base_link"]
+
+
+def test_index_recording__stores_configured_reference_frames(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    add_mcaps.index_recording(
+        dataset=dataset,
+        mcap_path=str(mcap_path),
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        reference_frame_ids=[helpers.LIDAR_FRAME_ID, helpers.BASE_FRAME_ID],
+    )
+
+    session = db_manager.persistent_session()
+    recordings = recording_resolver.get_all_by_dataset_id(
+        session=session, dataset_id=dataset.dataset_id
+    )
+    assert recordings[0].reference_frame_ids == [
+        helpers.LIDAR_FRAME_ID,
+        helpers.BASE_FRAME_ID,
+    ]
+
+
+def test_index_recording__unknown_reference_frame(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    with pytest.raises(McapAccessError, match="map"):
+        add_mcaps.index_recording(
+            dataset=dataset,
+            mcap_path=str(mcap_path),
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+            reference_frame_ids=["map"],
+        )
+
+    # The frames are checked before the recording is written.
+    session = db_manager.persistent_session()
+    assert (
+        recording_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset.dataset_id)
+        == []
+    )
 
 
 def test_index_recording__skips_static_transforms_without_frame_id(
@@ -263,14 +341,14 @@ def test_index_recording__skips_static_transforms_without_frame_id(
                 child_frame_id="camera",
                 translation=(0.0, 0.0, 0.0),
                 rotation=(0.0, 0.0, 0.0, 1.0),
-                log_time_ns=0,
+                timestamp_ns=0,
             ),
             StaticTransform(
                 parent_frame_id="base_link",
                 child_frame_id="lidar",
                 translation=(0.0, 1.0, 2.0),
                 rotation=(0.0, 0.0, 0.0, 1.0),
-                log_time_ns=0,
+                timestamp_ns=0,
             ),
         ],
     )
@@ -361,6 +439,30 @@ def test_index_recordings__continues_after_a_broken_recording(
 
     assert len(sequence_sample_ids) == 1
     assert _get_sample_links(sequence_sample_id=sequence_sample_ids[0]) != []
+
+
+def test_index_recordings__repeated_reference_frame(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    with pytest.raises(ValueError, match="map"):
+        add_mcaps.index_recordings(
+            dataset=dataset,
+            mcap_paths=[str(mcap_path)],
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+            reference_frame_ids=["map", "map"],
+        )
+
+    # The ids are checked before the recording is written.
+    session = db_manager.persistent_session()
+    assert (
+        recording_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset.dataset_id)
+        == []
+    )
 
 
 def test_index_recordings__all_broken(

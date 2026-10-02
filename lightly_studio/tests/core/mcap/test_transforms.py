@@ -27,7 +27,7 @@ def _static_transform(
         child_frame_id=child_frame_id,
         translation=translation,
         rotation=rotation,
-        log_time_ns=1_000,
+        timestamp_ns=1_000,
     )
 
 
@@ -135,11 +135,24 @@ class TestTransformTree:
         assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0])
 
 
+def test_frame_edges__ignores_the_pose() -> None:
+    message = {
+        "transforms": [
+            {
+                "header": {"frame_id": "map"},
+                "child_frame_id": "base_link",
+            }
+        ]
+    }
+
+    assert transforms.frame_edges(message) == [("map", "base_link")]
+
+
 def test_from_decoded_message__ros() -> None:
     message = SimpleNamespace(
         transforms=[
             SimpleNamespace(
-                header=SimpleNamespace(frame_id="base"),
+                header=SimpleNamespace(frame_id="base", stamp=SimpleNamespace(sec=1, nanosec=5)),
                 child_frame_id="cam",
                 transform=SimpleNamespace(
                     translation=SimpleNamespace(x=1.0, y=2.0, z=3.0),
@@ -157,7 +170,7 @@ def test_from_decoded_message__ros() -> None:
             child_frame_id="cam",
             translation=(1.0, 2.0, 3.0),
             rotation=IDENTITY_ROTATION,
-            log_time_ns=42,
+            timestamp_ns=1_000_000_005,
         )
     ]
 
@@ -166,6 +179,7 @@ def test_from_decoded_message__foxglove() -> None:
     message: Any = {
         "transforms": [
             {
+                "timestamp": {"sec": 2, "nsec": 7},
                 "parent_frame_id": "base",
                 "child_frame_id": "cam",
                 "translation": {"x": 1.0, "y": 2.0, "z": 3.0},
@@ -182,7 +196,7 @@ def test_from_decoded_message__foxglove() -> None:
             child_frame_id="cam",
             translation=(1.0, 2.0, 3.0),
             rotation=IDENTITY_ROTATION,
-            log_time_ns=42,
+            timestamp_ns=2_000_000_007,
         )
     ]
 
@@ -199,6 +213,30 @@ def test_from_decoded_message__single_transform() -> None:
 
     assert len(static_transforms) == 1
     assert static_transforms[0].child_frame_id == "cam"
+
+
+@pytest.mark.parametrize(
+    "stamp_fields",
+    [
+        {},
+        {"timestamp": {"sec": 0, "nsec": 0}},
+        {"timestamp": {"nsec": 7}},
+    ],
+)
+def test_from_decoded_message__capture_timestamp_falls_back_to_log_time(
+    stamp_fields: dict[str, Any],
+) -> None:
+    message: Any = {
+        **stamp_fields,
+        "parent_frame_id": "base",
+        "child_frame_id": "cam",
+        "translation": {"x": 0.0, "y": 0.0, "z": 0.0},
+        "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+    }
+
+    static_transforms = transforms.from_decoded_message(message, log_time_ns=42)
+
+    assert static_transforms[0].timestamp_ns == 42
 
 
 def test_from_decoded_message__no_transform() -> None:
