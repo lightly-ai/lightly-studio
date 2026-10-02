@@ -23,7 +23,6 @@
      * Loads the selected LiDAR payloads for the active tick and renders them in the 3D scene.
      */
     interface Props {
-        sampleId: string;
         /** Dataset the labeled point-cloud sequence belongs to. */
         datasetId: string;
         /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
@@ -36,19 +35,16 @@
         sourcePath?: readonly WorkspaceCrumb[];
         /** Optional status override for tests and stories. */
         status?: 'unsupported' | 'empty' | 'error';
-        onExit?: () => void;
         onRetry?: () => void;
     }
 
     let {
-        sampleId,
         datasetId,
         sequenceId,
         tickNumber = 1,
         onTickChange = () => undefined,
         sourcePath = [],
         status,
-        onExit = () => undefined,
         onRetry
     }: Props = $props();
 
@@ -108,15 +104,14 @@
 
 <div
     bind:this={containerEl}
-    class="flex h-full min-h-0 w-full min-w-0 flex-col bg-background"
+    class="flex h-full min-h-0 w-full min-w-0 flex-col"
     data-testid="point-cloud-labeling-workspace"
 >
     <WorkspaceHeader
-        {sampleId}
+        {sequenceId}
         {sourcePath}
         {isFullscreen}
         onToggleFullscreen={toggleFullscreen}
-        {onExit}
     />
     <WorkspaceFilterBar
         {lidarChannels}
@@ -134,11 +129,7 @@
     />
     <div class="flex min-h-0 flex-1">
         {#if workspace.status === 'unsupported' || workspace.status === 'error'}
-            <WorkspaceStatusPanel
-                status={workspace.status}
-                onRetry={onRetry ?? workspace.retry}
-                {onExit}
-            />
+            <WorkspaceStatusPanel status={workspace.status} onRetry={onRetry ?? workspace.retry} />
         {:else}
             <PaneGroup direction="horizontal" class="min-h-0 flex-1">
                 <Pane defaultSize={78} minSize={50} class="flex min-h-0 flex-col">
@@ -147,15 +138,11 @@
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
                             <ToolRail />
                             {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
-                                <WorkspaceStatusPanel
-                                    status="error"
-                                    onRetry={workspace.retry}
-                                    {onExit}
-                                />
+                                <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
-                                <WorkspaceStatusPanel status="empty" {onExit} />
+                                <WorkspaceStatusPanel status="empty" />
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
-                                <WorkspaceStatusPanel status="loading" {onExit} />
+                                <WorkspaceStatusPanel status="loading" />
                             {:else if workspace.cloudPointFrame.data}
                                 <SceneViewport
                                     batch={workspace.cloudPointFrame.data.batch}
@@ -164,11 +151,11 @@
                                         : 'intensity'}
                                 />
                             {:else}
-                                <WorkspaceStatusPanel status="empty" {onExit} />
+                                <WorkspaceStatusPanel status="empty" />
                             {/if}
                         </Pane>
                         <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"
+                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
                         >
                             <div
                                 class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
@@ -187,7 +174,7 @@
                             />
                         </Pane>
                         <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"
+                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
                         >
                             <div
                                 class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
@@ -219,7 +206,7 @@
                     </PaneGroup>
                 </Pane>
                 <PaneResizer
-                    class="group relative flex w-2 cursor-col-resize items-center justify-center bg-border/50 transition-colors hover:bg-border"
+                    class="group relative flex w-2 cursor-col-resize items-center justify-center bg-card transition-colors hover:bg-card"
                 >
                     <div
                         class="flex flex-col gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import posixpath
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -55,6 +56,9 @@ class MCAPSequenceSummary(BaseModel):
     """
 
     recording_id: UUID = Field(description="The MCAP sequence this summary describes.")
+    file_name: str = Field(
+        description="The recording's file name, e.g. `run-2026-04-18.mcap`, from its bag path."
+    )
     format: RecordingFormat = Field(description="The sequence's file format.")
     start_log_time_ns: int | None = Field(
         description="The earliest log_time_ns across all indexed ticks, in nanoseconds. "
@@ -95,6 +99,7 @@ class MCAPSequenceSummary(BaseModel):
 
         return cls(
             recording_id=info.recording.recording_id,
+            file_name=_file_name_from_uri(info.recording.uri),
             format=info.recording.format,
             start_log_time_ns=start_log_time_ns,
             lidar_channels=lidar_channels,
@@ -103,3 +108,18 @@ class MCAPSequenceSummary(BaseModel):
                 ReferenceFrameView(name=frame_id) for frame_id in info.reference_frame_ids
             ],
         )
+
+
+def _file_name_from_uri(uri: str) -> str:
+    r"""Gets the file name from a recording URI.
+
+    Normalizes Windows separators first, so a local Windows URI such as
+    `C:\bags\drive.mcap` yields `drive.mcap` instead of the whole path.
+
+    Args:
+        uri: The recording's URI.
+
+    Returns:
+        The final path component of the URI.
+    """
+    return posixpath.basename(uri.replace("\\", "/"))
