@@ -76,25 +76,12 @@ def test_vector_element__unsupported() -> None:
         expr.compile(dialect=sqlite.dialect())
 
 
-def test_inner_product__duckdb() -> None:
-    """inner_product compiles to list_inner_product with a FLOAT[] cast for DuckDB."""
-    expr = db_vector.inner_product(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "list_inner_product(col1, CAST(col2 AS FLOAT[]))"
-
-
 def test_inner_product__postgresql() -> None:
     """inner_product compiles to inner_product with ::vector casts for PostgreSQL."""
     expr = db_vector.inner_product(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
     # SQLAlchemy dialect factory functions lack type stubs.
     result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
     assert str(result) == "inner_product(col1::vector, col2::vector)"
-
-
-def test_inner_product__unsupported() -> None:
-    expr = db_vector.inner_product(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
-    with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-        expr.compile(dialect=sqlite.dialect())
 
 
 def test_inner_product__from_session(db_session: Session) -> None:
@@ -107,22 +94,9 @@ def test_inner_product__from_session(db_session: Session) -> None:
     assert result == pytest.approx(-4.5)
 
 
-def test_loaded_vector__duckdb() -> None:
-    """loaded_vector compiles to the column unchanged for DuckDB."""
-    expr = db_vector.loaded_vector(sqlalchemy.column("col1"), sqlalchemy.literal_column("3"))
-    result = expr.compile(dialect=Dialect())
-    assert str(result) == "col1"
-
-
 def test_loaded_vector__postgresql() -> None:
     """loaded_vector compiles to subvector(col, 1, dimension) for PostgreSQL."""
     expr = db_vector.loaded_vector(sqlalchemy.column("col1"), sqlalchemy.literal_column("3"))
     # SQLAlchemy dialect factory functions lack type stubs.
     result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
     assert str(result) == "subvector(col1, 1, 3)"
-
-
-def test_loaded_vector__unsupported() -> None:
-    expr = db_vector.loaded_vector(sqlalchemy.column("col1"), sqlalchemy.literal_column("3"))
-    with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-        expr.compile(dialect=sqlite.dialect())

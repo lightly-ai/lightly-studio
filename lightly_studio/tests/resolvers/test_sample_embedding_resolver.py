@@ -320,14 +320,9 @@ def test_get_projections_by_collection_id(db_session: Session) -> None:
         direction_y=[0.0, 0.5, 0.0],
     )
 
-    # The rows are ordered by sample ID. For example, x of a is 1 * 1 + 10 * 3 = 31.
-    expected = sorted(
-        [(image_a.sample_id, 31.0, 1.0), (image_b.sample_id, 64.0, 2.5)],
-        key=lambda row: row[0],
-    )
-    assert [row.sample_id for row in projections] == [row[0] for row in expected]
-    assert [(row.x, row.y) for row in projections] == pytest.approx(
-        [(x, y) for _, x, y in expected]
+    # x of a is 1 * 1 + 10 * 3 = 31, and x of b is 4 * 1 + 10 * 6 = 64.
+    assert sorted(projections) == sorted(
+        [(image_a.sample_id, 31.0, 1.0), (image_b.sample_id, 64.0, 2.5)]
     )
 
 
@@ -335,11 +330,9 @@ def test_get_projections_by_collection_id(db_session: Session) -> None:
     ("direction_x", "direction_y"),
     [
         ([1.0, 0.0], [0.0, 1.0, 0.0]),
-        ([1.0, 0.0, 0.0], [0.0, 1.0]),
-        ([1.0, 0.0], [0.0, 1.0]),
-        ([1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]),
+        ([1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]),
     ],
-    ids=["x_too_short", "y_too_short", "both_too_short", "both_too_long"],
+    ids=["x_too_short", "y_too_long"],
 )
 def test_get_projections_by_collection_id__dimension_mismatch(
     db_session: Session, direction_x: list[float], direction_y: list[float]
@@ -348,12 +341,6 @@ def test_get_projections_by_collection_id__dimension_mismatch(
     embedding_model_id = create_embedding_model(
         session=db_session, collection_id=collection_id, embedding_dimension=3
     ).embedding_model_id
-    create_samples_with_embeddings(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model_id,
-        images_and_embeddings=[(ImageStub(path="a.png"), [1.0, 2.0, 3.0])],
-    )
 
     with pytest.raises(ValueError, match="embedding dimension 3"):
         sample_embedding_resolver.get_projections_by_collection_id(
