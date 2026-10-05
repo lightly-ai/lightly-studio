@@ -35,6 +35,7 @@
             size: vehicle.size,
             rotation: [0, 0, Math.sin(halfYaw), Math.cos(halfYaw)],
             trackId: null,
+            trackNumber: null,
             keyframeId: null
         });
     });

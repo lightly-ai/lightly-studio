@@ -120,6 +120,7 @@ export function createAnnotationFixture() {
         annotationClassId: 'vehicle',
         annotationSourceId: 'ground-truth',
         trackId: 'track-0',
+        trackNumber: 7,
         keyframeId: 'keyframe-0',
         center: [10, -2, 1],
         size: [4, 2, 2],
