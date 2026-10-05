@@ -11,6 +11,41 @@ interface Params {
 export function createSceneNavigationController({ camera, controls, invalidate }: Params) {
     let navigationFrame: number | undefined;
     let navigationDamping = true;
+    let lastContinuousNavigationTime = 0;
+    const continuousNavigation = new Map<SceneNavigationAction, number>();
+
+    function animateContinuousNavigation(now: number) {
+        if (continuousNavigation.size === 0) {
+            navigationFrame = undefined;
+            controls.enableDamping = navigationDamping;
+            return;
+        }
+
+        const delta = Math.min((now - lastContinuousNavigationTime) / 1000, 0.05);
+        lastContinuousNavigationTime = now;
+        moveContinuously(delta);
+
+        controls.update();
+        invalidate();
+        navigationFrame = requestAnimationFrame(animateContinuousNavigation);
+    }
+
+    function moveContinuously(delta: number) {
+        const { direction, right } = getMovementAxes(camera.position, controls.target);
+        const move = new THREE.Vector3();
+        if (continuousNavigation.has('forward')) move.add(direction);
+        if (continuousNavigation.has('backward')) move.sub(direction);
+        if (continuousNavigation.has('right')) move.add(right);
+        if (continuousNavigation.has('left')) move.sub(right);
+        move.multiplyScalar(camera.position.distanceTo(controls.target) * 0.85 * delta);
+        camera.position.add(move);
+        controls.target.add(move);
+        const rotateLeft = continuousNavigation.has('rotate-left');
+        const rotateRight = continuousNavigation.has('rotate-right');
+        if (rotateLeft !== rotateRight) {
+            rotatePosition(camera.position, controls.target, (rotateLeft ? 1 : -1) * 0.9 * delta);
+        }
+    }
 
     function animateNavigation(targetPosition: THREE.Vector3, targetCenter: THREE.Vector3) {
         if (navigationFrame === undefined) navigationDamping = controls.enableDamping;
@@ -35,13 +70,17 @@ export function createSceneNavigationController({ camera, controls, invalidate }
                 return;
             }
             navigationFrame = undefined;
-            controls.enableDamping = navigationDamping;
+            if (continuousNavigation.size > 0) {
+                lastContinuousNavigationTime = performance.now();
+                navigationFrame = requestAnimationFrame(animateContinuousNavigation);
+            } else controls.enableDamping = navigationDamping;
         };
 
         navigationFrame = requestAnimationFrame(animate);
     }
 
     function cancelNavigationAnimation() {
+        continuousNavigation.clear();
         if (navigationFrame === undefined) return;
         cancelAnimationFrame(navigationFrame);
         navigationFrame = undefined;
@@ -49,7 +88,23 @@ export function createSceneNavigationController({ camera, controls, invalidate }
     }
 
     const unsubscribe = listenToSceneNavigation(({ action, phase }) => {
-        if (phase === 'step') navigateStep(action);
+        if (phase === 'start') {
+            if (navigationFrame === undefined) navigationDamping = controls.enableDamping;
+            else cancelAnimationFrame(navigationFrame);
+            continuousNavigation.set(action, (continuousNavigation.get(action) ?? 0) + 1);
+            controls.enableDamping = false;
+            lastContinuousNavigationTime = performance.now();
+            navigationFrame = requestAnimationFrame(animateContinuousNavigation);
+            return;
+        }
+        if (phase === 'stop') {
+            const count = continuousNavigation.get(action) ?? 0;
+            if (count > 1) continuousNavigation.set(action, count - 1);
+            else continuousNavigation.delete(action);
+            return;
+        }
+
+        navigateStep(action);
     });
 
     function navigateStep(action: SceneNavigationAction) {

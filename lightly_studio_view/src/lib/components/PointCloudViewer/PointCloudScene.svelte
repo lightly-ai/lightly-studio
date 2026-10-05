@@ -4,6 +4,7 @@
     import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import PointCloudPoints from './PointCloudPoints/PointCloudPoints.svelte';
     import * as THREE from 'three';
+    import { createSceneNavigationController } from './sceneNavigationController';
     import type { ColorMode } from './pointCloudUtils';
     import type { PointBatch } from './types';
 
@@ -21,19 +22,24 @@
     let { batch, colorMode = 'none', pointSize = 2, intensityRange }: Props = $props();
 
     const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
-    const { renderer } = useThrelte();
+    const { invalidate, renderer } = useThrelte();
     let cameraRef: THREE.PerspectiveCamera | undefined = $state();
     let controlsRef: ThreeOrbitControls | undefined = $state();
-
     $effect(() => {
+        if (!cameraRef || !controlsRef) return;
+        const navigation = createSceneNavigationController({
+            camera: cameraRef,
+            controls: controlsRef,
+            invalidate
+        });
         const canvas = renderer.domElement;
-
-        // Suppress browser context menu so right-drag rotate works uninterrupted.
-        const suppress = (e: Event) => e.preventDefault();
+        const suppress = (event: Event) => event.preventDefault();
         canvas.addEventListener('contextmenu', suppress);
-
+        canvas.addEventListener('pointerdown', navigation.cancel);
         return () => {
             canvas.removeEventListener('contextmenu', suppress);
+            canvas.removeEventListener('pointerdown', navigation.cancel);
+            navigation.dispose();
         };
     });
 </script>
