@@ -1,48 +1,55 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateQueryResult } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
-import * as svelteQueryGen from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { getTickDetails } from '$lib/api/lightly_studio_local/sdk.gen';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 import { render } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import type { useTickDetails } from './useTickDetails';
 import UseTickDetailsHarness from './UseTickDetailsHarness.svelte';
 
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({ getTickDetails: vi.fn() }));
+
 describe('useTickDetails', () => {
-    // Sentinel that stands in for the generated query options, so we can assert
-    // the hook merges its own `enabled` flag onto them.
-    const baseOptions = { queryKey: ['tick-details'], queryFn: vi.fn() };
-    const query = {
-        data: {
-            recording_id: 'recording-1',
-            seq_number: 0,
-            timestamp_ns: 1000,
-            camera_channels: {},
-            lidar_channels: {},
-            annotations: []
-        },
-        isSuccess: true
-    } satisfies Partial<CreateQueryResult<TickDetailView, Error>>;
+    const data = {
+        recording_id: 'recording-1',
+        seq_number: 0,
+        timestamp_ns: 1000,
+        camera_channels: {},
+        lidar_channels: {},
+        annotations: []
+    } satisfies TickDetailView;
+    const query = { data, isSuccess: true } satisfies Partial<
+        CreateQueryResult<TickDetailView, Error>
+    >;
+    const path = { dataset_id: 'dataset-1', sequence_id: 'sequence-1', seq_number: 2 };
 
     // The thunk the hook hands to createQuery; invoking it yields the resolved
     // query options for the current getter values.
     let queryOptionsThunk: () => {
+        queryKey: unknown[];
+        queryFn: (context: { signal: AbortSignal }) => Promise<TickDetailView>;
         enabled: boolean;
         placeholderData: (previous: TickDetailView | undefined) => TickDetailView | undefined;
     };
 
     beforeEach(() => {
         vi.resetAllMocks();
-        vi.spyOn(svelteQueryGen, 'getTickDetailsOptions').mockReturnValue(
-            baseOptions as unknown as ReturnType<typeof svelteQueryGen.getTickDetailsOptions>
-        );
+        vi.mocked(getTickDetails).mockResolvedValue({ data } as unknown as Awaited<
+            ReturnType<typeof getTickDetails>
+        >);
         vi.spyOn(tanstackQuery, 'createQuery').mockImplementation((thunk) => {
             queryOptionsThunk = thunk as typeof queryOptionsThunk;
             return query as unknown as CreateQueryResult<TickDetailView, Error>;
         });
     });
 
-    const renderHook = (props: { datasetId: string; sequenceId: string; seqNumber: number }) => {
+    const renderHook = (props: {
+        datasetId: string;
+        sequenceId: string;
+        seqNumber: number;
+        displayFrameId?: string;
+    }) => {
         let result: ReturnType<typeof useTickDetails> | undefined;
         render(UseTickDetailsHarness, {
             ...props,
@@ -65,13 +72,95 @@ describe('useTickDetails', () => {
         expect(tickDetails).toBe(query);
     });
 
-    it('requests tick details for the given dataset, sequence, and tick position', () => {
+    it('requests tick details for the given dataset, sequence, and tick position', async () => {
         renderHook({ datasetId: 'dataset-1', sequenceId: 'sequence-1', seqNumber: 2 });
-        queryOptionsThunk();
+        const signal = new AbortController().signal;
 
-        expect(svelteQueryGen.getTickDetailsOptions).toHaveBeenCalledWith({
-            path: { dataset_id: 'dataset-1', sequence_id: 'sequence-1', seq_number: 2 }
+        await expect(queryOptionsThunk().queryFn({ signal })).resolves.toBe(data);
+        expect(getTickDetails).toHaveBeenCalledExactlyOnceWith({
+            path,
+            signal,
+            throwOnError: true
         });
+    });
+
+    it('requests the cuboids in the target frame when one is given', async () => {
+        renderHook({
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            seqNumber: 2,
+            displayFrameId: 'map'
+        });
+        const signal = new AbortController().signal;
+
+        await expect(queryOptionsThunk().queryFn({ signal })).resolves.toBe(data);
+        expect(getTickDetails).toHaveBeenCalledExactlyOnceWith({
+            path,
+            query: { target_frame_id: 'map' },
+            signal,
+            throwOnError: true
+        });
+    });
+
+    it('keys the query by the target frame', () => {
+        renderHook({
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            seqNumber: 2,
+            displayFrameId: 'map'
+        });
+
+        expect(queryOptionsThunk().queryKey).toEqual([
+            expect.objectContaining({ path, query: { target_frame_id: 'map' } })
+        ]);
+    });
+
+    it('loads the cuboids in their own frames when they cannot be mapped', async () => {
+        renderHook({
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            seqNumber: 2,
+            displayFrameId: 'map'
+        });
+        vi.mocked(getTickDetails).mockRejectedValueOnce({
+            detail: { type: 'transform_unavailable', message: 'No transform' }
+        });
+        const signal = new AbortController().signal;
+
+        await expect(queryOptionsThunk().queryFn({ signal })).resolves.toBe(data);
+        expect(getTickDetails).toHaveBeenLastCalledWith({ path, signal, throwOnError: true });
+    });
+
+    it('does not retry without a target frame for other errors', async () => {
+        renderHook({
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            seqNumber: 2,
+            displayFrameId: 'map'
+        });
+        vi.mocked(getTickDetails).mockRejectedValueOnce({ detail: 'Recording was not found.' });
+
+        await expect(
+            queryOptionsThunk().queryFn({ signal: new AbortController().signal })
+        ).rejects.toEqual({ detail: 'Recording was not found.' });
+        expect(getTickDetails).toHaveBeenCalledOnce();
+    });
+
+    it('does not retry without a target frame when the request is aborted', async () => {
+        renderHook({
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            seqNumber: 2,
+            displayFrameId: 'map'
+        });
+        const controller = new AbortController();
+        controller.abort();
+        vi.mocked(getTickDetails).mockRejectedValueOnce(new Error('Aborted'));
+
+        await expect(queryOptionsThunk().queryFn({ signal: controller.signal })).rejects.toThrow(
+            'Aborted'
+        );
+        expect(getTickDetails).toHaveBeenCalledOnce();
     });
 
     it('enables the query only when both the dataset and sequence ids are present', () => {
@@ -89,9 +178,8 @@ describe('useTickDetails', () => {
 
     it('keeps the previous tick details while the next tick loads', () => {
         renderHook({ datasetId: 'dataset-1', sequenceId: 'sequence-1', seqNumber: 2 });
-        const previous = query.data;
 
-        expect(queryOptionsThunk().placeholderData(previous)).toBe(previous);
+        expect(queryOptionsThunk().placeholderData(data)).toBe(data);
         expect(queryOptionsThunk().placeholderData(undefined)).toBeUndefined();
     });
 });

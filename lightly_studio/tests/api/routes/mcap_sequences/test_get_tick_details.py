@@ -13,7 +13,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
-from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import group_resolver
 from lightly_studio.services import recording_service
@@ -61,7 +61,7 @@ def test_get_tick_details__transform_not_found(
     mocker.patch.object(
         recording_service,
         "get_tick_details",
-        side_effect=McapAccessError("No transform connects the frames."),
+        side_effect=TransformNotFoundError("No transform connects the frames."),
     )
 
     response = test_client.get(
@@ -70,7 +70,28 @@ def test_get_tick_details__transform_not_found(
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
-    assert response.json()["detail"] == "No transform connects the frames."
+    assert response.json()["detail"] == {
+        "type": "transform_unavailable",
+        "message": "No transform connects the frames.",
+    }
+
+
+def test_get_tick_details__mcap_access_error(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(
+        recording_service,
+        "get_tick_details",
+        side_effect=McapAccessError("Recording was not found."),
+    )
+
+    response = test_client.get(
+        f"/datasets/{uuid.uuid4()}/mcap-sequences/{uuid.uuid4()}/ticks/0",
+        params={"target_frame_id": "map"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json()["detail"] == "Recording was not found."
 
 
 def test_get_tick_details__unknown_sequence(test_client: TestClient) -> None:

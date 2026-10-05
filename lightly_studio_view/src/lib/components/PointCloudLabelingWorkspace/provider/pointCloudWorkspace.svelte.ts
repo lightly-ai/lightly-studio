@@ -24,11 +24,17 @@ type TickDetails = ReturnType<typeof useTickDetails>['tickDetails'];
 type CloudPointQuery = ReturnType<typeof useCloudPointFrame>['query'];
 type CloudPointFrameParams = ReturnType<Parameters<typeof useCloudPointFrame>[0]>;
 
-function createTickDetails(getInputs: GetInputs, getCurrentTick: () => number): TickDetails {
+function createTickDetails(
+    getInputs: GetInputs,
+    getCurrentTick: () => number,
+    getDisplayFrameId: () => string
+): TickDetails {
     return useTickDetails({
         getDatasetId: () => getInputs().datasetId,
         getSequenceId: () => getInputs().sequenceId,
-        getSeqNumber: getCurrentTick
+        getSeqNumber: getCurrentTick,
+        // The cuboids are mapped to the frame of the point clouds, so that the two align.
+        getDisplayFrameId: () => getDisplayFrameId() || undefined
     }).tickDetails;
 }
 
@@ -55,7 +61,7 @@ function createCloudPointFrameParamsGetter(
     getInputs: GetInputs,
     tickDetails: TickDetails,
     summary: SequenceSummary,
-    getTargetFrameId: () => string
+    getDisplayFrameId: () => string
 ): () => CloudPointFrameParams {
     return () => ({
         datasetId: getInputs().datasetId,
@@ -65,7 +71,7 @@ function createCloudPointFrameParamsGetter(
             tickDetails.data,
             getInputs().selectedLidarChannels
         ),
-        targetFrameId: getTargetFrameId() || undefined
+        displayFrameId: getDisplayFrameId() || undefined
     });
 }
 
@@ -159,7 +165,11 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         this.#sequenceTicks = ticks;
         // Read once at construction: this is the starting position, not a reactive binding.
         this.currentTick = getInputs().initialTick ?? 0;
-        const tickDetails = createTickDetails(getInputs, () => this.currentTick);
+        const tickDetails = createTickDetails(
+            getInputs,
+            () => this.currentTick,
+            () => this.referenceFrameId
+        );
         const getCloudPointFrameParams = createCloudPointFrameParamsGetter(
             getInputs,
             tickDetails,
