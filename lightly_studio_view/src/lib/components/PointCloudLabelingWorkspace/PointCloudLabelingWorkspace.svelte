@@ -11,6 +11,7 @@
     import type { WorkspaceCrumb } from './types';
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
     import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
+    import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
@@ -53,6 +54,7 @@
 
     let selectedLidarChannels = $state<number[] | null>(null);
     let selectedCameraChannels = $state<number[]>([]);
+    let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
 
     const workspace = createPointCloudWorkspaceContext(() => ({
         datasetId,
@@ -111,6 +113,7 @@
 
     const lidarChannels = $derived(workspace.lidarChannels);
     const cameraChannels = $derived(workspace.cameraChannels);
+    const displayedColorMode = $derived(selectedColorMode ?? 'density');
 
     const toggleChannel = (selected: number[], channelId: number): number[] =>
         selected.includes(channelId)
@@ -162,6 +165,8 @@
         selectedLidarChannels={selectedLidarChannels ??
             lidarChannels.map((channel) => channel.channel_id)}
         {selectedCameraChannels}
+        colorMode={displayedColorMode}
+        onColorModeChange={(mode) => (selectedColorMode = mode)}
         onToggleLidarChannel={(channelId) =>
             (selectedLidarChannels = toggleChannel(
                 selectedLidarChannels ?? lidarChannels.map((channel) => channel.channel_id),
@@ -187,9 +192,7 @@
                             {:else if sceneSnapshot}
                                 <SceneViewport
                                     batch={sceneSnapshot.frame.batch}
-                                    colorMode={sceneSnapshot.frame.batch.colors
-                                        ? 'rgb'
-                                        : 'intensity'}
+                                    colorMode={displayedColorMode}
                                     pointCloudBounds={sceneSnapshot.frame.bounds ?? undefined}
                                     fitKey={`${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`}
                                     cuboids={sceneCuboids}
