@@ -38,6 +38,23 @@ describe('embedTextAxes', () => {
         });
     });
 
+    it('sends one request at a time', async () => {
+        let inFlight = 0;
+        let maxInFlight = 0;
+        mocks.embedText.mockImplementation(async ({ query }: { query: { query_text: string } }) => {
+            inFlight += 1;
+            maxInFlight = Math.max(maxInFlight, inFlight);
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            inFlight -= 1;
+            return { data: EMBEDDINGS[query.query_text], error: undefined };
+        });
+
+        await embedTextAxes('collection-id', TEXT_AXES);
+
+        expect(mocks.embedText).toHaveBeenCalledTimes(4);
+        expect(maxInFlight).toBe(1);
+    });
+
     it('throws an Error with the server message when a text fails to embed', async () => {
         mocks.embedText.mockResolvedValue({
             data: undefined,

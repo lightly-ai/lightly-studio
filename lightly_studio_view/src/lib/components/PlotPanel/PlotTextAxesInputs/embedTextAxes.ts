@@ -10,12 +10,19 @@ export const embedTextAxes = async (
     collectionId: string,
     textAxes: TextAxes
 ): Promise<ProjectionAxes> => {
-    const [xNegative, xPositive, yNegative, yPositive] = await Promise.all([
-        embed(collectionId, textAxes.x.negative),
-        embed(collectionId, textAxes.x.positive),
-        embed(collectionId, textAxes.y.negative),
-        embed(collectionId, textAxes.y.positive)
-    ]);
+    const texts = [
+        textAxes.x.negative,
+        textAxes.x.positive,
+        textAxes.y.negative,
+        textAxes.y.positive
+    ];
+    // One request at a time: the server has one embedding model, so parallel requests wait
+    // for each other and only add load.
+    const embeddings: number[][] = [];
+    for (const text of texts) {
+        embeddings.push(await embed(collectionId, text));
+    }
+    const [xNegative, xPositive, yNegative, yPositive] = embeddings;
     return { x: subtract(xPositive, xNegative), y: subtract(yPositive, yNegative) };
 };
 
