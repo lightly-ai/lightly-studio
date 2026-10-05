@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Generator
+import json
+from collections.abc import Generator, Iterator
 from typing import Any
 from uuid import uuid4
 
@@ -14,7 +15,6 @@ from lightly_studio.agent.openrouter_client import AgentLLMError, ChatModel
 from lightly_studio.api.app import app
 from lightly_studio.api.routes.api import agent
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_GATEWAY,
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
@@ -50,16 +50,25 @@ def test_agent_chat(db_session: Session, test_client: TestClient) -> None:
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    body = response.json()
+    assert response.headers["content-type"] == "application/x-ndjson"
+    events = _read_events(text=response.text)
     tag = tag_resolver.get_by_name(
         session=db_session, tag_name="picked", collection_id=collection.collection_id
     )
     assert tag is not None
-    assert body["ui_actions"] == [
+    assert [event["type"] for event in events] == [
+        "message",
+        "message",
+        "content_delta",
+        "message",
+        "turn_done",
+    ]
+    messages = [event["message"] for event in events if event["type"] == "message"]
+    assert [message["role"] for message in messages] == ["assistant", "tool", "assistant"]
+    assert messages[-1]["content"] == "Done."
+    assert events[-1]["ui_actions"] == [
         {"type": "select_tag", "tag_id": str(tag.tag_id), "tag_name": "picked"}
     ]
-    assert [message["role"] for message in body["messages"]] == ["assistant", "tool", "assistant"]
-    assert body["messages"][-1]["content"] == "Done."
 
 
 def test_agent_chat__not_found(test_client: TestClient) -> None:
@@ -95,8 +104,11 @@ def test_agent_chat__llm_error(db_session: Session, test_client: TestClient) -> 
         json={"messages": [_USER_MESSAGE]},
     )
 
-    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
-    assert response.json()["detail"] == "OpenRouter answered 401: bad key"
+    # The stream has started when the model fails, so the error is the last event.
+    assert response.status_code == HTTP_STATUS_OK
+    assert _read_events(text=response.text) == [
+        {"type": "turn_error", "detail": "OpenRouter answered 401: bad key"}
+    ]
 
 
 def test_agent_chat__no_api_key(
@@ -121,9 +133,14 @@ def _clear_chat_model_override() -> Generator[None, None, None]:
 
 
 class _FailingChatModel:
-    def complete(self, messages: Any, tools: Any) -> AgentMessage:
+    def stream(self, messages: Any, tools: Any) -> Iterator[AgentMessage]:
         del messages, tools
         raise AgentLLMError("OpenRouter answered 401: bad key")
+        yield  # Makes this function a generator.
+
+
+def _read_events(text: str) -> list[dict[str, Any]]:
+    return [json.loads(line) for line in text.splitlines()]
 
 
 def _override_chat_model(chat_model: ChatModel) -> None:

@@ -3,14 +3,22 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.agent.agent_events import AgentEvent, MessageEvent
 from lightly_studio.agent.agent_tool import AgentContext
-from lightly_studio.agent.chat_messages import AgentMessage, AgentToolCall, AgentToolCallFunction
+from lightly_studio.agent.chat_messages import (
+    AgentMessage,
+    AgentToolCall,
+    AgentToolCallFunction,
+    ContentDelta,
+    ReasoningDelta,
+)
+from lightly_studio.agent.openrouter_stream import ModelDelta
 from lightly_studio.agent.result_store import ResultStore
 from lightly_studio.models.collection import CollectionTable
 from tests import helpers_resolvers
@@ -82,17 +90,30 @@ def tool_call_message(calls: Sequence[tuple[str, str, Mapping[str, Any]]]) -> Ag
     )
 
 
+def messages_of(events: Sequence[AgentEvent]) -> list[AgentMessage]:
+    """Get the messages of the message events, in order."""
+    return [event.message for event in events if isinstance(event, MessageEvent)]
+
+
 class ScriptedChatModel:
-    """A ``ChatModel`` that answers with fixed replies, in order, and records its input."""
+    """A ``ChatModel`` that streams fixed replies, in order, and records its input.
+
+    A reply streams its reasoning and its content as one piece each, then the message.
+    """
 
     def __init__(self, replies: Sequence[AgentMessage]) -> None:
         self._replies = list(replies)
         self.received_messages: list[list[AgentMessage]] = []
         self.received_tools: list[list[dict[str, Any]]] = []
 
-    def complete(
+    def stream(
         self, messages: Sequence[AgentMessage], tools: Sequence[dict[str, Any]]
-    ) -> AgentMessage:
+    ) -> Iterator[ModelDelta | AgentMessage]:
         self.received_messages.append(list(messages))
         self.received_tools.append(list(tools))
-        return self._replies.pop(0)
+        reply = self._replies.pop(0)
+        if reply.reasoning:
+            yield ReasoningDelta(text=reply.reasoning)
+        if reply.content:
+            yield ContentDelta(text=reply.content)
+        yield reply

@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 from typing import Annotated
 from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from lightly_studio.agent import agent_loop
-from lightly_studio.agent.agent_loop import AgentTurnResult
+from lightly_studio.agent.agent_events import AgentEvent, AgentStreamLine, TurnErrorEvent
 from lightly_studio.agent.agent_tool import AgentContext
 from lightly_studio.agent.chat_messages import AgentMessage
 from lightly_studio.agent.openrouter_client import AgentLLMError, ChatModel, OpenRouterChatModel
 from lightly_studio.agent.result_store import default_result_store
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_GATEWAY,
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_SERVICE_UNAVAILABLE,
 )
@@ -31,6 +31,15 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 _LLM_TIMEOUT_SECONDS = 120.0
 
 agent_router = APIRouter()
+
+
+class NdjsonStreamingResponse(StreamingResponse):
+    """A stream of JSON objects, one per line.
+
+    The media type is a class attribute, so the OpenAPI schema shows it for the route.
+    """
+
+    media_type = "application/x-ndjson"
 
 
 class AgentChatRequest(BaseModel):
@@ -63,22 +72,36 @@ def get_chat_model() -> Generator[ChatModel, None, None]:
         base_url=env.LIGHTLY_STUDIO_OPENROUTER_BASE_URL, timeout=_LLM_TIMEOUT_SECONDS
     ) as client:
         yield OpenRouterChatModel(
-            client=client, api_key=api_key, model=env.LIGHTLY_STUDIO_AGENT_MODEL
+            client=client,
+            api_key=api_key,
+            model=env.LIGHTLY_STUDIO_AGENT_MODEL,
+            reasoning_effort=env.LIGHTLY_STUDIO_AGENT_REASONING_EFFORT,
         )
 
 
-@agent_router.post("/collections/{collection_id}/agent/chat", response_model=AgentTurnResult)
+@agent_router.post(
+    "/collections/{collection_id}/agent/chat",
+    response_class=NdjsonStreamingResponse,
+    responses={
+        200: {
+            "model": AgentStreamLine,
+            "description": "The events of the turn, one JSON object per line.",
+        }
+    },
+)
 def agent_chat(
     session: SessionDep,
     collection: Annotated[CollectionTable, Depends(get_and_validate_collection_id)],
     chat_model: Annotated[ChatModel, Depends(get_chat_model)],
     request: AgentChatRequest,
-) -> AgentTurnResult:
+) -> NdjsonStreamingResponse:
     """Answer a chat message. The agent can search, select and tag samples.
 
+    The answer streams the events of the turn while the agent works. A failure of the
+    language model after the stream started arrives as a ``turn_error`` event.
+
     Raises:
-        HTTPException: 400 if the collection is not an image collection, 502 if the
-            language model gives no usable answer.
+        HTTPException: 400 if the collection is not an image collection.
     """
     if collection.sample_type != SampleType.IMAGE:
         raise HTTPException(
@@ -91,9 +114,16 @@ def agent_chat(
         selected_sample_ids=request.selected_sample_ids,
         result_store=default_result_store,
     )
+    events = agent_loop.stream_agent_turn(
+        chat_model=chat_model, context=context, history=request.messages
+    )
+    return NdjsonStreamingResponse(_to_lines(events=events))
+
+
+def _to_lines(events: Iterator[AgentEvent]) -> Iterator[str]:
+    """Write each event as one line of JSON. A model failure becomes the last event."""
     try:
-        return agent_loop.run_agent_turn(
-            chat_model=chat_model, context=context, history=request.messages
-        )
+        for event in events:
+            yield event.model_dump_json() + "\n"
     except AgentLLMError as exc:
-        raise HTTPException(status_code=HTTP_STATUS_BAD_GATEWAY, detail=str(exc)) from exc
+        yield TurnErrorEvent(detail=str(exc)).model_dump_json() + "\n"

@@ -1,6 +1,6 @@
-import type { AgentTurnResult } from '$lib/api/lightly_studio_local/types.gen';
+import type { TurnDoneEvent } from '$lib/api/lightly_studio_local/types.gen';
 
-type UiAction = AgentTurnResult['ui_actions'][number];
+type UiAction = TurnDoneEvent['ui_actions'][number];
 
 interface UiActionHandlers {
     /** Filters the grid to one tag. */

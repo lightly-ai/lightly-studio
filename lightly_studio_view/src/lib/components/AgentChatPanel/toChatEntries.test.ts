@@ -7,7 +7,7 @@ const toolCall = (id: string, name: string) => ({
 });
 
 describe('toChatEntries', () => {
-    it('shows user and assistant text and one entry per tool result', () => {
+    it('shows user and assistant text and one entry per tool call', () => {
         const entries = toChatEntries([
             { role: 'user', content: 'Find tigers' },
             toolCall('call_1', 'search_by_text'),
@@ -27,14 +27,43 @@ describe('toChatEntries', () => {
 
         expect(entries).toEqual([
             { kind: 'user', text: 'Find tigers' },
-            { kind: 'tool', name: 'search_by_text', summary: '10 found', isError: false },
             {
                 kind: 'tool',
+                callId: 'call_1',
+                name: 'search_by_text',
+                status: 'done',
+                summary: '10 found'
+            },
+            {
+                kind: 'tool',
+                callId: 'call_2',
                 name: 'tag_samples',
-                summary: '10 tagged, tag "tiger"',
-                isError: false
+                status: 'done',
+                summary: '10 tagged, tag "tiger"'
             },
             { kind: 'assistant', text: 'Tagged 10 images.' }
+        ]);
+    });
+
+    it('shows the reasoning and the text of a step, and a tool without result as running', () => {
+        const entries = toChatEntries([
+            {
+                ...toolCall('call_1', 'get_collection_overview'),
+                reasoning: 'I need the size first.',
+                content: 'I check the collection.'
+            }
+        ]);
+
+        expect(entries).toEqual([
+            { kind: 'thinking', text: 'I need the size first.' },
+            { kind: 'step', text: 'I check the collection.' },
+            {
+                kind: 'tool',
+                callId: 'call_1',
+                name: 'get_collection_overview',
+                status: 'running',
+                summary: 'running…'
+            }
         ]);
     });
 
@@ -49,7 +78,13 @@ describe('toChatEntries', () => {
         ]);
 
         expect(entries).toEqual([
-            { kind: 'tool', name: 'show_samples', summary: 'Unknown result handle', isError: true }
+            {
+                kind: 'tool',
+                callId: 'call_1',
+                name: 'show_samples',
+                status: 'error',
+                summary: 'Unknown result handle'
+            }
         ]);
     });
 });

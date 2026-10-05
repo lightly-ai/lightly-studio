@@ -1,8 +1,10 @@
 import type { AgentMessageOutput } from '$lib/api/lightly_studio_local/types.gen';
 
+type ToolStatus = 'running' | 'done' | 'error';
+
 type ChatEntry =
-    | { kind: 'user' | 'assistant'; text: string }
-    | { kind: 'tool'; name: string; summary: string; isError: boolean };
+    | { kind: 'user' | 'assistant' | 'step' | 'thinking'; text: string }
+    | { kind: 'tool'; callId: string; name: string; status: ToolStatus; summary: string };
 
 // The result keys of the agent tools that count samples, with the word that describes them.
 const COUNT_KEYS: [string, string][] = [
@@ -13,35 +15,59 @@ const COUNT_KEYS: [string, string][] = [
 ];
 
 /**
- * Turns the agent transcript into the entries that the chat shows. A tool call and its
- * result become one entry with the tool name and a short summary.
+ * Turns the agent transcript into the entries that the chat shows. The reasoning of a step
+ * becomes a thinking entry, and its text a step entry. A tool call becomes a running tool
+ * entry, which its result completes.
  */
 export function toChatEntries(messages: AgentMessageOutput[]): ChatEntry[] {
-    const toolNames = new Map<string, string>();
     const entries: ChatEntry[] = [];
+    const toolEntries = new Map<string, Extract<ChatEntry, { kind: 'tool' }>>();
     for (const message of messages) {
-        for (const call of message.tool_calls ?? []) {
-            toolNames.set(call.id, call.function.name);
-        }
-        if (message.role === 'tool') {
-            const name = toolNames.get(message.tool_call_id ?? '') ?? 'tool';
-            entries.push({ kind: 'tool', name, ...summarizeToolResult(message.content ?? '') });
-        } else if ((message.role === 'user' || message.role === 'assistant') && message.content) {
-            entries.push({ kind: message.role, text: message.content });
+        if (message.role === 'user' && message.content) {
+            entries.push({ kind: 'user', text: message.content });
+        } else if (message.role === 'assistant') {
+            entries.push(...assistantEntries(message, toolEntries));
+        } else if (message.role === 'tool') {
+            const entry = toolEntries.get(message.tool_call_id ?? '');
+            if (entry) Object.assign(entry, summarizeToolResult(message.content ?? ''));
         }
     }
     return entries;
 }
 
-function summarizeToolResult(content: string): { summary: string; isError: boolean } {
+function assistantEntries(
+    message: AgentMessageOutput,
+    toolEntries: Map<string, Extract<ChatEntry, { kind: 'tool' }>>
+): ChatEntry[] {
+    const calls = message.tool_calls ?? [];
+    const entries: ChatEntry[] = [];
+    if (message.reasoning) entries.push({ kind: 'thinking', text: message.reasoning });
+    if (message.content) {
+        entries.push({ kind: calls.length ? 'step' : 'assistant', text: message.content });
+    }
+    for (const call of calls) {
+        const entry = {
+            kind: 'tool' as const,
+            callId: call.id,
+            name: call.function.name,
+            status: 'running' as ToolStatus,
+            summary: 'running…'
+        };
+        toolEntries.set(call.id, entry);
+        entries.push(entry);
+    }
+    return entries;
+}
+
+function summarizeToolResult(content: string): { status: ToolStatus; summary: string } {
     let result: Record<string, unknown>;
     try {
         result = JSON.parse(content);
     } catch {
-        return { summary: content, isError: false };
+        return { status: 'done', summary: content };
     }
     if (typeof result.error === 'string') {
-        return { summary: result.error, isError: true };
+        return { status: 'error', summary: result.error };
     }
     const parts = COUNT_KEYS.filter(([key]) => typeof result[key] === 'number').map(
         ([key, word]) => `${result[key]} ${word}`
@@ -49,5 +75,5 @@ function summarizeToolResult(content: string): { summary: string; isError: boole
     if (typeof result.tag_name === 'string') {
         parts.push(`tag "${result.tag_name}"`);
     }
-    return { summary: parts.join(', ') || 'done', isError: false };
+    return { status: 'done', summary: parts.join(', ') || 'done' };
 }

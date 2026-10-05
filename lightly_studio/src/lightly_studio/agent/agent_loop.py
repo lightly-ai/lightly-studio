@@ -3,22 +3,26 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Generator, Iterator, Sequence
 from typing import Any
 
-from pydantic import BaseModel
-
+from lightly_studio.agent.agent_events import (
+    AgentEvent,
+    ContentDeltaEvent,
+    MessageEvent,
+    ReasoningDeltaEvent,
+    TurnDoneEvent,
+)
 from lightly_studio.agent.agent_tool import AgentContext, AgentTool
-from lightly_studio.agent.chat_messages import AgentMessage, AgentToolCall
-from lightly_studio.agent.openrouter_client import ChatModel
+from lightly_studio.agent.chat_messages import AgentMessage, AgentToolCall, ReasoningDelta
+from lightly_studio.agent.openrouter_client import AgentLLMError, ChatModel
 from lightly_studio.agent.search_tools import SEARCH_TOOLS
 from lightly_studio.agent.tag_tools import TAG_TOOLS
-from lightly_studio.agent.ui_actions import UiAction
 
 AGENT_TOOLS: list[AgentTool[Any]] = [*SEARCH_TOOLS, *TAG_TOOLS]
 
 # The largest number of model calls in one turn. It stops a model that calls tools in a loop.
-MAX_STEPS = 8
+MAX_STEPS = 16
 
 _SYSTEM_PROMPT = """\
 You are the assistant of LightlyStudio, a tool to curate image datasets. You work on the \
@@ -26,33 +30,24 @@ collection "{collection_name}". The user selected {selected_count} samples in th
 
 Rules:
 - Do the request with the tools. Do not ask for confirmation of a clear request.
+- Before you call tools, write one short sentence that tells the user your next step.
 - Tools that find samples return a result handle such as "result_3". Pass the handle to \
 other tools. Never invent sample IDs or handles.
 - When the user asks for samples and a tag, first find the samples, then tag the handle.
 - When the user asks for samples but no tag, show them with show_samples.
 - When a tool returns an error, fix the call or explain the problem to the user.
+- When the user asks who developed you or which model you are, say that you are the \
+LightlyStudio assistant, developed by Lightly AI. Do not name the language model or its \
+provider.
 - Answer in one to three short sentences. Name the tag and the number of samples."""
 
 
-class AgentTurnResult(BaseModel):
-    """The result of one agent turn.
-
-    Attributes:
-        messages: The messages that the turn added to the transcript, in order. The last
-            one is the answer of the assistant.
-        ui_actions: The actions for the GUI, in the order that the tools recorded them.
-    """
-
-    messages: list[AgentMessage]
-    ui_actions: list[UiAction]
-
-
-def run_agent_turn(
+def stream_agent_turn(
     chat_model: ChatModel,
     context: AgentContext,
     history: Sequence[AgentMessage],
     tools: Sequence[AgentTool[Any]] = AGENT_TOOLS,
-) -> AgentTurnResult:
+) -> Iterator[AgentEvent]:
     """Answer the last user message of the history, calling tools as the model asks.
 
     Args:
@@ -63,7 +58,8 @@ def run_agent_turn(
         tools: The tools that the model can call.
 
     Returns:
-        The new messages and the GUI actions.
+        An iterator over the events of the turn: the pieces of text while the model writes,
+        each new message, and a ``TurnDoneEvent`` with the GUI actions last.
 
     Raises:
         AgentLLMError: If the model gives no usable answer.
@@ -72,25 +68,24 @@ def run_agent_turn(
     definitions = [tool.definition() for tool in tools]
     transcript = [_system_message(context=context)]
     transcript.extend(message for message in history if message.role != "system")
-    new_messages: list[AgentMessage] = []
     for _ in range(MAX_STEPS):
-        reply = chat_model.complete(messages=transcript, tools=definitions)
-        reply = reply.model_copy(update={"role": "assistant"})
+        reply = yield from _stream_reply(
+            chat_model=chat_model, transcript=transcript, definitions=definitions
+        )
         transcript.append(reply)
-        new_messages.append(reply)
+        yield MessageEvent(message=reply)
         if not reply.tool_calls:
-            return AgentTurnResult(messages=new_messages, ui_actions=context.ui_actions)
+            yield TurnDoneEvent(ui_actions=context.ui_actions)
+            return
         for call in reply.tool_calls:
             tool_message = _run_tool_call(context=context, tools_by_name=tools_by_name, call=call)
             transcript.append(tool_message)
-            new_messages.append(tool_message)
-    new_messages.append(
-        AgentMessage(
-            role="assistant",
-            content=f"I stopped after {MAX_STEPS} steps without a final answer.",
-        )
+            yield MessageEvent(message=tool_message)
+    stop_message = AgentMessage(
+        role="assistant", content=f"I stopped after {MAX_STEPS} steps without a final answer."
     )
-    return AgentTurnResult(messages=new_messages, ui_actions=context.ui_actions)
+    yield MessageEvent(message=stop_message)
+    yield TurnDoneEvent(ui_actions=context.ui_actions)
 
 
 def _system_message(context: AgentContext) -> AgentMessage:
@@ -101,6 +96,25 @@ def _system_message(context: AgentContext) -> AgentMessage:
             selected_count=len(context.selected_sample_ids),
         ),
     )
+
+
+def _stream_reply(
+    chat_model: ChatModel,
+    transcript: Sequence[AgentMessage],
+    definitions: Sequence[dict[str, Any]],
+) -> Generator[AgentEvent, None, AgentMessage]:
+    """Stream one step of the model. Yield its pieces of text and return its message."""
+    reply: AgentMessage | None = None
+    for item in chat_model.stream(messages=transcript, tools=definitions):
+        if isinstance(item, AgentMessage):
+            reply = item
+        elif isinstance(item, ReasoningDelta):
+            yield ReasoningDeltaEvent(text=item.text)
+        else:
+            yield ContentDeltaEvent(text=item.text)
+    if reply is None:
+        raise AgentLLMError("The model stream ended without a message.")
+    return reply.model_copy(update={"role": "assistant"})
 
 
 def _run_tool_call(

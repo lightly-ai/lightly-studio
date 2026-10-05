@@ -1,29 +1,30 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
-import { agentChat } from '$lib/api/lightly_studio_local/sdk.gen';
 import { useAgentChat } from './useAgentChat';
 
-vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({ agentChat: vi.fn() }));
+const ndjson = (events: object[]) =>
+    new Response(events.map((event) => JSON.stringify(event) + '\n').join(''), { status: 200 });
 
-const mockedAgentChat = vi.mocked(agentChat);
-
-// The tests need only the `data` and `error` fields of the SDK response.
-const asResponse = (value: unknown) => value as Awaited<ReturnType<typeof agentChat>>;
+const stubFetch = (response: Response) => {
+    const fetchMock = vi.fn(async () => response);
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+};
 
 describe('useAgentChat', () => {
-    beforeEach(() => {
-        mockedAgentChat.mockReset();
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     it('sends the transcript and the selection, then applies the GUI actions', async () => {
         const uiActions = [{ type: 'select_tag' as const, tag_id: 't1', tag_name: 'tiger' }];
-        mockedAgentChat.mockResolvedValue(
-            asResponse({
-                data: {
-                    messages: [{ role: 'assistant', content: 'Tagged 2 images.' }],
-                    ui_actions: uiActions
-                }
-            })
+        const answer = { role: 'assistant', content: 'Tagged 2 images.', reasoning: 'Easy.' };
+        const fetchMock = stubFetch(
+            ndjson([
+                { type: 'reasoning_delta', text: 'Easy.' },
+                { type: 'message', message: answer },
+                { type: 'turn_done', ui_actions: uiActions }
+            ])
         );
         const onUiActions = vi.fn(async () => {});
         const chat = useAgentChat({
@@ -34,27 +35,21 @@ describe('useAgentChat', () => {
 
         await chat.send('  Tag tigers  ');
 
-        expect(mockedAgentChat).toHaveBeenCalledWith({
-            path: { collection_id: 'collection-1' },
-            body: {
-                messages: [{ role: 'user', content: 'Tag tigers' }],
-                selected_sample_ids: ['s1']
-            }
+        const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+        expect(url).toMatch(/\/api\/collections\/collection-1\/agent\/chat$/);
+        expect(JSON.parse(init.body as string)).toEqual({
+            messages: [{ role: 'user', content: 'Tag tigers' }],
+            selected_sample_ids: ['s1']
         });
-        expect(get(chat.messages)).toEqual([
-            { role: 'user', content: 'Tag tigers' },
-            { role: 'assistant', content: 'Tagged 2 images.' }
-        ]);
+        expect(get(chat.messages)).toEqual([{ role: 'user', content: 'Tag tigers' }, answer]);
+        expect(get(chat.draft)).toEqual({ reasoning: '', content: '' });
         expect(onUiActions).toHaveBeenCalledWith(uiActions);
         expect(get(chat.isSending)).toBe(false);
     });
 
-    it('shows the error detail of a failed request', async () => {
-        mockedAgentChat.mockResolvedValue(
-            asResponse({
-                data: undefined,
-                error: { detail: 'The AI agent is off.' }
-            })
+    it('shows the error detail of a rejected request', async () => {
+        stubFetch(
+            new Response(JSON.stringify({ detail: 'The AI agent is off.' }), { status: 503 })
         );
         const chat = useAgentChat({
             collectionId: 'collection-2',
@@ -68,14 +63,55 @@ describe('useAgentChat', () => {
         expect(get(chat.messages)).toEqual([{ role: 'user', content: 'Hello' }]);
     });
 
-    it('reset clears the conversation', async () => {
-        mockedAgentChat.mockResolvedValue(
-            asResponse({
-                data: { messages: [{ role: 'assistant', content: 'Hi.' }], ui_actions: [] }
-            })
+    it('keeps the complete steps of a turn that fails', async () => {
+        const step = {
+            role: 'assistant',
+            tool_calls: [{ id: 'c1', type: 'function', function: { name: 'f', arguments: '{}' } }]
+        };
+        const result = { role: 'tool', tool_call_id: 'c1', content: '{}' };
+        stubFetch(
+            ndjson([
+                { type: 'message', message: step },
+                { type: 'message', message: result },
+                { type: 'turn_error', detail: 'OpenRouter answered 429' }
+            ])
         );
+        const onUiActions = vi.fn();
         const chat = useAgentChat({
             collectionId: 'collection-3',
+            getSelectedSampleIds: () => [],
+            onUiActions
+        });
+
+        await chat.send('Go');
+
+        expect(get(chat.error)).toBe('OpenRouter answered 429');
+        expect(get(chat.messages)).toEqual([{ role: 'user', content: 'Go' }, step, result]);
+        expect(onUiActions).not.toHaveBeenCalled();
+    });
+
+    it('reports a stream that ends before the turn is done', async () => {
+        stubFetch(ndjson([{ type: 'content_delta', text: 'Hal' }]));
+        const chat = useAgentChat({
+            collectionId: 'collection-4',
+            getSelectedSampleIds: () => [],
+            onUiActions: vi.fn()
+        });
+
+        await chat.send('Hello');
+
+        expect(get(chat.error)).toBe('The agent stopped before it finished.');
+    });
+
+    it('reset clears the conversation', async () => {
+        stubFetch(
+            ndjson([
+                { type: 'message', message: { role: 'assistant', content: 'Hi.' } },
+                { type: 'turn_done', ui_actions: [] }
+            ])
+        );
+        const chat = useAgentChat({
+            collectionId: 'collection-5',
             getSelectedSampleIds: () => [],
             onUiActions: vi.fn(async () => {})
         });

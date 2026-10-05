@@ -31,7 +31,7 @@
         collection_id: collectionId
     });
 
-    const { messages, isSending, error, send, reset } = useAgentChat({
+    const { messages, draft, isSending, error, send, reset } = useAgentChat({
         collectionId,
         getSelectedSampleIds: () => Array.from(get(getSelectedSampleIds(collectionId))),
         onUiActions: (actions) =>
@@ -82,7 +82,7 @@
             />
         </div>
     </div>
-    <AgentChatMessages {entries} isSending={$isSending} />
+    <AgentChatMessages {entries} draft={$draft} isSending={$isSending} />
     {#if $error}
         <p class="text-sm text-destructive" data-testid="agent-chat-error">{$error}</p>
     {/if}

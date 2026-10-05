@@ -69,6 +69,10 @@ LIGHTLY_STUDIO_OPENROUTER_BASE_URL: str = env.str(
     "LIGHTLY_STUDIO_OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/"
 )
 # Any OpenRouter model that supports tool calling.
-LIGHTLY_STUDIO_AGENT_MODEL: str = env.str(
-    "LIGHTLY_STUDIO_AGENT_MODEL", "anthropic/claude-haiku-4.5"
+LIGHTLY_STUDIO_AGENT_MODEL: str = env.str("LIGHTLY_STUDIO_AGENT_MODEL", "openai/gpt-6-luna")
+# How much the agent model reasons before it answers, for example "low", "medium" or "high".
+# "none" sends no reasoning setting, for models that cannot reason.
+_AGENT_REASONING_EFFORT: str = env.str("LIGHTLY_STUDIO_AGENT_REASONING_EFFORT", "medium")
+LIGHTLY_STUDIO_AGENT_REASONING_EFFORT: Optional[str] = (
+    None if _AGENT_REASONING_EFFORT == "none" else _AGENT_REASONING_EFFORT
 )
