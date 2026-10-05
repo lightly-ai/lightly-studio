@@ -3,11 +3,13 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import video_resolver
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
+from lightly_studio.resolvers import embedding_region_resolver, video_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
@@ -105,6 +107,60 @@ def test_count_video_frame_annotations_by_video_collection_without_filter(
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 1
+
+
+def test_count_video_frame_annotations_by_video_collection__with_embedding_region(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    first_video = create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/first.mp4"),
+    )
+    second_video = create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/second.mp4"),
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="Car",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=first_video.sample_id, annotation_label_id=label.annotation_label_id
+            ),
+            AnnotationDetails(
+                sample_id=second_video.sample_id, annotation_label_id=label.annotation_label_id
+            ),
+        ],
+    )
+    mocker.patch.object(
+        embedding_region_resolver,
+        "get_sample_ids_in_region",
+        return_value=[first_video.sample_id],
+    )
+
+    result = video_resolver.count_video_frame_annotations_by_video_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=VideoFilter(
+            sample_filter=SampleFilter(
+                embedding_region=EmbeddingRegion(
+                    polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1)]
+                )
+            )
+        ),
+    )
+
+    assert len(result) == 1
+    assert result[0].total_count == 2
+    assert result[0].current_count == 1
 
 
 def test_count_video_frame_annotations_by_video_collection_with_annotation_filter(

@@ -4,11 +4,15 @@ A decoded message is a ROS 2 object, a protobuf object, or a plain dict, dependi
 on how the file encodes its messages. The ROS and Foxglove flavours of the same
 message also name their fields differently, e.g. `k` and `K` for the camera matrix.
 These helpers read a field by any of its known names from any of the representations.
+
+Dict fields are read by key. Every other message is read by attribute. The key
+check is a concrete `dict` test: an abstract `Mapping` test walks the ABC registry
+for every ROS field.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 from lightly_studio.core.mcap.errors import McapAccessError
@@ -26,7 +30,7 @@ def get_field(message: Any, names: Sequence[str]) -> Any:
         of them.
     """
     for name in names:
-        if isinstance(message, Mapping):
+        if isinstance(message, dict):
             if name in message:
                 return message[name]
         elif hasattr(message, name):
@@ -48,7 +52,7 @@ def require_field(message: Any, names: Sequence[str]) -> Any:
         McapAccessError: If the message has none of the fields.
     """
     for name in names:
-        if isinstance(message, Mapping):
+        if isinstance(message, dict):
             if name in message:
                 return message[name]
         elif hasattr(message, name):

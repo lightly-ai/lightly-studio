@@ -175,6 +175,35 @@ export const decodeRLEToBinaryMask = (rle: number[], width: number, height: numb
     return mask;
 };
 
+// Convert a row-major RLE mask to an SVG path that covers exactly the mask pixels.
+// Each foreground run becomes one 1px-high strip per image row it spans.
+export const rleToSvgPath = (rle: number[], width: number): string => {
+    if (width <= 0) return '';
+
+    const strips: string[] = [];
+    let pixelIndex = 0;
+    rle.forEach((count, index) => {
+        const isForeground = index % 2 === 1;
+        if (isForeground) strips.push(...getRunStrips(pixelIndex, count, width));
+        pixelIndex += count;
+    });
+    return strips.join('');
+};
+
+const getRunStrips = (start: number, count: number, width: number): string[] => {
+    const strips: string[] = [];
+    const end = start + count;
+    let pixelIndex = start;
+    while (pixelIndex < end) {
+        const x = pixelIndex % width;
+        const y = Math.floor(pixelIndex / width);
+        const length = Math.min(end - pixelIndex, width - x);
+        strips.push(`M${x} ${y}h${length}v1h-${length}z`);
+        pixelIndex += length;
+    }
+    return strips;
+};
+
 // Convert a binary mask directly to a data URL for fast preview rendering.
 // This avoids the RLE encode/decode round-trip during drawing.
 export function maskToDataUrl(

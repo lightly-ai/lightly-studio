@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import posixpath
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -12,6 +13,15 @@ from lightly_studio.models.mcap_group_component_definition import (
 )
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceInfoView
 from lightly_studio.models.recording import RecordingFormat
+
+
+class ReferenceFrameView(BaseModel):
+    """One coordinate frame the scene of a sequence can be shown in."""
+
+    name: str = Field(
+        description="The coordinate frame, as named in the recording, e.g. `map`. It is "
+        "also the `target_frame_id` of the point cloud endpoint."
+    )
 
 
 class ChannelSummaryView(BaseModel):
@@ -46,6 +56,9 @@ class MCAPSequenceSummary(BaseModel):
     """
 
     recording_id: UUID = Field(description="The MCAP sequence this summary describes.")
+    file_name: str = Field(
+        description="The recording's file name, e.g. `run-2026-04-18.mcap`, from its bag path."
+    )
     format: RecordingFormat = Field(description="The sequence's file format.")
     start_log_time_ns: int | None = Field(
         description="The earliest log_time_ns across all indexed ticks, in nanoseconds. "
@@ -56,6 +69,10 @@ class MCAPSequenceSummary(BaseModel):
     )
     camera_channels: list[ChannelSummaryView] = Field(
         description="Image and video channels, e.g. compressed camera frames."
+    )
+    reference_frames: list[ReferenceFrameView] = Field(
+        description="Coordinate frames the scene can be shown in, in menu order. "
+        "The first is the default. Set when the recording is indexed."
     )
 
     @classmethod
@@ -82,8 +99,27 @@ class MCAPSequenceSummary(BaseModel):
 
         return cls(
             recording_id=info.recording.recording_id,
+            file_name=_file_name_from_uri(info.recording.uri),
             format=info.recording.format,
             start_log_time_ns=start_log_time_ns,
             lidar_channels=lidar_channels,
             camera_channels=camera_channels,
+            reference_frames=[
+                ReferenceFrameView(name=frame_id) for frame_id in info.reference_frame_ids
+            ],
         )
+
+
+def _file_name_from_uri(uri: str) -> str:
+    r"""Gets the file name from a recording URI.
+
+    Normalizes Windows separators first, so a local Windows URI such as
+    `C:\bags\drive.mcap` yields `drive.mcap` instead of the whole path.
+
+    Args:
+        uri: The recording's URI.
+
+    Returns:
+        The final path component of the URI.
+    """
+    return posixpath.basename(uri.replace("\\", "/"))

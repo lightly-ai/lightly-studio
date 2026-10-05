@@ -11,7 +11,7 @@ composes the class and refuses a server that LightlyStudio can never ask for an 
 from __future__ import annotations
 
 import functools
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from lightly_studio_serve.embedder import Capability, Embedder
 
@@ -22,6 +22,13 @@ from lightly_studio.embed.remote.errors import RemoteEmbedderCapabilityError
 # LightlyStudio ever asks for, and `register` refuses it with "implements no capability".
 # TODO(Iunir, 09/2026): Remove this constant when the registry gains a `VIDEO_BYTES` entry.
 _RESOLVABLE_CAPABILITIES = (Capability.TEXT, Capability.IMAGE_BYTES)
+
+# Every class that this module built. Only such a class has route classes as its bases.
+_COMPOSED_CLASSES: set[type[Embedder]] = set()
+
+# The route classes that a later process composes again when it builds the embedder from a
+# stored endpoint. Another route, such as one that a caller adds with `with_route`, is lost.
+_REBUILDABLE_ROUTES: set[type[Embedder]] = set()
 
 
 def compose_remote_embedder_class(
@@ -63,6 +70,26 @@ def composed_class(bases: Sequence[type[Embedder]]) -> type[Embedder]:
     return _composed_class(bases=tuple(bases))
 
 
+def is_composed(cls: type[Embedder]) -> bool:
+    """Get whether this module built ``cls`` out of route classes."""
+    return cls in _COMPOSED_CLASSES
+
+
+def add_rebuildable_routes(routes: Iterable[type[Embedder]]) -> None:
+    """Record route classes that a build from a stored endpoint composes again.
+
+    Args:
+        routes: The route classes that ``RemoteEmbedder.connect`` or ``EmbedderRegistry``
+            compose for a server that advertises their capability.
+    """
+    _REBUILDABLE_ROUTES.update(routes)
+
+
+def is_rebuildable(cls: type[Embedder]) -> bool:
+    """Get whether a build from a stored endpoint composes every route class of ``cls``."""
+    return cls in _COMPOSED_CLASSES and all(base in _REBUILDABLE_ROUTES for base in cls.__bases__)
+
+
 @functools.cache
 def _composed_class(bases: tuple[type[Embedder], ...]) -> type[Embedder]:
     """Build and cache the class that carries exactly ``bases``.
@@ -78,7 +105,9 @@ def _composed_class(bases: tuple[type[Embedder], ...]) -> type[Embedder]:
         A class that ``isinstance`` reports as each of ``bases``.
     """
     capabilities = "".join(base.__name__.removeprefix("_").removesuffix("Route") for base in bases)
-    return type(f"Remote{capabilities}Embedder", bases, {})
+    composed = type(f"Remote{capabilities}Embedder", bases, {})
+    _COMPOSED_CLASSES.add(composed)
+    return composed
 
 
 def _check_routable(

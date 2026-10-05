@@ -7,6 +7,7 @@ from collections.abc import Mapping
 
 import numpy as np
 import pyarrow as pa
+from numpy.typing import NDArray
 from pyarrow import ipc
 
 from lightly_studio.services.recording_service import (
@@ -22,12 +23,17 @@ from lightly_studio.services.recording_service.point_cloud_types import (
 )
 
 
-def serialize_point_cloud(
-    message: object, channel_id: int, topic: str, log_time_ns: int
+def serialize_point_cloud(  # noqa: PLR0913
+    message: object,
+    channel_id: int,
+    topic: str,
+    log_time_ns: int,
+    transform: NDArray[np.float64] | None = None,
+    frame_id: str | None = None,
 ) -> PointCloudPayload:
     """Decode a PointCloud2 message and serialize its points as an Arrow IPC stream.
 
-    The x, y, and z coordinate fields are required. Optional intensity and RGB
+    The x, y, and z coordinate fields are required. Optional reflectivity and RGB
     fields are decoded when present, and non-finite points are dropped. Frame
     metadata is attached to the Arrow schema.
 
@@ -36,6 +42,10 @@ def serialize_point_cloud(
         channel_id: The MCAP channel the message was read from.
         topic: The topic the message was published on.
         log_time_ns: The log time of the message in nanoseconds.
+        transform: The 4x4 homogeneous transform to apply to the points, or `None` to
+            keep them in the sensor frame.
+        frame_id: The coordinate frame the served points are in. `None` uses the frame
+            in the message header.
 
     Returns:
         The serialized point data with its log time.
@@ -46,15 +56,18 @@ def serialize_point_cloud(
     """
     layout, data, fields = read_point_cloud_layout.read_point_cloud_layout(message=message)
     xyz = read_point_cloud_xyz.read_point_cloud_xyz(data=data, fields=fields, layout=layout)
+    if transform is not None:
+        xyz = (xyz.astype(np.float64) @ transform[:3, :3].T + transform[:3, 3]).astype(np.float32)
     valid = np.isfinite(xyz).all(axis=1)
     columns = build_point_cloud_columns.build_point_cloud_columns(
         data=data, fields=fields, layout=layout, xyz=xyz, valid=valid
     )
-    frame_id = str(
-        point_cloud_value.get_value(
-            value=point_cloud_value.get_value(value=message, name="header"), name="frame_id"
+    if frame_id is None:
+        frame_id = str(
+            point_cloud_value.get_value(
+                value=point_cloud_value.get_value(value=message, name="header"), name="frame_id"
+            )
         )
-    )
     metadata = PointCloudFrameMetadata(
         channel_id=channel_id,
         topic=topic,

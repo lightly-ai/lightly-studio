@@ -36,6 +36,7 @@
         isSampleDetailsRoute,
         isImagesRoute,
         isPointCloudsRoute,
+        isPointCloudLabelingRoute,
         isVideoFramesRoute,
         isVideosRoute,
         isGroupsRoute,
@@ -60,6 +61,7 @@
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { CategoryCount } from '$lib/components/BarChart';
+    import { selectCategoricalMetadataKeys } from './metadataDistributionSource';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
@@ -140,6 +142,7 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
@@ -302,9 +305,13 @@
             : 'Search samples by description or image'
     );
 
-    const { metadataValues, categoricalMetadataValues } = $derived.by(() =>
-        useMetadataFilters(collectionId)
-    );
+    const {
+        metadataValues,
+        metadataInfo,
+        categoricalMetadataValues,
+        updateCategoricalMetadataValues
+    } = $derived.by(() => useMetadataFilters(collectionId));
+    const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
     const annotationLabelsQuery = useAnnotationLabels(() => ({
@@ -499,6 +506,34 @@
     let distributionSampleTagIds = $state<string[]>([]);
     let histogramBinCount = $state(20);
 
+    const handleCategoricalValueToggle = (metadataKey: string, value: string | boolean | null) => {
+        const selected = $categoricalMetadataValues[metadataKey] ?? [];
+        const exists = selected.some((candidate) => Object.is(candidate, value));
+        const next = exists
+            ? selected.filter((candidate) => !Object.is(candidate, value))
+            : [...selected, value];
+        updateCategoricalMetadataValues({
+            ...$categoricalMetadataValues,
+            [metadataKey]: next
+        });
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: metadataKey,
+            action: exists ? 'value_disabled' : 'value_enabled'
+        });
+    };
+
+    const clearCategoricalValues = (metadataKey: string) => {
+        const next = { ...$categoricalMetadataValues };
+        delete next[metadataKey];
+        updateCategoricalMetadataValues(next);
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: metadataKey,
+            action: 'values_cleared'
+        });
+    };
+
     function handleCombinedMetadataFilterChanged(fieldName: string, min: number, max: number) {
         trackEvent('metadata_filter_changed', {
             collection_id: collectionId,
@@ -516,7 +551,7 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails}
+    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails || isPointCloudLabeling}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
@@ -592,10 +627,19 @@
 
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
-                                    <MetadataFilterChips {collectionId} />
+                                    <MetadataFilterChips
+                                        {collectionId}
+                                        isImageCollection={isImages}
+                                        categoricalKeys={categoricalMetadataKeys}
+                                    />
                                     <CombinedMetadataDimensionsFilters
                                         {isVideos}
                                         {isVideoFrames}
+                                        isImageCollection={isImages}
+                                        categoricalFilter={imageAnnotationCountsFilter}
+                                        categoricalKeys={categoricalMetadataKeys}
+                                        onCategoricalValueToggle={handleCategoricalValueToggle}
+                                        onCategoricalValuesClear={clearCategoricalValues}
                                         onFilterChanged={handleCombinedMetadataFilterChanged}
                                     />
                                 {/key}

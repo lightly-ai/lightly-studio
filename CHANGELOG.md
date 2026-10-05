@@ -11,14 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `quickstart-enterprise` CLI command to seed a remote enterprise instance with a demo dataset.
 - Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
+- Python SDK: Attach 3D cuboids from annotation MCAPs with `dataset.add_labels_from_folder(...)`. A later call skips sequences that already have that annotation source.
 - Python SDK: Embed search queries on a remote embedding server with `register_remote_embedder`.
 - Python SDK: Enable metric recomputing for instance-segmentation.
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
+- Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
+- Python SDK: Store the URL and API key of a remote embedder that `register_default_embedder` registered before an import, so that a later process, such as `lightly-studio gui`, searches on the server with no new registration.
+- Python SDK: Embed annotation crops on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
 
 ### Changed
 
 - Redesign the embedding plot selection tools as visible, sticky Pan, Rectangle, and Lasso buttons in the GUI.
 - Show the Rectangle and Lasso drag shortcuts in the embedding plot tool tooltips.
+- Show categorical metadata filters in the image sidebar with an optional field picker and expanded value lists.
+- Keep the query editor button enabled in the GUI. Clicking "Re-apply" refreshes the results with the current data.
 
 ### Deprecated
 
@@ -26,10 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Disable the subpart diversity sampling strategy when no object detection or segmentation annotation sources exist in the collection.
 - Combine typicality and similarity computation and sampling into one backend request that continues if the frontend disconnects.
 - Fix the `Values` field in the distribution panel using a larger font than the other fields.
+- Fix the focus outline of the bulk annotation panel controls missing its left and right edges.
+- Fix instance segmentation masks that cannot be selected with a click when their bounding boxes are hidden in the GUI.
+- Fix undoing an annotation deletion restoring it to the default source instead of its original one.
 - Return 409 instead of 500 for text and image search on a collection whose embedding space cannot embed the query, and 502 when its embedding server cannot be used.
 - Python SDK: Keep the image embeddings stored before an embedder failure, and embed only the images without an embedding when the images are added again with `embed=True`.
+
 
 ### Security
 

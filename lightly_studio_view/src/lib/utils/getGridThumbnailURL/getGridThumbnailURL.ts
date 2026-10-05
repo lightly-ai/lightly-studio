@@ -10,11 +10,19 @@ type GridThumbnailURLParams = {
     cacheBuster?: string;
 };
 
+// Fixed request sizes keep thumbnail URLs stable while the grid resizes, so the
+// browser cache serves them instead of sending a new request for every pixel.
+const GRID_THUMBNAIL_SIZE_STEPS = [128, 192, 256, 384, 512, 768, 1024, 1536, 2048];
+
 export function getGridThumbnailRequestSize(renderedSize: number, devicePixelRatio = 1): number {
     if (renderedSize <= 0) {
         return 0;
     }
-    return Math.ceil(renderedSize * Math.min(devicePixelRatio, 2));
+    const size = Math.ceil(renderedSize * Math.min(devicePixelRatio, 2));
+    return (
+        GRID_THUMBNAIL_SIZE_STEPS.find((step) => step >= size) ??
+        GRID_THUMBNAIL_SIZE_STEPS[GRID_THUMBNAIL_SIZE_STEPS.length - 1]
+    );
 }
 
 function buildGridThumbnailURL({

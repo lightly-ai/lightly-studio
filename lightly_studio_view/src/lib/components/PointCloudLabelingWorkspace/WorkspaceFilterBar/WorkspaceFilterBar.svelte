@@ -1,8 +1,22 @@
 <script lang="ts">
     import WorkspaceChannelSelect from './WorkspaceChannelSelect/WorkspaceChannelSelect.svelte';
+    import { Select } from '$lib/components/Select';
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { ColorMode } from '$lib/components/PointCloudViewer';
 
     interface Props {
+        /** Coordinate frames the scene can be shown in. */
+        referenceFrames: readonly { readonly name: string }[];
+
+        /** ID of the coordinate frame the point clouds are shown in. */
+        referenceFrameId: string;
+
+        /** Shows the point clouds in another coordinate frame by its ID. */
+        onSelectReferenceFrame: (frameId: string) => void;
+
+        /** Whether the active tick is shown in the sensor frames instead. */
+        isShowingSensorFrames?: boolean;
+
         /** Point-cloud channels rendered as timeline lanes. */
         lidarChannels: ChannelSummaryView[];
 
@@ -15,6 +29,9 @@
         /** `channel_id`s of the camera channels currently shown. */
         selectedCameraChannels: number[];
 
+        colorMode: Exclude<ColorMode, 'none'>;
+        onColorModeChange: (colorMode: Exclude<ColorMode, 'none'>) => void;
+
         /** Toggles a lidar channel on or off by its `channel_id`. */
         onToggleLidarChannel: (channelId: number) => void;
 
@@ -23,19 +40,58 @@
     }
 
     let {
+        referenceFrames,
+        referenceFrameId,
+        onSelectReferenceFrame,
+        isShowingSensorFrames = false,
         lidarChannels,
         cameraChannels,
         selectedLidarChannels,
         selectedCameraChannels,
+        colorMode,
+        onColorModeChange,
         onToggleLidarChannel,
         onToggleCameraChannel
     }: Props = $props();
+
+    const frameItems = $derived(
+        referenceFrames.map((frame) => ({
+            value: frame.name,
+            label: frame.name,
+            testId: `workspace-frame-select-${frame.name}`
+        }))
+    );
+    const frameTriggerLabel = $derived(`Frame: ${referenceFrameId}`);
+    const colorItems = [
+        { value: 'height', label: 'Height' },
+        { value: 'intensity', label: 'Intensity / Reflectivity' },
+        { value: 'distance', label: 'Distance' },
+        { value: 'density', label: 'Density' },
+        { value: 'height-distance', label: 'Height + Distance' },
+        { value: 'height-density', label: 'Height + Density' }
+    ];
+    const colorTriggerLabel = $derived(
+        `Color: ${colorItems.find((item) => item.value === colorMode)?.label ?? colorMode}`
+    );
 </script>
 
-<div
-    class="flex shrink-0 items-center gap-4 border-b bg-background px-4 py-2"
-    data-testid="workspace-filter-bar"
->
+<div class="flex shrink-0 items-center gap-4 border-b py-2" data-testid="workspace-filter-bar">
+    {#if referenceFrames.length > 0}
+        <Select
+            items={frameItems}
+            value={referenceFrameId}
+            triggerLabel={frameTriggerLabel}
+            size="xs"
+            class="w-40"
+            testId="workspace-frame-select"
+            onValueChange={onSelectReferenceFrame}
+        />
+        {#if isShowingSensorFrames}
+            <span class="text-xs text-muted-foreground" data-testid="workspace-frame-fallback">
+                No transform at this tick. Showing sensor frames.
+            </span>
+        {/if}
+    {/if}
     <WorkspaceChannelSelect
         label="Lidar"
         channels={lidarChannels}
@@ -49,5 +105,14 @@
         selectedChannels={selectedCameraChannels}
         onToggleChannel={onToggleCameraChannel}
         testId="workspace-camera-select"
+    />
+    <Select
+        items={colorItems}
+        value={colorMode}
+        triggerLabel={colorTriggerLabel}
+        size="xs"
+        class="w-40"
+        testId="workspace-color-select"
+        onValueChange={(value) => onColorModeChange(value as Exclude<ColorMode, 'none'>)}
     />
 </div>

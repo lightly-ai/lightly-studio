@@ -38,6 +38,7 @@ describe('YoutubeVisTab', () => {
             filterParams: writable(null),
             updateFilterParams: vi.fn(),
             updateSampleIds: vi.fn(),
+            updateEmbeddingRegion: vi.fn(),
             videoSortBy: writable(null),
             updateSortBy: vi.fn()
         });
@@ -79,6 +80,7 @@ describe('YoutubeVisTab', () => {
             filterParams: writable(null),
             updateFilterParams: vi.fn(),
             updateSampleIds: vi.fn(),
+            updateEmbeddingRegion: vi.fn(),
             videoSortBy: writable(null),
             updateSortBy: vi.fn()
         });

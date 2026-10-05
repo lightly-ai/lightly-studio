@@ -7,12 +7,13 @@
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
-    import { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { buildVideoFilter, useVideoFilters } from '$lib/hooks';
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
     import { GridItem } from '$lib/components/GridItem';
     import type { VideoFilterParams } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { isEqual, omit } from 'lodash-es';
+    import { isEqual } from 'lodash-es';
+    import { mergeExternalFilters, paramsWithoutExternalFilters } from './syncFilterParams';
     import { get } from 'svelte/store';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { onMount } from 'svelte';
@@ -48,13 +49,6 @@
         video_bounds: $videoBoundsValues
     });
 
-    const paramsWithoutSampleIds = (params: VideoFilterParams) => {
-        return {
-            ...params,
-            filters: params.filters ? omit(params.filters, ['sample_ids']) : undefined
-        };
-    };
-
     const { filterParams, videoSortBy, updateFilterParams } = useVideoFilters();
 
     $effect(() => {
@@ -62,56 +56,22 @@
         const baseParams = videosParams as VideoFilterParams;
         const currentParams = $filterParams;
 
-        // Compare parameters excluding sample_ids to detect if other filters have changed
+        // Compare filter controls without the externally-set sample IDs and embedding region.
         if (
             currentParams &&
-            isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
+            isEqual(
+                paramsWithoutExternalFilters(baseParams),
+                paramsWithoutExternalFilters(currentParams)
+            )
         ) {
             return;
         }
 
-        // Start with the base parameters from the component
-        let nextParams = baseParams;
-
-        let currentSampleIds: string[] = [];
-        if (
-            currentParams?.collection_id === baseParams.collection_id &&
-            currentParams.filters?.sample_ids
-        ) {
-            currentSampleIds = currentParams.filters.sample_ids;
-        }
-
-        // Merge the existing sample selection into the new parameters
-        if (currentSampleIds && currentSampleIds.length > 0) {
-            nextParams = {
-                ...nextParams,
-                filters: {
-                    ...(nextParams.filters ?? {}),
-                    sample_ids: currentSampleIds
-                }
-            };
-        }
-
-        // Update the global filter parameters
-        updateFilterParams(nextParams);
+        updateFilterParams(mergeExternalFilters(baseParams, currentParams));
     });
 
     const currentVideoFilter = $derived.by(() => {
-        const currentSampleIds =
-            $filterParams?.collection_id === videosParams.collection_id
-                ? $filterParams.filters?.sample_ids
-                : undefined;
-        const paramsWithSelection: VideoFilterParams =
-            currentSampleIds && currentSampleIds.length > 0
-                ? {
-                      ...videosParams,
-                      filters: {
-                          ...(videosParams.filters ?? {}),
-                          sample_ids: currentSampleIds
-                      }
-                  }
-                : videosParams;
-
+        const paramsWithSelection = mergeExternalFilters(videosParams, $filterParams);
         return buildVideoFilter(paramsWithSelection) ?? {};
     });
 

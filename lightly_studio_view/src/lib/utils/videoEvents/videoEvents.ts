@@ -6,7 +6,7 @@ import { getColorByLabel } from '$lib/utils/getColorByLabel';
  *
  * Events are derived from classification annotations that carry a temporal
  * span (start/end time in seconds), e.g. ActivityNet-style event annotations
- * imported onto the video sample itself.
+ * added to the video sample itself.
  */
 export interface VideoEvent {
     /** Unique id of the event (the annotation's sample id). */
@@ -34,7 +34,7 @@ export interface LaneAssignedEvent extends VideoEvent {
 const EVENT_FILL_ALPHA = 0.7;
 
 /**
- * Extracts imported events from a sample's annotations.
+ * Extracts events from a sample's annotations.
  *
  * Keeps only classification annotations that carry a temporal span and maps
  * them into {@link VideoEvent}s sorted by start time.

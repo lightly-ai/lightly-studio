@@ -38,4 +38,22 @@ describe('createPointCloudBuffer', () => {
 
         buffer.dispose();
     });
+
+    it('uses the batch rgb colors in rgb mode', () => {
+        const buffer = createPointCloudBuffer();
+        buffer.updatePositions({
+            positions: new Float32Array([1, 2, 3, 4, 5, 6]),
+            intensities: new Float32Array([10, 20]),
+            colors: new Float32Array([0.25, 0.5, 0.75, 0.125, 0.375, 1]),
+            count: 2
+        });
+
+        buffer.updateColors(2, 'rgb');
+
+        expect(
+            Array.from((buffer.geometry.getAttribute('color') as BufferAttribute).array)
+        ).toEqual([0.25, 0.5, 0.75, 0.125, 0.375, 1]);
+
+        buffer.dispose();
+    });
 });

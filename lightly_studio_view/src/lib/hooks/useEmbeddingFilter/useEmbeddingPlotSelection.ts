@@ -18,6 +18,14 @@ export function clearPlotSelectionCount(collectionId: string): void {
     });
 }
 
+export function clearPlotSelectionForCollection(
+    collectionId: string,
+    setRangeSelectionForCollection: (collectionId: string, selection: null) => void
+): void {
+    setRangeSelectionForCollection(collectionId, null);
+    clearPlotSelectionCount(collectionId);
+}
+
 export function getPlotSelectionCount(collectionId: Readable<string>): Readable<number> {
     return derived(
         [selectionCountByCollection, collectionId],

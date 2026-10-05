@@ -5,6 +5,7 @@
         CuboidAnnotation
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import PointCloudAnnotationList from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList';
+    import { Segment } from '$lib/components';
 
     interface Props {
         /** Cuboid annotations to display in the list. */
@@ -26,15 +27,17 @@
 </script>
 
 <div
-    class="flex h-full flex-col overflow-y-auto border-l bg-background p-3 dark:[color-scheme:dark]"
+    class="scrollbar-thin flex h-full flex-col overflow-y-auto border-l bg-background p-3 dark:[color-scheme:dark]"
     data-testid="point-cloud-right-side-panel"
 >
     <div class="flex flex-1 flex-col">
-        <PointCloudAnnotationList
-            {cuboids}
-            {annotationClasses}
-            {annotationSources}
-            bind:selectedCuboidId
-        />
+        <Segment title="Annotations">
+            <PointCloudAnnotationList
+                {cuboids}
+                {annotationClasses}
+                {annotationSources}
+                bind:selectedCuboidId
+            />
+        </Segment>
     </div>
 </div>

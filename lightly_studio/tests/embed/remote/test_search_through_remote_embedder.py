@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from lightly_studio_serve.embedder import ImageBytesEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from pytest_mock import MockerFixture
 
 import lightly_studio
 from lightly_studio import ImageDataset
@@ -25,6 +26,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.database import db_manager
+from lightly_studio.embed.remote import transport
 from lightly_studio.embed.remote.errors import RemoteEmbedderAuthError
 from lightly_studio.resolvers import embedding_model_resolver
 from tests.embed.remote import color_embedder, threaded_server
@@ -63,6 +65,11 @@ def server_url(query_embedder: ColorQueryEmbedder) -> Iterator[str]:
 @pytest.fixture
 def image_paths(tmp_path: Path) -> dict[str, Path]:
     return color_embedder.write_color_images(directory=tmp_path)
+
+
+@pytest.fixture
+def no_retry_wait(mocker: MockerFixture) -> None:
+    mocker.patch.object(transport, "time")
 
 
 @pytest.fixture
@@ -143,6 +150,7 @@ def test_register_remote_embedder__wrong_api_key(
     assert embedding_model.api_key is None
 
 
+@pytest.mark.usefixtures("no_retry_wait")
 @pytest.mark.parametrize("query_kind", ["text", "image"])
 @pytest.mark.parametrize("queries_before_stop", [0, 1])
 def test_search__server_stopped(

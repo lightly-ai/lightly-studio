@@ -20,15 +20,19 @@ from lightly_studio.core.file_outcome_report import (
     BrokenInputFileError,
     FileOutcomeReport,
 )
-from lightly_studio.core.mcap import dataset_schema, matching
+from lightly_studio.core.mcap import dataset_schema, matching, reference_frames
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.errors import McapAccessError
-from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap.reader import STATIC_TRANSFORM_TOPIC, McapFileReader
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequenceEntry
-from lightly_studio.core.mcap.type_definitions import CameraIntrinsics, FrameLocator
+from lightly_studio.core.mcap.type_definitions import (
+    CameraIntrinsics,
+    FrameLocator,
+    StaticTransform,
+)
 from lightly_studio.database import db_manager
 from lightly_studio.models.mcap import McapCreate
 from lightly_studio.resolvers import group_resolver, mcap_resolver, recording_resolver
@@ -39,19 +43,21 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-MCAP_EXTENSIONS = {".mcap"}
+MCAP_EXTENSION = ".mcap"
+MCAP_EXTENSIONS = {MCAP_EXTENSION}
 """The file extensions an MCAP recording is discovered by."""
 
 DEFAULT_MAX_PAIRING_DIFF_NS = 50_000_000
 """The largest time difference that still pairs a component with an sync tick."""
 
 
-def index_recordings(
+def index_recordings(  # noqa: PLR0913
     dataset: McapDataset,
     mcap_paths: Iterable[str],
     sync_component: str,
     components: Sequence[McapComponentSpec],
     max_pairing_diff_ns: int = DEFAULT_MAX_PAIRING_DIFF_NS,
+    reference_frame_ids: Sequence[str] | None = None,
 ) -> list[UUID]:
     """Index several recordings into a dataset, one sequence each.
 
@@ -68,6 +74,10 @@ def index_recordings(
             passed on every call.
         max_pairing_diff_ns: The largest time difference that still pairs a component
             with an anchor tick.
+        reference_frame_ids: The coordinate frames shown in the viewer, in menu order.
+            The first is the default. Each id is the frame string from the bag, for
+            example `map` or `CABIN`. When omitted, no frames are stored and the
+            viewer keeps each point cloud in its sensor frame.
 
     Returns:
         The sample ID of the sequence of every recording that was indexed, in the order
@@ -75,8 +85,10 @@ def index_recordings(
         no entry.
 
     Raises:
-        ValueError: If `components` names other components than the dataset has, or if
-            `sync_component` is not one of them.
+        ValueError: If `components` names other components than the dataset has, if
+            `sync_component` is not one of them, or if a reference frame id is empty
+            or repeated. `index_recording` checks the reference frame ids, so they
+            are checked only when a recording is indexed.
         AllInputFilesFailedError: If at least one recording was attempted and every
             attempted recording failed.
     """
@@ -104,6 +116,7 @@ def index_recordings(
                         sync_component=sync_component,
                         components=components,
                         max_pairing_diff_ns=max_pairing_diff_ns,
+                        reference_frame_ids=reference_frame_ids,
                     )
                 )
             except McapAccessError as exc:
@@ -113,12 +126,13 @@ def index_recordings(
     return sequence_sample_ids
 
 
-def index_recording(
+def index_recording(  # noqa: PLR0913
     dataset: McapDataset,
     mcap_path: str,
     sync_component: str,
     components: Sequence[McapComponentSpec],
     max_pairing_diff_ns: int = DEFAULT_MAX_PAIRING_DIFF_NS,
+    reference_frame_ids: Sequence[str] | None = None,
 ) -> UUID:
     """Index one recording into a dataset.
 
@@ -133,16 +147,22 @@ def index_recording(
             every call.
         max_pairing_diff_ns: The largest time difference that still pairs a component
             with an anchor tick.
+        reference_frame_ids: The coordinate frames shown in the viewer, in menu order.
+            The first is the default. Each id is the frame string from the bag, for
+            example `map` or `CABIN`. When omitted, no frames are stored and the
+            viewer keeps each point cloud in its sensor frame.
 
     Returns:
         The sample ID of the sequence that holds the groups of the recording.
 
     Raises:
-        ValueError: If `components` names other components than the dataset has, or if
-            `sync_component` is not one of them.
-        McapAccessError: If the recording cannot be read, or if it has no topic of a
-            component.
+        ValueError: If `components` names other components than the dataset has, if
+            `sync_component` is not one of them, or if a reference frame id is empty
+            or repeated.
+        McapAccessError: If the recording cannot be read, if it has no topic of a
+            component, or if a reference frame is not in the recording.
     """
+    reference_frames.check_reference_frame_ids(frame_ids=reference_frame_ids)
     dataset_schema.check_components_match(
         session=dataset.group_dataset.session,
         group_collection_id=dataset.group_dataset.collection_id,
@@ -157,7 +177,10 @@ def index_recording(
         components=components,
         sync_component=sync_object,
         max_pairing_diff_ns=max_pairing_diff_ns,
+        reference_frame_ids=reference_frame_ids,
     )
+    # Resolved before anything is written, so an unknown frame leaves no rows behind.
+    frame_ids = _reference_frame_ids(loaded=loaded, reference_frame_ids=reference_frame_ids)
     rows = _complete_rows(components=components, locators=loaded.locators)
     logger.info(
         "Indexing %d of %d ticks of '%s'.",
@@ -173,6 +196,8 @@ def index_recording(
         mcap_components=mcap_components,
         loaded=loaded,
     )
+    _add_static_transforms(recording=recording, static_transforms=loaded.static_transforms)
+    recording.set_reference_frame_ids(frame_ids=frame_ids)
     _fill_mcap_definitions(components=components, mcap_components=mcap_components, loaded=loaded)
 
     sequence = dataset.create_sequence(recording_id=recording.recording_id)
@@ -193,7 +218,7 @@ def index_recording(
 
 
 class _LoadedRecording(NamedTuple):
-    """The locators of every component, paired to the sync component, plus camera intrinsics.
+    """Locators paired to the sync component, plus camera intrinsics and static transforms.
 
     `channel_ids` comes from the file summary, so a component still has a channel even
     when pairing finds no tick for it.
@@ -202,6 +227,8 @@ class _LoadedRecording(NamedTuple):
     locators: dict[str, list[FrameLocator | None]]
     intrinsics: dict[str, CameraIntrinsics]
     channel_ids: dict[str, int]
+    static_transforms: list[StaticTransform]
+    dynamic_edges: list[tuple[str, str]]
 
 
 def _get_sync_component(
@@ -227,16 +254,21 @@ def _read_recording(
     components: Sequence[McapComponentSpec],
     sync_component: McapComponentSpec,
     max_pairing_diff_ns: int,
+    reference_frame_ids: Sequence[str] | None,
 ) -> _LoadedRecording:
-    """Pair every component to the sync_component, and read the intrinsics of the cameras.
+    """Pair every component to the sync_component, and read intrinsics and transforms.
 
     Pairing uses capture timestamps first, then log times when the capture clocks do
-    not overlap. The topics are read in a single pass, because a chunk holds the
-    messages of every topic in a time span and reading them one at a time fetches the
-    shared chunks again for each of them.
+    not overlap. The topics, including `/tf_static`, are read in a single pass, because
+    a chunk holds the messages of every topic in a time span and reading them one at a
+    time fetches the shared chunks again for each of them. `/tf` is read only when
+    reference frames are requested, and only until those frames have been seen.
     """
     with McapFileReader(mcap_path) as reader:
-        reader.load_data_for_topics(_topics_to_load(components=components))
+        reader.load_data_for_topics(
+            _topics_to_load(components=components),
+            static_transform_topic=STATIC_TRANSFORM_TOPIC,
+        )
         sync_locators = reader.get_frame_locators(sync_component.topic)
 
         locators: dict[str, list[FrameLocator | None]] = {sync_component.name: list(sync_locators)}
@@ -256,7 +288,21 @@ def _read_recording(
             if component.camera_info_topic is not None
         }
         channel_ids = _channel_ids_by_component(reader=reader, components=components)
-    return _LoadedRecording(locators=locators, intrinsics=intrinsics, channel_ids=channel_ids)
+        static_transforms = _named_static_transforms(
+            static_transforms=reader.get_static_transforms(), mcap_path=mcap_path
+        )
+        dynamic_edges = _dynamic_edges(
+            reader=reader,
+            static_transforms=static_transforms,
+            reference_frame_ids=reference_frame_ids,
+        )
+    return _LoadedRecording(
+        locators=locators,
+        intrinsics=intrinsics,
+        channel_ids=channel_ids,
+        static_transforms=static_transforms,
+        dynamic_edges=dynamic_edges,
+    )
 
 
 def _pair_to_sync(
@@ -330,6 +376,94 @@ def _add_calibrations(
     ]
     if calibrations:
         recording.add_sensor_calibrations(calibrations=calibrations)
+
+
+def _add_static_transforms(
+    recording: Recording, static_transforms: Sequence[StaticTransform]
+) -> None:
+    """Store the static transforms of the recording, if it has any.
+
+    A later message for the same child frame replaces the earlier edge, which is how
+    the transform tree composes `/tf_static`.
+    """
+    edges = _latest_static_transform_per_child(static_transforms)
+    if edges:
+        recording.add_static_transforms(transforms=edges)
+
+
+def _dynamic_edges(
+    reader: McapFileReader,
+    static_transforms: Sequence[StaticTransform],
+    reference_frame_ids: Sequence[str] | None,
+) -> list[tuple[str, str]]:
+    """Return dynamic edges that cover the requested frames missing from the static tree.
+
+    No `/tf` messages are read when no frames are requested, or when every requested
+    frame is already a parent or a child of a static transform.
+    """
+    if not reference_frame_ids:
+        return []
+    known = {
+        frame_id
+        for transform in static_transforms
+        for frame_id in (transform.parent_frame_id, transform.child_frame_id)
+    }
+    missing = [frame_id for frame_id in reference_frame_ids if frame_id not in known]
+    if not missing:
+        return []
+    return reader.read_dynamic_edges_until(frame_ids=missing)
+
+
+def _reference_frame_ids(
+    loaded: _LoadedRecording,
+    reference_frame_ids: Sequence[str] | None,
+) -> list[str]:
+    """Return the frames the scene of the recording can be shown in.
+
+    None are returned when `reference_frame_ids` is not given.
+
+    Raises:
+        McapAccessError: If a frame of `reference_frame_ids` is not in the recording.
+    """
+    if reference_frame_ids is None:
+        return []
+    return reference_frames.known_reference_frame_ids(
+        frame_ids=reference_frame_ids,
+        static_transforms=_latest_static_transform_per_child(loaded.static_transforms),
+        dynamic_edges=loaded.dynamic_edges,
+    )
+
+
+def _latest_static_transform_per_child(
+    static_transforms: Sequence[StaticTransform],
+) -> list[StaticTransform]:
+    """Keep the last transform of each child frame."""
+    latest_by_child: dict[str, StaticTransform] = {}
+    for transform in static_transforms:
+        latest_by_child[transform.child_frame_id] = transform
+    return list(latest_by_child.values())
+
+
+def _named_static_transforms(
+    static_transforms: Sequence[StaticTransform], mcap_path: str
+) -> list[StaticTransform]:
+    """Drop the transforms that have an empty parent or child frame id.
+
+    Such an edge cannot be stored or looked up. The rest of the recording is still
+    indexed.
+    """
+    named = [
+        transform
+        for transform in static_transforms
+        if transform.parent_frame_id.strip() and transform.child_frame_id.strip()
+    ]
+    if len(named) < len(static_transforms):
+        logger.warning(
+            "Skipping %d static transforms without a frame id in '%s'.",
+            len(static_transforms) - len(named),
+            mcap_path,
+        )
+    return named
 
 
 def _fill_mcap_definitions(

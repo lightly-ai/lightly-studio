@@ -42,6 +42,9 @@
     let frameRequestId: number | null = null;
     let previousVideoSampleId: string | null = null;
     let sourceLoadError = $state<string | null>(null);
+    // A refetch creates a new `video` object. Depend on the ID only, so the
+    // source is not reset while the sample stays the same.
+    const videoSampleId = $derived(video.sample_id);
 
     // HTMLMediaElement.error.code values.
     const MEDIA_ERROR_MESSAGES: Record<number, string> = {
@@ -116,7 +119,7 @@
     $effect(() => {
         if (!videoEl) return;
 
-        const currentVideoSampleId = video.sample_id;
+        const currentVideoSampleId = videoSampleId;
 
         if (previousVideoSampleId !== null && previousVideoSampleId !== currentVideoSampleId) {
             previousIndex = null;
@@ -132,6 +135,19 @@
 
         return () => {
             clearFrameLoop();
+        };
+    });
+
+    // Release the streaming connection when the element goes away. Capture the
+    // element, because `videoEl` can already be null during teardown.
+    $effect(() => {
+        const el = videoEl;
+        if (!el) return;
+
+        return () => {
+            el.pause();
+            el.removeAttribute('src');
+            el.load();
         };
     });
 </script>

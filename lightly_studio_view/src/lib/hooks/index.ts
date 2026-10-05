@@ -8,7 +8,10 @@ export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
-export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+export {
+    createMetadataFilters,
+    useMetadataFilters
+} from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution';
 export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution';
 export { useMetadataDistributionsBySampleTags } from '$lib/hooks/useMetadataDistributionsBySampleTags';
@@ -81,4 +84,6 @@ export {
 export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
 export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte';
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
+export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
+export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';

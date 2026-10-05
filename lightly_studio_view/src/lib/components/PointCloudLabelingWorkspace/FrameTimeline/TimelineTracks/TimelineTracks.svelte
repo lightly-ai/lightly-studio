@@ -9,9 +9,11 @@
         currentTick: number;
         /** Lane names rendered beneath the ruler, in display order. */
         lanes: string[];
+        /** Select a tick from the overlaid ruler slider. */
+        onSelectTick: (seqNumber: number) => void;
     }
 
-    let { ticks, currentTick, lanes }: Props = $props();
+    let { ticks, currentTick, lanes, onSelectTick }: Props = $props();
 
     const NANOS_PER_SECOND = 1_000_000_000;
 
@@ -26,18 +28,33 @@
     };
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-2 py-1.5">
-    <div class="flex h-4 shrink-0 items-end gap-px">
+<div class="scrollbar-thin flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-2 py-1.5">
+    <div class="relative flex h-4 shrink-0 items-end gap-px">
         {#each ticks as tick (tick.seq_number)}
             <span
-                class="w-full {tick.seq_number === currentTick
-                    ? 'h-4 bg-primary'
-                    : tick.seq_number % 5 === 0
-                      ? 'h-3 bg-border'
-                      : 'h-1.5 bg-border'}"
+                class="w-full {tick.seq_number % 5 === 0 ? 'h-3 bg-border' : 'h-1.5 bg-border'}"
                 title={formatTickTime(tick.timestamp_ns)}
             ></span>
         {/each}
+        <input
+            aria-label="Frame position"
+            class="absolute top-0 h-4 cursor-pointer appearance-none bg-transparent accent-primary [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:bg-transparent"
+            style:left={ticks.length > 0 ? `${50 / ticks.length}%` : '0%'}
+            style:right={ticks.length > 0 ? `${50 / ticks.length}%` : '0%'}
+            style:width={`calc(100% - ${ticks.length > 0 ? 100 / ticks.length : 0}%)`}
+            type="range"
+            min="0"
+            max={Math.max(0, ticks.length - 1)}
+            value={Math.max(
+                0,
+                ticks.findIndex((tick) => tick.seq_number === currentTick)
+            )}
+            disabled={ticks.length === 0}
+            oninput={(event) => {
+                const tick = ticks[Number(event.currentTarget.value)];
+                if (tick) onSelectTick(tick.seq_number);
+            }}
+        />
     </div>
     {#each lanes as lane (lane)}
         <div class="flex items-center gap-2">
