@@ -4,15 +4,25 @@ import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
+const { cloudQuery, tickDetails, summaryState } = vi.hoisted(() => ({
+    cloudQuery: { data: undefined as unknown, isLoading: false, isError: false, refetch: vi.fn() },
+    tickDetails: { data: undefined, isLoading: false },
+    summaryState: { isLoading: false }
+}));
+
+vi.mock('./SceneViewport/SceneViewport.svelte', async () => ({
+    default: (await import('./SceneViewport/SceneViewportStub.svelte')).default
+}));
+
 // The workspace mounts the camera projection strip, which reads the tick details
 // query; stub it so the chrome renders without a live TanStack query client.
 vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
-    useTickDetails: () => ({ tickDetails: { data: undefined } })
+    useTickDetails: () => ({ tickDetails })
 }));
 
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
-        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+        query: cloudQuery
     })
 }));
 
@@ -43,7 +53,9 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
                 ],
                 camera_channels: []
             },
-            isLoading: false,
+            get isLoading() {
+                return summaryState.isLoading;
+            },
             isError: false
         },
         refetch: vi.fn()
@@ -53,7 +65,13 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
 const defaultProps = { datasetId: 'dataset-1', sequenceId: 'sequence-1' };
 
 describe('PointCloudLabelingWorkspace', () => {
-    afterEach(() => vi.useRealTimers());
+    afterEach(() => {
+        vi.useRealTimers();
+        cloudQuery.data = undefined;
+        cloudQuery.isLoading = false;
+        tickDetails.isLoading = false;
+        summaryState.isLoading = false;
+    });
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
     });
@@ -78,6 +96,41 @@ describe('PointCloudLabelingWorkspace', () => {
         );
         expect(screen.queryByTestId('workspace-scene-viewport')).not.toBeInTheDocument();
     });
+
+    it('shows loading when no cloud frame is available', () => {
+        tickDetails.isLoading = true;
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
+            'data-status',
+            'loading'
+        );
+    });
+
+    it.each(['summary', 'tick', 'cloud'])(
+        'renders an available cloud while %s data loads',
+        (query) => {
+            cloudQuery.data = {
+                batch: {
+                    positions: new Float32Array(3),
+                    intensities: new Float32Array(1),
+                    count: 1
+                },
+                channels: []
+            };
+            tickDetails.isLoading = query === 'tick';
+            cloudQuery.isLoading = query === 'cloud';
+            summaryState.isLoading = query === 'summary';
+            render(PointCloudLabelingWorkspace, {
+                props: {
+                    ...defaultProps
+                }
+            });
+
+            expect(screen.getByTestId('workspace-scene-viewport')).toBeInTheDocument();
+            expect(screen.queryByTestId('workspace-status-panel')).not.toBeInTheDocument();
+        }
+    );
 
     it('renders the source breadcrumb when a path is given', () => {
         render(PointCloudLabelingWorkspace, {

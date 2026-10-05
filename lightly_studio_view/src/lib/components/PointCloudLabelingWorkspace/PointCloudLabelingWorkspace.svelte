@@ -145,8 +145,6 @@
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
                                 <WorkspaceStatusPanel status="empty" />
-                            {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
-                                <WorkspaceStatusPanel status="loading" />
                             {:else if workspace.cloudPointFrame.data}
                                 <SceneViewport
                                     batch={workspace.cloudPointFrame.data.batch}
@@ -157,7 +155,7 @@
                                         undefined}
                                 />
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
-                                <WorkspaceStatusPanel status="loading" {onExit} />
+                                <WorkspaceStatusPanel status="loading" />
                             {:else}
                                 <WorkspaceStatusPanel status="empty" />
                             {/if}
