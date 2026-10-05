@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import ARRAY, BindParameter, Float, bindparam, func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_insert, db_vector
@@ -31,6 +31,14 @@ class SampleEmbeddingRow(NamedTuple):
 
     sample_id: UUID
     embedding: Embedding
+
+
+class SampleProjectionRow(NamedTuple):
+    """A sample id paired with the projections of its embedding onto two directions."""
+
+    sample_id: UUID
+    x: float
+    y: float
 
 
 def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleEmbeddingTable:
@@ -165,6 +173,55 @@ def get_all_by_collection_id(
     ]
 
 
+def get_projections_by_collection_id(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    direction_x: Sequence[float],
+    direction_y: Sequence[float],
+) -> list[SampleProjectionRow]:
+    """Get the projections of the sample embeddings of a collection onto two directions.
+
+    D is the embedding dimension. The x and y values of a sample are the dot products of its
+    embedding with ``direction_x`` and ``direction_y``. The database computes them, so the
+    embeddings are not loaded into Python.
+
+    Args:
+        session: The database session.
+        collection_id: The collection ID to filter by.
+        embedding_model_id: The embedding model ID to filter by.
+        direction_x: The X direction of shape (D,).
+        direction_y: The Y direction of shape (D,).
+
+    Returns:
+        The projections of the samples with an embedding, ordered by sample ID.
+    """
+    embeddings = (
+        select(
+            SampleEmbeddingTable.sample_id,
+            db_vector.loaded_vector(col(SampleEmbeddingTable.embedding), len(direction_x)).label(
+                "embedding"
+            ),
+        )
+        .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.collection_id == collection_id)
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        # OFFSET 0 keeps PostgreSQL from merging the subquery into the outer query. Then both
+        # dot products use the same loaded vector, and each vector loads only once.
+        .offset(0)
+        .subquery()
+    )
+    statement = select(
+        embeddings.c.sample_id,
+        db_vector.inner_product(embeddings.c.embedding, _direction_param(direction_x)),
+        db_vector.inner_product(embeddings.c.embedding, _direction_param(direction_y)),
+    ).order_by(embeddings.c.sample_id.asc())
+    return [
+        SampleProjectionRow(sample_id=sample_id, x=x, y=y)
+        for sample_id, x, y in session.exec(statement).all()
+    ]
+
+
 def get_hash_by_collection_id(
     session: Session,
     collection_id: UUID,
@@ -248,3 +305,10 @@ def _read_embedding_rows_binary(
             SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
             for sample_id, embedding in cursor
         ]
+
+
+def _direction_param(direction: Sequence[float]) -> BindParameter[Sequence[float]]:
+    """Return a bound parameter with the values of a direction vector."""
+    return bindparam(
+        None, value=[float(value) for value in direction], type_=ARRAY(Float), unique=True
+    )

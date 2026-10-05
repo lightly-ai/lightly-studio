@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import threading
-from collections import OrderedDict
 from collections.abc import Sequence
-from dataclasses import dataclass
 from uuid import UUID
 
 import numpy as np
@@ -17,32 +14,6 @@ from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import sample_embedding_resolver
-
-
-@dataclass(frozen=True)
-class _EmbeddingMatrix:
-    """The high-dimensional embeddings of a collection, kept in memory.
-
-    N is the number of samples with an embedding and D is the embedding dimension.
-
-    Attributes:
-        embedding_hash: The hash of the stored embeddings when they were loaded.
-        sample_ids: The sample IDs of the rows of ``matrix``, ordered by sample ID.
-        matrix: The embeddings of shape (N, D).
-    """
-
-    embedding_hash: str
-    sample_ids: tuple[UUID, ...]
-    matrix: NDArray[np.float32]
-
-
-# The key is (collection_id, embedding_model_id). An entry is loaded again when the stored
-# embeddings change, for example after new samples are embedded. One entry can take more than
-# 1 GB, so only the most recently used entries stay in memory.
-_EMBEDDING_MATRIX_CACHE_SIZE = 2
-_embedding_matrix_cache: OrderedDict[tuple[UUID, UUID], _EmbeddingMatrix] = OrderedDict()
-# FastAPI runs sync routes in a thread pool, so requests can use the cache at the same time.
-_embedding_matrix_cache_lock = threading.Lock()
 
 
 def get_twodim_embeddings(
@@ -133,7 +104,7 @@ def get_twodim_embeddings_from_axes(
     samples vary along its direction.
 
     The result is not stored in the database, because the directions change with each query.
-    The high-dimensional embeddings stay in memory until they change.
+    The projection runs in the database, and nothing is kept between requests.
 
     Args:
         session: Database session.
@@ -160,19 +131,20 @@ def get_twodim_embeddings_from_axes(
             f"got {len(direction_x)} and {len(direction_y)}."
         )
 
-    embedding_matrix = _load_embedding_matrix(
+    projections = sample_embedding_resolver.get_projections_by_collection_id(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
+        direction_x=direction_x,
+        direction_y=direction_y,
     )
-    if not embedding_matrix.sample_ids:
-        empty = np.array([], dtype=np.float32)
-        return empty, empty, []
-
-    directions = np.asarray([direction_x, direction_y], dtype=np.float32)
-    x_values, y_values = directions @ embedding_matrix.matrix.T
-    # Return a copy, so that a caller cannot change the sample IDs in the cache.
-    return x_values, y_values, list(embedding_matrix.sample_ids)
+    x_values = np.fromiter(
+        (projection.x for projection in projections), dtype=np.float32, count=len(projections)
+    )
+    y_values = np.fromiter(
+        (projection.y for projection in projections), dtype=np.float32, count=len(projections)
+    )
+    return x_values, y_values, [projection.sample_id for projection in projections]
 
 
 def _calculate_2d_embeddings(
@@ -189,50 +161,3 @@ def _calculate_2d_embeddings(
 
     embedding_calculator = TwoDimEmbedding(embedding_values)
     return embedding_calculator.calculate_2d_embedding()  # type: ignore[no-any-return]
-
-
-def _load_embedding_matrix(
-    session: Session,
-    collection_id: UUID,
-    embedding_model_id: UUID,
-) -> _EmbeddingMatrix:
-    """Return the embeddings of a collection, from memory if they did not change."""
-    embedding_hash, sample_ids_with_embeddings = (
-        sample_embedding_resolver.get_hash_by_collection_id(
-            session=session,
-            collection_id=collection_id,
-            embedding_model_id=embedding_model_id,
-        )
-    )
-    key = (collection_id, embedding_model_id)
-    with _embedding_matrix_cache_lock:
-        cached = _embedding_matrix_cache.get(key)
-        # The hash covers only the first value of each embedding, so also compare the sample
-        # IDs. This finds a sample that another sample with the same first value replaced.
-        if (
-            cached is not None
-            and cached.embedding_hash == embedding_hash
-            and cached.sample_ids == tuple(sample_ids_with_embeddings)
-        ):
-            _embedding_matrix_cache.move_to_end(key)
-            return cached
-
-    # Load outside the lock, so that a slow load does not block requests for other entries.
-    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
-        session=session,
-        sample_ids=sample_ids_with_embeddings,
-        embedding_model_id=embedding_model_id,
-    )
-    embedding_matrix = _EmbeddingMatrix(
-        embedding_hash=embedding_hash,
-        sample_ids=tuple(embedding.sample_id for embedding in sample_embeddings),
-        matrix=np.asarray(
-            [embedding.embedding for embedding in sample_embeddings], dtype=np.float32
-        ),
-    )
-    with _embedding_matrix_cache_lock:
-        _embedding_matrix_cache[key] = embedding_matrix
-        _embedding_matrix_cache.move_to_end(key)
-        while len(_embedding_matrix_cache) > _EMBEDDING_MATRIX_CACHE_SIZE:
-            _embedding_matrix_cache.popitem(last=False)
-    return embedding_matrix

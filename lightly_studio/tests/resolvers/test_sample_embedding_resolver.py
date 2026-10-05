@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import numpy as np
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.sample_embedding import (
@@ -17,6 +18,7 @@ from tests.helpers_resolvers import (
     create_image,
     create_images,
     create_sample_embedding,
+    create_samples_with_embeddings,
     create_tag,
 )
 
@@ -270,6 +272,57 @@ def test_get_all_by_collection_id_with_filter(db_session: Session) -> None:
     embedding_by_id = {row.sample_id: list(row.embedding) for row in filtered}
     assert embedding_by_id[samples[0].sample_id] == [0.0, 1.0, 2.0]
     assert embedding_by_id[samples[1].sample_id] == [1.0, 2.0, 3.0]
+
+
+def test_get_projections_by_collection_id(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    other_collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_model_name="model_1"
+    ).embedding_model_id
+    other_embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_model_name="model_2"
+    ).embedding_model_id
+    image_a, image_b = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="a.png"), [1.0, 2.0, 3.0]),
+            (ImageStub(path="b.png"), [4.0, 5.0, 6.0]),
+        ],
+    )
+    # An embedding of another model, and a sample in another collection.
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding_model_id=other_embedding_model_id,
+        embedding=[7.0, 8.0, 9.0],
+    )
+    create_samples_with_embeddings(
+        session=db_session,
+        collection_id=other_collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[(ImageStub(path="c.png"), [1.0, 1.0, 1.0])],
+    )
+
+    projections = sample_embedding_resolver.get_projections_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        direction_x=[1.0, 0.0, 10.0],
+        direction_y=[0.0, 0.5, 0.0],
+    )
+
+    # The rows are ordered by sample ID. For example, x of a is 1 * 1 + 10 * 3 = 31.
+    expected = sorted(
+        [(image_a.sample_id, 31.0, 1.0), (image_b.sample_id, 64.0, 2.5)],
+        key=lambda row: row[0],
+    )
+    assert [row.sample_id for row in projections] == [row[0] for row in expected]
+    assert [(row.x, row.y) for row in projections] == pytest.approx(
+        [(x, y) for _, x, y in expected]
+    )
 
 
 def test_get_embedding_count(db_session: Session) -> None:

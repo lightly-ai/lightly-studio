@@ -7,19 +7,12 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session, col, delete
 
-from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers import sample_embedding_resolver, twodim_embedding_resolver
+from lightly_studio.resolvers import twodim_embedding_resolver
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
 )
-
-
-@pytest.fixture(autouse=True)
-def _clear_embedding_matrix_cache(mocker: MockerFixture) -> None:
-    """Start each test with no embeddings in memory."""
-    mocker.patch.dict(twodim_embedding_resolver._embedding_matrix_cache, {}, clear=True)
 
 
 def test__calculate_2d_embeddings__1_sample() -> None:
@@ -220,219 +213,143 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     assert len(sample_ids_second) == 2
 
 
-# Mean 0. The variance is 3 along axis 0, 4/3 along axis 1 and 1/3 along axis 2.
-AXIS_ALIGNED_EMBEDDINGS = [
-    [3.0, 0.0, 0.0],
-    [-3.0, 0.0, 0.0],
-    [0.0, 2.0, 0.0],
-    [0.0, -2.0, 0.0],
-    [0.0, 0.0, 1.0],
-    [0.0, 0.0, -1.0],
-]
-
-
 def test_get_twodim_embeddings_from_axes(db_session: Session) -> None:
-    collection, embedding_model_id, embedding_by_sample_id = _create_axis_aligned_samples(
-        session=db_session
+    collection_id, embedding_model_id, (sample_a, sample_b) = _create_samples(
+        session=db_session, embeddings=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
     )
 
     x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
         session=db_session,
-        collection_id=collection.collection_id,
+        collection_id=collection_id,
         embedding_model_id=embedding_model_id,
-        direction_x=[10.0, 0.0, 0.0],
-        direction_y=[0.0, 0.1, 0.0],
+        direction_x=[1.0, 0.0, 10.0],
+        direction_y=[0.0, 0.5, 0.0],
     )
 
-    # The values are not rescaled. The X spread (10 * sqrt(3)) stays 150 times the Y spread
-    # (0.1 * sqrt(4/3)).
-    assert len(sample_ids) == 6
-    for sample_id, x, y in zip(sample_ids, x_values, y_values):
-        embedding = embedding_by_sample_id[sample_id]
-        assert x == pytest.approx(10.0 * embedding[0])
-        assert y == pytest.approx(0.1 * embedding[1])
+    # The values are dot products and are not rescaled, for example 1 * 1 + 10 * 3 = 31.
+    assert dict(zip(sample_ids, x_values.tolist())) == pytest.approx(
+        {sample_a: 31.0, sample_b: 64.0}
+    )
+    assert dict(zip(sample_ids, y_values.tolist())) == pytest.approx({sample_a: 1.0, sample_b: 2.5})
 
 
 def test_get_twodim_embeddings_from_axes__no_embeddings(db_session: Session) -> None:
+    collection_id, embedding_model_id, _ = _create_samples(session=db_session, embeddings=[])
+
+    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        direction_x=[1.0, 0.0, 0.0],
+        direction_y=[0.0, 1.0, 0.0],
+    )
+
+    assert len(x_values) == 0
+    assert len(y_values) == 0
+    assert sample_ids == []
+
+
+def test_get_twodim_embeddings_from_axes__dimension_mismatch(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
     embedding_model = helpers_resolvers.create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_dimension=3,
     )
-
-    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        direction_x=[1.0, 0.0, 0.0],
-        direction_y=[0.0, 1.0, 0.0],
-    )
-
-    assert x_values.size == 0
-    assert y_values.size == 0
-    assert sample_ids == []
-
-
-def test_get_twodim_embeddings_from_axes__dimension_mismatch(db_session: Session) -> None:
-    collection, embedding_model_id, _ = _create_axis_aligned_samples(session=db_session)
 
     with pytest.raises(ValueError, match="embedding dimension 3, got 2 and 3"):
         twodim_embedding_resolver.get_twodim_embeddings_from_axes(
             session=db_session,
             collection_id=collection.collection_id,
-            embedding_model_id=embedding_model_id,
+            embedding_model_id=embedding_model.embedding_model_id,
             direction_x=[1.0, 0.0],
             direction_y=[0.0, 1.0, 0.0],
         )
 
 
-def test_get_twodim_embeddings_from_axes__keeps_unchanged_embeddings_in_memory(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    collection, embedding_model_id, _ = _create_axis_aligned_samples(session=db_session)
-    load_spy = mocker.spy(sample_embedding_resolver, "get_by_sample_ids")
-
-    for _ in range(2):
-        twodim_embedding_resolver.get_twodim_embeddings_from_axes(
-            session=db_session,
-            collection_id=collection.collection_id,
-            embedding_model_id=embedding_model_id,
-            direction_x=[1.0, 0.0, 0.0],
-            direction_y=[0.0, 1.0, 0.0],
-        )
-
-    assert load_spy.call_count == 1
-
-
-def test_get_twodim_embeddings_from_axes__reloads_when_embeddings_change(
+def test_get_twodim_embeddings_from_axes__reflects_replaced_embeddings(
     db_session: Session,
 ) -> None:
-    collection, embedding_model_id, _ = _create_axis_aligned_samples(session=db_session)
-    _, _, sample_ids_first = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model_id,
-        direction_x=[1.0, 0.0, 0.0],
-        direction_y=[0.0, 1.0, 0.0],
-    )
-    (new_image,) = helpers_resolvers.create_samples_with_embeddings(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model_id,
-        images_and_embeddings=[(ImageStub(path="sample_new.jpg"), [1.0, 1.0, 1.0])],
-    )
-
-    _, _, sample_ids_second = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model_id,
-        direction_x=[1.0, 0.0, 0.0],
-        direction_y=[0.0, 1.0, 0.0],
-    )
-
-    assert len(sample_ids_first) == 6
-    assert len(sample_ids_second) == 7
-    assert new_image.sample_id in sample_ids_second
-
-
-def test_get_twodim_embeddings_from_axes__reloads_when_a_sample_is_replaced(
-    db_session: Session,
-) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session)
-    embedding_model = helpers_resolvers.create_embedding_model(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_dimension=3,
-    )
-    (old_image,) = helpers_resolvers.create_samples_with_embeddings(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        images_and_embeddings=[(ImageStub(path="sample_old.jpg"), [0.0, 2.0, 0.0])],
+    collection_id, embedding_model_id, (old_sample_id,) = _create_samples(
+        session=db_session, embeddings=[[0.0, 2.0, 0.0]]
     )
     twodim_embedding_resolver.get_twodim_embeddings_from_axes(
         session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
         direction_x=[1.0, 0.0, 0.0],
         direction_y=[0.0, 1.0, 0.0],
     )
-    # The new embedding has the same first value as the old one, so the embedding hash does
-    # not change.
     db_session.exec(
-        delete(SampleEmbeddingTable).where(
-            col(SampleEmbeddingTable.sample_id) == old_image.sample_id
-        )
+        delete(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id) == old_sample_id)
     )
     (new_image,) = helpers_resolvers.create_samples_with_embeddings(
         session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
         images_and_embeddings=[(ImageStub(path="sample_new.jpg"), [0.0, 9.0, 0.0])],
     )
 
-    _, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
+    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
         session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
         direction_x=[1.0, 0.0, 0.0],
         direction_y=[0.0, 1.0, 0.0],
     )
 
     assert sample_ids == [new_image.sample_id]
+    assert x_values.tolist() == pytest.approx([0.0])
     assert y_values.tolist() == pytest.approx([9.0])
 
 
-def test_get_twodim_embeddings_from_axes__returns_a_copy_of_the_sample_ids(
+def test_get_twodim_embeddings_from_axes__only_includes_the_collection_and_model(
     db_session: Session,
 ) -> None:
-    collection, embedding_model_id, _ = _create_axis_aligned_samples(session=db_session)
-    _, _, sample_ids_first = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
+    collection_id, embedding_model_id, (sample_id,) = _create_samples(
+        session=db_session, embeddings=[[1.0, 2.0, 3.0]]
+    )
+    other_embedding_model = helpers_resolvers.create_embedding_model(
         session=db_session,
-        collection_id=collection.collection_id,
+        collection_id=collection_id,
+        embedding_model_name="other_model",
+        embedding_dimension=3,
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=sample_id,
+        embedding_model_id=other_embedding_model.embedding_model_id,
+        embedding=[4.0, 5.0, 6.0],
+    )
+    other_collection = helpers_resolvers.create_collection(session=db_session)
+    helpers_resolvers.create_samples_with_embeddings(
+        session=db_session,
+        collection_id=other_collection.collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[(ImageStub(path="sample_other.jpg"), [7.0, 8.0, 9.0])],
+    )
+
+    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
+        session=db_session,
+        collection_id=collection_id,
         embedding_model_id=embedding_model_id,
         direction_x=[1.0, 0.0, 0.0],
         direction_y=[0.0, 1.0, 0.0],
     )
-    _, _, sample_ids_second = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model_id,
-        direction_x=[1.0, 0.0, 0.0],
-        direction_y=[0.0, 1.0, 0.0],
-    )
 
-    sample_ids_first.clear()
-
-    assert len(sample_ids_second) == 6
+    assert sample_ids == [sample_id]
+    assert x_values.tolist() == pytest.approx([1.0])
+    assert y_values.tolist() == pytest.approx([2.0])
 
 
-def test_get_twodim_embeddings_from_axes__keeps_the_most_recently_used_embeddings_in_memory(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    mocker.patch.object(twodim_embedding_resolver, "_EMBEDDING_MATRIX_CACHE_SIZE", 2)
-    a, b, c = (_create_axis_aligned_samples(session=db_session) for _ in range(3))
-    load_spy = mocker.spy(sample_embedding_resolver, "get_by_sample_ids")
+def _create_samples(
+    session: Session, embeddings: list[list[float]]
+) -> tuple[UUID, UUID, list[UUID]]:
+    """Create a collection with a 3D embedding model and one sample for each embedding.
 
-    for collection, embedding_model_id, _ in [a, b, a, c, a, b]:
-        twodim_embedding_resolver.get_twodim_embeddings_from_axes(
-            session=db_session,
-            collection_id=collection.collection_id,
-            embedding_model_id=embedding_model_id,
-            direction_x=[1.0, 0.0, 0.0],
-            direction_y=[0.0, 1.0, 0.0],
-        )
-
-    # A, B and C load once. B is the least recently used entry when C loads, so B loads again.
-    assert load_spy.call_count == 4
-
-
-def _create_axis_aligned_samples(
-    session: Session,
-) -> tuple[CollectionTable, UUID, dict[UUID, list[float]]]:
+    Returns:
+        Tuple of (collection ID, embedding model ID, sample IDs in the order of embeddings).
+    """
     collection = helpers_resolvers.create_collection(session=session)
     embedding_model = helpers_resolvers.create_embedding_model(
         session=session,
@@ -444,11 +361,11 @@ def _create_axis_aligned_samples(
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
         images_and_embeddings=[
-            (ImageStub(path=f"sample_{i}.jpg"), embedding)
-            for i, embedding in enumerate(AXIS_ALIGNED_EMBEDDINGS)
+            (ImageStub(path=f"sample_{i}.jpg"), embedding) for i, embedding in enumerate(embeddings)
         ],
     )
-    embedding_by_sample_id = {
-        image.sample_id: embedding for image, embedding in zip(images, AXIS_ALIGNED_EMBEDDINGS)
-    }
-    return collection, embedding_model.embedding_model_id, embedding_by_sample_id
+    return (
+        collection.collection_id,
+        embedding_model.embedding_model_id,
+        [image.sample_id for image in images],
+    )
