@@ -2,10 +2,9 @@
     import { T, useThrelte } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
     import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-    import { untrack } from 'svelte';
+    import PointCloudPoints from './PointCloudPoints/PointCloudPoints.svelte';
     import * as THREE from 'three';
-    import { fitCameraToBounds } from './pointCloudCamera';
-    import { createPointCloudBuffer } from './pointCloudBuffer';
+    import { createSceneNavigationController } from './sceneNavigationController';
     import type { ColorMode } from './pointCloudUtils';
     import type { PointBatch } from './types';
 
@@ -28,49 +27,23 @@
     const { invalidate, renderer } = useThrelte();
     let cameraRef: THREE.PerspectiveCamera | undefined = $state();
     let controlsRef: ThreeOrbitControls | undefined = $state();
-    const pointCloudBuffer = createPointCloudBuffer();
-    let fittedKey: string | undefined;
 
     $effect(() => {
+        if (!cameraRef || !controlsRef) return;
+        const navigation = createSceneNavigationController({
+            camera: cameraRef,
+            controls: controlsRef,
+            invalidate
+        });
         const canvas = renderer.domElement;
-
-        // Suppress browser context menu so right-drag rotate works uninterrupted.
-        const suppress = (e: Event) => e.preventDefault();
+        const suppress = (event: Event) => event.preventDefault();
         canvas.addEventListener('contextmenu', suppress);
-
+        canvas.addEventListener('pointerdown', navigation.cancel);
         return () => {
             canvas.removeEventListener('contextmenu', suppress);
-            pointCloudBuffer.dispose();
+            canvas.removeEventListener('pointerdown', navigation.cancel);
+            navigation.dispose();
         };
-    });
-    // Position effect: copy batch into shared buffers, update draw range and bounds.
-    // cameraRef and controlsRef are read in the tracked section so the effect
-    // retries the fit once both refs are bound; fittedKey is only set after the fit is actually
-    // performed. The camera is refitted when fitKey changes, since the cloud then moves.
-    $effect(() => {
-        const currentBatch = batch;
-        const camera = cameraRef;
-        const controls = controlsRef;
-        const currentFitKey = fitKey;
-        untrack(() => {
-            const bounds = pointCloudBuffer.updatePositions(currentBatch);
-            if (fittedKey !== currentFitKey && bounds && camera && controls) {
-                fitCameraToBounds(camera, controls, bounds);
-                fittedKey = currentFitKey;
-            }
-            invalidate();
-        });
-    });
-    // Color effect: rebuild colors when batch, colorMode, or intensityRange change.
-    $effect(() => {
-        const currentBatch = batch;
-        const mode = colorMode;
-        const range = intensityRange;
-        const currentColors = currentBatch.colors;
-        untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentColors);
-            invalidate();
-        });
     });
 </script>
 
@@ -89,9 +62,9 @@
         enableDamping
         screenSpacePanning={false}
         mouseButtons={{
-            LEFT: THREE.MOUSE.PAN,
+            LEFT: THREE.MOUSE.ROTATE,
             MIDDLE: THREE.MOUSE.DOLLY,
-            RIGHT: THREE.MOUSE.ROTATE
+            RIGHT: THREE.MOUSE.PAN
         }}
         touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
     />
@@ -99,6 +72,12 @@
 
 <T.AmbientLight intensity={1} />
 
-<T.Points geometry={pointCloudBuffer.geometry}>
-    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} />
-</T.Points>
+<PointCloudPoints
+    {batch}
+    {colorMode}
+    {pointSize}
+    {intensityRange}
+    {fitKey}
+    camera={cameraRef}
+    controls={controlsRef}
+/>
