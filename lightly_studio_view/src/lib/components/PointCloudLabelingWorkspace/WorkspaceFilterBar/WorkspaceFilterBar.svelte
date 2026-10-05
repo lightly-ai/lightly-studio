@@ -2,6 +2,7 @@
     import WorkspaceChannelSelect from './WorkspaceChannelSelect/WorkspaceChannelSelect.svelte';
     import { Select } from '$lib/components/Select';
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { ColorMode } from '$lib/components/PointCloudViewer';
 
     interface Props {
         /** Coordinate frames the scene can be shown in. */
@@ -28,6 +29,9 @@
         /** `channel_id`s of the camera channels currently shown. */
         selectedCameraChannels: number[];
 
+        colorMode: Exclude<ColorMode, 'none'>;
+        onColorModeChange: (colorMode: Exclude<ColorMode, 'none'>) => void;
+
         /** Toggles a lidar channel on or off by its `channel_id`. */
         onToggleLidarChannel: (channelId: number) => void;
 
@@ -44,6 +48,8 @@
         cameraChannels,
         selectedLidarChannels,
         selectedCameraChannels,
+        colorMode,
+        onColorModeChange,
         onToggleLidarChannel,
         onToggleCameraChannel
     }: Props = $props();
@@ -56,6 +62,16 @@
         }))
     );
     const frameTriggerLabel = $derived(`Frame: ${referenceFrameId}`);
+    const colorItems = [
+        { value: 'height', label: 'Height' },
+        { value: 'distance', label: 'Distance' },
+        { value: 'density', label: 'Density' },
+        { value: 'height-distance', label: 'Height + Distance' },
+        { value: 'height-density', label: 'Height + Density' }
+    ];
+    const colorTriggerLabel = $derived(
+        `Color: ${colorItems.find((item) => item.value === colorMode)?.label ?? colorMode}`
+    );
 </script>
 
 <div class="flex shrink-0 items-center gap-4 border-b py-2" data-testid="workspace-filter-bar">
@@ -88,5 +104,14 @@
         selectedChannels={selectedCameraChannels}
         onToggleChannel={onToggleCameraChannel}
         testId="workspace-camera-select"
+    />
+    <Select
+        items={colorItems}
+        value={colorMode}
+        triggerLabel={colorTriggerLabel}
+        size="xs"
+        class="w-40"
+        testId="workspace-color-select"
+        onValueChange={(value) => onColorModeChange(value as Exclude<ColorMode, 'none'>)}
     />
 </div>

@@ -26,6 +26,8 @@ const defaultProps = {
     cameraChannels,
     selectedLidarChannels: [] as number[],
     selectedCameraChannels: [] as number[],
+    colorMode: 'density' as const,
+    onColorModeChange: vi.fn(),
     onToggleLidarChannel: vi.fn(),
     onToggleCameraChannel: vi.fn()
 };
@@ -87,6 +89,20 @@ describe('WorkspaceFilterBar', () => {
         await user.click(screen.getByText('CABIN'));
 
         expect(onSelectReferenceFrame).toHaveBeenCalledExactlyOnceWith('CABIN');
+    });
+
+    it('selects a point color mode with the shared select control', async () => {
+        const user = userEvent.setup();
+        const onColorModeChange = vi.fn();
+        render(WorkspaceFilterBar, {
+            props: { ...defaultProps, onColorModeChange }
+        });
+
+        expect(screen.getByTestId('workspace-color-select')).toHaveTextContent('Color: Density');
+        await user.click(screen.getByTestId('workspace-color-select'));
+        await user.click(screen.getByText('Height + Distance'));
+
+        expect(onColorModeChange).toHaveBeenCalledExactlyOnceWith('height-distance');
     });
 
     it('hides the frame select without reference frames', () => {
