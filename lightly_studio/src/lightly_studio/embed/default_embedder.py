@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import TypeVar
+from enum import Enum
+from typing import Literal, TypeVar
 from uuid import UUID
 
 from lightly_studio_serve.embedder import Capability, Embedder
@@ -31,6 +32,12 @@ logger = logging.getLogger(__name__)
 _EmbedderT = TypeVar("_EmbedderT", bound=Embedder)
 
 
+class _ParentSpace(Enum):
+    """Tells that a collection does not take the embedding space of its parent."""
+
+    NOT_TAKEN = "not_taken"
+
+
 def resolve_default_embedder(
     session: Session,
     collection_id: UUID,
@@ -46,10 +53,11 @@ def resolve_default_embedder(
 
     - The collection has a default model in the DB: its embedding space selects the embedder.
     - The collection has no default in the DB yet, and its parent collection has a default
-      model that stores a server: that model becomes the collection's default. This applies
-      only if the caller gives ``inherit_parent_space_for`` and no registration set the
-      bootstrap space of that capability. Thus crops and frames that a later process adds
-      use the server of their parent.
+      model whose embedder has the capability: that model becomes the collection's
+      default. This applies only if the caller gives ``inherit_parent_space_for`` and no
+      registration set the bootstrap space of that capability. Thus crops and frames that
+      a later process adds use the embedding space of their parent. If no embedder of the
+      parent's space is available, the collection is skipped, see ``_inherit_parent_space``.
     - Else: the registry's bootstrap embedder is used and registered as the collection's
       default. The model stores the server of an embedder that names one, see
       ``PersistableEmbedder``.
@@ -87,18 +95,15 @@ def resolve_default_embedder(
             return None
         return embedder, default_model.embedding_model_id
 
-    parent_model = _parent_server_model(
-        session=session,
-        collection_id=collection_id,
-        inherit_parent_space_for=inherit_parent_space_for,
-    )
-    if parent_model is not None:
-        return _resolve_from_parent(
+    if inherit_parent_space_for is not None:
+        inherited = _inherit_parent_space(
             session=session,
             collection_id=collection_id,
-            parent_model=parent_model,
+            capability=inherit_parent_space_for,
             get_embedder_fn=get_embedder_fn,
         )
+        if inherited is not _ParentSpace.NOT_TAKEN:
+            return inherited
 
     embedder = get_embedder_fn(embedder_registry.get_registry(), None, None)
     if embedder is None:
@@ -196,67 +201,69 @@ def _embedder_for_model(
     return embedder
 
 
-def _resolve_from_parent(
+def _inherit_parent_space(
     session: Session,
     collection_id: UUID,
-    parent_model: EmbeddingModelTable,
+    capability: Capability,
     get_embedder_fn: Callable[
         [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
     ],
-) -> tuple[_EmbedderT, UUID] | None:
-    """Make the model of the parent collection the default of the collection.
+) -> tuple[_EmbedderT, UUID] | Literal[_ParentSpace.NOT_TAKEN] | None:
+    """Make the default model of the parent collection the default of the collection.
 
-    If the server of the model cannot give the embedder, the collection gets no default
-    model, so that a later call tries the server again. A bootstrap default would put the
-    collection in another embedding space than its parent.
+    If no embedder of the parent's space is available, for example because its server
+    does not answer or because a local embedder is not registered, the collection is
+    skipped and gets no default model. Thus a later call tries again. A bootstrap default
+    would put the collection in another embedding space than its parent permanently.
 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection that has no default model.
-        parent_model: The default model of the parent collection. It stores a server.
+        capability: The capability of ``get_embedder_fn``.
         get_embedder_fn: The typed getter of the needed capability, as described in
             ``resolve_default_embedder``.
 
     Returns:
-        The embedder and the model id to store embeddings under, or None to skip.
+        The embedder and the model id to store embeddings under, None to skip, or
+        ``NOT_TAKEN`` if a registration set the bootstrap space of ``capability``, the
+        parent has no default model, or the embedder of the parent lacks ``capability``.
     """
-    embedder = _embedder_for_model(default_model=parent_model, get_embedder_fn=get_embedder_fn)
-    if embedder is None:
+    registry = embedder_registry.get_registry()
+    if registry.is_bootstrap_registered(capability=capability):
+        return _ParentSpace.NOT_TAKEN
+    parent_model = _parent_default_model(session=session, collection_id=collection_id)
+    if parent_model is None:
+        return _ParentSpace.NOT_TAKEN
+    space_embedder = registry.get_space_embedder(
+        space_key=parent_model.name,
+        capability=capability,
+        config=embedder_config.from_embedding_model(embedding_model=parent_model),
+    )
+    if space_embedder is None:
         logger.warning(
-            "Cannot embed the collection %s on the server %s of its parent collection for "
-            "space %r. Skipping embedding generation.",
+            "Cannot embed the collection %s in the space %r of its parent collection, "
+            "because no embedder of the space is available. Skipping embedding generation.",
             collection_id,
-            parent_model.remote_embedder_url,
             parent_model.name,
         )
         return None
+    embedder = _embedder_for_model(default_model=parent_model, get_embedder_fn=get_embedder_fn)
+    if embedder is None:
+        return _ParentSpace.NOT_TAKEN
     model_id = _register_default_model(
         session=session, collection_id=collection_id, embedder=embedder
     )
     return embedder, model_id
 
 
-def _parent_server_model(
-    session: Session, collection_id: UUID, inherit_parent_space_for: Capability | None
-) -> EmbeddingModelTable | None:
-    """Give the default model of the parent collection if the collection can take it.
-
-    The collection can take it if ``inherit_parent_space_for`` is given, no registration
-    set the bootstrap space of that capability, and the model stores a server.
-    """
-    if inherit_parent_space_for is None or embedder_registry.get_registry().is_bootstrap_registered(
-        capability=inherit_parent_space_for
-    ):
-        return None
+def _parent_default_model(session: Session, collection_id: UUID) -> EmbeddingModelTable | None:
+    """Get the default model of the parent collection, or None if there is none."""
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None or collection.parent_collection_id is None:
         return None
-    parent_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+    return collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection.parent_collection_id
     )
-    if parent_model is None or parent_model.remote_embedder_url is None:
-        return None
-    return parent_model
 
 
 def _register_default_model(session: Session, collection_id: UUID, embedder: Embedder) -> UUID:
