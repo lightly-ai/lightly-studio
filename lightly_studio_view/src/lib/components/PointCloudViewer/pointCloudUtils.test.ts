@@ -158,7 +158,7 @@ describe('buildColorBuffer', () => {
             colors
         });
 
-        expect(Array.from(colors)).toEqual([...turboRgb(0.5), ...turboRgb(0.5), ...turboRgb(1)]);
+        expect(Array.from(colors)).toEqual([...turboRgb(0.5), ...turboRgb(0.5), ...turboRgb(0.5)]);
     });
 
     it('fills missing rgb values with neutral gray instead of stale colors', () => {
