@@ -21,7 +21,7 @@
     let { batch, colorMode = 'none', pointSize = 2, intensityRange }: Props = $props();
 
     const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
-    const { invalidate, renderer } = useThrelte();
+    const { renderer } = useThrelte();
     let cameraRef: THREE.PerspectiveCamera | undefined = $state();
     let controlsRef: ThreeOrbitControls | undefined = $state();
 
