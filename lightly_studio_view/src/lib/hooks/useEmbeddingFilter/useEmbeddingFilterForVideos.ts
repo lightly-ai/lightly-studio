@@ -1,27 +1,20 @@
-import { derived, type Readable } from 'svelte/store';
+import { get, type Readable } from 'svelte/store';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-import { useFilterVisibility } from './useFilterVisibility';
+import { useRegionFilterVisibility } from './useRegionFilterVisibility';
 
 export function useEmbeddingFilterForVideos(
     collectionId: Readable<string>,
     setRangeSelectionForCollection: (collectionId: string, selection: null) => void
 ) {
-    const { filterParams, updateSampleIds } = useVideoFilters();
+    const { filterParams, updateEmbeddingRegion } = useVideoFilters();
 
-    const activeSampleIds = derived(
-        [filterParams, collectionId],
-        ([$filterParams, $collectionId]) => {
-            if ($filterParams?.collection_id !== $collectionId) {
-                return [];
-            }
-            return $filterParams?.filters?.sample_ids ?? [];
-        }
-    );
-
-    return useFilterVisibility(
+    return useRegionFilterVisibility(
         collectionId,
-        activeSampleIds,
-        updateSampleIds,
+        () => {
+            if (get(filterParams)?.collection_id === get(collectionId)) {
+                updateEmbeddingRegion(null);
+            }
+        },
         setRangeSelectionForCollection
     );
 }
