@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_ANALYTICS_ENABLED,
+    LIGHTLY_STUDIO_OPENROUTER_API_KEY,
     LIGHTLY_STUDIO_POINT_CLOUD_ENABLED,
 )
 
@@ -13,6 +14,9 @@ ANALYTICS_FEATURE = "analytics"
 # The GUI reads this back to decide whether MCAP samples can open the point-cloud labeling
 # workspace (LIG-10659). Leaving it off never affects the existing sample detail view.
 POINT_CLOUD_RENDERING_FEATURE = "point_cloud_rendering"
+# The GUI reads this back to decide whether to show the AI agent chat panel. It is on when an
+# OpenRouter API key is set.
+AGENT_CHAT_FEATURE = "agent_chat"
 
 
 def _get_active_features() -> list[str]:
@@ -22,6 +26,8 @@ def _get_active_features() -> list[str]:
         features.append(ANALYTICS_FEATURE)
     if LIGHTLY_STUDIO_POINT_CLOUD_ENABLED:
         features.append(POINT_CLOUD_RENDERING_FEATURE)
+    if LIGHTLY_STUDIO_OPENROUTER_API_KEY:
+        features.append(AGENT_CHAT_FEATURE)
     return features
 
 

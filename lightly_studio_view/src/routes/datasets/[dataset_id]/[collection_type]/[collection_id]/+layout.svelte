@@ -57,6 +57,7 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
     import { AnnotationCountMode, SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
@@ -145,6 +146,9 @@
     const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
+    // The AI agent chat works on image grids, when the backend has an OpenRouter API key.
+    const { featureFlags } = useFeatureFlags();
+    const supportsAgentChat = $derived(isImages && $featureFlags.includes('agent_chat'));
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
@@ -482,7 +486,13 @@
     const hasFilterPanel = $derived(isCollectionGrid && !isPointClouds);
 
     const panelIsVisible = $derived(
-        isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
+        isPanelVisible(
+            $activePanel,
+            isImages,
+            hasMediaWithEmbeddings,
+            supportsDistribution,
+            supportsAgentChat
+        )
     );
 
     // False only once annotation labels have loaded and come back empty — not
@@ -736,6 +746,15 @@
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
                                     <QueryEditorPanel onClose={() => setActivePanel('none')} />
                                 {/await}
+                            {:else if $activePanel === 'agentChat' && supportsAgentChat}
+                                {#await import('$lib/components/AgentChatPanel/AgentChatPanel.svelte') then { default: AgentChatPanel }}
+                                    {#key collectionId}
+                                        <AgentChatPanel
+                                            {collectionId}
+                                            onClose={() => setActivePanel('none')}
+                                        />
+                                    {/key}
+                                {/await}
                             {:else if distributionPanelVisible && isVideos}
                                 {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}
                                     {#key collectionId}
@@ -787,6 +806,7 @@
                         {hasMediaWithEmbeddings}
                         {supportsEvaluation}
                         {supportsDistribution}
+                        {supportsAgentChat}
                     />
                 </div>
             {/if}

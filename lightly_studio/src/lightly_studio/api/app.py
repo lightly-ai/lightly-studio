@@ -23,6 +23,7 @@ from lightly_studio.api.routes import (
     webapp,
 )
 from lightly_studio.api.routes.api import (
+    agent,
     analytics,
     annotation,
     annotation_label,
@@ -164,6 +165,7 @@ api_router.include_router(group.group_router)
 api_router.include_router(mcap_sequence.mcap_sequence_router)
 api_router.include_router(enterprise.enterprise_router)
 api_router.include_router(version.version_router)
+api_router.include_router(agent.agent_router)
 
 app.include_router(api_router)
 

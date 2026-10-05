@@ -59,3 +59,16 @@ LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS: int = env.int("LIGHTLY_STUDIO_REQUEST_TI
 LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR: bool = env.bool(
     "LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR", False
 )
+
+# The AI agent of the GUI chat panel. The agent is off while no OpenRouter API key is set; see
+# lightly_studio/agent and lightly_studio/api/features.py.
+LIGHTLY_STUDIO_OPENROUTER_API_KEY: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_OPENROUTER_API_KEY", default=None
+)
+LIGHTLY_STUDIO_OPENROUTER_BASE_URL: str = env.str(
+    "LIGHTLY_STUDIO_OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/"
+)
+# Any OpenRouter model that supports tool calling.
+LIGHTLY_STUDIO_AGENT_MODEL: str = env.str(
+    "LIGHTLY_STUDIO_AGENT_MODEL", "anthropic/claude-haiku-4.5"
+)

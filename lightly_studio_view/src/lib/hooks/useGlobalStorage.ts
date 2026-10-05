@@ -119,7 +119,8 @@ export type PanelType =
     | 'embeddingPlot'
     | 'evaluationRuns'
     | 'queryEditor'
-    | 'distribution';
+    | 'distribution'
+    | 'agentChat';
 
 const activePanel = writable<PanelType>('none');
 const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');

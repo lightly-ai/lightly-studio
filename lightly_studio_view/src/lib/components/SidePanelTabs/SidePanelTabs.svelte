@@ -1,6 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
-    import { ChartColumn, ChartNetwork, Gauge, SearchCode } from '@lucide/svelte';
+    import { ChartColumn, ChartNetwork, Gauge, SearchCode, Sparkles } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useSidePanelTabs } from './useSidePanelTabs';
 
@@ -10,13 +10,15 @@
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
         supportsDistribution: boolean;
+        supportsAgentChat?: boolean;
     }
     const {
         collectionId,
         isImages,
         hasMediaWithEmbeddings,
         supportsEvaluation,
-        supportsDistribution
+        supportsDistribution,
+        supportsAgentChat = false
     }: Props = $props();
 
     const { activePanel, toggle } = useSidePanelTabs({ getCollectionId: () => collectionId });
@@ -116,6 +118,30 @@
             >
                 <ChartColumn class="size-4" />
                 <span>Distr</span>
+            </button>
+        </Tooltip>
+    {/if}
+    {#if supportsAgentChat}
+        <Tooltip
+            content="Ask the AI agent to search, select and tag samples"
+            position="left"
+            triggerClass="w-full"
+            class="w-max"
+        >
+            <button
+                class={cn(
+                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
+                    $activePanel === 'agentChat'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+                data-testid="side-panel-tabs-agent"
+                aria-label="Agent"
+                aria-pressed={$activePanel === 'agentChat'}
+                onclick={() => toggle($activePanel, 'agentChat')}
+            >
+                <Sparkles class="size-4" />
+                <span>Agent</span>
             </button>
         </Tooltip>
     {/if}

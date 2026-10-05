@@ -216,4 +216,21 @@ describe('SidePanelTabs', () => {
         );
         expect(screen.getByTestId('side-panel-tabs-eval')).toHaveAttribute('aria-pressed', 'false');
     });
+
+    it('renders the Agent button only when supportsAgentChat is true', () => {
+        const props = {
+            collectionId: 'col1',
+            isImages: true,
+            hasMediaWithEmbeddings: false,
+            supportsEvaluation: false,
+            supportsDistribution: false
+        };
+        const { unmount } = render(SidePanelTabs, { props });
+        expect(screen.queryByTestId('side-panel-tabs-agent')).not.toBeInTheDocument();
+        unmount();
+
+        render(SidePanelTabs, { props: { ...props, supportsAgentChat: true } });
+        fireEvent.click(screen.getByTestId('side-panel-tabs-agent'));
+        expect(setActivePanel).toHaveBeenCalledWith('agentChat');
+    });
 });
