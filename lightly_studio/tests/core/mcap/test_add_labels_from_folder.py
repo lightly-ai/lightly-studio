@@ -121,6 +121,46 @@ def test_add_labels_from_folder__skips_a_second_call(
     assert len(_cuboids(group_ids)) == 1
 
 
+def test_add_labels_from_folder__logs_unknown_topic(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset, group_ids = _index(tmp_path)
+    _write_labels(tmp_path / "recording.mcap")
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/wrong_topic")
+
+    assert "Topic '/wrong_topic' is not in annotation MCAP" in caplog.text
+    assert "SceneUpdate topics in the file: /scene_update" in caplog.text
+    assert _cuboids(group_ids) == []
+
+
+def test_add_labels_from_folder__warns_without_annotation_files(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset, _ = _index(tmp_path)
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
+
+    assert "No annotation MCAPs named '<recording>_labeled.mcap'" in caplog.text
+
+
+def test_add_labels_from_folder__logs_file_that_is_not_an_mcap(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset, _ = _index(tmp_path)
+    (tmp_path / "recording_labeled.mcap").write_text("not an mcap")
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
+
+    assert "Cannot add annotations from" in caplog.text
+
+
 def _index(tmp_path: Path) -> tuple[McapDataset, list[UUID]]:
     path = helpers.write_mcap(tmp_path / "recording.mcap")
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
