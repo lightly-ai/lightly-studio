@@ -298,6 +298,70 @@ describe('PlotPanel.svelte', () => {
         expect(usePlotDataSpy.mock.calls.at(-1)?.[0].highlightRegion).toEqual(polygon);
     });
 
+    it('keeps the video lasso request small for a large selection', async () => {
+        routeState.id = VIDEOS_ROUTE;
+        const polygon = [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ];
+        const requestBodySizes: number[] = [];
+        let oldIdListRequestBody = '';
+        for (const selectionCount of [1, 5000]) {
+            const selectedSampleIds = Array.from(
+                { length: selectionCount },
+                (_, index) => `video-${index}`
+            );
+            rangeSelectionStore = writable(polygon);
+            selectedSampleIdsStore = writable(selectedSampleIds);
+
+            const { unmount } = render(PlotPanel, {
+                props: { collectionId: 'test-collection-id' }
+            });
+            await fireEvent.mouseUp(window);
+
+            const requestBody = JSON.stringify({ filter: get(videoFilterStore) });
+            expect(JSON.parse(requestBody).filter.sample_filter).toEqual({
+                embedding_region: { polygon }
+            });
+            requestBodySizes.push(requestBody.length);
+            oldIdListRequestBody = JSON.stringify({
+                filter: { sample_filter: { sample_ids: selectedSampleIds } }
+            });
+            unmount();
+        }
+
+        expect(new Set(requestBodySizes).size).toBe(1);
+        expect(requestBodySizes[0]).toBeLessThan(oldIdListRequestBody.length / 10);
+        expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 5000);
+    });
+
+    it.each([
+        { selectedSampleIds: [], fulfillsFilter: [1, 1] },
+        { selectedSampleIds: ['video-1', 'video-2'], fulfillsFilter: [1, 1] }
+    ])('clears a video region when the lasso selects nothing or everything', async (selection) => {
+        routeState.id = VIDEOS_ROUTE;
+        videoFilterStore = writable({
+            sample_filter: { embedding_region: { polygon: [{ x: 0, y: 0 }] } }
+        });
+        rangeSelectionStore = writable([
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ]);
+        selectedSampleIdsStore = writable(selection.selectedSampleIds);
+        arrowDataStore = writable({ fulfils_filter: new Uint8Array(selection.fulfillsFilter) });
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await fireEvent.mouseUp(window);
+
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+    });
+
     it('should not clear embedding selection when base filters change', async () => {
         rangeSelectionStore = writable([
             { x: 0, y: 0 },
