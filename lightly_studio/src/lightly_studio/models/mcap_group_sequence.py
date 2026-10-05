@@ -40,6 +40,7 @@ class McapGroupSequenceInfoView(BaseModel):
     sample_id: UUID
     recording: RecordingDetails
     components: list[McapGroupComponentDefinitionView]
+    reference_frame_ids: list[str]
 
     @classmethod
     def from_parts(
@@ -53,6 +54,7 @@ class McapGroupSequenceInfoView(BaseModel):
             sample_id=sample_id,
             recording=RecordingDetails.from_recording_table(recording),
             components=components,
+            reference_frame_ids=list(recording.reference_frame_ids),
         )
 
 

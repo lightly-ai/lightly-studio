@@ -8,6 +8,7 @@ from enum import Enum
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
 
@@ -39,6 +40,11 @@ class RecordingTable(RecordingBase, table=True):
 
     # The dataset the recording belongs to.
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
+    # Frames the scene can be shown in, in menu order. Empty until indexed.
+    reference_frame_ids: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSON, nullable=False),
+    )
 
 
 class RecordingDetails(BaseModel):

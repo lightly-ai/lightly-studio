@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 import FrameTimeline from './FrameTimeline.svelte';
 
@@ -10,9 +10,12 @@ const defaultProps = {
     ticks: createTicks([null, null, null]),
     currentTick: 0,
     isPlaying: false,
+    playbackIntervalMs: 300,
     onPreviousFrame: vi.fn(),
     onNextFrame: vi.fn(),
-    onPlayToggle: vi.fn()
+    onPlayToggle: vi.fn(),
+    onPlaybackIntervalChange: vi.fn(),
+    onSelectTick: vi.fn()
 };
 
 describe('FrameTimeline', () => {
@@ -40,6 +43,30 @@ describe('FrameTimeline', () => {
         render(FrameTimeline, { props: { ...defaultProps, ticks: [] } });
 
         expect(screen.getByText('Frame — / —')).toBeInTheDocument();
+    });
+
+    it('selects ticks with the timeline slider and exposes the playback interval control', async () => {
+        const onSelectTick = vi.fn();
+        render(FrameTimeline, {
+            props: {
+                ...defaultProps,
+                ticks: createTicks([null, null, null]).map((tick, index) => ({
+                    ...tick,
+                    seq_number: index * 4
+                })),
+                currentTick: 0,
+                onSelectTick
+            }
+        });
+
+        await fireEvent.input(screen.getByRole('slider', { name: 'Frame position' }), {
+            target: { value: '2' }
+        });
+        expect(
+            screen.getByRole('spinbutton', { name: 'Playback interval in seconds' })
+        ).toHaveValue(0.3);
+        expect(screen.getByRole('slider', { name: 'Frame position' })).toHaveAttribute('max', '2');
+        expect(onSelectTick).toHaveBeenCalledWith(8);
     });
 
     it('renders a lane per lidar and camera channel by name', () => {

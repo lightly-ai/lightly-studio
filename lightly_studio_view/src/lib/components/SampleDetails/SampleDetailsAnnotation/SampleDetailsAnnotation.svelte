@@ -99,6 +99,7 @@
                 {highlight}
                 {scale}
                 {colorBySource}
+                isSelectable
             />
         </SelectableSvgGroup>
     {/key}

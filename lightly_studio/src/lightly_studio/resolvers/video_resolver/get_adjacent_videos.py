@@ -14,7 +14,7 @@ from lightly_studio.core.dataset_query.video_sample_field import VideoSampleFiel
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
-from lightly_studio.resolvers import adjacents, similarity_utils
+from lightly_studio.resolvers import adjacents, similarity_utils, video_resolver
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
@@ -42,6 +42,9 @@ def get_adjacent_videos(  # noqa: PLR0913
         The adjacency result with the previous/next sample IDs and the anchor's
         position, or ``None`` when the anchor is not in the (filtered) collection.
     """
+    video_resolver.resolve_embedding_region(
+        session=session, collection_id=collection_id, video_filter=filters
+    )
     base_query = _base_query(order_by=order_by)
     base_query = base_query.where(col(SampleTable.collection_id) == collection_id)
 

@@ -45,6 +45,9 @@ logger = logging.getLogger(__name__)
 # keeping a single open per image.
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
+# Embed and commit images in chunks, so that an embedder failure keeps the earlier chunks
+_IMAGE_EMBED_BATCH_SIZE = 1024
+
 
 class ImageNotEmbeddedError(ValueError):
     """Raised when the embedder returns no embedding for an image to embed.
@@ -152,7 +155,6 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
     }
     if len(sample_id_to_filepath) != len(sample_ids):
         raise ValueError("Could not fetch all image paths for the provided IDs.")
-    filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
 
     default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
@@ -163,15 +165,18 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
         return
     embedder, model_id = default_embedder_and_model_id
 
-    result = embedder.embed_images(paths=filepaths)
-    kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
-
-    embedding_storage.store_embeddings(
-        session=session,
-        model_id=model_id,
-        sample_ids=kept_sample_ids,
-        embeddings=result.embeddings,
-    )
+    with tqdm(total=len(sample_ids), desc="Embedding images", unit=" images") as progress:
+        for sample_id_chunk in batching.batched(
+            items=sample_ids, batch_size=_IMAGE_EMBED_BATCH_SIZE
+        ):
+            _embed_image_chunk(
+                session=session,
+                embedder=embedder,
+                model_id=model_id,
+                sample_ids=sample_id_chunk,
+                filepaths=[sample_id_to_filepath[sample_id] for sample_id in sample_id_chunk],
+            )
+            progress.update(len(sample_id_chunk))
 
 
 def embed_annotation_collection(session: Session, annotation_collection_id: UUID) -> None:
@@ -440,6 +445,37 @@ def _single_embedding(result: EmbeddingResult, message: str) -> NDArray[np.float
         raise ImageNotEmbeddedError(message)
     embedding: NDArray[np.float32] = result.embeddings[0]
     return embedding
+
+
+def _embed_image_chunk(
+    session: Session,
+    embedder: ImagePathEmbedder,
+    model_id: UUID,
+    sample_ids: list[UUID],
+    filepaths: list[str],
+) -> None:
+    """Embed and store one chunk of images, and commit it.
+
+    Images the embedder drops (see ``kept_indices``) are left out, so the stored sample
+    ids stay aligned with the returned embeddings.
+
+    Args:
+        session: Database session for resolver operations.
+        embedder: The image path embedder resolved for the collection.
+        model_id: The model id the embeddings are stored under.
+        sample_ids: The image sample ids in this chunk.
+        filepaths: The image paths, in the same order as ``sample_ids``.
+    """
+    result = embedder.embed_images(paths=filepaths)
+    kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
+    # embed_image_samples shows the progress, thus this function shows no storage bar
+    embedding_storage.store_embeddings(
+        session=session,
+        model_id=model_id,
+        sample_ids=kept_sample_ids,
+        embeddings=result.embeddings,
+        show_progress=False,
+    )
 
 
 def _embed_annotation_chunk(

@@ -36,7 +36,7 @@ class MyEmbedder(TextEmbedder, ImageBytesEmbedder):
         ...
 
 
-serve(MyEmbedder(), api_key="the-key-you-paste-into-lightlystudio")
+serve(MyEmbedder(), api_key="your-secret-key")
 ```
 
 `serve` binds `127.0.0.1:8080` by default, where the requests stay on the machine. TLS is
@@ -51,7 +51,7 @@ serve(
     MyEmbedder(),
     host="0.0.0.0",
     port=8080,
-    api_key="the-key-you-paste-into-lightlystudio",
+    api_key="your-secret-key",
     ssl_certfile="cert.pem",
     ssl_keyfile="key.pem",
 )
@@ -119,12 +119,26 @@ Pass `--api-key`, or set `LIGHTLY_STUDIO_SERVE_API_KEY`, for a server that expec
 
 ## Connect the server to LightlyStudio
 
-LightlyStudio embeds search queries on the server when you point a dataset at it. The
-dataset must already hold embeddings in the space that the server produces:
+To import through the server, register it before the import. The import then embeds the
+images on the server, and the dataset stores the URL and the API key:
 
 ```python
 import lightly_studio as ls
+from lightly_studio.embed.remote.connection import build_client
+from lightly_studio.embed.remote.embedder import RemoteEmbedder
 
+ls.register_default_embedder(
+    embedder=RemoteEmbedder.connect(
+        client=build_client(url="http://127.0.0.1:8080"), api_key="your-secret-key"
+    )
+)
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path="my_images/")
+```
+
+To search in a space that the dataset already holds, point the dataset at the server:
+
+```python
 ls.register_remote_embedder(dataset=dataset, url="http://127.0.0.1:8080", api_key="your-secret-key")
 ```
 

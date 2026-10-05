@@ -41,7 +41,7 @@ describe('getMenuItem', () => {
     it('SEQUENCE returns a point-clouds menu item', () => {
         const item = getMenuItem('dataset-id', undefined, 'col-id', SampleType.SEQUENCE);
         if (!item) throw new Error('expected a menu item');
-        expect(item.title).toBe('Sequences');
+        expect(item.title).toBe('Point clouds');
         expect(item.id).toBe('sequence-col-id');
         expect(item.href).toBe('/datasets/dataset-id/sequence/col-id/point-clouds');
     });

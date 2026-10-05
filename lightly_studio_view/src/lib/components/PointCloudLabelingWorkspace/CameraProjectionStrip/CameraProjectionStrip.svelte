@@ -15,40 +15,38 @@
         sequenceId: string;
         /** Zero-based tick position to render frames for. */
         seqNumber: number;
+        /** Frame the workspace requests cuboids in, so both share one tick-details query. */
+        displayFrameId?: string;
     }
 
-    let { datasetId, sequenceId, seqNumber }: Props = $props();
+    let { datasetId, sequenceId, seqNumber, displayFrameId }: Props = $props();
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
         getSequenceId: () => sequenceId,
-        getSeqNumber: () => seqNumber
+        getSeqNumber: () => seqNumber,
+        getDisplayFrameId: () => displayFrameId || undefined
     });
     const recordingId = $derived(tickDetails.data?.recording_id);
     const cameraChannels: TickChannelView[] = $derived(
-        tickDetails.data?.channels ? Object.values(tickDetails.data?.channels) : []
+        tickDetails.data?.camera_channels ? Object.values(tickDetails.data.camera_channels) : []
     );
 </script>
 
 <div
-    class="flex h-full min-h-0 flex-col border-t bg-background"
+    class="flex h-full min-h-0 flex-col border-t bg-background p-2"
     data-testid="workspace-projection-strip"
 >
-    <div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-        <span class="font-medium text-foreground">Cameras</span>
-    </div>
     {#if recordingId}
-        <div class="flex min-h-0 flex-1 gap-2 overflow-x-auto px-3 pb-2">
+        <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-auto">
             {#each cameraChannels as channel}
-                {#if channel.keyframe_log_time_ns}
-                    <CameraProjectionFrame
-                        {datasetId}
-                        {recordingId}
-                        channelId={channel.channel_id}
-                        timestampNs={channel.keyframe_log_time_ns}
-                        label={channel.group_component_name}
-                    />
-                {/if}
+                <CameraProjectionFrame
+                    {datasetId}
+                    {recordingId}
+                    channelId={channel.channel_id}
+                    timestampNs={channel.keyframe_log_time_ns ?? undefined}
+                    label={channel.group_component_name}
+                />
             {/each}
         </div>
     {/if}

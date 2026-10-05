@@ -3,8 +3,8 @@
 ``RemoteTransport`` sends the requests of version 1 of the protocol and reads the answers
 back into the wire models of ``lightly_studio_serve``, so the client and the server cannot
 drift apart. A status that is not 200 becomes the exception of ``errors`` that names its
-cause. A 429 or a 503 is sent again, for a capped number of attempts and after a capped
-wait.
+cause. A 429, a 503 or a failure of the network is sent again, for a capped number of
+attempts and after a capped wait.
 
 The transport holds no state of the server. ``RemoteEmbedder`` reads ``/v1/describe`` once
 and keeps the answer for the lifetime of the process.
@@ -22,6 +22,7 @@ from lightly_studio_serve import protocol
 from lightly_studio_serve.protocol import DescribeResponse, EmbeddingsResponse, EmbedTextsRequest
 from pydantic import BaseModel, ValidationError
 
+from lightly_studio.embed.remote.endpoint import RemoteEndpoint
 from lightly_studio.embed.remote.errors import (
     RemoteEmbedderAuthError,
     RemoteEmbedderBatchTooLargeError,
@@ -36,11 +37,15 @@ from lightly_studio.embed.remote.timeouts import DEFAULT_TIMEOUTS, RemoteTimeout
 # that still loads its model answers 503 until the weights arrive.
 _MAX_ATTEMPTS = 3
 
+# A user waits for the answer of a text query, so it gets fewer attempts.
+_MAX_ATTEMPTS_BY_PATH = {protocol.EMBED_TEXTS_PATH: 2}
+
 # The longest that the client waits between two attempts, whatever `Retry-After` asks. A
 # server can name an hour, and the caller of a text query sits under a key press.
 _MAX_RETRY_WAIT_SECONDS = 30.0
 
-# The wait for a 429 or a 503 that carries no `Retry-After`, or one that cannot be read.
+# The wait after a failure of the network, or after a 429 or a 503 that carries no
+# `Retry-After` or one that cannot be read.
 _DEFAULT_RETRY_WAIT_SECONDS = 1.0
 
 # The two statuses that say "later". Every other status says "not this request".
@@ -65,11 +70,11 @@ _STATUS_ERRORS: dict[int, tuple[type[RemoteEmbedderError], str]] = {
     httpx.codes.NOT_FOUND: (RemoteEmbedderCapabilityError, ", so it does not serve that path"),
     httpx.codes.TOO_MANY_REQUESTS: (
         RemoteEmbedderUnreachableError,
-        f", so it stayed busy for {_MAX_ATTEMPTS} attempts",
+        ", so it stayed busy for every attempt",
     ),
     httpx.codes.SERVICE_UNAVAILABLE: (
         RemoteEmbedderUnreachableError,
-        f", so it stayed busy for {_MAX_ATTEMPTS} attempts",
+        ", so it stayed busy for every attempt",
     ),
 }
 
@@ -116,10 +121,19 @@ class RemoteTransport:
                 the one of a client that the caller passes in.
         """
         self._client = client
+        self._api_key = api_key
         # A header of the request, not of the client: the caller owns the client, and a
         # transport must not put a token on a client that it was lent.
         self._headers = {} if api_key is None else {"Authorization": f"Bearer {api_key}"}
         self._timeouts = timeouts if timeouts is not None else DEFAULT_TIMEOUTS
+
+    def endpoint(self) -> RemoteEndpoint:
+        """Get the address and the token that every request of this transport carries.
+
+        Returns:
+            The ``base_url`` of the client, and the token.
+        """
+        return RemoteEndpoint(url=str(self._client.base_url), api_key=self._api_key)
 
     def describe(self) -> DescribeResponse:
         """Read the identity, the capabilities and the limits of the server.
@@ -237,7 +251,7 @@ class RemoteTransport:
         json: dict[str, Any] | None = None,
         files: list[_FilePart] | None = None,
     ) -> httpx.Response:
-        """Send one request, wait out a busy server, and raise for a status that is not 200.
+        """Send one request, wait out a busy server or a lost connection, and check the status.
 
         The budget applies to one attempt, and to one phase of it: httpx limits the wait
         for a chunk, not the whole exchange. A server that answers slowly but steadily,
@@ -258,13 +272,23 @@ class RemoteTransport:
             RemoteEmbedderError: If the server gives no answer or answers a status that
                 carries no embeddings.
         """
+        max_attempts = _MAX_ATTEMPTS_BY_PATH.get(path, _MAX_ATTEMPTS)
         attempt = 1
         while True:
-            response = self._send(method=method, path=path, timeout=timeout, json=json, files=files)
-            if response.status_code not in _RETRY_STATUSES or attempt >= _MAX_ATTEMPTS:
-                break
+            try:
+                response = self._send(
+                    method=method, path=path, timeout=timeout, json=json, files=files
+                )
+            except RemoteEmbedderUnreachableError:
+                if attempt >= max_attempts:
+                    raise
+                wait_seconds = _DEFAULT_RETRY_WAIT_SECONDS
+            else:
+                if response.status_code not in _RETRY_STATUSES or attempt >= max_attempts:
+                    break
+                wait_seconds = _retry_wait_seconds(response=response)
             attempt += 1
-            time.sleep(_retry_wait_seconds(response=response))
+            time.sleep(wait_seconds)
         _check_status(response=response)
         return response
 
