@@ -11,6 +11,9 @@
     import type { WorkspaceCrumb } from './types';
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
     import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { getColorByLabel } from '$lib/utils';
+    import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -66,6 +69,19 @@
             getOnTickChange: () => onTickChange
         });
     let selectedCuboidId = $state<string | null>(null);
+    const { customLabelColorsStore } = useCustomLabelColors();
+
+    const cuboids = $derived(
+        tickAnnotationsToCuboids(workspace.tickDetails.data?.annotations ?? [])
+    );
+
+    const annotationClasses = $derived.by(() => {
+        void $customLabelColorsStore;
+        return tickAnnotationsToClasses(
+            workspace.tickDetails.data?.annotations ?? [],
+            (name) => getColorByLabel(name, 1).color
+        );
+    });
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
@@ -154,6 +170,10 @@
                                     pointCloudBounds={workspace.cloudPointFrame.data.bounds ??
                                         undefined}
                                     fitKey={`${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`}
+                                    {cuboids}
+                                    {annotationClasses}
+                                    selectedAnnotationId={selectedCuboidId}
+                                    onselect={(id) => (selectedCuboidId = id)}
                                 />
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
                                 <WorkspaceStatusPanel status="loading" />
@@ -225,7 +245,7 @@
                     </div>
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <PointCloudRightSidePanel bind:selectedCuboidId />
+                    <PointCloudRightSidePanel {cuboids} {annotationClasses} bind:selectedCuboidId />
                 </Pane>
             </PaneGroup>
         {/if}
