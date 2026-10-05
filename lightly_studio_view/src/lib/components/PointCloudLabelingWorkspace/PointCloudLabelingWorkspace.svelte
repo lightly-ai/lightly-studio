@@ -12,6 +12,9 @@
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
     import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
     import type { ColorMode } from '$lib/components/PointCloudViewer';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { getColorByLabel } from '$lib/utils';
+    import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -68,6 +71,42 @@
             getOnTickChange: () => onTickChange
         });
     let selectedCuboidId = $state<string | null>(null);
+    const { customLabelColorsStore } = useCustomLabelColors();
+
+    // Synchronized snapshot: the cloud frame and its corresponding annotations
+    // advance together.
+    let sceneSnapshot = $state<{
+        frame: NonNullable<(typeof workspace.cloudPointFrame)['data']>;
+        annotations: Parameters<typeof tickAnnotationsToCuboids>[0];
+    } | null>(null);
+
+    $effect(() => {
+        if (workspace.cloudPointFrame.data && !workspace.cloudPointFrame.isPlaceholderData) {
+            sceneSnapshot = {
+                frame: workspace.cloudPointFrame.data,
+                annotations: workspace.tickDetails.data?.annotations ?? []
+            };
+        }
+    });
+
+    const cuboids = $derived(tickAnnotationsToCuboids(sceneSnapshot?.annotations ?? []));
+
+    const annotationClasses = $derived.by(() => {
+        void $customLabelColorsStore;
+        return tickAnnotationsToClasses(
+            sceneSnapshot?.annotations ?? [],
+            (name) => getColorByLabel(name, 1).color
+        );
+    });
+
+    // Skip cuboids whose coordinate frame differs from the loaded point cloud.
+    // When the cloud falls back to sensor frames (no TF transform available),
+    // cuboids requested in the reference frame are filtered out rather than
+    // rendered at wrong coordinates.
+    const sceneCuboids = $derived.by(() => {
+        const frameIds = new Set(sceneSnapshot?.frame.channels.map((c) => c.frameId));
+        return cuboids.filter((c) => frameIds.has(c.frameId));
+    });
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
     let isFullscreen = $state(false);
@@ -150,13 +189,16 @@
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
                                 <WorkspaceStatusPanel status="empty" />
-                            {:else if workspace.cloudPointFrame.data}
+                            {:else if sceneSnapshot}
                                 <SceneViewport
-                                    batch={workspace.cloudPointFrame.data.batch}
+                                    batch={sceneSnapshot.frame.batch}
                                     colorMode={displayedColorMode}
-                                    pointCloudBounds={workspace.cloudPointFrame.data.bounds ??
-                                        undefined}
+                                    pointCloudBounds={sceneSnapshot.frame.bounds ?? undefined}
                                     fitKey={`${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`}
+                                    cuboids={sceneCuboids}
+                                    {annotationClasses}
+                                    selectedAnnotationId={selectedCuboidId}
+                                    onselect={(id) => (selectedCuboidId = id)}
                                 />
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
                                 <WorkspaceStatusPanel status="loading" />
@@ -228,7 +270,7 @@
                     </div>
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <PointCloudRightSidePanel bind:selectedCuboidId />
+                    <PointCloudRightSidePanel {cuboids} {annotationClasses} bind:selectedCuboidId />
                 </Pane>
             </PaneGroup>
         {/if}
