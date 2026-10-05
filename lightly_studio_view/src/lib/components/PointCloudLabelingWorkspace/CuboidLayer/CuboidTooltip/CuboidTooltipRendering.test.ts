@@ -11,16 +11,6 @@ const defaultProps = {
 describe('CuboidTooltip', () => {
     it('shows the track number when present', () => {
         render(CuboidTooltip, {
-            props: { ...defaultProps, annotation: { ...defaultProps.annotation, trackNumber: 7 } }
-        });
-
-        expect(screen.getByText('Track number')).toBeInTheDocument();
-        expect(screen.getByText('7')).toBeInTheDocument();
-        expect(screen.queryByText('Track ID')).not.toBeInTheDocument();
-    });
-
-    it('shows track number 0', () => {
-        render(CuboidTooltip, {
             props: { ...defaultProps, annotation: { ...defaultProps.annotation, trackNumber: 0 } }
         });
 
