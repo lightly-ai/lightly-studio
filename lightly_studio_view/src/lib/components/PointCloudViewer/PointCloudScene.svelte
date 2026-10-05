@@ -17,14 +17,17 @@
         pointSize?: number;
         /** Min/max clamp for intensity-based coloring. */
         intensityRange?: [number, number];
+        /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
+        fitKey?: string;
     }
 
-    let { batch, colorMode = 'none', pointSize = 2, intensityRange }: Props = $props();
+    let { batch, colorMode = 'none', pointSize = 2, intensityRange, fitKey = '' }: Props = $props();
 
     const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
     const { invalidate, renderer } = useThrelte();
     let cameraRef: THREE.PerspectiveCamera | undefined = $state();
     let controlsRef: ThreeOrbitControls | undefined = $state();
+
     $effect(() => {
         if (!cameraRef || !controlsRef) return;
         const navigation = createSceneNavigationController({
@@ -74,6 +77,7 @@
     {colorMode}
     {pointSize}
     {intensityRange}
+    {fitKey}
     camera={cameraRef}
     controls={controlsRef}
 />

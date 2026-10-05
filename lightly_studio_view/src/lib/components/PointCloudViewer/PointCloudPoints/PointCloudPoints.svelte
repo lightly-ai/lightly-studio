@@ -13,27 +13,38 @@
         colorMode: ColorMode;
         pointSize: number;
         intensityRange?: [number, number];
+        /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
+        fitKey?: string;
         camera?: PerspectiveCamera;
         controls?: OrbitControls;
     }
-    let { batch, colorMode, pointSize, intensityRange, camera, controls }: Props = $props();
+    let {
+        batch,
+        colorMode,
+        pointSize,
+        intensityRange,
+        fitKey = '',
+        camera,
+        controls
+    }: Props = $props();
     const { invalidate } = useThrelte();
     const pointCloudBuffer = createPointCloudBuffer();
-    let hasFitted = false;
+    let fittedKey: string | undefined;
     onDestroy(() => pointCloudBuffer.dispose());
     // Position effect: copy batch into shared buffers, update draw range and bounds.
-    // camera and controls are read in the tracked section so the effect
-    // retries the fit once both refs are bound; hasFitted is only set to true
-    // after the fit is actually performed.
+    // camera and controls are read in the tracked section so the effect retries the fit
+    // once both refs are bound; fittedKey is only updated after the fit is performed.
+    // The camera is refitted when fitKey changes, e.g. when the coordinate frame changes.
     $effect(() => {
         const currentBatch = batch;
         const currentCamera = camera;
         const currentControls = controls;
+        const currentFitKey = fitKey;
         untrack(() => {
             const bounds = pointCloudBuffer.updatePositions(currentBatch);
-            if (!hasFitted && bounds && currentCamera && currentControls) {
+            if (fittedKey !== currentFitKey && bounds && currentCamera && currentControls) {
                 fitCameraToBounds(currentCamera, currentControls, bounds);
-                hasFitted = true;
+                fittedKey = currentFitKey;
             }
             invalidate();
         });
