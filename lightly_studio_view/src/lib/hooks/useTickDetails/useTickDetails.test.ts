@@ -122,11 +122,28 @@ describe('useTickDetails', () => {
             seqNumber: 2,
             targetFrameId: 'map'
         });
-        vi.mocked(getTickDetails).mockRejectedValueOnce(new Error('No transform'));
+        vi.mocked(getTickDetails).mockRejectedValueOnce({
+            detail: { type: 'transform_unavailable', message: 'No transform' }
+        });
         const signal = new AbortController().signal;
 
         await expect(queryOptionsThunk().queryFn({ signal })).resolves.toBe(data);
         expect(getTickDetails).toHaveBeenLastCalledWith({ path, signal, throwOnError: true });
+    });
+
+    it('does not retry without a target frame for other errors', async () => {
+        renderHook({
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            seqNumber: 2,
+            targetFrameId: 'map'
+        });
+        vi.mocked(getTickDetails).mockRejectedValueOnce({ detail: 'Recording was not found.' });
+
+        await expect(
+            queryOptionsThunk().queryFn({ signal: new AbortController().signal })
+        ).rejects.toEqual({ detail: 'Recording was not found.' });
+        expect(getTickDetails).toHaveBeenCalledOnce();
     });
 
     it('does not retry without a target frame when the request is aborted', async () => {

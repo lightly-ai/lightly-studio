@@ -42,7 +42,9 @@ export const useTickDetails = ({
                 } catch (error) {
                     // A tick without a transform to the target frame still loads, so that
                     // its channels can be shown.
-                    if (!targetFrameId || signal.aborted) throw error;
+                    if (!targetFrameId || signal.aborted || !isTransformUnavailable(error)) {
+                        throw error;
+                    }
                     return fetchTickDetails({ path, signal });
                 }
             },
@@ -53,6 +55,14 @@ export const useTickDetails = ({
 
     return { tickDetails };
 };
+
+// The `detail.type` the backend sets if no transform connects the cuboid frames to the target.
+const TRANSFORM_UNAVAILABLE_ERROR_TYPE = 'transform_unavailable';
+
+function isTransformUnavailable(error: unknown): boolean {
+    const detail = (error as { detail?: { type?: unknown } } | null)?.detail;
+    return detail?.type === TRANSFORM_UNAVAILABLE_ERROR_TYPE;
+}
 
 async function fetchTickDetails({
     path,
