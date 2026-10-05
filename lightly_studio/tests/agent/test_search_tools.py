@@ -6,41 +6,12 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.agent import search_tools
-from lightly_studio.agent.search_tools import (
-    FindSimilarArgs,
-    GetCollectionOverviewArgs,
-    SearchByTextArgs,
-)
+from lightly_studio.agent.search_tools import FindSimilarArgs, SearchByTextArgs
 from lightly_studio.embed import embed_samples
-from tests import helpers_resolvers
 from tests.agent import helpers_agent
 
 # Three images: `a` and `b` point almost the same way, `c` is orthogonal to `a`.
 _EMBEDDINGS = {"a.jpg": [1.0, 0.0], "b.jpg": [0.9, 0.1], "c.jpg": [0.0, 1.0]}
-
-
-def test_get_collection_overview(db_session: Session) -> None:
-    collection, ids = helpers_agent.create_collection_with_embeddings(
-        session=db_session, embeddings_by_file=_EMBEDDINGS
-    )
-    helpers_resolvers.create_tag(
-        session=db_session, collection_id=collection.collection_id, tag_name="cats"
-    )
-    context = helpers_agent.create_context(
-        session=db_session, collection=collection, selected_sample_ids=[ids["a.jpg"]]
-    )
-
-    overview = search_tools.get_collection_overview(context, GetCollectionOverviewArgs())
-
-    assert overview == {
-        "collection_name": collection.name,
-        "sample_type": "image",
-        "sample_count": 3,
-        "selected_sample_count": 1,
-        "has_embeddings": True,
-        "tags": ["cats"],
-        "annotation_labels": [],
-    }
 
 
 def test_search_by_text(db_session: Session, mocker: MockerFixture) -> None:

@@ -75,5 +75,11 @@ function summarizeToolResult(content: string): { status: ToolStatus; summary: st
     if (typeof result.tag_name === 'string') {
         parts.push(`tag "${result.tag_name}"`);
     }
+    if (Array.isArray(result.strategies)) {
+        parts.push(result.strategies.join(' + '));
+    }
+    if (typeof result.computed === 'string') {
+        parts.push(`${result.computed} stored as "${result.metadata_name}"`);
+    }
     return { status: 'done', summary: parts.join(', ') || 'done' };
 }

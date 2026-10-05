@@ -16,10 +16,12 @@ from lightly_studio.agent.agent_events import (
 from lightly_studio.agent.agent_tool import AgentContext, AgentTool
 from lightly_studio.agent.chat_messages import AgentMessage, AgentToolCall, ReasoningDelta
 from lightly_studio.agent.openrouter_client import AgentLLMError, ChatModel
+from lightly_studio.agent.overview_tool import OVERVIEW_TOOLS
 from lightly_studio.agent.search_tools import SEARCH_TOOLS
+from lightly_studio.agent.selection_tools import SELECTION_TOOLS
 from lightly_studio.agent.tag_tools import TAG_TOOLS
 
-AGENT_TOOLS: list[AgentTool[Any]] = [*SEARCH_TOOLS, *TAG_TOOLS]
+AGENT_TOOLS: list[AgentTool[Any]] = [*OVERVIEW_TOOLS, *SEARCH_TOOLS, *SELECTION_TOOLS, *TAG_TOOLS]
 
 # The largest number of model calls in one turn. It stops a model that calls tools in a loop.
 MAX_STEPS = 16
@@ -35,6 +37,14 @@ Rules:
 other tools. Never invent sample IDs or handles.
 - When the user asks for samples and a tag, first find the samples, then tag the handle.
 - When the user asks for samples but no tag, show them with show_samples.
+- When a request depends on the data, for example to choose selection strategies, call \
+get_collection_overview first.
+- To select samples, use run_selection. Choose the strategies and their strengths from the \
+request and from the overview. Combine strategies when the request names several goals.
+- A typicality weighting needs typicality metadata. When the overview does not list it, \
+compute it first with compute_metadata.
+- A similarity strategy needs a query tag. To use the samples of a search as the query, tag \
+them first with tag_samples.
 - When a tool returns an error, fix the call or explain the problem to the user.
 - When the user asks who developed you or which model you are, say that you are the \
 LightlyStudio assistant, developed by Lightly AI. Do not name the language model or its \

@@ -67,6 +67,46 @@ describe('toChatEntries', () => {
         ]);
     });
 
+    it('summarizes a combined selection and a metadata computation', () => {
+        const entries = toChatEntries([
+            {
+                role: 'assistant',
+                tool_calls: [
+                    {
+                        id: 'c1',
+                        type: 'function',
+                        function: { name: 'compute_metadata', arguments: '{}' }
+                    },
+                    {
+                        id: 'c2',
+                        type: 'function',
+                        function: { name: 'run_selection', arguments: '{}' }
+                    }
+                ]
+            },
+            {
+                role: 'tool',
+                tool_call_id: 'c1',
+                content: JSON.stringify({ metadata_name: 'typicality', computed: 'typicality' })
+            },
+            {
+                role: 'tool',
+                tool_call_id: 'c2',
+                content: JSON.stringify({
+                    tag_name: 'picked',
+                    selected_count: 200,
+                    result: 'result_2',
+                    strategies: ['diversity x2', 'weights(typicality) x1']
+                })
+            }
+        ]);
+
+        expect(entries.map((entry) => entry.kind === 'tool' && entry.summary)).toEqual([
+            'typicality stored as "typicality"',
+            '200 selected, tag "picked", diversity x2 + weights(typicality) x1'
+        ]);
+    });
+
     it('marks a tool error', () => {
         const entries = toChatEntries([
             toolCall('call_1', 'show_samples'),

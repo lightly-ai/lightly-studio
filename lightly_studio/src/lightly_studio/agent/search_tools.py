@@ -16,11 +16,9 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.embed import embed_samples
 from lightly_studio.resolvers import (
-    annotation_label_resolver,
     collection_embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
-    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -33,13 +31,6 @@ _PAGE_SIZE = 100
 
 # The number of best samples whose file names a search result shows to the model.
 _PREVIEW_SIZE = 5
-
-# The largest number of tag and label names that the overview lists.
-_MAX_LISTED_NAMES = 100
-
-
-class GetCollectionOverviewArgs(BaseModel):
-    """The overview takes no arguments."""
 
 
 class SearchByTextArgs(BaseModel):
@@ -65,37 +56,6 @@ class _RankedSample:
     sample_id: UUID
     file_name: str
     similarity: float
-
-
-def get_collection_overview(
-    context: AgentContext, args: GetCollectionOverviewArgs
-) -> dict[str, Any]:
-    """Describe the collection: size, tags, annotation labels and embeddings."""
-    del args
-    session = context.session
-    collection = context.collection
-    sample_count = image_resolver.get_all_by_collection_id(
-        session=session,
-        collection_id=collection.collection_id,
-        pagination=Paginated(offset=0, limit=1),
-    ).total_count
-    tags = tag_resolver.get_all_by_collection_id(
-        session=session, collection_id=collection.collection_id, limit=_MAX_LISTED_NAMES
-    )
-    labels = annotation_label_resolver.get_all_sorted_alphabetically(
-        session=session, dataset_id=collection.dataset_id
-    )
-    return {
-        "collection_name": collection.name,
-        "sample_type": collection.sample_type.value,
-        "sample_count": sample_count,
-        "selected_sample_count": len(context.selected_sample_ids),
-        "has_embeddings": collection_embedding_model_resolver.has_default_by_collection_id(
-            session=session, collection_id=collection.collection_id
-        ),
-        "tags": [tag.name for tag in tags],
-        "annotation_labels": [label.annotation_label_name for label in labels][:_MAX_LISTED_NAMES],
-    }
 
 
 def search_by_text(context: AgentContext, args: SearchByTextArgs) -> dict[str, Any]:
@@ -157,16 +117,6 @@ def aggregate_query_embedding(embeddings: Sequence[Embedding]) -> list[float]:
 
 
 SEARCH_TOOLS: list[AgentTool[Any]] = [
-    AgentTool(
-        name="get_collection_overview",
-        description=(
-            "Get the size of the collection, its tag names, its annotation label names, the "
-            "number of samples that the user selected in the GUI, and whether it has "
-            "embeddings. Call this first when you need any of these facts."
-        ),
-        args_model=GetCollectionOverviewArgs,
-        run=get_collection_overview,
-    ),
     AgentTool(
         name="search_by_text",
         description=(

@@ -39,11 +39,24 @@ class SamplingConfig(BaseModel):
 class SamplingStrategy(BaseModel):
     """Base class for sampling strategies."""
 
-    strength: float = 1.0
+    strength: float = Field(
+        default=1.0,
+        description=(
+            "The weight of the strategy relative to the other strategies of the same run. "
+            "A strategy with strength 2.0 counts twice as much as one with 1.0. A negative "
+            "strength on a weighting strategy prefers low values instead of high values."
+        ),
+    )
 
 
 class EmbeddingDiversityStrategy(SamplingStrategy):
-    """Sampling strategy based on embedding diversity."""
+    """Sampling strategy based on embedding diversity.
+
+    Selects samples that cover the embedding space as broadly as possible. Use it to get the
+    most informative subset, for example to label first. On its own it over-represents rare
+    regions. Combine it with a typicality weighting to keep the selection close to the real
+    distribution of the data.
+    """
 
     strategy_name: Literal["diversity"] = "diversity"
     embedding_model_name: str | None = None
@@ -63,7 +76,12 @@ class EmbeddingDeduplicationStrategy(SamplingStrategy):
 
 
 class EmbeddingSimilarityStrategy(SamplingStrategy):
-    """Sampling strategy based on embedding similarity to a tagged query set."""
+    """Sampling strategy based on embedding similarity to a tagged query set.
+
+    Prefers samples that look like the samples of the query tag. Use it to find more
+    samples of a kind, for example more night scenes. The query tag must exist before the
+    run.
+    """
 
     strategy_name: Literal["similarity"] = "similarity"
     query_tag_name: str
@@ -71,14 +89,25 @@ class EmbeddingSimilarityStrategy(SamplingStrategy):
 
 
 class MetadataWeightingStrategy(SamplingStrategy):
-    """Sampling strategy based on metadata weighting."""
+    """Sampling strategy based on metadata weighting.
+
+    Prefers samples with a high value of a numeric metadata key. With a negative strength,
+    it prefers samples with a low value. Use it with typicality metadata: a positive
+    strength prefers typical samples, a negative strength prefers outliers.
+    """
 
     strategy_name: Literal["weights"] = "weights"
     metadata_key: str
 
 
 class AnnotationClassBalancingStrategy(SamplingStrategy):
-    """Sampling strategy based on class balancing."""
+    """Sampling strategy based on class balancing.
+
+    Selects samples so that the annotation classes in the selection come near a target
+    distribution. ``"uniform"`` gives each class the same share, ``"input"`` keeps the
+    shares of the input samples, and a mapping from annotation class name to share sets
+    them explicitly. Use it when some annotation classes are rare.
+    """
 
     strategy_name: Literal["balance"] = "balance"
     target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
@@ -105,7 +134,12 @@ class MetadataBalancingStrategy(SamplingStrategy):
 
 
 class SubpartDiversityStrategy(SamplingStrategy):
-    """Sampling strategy based on diversity of annotation subparts (crops)."""
+    """Sampling strategy based on diversity of annotation subparts (crops).
+
+    Selects samples whose annotated objects cover the embedding space broadly, not their
+    full images. Use it when the objects in the images matter more than the scenes. The
+    crops of the annotations must have embeddings.
+    """
 
     strategy_name: Literal["subpart_diversity"] = "subpart_diversity"
     embedding_model_name: str | None = None
