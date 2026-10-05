@@ -40,6 +40,8 @@ dependencies = [
     "xxhash>=3.5.0",
     "scikit-learn==1.3.2; python_version < '3.10'",
     "scikit-learn==1.7.2; python_version >= '3.10'",
+    # 1.13 is the last SciPy that supports Python 3.9
+    "scipy>=1.13.1",
     "python-multipart>=0.0.20",
     "environs<12.0.0",
     "open-clip-torch>=2.20.0",
@@ -140,6 +142,11 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "pyarrow.*"
+ignore_missing_imports = true
+
+# scipy-stubs requires Python 3.10 or newer. Static checks run on Python 3.9.
+[[tool.mypy.overrides]]
+module = "scipy.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
