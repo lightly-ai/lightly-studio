@@ -1,11 +1,13 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    import RotationCursor from './RotationCursor/RotationCursor.svelte';
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
     import GroundPlane from '$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.svelte';
     import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
+    import SceneNavigationControls from './SceneNavigationControls.svelte';
     import type {
         AnnotationClass,
         Bounds3,
@@ -18,17 +20,12 @@
     interface Props {
         /** Point positions and intensities consumed by the existing renderer. */
         batch?: PointBatch;
-        /** Point color mapping mode. */
         colorMode?: ColorMode;
-        /** Screen-space point size in pixels. */
         pointSize?: number;
-        /** Optional intensity range used by intensity coloring. */
         intensityRange?: [number, number];
         /** Static cuboid annotations rendered over the point cloud. */
         cuboids?: readonly CuboidAnnotation[];
-        /** Classes used to color cuboid annotations. */
         annotationClasses?: readonly AnnotationClass[];
-        /** Bounds of the displayed point cloud. */
         pointCloudBounds?: Bounds3;
         /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
@@ -83,6 +80,7 @@
 
     let cursorX = $state(0);
     let cursorY = $state(0);
+    let viewport: HTMLDivElement | undefined = $state();
 
     function isEmptyBounds(bounds: Bounds3): boolean {
         return bounds.min.every((value, axis) => value === bounds.max[axis]);
@@ -100,6 +98,7 @@
     role="application"
     data-testid="workspace-scene-viewport"
     onmousemove={handleMouseMove}
+    bind:this={viewport}
 >
     <Canvas>
         <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} {fitKey} />
@@ -115,5 +114,7 @@
             {onhover}
         />
     </Canvas>
+    <SceneNavigationControls />
+    <RotationCursor target={viewport} {cursorX} {cursorY} />
     <CuboidTooltipOverlay {cursorX} {cursorY} {hoveredAnnotationId} {cuboids} {annotationClasses} />
 </div>
