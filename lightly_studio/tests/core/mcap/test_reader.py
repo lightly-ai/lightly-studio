@@ -12,12 +12,13 @@ from mcap.exceptions import InvalidMagic
 from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
-from lightly_studio.core.mcap import matching
+from lightly_studio.core.mcap import matching, transforms
 from lightly_studio.core.mcap.errors import (
     ChannelNotFoundError,
     DataNotLoadedError,
     McapAccessError,
     TopicNotFoundError,
+    TransformNotFoundError,
 )
 from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
 from lightly_studio.core.mcap.reader import session as session_module
@@ -402,6 +403,109 @@ class TestMcapFileReader:
             for transform in static_transforms
         ] == [("base_link", "lidar", (0.0, 1.0, 2.0))]
 
+    def test_get_transform_at(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_050_000_000, (20.0, 0.0, 0.0)),
+                (1_100_000_000, (30.0, 0.0, 0.0)),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            matrix = reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=1_040_000_000,
+                static_transforms=reader.get_static_transforms(),
+            )
+
+        # The pose at 1.05 s is the closest, so the base frame is at x = 20 m. The lidar
+        # sits at (0, 1, 2) m in the base frame.
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [20.0, 1.0, 2.0, 1.0])
+
+    def test_get_transform_at__selects_by_capture_time(self, tmp_path: Path) -> None:
+        # Each pose is logged 90 ms after its capture time, so the poses are captured
+        # at 0.91 s, 0.96 s and 1.01 s.
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_050_000_000, (20.0, 0.0, 0.0)),
+                (1_100_000_000, (30.0, 0.0, 0.0)),
+            ],
+            tf_stamp_offset_ns=-90_000_000,
+        )
+
+        with McapFileReader(path) as reader:
+            matrix = reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=960_000_000,
+                static_transforms=reader.get_static_transforms(),
+            )
+
+        # The pose captured at 0.96 s is used, not the pose logged at 1.0 s, which is
+        # closer by log time.
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [20.0, 1.0, 2.0, 1.0])
+
+    def test_get_transform_at__static_only(self, reader: McapFileReader) -> None:
+        matrix = reader.get_transform_at(
+            parent_frame_id=helpers.BASE_FRAME_ID,
+            child_frame_id=helpers.LIDAR_FRAME_ID,
+            timestamp_ns=1_000_000_000,
+            static_transforms=reader.get_static_transforms(),
+        )
+
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 2.0, 1.0])
+
+    def test_get_transform_at__pose_outside_window(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap", base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))]
+        )
+
+        # The only pose is 300 ms + 1 ns before the requested time, which is outside the
+        # 300 ms window.
+        with McapFileReader(path) as reader, pytest.raises(TransformNotFoundError):
+            reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=1_300_000_001,
+                static_transforms=reader.get_static_transforms(),
+            )
+
+    def test_get_transform_at__pose_captured_outside_window(self, tmp_path: Path) -> None:
+        # The pose is logged at 1.0 s, the requested time, but captured at 0.6 s, which
+        # is outside the 300 ms window.
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))],
+            tf_stamp_offset_ns=-400_000_000,
+        )
+
+        with McapFileReader(path) as reader, pytest.raises(TransformNotFoundError):
+            reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=1_000_000_000,
+                static_transforms=reader.get_static_transforms(),
+            )
+
+    def test_get_transform_at__without_static_transforms(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap", base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))]
+        )
+
+        # Only the stored static edges are composed, so the lidar is not connected.
+        with McapFileReader(path) as reader, pytest.raises(TransformNotFoundError):
+            reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=1_000_000_000,
+                static_transforms=[],
+            )
+
     def test_get_decoded_message_at(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
         with McapFileReader(path) as reader:
@@ -457,6 +561,27 @@ class TestMcapFileReader:
                     channel_id=channel_id,
                     timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
                 )
+
+    def test_read_dynamic_edges_until__stops_when_the_frames_are_seen(
+        self, tmp_path: Path, mocker: MockerFixture
+    ) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_100_000_000, (20.0, 0.0, 0.0)),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            frame_edges = mocker.spy(transforms, "frame_edges")
+            edges = reader.read_dynamic_edges_until(frame_ids=["map"])
+
+        assert edges == [("map", "base_link")]
+        assert frame_edges.call_count == 1
+
+    def test_read_dynamic_edges_until__missing_topic(self, reader: McapFileReader) -> None:
+        assert reader.read_dynamic_edges_until(frame_ids=["map"]) == []
 
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)

@@ -1,6 +1,6 @@
 import type { Bounds3, Vector3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
-export interface GroundPlaneLayout {
+interface GroundPlaneLayout {
     /** Grid origin in world coordinates, slightly below the lowest point. */
     center: Vector3;
     /** Distance from the cloud center where the infinite grid fades out. */
@@ -24,4 +24,9 @@ export function computeGroundPlaneLayout(bounds: Bounds3): GroundPlaneLayout | n
             bounds.min[2] - footprint * Z_OFFSET_FACTOR
         ]
     };
+}
+
+/** Keeps grid cells readable as the camera zooms, using powers of ten in world units. */
+export function getGridCellSize(distance: number): number {
+    return 10 ** Math.floor(Math.log10(Math.max(distance / 20, 0.1)));
 }

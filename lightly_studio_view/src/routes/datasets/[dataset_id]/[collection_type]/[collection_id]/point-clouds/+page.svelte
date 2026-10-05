@@ -4,15 +4,10 @@
     import { McapSequencesGrid } from '$lib/components/McapSequencesGrid';
     import { useGlobalStorage, useMcapSequencesInfinite } from '$lib/hooks';
     import { routeHelpers } from '$lib/routes';
-    import type { PageData } from './$types.js';
 
-    interface Props {
-        data: PageData;
-    }
-
+    const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
     const collectionType = $derived(page.params.collection_type!);
-    const { data: pageData }: Props = $props();
 
     const { data, query, loadMore, totalCount } = useMcapSequencesInfinite(() => collectionId);
     const { setfilteredSampleCount } = useGlobalStorage();
@@ -34,13 +29,15 @@
     const hasNextPage = $derived(query.hasNextPage ?? false);
     const isFetchingNextPage = $derived(query.isFetchingNextPage);
 
+    // An MCAP component's sample is its sequence, so the sample id doubles as the sequence id.
+    // The dataset slot carries a collection id (what the collection layout resolves the hierarchy
+    // by); the labeling page derives the real dataset id from the loaded collection.
     const handleSequenceClick = (sampleId: string) => {
         void goto(
             routeHelpers.toPointCloudLabeling({
-                datasetId: pageData.collection.dataset_id,
+                datasetId,
                 collectionType,
                 collectionId,
-                sampleId,
                 sequenceId: sampleId
             })
         );

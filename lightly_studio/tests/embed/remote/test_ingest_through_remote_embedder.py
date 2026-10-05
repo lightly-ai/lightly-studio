@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from uuid import UUID
 
 import numpy as np
 import pytest
@@ -16,11 +17,18 @@ from pytest_mock import MockerFixture
 
 import lightly_studio
 from lightly_studio import ImageDataset
+from lightly_studio.core.annotation import CreateObjectDetection
 from lightly_studio.embed import embed_samples, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
-from lightly_studio.resolvers import collection_embedding_model_resolver, sample_embedding_resolver
+from lightly_studio.models.collection import SampleType
+from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
+    collection_resolver,
+    sample_embedding_resolver,
+)
 from tests.embed.remote import color_embedder, threaded_server
 from tests.embed.remote.color_embedder import ColorQueryEmbedder
 
@@ -89,6 +97,54 @@ def test_add_images_from_path__stores_the_server(dataset: ImageDataset, server_u
     assert embedding_count == 3
 
 
+def test_embed_annotation_collection__uses_the_server_space(
+    dataset: ImageDataset, server_url: str
+) -> None:
+    annotation_collection_id = _add_box_to_each_image(dataset=dataset)
+
+    embed_samples.embed_annotation_collection(
+        session=dataset.session, annotation_collection_id=annotation_collection_id
+    )
+
+    # The crops use the model row of the images, which stores the server
+    crop_model = _default_model(dataset=dataset, collection_id=annotation_collection_id)
+    image_model = _default_model(dataset=dataset, collection_id=dataset.collection_id)
+    assert crop_model.embedding_model_id == image_model.embedding_model_id
+    assert crop_model.remote_embedder_url == server_url
+    embedding_count = sample_embedding_resolver.get_embedding_count(
+        session=dataset.session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=crop_model.embedding_model_id,
+    )
+    assert embedding_count == 3
+
+
+def test_embed_annotation_collection__after_restart(
+    dataset: ImageDataset, query_embedder: ColorQueryEmbedder, mocker: MockerFixture
+) -> None:
+    annotation_collection_id = _add_box_to_each_image(dataset=dataset)
+    embed_samples.embed_annotation_collection(
+        session=dataset.session, annotation_collection_id=annotation_collection_id
+    )
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    _add_box_to_each_image(dataset=dataset)
+    call_count = query_embedder.call_count
+
+    embed_samples.embed_annotation_collection(
+        session=dataset.session, annotation_collection_id=annotation_collection_id
+    )
+
+    # The 3 new crops fit in one request to the stored server
+    assert query_embedder.call_count == call_count + 1
+    crop_model = _default_model(dataset=dataset, collection_id=annotation_collection_id)
+    embedding_count = sample_embedding_resolver.get_embedding_count(
+        session=dataset.session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=crop_model.embedding_model_id,
+    )
+    assert embedding_count == 6
+
+
 def test_text_search__after_restart(
     dataset: ImageDataset, query_embedder: ColorQueryEmbedder, mocker: MockerFixture
 ) -> None:
@@ -149,3 +205,24 @@ def _embedding_count(dataset: ImageDataset) -> int:
         collection_id=dataset.collection_id,
         embedding_model_id=default_model.embedding_model_id,
     )
+
+
+def _add_box_to_each_image(dataset: ImageDataset) -> UUID:
+    """Add one box to each 8x8 image and return the id of the annotation collection."""
+    for sample in dataset:
+        sample.add_annotation(
+            annotation=CreateObjectDetection(class_name="box", x=0, y=0, width=4, height=4)
+        )
+    return collection_resolver.get_or_create_child_collection(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+
+def _default_model(dataset: ImageDataset, collection_id: UUID) -> EmbeddingModelTable:
+    default_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=dataset.session, collection_id=collection_id
+    )
+    assert default_model is not None
+    return default_model

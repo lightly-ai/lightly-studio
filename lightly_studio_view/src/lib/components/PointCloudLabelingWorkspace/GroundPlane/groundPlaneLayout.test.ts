@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Bounds3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
-import { computeGroundPlaneLayout } from './groundPlaneLayout';
+import { computeGroundPlaneLayout, getGridCellSize } from './groundPlaneLayout';
 
 describe('computeGroundPlaneLayout', () => {
     it('centers the grid under the bounds and fades near the cloud edges', () => {
@@ -25,5 +25,14 @@ describe('computeGroundPlaneLayout', () => {
         const bounds: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
 
         expect(computeGroundPlaneLayout(bounds)).toBeNull();
+    });
+});
+
+describe('getGridCellSize', () => {
+    it('uses larger cells when zooming out and smaller cells when zooming in', () => {
+        expect(getGridCellSize(2)).toBe(0.1);
+        expect(getGridCellSize(20)).toBe(1);
+        expect(getGridCellSize(200)).toBe(10);
+        expect(getGridCellSize(0)).toBe(0.1);
     });
 });

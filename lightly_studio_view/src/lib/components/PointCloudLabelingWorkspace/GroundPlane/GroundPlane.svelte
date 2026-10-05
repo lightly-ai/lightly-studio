@@ -2,7 +2,7 @@
     import { useTask, useThrelte } from '@threlte/core';
     import { Grid } from '@threlte/extras';
     import type { Bounds3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
-    import { computeGroundPlaneLayout, type GroundPlaneLayout } from './groundPlaneLayout';
+    import { computeGroundPlaneLayout, getGridCellSize } from './groundPlaneLayout';
 
     /** Renders a reference grid just below the point cloud. */
     interface Props {
@@ -14,40 +14,26 @@
 
     const CELL_COLOR = 'hsl(20, 5%, 35%)';
     const SECTION_COLOR = 'hsl(20, 5%, 55%)';
-    const { camera } = useThrelte();
     const layout = $derived(computeGroundPlaneLayout(pointCloudBounds));
-    let stableLayout = $state<GroundPlaneLayout | null>(null);
+    const { camera } = useThrelte();
     let cellSize = $state(1);
-
-    $effect(() => {
-        const currentLayout = layout;
-        if (!stableLayout && currentLayout) stableLayout = currentLayout;
-    });
 
     useTask(
         () => {
-            if (!stableLayout) return;
-            const [x, y, z] = stableLayout.center;
+            if (!layout) return;
+            const [x, y, z] = layout.center;
             const position = camera.current.position;
             const distance = Math.hypot(position.x - x, position.y - y, position.z - z);
-            const nextCellSize = getGridCellSize(distance);
-            if (nextCellSize !== cellSize) cellSize = nextCellSize;
+            cellSize = getGridCellSize(distance);
         },
         { autoInvalidate: false }
     );
-
-    function getGridCellSize(distance: number): number {
-        const target = Math.max(distance * 0.075, 0.000001);
-        const magnitude = 10 ** Math.floor(Math.log10(target));
-        const normalized = target / magnitude;
-        return (normalized >= 5 ? 5 : normalized >= 2 ? 2 : 1) * magnitude;
-    }
 </script>
 
-{#if stableLayout}
+{#if layout}
     <Grid
         plane="xy"
-        position={[...stableLayout.center]}
+        position={[...layout.center]}
         cellColor={CELL_COLOR}
         {cellSize}
         cellThickness={0.5}
@@ -56,7 +42,7 @@
         sectionThickness={1}
         backgroundOpacity={0}
         infiniteGrid
-        fadeOrigin={[...stableLayout.center]}
-        fadeDistance={stableLayout.fadeDistance}
+        fadeOrigin={[...layout.center]}
+        fadeDistance={layout.fadeDistance}
     />
 {/if}
