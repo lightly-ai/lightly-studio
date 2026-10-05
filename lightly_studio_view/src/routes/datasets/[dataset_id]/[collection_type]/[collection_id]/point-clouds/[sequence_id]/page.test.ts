@@ -19,7 +19,9 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 vi.mock('$app/state', () => ({
     page: {
-        url: new URL('http://localhost/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-1'),
+        url: new URL(
+            'http://localhost/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-1'
+        ),
         params: { dataset_id: 'dataset-1' },
         state: {}
     }
