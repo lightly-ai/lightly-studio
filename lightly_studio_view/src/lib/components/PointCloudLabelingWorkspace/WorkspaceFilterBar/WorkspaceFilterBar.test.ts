@@ -19,6 +19,9 @@ const cameraChannels: ChannelSummaryView[] = [
 ];
 
 const defaultProps = {
+    referenceFrames: [] as { name: string }[],
+    referenceFrameId: '',
+    onSelectReferenceFrame: vi.fn(),
     lidarChannels,
     cameraChannels,
     selectedLidarChannels: [] as number[],
@@ -30,6 +33,9 @@ const defaultProps = {
 describe('WorkspaceFilterBar', () => {
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
     });
 
     it('opens a lane and lists its channels', async () => {
@@ -62,6 +68,46 @@ describe('WorkspaceFilterBar', () => {
         await user.click(screen.getByText('rear'));
 
         expect(onToggleCameraChannel).toHaveBeenCalledExactlyOnceWith(3);
+    });
+
+    it('selects a reference frame by its id', async () => {
+        const user = userEvent.setup();
+        const onSelectReferenceFrame = vi.fn();
+        render(WorkspaceFilterBar, {
+            props: {
+                ...defaultProps,
+                referenceFrames: [{ name: 'map' }, { name: 'CABIN' }],
+                referenceFrameId: 'map',
+                onSelectReferenceFrame
+            }
+        });
+
+        expect(screen.getByTestId('workspace-frame-select')).toHaveTextContent('Frame: map');
+        await user.click(screen.getByTestId('workspace-frame-select'));
+        await user.click(screen.getByText('CABIN'));
+
+        expect(onSelectReferenceFrame).toHaveBeenCalledExactlyOnceWith('CABIN');
+    });
+
+    it('hides the frame select without reference frames', () => {
+        render(WorkspaceFilterBar, { props: defaultProps });
+
+        expect(screen.queryByTestId('workspace-frame-select')).not.toBeInTheDocument();
+    });
+
+    it('says when the tick is shown in the sensor frames', () => {
+        render(WorkspaceFilterBar, {
+            props: {
+                ...defaultProps,
+                referenceFrames: [{ name: 'map' }],
+                referenceFrameId: 'map',
+                isShowingSensorFrames: true
+            }
+        });
+
+        expect(screen.getByTestId('workspace-frame-fallback')).toHaveTextContent(
+            'Showing sensor frames'
+        );
     });
 
     it('disables a lane that has no channels', () => {

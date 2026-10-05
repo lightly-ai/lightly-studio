@@ -89,6 +89,7 @@ def test_get_all_by_collection_id__returns_mcap_sequences(db_session: Session) -
     assert result.total_count == 1
     assert len(result.samples) == 1
     assert result.samples[0].sample_id == seq_id
+    assert result.samples[0].recording_id == recording_id
     assert result.samples[0].sample_count == 2
     assert result.samples[0].sequence_frame is None
     assert result.next_cursor is None

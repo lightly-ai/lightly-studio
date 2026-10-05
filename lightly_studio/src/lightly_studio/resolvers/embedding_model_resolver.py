@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
@@ -66,6 +66,35 @@ def set_api_key(
     return db_embedding_model
 
 
+def set_remote_embedder(
+    session: Session, embedding_model_id: UUID, url: str, api_key: str | None
+) -> EmbeddingModelTable:
+    """Point an embedding model at a remote embedding backend.
+
+    Args:
+        session: The database session.
+        embedding_model_id: The embedding model to update.
+        url: The base URL of the remote embedding backend.
+        api_key: The bearer token for the backend, or None if it needs none.
+
+    Returns:
+        The updated embedding model.
+
+    Raises:
+        ValueError: If no embedding model with the given ID exists.
+    """
+    db_embedding_model = get_by_id(session=session, embedding_model_id=embedding_model_id)
+    if db_embedding_model is None:
+        raise ValueError(f"Embedding model with id {embedding_model_id} not found.")
+
+    db_embedding_model.remote_embedder_url = url
+    db_embedding_model.api_key = api_key
+    session.add(db_embedding_model)
+    session.commit()
+    session.refresh(db_embedding_model)
+    return db_embedding_model
+
+
 def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable | None:
     """Retrieve a single embedding model by ID."""
     return session.exec(
@@ -92,3 +121,13 @@ def get_by_name(session: Session, dataset_id: UUID, name: str) -> EmbeddingModel
         .where(EmbeddingModelTable.dataset_id == dataset_id)
     )
     return session.exec(query).one_or_none()
+
+
+def get_all_by_dataset_id(session: Session, dataset_id: UUID) -> list[EmbeddingModelTable]:
+    """Retrieve all embedding models of a dataset, ordered by name."""
+    query = (
+        select(EmbeddingModelTable)
+        .where(EmbeddingModelTable.dataset_id == dataset_id)
+        .order_by(col(EmbeddingModelTable.name))
+    )
+    return list(session.exec(query).all())

@@ -5,11 +5,18 @@ from __future__ import annotations
 import uuid
 
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
+from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import group_resolver
+from lightly_studio.services import recording_service
 from tests.helpers_resolvers import create_mcap
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 from tests.resolvers.mcap_group_sequence_resolver.helpers import McapSequenceFixture
@@ -31,17 +38,39 @@ def test_get_tick_details(test_client: TestClient, db_session: Session) -> None:
     assert body["recording_id"] == str(fixture.recording_id)
     assert body["seq_number"] == 0
     assert body["timestamp_ns"] == _TIMESTAMP_NS
-    assert set(body["channels"].keys()) == {"front", "pcl_front"}
-    assert body["channels"]["front"] == {
+    assert set(body["camera_channels"].keys()) == {"front"}
+    assert body["camera_channels"]["front"] == {
         "channel_id": 3,
-        "log_time_ns": _TIMESTAMP_NS,
-        "keyframe_log_time_ns": _TIMESTAMP_NS,
+        "group_component_name": "front",
+        "log_time_ns": str(_TIMESTAMP_NS),
+        "keyframe_log_time_ns": str(_TIMESTAMP_NS),
     }
-    assert body["channels"]["pcl_front"] == {
+    assert set(body["lidar_channels"].keys()) == {"pcl_front"}
+    assert body["lidar_channels"]["pcl_front"] == {
         "channel_id": 7,
-        "log_time_ns": _TIMESTAMP_NS + 1,
+        "group_component_name": "pcl_front",
+        "log_time_ns": str(_TIMESTAMP_NS + 1),
         "keyframe_log_time_ns": None,
     }
+    assert body["annotations"] == []
+
+
+def test_get_tick_details__transform_not_found(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(
+        recording_service,
+        "get_tick_details",
+        side_effect=McapAccessError("No transform connects the frames."),
+    )
+
+    response = test_client.get(
+        f"/datasets/{uuid.uuid4()}/mcap-sequences/{uuid.uuid4()}/ticks/0",
+        params={"target_frame_id": "map"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json()["detail"] == "No transform connects the frames."
 
 
 def test_get_tick_details__unknown_sequence(test_client: TestClient) -> None:

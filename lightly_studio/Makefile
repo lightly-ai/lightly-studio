@@ -73,11 +73,22 @@ build: clean build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "$(MAKE) -C ../lightly_studio_view build"
+	@powershell -Command "New-Item -ItemType Directory -Path sourcemaps -Force | Out-Null; Copy-Item -Path ..\lightly_studio_view\build\* -Destination sourcemaps\ -Recurse -Force"
+	@powershell -Command "Get-ChildItem -Path ..\lightly_studio_view\build -Filter *.map -Recurse | Remove-Item -Force"
 	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
 	$(MAKE) -C ../lightly_studio_view build
+	@if [ -n "$(SOURCEMAP)" ] && [ -n "$(POSTHOG_CLI_VERSION)" ] && [ -n "$(RELEASE_VERSION)" ] && [ -n "$(POSTHOG_HOST)" ]; then \
+		npx --yes @posthog/cli@$(POSTHOG_CLI_VERSION) \
+			--host "$(POSTHOG_HOST)" \
+			sourcemap inject --directory ../lightly_studio_view/build \
+			--release-version "$(RELEASE_VERSION)" \
+		|| echo "::warning::PostHog sourcemap inject failed; release continues without injection."; \
+	fi
+	cp -r ../lightly_studio_view/build/ sourcemaps
+	find ../lightly_studio_view/build -name '*.map' -delete
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
 	cp ../lightly_studio_view/src/lib/version.json src/lightly_studio/dist_lightly_studio_view_app/version-info.json
 endif
@@ -140,6 +151,11 @@ start-e2e-distribution: build
 .PHONY: start-e2e-video-groups
 start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
+
+# The script imports the test embedders from `tests`.
+.PHONY: start-e2e-remote-embedder
+start-e2e-remote-embedder: build
+	PYTHONPATH=. uv run e2e-tests/index_remote_embedder.py
 
 .PHONY: start-postgres
 start-postgres: stop-postgres
@@ -310,7 +326,7 @@ start-example:
 start-example-mcap-s3: setup-floci build
 	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
 	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
-		uv run --extra mcap --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Demo targets for the camera-frame endpoint.
 # Uploads the MCAP to the local Floci S3 emulator and starts the API server so
@@ -331,7 +347,7 @@ demo-mcap-server: setup-floci mock-webapp-dist
 	@uv run python src/lightly_studio/scripts/demo_mcap_seed.py \
 		"$(DEMO_MCAP_DB)" "$(FLOCI_MCAP_S3_URI)" "$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
 	@echo "Starting server on http://$(DEMO_MCAP_HOST):$(DEMO_MCAP_PORT) — Ctrl-C to stop"
-	@$(FLOCI_ENV) uv run --extra mcap --extra cloud-storage python -c "\
+	@$(FLOCI_ENV) uv run --extra cloud-storage python -c "\
 import uvicorn; \
 from lightly_studio.database import db_manager; \
 db_manager.connect(db_file='$(DEMO_MCAP_DB)'); \
@@ -340,7 +356,7 @@ uvicorn.run(app, host='$(DEMO_MCAP_HOST)', port=$(DEMO_MCAP_PORT))"
 
 .PHONY: demo-mcap-urls
 demo-mcap-urls:
-	@uv run --extra mcap python src/lightly_studio/scripts/demo_mcap_urls.py \
+	@uv run python src/lightly_studio/scripts/demo_mcap_urls.py \
 		"$(firstword $(FLOCI_MCAP_FILES))" "$(DEMO_MCAP_HOST)" "$(DEMO_MCAP_PORT)" \
 		"$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
 
@@ -437,6 +453,7 @@ else
 	rm -rf *.db
 	rm -rf *.db.wal
 	rm -rf dist/*
+	rm -rf sourcemaps
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -exec rm -rf {} +

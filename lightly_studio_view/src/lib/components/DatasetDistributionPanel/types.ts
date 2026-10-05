@@ -98,6 +98,7 @@ export interface DistributionSourceGroup {
         filteredBuckets?: CategoricalMetadataBucket[];
         selectedValues: CategoricalMetadataValue[];
         loading?: boolean;
+        updating?: boolean;
         error?: string;
     };
 }

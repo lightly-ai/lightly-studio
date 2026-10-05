@@ -63,11 +63,12 @@ class TestTickChannelView:
         db_session.commit()
         db_session.refresh(mcap)
 
-        view = TickChannelView.from_mcap_table(mcap=mcap)
+        view = TickChannelView.from_mcap_table(mcap=mcap, group_component_name="front")
 
         assert view.channel_id == 3
-        assert view.log_time_ns == 100
-        assert view.keyframe_log_time_ns == 80
+        assert view.group_component_name == "front"
+        assert view.log_time_ns == "100"
+        assert view.keyframe_log_time_ns == "80"
 
     def test_from_mcap_table__point_cloud(self, db_session: Session) -> None:
         """from_mcap_table leaves keyframe_log_time_ns as None for a lidar channel."""
@@ -86,28 +87,44 @@ class TestTickChannelView:
         db_session.commit()
         db_session.refresh(mcap)
 
-        view = TickChannelView.from_mcap_table(mcap=mcap)
+        view = TickChannelView.from_mcap_table(mcap=mcap, group_component_name="pcl_front")
 
         assert view.channel_id == 7
-        assert view.log_time_ns == 200
+        assert view.group_component_name == "pcl_front"
+        assert view.log_time_ns == "200"
         assert view.keyframe_log_time_ns is None
 
 
 class TestTickDetailView:
     def test_fields(self) -> None:
-        """TickDetailView exposes recording_id, seq_number, timestamp_ns, and channels."""
+        """TickDetailView exposes recording_id, seq_number, timestamp_ns, channels, annotations."""
         recording_id = uuid4()
-        channel = TickChannelView(channel_id=1, log_time_ns=500, keyframe_log_time_ns=None)
+        camera_channel = TickChannelView(
+            channel_id=1,
+            group_component_name="front",
+            log_time_ns="500",
+            keyframe_log_time_ns="500",
+        )
+        lidar_channel = TickChannelView(
+            channel_id=2,
+            group_component_name="pcl_front",
+            log_time_ns="501",
+            keyframe_log_time_ns=None,
+        )
         detail = TickDetailView(
             recording_id=recording_id,
             seq_number=0,
             timestamp_ns=500,
-            channels={"front": channel},
+            camera_channels={"front": camera_channel},
+            lidar_channels={"pcl_front": lidar_channel},
+            annotations=[],
         )
         assert detail.recording_id == recording_id
         assert detail.seq_number == 0
         assert detail.timestamp_ns == 500
-        assert detail.channels["front"].channel_id == 1
+        assert detail.camera_channels["front"].channel_id == 1
+        assert detail.lidar_channels["pcl_front"].channel_id == 2
+        assert detail.annotations == []
 
     def test_timestamp_ns__none(self) -> None:
         """TickDetailView accepts None for timestamp_ns."""
@@ -115,6 +132,8 @@ class TestTickDetailView:
             recording_id=uuid4(),
             seq_number=1,
             timestamp_ns=None,
-            channels={},
+            camera_channels={},
+            lidar_channels={},
+            annotations=[],
         )
         assert detail.timestamp_ns is None

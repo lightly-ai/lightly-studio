@@ -27,7 +27,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: true
             }
         });
         expect(screen.getByTestId('side-panel-tabs-query')).toBeInTheDocument();
@@ -38,7 +39,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: false
             }
         });
         expect(screen.queryByTestId('side-panel-tabs-query')).not.toBeInTheDocument();
@@ -50,7 +52,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: true,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: false
             }
         });
         expect(screen.getByTestId('side-panel-tabs-embed')).toBeInTheDocument();
@@ -61,7 +64,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: false
             }
         });
         expect(screen.queryByTestId('side-panel-tabs-embed')).not.toBeInTheDocument();
@@ -73,7 +77,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: true
+                supportsEvaluation: true,
+                supportsDistribution: true
             }
         });
         expect(screen.getByTestId('side-panel-tabs-eval')).toBeInTheDocument();
@@ -84,7 +89,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: true
             }
         });
         expect(screen.queryByTestId('side-panel-tabs-eval')).not.toBeInTheDocument();
@@ -96,7 +102,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: true
             }
         });
 
@@ -111,7 +118,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: true
             }
         });
 
@@ -125,7 +133,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: true,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: false
             }
         });
 
@@ -133,13 +142,14 @@ describe('SidePanelTabs', () => {
         expect(setActivePanel).toHaveBeenCalledWith('embeddingPlot');
     });
 
-    it('renders the Distribution button only when isImages is true', () => {
+    it('renders the Distribution button only when supportsDistribution is true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                isImages: false,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: true
             }
         });
         expect(screen.getByTestId('side-panel-tabs-distribution')).toBeInTheDocument();
@@ -148,9 +158,10 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
+                isImages: true,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: false
             }
         });
         expect(screen.queryByTestId('side-panel-tabs-distribution')).not.toBeInTheDocument();
@@ -162,7 +173,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: false
+                supportsEvaluation: false,
+                supportsDistribution: true
             }
         });
 
@@ -176,7 +188,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
-                supportsEvaluation: true
+                supportsEvaluation: true,
+                supportsDistribution: true
             }
         });
 
@@ -191,7 +204,8 @@ describe('SidePanelTabs', () => {
                 collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: true,
-                supportsEvaluation: true
+                supportsEvaluation: true,
+                supportsDistribution: true
             }
         });
 

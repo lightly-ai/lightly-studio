@@ -241,6 +241,93 @@ def test_quickstart__second_run_without_force_download_does_not_duplicate_or_cra
     assert len(ground_truth.annotations) == 3
 
 
+def test_quickstart_enterprise(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, mock_track: MagicMock
+) -> None:
+    monkeypatch.delenv("LIGHTLY_STUDIO_API_KEY", raising=False)
+    mock_connect = mocker.patch.object(lightly_studio, attribute="connect")
+    mock_dataset = mocker.MagicMock()
+    mock_dataset.query.return_value.to_list.return_value = []
+    mocker.patch.object(
+        lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        cli=cli.main,
+        args=["quickstart-enterprise", "--api-url", "http://10.0.0.5:8100", "--token", "my-token"],
+    )
+    assert result.exit_code == 0
+    mock_connect.assert_called_once_with(
+        api_url="http://10.0.0.5:8100", token="my-token", api_key=None
+    )
+    mock_track.assert_called_once_with(
+        event=tracking.APP_LAUNCHED,
+        properties={"launch_source": tracking.LaunchSource.QUICKSTART_ENTERPRISE.value},
+    )
+
+
+def test_quickstart_enterprise__with_api_key(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Clear token env var so Click does not pick it up from the developer's environment.
+    monkeypatch.delenv("LIGHTLY_STUDIO_TOKEN", raising=False)
+    mock_connect = mocker.patch.object(lightly_studio, attribute="connect")
+    mock_dataset = mocker.MagicMock()
+    mock_dataset.query.return_value.to_list.return_value = []
+    mocker.patch.object(
+        lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        cli=cli.main,
+        args=["quickstart-enterprise", "--api-url", "http://10.0.0.5:8100", "--api-key", "my-key"],
+    )
+    assert result.exit_code == 0
+    mock_connect.assert_called_once_with(
+        api_url="http://10.0.0.5:8100", token=None, api_key="my-key"
+    )
+
+
+def test_quickstart_enterprise__already_seeded(mocker: MockerFixture) -> None:
+    mocker.patch.object(lightly_studio, attribute="connect")
+    mock_dataset = mocker.MagicMock()
+    mock_dataset.query.return_value.to_list.return_value = [mocker.MagicMock()]
+    mock_run = mocker.MagicMock()
+    mock_run.name = "od_evaluation"
+    mock_dataset.evaluate.return_value.list_runs.return_value = [mock_run]
+    mocker.patch.object(
+        lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        cli=cli.main,
+        args=["quickstart-enterprise", "--api-url", "http://10.0.0.5:8100", "--token", "my-token"],
+    )
+    assert result.exit_code == 0
+    assert "already seeded" in result.output
+    mock_dataset.add_images_from_path.assert_not_called()
+    mock_dataset.add_annotations_from_coco.assert_not_called()
+
+
+def test_quickstart_enterprise__partially_seeded(mocker: MockerFixture) -> None:
+    mocker.patch.object(lightly_studio, attribute="connect")
+    mock_dataset = mocker.MagicMock()
+    mock_dataset.query.return_value.to_list.return_value = [mocker.MagicMock()]
+    mock_dataset.evaluate.return_value.list_runs.return_value = []
+    mocker.patch.object(
+        lightly_studio.ImageDataset, attribute="load_or_create", return_value=mock_dataset
+    )
+    runner = CliRunner()
+    result = runner.invoke(
+        cli=cli.main,
+        args=["quickstart-enterprise", "--api-url", "http://10.0.0.5:8100", "--token", "my-token"],
+    )
+    assert result.exit_code == 1
+    assert "partially seeded" in result.output
+    mock_dataset.add_images_from_path.assert_not_called()
+    mock_dataset.add_annotations_from_coco.assert_not_called()
+
+
 def _mock_quickstart_dependencies(mocker: MockerFixture) -> tuple[Any, Any, Any, Any]:
     mock_download = mocker.patch.object(
         lightly_studio.utils, attribute="download_example_dataset", return_value="/dataset_examples"

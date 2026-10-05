@@ -67,7 +67,8 @@ export {
     useImageAnnotationCountsQueryKey
 } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 export { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-export { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+export { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+export { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount';
 export { useVideoOrderBy } from '$lib/hooks/useVideoOrderBy/useVideoOrderBy';
 export { useVideoSortFields } from '$lib/hooks/useVideoSortFields/useVideoSortFields';
 export {
@@ -80,4 +81,6 @@ export {
 export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
 export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte';
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
+export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
+export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';

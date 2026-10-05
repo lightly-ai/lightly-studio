@@ -27,14 +27,23 @@ describe('withSampleTagFilter', () => {
         expect(
             withSampleTagFilter(
                 {
+                    filter_type: 'video',
                     width: { min: 100 },
                     sample_filter: { sample_ids: ['sample-1'], tag_ids: ['grid-tag'] }
                 },
                 'comparison-tag'
             )
         ).toEqual({
+            filter_type: 'video',
             width: { min: 100 },
             sample_filter: { sample_ids: ['sample-1'], tag_ids: ['comparison-tag'] }
+        });
+    });
+
+    it('builds an image filter when there is no exploration filter', () => {
+        expect(withSampleTagFilter(undefined, 'comparison-tag')).toEqual({
+            filter_type: 'image',
+            sample_filter: { tag_ids: ['comparison-tag'] }
         });
     });
 });

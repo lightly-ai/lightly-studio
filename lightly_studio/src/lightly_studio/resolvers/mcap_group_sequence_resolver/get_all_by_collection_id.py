@@ -89,6 +89,7 @@ def get_all_by_collection_id(
     views = [
         McapSequenceView(
             sample_id=seq.sample_id,
+            recording_id=seq.recording_id,
             sample_count=sequence_sample_counts.get(seq.sample_id, 0),
             sequence_frame=sequence_frames.get(seq.sample_id),
         )

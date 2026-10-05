@@ -5,12 +5,13 @@ from __future__ import annotations
 from collections.abc import Iterable
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_insert
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
 )
+from lightly_studio.models.sequence import SampleSequenceLinkTable
 
 
 def add_many(
@@ -45,6 +46,24 @@ def add_many(
         session=session, table=AnnotationCollectionCoverageTable, rows=rows
     )
     session.flush()
+
+
+def sequence_sample_ids(session: Session, annotation_collection_id: UUID) -> set[UUID]:
+    """Return sequences that already have groups covered by this annotation source."""
+    rows = session.exec(
+        select(SampleSequenceLinkTable.sequence_sample_id)
+        .join(
+            AnnotationCollectionCoverageTable,
+            col(AnnotationCollectionCoverageTable.parent_sample_id)
+            == col(SampleSequenceLinkTable.sample_id),
+        )
+        .where(
+            col(AnnotationCollectionCoverageTable.annotation_collection_id)
+            == annotation_collection_id
+        )
+        .distinct()
+    ).all()
+    return set(rows)
 
 
 def list_by_collection_id(session: Session, annotation_collection_id: UUID) -> list[UUID]:

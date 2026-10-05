@@ -66,6 +66,7 @@ describe('useCreateSampling', () => {
                 n_samples_to_select: 5,
                 sampling_result_tag_name: 'my-tag',
                 strategies: [{ strategy_name: 'diversity', embedding_model_name: null }],
+                metadata_computations: [],
                 filter: undefined
             }
         });
@@ -74,7 +75,7 @@ describe('useCreateSampling', () => {
         expect(closeSamplingDialog).toHaveBeenCalled();
     });
 
-    it('submit with typicality calls computeTypicalityMetadata first, then createSampling', async () => {
+    it('submit with typicality submits typicality computation with selection', async () => {
         vi.mocked(computeTypicalityMetadata).mockResolvedValue({ data: {}, error: null } as never);
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
@@ -100,22 +101,20 @@ describe('useCreateSampling', () => {
         });
 
         expect(result).toBe(true);
-        expect(computeTypicalityMetadata).toHaveBeenCalledWith({
-            path: { collection_id: 'col-1' },
-            body: { embedding_model_name: null, metadata_name: 'typicality' }
-        });
+        expect(computeTypicalityMetadata).not.toHaveBeenCalled();
         expect(createSampling).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 10,
                 sampling_result_tag_name: 'result-tag',
                 strategies: [{ strategy_name: 'weights', metadata_key: 'typicality' }],
+                metadata_computations: [{ kind: 'typicality', metadata_name: 'typicality' }],
                 filter: undefined
             }
         });
     });
 
-    it('submit with similarity calls computeSimilarityMetadata first, then createSampling', async () => {
+    it('submit with similarity submits similarity computation with selection', async () => {
         vi.mocked(computeSimilarityMetadata).mockResolvedValue({ data: {}, error: null } as never);
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
@@ -141,16 +140,20 @@ describe('useCreateSampling', () => {
         });
 
         expect(result).toBe(true);
-        expect(computeSimilarityMetadata).toHaveBeenCalledWith({
-            path: { collection_id: 'col-1', query_tag_id: 'query-tag-id' },
-            body: { embedding_model_name: null, metadata_name: 'similarity' }
-        });
+        expect(computeSimilarityMetadata).not.toHaveBeenCalled();
         expect(createSampling).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 8,
                 sampling_result_tag_name: 'sim-tag',
                 strategies: [{ strategy_name: 'weights', metadata_key: 'similarity' }],
+                metadata_computations: [
+                    {
+                        kind: 'similarity',
+                        metadata_name: 'similarity',
+                        query_tag_id: 'query-tag-id'
+                    }
+                ],
                 filter: undefined
             }
         });
@@ -184,74 +187,6 @@ describe('useCreateSampling', () => {
             'Similarity is only available for image collections.'
         );
         expect(computeSimilarityMetadata).not.toHaveBeenCalled();
-        expect(createSampling).not.toHaveBeenCalled();
-    });
-
-    it('API error in computeTypicalityMetadata toasts error and returns false without calling sampling', async () => {
-        vi.mocked(computeTypicalityMetadata).mockResolvedValue({
-            data: null,
-            error: { error: 'typicality failed' }
-        } as never);
-        const loadTags = vi.fn().mockResolvedValue(undefined);
-        const setTagSelected = vi.fn();
-        const closeSamplingDialog = vi.fn();
-        const tagsStore = writable([]);
-
-        const { submit } = useCreateSampling({
-            tags: tagsStore,
-            setTagSelected,
-            loadTags,
-            closeSamplingDialog
-        });
-        const result = await submit({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
-            samplingStrategy: 'typicality',
-            nSamplesToSelect: 10,
-            samplingResultTagName: 'result-tag',
-            queryTagId: '',
-            balancingMode: 'uniform',
-            samplingFilter: null
-        });
-
-        expect(result).toBe(false);
-        expect(toast.error).toHaveBeenCalledWith(
-            'Failed to compute typicality metadata: typicality failed'
-        );
-        expect(createSampling).not.toHaveBeenCalled();
-    });
-
-    it('API error in computeSimilarityMetadata toasts error and returns false without calling sampling', async () => {
-        vi.mocked(computeSimilarityMetadata).mockResolvedValue({
-            data: null,
-            error: { error: 'similarity failed' }
-        } as never);
-        const loadTags = vi.fn().mockResolvedValue(undefined);
-        const setTagSelected = vi.fn();
-        const closeSamplingDialog = vi.fn();
-        const tagsStore = writable([]);
-
-        const { submit } = useCreateSampling({
-            tags: tagsStore,
-            setTagSelected,
-            loadTags,
-            closeSamplingDialog
-        });
-        const result = await submit({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
-            samplingStrategy: 'similarity',
-            nSamplesToSelect: 8,
-            samplingResultTagName: 'sim-tag',
-            queryTagId: 'query-tag-id',
-            balancingMode: 'uniform',
-            samplingFilter: null
-        });
-
-        expect(result).toBe(false);
-        expect(toast.error).toHaveBeenCalledWith(
-            'Failed to compute similarity metadata: similarity failed'
-        );
         expect(createSampling).not.toHaveBeenCalled();
     });
 
@@ -357,8 +292,7 @@ describe('useCreateSampling', () => {
             samplingFilter: null
         });
 
-        expect(messages[0]).toBe('Computing typicality metadata...');
-        expect(messages[1]).toBe('Creating sampling...');
+        expect(messages).toEqual(['Creating sampling...']);
         expect(get(hook.loadingMessage)).toBe('');
     });
 
@@ -393,6 +327,7 @@ describe('useCreateSampling', () => {
                 n_samples_to_select: 20,
                 sampling_result_tag_name: 'balanced-tag',
                 strategies: [{ strategy_name: 'balance', target_distribution: 'uniform' }],
+                metadata_computations: [],
                 filter: undefined
             }
         });
@@ -438,6 +373,7 @@ describe('useCreateSampling', () => {
                         annotation_source_id: 'annotation-source-2'
                     }
                 ],
+                metadata_computations: [],
                 filter: undefined
             }
         });
@@ -474,6 +410,7 @@ describe('useCreateSampling', () => {
                 n_samples_to_select: 15,
                 sampling_result_tag_name: 'balanced-tag',
                 strategies: [{ strategy_name: 'balance', target_distribution: 'input' }],
+                metadata_computations: [],
                 filter: undefined
             }
         });

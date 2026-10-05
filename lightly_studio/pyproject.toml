@@ -40,6 +40,8 @@ dependencies = [
     "xxhash>=3.5.0",
     "scikit-learn==1.3.2; python_version < '3.10'",
     "scikit-learn==1.7.2; python_version >= '3.10'",
+    # 1.13 is the last SciPy that supports Python 3.9
+    "scipy>=1.13.1",
     "python-multipart>=0.0.20",
     "environs<12.0.0",
     "open-clip-torch>=2.20.0",
@@ -63,6 +65,10 @@ dependencies = [
     "posthog>=6.9,<7.0",
     "lightly-studio-serve>=0.1.0,<0.2.0",
     "httpx>=0.27.2",
+    # MCAP recordings: the core reader plus the message decoder for the
+    # schema encoding we read (CDR/ros2msg).
+    "mcap>=1.2.0,<2.0",
+    "mcap-ros2-support>=0.5.0,<0.6",
 ]
 
 [tool.uv.sources]
@@ -76,12 +82,6 @@ cloud-storage = [
     "s3fs>=2023.1.0",
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
-]
-mcap = [
-    # MCAP robotics recordings: the core reader plus the message decoder for the
-    # schema encoding we read (CDR/ros2msg).
-    "mcap>=1.2.0,<2.0",
-    "mcap-ros2-support>=0.5.0,<0.6",
 ]
 
 [dependency-groups]
@@ -142,6 +142,11 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "pyarrow.*"
+ignore_missing_imports = true
+
+# scipy-stubs requires Python 3.10 or newer. Static checks run on Python 3.9.
+[[tool.mypy.overrides]]
+module = "scipy.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

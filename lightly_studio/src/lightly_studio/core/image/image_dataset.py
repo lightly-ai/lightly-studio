@@ -36,6 +36,7 @@ from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
     collection_resolver,
     image_resolver,
     tag_resolver,
@@ -141,7 +142,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             path: Path to the folder containing the images to add.
             allowed_extensions: An iterable container of allowed image file
                 extensions.
-            embed: If True, generate embeddings for the newly added images.
+            embed: If True, generate embeddings for the newly added images. Existing images
+                without an embedding of the default embedding model are also embedded.
             tag_depth: Defines the tagging behavior based on directory depth.
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=N` (N >= 1): Creates a tag for each of the first `N`
@@ -350,7 +352,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_path: Path to the folder containing the images.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -402,7 +405,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             data_yaml: Path to the YOLO data.yaml file.
             input_split: The split to load (e.g., 'train', 'val', 'test').
                 If None, all available splits will be loaded and assigned a corresponding tag.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -511,7 +515,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 'InstanceSegmentation').
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -591,7 +596,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Load a Pascal VOC segmentation dataset and store in DB.
 
         Pascal VOC masks encode class IDs per pixel (semantic segmentation).
-        Imported masks are persisted as `AnnotationType.SEGMENTATION_MASK`.
+        The masks are persisted as `AnnotationType.SEGMENTATION_MASK`.
         Query and export workflows should use segmentation mask type filters.
 
         Args:
@@ -600,7 +605,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             class_id_to_name: Mapping from class IDs to class names.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -661,7 +667,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_rel_path: Relative path to images folder from label folder.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             annotation_source: Name of the annotation source to add the annotations
                 to. Reusing the same source name appends to that source. If `None`,
                 a default source is used.
@@ -718,7 +725,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_path: Path to the folder containing the images.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added samples. Existing images
+                without an embedding of the default embedding model are also embedded.
             limit: Maximum number of samples to load. By default, all samples are loaded.
 
         Raises:
@@ -819,11 +827,23 @@ def _generate_embeddings_image(
 ) -> None:
     """Generate and store embeddings for samples.
 
+    Existing samples that have no embedding of the collection's default model are embedded
+    too, so a rerun completes an embedding that failed before.
+
     Args:
         session: Database session for resolver operations.
         collection_id: The ID of the collection to associate with the embedding model.
         sample_ids: List of sample IDs to generate embeddings for.
     """
+    default_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if default_model_id is not None:
+        unembedded_sample_ids = image_resolver.get_unembedded_sample_ids(
+            session=session, collection_id=collection_id, embedding_model_id=default_model_id
+        )
+        sample_ids = list(dict.fromkeys([*sample_ids, *unembedded_sample_ids]))
+
     if not sample_ids:
         return
 

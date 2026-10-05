@@ -23,7 +23,7 @@
         type DistributionSourceGroup
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
-    import { MetadataCategoricalFilter } from './MetadataCategoricalFilter';
+    import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
     import HistogramToolbar from './HistogramToolbar/HistogramToolbar.svelte';
     import type { ValueMode } from './PanelHeader/ValueModeSelect';
     import type { CategoricalMetadataValue } from '$lib/services/types';
@@ -57,6 +57,13 @@
          * parent preserve the mode across close/reopen cycles.
          */
         initialCountMode?: AnnotationCountMode;
+        /**
+         * Shows the count mode select in the config and expand dialogs. Set to
+         * false when the host supports only one count mode, and pass that mode
+         * as `initialCountMode`. For example, a host that counts only samples
+         * passes `SAMPLES`, which also hides the summed total. Default: true.
+         */
+        showCountMode?: boolean;
         /**
          * Called when a histogram range is selected (single-bin click or
          * press-drag-release across bins), with the group id (e.g. the
@@ -93,6 +100,7 @@
         onBarClick,
         onCountModeChange,
         initialCountMode = AnnotationCountMode.OBJECTS,
+        showCountMode = true,
         onHistogramRangeSelect,
         histogramBinCount = 20,
         onHistogramBinCountChange,
@@ -483,26 +491,12 @@
             buckets={activeCategorical.buckets}
             selectedValues={activeCategorical.selectedValues}
             loading={activeCategorical.loading}
+            updating={activeCategorical.updating}
+            error={activeCategorical.error}
+            onRetry={onCategoricalRetry}
             onToggle={(value) => onCategoricalValueToggle?.(activeGroup.id, value)}
             onClear={() => onCategoricalValuesClear?.(activeGroup.id)}
         />
-        {#if activeCategorical.error && activeCategorical.buckets.length > 0}
-            <div
-                class="mt-1 flex items-center justify-between gap-2 text-xs text-destructive"
-                role="alert"
-            >
-                <span>Could not update metadata distribution.</span>
-                {#if onCategoricalRetry}
-                    <button
-                        class="underline max-sm:min-h-11"
-                        type="button"
-                        onclick={onCategoricalRetry}
-                    >
-                        Retry
-                    </button>
-                {/if}
-            </div>
-        {/if}
         {#if categoricalData.length > 0}
             <div class="mt-2">
                 <PanelHeader
@@ -628,7 +622,7 @@
         allClasses={displayedData.map((item) => item.label)}
         items={configurationItems}
         config={activeViewConfig}
-        showCountMode={!activeCategorical}
+        showCountMode={showCountMode && !activeCategorical}
         itemNoun={activeCategorical ? 'value' : 'class'}
         itemNounPlural={activeCategorical ? 'values' : 'classes'}
         sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
@@ -644,7 +638,7 @@
         categoryNoun={activeCategorical ? 'value' : 'class'}
         categoryNounPlural={activeCategorical ? 'values' : 'classes'}
         sortLabels={activeCategorical ? CATEGORICAL_DISTRIBUTION_SORT_LABELS : undefined}
-        showCountMode={!activeCategorical}
+        showCountMode={showCountMode && !activeCategorical}
         aggregateOther={activeCategorical !== null}
         onConfigChange={applyConfig}
         onBarClick={activeCategorical ? handleCategoricalBarClick : onBarClick}
