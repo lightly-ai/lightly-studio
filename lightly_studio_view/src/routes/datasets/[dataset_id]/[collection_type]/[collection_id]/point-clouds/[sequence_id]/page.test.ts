@@ -9,8 +9,25 @@ import type { PageData } from './$types';
 
 const featureFlags = writable<string[]>([]);
 let summaryData: { file_name: string; lidar_channels: []; camera_channels: [] } | undefined;
+const adjacentSequences = vi.hoisted(() => ({
+    data: undefined as
+        | { previous_sample_id: string | null; next_sample_id: string | null }
+        | undefined
+}));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+
+vi.mock('$app/state', () => ({
+    page: {
+        url: new URL('http://localhost/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-1'),
+        params: { dataset_id: 'dataset-1' },
+        state: {}
+    }
+}));
+
+vi.mock('$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences', () => ({
+    useAdjacentMcapSequences: () => ({ query: adjacentSequences, refetch: vi.fn() })
+}));
 
 vi.mock('$lib/hooks', () => ({
     useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
@@ -48,6 +65,7 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
     beforeEach(() => {
         vi.clearAllMocks();
         summaryData = undefined;
+        adjacentSequences.data = undefined;
     });
 
     it('renders the route shell but not the workspace when the feature is disabled', () => {
@@ -96,6 +114,36 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         expect(url).toBeInstanceOf(URL);
         expect((url as URL).hash).toBe('#tick=2');
         expect(options).toMatchObject({ replaceState: true, noScroll: true, keepFocus: true });
+    });
+
+    it('opens the next sequence from the timeline on its first tick', async () => {
+        featureFlags.set(['point_cloud_rendering']);
+        adjacentSequences.data = { previous_sample_id: null, next_sample_id: 'sequence-2' };
+        const user = userEvent.setup();
+        render(Page, {
+            props: { data: mockPageData }
+        });
+
+        expect(await screen.findByRole('button', { name: 'Previous sequence' })).toBeDisabled();
+        await user.click(screen.getByRole('button', { name: 'Next sequence' }));
+
+        expect(goto).toHaveBeenCalledExactlyOnceWith(
+            '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-2'
+        );
+    });
+
+    it('opens the previous sequence from the timeline', async () => {
+        featureFlags.set(['point_cloud_rendering']);
+        adjacentSequences.data = { previous_sample_id: 'sequence-0', next_sample_id: null };
+        const user = userEvent.setup();
+        render(Page, { props: { data: mockPageData } });
+
+        expect(await screen.findByRole('button', { name: 'Next sequence' })).toBeDisabled();
+        await user.click(screen.getByRole('button', { name: 'Previous sequence' }));
+
+        expect(goto).toHaveBeenCalledExactlyOnceWith(
+            '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-0'
+        );
     });
 });
 

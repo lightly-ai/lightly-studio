@@ -31,6 +31,10 @@
         tickNumber?: number;
         /** Reports the active tick as a 1-based number for route synchronization. */
         onTickChange?: (tickNumber: number) => void;
+        /** Opens the previous sequence; the timeline control is disabled when absent. */
+        onPreviousSequence?: () => void;
+        /** Opens the next sequence; the timeline control is disabled when absent. */
+        onNextSequence?: () => void;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
         /** Optional status override for tests and stories. */
@@ -43,6 +47,8 @@
         sequenceId,
         tickNumber = 1,
         onTickChange = () => undefined,
+        onPreviousSequence,
+        onNextSequence,
         sourcePath = [],
         status,
         onRetry
@@ -209,6 +215,8 @@
                                 onPlayToggle={togglePlayback}
                                 onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
                                 onSelectTick={goToFrame}
+                                {onPreviousSequence}
+                                {onNextSequence}
                             />
                         </Pane>
                     </PaneGroup>

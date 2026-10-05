@@ -144,6 +144,27 @@ describe('FrameTimeline', () => {
         expect(screen.queryByRole('button', { name: 'Play frames' })).not.toBeInTheDocument();
     });
 
+    it('steps between sequences through the exposed handlers', () => {
+        const onPreviousSequence = vi.fn();
+        const onNextSequence = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onPreviousSequence, onNextSequence }
+        });
+
+        screen.getByRole('button', { name: 'Previous sequence' }).click();
+        screen.getByRole('button', { name: 'Next sequence' }).click();
+
+        expect(onPreviousSequence).toHaveBeenCalledOnce();
+        expect(onNextSequence).toHaveBeenCalledOnce();
+    });
+
+    it('disables sequence stepping when no adjacent sequence handler is given', () => {
+        render(FrameTimeline, { props: defaultProps });
+
+        expect(screen.getByRole('button', { name: 'Previous sequence' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Next sequence' })).toBeDisabled();
+    });
+
     it('disables stepping past the ends of the sequence', () => {
         const handlers = { onPreviousFrame: vi.fn(), onNextFrame: vi.fn() };
         const { rerender } = render(FrameTimeline, {
