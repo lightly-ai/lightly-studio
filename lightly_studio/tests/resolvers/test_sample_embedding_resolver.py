@@ -278,10 +278,16 @@ def test_get_projections_by_collection_id(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     other_collection_id = create_collection(session=db_session).collection_id
     embedding_model_id = create_embedding_model(
-        session=db_session, collection_id=collection_id, embedding_model_name="model_1"
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="model_1",
+        embedding_dimension=3,
     ).embedding_model_id
     other_embedding_model_id = create_embedding_model(
-        session=db_session, collection_id=collection_id, embedding_model_name="model_2"
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="model_2",
+        embedding_dimension=3,
     ).embedding_model_id
     image_a, image_b = create_samples_with_embeddings(
         session=db_session,
@@ -323,6 +329,54 @@ def test_get_projections_by_collection_id(db_session: Session) -> None:
     assert [(row.x, row.y) for row in projections] == pytest.approx(
         [(x, y) for _, x, y in expected]
     )
+
+
+@pytest.mark.parametrize(
+    ("direction_x", "direction_y"),
+    [
+        ([1.0, 0.0], [0.0, 1.0, 0.0]),
+        ([1.0, 0.0, 0.0], [0.0, 1.0]),
+        ([1.0, 0.0], [0.0, 1.0]),
+        ([1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]),
+    ],
+    ids=["x_too_short", "y_too_short", "both_too_short", "both_too_long"],
+)
+def test_get_projections_by_collection_id__dimension_mismatch(
+    db_session: Session, direction_x: list[float], direction_y: list[float]
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=3
+    ).embedding_model_id
+    create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[(ImageStub(path="a.png"), [1.0, 2.0, 3.0])],
+    )
+
+    with pytest.raises(ValueError, match="embedding dimension 3"):
+        sample_embedding_resolver.get_projections_by_collection_id(
+            session=db_session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            direction_x=direction_x,
+            direction_y=direction_y,
+        )
+
+
+def test_get_projections_by_collection_id__unknown_model(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = uuid4()
+
+    with pytest.raises(ValueError, match=f"Embedding model {embedding_model_id} not found"):
+        sample_embedding_resolver.get_projections_by_collection_id(
+            session=db_session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            direction_x=[1.0, 0.0, 0.0],
+            direction_y=[0.0, 1.0, 0.0],
+        )
 
 
 def test_get_embedding_count(db_session: Session) -> None:

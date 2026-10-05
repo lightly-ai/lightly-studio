@@ -119,18 +119,8 @@ def get_twodim_embeddings_from_axes(
 
     Raises:
         ValueError: If the embedding model does not exist, or if a direction does not have
-            the embedding dimension.
+            the embedding dimension. The projection query raises these errors.
     """
-    embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
-    if embedding_model is None:
-        raise ValueError(f"Embedding model {embedding_model_id} not found.")
-    dimension = embedding_model.embedding_dimension
-    if len(direction_x) != dimension or len(direction_y) != dimension:
-        raise ValueError(
-            f"The axis directions must have the embedding dimension {dimension}, "
-            f"got {len(direction_x)} and {len(direction_y)}."
-        )
-
     projections = sample_embedding_resolver.get_projections_by_collection_id(
         session=session,
         collection_id=collection_id,

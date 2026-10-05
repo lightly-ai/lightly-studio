@@ -13,6 +13,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.database import db_insert, db_vector
 from lightly_studio.database.db_manager import DatabaseBackend
 from lightly_studio.database.db_vector import Embedding
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -195,11 +196,25 @@ def get_projections_by_collection_id(
 
     Returns:
         The projections of the samples with an embedding, ordered by sample ID.
+
+    Raises:
+        ValueError: If the embedding model does not exist, or if a direction does not have
+            the embedding dimension.
     """
+    embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
+    if embedding_model is None:
+        raise ValueError(f"Embedding model {embedding_model_id} not found.")
+    dimension = embedding_model.embedding_dimension
+    if dimension != len(direction_x) or dimension != len(direction_y):
+        raise ValueError(
+            f"The axis directions must have the embedding dimension {dimension}, "
+            f"got {len(direction_x)} and {len(direction_y)}."
+        )
+
     embeddings = (
         select(
             SampleEmbeddingTable.sample_id,
-            db_vector.loaded_vector(col(SampleEmbeddingTable.embedding), len(direction_x)).label(
+            db_vector.loaded_vector(col(SampleEmbeddingTable.embedding), dimension).label(
                 "embedding"
             ),
         )
