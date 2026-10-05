@@ -15,6 +15,7 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.models.collection import SampleType
 from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails, ImageStub
+from tests.resolvers.mcap_group_sequence_resolver import helpers as mcap_sequence_helpers
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
@@ -206,6 +207,29 @@ def test_get_adjacent_samples__returns_adjacents_for_videos(
     assert data["next_sample_id"] == str(video_c.sample_id)
     assert data["current_sample_position"] == 2
     assert data["total_count"] == 3
+
+
+def test_get_adjacent_samples__returns_adjacents_for_mcap_sequences(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    sequence = mcap_sequence_helpers.create_mcap_sequence(session=db_session)
+
+    response = test_client.post(
+        f"/api/samples/{sequence.sample_id}/adjacents",
+        json={
+            "sample_type": "sequence",
+            "collection_id": str(sequence.sequence_collection.collection_id),
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["previous_sample_id"] is None
+    assert data["sample_id"] == str(sequence.sample_id)
+    assert data["next_sample_id"] is None
+    assert data["current_sample_position"] == 1
+    assert data["total_count"] == 1
 
 
 def test_get_adjacent_samples__annotations_match_grid_ordering(
