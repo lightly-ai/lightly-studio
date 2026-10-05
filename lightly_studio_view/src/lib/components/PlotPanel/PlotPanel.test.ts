@@ -15,6 +15,12 @@ import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './pl
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
 let imageFilterStore: Writable<Record<string, unknown>>;
+let videoFilterStore: Writable<{
+    sample_filter?: {
+        sample_ids?: string[];
+        embedding_region?: { polygon: { x: number; y: number }[] };
+    };
+} | null>;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
 let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
@@ -47,6 +53,7 @@ const originalResizeObserver = globalThis.ResizeObserver;
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
 const IMAGES_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]/images';
+const VIDEOS_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]/videos';
 const ANNOTATIONS_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]/annotations';
 // Route is read per-render, so tests set `routeState.id` before rendering to pick a grid type.
 const routeState = vi.hoisted(() => ({ id: '' }));
@@ -91,8 +98,15 @@ vi.mock('./usePlotData/usePlotData', () => ({
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: () => ({
-        videoFilter: writable(null),
-        updateSampleIds: vi.fn()
+        videoFilter: videoFilterStore,
+        updateSampleIds: vi.fn(),
+        updateEmbeddingRegion: (region: { polygon: { x: number; y: number }[] } | null) => {
+            mockUpdateEmbeddingRegion(region);
+            videoFilterStore.update((filter) => ({
+                ...filter,
+                sample_filter: { ...filter?.sample_filter, embedding_region: region ?? undefined }
+            }));
+        }
     })
 }));
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
@@ -162,6 +176,7 @@ describe('PlotPanel.svelte', () => {
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
+        videoFilterStore = writable(null);
         arrowDataStore = writable(undefined);
         colorLegendStore = writable(new Map());
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
@@ -219,6 +234,25 @@ describe('PlotPanel.svelte', () => {
         expect(mockUpdateSampleIds).not.toHaveBeenCalled();
     });
 
+    it('clears the video region and selection count when pressing Escape', async () => {
+        routeState.id = VIDEOS_ROUTE;
+        videoFilterStore = writable({
+            sample_filter: { embedding_region: { polygon: [{ x: 0, y: 0 }] } }
+        });
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await fireEvent.keyDown(window, { key: 'Escape' });
+
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+    });
+
     it('should send the lasso as region geometry after applying mouse selection', async () => {
         const polygon = [
             { x: 0, y: 0 },
@@ -242,6 +276,26 @@ describe('PlotPanel.svelte', () => {
         expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
         expect(mockUpdateSampleIds).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
+    });
+
+    it('saves and highlights video lassos as region geometry', async () => {
+        routeState.id = VIDEOS_ROUTE;
+        const polygon = [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ];
+        rangeSelectionStore = writable(polygon);
+        selectedSampleIdsStore = writable(['video-1']);
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await fireEvent.mouseUp(window);
+
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith({ polygon });
+        expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
+        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
+        expect(usePlotDataSpy.mock.calls.at(-1)?.[0].highlightRegion).toEqual(polygon);
     });
 
     it('should not clear embedding selection when base filters change', async () => {
