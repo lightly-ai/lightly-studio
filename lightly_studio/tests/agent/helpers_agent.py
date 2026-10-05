@@ -21,6 +21,7 @@ from lightly_studio.agent.chat_messages import (
 from lightly_studio.agent.openrouter_stream import ModelDelta
 from lightly_studio.agent.result_store import ResultStore
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.plugins.operator_registry import OperatorRegistry
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 
@@ -62,13 +63,15 @@ def create_context(
     session: Session,
     collection: CollectionTable,
     selected_sample_ids: Sequence[UUID] = (),
+    operator_registry: OperatorRegistry | None = None,
 ) -> AgentContext:
-    """Create an agent context with a fresh result store."""
+    """Create an agent context with a fresh result store, and an empty operator registry."""
     return AgentContext(
         session=session,
         collection=collection,
         selected_sample_ids=list(selected_sample_ids),
         result_store=ResultStore(),
+        operator_registry=operator_registry or OperatorRegistry(),
     )
 
 

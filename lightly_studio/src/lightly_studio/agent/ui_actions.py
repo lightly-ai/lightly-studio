@@ -27,4 +27,12 @@ class ShowSamplesAction(BaseModel):
     sample_ids: list[UUID]
 
 
-UiAction = Annotated[Union[SelectTagAction, ShowSamplesAction], Field(discriminator="type")]
+class RefreshDataAction(BaseModel):
+    """Reload the tags and the samples, because a tool changed data that the GUI shows."""
+
+    type: Literal["refresh_data"] = "refresh_data"
+
+
+UiAction = Annotated[
+    Union[SelectTagAction, ShowSamplesAction, RefreshDataAction], Field(discriminator="type")
+]

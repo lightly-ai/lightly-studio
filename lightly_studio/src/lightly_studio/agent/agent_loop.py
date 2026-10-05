@@ -17,6 +17,7 @@ from lightly_studio.agent.agent_tool import AgentContext, AgentTool
 from lightly_studio.agent.chat_messages import AgentMessage, AgentToolCall, ReasoningDelta
 from lightly_studio.agent.filter_tools import FILTER_TOOLS
 from lightly_studio.agent.openrouter_client import AgentLLMError, ChatModel
+from lightly_studio.agent.operator_tools import OPERATOR_TOOLS
 from lightly_studio.agent.overview_tool import OVERVIEW_TOOLS
 from lightly_studio.agent.search_tools import SEARCH_TOOLS
 from lightly_studio.agent.selection_tools import SELECTION_TOOLS
@@ -28,6 +29,7 @@ AGENT_TOOLS: list[AgentTool[Any]] = [
     *FILTER_TOOLS,
     *SELECTION_TOOLS,
     *TAG_TOOLS,
+    *OPERATOR_TOOLS,
 ]
 
 # The largest number of model calls in one turn. It stops a model that calls tools in a loop.
@@ -54,6 +56,8 @@ request and from the overview. Combine strategies when the request names several
 compute it first with compute_metadata.
 - A similarity strategy needs a query tag. To use the samples of a search as the query, tag \
 them first with tag_samples.
+- For a task that no other tool does, such as auto-labeling or inference, look for an \
+operator with list_operators and run it with run_operator.
 - When a tool returns an error, fix the call or explain the problem to the user.
 - When the user asks who developed you or which model you are, say that you are the \
 LightlyStudio assistant, developed by Lightly AI. Do not name the language model or its \

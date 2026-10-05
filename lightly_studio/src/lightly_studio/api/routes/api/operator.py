@@ -10,31 +10,14 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.plugins import operator_context
-from lightly_studio.plugins.base_operator import OperatorResult, OperatorStatus
+from lightly_studio.plugins.base_operator import OperatorResult
 from lightly_studio.plugins.operator_context import AnyFilter, ExecutionContext
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
-from lightly_studio.plugins.parameter import BaseParameter, TableParameter
 from lightly_studio.resolvers import collection_resolver
+from lightly_studio.services import operator_service
+from lightly_studio.services.operator_service import ParameterView
 
 operator_router = APIRouter(prefix="/operators", tags=["operators"])
-
-
-class ParameterColumnView(BaseModel):
-    """A single column of a table parameter as exposed to the GUI."""
-
-    name: str
-    description: str
-    default: Any = None
-    required: bool
-    param_type: str | None
-
-
-class ParameterView(ParameterColumnView):
-    """An operator parameter as exposed to the GUI."""
-
-    columns: list[ParameterColumnView] | None = None
-    """The columns of a table parameter, `None` for every other parameter type."""
 
 
 class OperatorContextRequest(BaseModel):
@@ -69,7 +52,9 @@ def get_operator_parameters(operator_id: str) -> list[ParameterView]:
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Operator '{operator_id}' not found",
         )
-    return [_parameter_view(parameter=parameter) for parameter in operator.parameters]
+    return [
+        operator_service.to_parameter_view(parameter=parameter) for parameter in operator.parameters
+    ]
 
 
 @operator_router.post("/{operator_id}/execute", response_model=OperatorResult)
@@ -96,14 +81,9 @@ def execute_operator(
             detail=f"Operator '{operator_id}' not found",
         )
 
-    if operator.status != OperatorStatus.READY:
-        if operator.status in (OperatorStatus.PENDING, OperatorStatus.STARTING):
-            message = f"Operator '{operator_id}' is still starting, please try again in a moment."
-        elif operator.status in (OperatorStatus.STOPPING, OperatorStatus.STOPPED):
-            message = f"Operator '{operator_id}' has been stopped and cannot be executed."
-        else:
-            message = f"Operator '{operator_id}' is in an error state and cannot be executed."
-        return OperatorResult(success=False, message=message)
+    status_error = operator_service.get_status_error(operator=operator, operator_ref=operator_id)
+    if status_error is not None:
+        return OperatorResult(success=False, message=status_error)
 
     context = request.context
 
@@ -115,20 +95,9 @@ def execute_operator(
             detail=f"Collection '{context.collection_id}' not found",
         )
 
-    # Get the scopes for the collection and validate against the scopes supported by the operator.
-    collection_scopes = operator_context.get_allowed_scopes_for_collection(
-        sample_type=collection.sample_type,
-        is_root_collection=collection.parent_collection_id is None,
-    )
-    if not any(scope in operator.supported_scopes for scope in collection_scopes):
-        supported = ", ".join(s.value for s in operator.supported_scopes)
-        return OperatorResult(
-            success=False,
-            message=(
-                f"Operator '{operator.name}' cannot be executed in this context. "
-                f"Supported scopes: {supported}."
-            ),
-        )
+    scope_error = operator_service.get_scope_error(operator=operator, collection=collection)
+    if scope_error is not None:
+        return OperatorResult(success=False, message=scope_error)
 
     # Execute the operator
     return operator.execute(
@@ -137,46 +106,4 @@ def execute_operator(
             collection_id=context.collection_id, context_filter=context.context_filter
         ),
         parameters=request.parameters,
-    )
-
-
-def _parameter_view(parameter: BaseParameter) -> ParameterView:
-    """Convert an operator parameter into its API representation.
-
-    Args:
-        parameter: The parameter as declared by the operator.
-
-    Returns:
-        The parameter as exposed to the GUI, with the columns filled in for table parameters.
-    """
-    columns = (
-        [_parameter_column_view(parameter=column) for column in parameter.columns]
-        if isinstance(parameter, TableParameter)
-        else None
-    )
-    return ParameterView(
-        name=parameter.name,
-        description=parameter.description,
-        default=parameter.default,
-        required=parameter.required,
-        param_type=parameter.param_type,
-        columns=columns,
-    )
-
-
-def _parameter_column_view(parameter: BaseParameter) -> ParameterColumnView:
-    """Convert a table parameter column into its API representation.
-
-    Args:
-        parameter: The column as declared by the operator.
-
-    Returns:
-        The column as exposed to the GUI.
-    """
-    return ParameterColumnView(
-        name=parameter.name,
-        description=parameter.description,
-        default=parameter.default,
-        required=parameter.required,
-        param_type=parameter.param_type,
     )

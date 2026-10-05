@@ -69,6 +69,10 @@ function summarizeToolResult(content: string): { status: ToolStatus; summary: st
     if (typeof result.error === 'string') {
         return { status: 'error', summary: result.error };
     }
+    // An operator reports its own success and message.
+    if (typeof result.success === 'boolean') {
+        return { status: result.success ? 'done' : 'error', summary: String(result.message) };
+    }
     const parts = COUNT_KEYS.filter(([key]) => typeof result[key] === 'number').map(
         ([key, word]) => `${result[key]} ${word}`
     );

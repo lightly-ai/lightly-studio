@@ -107,6 +107,27 @@ describe('toChatEntries', () => {
         ]);
     });
 
+    it('shows the message of an operator, and its failure as an error', () => {
+        const entries = toChatEntries([
+            toolCall('call_1', 'run_operator'),
+            {
+                role: 'tool',
+                tool_call_id: 'call_1',
+                content: JSON.stringify({ operator: 'sam', success: false, message: 'No GPU.' })
+            }
+        ]);
+
+        expect(entries).toEqual([
+            {
+                kind: 'tool',
+                callId: 'call_1',
+                name: 'run_operator',
+                status: 'error',
+                summary: 'No GPU.'
+            }
+        ]);
+    });
+
     it('marks a tool error', () => {
         const entries = toChatEntries([
             toolCall('call_1', 'show_samples'),

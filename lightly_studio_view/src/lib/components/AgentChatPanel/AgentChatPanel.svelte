@@ -46,6 +46,10 @@
                 showSamples: (sampleIds) => {
                     clearTagsSelected();
                     updateSampleIds(sampleIds);
+                },
+                refreshData: async () => {
+                    await loadTags();
+                    await queryClient.invalidateQueries();
                 }
             })
     });

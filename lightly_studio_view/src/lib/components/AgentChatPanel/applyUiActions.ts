@@ -7,6 +7,8 @@ interface UiActionHandlers {
     showTag: (tagId: string) => Promise<void>;
     /** Filters the grid to a list of samples. */
     showSamples: (sampleIds: string[]) => void;
+    /** Reloads the tags and the samples, because a tool changed data. */
+    refreshData: () => Promise<void>;
 }
 
 /**
@@ -20,8 +22,10 @@ export async function applyUiActions(
     for (const action of actions) {
         if (action.type === 'select_tag') {
             await handlers.showTag(action.tag_id);
-        } else {
+        } else if (action.type === 'show_samples') {
             handlers.showSamples(action.sample_ids);
+        } else {
+            await handlers.refreshData();
         }
     }
 }

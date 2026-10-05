@@ -25,6 +25,7 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.dataset import env
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.plugins.operator_registry import operator_registry
 
 # How long one call of the language model may take. A model that calls tools can think for a
 # while before it answers.
@@ -113,6 +114,7 @@ def agent_chat(
         collection=collection,
         selected_sample_ids=request.selected_sample_ids,
         result_store=default_result_store,
+        operator_registry=operator_registry,
     )
     events = agent_loop.stream_agent_turn(
         chat_model=chat_model, context=context, history=request.messages

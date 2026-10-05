@@ -13,6 +13,7 @@ from sqlmodel import Session
 from lightly_studio.agent.result_store import ResultStore
 from lightly_studio.agent.ui_actions import UiAction
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.plugins.operator_registry import OperatorRegistry
 
 ArgsT = TypeVar("ArgsT", bound=BaseModel)
 
@@ -26,6 +27,7 @@ class AgentContext:
         collection: The collection that the chat is about.
         selected_sample_ids: The samples that the user selected in the GUI.
         result_store: The store of the result handles.
+        operator_registry: The registry of the operators that the agent can run.
         ui_actions: The actions for the GUI. Tools append to it.
     """
 
@@ -33,6 +35,7 @@ class AgentContext:
     collection: CollectionTable
     selected_sample_ids: list[UUID]
     result_store: ResultStore
+    operator_registry: OperatorRegistry
     ui_actions: list[UiAction] = field(default_factory=list)
 
 
