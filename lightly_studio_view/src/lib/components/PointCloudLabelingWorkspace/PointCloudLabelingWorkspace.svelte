@@ -153,6 +153,7 @@
                                         : 'intensity'}
                                     pointCloudBounds={workspace.cloudPointFrame.data.bounds ??
                                         undefined}
+                                    fitKey={`${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`}
                                 />
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
                                 <WorkspaceStatusPanel status="loading" />
