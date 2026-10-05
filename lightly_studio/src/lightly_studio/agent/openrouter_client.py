@@ -94,7 +94,7 @@ class OpenRouterChatModel:
             with self._client.stream(
                 "POST",
                 _CHAT_COMPLETIONS_PATH,
-                json=self._payload(messages, tools),
+                json=self._payload(messages=messages, tools=tools),
                 headers=self._headers,
             ) as response:
                 _raise_for_status(response=response)
@@ -103,9 +103,10 @@ class OpenRouterChatModel:
         except httpx.HTTPError as exc:
             raise AgentLLMError(f"OpenRouter cannot be reached: {exc}") from exc
         try:
-            yield assembler.message()
+            message = assembler.message()
         except ValueError as exc:
             raise AgentLLMError(str(exc)) from exc
+        yield message
 
     def _payload(
         self, messages: Sequence[AgentMessage], tools: Sequence[dict[str, Any]]
