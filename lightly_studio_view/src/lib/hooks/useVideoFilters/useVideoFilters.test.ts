@@ -12,7 +12,7 @@ const embeddingRegion = {
     ]
 };
 
-vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
+vi.mock('$lib/hooks', () => ({
     createMetadataFilters: vi.fn(() => [])
 }));
 
@@ -121,8 +121,7 @@ describe('useVideoFilters', () => {
         });
 
         it('includes metadata_filters in sample_filter when createMetadataFilters returns filters', async () => {
-            const { createMetadataFilters } =
-                await import('$lib/hooks/useMetadataFilters/useMetadataFilters');
+            const { createMetadataFilters } = await import('$lib/hooks');
             vi.mocked(createMetadataFilters).mockReturnValueOnce([
                 { key: 'temp', value: 10, op: '>=' as const }
             ]);
@@ -267,8 +266,7 @@ describe('useVideoFilters', () => {
         });
 
         it('preserves generated metadata filters when geometry is set and cleared', async () => {
-            const { createMetadataFilters } =
-                await import('$lib/hooks/useMetadataFilters/useMetadataFilters');
+            const { createMetadataFilters } = await import('$lib/hooks');
             const metadataFilters = [
                 { key: 'temp', value: 10, op: '>=' as const },
                 { key: 'weather', value: ['sunny'], op: 'in' as const }

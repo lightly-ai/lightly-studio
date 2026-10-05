@@ -1,5 +1,5 @@
 import { derived, get, writable } from 'svelte/store';
-import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import { createMetadataFilters } from '$lib/hooks';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
     AnnotationsFilter,
