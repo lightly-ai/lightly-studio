@@ -71,16 +71,39 @@
     let selectedCuboidId = $state<string | null>(null);
     const { customLabelColorsStore } = useCustomLabelColors();
 
-    const cuboids = $derived(
-        tickAnnotationsToCuboids(workspace.tickDetails.data?.annotations ?? [])
-    );
+    // Synchronized snapshot: the cloud frame and its corresponding annotations
+    // advance together.
+    let sceneSnapshot = $state<{
+        frame: NonNullable<(typeof workspace.cloudPointFrame)['data']>;
+        annotations: Parameters<typeof tickAnnotationsToCuboids>[0];
+    } | null>(null);
+
+    $effect(() => {
+        if (workspace.cloudPointFrame.data && !workspace.cloudPointFrame.isPlaceholderData) {
+            sceneSnapshot = {
+                frame: workspace.cloudPointFrame.data,
+                annotations: workspace.tickDetails.data?.annotations ?? []
+            };
+        }
+    });
+
+    const cuboids = $derived(tickAnnotationsToCuboids(sceneSnapshot?.annotations ?? []));
 
     const annotationClasses = $derived.by(() => {
         void $customLabelColorsStore;
         return tickAnnotationsToClasses(
-            workspace.tickDetails.data?.annotations ?? [],
+            sceneSnapshot?.annotations ?? [],
             (name) => getColorByLabel(name, 1).color
         );
+    });
+
+    // Skip cuboids whose coordinate frame differs from the loaded point cloud.
+    // When the cloud falls back to sensor frames (no TF transform available),
+    // cuboids requested in the reference frame are filtered out rather than
+    // rendered at wrong coordinates.
+    const sceneCuboids = $derived.by(() => {
+        const frameIds = new Set(sceneSnapshot?.frame.channels.map((c) => c.frameId));
+        return cuboids.filter((c) => frameIds.has(c.frameId));
     });
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
@@ -161,16 +184,15 @@
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
                                 <WorkspaceStatusPanel status="empty" />
-                            {:else if workspace.cloudPointFrame.data}
+                            {:else if sceneSnapshot}
                                 <SceneViewport
-                                    batch={workspace.cloudPointFrame.data.batch}
-                                    colorMode={workspace.cloudPointFrame.data.batch.colors
+                                    batch={sceneSnapshot.frame.batch}
+                                    colorMode={sceneSnapshot.frame.batch.colors
                                         ? 'rgb'
                                         : 'intensity'}
-                                    pointCloudBounds={workspace.cloudPointFrame.data.bounds ??
-                                        undefined}
+                                    pointCloudBounds={sceneSnapshot.frame.bounds ?? undefined}
                                     fitKey={`${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`}
-                                    {cuboids}
+                                    cuboids={sceneCuboids}
                                     {annotationClasses}
                                     selectedAnnotationId={selectedCuboidId}
                                     onselect={(id) => (selectedCuboidId = id)}

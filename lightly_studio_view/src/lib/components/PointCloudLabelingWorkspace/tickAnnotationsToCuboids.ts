@@ -1,12 +1,9 @@
-import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
-import type { AnnotationClass, CuboidAnnotation } from './domain';
+import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 import { canonicalCoordinateFrame } from './domain';
 
 /** Maps cuboid annotations from a tick response into the point-cloud domain. */
-export function tickAnnotationsToCuboids(
-    annotations: readonly AnnotationView[]
-): CuboidAnnotation[] {
-    return annotations.flatMap((annotation): CuboidAnnotation[] => {
+export function tickAnnotationsToCuboids(annotations: Readonly<TickDetailView['annotations']>) {
+    return annotations.flatMap((annotation) => {
         const details = annotation.cuboid_3d_details;
         if (!details) return [];
 
@@ -19,9 +16,9 @@ export function tickAnnotationsToCuboids(
                 annotationSourceId: annotation.annotation_collection_id,
                 trackId: annotation.object_track_id ?? null,
                 keyframeId: null,
-                center: [details.px, details.py, details.pz],
-                size: [details.sx, details.sy, details.sz],
-                rotation: [details.qx, details.qy, details.qz, details.qw]
+                center: [details.px, details.py, details.pz] as const,
+                size: [details.sx, details.sy, details.sz] as const,
+                rotation: [details.qx, details.qy, details.qz, details.qw] as const
             }
         ];
     });
@@ -29,10 +26,10 @@ export function tickAnnotationsToCuboids(
 
 /** Builds the distinct annotation classes used by the cuboids in a tick response. */
 export function tickAnnotationsToClasses(
-    annotations: readonly AnnotationView[],
+    annotations: Readonly<TickDetailView['annotations']>,
     getColor: (name: string) => string
-): AnnotationClass[] {
-    const classes = new Map<string, AnnotationClass>();
+) {
+    const classes = new Map<string, { id: string; name: string; color: string }>();
 
     for (const annotation of annotations) {
         const details = annotation.cuboid_3d_details;
