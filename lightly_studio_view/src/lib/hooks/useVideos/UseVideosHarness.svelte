@@ -6,9 +6,11 @@
     interface Props {
         queryClient: QueryClient;
         getParams: Parameters<typeof useVideos>[0];
+        onError: (error: unknown) => void;
     }
 
-    const { queryClient, getParams }: Props = $props();
+    const { queryClient, getParams, onError }: Props = $props();
     setQueryClientContext(untrack(() => queryClient));
-    useVideos(() => getParams());
+    const { query } = useVideos(() => getParams());
+    $effect(() => onError(query.error));
 </script>

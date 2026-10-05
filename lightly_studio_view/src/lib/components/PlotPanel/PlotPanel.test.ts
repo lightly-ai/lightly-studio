@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient } from '@tanstack/svelte-query';
+import { transferableAbortController } from 'node:util';
 import { client } from '$lib/api/lightly_studio_local/client.gen';
 import UseVideosHarness from '$lib/hooks/useVideos/UseVideosHarness.svelte';
 import type { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -27,6 +28,7 @@ let videoFilterStore: Writable<{
 } | null>;
 let actualVideoFilters: ReturnType<typeof useVideoFilters> | null = null;
 const originalClientConfig = client.getConfig();
+const originalAbortController = globalThis.AbortController;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
 let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
@@ -164,6 +166,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
 describe('PlotPanel.svelte', () => {
     afterEach(() => {
         client.setConfig({ ...originalClientConfig, fetch: originalClientConfig.fetch });
+        vi.stubGlobal('AbortController', originalAbortController);
     });
 
     beforeAll(() => {
@@ -315,6 +318,8 @@ describe('PlotPanel.svelte', () => {
 
     it('keeps the video lasso request small for a large selection', async () => {
         routeState.id = VIDEOS_ROUTE;
+        // Node's Request requires a native AbortSignal rather than jsdom's signal.
+        vi.stubGlobal('AbortController', transferableAbortController().constructor);
         const { useVideoFilters } = await vi.importActual<
             typeof import('$lib/hooks/useVideoFilters/useVideoFilters')
         >('$lib/hooks/useVideoFilters/useVideoFilters');
@@ -363,14 +368,21 @@ describe('PlotPanel.svelte', () => {
             const queryClient = new QueryClient({
                 defaultOptions: { queries: { retry: false, gcTime: 0 } }
             });
+            let requestError: unknown = null;
             const videos = render(UseVideosHarness, {
                 queryClient,
+                onError: (error) => {
+                    requestError = error;
+                },
                 getParams: () => ({
                     collection_id: 'test-collection-id',
                     filter: get(videoFilters.videoFilter) ?? { filter_type: 'video' }
                 })
             });
-            await waitFor(() => expect(requestBodies).toHaveLength(requestBodySizes.length + 1));
+            await waitFor(() => {
+                expect(requestError).toBeNull();
+                expect(requestBodies).toHaveLength(requestBodySizes.length + 1);
+            });
             const requestBody = requestBodies[requestBodySizes.length];
             const body = JSON.parse(requestBody);
             expect(body.filter.filter_type).toBe('video');
