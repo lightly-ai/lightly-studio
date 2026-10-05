@@ -7,6 +7,7 @@ text queries can be compared against image embeddings.
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -49,7 +50,7 @@ class MobileCLIPEmbedder(
     video is covered frame by frame through ``embed_images_pil``.
     """
 
-    __slots__ = ("_device", "_model", "_preprocess", "_tokenizer")
+    __slots__ = ("_device", "_inference_lock", "_model", "_preprocess", "_tokenizer")
 
     def __init__(self) -> None:
         """Initialize the MobileCLIP embedding model.
@@ -72,6 +73,8 @@ class MobileCLIPEmbedder(
         )
         self._model = self._model.to(self._device)
         self._tokenizer = mobileclip.get_tokenizer(model_name=MODEL_NAME)
+        # Concurrent forward passes on MPS hang, so the query methods run one at a time
+        self._inference_lock = threading.Lock()
 
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this embedder.
@@ -123,11 +126,12 @@ class MobileCLIPEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        return image_embedding.embed_image_bytes_batched(
-            images=images,
-            context=self._embedding_context(),
-            show_progress=False,
-        )
+        with self._inference_lock:
+            return image_embedding.embed_image_bytes_batched(
+                images=images,
+                context=self._embedding_context(),
+                show_progress=False,
+            )
 
     def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
         """Embed PIL images with MobileCLIP.
@@ -138,11 +142,12 @@ class MobileCLIPEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        return image_embedding.embed_pil_images_batched(
-            images=images,
-            context=self._embedding_context(),
-            show_progress=False,
-        )
+        with self._inference_lock:
+            return image_embedding.embed_pil_images_batched(
+                images=images,
+                context=self._embedding_context(),
+                show_progress=False,
+            )
 
     def embed_text(self, texts: list[str]) -> EmbeddingResult:
         """Embed texts with MobileCLIP.
@@ -157,9 +162,11 @@ class MobileCLIPEmbedder(
             empty = np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
             return EmbeddingResult(embeddings=empty, kept_indices=[])
 
-        tokenized = self._tokenizer(texts).to(self._device)
-        with torch.no_grad():
-            embeddings = self._model.encode_text(tokenized).cpu().numpy()  # type: ignore[operator]
+        tokenized = self._tokenizer(texts)
+        with self._inference_lock, torch.no_grad():
+            embeddings = (
+                self._model.encode_text(tokenized.to(self._device)).cpu().numpy()  # type: ignore[operator]
+            )
         return EmbeddingResult(
             embeddings=embeddings.astype(np.float32), kept_indices=list(range(len(texts)))
         )

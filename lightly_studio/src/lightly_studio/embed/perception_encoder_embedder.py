@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable, Iterator
 
 import fsspec
@@ -72,6 +73,8 @@ class PerceptionEncoderEmbedder(
             else "cpu"
         )
         self._model = self._model.to(self._device)
+        # Concurrent forward passes on MPS hang, so the query methods run one at a time
+        self._inference_lock = threading.Lock()
 
     def embedding_space_spec(self) -> EmbeddingSpaceSpec:
         """Describe the embedding space produced by this generator.
@@ -97,9 +100,11 @@ class PerceptionEncoderEmbedder(
             empty = np.empty((0, self._model.output_dim), dtype=np.float32)
             return EmbeddingResult(embeddings=empty, kept_indices=[])
 
-        tokenized = self._tokenizer(texts).to(self._device)
-        with torch.no_grad():
-            embeddings = self._model.encode_text(tokenized, normalize=True).cpu().numpy()
+        tokenized = self._tokenizer(texts)
+        with self._inference_lock, torch.no_grad():
+            embeddings = (
+                self._model.encode_text(tokenized.to(self._device), normalize=True).cpu().numpy()
+            )
         return EmbeddingResult(
             embeddings=embeddings.astype(np.float32), kept_indices=list(range(len(texts)))
         )
@@ -143,11 +148,12 @@ class PerceptionEncoderEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        return image_embedding.embed_image_bytes_batched(
-            images=images,
-            context=self._embedding_context(),
-            show_progress=False,
-        )
+        with self._inference_lock:
+            return image_embedding.embed_image_bytes_batched(
+                images=images,
+                context=self._embedding_context(),
+                show_progress=False,
+            )
 
     def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
         """Embed PIL images with Perception Encoder.
@@ -158,11 +164,12 @@ class PerceptionEncoderEmbedder(
         Returns:
             The embeddings and the indices of the inputs they cover.
         """
-        return image_embedding.embed_pil_images_batched(
-            images=images,
-            context=self._embedding_context(),
-            show_progress=False,
-        )
+        with self._inference_lock:
+            return image_embedding.embed_pil_images_batched(
+                images=images,
+                context=self._embedding_context(),
+                show_progress=False,
+            )
 
     def _embedding_context(self) -> EmbeddingContext:
         """Build the model-specific configuration for batched image embedding."""

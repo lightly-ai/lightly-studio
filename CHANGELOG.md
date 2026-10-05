@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix the GUI hanging on Apple Silicon when it embeds several search texts or images at the same time.
 - Disable the subpart diversity sampling strategy when no object detection or segmentation annotation sources exist in the collection.
 - Combine typicality and similarity computation and sampling into one backend request that continues if the frontend disconnects.
 - Fix the `Values` field in the distribution panel using a larger font than the other fields.

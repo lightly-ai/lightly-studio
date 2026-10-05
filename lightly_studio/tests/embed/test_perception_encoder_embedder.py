@@ -7,6 +7,7 @@ import pytest
 import torch
 from lightly_studio_serve.types import ImageCrop
 from PIL import Image
+from pytest_mock import MockerFixture
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.embed.perception_encoder_embedder import (
@@ -48,6 +49,20 @@ class TestPerceptionEncoderEmbedder:
         assert result.embeddings.shape == (0, 512)
         assert result.embeddings.dtype == np.float32
         assert result.kept_indices == []
+
+    def test_embed_text__holds_inference_lock(self, mocker: MockerFixture) -> None:
+        perception_encoder = PerceptionEncoderEmbedder()
+
+        def encode_text(tokens: torch.Tensor, **_: object) -> torch.Tensor:
+            assert perception_encoder._inference_lock.locked()
+            return torch.zeros((len(tokens), 512))
+
+        mocker.patch.object(perception_encoder._model, "encode_text", side_effect=encode_text)
+
+        result = perception_encoder.embed_text(texts=["a cat"])
+
+        assert result.embeddings.shape == (1, 512)
+        assert not perception_encoder._inference_lock.locked()
 
     def test_embed_images(self) -> None:
         perception_encoder = PerceptionEncoderEmbedder()

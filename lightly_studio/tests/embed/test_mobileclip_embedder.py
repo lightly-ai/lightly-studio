@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
 import torch
 from lightly_studio_serve.types import ImageCrop
 from PIL import Image
+from pytest_mock import MockerFixture
 
 from lightly_studio.embed.mobileclip_embedder import (
     EMBEDDING_DIMENSION,
@@ -112,6 +114,30 @@ class TestMobileCLIPEmbedder:
         assert result.embeddings.shape == (0, 512)
         assert result.embeddings.dtype == np.float32
         assert result.kept_indices == []
+
+    def test_embed_text__holds_inference_lock(self, mocker: MockerFixture) -> None:
+        mobileclip = MobileCLIPEmbedder()
+
+        def encode_text(tokens: torch.Tensor) -> torch.Tensor:
+            assert mobileclip._inference_lock.locked()
+            return torch.zeros((len(tokens), 512))
+
+        mocker.patch.object(mobileclip._model, "encode_text", side_effect=encode_text)
+
+        result = mobileclip.embed_text(texts=["a cat"])
+
+        assert result.embeddings.shape == (1, 512)
+        assert not mobileclip._inference_lock.locked()
+
+    def test_embed_text__concurrent_calls(self) -> None:
+        mobileclip = MobileCLIPEmbedder()
+        expected = mobileclip.embed_text(texts=["a cat"]).embeddings
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(lambda _: mobileclip.embed_text(texts=["a cat"]), range(4)))
+
+        for result in results:
+            assert np.allclose(result.embeddings, expected, atol=1e-5)
 
     def test_classification(self) -> None:
         """End-to-end test for embedding consistency.
