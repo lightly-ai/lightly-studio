@@ -11,7 +11,7 @@ interface UseCloudPointFrameReturn {
  * Fetches and merges cloud point frames across the requested channels.
  *
  * Each channel is fetched in parallel and the results are combined into a single
- * frame. If the frame cannot be loaded in `targetFrameId`, it is loaded in the sensor
+ * frame. If the frame cannot be loaded in `displayFrameId`, it is loaded in the sensor
  * frames instead, which the `frameId` of each merged channel shows. Accepts a getter (thunk) so the query stays reactive to parameter changes.
  *
  * @param getParams - Reactive getter for the dataset, recording, and channels to load.
@@ -21,9 +21,9 @@ export const useCloudPointFrame = (
     getParams: () => CloudPointFrameParams
 ): UseCloudPointFrameReturn => {
     const query = createQuery(() => {
-        const { datasetId, recordingId, channels, targetFrameId } = getParams();
+        const { datasetId, recordingId, channels, displayFrameId } = getParams();
         return {
-            queryKey: ['cloud-point-frame', datasetId, recordingId, channels, targetFrameId ?? ''],
+            queryKey: ['cloud-point-frame', datasetId, recordingId, channels, displayFrameId ?? ''],
             // Skip fetching until a dataset, recording, and at least one channel are known.
             enabled: Boolean(datasetId && recordingId && channels.length),
             // Preserve the mounted scene and its camera while the next tick is loading.
@@ -34,13 +34,13 @@ export const useCloudPointFrame = (
                         datasetId,
                         recordingId,
                         channels,
-                        targetFrameId,
+                        displayFrameId,
                         signal
                     });
                 } catch (error) {
                     // A tick without a transform to the target frame, e.g. a gap in `/tf`,
                     // still renders. Every channel falls back so the frames never mix.
-                    if (!targetFrameId || signal?.aborted) throw error;
+                    if (!displayFrameId || signal?.aborted) throw error;
                     return fetchMergedFrame({ datasetId, recordingId, channels, signal });
                 }
             }
@@ -58,7 +58,7 @@ async function fetchMergedFrame({
     datasetId,
     recordingId,
     channels,
-    targetFrameId,
+    displayFrameId,
     signal
 }: FetchMergedFrameParams): Promise<CloudPointFrame> {
     const [firstChannel, ...otherChannels] = channels;
@@ -68,11 +68,11 @@ async function fetchMergedFrame({
             datasetId,
             recordingId,
             channel: firstChannel,
-            targetFrameId,
+            displayFrameId,
             signal
         }),
         ...otherChannels.map((channel) =>
-            fetchCloudPointFrame({ datasetId, recordingId, channel, targetFrameId, signal })
+            fetchCloudPointFrame({ datasetId, recordingId, channel, displayFrameId, signal })
         )
     ]);
     return mergeCloudPointFrames(frames);

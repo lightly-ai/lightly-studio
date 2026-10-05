@@ -16,16 +16,16 @@
         /** Zero-based tick position to render frames for. */
         seqNumber: number;
         /** Frame the workspace requests cuboids in, so both share one tick-details query. */
-        targetFrameId?: string;
+        displayFrameId?: string;
     }
 
-    let { datasetId, sequenceId, seqNumber, targetFrameId }: Props = $props();
+    let { datasetId, sequenceId, seqNumber, displayFrameId }: Props = $props();
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
         getSequenceId: () => sequenceId,
         getSeqNumber: () => seqNumber,
-        getTargetFrameId: () => targetFrameId || undefined
+        getDisplayFrameId: () => displayFrameId || undefined
     });
     const recordingId = $derived(tickDetails.data?.recording_id);
     const cameraChannels: TickChannelView[] = $derived(

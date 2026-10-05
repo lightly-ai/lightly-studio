@@ -48,8 +48,8 @@ const { cloudState, tickDetailsParams } = vi.hoisted(() => ({
     cloudState: { data: undefined } as {
         data: { channels: Array<{ frameId: string }> } | undefined;
     },
-    tickDetailsParams: { getTargetFrameId: undefined } as {
-        getTargetFrameId?: () => string | undefined;
+    tickDetailsParams: { getDisplayFrameId: undefined } as {
+        getDisplayFrameId?: () => string | undefined;
     }
 }));
 
@@ -57,8 +57,8 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     useMcapSequenceSummary: () => ({ summary: summaryState, refetch })
 }));
 vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
-    useTickDetails: (params: { getTargetFrameId?: () => string | undefined }) => {
-        tickDetailsParams.getTargetFrameId = params.getTargetFrameId;
+    useTickDetails: (params: { getDisplayFrameId?: () => string | undefined }) => {
+        tickDetailsParams.getDisplayFrameId = params.getDisplayFrameId;
         return { tickDetails: { ...tickDetailsState, refetch: tickRefetch } };
     }
 }));
@@ -131,14 +131,14 @@ describe('PointCloudWorkspace', () => {
 
     it('requests the tick details in the selected reference frame', () => {
         createWorkspace();
-        expect(tickDetailsParams.getTargetFrameId?.()).toBeUndefined();
+        expect(tickDetailsParams.getDisplayFrameId?.()).toBeUndefined();
 
         summaryState.data = summaryWithFrames;
         const workspace = createWorkspace();
-        expect(tickDetailsParams.getTargetFrameId?.()).toBe('map');
+        expect(tickDetailsParams.getDisplayFrameId?.()).toBe('map');
 
         workspace.selectReferenceFrame('CABIN');
-        expect(tickDetailsParams.getTargetFrameId?.()).toBe('CABIN');
+        expect(tickDetailsParams.getDisplayFrameId?.()).toBe('CABIN');
     });
 
     it('resets the picked reference frame when the sequence changes', () => {

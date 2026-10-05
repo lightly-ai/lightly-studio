@@ -27,14 +27,14 @@ type CloudPointFrameParams = ReturnType<Parameters<typeof useCloudPointFrame>[0]
 function createTickDetails(
     getInputs: GetInputs,
     getCurrentTick: () => number,
-    getTargetFrameId: () => string
+    getDisplayFrameId: () => string
 ): TickDetails {
     return useTickDetails({
         getDatasetId: () => getInputs().datasetId,
         getSequenceId: () => getInputs().sequenceId,
         getSeqNumber: getCurrentTick,
         // The cuboids are mapped to the frame of the point clouds, so that the two align.
-        getTargetFrameId: () => getTargetFrameId() || undefined
+        getDisplayFrameId: () => getDisplayFrameId() || undefined
     }).tickDetails;
 }
 
@@ -61,7 +61,7 @@ function createCloudPointFrameParamsGetter(
     getInputs: GetInputs,
     tickDetails: TickDetails,
     summary: SequenceSummary,
-    getTargetFrameId: () => string
+    getDisplayFrameId: () => string
 ): () => CloudPointFrameParams {
     return () => ({
         datasetId: getInputs().datasetId,
@@ -71,7 +71,7 @@ function createCloudPointFrameParamsGetter(
             tickDetails.data,
             getInputs().selectedLidarChannels
         ),
-        targetFrameId: getTargetFrameId() || undefined
+        displayFrameId: getDisplayFrameId() || undefined
     });
 }
 

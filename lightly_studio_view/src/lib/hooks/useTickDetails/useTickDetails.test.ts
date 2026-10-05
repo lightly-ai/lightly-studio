@@ -48,7 +48,7 @@ describe('useTickDetails', () => {
         datasetId: string;
         sequenceId: string;
         seqNumber: number;
-        targetFrameId?: string;
+        displayFrameId?: string;
     }) => {
         let result: ReturnType<typeof useTickDetails> | undefined;
         render(UseTickDetailsHarness, {
@@ -89,7 +89,7 @@ describe('useTickDetails', () => {
             datasetId: 'dataset-1',
             sequenceId: 'sequence-1',
             seqNumber: 2,
-            targetFrameId: 'map'
+            displayFrameId: 'map'
         });
         const signal = new AbortController().signal;
 
@@ -107,7 +107,7 @@ describe('useTickDetails', () => {
             datasetId: 'dataset-1',
             sequenceId: 'sequence-1',
             seqNumber: 2,
-            targetFrameId: 'map'
+            displayFrameId: 'map'
         });
 
         expect(queryOptionsThunk().queryKey).toEqual([
@@ -120,7 +120,7 @@ describe('useTickDetails', () => {
             datasetId: 'dataset-1',
             sequenceId: 'sequence-1',
             seqNumber: 2,
-            targetFrameId: 'map'
+            displayFrameId: 'map'
         });
         vi.mocked(getTickDetails).mockRejectedValueOnce({
             detail: { type: 'transform_unavailable', message: 'No transform' }
@@ -136,7 +136,7 @@ describe('useTickDetails', () => {
             datasetId: 'dataset-1',
             sequenceId: 'sequence-1',
             seqNumber: 2,
-            targetFrameId: 'map'
+            displayFrameId: 'map'
         });
         vi.mocked(getTickDetails).mockRejectedValueOnce({ detail: 'Recording was not found.' });
 
@@ -151,7 +151,7 @@ describe('useTickDetails', () => {
             datasetId: 'dataset-1',
             sequenceId: 'sequence-1',
             seqNumber: 2,
-            targetFrameId: 'map'
+            displayFrameId: 'map'
         });
         const controller = new AbortController();
         controller.abort();
