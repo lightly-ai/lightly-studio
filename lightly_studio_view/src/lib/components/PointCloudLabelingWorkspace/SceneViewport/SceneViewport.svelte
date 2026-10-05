@@ -1,4 +1,5 @@
 <script lang="ts">
+    import SceneNavigationControls from './SceneNavigationControls.svelte';
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
@@ -93,5 +94,6 @@
             {onhover}
         />
     </Canvas>
+    <SceneNavigationControls />
     <CuboidTooltipOverlay {cursorX} {cursorY} {hoveredAnnotationId} {cuboids} {annotationClasses} />
 </div>
