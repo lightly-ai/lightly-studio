@@ -32,8 +32,7 @@ function dispatchSceneNavigation(detail: SceneNavigationEvent): void {
 export function listenToSceneNavigation(
     handler: (event: SceneNavigationEvent) => void
 ): () => void {
-    const listener = (event: Event) =>
-        handler((event as CustomEvent<SceneNavigationEvent>).detail);
+    const listener = (event: Event) => handler((event as CustomEvent<SceneNavigationEvent>).detail);
     window.addEventListener(SCENE_NAVIGATION_EVENT, listener);
     return () => window.removeEventListener(SCENE_NAVIGATION_EVENT, listener);
 }
