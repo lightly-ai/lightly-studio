@@ -2,10 +2,8 @@
     import { T, useThrelte } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
     import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-    import { untrack } from 'svelte';
+    import PointCloudPoints from './PointCloudPoints/PointCloudPoints.svelte';
     import * as THREE from 'three';
-    import { fitCameraToBounds } from './pointCloudCamera';
-    import { createPointCloudBuffer } from './pointCloudBuffer';
     import type { ColorMode } from './pointCloudUtils';
     import type { PointBatch } from './types';
 
@@ -26,8 +24,6 @@
     const { invalidate, renderer } = useThrelte();
     let cameraRef: THREE.PerspectiveCamera | undefined = $state();
     let controlsRef: ThreeOrbitControls | undefined = $state();
-    const pointCloudBuffer = createPointCloudBuffer();
-    let hasFitted = false;
 
     $effect(() => {
         const canvas = renderer.domElement;
@@ -38,36 +34,7 @@
 
         return () => {
             canvas.removeEventListener('contextmenu', suppress);
-            pointCloudBuffer.dispose();
         };
-    });
-    // Position effect: copy batch into shared buffers, update draw range and bounds.
-    // cameraRef and controlsRef are read in the tracked section so the effect
-    // retries the fit once both refs are bound; hasFitted is only set to true
-    // after the fit is actually performed.
-    $effect(() => {
-        const currentBatch = batch;
-        const camera = cameraRef;
-        const controls = controlsRef;
-        untrack(() => {
-            const bounds = pointCloudBuffer.updatePositions(currentBatch);
-            if (!hasFitted && bounds && camera && controls) {
-                fitCameraToBounds(camera, controls, bounds);
-                hasFitted = true;
-            }
-            invalidate();
-        });
-    });
-    // Color effect: rebuild colors when batch, colorMode, or intensityRange change.
-    $effect(() => {
-        const currentBatch = batch;
-        const mode = colorMode;
-        const range = intensityRange;
-        const currentColors = currentBatch.colors;
-        untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentColors);
-            invalidate();
-        });
     });
 </script>
 
@@ -96,6 +63,11 @@
 
 <T.AmbientLight intensity={1} />
 
-<T.Points geometry={pointCloudBuffer.geometry}>
-    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} />
-</T.Points>
+<PointCloudPoints
+    {batch}
+    {colorMode}
+    {pointSize}
+    {intensityRange}
+    camera={cameraRef}
+    controls={controlsRef}
+/>
