@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
@@ -29,6 +30,8 @@
         annotationClasses?: readonly AnnotationClass[];
         /** Bounds of the displayed point cloud. */
         pointCloudBounds?: Bounds3;
+        /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
+        fitKey?: string;
         /** Identity of the currently selected cuboid, or null. */
         selectedAnnotationId?: string | null;
         /** Identity of the currently hovered cuboid, or null. */
@@ -56,6 +59,7 @@
         cuboids = [],
         annotationClasses = [],
         pointCloudBounds = EMPTY_BOUNDS,
+        fitKey,
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
@@ -63,8 +67,26 @@
         onhover
     }: Props = $props();
 
+    // The ground plane keeps the bounds it was placed with, so it stays put while ticks change.
+    // It is placed again only when `fitKey` changes, e.g. for another coordinate frame.
+    let groundPlaneBounds = $state<Bounds3>(untrack(() => pointCloudBounds));
+    let groundPlaneKey = untrack(() => fitKey);
+    $effect(() => {
+        const key = fitKey;
+        const bounds = pointCloudBounds;
+        untrack(() => {
+            if (key === groundPlaneKey && !isEmptyBounds(groundPlaneBounds)) return;
+            groundPlaneKey = key;
+            groundPlaneBounds = bounds;
+        });
+    });
+
     let cursorX = $state(0);
     let cursorY = $state(0);
+
+    function isEmptyBounds(bounds: Bounds3): boolean {
+        return bounds.min.every((value, axis) => value === bounds.max[axis]);
+    }
 
     function handleMouseMove(event: MouseEvent) {
         const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -80,8 +102,8 @@
     onmousemove={handleMouseMove}
 >
     <Canvas>
-        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
-        <GroundPlane {pointCloudBounds} />
+        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} {fitKey} />
+        <GroundPlane pointCloudBounds={groundPlaneBounds} />
         <CuboidLayer
             {cuboids}
             {annotationClasses}

@@ -18,16 +18,18 @@
         pointSize?: number;
         /** Min/max clamp for intensity-based coloring. */
         intensityRange?: [number, number];
+        /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
+        fitKey?: string;
     }
 
-    let { batch, colorMode = 'none', pointSize = 2, intensityRange }: Props = $props();
+    let { batch, colorMode = 'none', pointSize = 2, intensityRange, fitKey = '' }: Props = $props();
 
     const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
     const { invalidate, renderer } = useThrelte();
     let cameraRef: THREE.PerspectiveCamera | undefined = $state();
     let controlsRef: ThreeOrbitControls | undefined = $state();
     const pointCloudBuffer = createPointCloudBuffer();
-    let hasFitted = false;
+    let fittedKey: string | undefined;
 
     $effect(() => {
         const canvas = renderer.domElement;
@@ -43,17 +45,18 @@
     });
     // Position effect: copy batch into shared buffers, update draw range and bounds.
     // cameraRef and controlsRef are read in the tracked section so the effect
-    // retries the fit once both refs are bound; hasFitted is only set to true
-    // after the fit is actually performed.
+    // retries the fit once both refs are bound; fittedKey is only set after the fit is actually
+    // performed. The camera is refitted when fitKey changes, since the cloud then moves.
     $effect(() => {
         const currentBatch = batch;
         const camera = cameraRef;
         const controls = controlsRef;
+        const currentFitKey = fitKey;
         untrack(() => {
             const bounds = pointCloudBuffer.updatePositions(currentBatch);
-            if (!hasFitted && bounds && camera && controls) {
+            if (fittedKey !== currentFitKey && bounds && camera && controls) {
                 fitCameraToBounds(camera, controls, bounds);
-                hasFitted = true;
+                fittedKey = currentFitKey;
             }
             invalidate();
         });
