@@ -1,4 +1,4 @@
-# QA Large-Scale Egocentric Video Data with EPIC-KITCHENS-100
+# QA Egocentric Video Data with Epic-Kitchens-100
 
 In this tutorial, we show how to do QA on a large egocentric video dataset with LightlyStudio. We use EPIC-KITCHENS-100: more than 37000 video clips of kitchen activities, each with a narration that describes the action in the clip.
 
@@ -13,6 +13,8 @@ We show how to:
 <video autoplay loop muted playsinline controls style="width: 100%;" onloadedmetadata="this.defaultPlaybackRate = 2; this.playbackRate = 2;">
   <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_overview_full.mp4" type="video/mp4">
 </video>
+
+We recorded the videos in this tutorial on a Linux server with an NVIDIA RTX 4090 GPU. The video above plays at 2x speed. For the processing times, see [Run the Loading Scripts](#run-the-loading-scripts).
 
 ## Understanding Different EpicKitchens Datasets
 
@@ -197,11 +199,21 @@ python lightly_studio_3_start_gui.py
 
 The first script creates the dataset and computes the embeddings for all clips with the large Perception Encoder model from `embedding_model.py`. This is the slowest step. The second script loads the annotations in bulk, which is much faster than adding them one-by-one. The third script registers the plugin from `caption_similarity_plugin.py` and starts the GUI, so that the plugin is available in the GUI. Run the first script only once, because it creates a new dataset. The data is stored in the `lightly_studio.db` file, so to restart the GUI later, run only `python lightly_studio_3_start_gui.py`.
 
+!!! note "Processing time"
+    On a Linux server with an NVIDIA RTX 4090 GPU, the first script takes about 3 hours 45 minutes for the 37455 clips:
+
+    - **Indexing**: about 31 minutes, at 20 clips per second
+    - **Embedding**: about 3 hours 15 minutes, at 3.21 clips per second with the large `PE-Core-L14-336` model
+
+    The default tiny model is faster, but gives less satisfactory results. For more information, see the note about the embedding model in [Get a Quick Overview](#get-a-quick-overview).
+
 ## Exploring EpicKitchens with LightlyStudio
 
 ### Get a Quick Overview
 
-The grid shows all 37455 clips with their narrations. Hover over a clip to play it, and double-click it to see all metadata from the CSV. LightlyStudio computes embeddings for all clips with the [Perception Encoder model](https://github.com/facebookresearch/perception_models). The embedding plot shows these embeddings in 2D, and similar clips form clusters. Lasso-select a cluster to see its clips in the grid and tag them. With text search, you can find clips with specific content: LightlyStudio compares the embedding of your text with the clip embeddings and shows a similarity score between 0 and 1 for each clip. The dataset is too large to look at each clip. To get a small, representative subset, go to Menu → Sampling and select 100 clips with the "Diversity" strategy.
+- **Grid**: Shows all 37455 clips with their narrations. Hover over a clip to play it. Double-click a clip to see all metadata from the CSV.
+- **Embedding plot**: Shows the clip embeddings from the [Perception Encoder model](https://github.com/facebookresearch/perception_models) in 2D. Similar clips form clusters. Lasso-select a cluster to see its clips in the grid and tag them.
+- **Text search**: Finds clips with specific content. LightlyStudio compares the embedding of your text with the clip embeddings and shows a similarity score between 0 and 1 for each clip.
 
 !!! note "Embedding model"
     By default, LightlyStudio embeds videos with the tiny `PE-Core-T16-384` variant of Perception Encoder. For this tutorial, we use the large `PE-Core-L14-336` variant, which the scripts load from `embedding_model.py`. It gives better results for the alignment score between narrations and videos, and for the other workflows that use embeddings. To learn how to use your own model, see [Using Your Own Embeddings](../core_concepts/embeddings.md#using-your-own-embeddings).
