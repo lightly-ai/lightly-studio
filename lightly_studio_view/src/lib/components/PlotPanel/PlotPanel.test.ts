@@ -1,6 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient } from '@tanstack/svelte-query';
+import { transferableAbortController } from 'node:util';
+import { client } from '$lib/api/lightly_studio_local/client.gen';
+import UseVideosHarness from '$lib/hooks/useVideos/UseVideosHarness.svelte';
+import type { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import PlotPanel from './PlotPanel.svelte';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { get, writable, type Writable } from 'svelte/store';
@@ -21,6 +26,9 @@ let videoFilterStore: Writable<{
         embedding_region?: { polygon: { x: number; y: number }[] };
     };
 } | null>;
+let actualVideoFilters: ReturnType<typeof useVideoFilters> | null = null;
+const originalClientConfig = client.getConfig();
+const originalAbortController = globalThis.AbortController;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
 let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
@@ -97,17 +105,21 @@ vi.mock('./usePlotData/usePlotData', () => ({
     }
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
-    useVideoFilters: () => ({
-        videoFilter: videoFilterStore,
-        updateSampleIds: vi.fn(),
-        updateEmbeddingRegion: (region: { polygon: { x: number; y: number }[] } | null) => {
-            mockUpdateEmbeddingRegion(region);
-            videoFilterStore.update((filter) => ({
-                ...filter,
-                sample_filter: { ...filter?.sample_filter, embedding_region: region ?? undefined }
-            }));
+    useVideoFilters: () =>
+        actualVideoFilters ?? {
+            videoFilter: videoFilterStore,
+            updateSampleIds: vi.fn(),
+            updateEmbeddingRegion: (region: { polygon: { x: number; y: number }[] } | null) => {
+                mockUpdateEmbeddingRegion(region);
+                videoFilterStore.update((filter) => ({
+                    ...filter,
+                    sample_filter: {
+                        ...filter?.sample_filter,
+                        embedding_region: region ?? undefined
+                    }
+                }));
+            }
         }
-    })
 }));
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({
@@ -152,6 +164,11 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
 });
 
 describe('PlotPanel.svelte', () => {
+    afterEach(() => {
+        client.setConfig({ ...originalClientConfig, fetch: originalClientConfig.fetch });
+        vi.stubGlobal('AbortController', originalAbortController);
+    });
+
     beforeAll(() => {
         Element.prototype.hasPointerCapture = vi.fn(() => false);
         Element.prototype.setPointerCapture = vi.fn();
@@ -171,6 +188,7 @@ describe('PlotPanel.svelte', () => {
         vi.resetAllMocks();
         vi.stubGlobal('ResizeObserver', ResizeObserverMock);
         routeState.id = IMAGES_ROUTE;
+        actualVideoFilters = null;
         clearAnnotationPlotSelection('test-collection-id');
         usePlotColorByType('test-collection-id').clearSelectedColorByType();
         rangeSelectionStore = writable(null);
@@ -296,6 +314,119 @@ describe('PlotPanel.svelte', () => {
         expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
         expect(mockUpdateSampleIds).not.toHaveBeenCalled();
         expect(usePlotDataSpy.mock.calls.at(-1)?.[0].highlightRegion).toEqual(polygon);
+    });
+
+    it('keeps the video lasso request small for a large selection', async () => {
+        routeState.id = VIDEOS_ROUTE;
+        // Node's Request requires a native AbortSignal rather than jsdom's signal.
+        vi.stubGlobal('AbortController', transferableAbortController().constructor);
+        const { useVideoFilters } = await vi.importActual<
+            typeof import('$lib/hooks/useVideoFilters/useVideoFilters')
+        >('$lib/hooks/useVideoFilters/useVideoFilters');
+        const videoFilters = useVideoFilters();
+        actualVideoFilters = videoFilters;
+        const requestBodies: string[] = [];
+        client.setConfig({
+            baseUrl: 'http://localhost:8001',
+            fetch: async (input) => {
+                const request = new Request(input);
+                expect(request.method).toBe('POST');
+                expect(new URL(request.url).pathname).toBe(
+                    '/api/collections/test-collection-id/video/'
+                );
+                requestBodies.push(await request.text());
+                return new Response(
+                    JSON.stringify({ data: [], total_count: 0, nextCursor: null }),
+                    {
+                        headers: { 'Content-Type': 'application/json' }
+                    }
+                );
+            }
+        });
+        const polygon = [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ];
+        const requestBodySizes: number[] = [];
+        let oldIdListRequestBody = '';
+        for (const selectionCount of [1, 5000]) {
+            videoFilters.updateFilterParams({ collection_id: 'test-collection-id' });
+            const selectedSampleIds = Array.from(
+                { length: selectionCount },
+                (_, index) => `video-${index}`
+            );
+            rangeSelectionStore = writable(polygon);
+            selectedSampleIdsStore = writable(selectedSampleIds);
+
+            const { unmount } = render(PlotPanel, {
+                props: { collectionId: 'test-collection-id' }
+            });
+            await fireEvent.mouseUp(window);
+
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false, gcTime: 0 } }
+            });
+            let requestError: unknown = null;
+            const videos = render(UseVideosHarness, {
+                queryClient,
+                onError: (error) => {
+                    requestError = error;
+                },
+                getParams: () => ({
+                    collection_id: 'test-collection-id',
+                    filter: get(videoFilters.videoFilter) ?? { filter_type: 'video' }
+                })
+            });
+            await waitFor(() => {
+                expect(requestError).toBeNull();
+                expect(requestBodies).toHaveLength(requestBodySizes.length + 1);
+            });
+            const requestBody = requestBodies[requestBodySizes.length];
+            const body = JSON.parse(requestBody);
+            expect(body.filter.filter_type).toBe('video');
+            expect(body.filter.sample_filter).toEqual({
+                embedding_region: { polygon }
+            });
+            requestBodySizes.push(new Blob([requestBody]).size);
+            oldIdListRequestBody = JSON.stringify({
+                ...body,
+                filter: { ...body.filter, sample_filter: { sample_ids: selectedSampleIds } }
+            });
+            videos.unmount();
+            queryClient.clear();
+            unmount();
+        }
+
+        expect(new Set(requestBodySizes).size).toBe(1);
+        expect(requestBodySizes[0]).toBeLessThan(new Blob([oldIdListRequestBody]).size / 10);
+        expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 5000);
+    });
+
+    it.each([
+        { selectedSampleIds: [], fulfillsFilter: [1, 1] },
+        { selectedSampleIds: ['video-1', 'video-2'], fulfillsFilter: [1, 1] }
+    ])('clears a video region when the lasso selects nothing or everything', async (selection) => {
+        routeState.id = VIDEOS_ROUTE;
+        videoFilterStore = writable({
+            sample_filter: { embedding_region: { polygon: [{ x: 0, y: 0 }] } }
+        });
+        rangeSelectionStore = writable([
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ]);
+        selectedSampleIdsStore = writable(selection.selectedSampleIds);
+        arrowDataStore = writable({ fulfils_filter: new Uint8Array(selection.fulfillsFilter) });
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await fireEvent.mouseUp(window);
+
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
     });
 
     it('should not clear embedding selection when base filters change', async () => {

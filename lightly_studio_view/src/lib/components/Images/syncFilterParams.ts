@@ -15,15 +15,16 @@ export const paramsWithoutExternalFilters = (params: ImagesInfiniteParams) => {
     };
 };
 
-// Merge the externally-set selection (sample_ids, embedding_region) and confusion cell from
-// the previous filter params into the new base params. The selection is always carried
-// forward; the confusion cell is only carried when the collection matches, because the cell
-// belongs to a specific evaluation run/collection and must be dropped when navigating to a
-// different collection to avoid wrongly filtering the new grid.
+// Merge externally-set selections from the previous filter params into the new base params.
+// These selections belong to a collection and must be dropped when navigating to another one.
 export const mergeExternalFilters = (
     baseParams: ImagesInfiniteParams,
     currentParams: ImagesInfiniteParams
 ): ImagesInfiniteParams => {
+    if (currentParams.collection_id !== baseParams.collection_id) {
+        return baseParams;
+    }
+
     let nextParams = baseParams;
 
     let currentSampleIds: string[] = [];
@@ -32,9 +33,7 @@ export const mergeExternalFilters = (
     if (currentParams.mode === 'normal') {
         currentSampleIds = currentParams.filters?.sample_ids ?? [];
         currentEmbeddingRegion = currentParams.filters?.embedding_region;
-        if (currentParams.collection_id === baseParams.collection_id) {
-            currentConfusionCell = currentParams.filters?.confusion_cell;
-        }
+        currentConfusionCell = currentParams.filters?.confusion_cell;
     }
 
     if (
