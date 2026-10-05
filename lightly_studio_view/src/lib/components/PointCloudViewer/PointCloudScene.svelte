@@ -59,9 +59,9 @@
         enableDamping
         screenSpacePanning={false}
         mouseButtons={{
-            LEFT: THREE.MOUSE.PAN,
+            LEFT: THREE.MOUSE.ROTATE,
             MIDDLE: THREE.MOUSE.DOLLY,
-            RIGHT: THREE.MOUSE.ROTATE
+            RIGHT: THREE.MOUSE.PAN
         }}
         touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
     />
