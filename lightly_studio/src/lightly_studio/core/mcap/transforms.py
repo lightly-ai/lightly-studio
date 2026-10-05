@@ -8,6 +8,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.spatial.transform import Rotation
 
 from lightly_studio.core.mcap import capture_time, message_fields
 from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
@@ -197,11 +198,47 @@ def to_matrix(transform: StaticTransform) -> NDArray[np.float64]:
     Returns:
         The 4x4 homogeneous matrix that maps points from the child frame to the parent
         frame.
+
+    Raises:
+        ValueError: If the quaternion has zero length.
     """
     matrix = np.eye(4, dtype=np.float64)
-    matrix[:3, :3] = _rotation_matrix(transform.rotation)
+    matrix[:3, :3] = Rotation.from_quat(quat=transform.rotation).as_matrix()
     matrix[:3, 3] = transform.translation
     return matrix
+
+
+def transform_pose(
+    matrix: NDArray[np.float64],
+    position: tuple[float, float, float],
+    rotation: tuple[float, float, float, float],
+) -> tuple[tuple[float, float, float], tuple[float, float, float, float]]:
+    """Maps a pose to another frame.
+
+    Args:
+        matrix: The 4x4 homogeneous transform that maps points from the frame of the
+            pose to the target frame, e.g. from `TransformTree.lookup`.
+        position: The position as (x, y, z) in meters.
+        rotation: The orientation as a quaternion (x, y, z, w).
+
+    Returns:
+        The position and the orientation in the target frame. The orientation is a
+        unit quaternion (x, y, z, w) with `w >= 0`.
+
+    Raises:
+        ValueError: If the quaternion has zero length.
+    """
+    mapped_position = matrix[:3, :3] @ np.asarray(position, dtype=np.float64) + matrix[:3, 3]
+    # Apply the cuboid rotation first, then the rotation of the frame change.
+    quaternion = (
+        Rotation.from_matrix(matrix=matrix[:3, :3]) * Rotation.from_quat(quat=rotation)
+    ).as_quat()
+    # A quaternion and its negation are the same rotation. Keep one of the two.
+    if quaternion[3] < 0.0:
+        quaternion = -quaternion
+    x, y, z = (float(value) for value in mapped_position)
+    qx, qy, qz, qw = (float(value) for value in quaternion)
+    return (x, y, z), (qx, qy, qz, qw)
 
 
 def _transform(decoded_transform: Any, log_time_ns: int) -> StaticTransform:
@@ -293,32 +330,4 @@ def _quaternion(decoded_quaternion: Any) -> tuple[float, float, float, float]:
         float(message_fields.require_field(decoded_quaternion, ("y",))),
         float(message_fields.require_field(decoded_quaternion, ("z",))),
         float(message_fields.require_field(decoded_quaternion, ("w",))),
-    )
-
-
-def _rotation_matrix(rotation: tuple[float, float, float, float]) -> NDArray[np.float64]:
-    """Returns the rotation matrix of a quaternion.
-
-    Args:
-        rotation: The rotation as a quaternion (x, y, z, w). Normalized before use, so
-            that a quaternion stored with limited precision still gives a rotation.
-
-    Returns:
-        The 3x3 rotation matrix.
-
-    Raises:
-        ValueError: If the quaternion has zero length.
-    """
-    quaternion = np.asarray(rotation, dtype=np.float64)
-    norm = float(np.linalg.norm(quaternion))
-    if norm == 0.0:
-        raise ValueError("A rotation quaternion (x, y, z, w) must not be all zeros.")
-    x, y, z, w = quaternion / norm
-    return np.array(
-        [
-            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
-        ],
-        dtype=np.float64,
     )

@@ -26,7 +26,7 @@ const defaultParams = () => ({
 });
 
 function getQueryOptions(
-    getParams: () => ReturnType<typeof defaultParams> & { targetFrameId?: string }
+    getParams: () => ReturnType<typeof defaultParams> & { displayFrameId?: string }
 ): QueryOptions {
     const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
     useCloudPointFrame(getParams);
@@ -77,7 +77,7 @@ describe('useCloudPointFrame', () => {
             datasetId: 'dataset-1',
             recordingId: 'recording-1',
             channel: { channelId: 1, timestampNs: '100' },
-            targetFrameId: undefined,
+            displayFrameId: undefined,
             signal
         });
         expect(mergeCloudPointFrames).toHaveBeenCalledWith([
@@ -90,25 +90,25 @@ describe('useCloudPointFrame', () => {
     it('fetches every channel in the target frame', async () => {
         vi.mocked(fetchCloudPointFrame).mockResolvedValue({ frameId: 'map' } as CloudPointFrame);
 
-        await getQueryOptions(() => ({ ...defaultParams(), targetFrameId: 'map' })).queryFn({});
+        await getQueryOptions(() => ({ ...defaultParams(), displayFrameId: 'map' })).queryFn({});
 
         expect(fetchCloudPointFrame).toHaveBeenCalledTimes(2);
         expect(
-            vi.mocked(fetchCloudPointFrame).mock.calls.map(([args]) => args.targetFrameId)
+            vi.mocked(fetchCloudPointFrame).mock.calls.map(([args]) => args.displayFrameId)
         ).toEqual(['map', 'map']);
     });
 
     it('falls back to the sensor frames when the target frame fails', async () => {
         const merged = { frameId: 'lidar-1,lidar-2' } as unknown as CloudPointFrame;
-        vi.mocked(fetchCloudPointFrame).mockImplementation(async ({ channel, targetFrameId }) => {
-            if (targetFrameId) throw new Error('Could not load point cloud (400).');
+        vi.mocked(fetchCloudPointFrame).mockImplementation(async ({ channel, displayFrameId }) => {
+            if (displayFrameId) throw new Error('Could not load point cloud (400).');
             return { frameId: `lidar-${channel.channelId}` } as CloudPointFrame;
         });
         vi.mocked(mergeCloudPointFrames).mockReturnValue(merged);
 
         const result = await getQueryOptions(() => ({
             ...defaultParams(),
-            targetFrameId: 'map'
+            displayFrameId: 'map'
         })).queryFn({});
 
         expect(result).toBe(merged);
