@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show the Rectangle and Lasso drag shortcuts in the embedding plot tool tooltips.
 - Show categorical metadata filters in the image sidebar with an optional field picker and expanded value lists.
 - Keep the query editor button enabled in the GUI. Clicking "Re-apply" refreshes the results with the current data.
+- Move the Tags, Metadata, and Embeddings docs pages under Workflows and add Enterprise sign-up and demo buttons to the docs landing page. The old URLs redirect.
 
 ### Deprecated
 
