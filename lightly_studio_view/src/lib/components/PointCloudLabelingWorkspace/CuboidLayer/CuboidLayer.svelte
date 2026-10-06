@@ -116,7 +116,7 @@
     {@const isHovered = hoveredAnnotationId === item.annotation.id}
     {@const color = highlightCuboidColor(base, isSelected, isHovered)}
     <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
-        <CuboidVisual {item} baseColor={base} edgeColor={color} onhit={onCuboidHit} onhoverenter={onCuboidHoverEnter} onhoverleave={onCuboidHoverLeave} />
+        <CuboidVisual {item} baseColor={base} edgeColor={color} {isHovered} {isSelected} onhit={onCuboidHit} onhoverenter={onCuboidHoverEnter} onhoverleave={onCuboidHoverLeave} />
         {#if isSelected}
             <CuboidGizmo />
         {/if}
