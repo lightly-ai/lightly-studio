@@ -126,7 +126,7 @@ def index_recordings(  # noqa: PLR0913
             except FileNotFoundError as exc:
                 logger.error("Cannot index '%s': the file does not exist.", mcap_path)
                 raise MissingInputFileError() from exc
-            except (McapAccessError, McapError, OSError) as exc:
+            except (McapAccessError, McapError) as exc:
                 # The report only counts the failure, so the reason is logged here.
                 logger.error("Cannot index '%s': %s", mcap_path, exc)
                 raise BrokenInputFileError() from exc
