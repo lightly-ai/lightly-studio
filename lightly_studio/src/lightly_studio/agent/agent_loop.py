@@ -72,9 +72,23 @@ provider.
 
 # How to turn a selection request into strategies and their strengths. The model reads it
 # together with the JSON schema of each strategy in run_selection.
-# TODO(human): Write the playbook below, one "- " line per kind of selection request.
 _SELECTION_PLAYBOOK = """\
 Selection playbook:
+- When the user gives strategies or strengths, use them as given.
+- "Diverse", "informative" or "to label first": diversity, strength 1.
+- "Representative" or "typical": weights on typicality, strength 1. For "diverse but \
+representative", use diversity 1 and weights on typicality 1.
+- "Outliers", "edge cases" or "unusual": weights on typicality, strength -1, and diversity 1.
+- "Without duplicates": deduplication. When the user gives no distance, use 0.1 and say so.
+- "Like these samples" or "more of these": tag the samples, then similarity with that query \
+tag, strength 2, and diversity 1 so that the selection does not repeat one sample.
+- "Balanced over the classes" or "more of the rare classes": balance with "uniform", or with \
+the shares that the user gives, strength 2, and diversity 1.
+- "Balanced over" a metadata key, or shares for metadata values: one metadata_balance per \
+key, strength 3, and diversity 1. A strength of 2 against diversity 1 can miss the target.
+- "Diverse objects" or "focus on the objects": subpart_diversity, strength 1.
+- When an achieved distribution misses its target by more than 0.1 and the user gave no \
+strengths, tell the user and offer to run again with a higher balance strength.
 """
 
 
