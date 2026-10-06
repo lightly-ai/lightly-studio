@@ -127,7 +127,12 @@ def add_labels_from_folder(
     suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
     annotation_source: str = add_labels.DEFAULT_ANNOTATION_SOURCE,
 ) -> None:
-    """Store cuboids from annotation MCAPs in a folder on indexed sequences."""
+    """Store cuboids from annotation MCAPs in a folder on indexed sequences.
+
+    A file that cannot be used is skipped and the reason is logged. The reasons are
+    a missing or ambiguous recording, a file that is not a readable MCAP, a missing
+    topic, and labels that do not join the ticks.
+    """
     by_uri, by_file_name = recording_index(
         session=dataset.group_dataset.session, dataset_id=dataset.dataset_id
     )
@@ -142,8 +147,15 @@ def add_labels_from_folder(
             dataset=dataset, annotation_source=annotation_source
         ),
     )
+    if not by_uri:
+        logger.warning("Dataset '%s' has no indexed recordings to add labels to.", dataset.name)
+    annotation_uris = annotation_mcap_uris(path=str(path), suffix=suffix)
+    if not annotation_uris:
+        logger.warning(
+            "No annotation MCAPs named '<recording>%s.mcap' found under '%s'.", suffix, path
+        )
     report = FileOutcomeReport()
-    for annotation_uri in annotation_mcap_uris(path=str(path), suffix=suffix):
+    for annotation_uri in annotation_uris:
         with report.track(annotation_uri):
             _add_labels_from_file(context=context, annotation_uri=annotation_uri)
     report.log_summary()
@@ -173,9 +185,12 @@ def _add_labels_from_file(context: _LabelingContext, annotation_uri: str) -> Non
         by_file_name=context.by_file_name,
     )
     if sequence_ref.sample_id in context.labeled_sequence_ids:
-        raise AlreadyPresentInputFileError(
-            f"Sequence already has annotation source '{context.annotation_source}'."
+        logger.info(
+            "Skipping '%s': the sequence already has annotation source '%s'.",
+            annotation_uri,
+            context.annotation_source,
         )
+        raise AlreadyPresentInputFileError()
     sequence = McapSequence(
         session=context.dataset.group_dataset.session,
         sample_id=sequence_ref.sample_id,
@@ -192,8 +207,11 @@ def _add_labels_from_file(context: _LabelingContext, annotation_uri: str) -> Non
             messages=messages,
             annotation_source=context.annotation_source,
         )
-    except (McapAccessError, McapError, ValueError) as error:
-        raise BrokenInputFileError(
-            f"Cannot add annotations from '{annotation_uri}': {error}"
-        ) from error
+    except FileNotFoundError as error:
+        logger.error("Cannot add annotations from '%s': the file does not exist.", annotation_uri)
+        raise MissingInputFileError() from error
+    except (McapAccessError, McapError, OSError, ValueError) as error:
+        # The report only counts the failure, so the reason is logged here.
+        logger.error("Cannot add annotations from '%s': %s", annotation_uri, error)
+        raise BrokenInputFileError() from error
     context.labeled_sequence_ids.add(sequence_ref.sample_id)

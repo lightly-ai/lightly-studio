@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.file_outcome_report import MissingInputFileError
@@ -119,6 +120,76 @@ def test_add_labels_from_folder__skips_a_second_call(
     dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
     dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
     assert len(_cuboids(group_ids)) == 1
+
+
+def test_add_labels_from_folder__logs_unknown_topic(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset, group_ids = _index(tmp_path)
+    _write_labels(tmp_path / "recording.mcap")
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/wrong_topic")
+
+    assert "Topic '/wrong_topic' is not in annotation MCAP" in caplog.text
+    assert "SceneUpdate topics in the file: /scene_update" in caplog.text
+    assert _cuboids(group_ids) == []
+
+
+def test_add_labels_from_folder__warns_when_dataset_has_no_recordings(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
+
+    assert "Dataset 'perception' has no indexed recordings to add labels to." in caplog.text
+
+
+def test_add_labels_from_folder__warns_without_annotation_files(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset, _ = _index(tmp_path)
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
+
+    assert "No annotation MCAPs named '<recording>_labeled.mcap'" in caplog.text
+
+
+def test_add_labels_from_folder__logs_file_that_is_not_an_mcap(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset, _ = _index(tmp_path)
+    (tmp_path / "recording_labeled.mcap").write_text("not an mcap")
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
+
+    assert "Cannot add annotations from" in caplog.text
+
+
+def test_add_labels_from_folder__logs_missing_annotation_file(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+) -> None:
+    dataset, _ = _index(tmp_path)
+    missing = annotation_mcap.annotation_mcap_uri(recording_uri=str(tmp_path / "recording.mcap"))
+    mocker.patch(
+        "lightly_studio.core.mcap.folder_labels.annotation_mcap_uris",
+        return_value=[missing],
+    )
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
+
+    assert f"Cannot add annotations from '{missing}': the file does not exist." in caplog.text
 
 
 def _index(tmp_path: Path) -> tuple[McapDataset, list[UUID]]:
