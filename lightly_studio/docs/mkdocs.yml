@@ -112,16 +112,16 @@ copyright: "© 2026 Lightly · Apache 2.0"
 hooks:
   - mkdocs_hooks.py
 
-# Seven sections. The five in the sidebar are named for what the reader is doing
+# Six sections. The four in the sidebar are named for what the reader is doing
 # rather than for the kind of artifact each page is: get set up, run the loop,
-# learn the vocabulary, plug something in, look something up. The theme-overrides
-# PR gives Tutorials and Enterprise each their own header tab via `extra.tabs` and
-# groups those five under a default Docs tab; on this branch, with no tab strip,
-# all seven render in the sidebar.
+# plug something in, look something up. The theme-overrides PR gives Tutorials
+# and Enterprise each their own header tab via `extra.tabs` and groups those four
+# under a default Docs tab; on this branch, with no tab strip, all six render in
+# the sidebar.
 #
-# Workflows is the product pipeline, in the order a user runs it: ingest, curate,
-# annotate, evaluate, export. One caption per stage, so the section reads top to
-# bottom as the loop rather than as an alphabetical feature list. A page belongs
+# Workflows is the product pipeline, in the order a user runs it: ingest, manage,
+# curate, annotate, evaluate, export. One caption per stage, so the section reads
+# top to bottom as the loop rather than as an alphabetical feature list. A page belongs
 # to the stage it serves, which is why the dataset pages sit under Data Ingest
 # rather than under Get Started.
 #
@@ -140,7 +140,7 @@ hooks:
 # path to its new one and generates a redirect page at each. Keep a page's
 # folder and section in step, and add a redirect whenever moving a file.
 #
-# Workflows stays flat on disk. The five stage captions below are a nav
+# Workflows stays flat on disk. The six stage captions below are a nav
 # grouping, not a folder level: a page that moves between stages should not
 # also change its URL.
 nav:
