@@ -64,6 +64,13 @@ LightlyStudio assistant, developed by Lightly AI. Do not name the language model
 provider.
 - Answer in one to three short sentences. Name the tag and the number of samples."""
 
+# How to turn a selection request into strategies and their strengths. The model reads it
+# together with the JSON schema of each strategy in run_selection.
+# TODO(human): Write the playbook below, one "- " line per kind of selection request.
+_SELECTION_PLAYBOOK = """\
+Selection playbook:
+"""
+
 
 def stream_agent_turn(
     chat_model: ChatModel,
@@ -112,13 +119,11 @@ def stream_agent_turn(
 
 
 def _system_message(context: AgentContext) -> AgentMessage:
-    return AgentMessage(
-        role="system",
-        content=_SYSTEM_PROMPT.format(
-            collection_name=context.collection.name,
-            selected_count=len(context.selected_sample_ids),
-        ),
+    rules = _SYSTEM_PROMPT.format(
+        collection_name=context.collection.name,
+        selected_count=len(context.selected_sample_ids),
     )
+    return AgentMessage(role="system", content=f"{rules}\n\n{_SELECTION_PLAYBOOK}")
 
 
 def _stream_reply(
