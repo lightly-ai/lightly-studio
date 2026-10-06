@@ -19,7 +19,8 @@ const TEST_BASE_URL = 'http://api.test';
 const defaultProps = {
     datasetId: 'dataset-1',
     sequenceId: 'sequence-1',
-    seqNumber: 0
+    seqNumber: 0,
+    selectedChannelIds: [1, 2]
 };
 
 const tickDetails: TickDetailView = {
@@ -77,6 +78,22 @@ describe('CameraProjectionStrip', () => {
             'src',
             `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=1&keyframe_timestamp_ns=1500`
         );
+    });
+
+    it('renders only the selected camera channels', () => {
+        tickDetailsResult.data = {
+            ...tickDetails,
+            camera_channels: {
+                ...tickDetails.camera_channels,
+                rear: { ...tickDetails.camera_channels.rear, keyframe_log_time_ns: '2500' }
+            }
+        };
+        render(CameraProjectionStrip, {
+            props: { ...defaultProps, selectedChannelIds: [1] }
+        });
+
+        expect(screen.getByRole('img', { name: 'front' })).toBeInTheDocument();
+        expect(screen.queryByRole('img', { name: 'rear' })).not.toBeInTheDocument();
     });
 
     it('renders no frames while the tick details are still loading', () => {

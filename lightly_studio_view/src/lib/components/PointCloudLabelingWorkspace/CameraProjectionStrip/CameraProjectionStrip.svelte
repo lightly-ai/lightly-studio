@@ -17,9 +17,11 @@
         seqNumber: number;
         /** Frame the workspace requests cuboids in, so both share one tick-details query. */
         displayFrameId?: string;
+        /** Camera channel IDs currently shown in the projection strip. */
+        selectedChannelIds: number[];
     }
 
-    let { datasetId, sequenceId, seqNumber, displayFrameId }: Props = $props();
+    let { datasetId, sequenceId, seqNumber, displayFrameId, selectedChannelIds }: Props = $props();
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
@@ -29,7 +31,11 @@
     });
     const recordingId = $derived(tickDetails.data?.recording_id);
     const cameraChannels: TickChannelView[] = $derived(
-        tickDetails.data?.camera_channels ? Object.values(tickDetails.data.camera_channels) : []
+        tickDetails.data?.camera_channels
+            ? Object.values(tickDetails.data.camera_channels).filter((channel) =>
+                  selectedChannelIds.includes(channel.channel_id)
+              )
+            : []
     );
 </script>
 

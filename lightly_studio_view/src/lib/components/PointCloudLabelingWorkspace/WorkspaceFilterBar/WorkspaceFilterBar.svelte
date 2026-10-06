@@ -37,6 +37,12 @@
 
         /** Toggles a camera channel on or off by its `channel_id`. */
         onToggleCameraChannel: (channelId: number) => void;
+
+        /** Replaces the selected LiDAR channels. */
+        onSetLidarChannels: (channelIds: number[]) => void;
+
+        /** Replaces the selected camera channels. */
+        onSetCameraChannels: (channelIds: number[]) => void;
     }
 
     let {
@@ -51,7 +57,9 @@
         colorMode,
         onColorModeChange,
         onToggleLidarChannel,
-        onToggleCameraChannel
+        onToggleCameraChannel,
+        onSetLidarChannels,
+        onSetCameraChannels
     }: Props = $props();
 
     const frameItems = $derived(
@@ -97,6 +105,7 @@
         channels={lidarChannels}
         selectedChannels={selectedLidarChannels}
         onToggleChannel={onToggleLidarChannel}
+        onSetChannels={onSetLidarChannels}
         testId="workspace-lidar-select"
     />
     <WorkspaceChannelSelect
@@ -104,6 +113,7 @@
         channels={cameraChannels}
         selectedChannels={selectedCameraChannels}
         onToggleChannel={onToggleCameraChannel}
+        onSetChannels={onSetCameraChannels}
         testId="workspace-camera-select"
     />
     <Select

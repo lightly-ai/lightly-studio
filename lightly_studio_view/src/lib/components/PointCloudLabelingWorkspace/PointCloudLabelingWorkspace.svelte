@@ -59,7 +59,7 @@
     }: Props = $props();
 
     let selectedLidarChannels = $state<number[] | null>(null);
-    let selectedCameraChannels = $state<number[]>([]);
+    let selectedCameraChannels = $state<number[] | null>(null);
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
 
     const workspace = createPointCloudWorkspaceContext(() => ({
@@ -142,6 +142,7 @@
     $effect(() => {
         if (!datasetId || !sequenceId) return;
         selectedLidarChannels = null;
+        selectedCameraChannels = null;
     });
 
     $effect(() => {
@@ -170,7 +171,8 @@
         {cameraChannels}
         selectedLidarChannels={selectedLidarChannels ??
             lidarChannels.map((channel) => channel.channel_id)}
-        {selectedCameraChannels}
+        selectedCameraChannels={selectedCameraChannels ??
+            cameraChannels.map((channel) => channel.channel_id)}
         colorMode={displayedColorMode}
         onColorModeChange={(mode) => (selectedColorMode = mode)}
         onToggleLidarChannel={(channelId) =>
@@ -179,7 +181,12 @@
                 channelId
             ))}
         onToggleCameraChannel={(channelId) =>
-            (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
+            (selectedCameraChannels = toggleChannel(
+                selectedCameraChannels ?? cameraChannels.map((channel) => channel.channel_id),
+                channelId
+            ))}
+        onSetLidarChannels={(channelIds) => (selectedLidarChannels = channelIds)}
+        onSetCameraChannels={(channelIds) => (selectedCameraChannels = channelIds)}
     />
     <div class="flex min-h-0 flex-1">
         {#if workspace.status === 'unsupported' || workspace.status === 'error'}
@@ -230,6 +237,8 @@
                                 {sequenceId}
                                 seqNumber={workspace.currentTick}
                                 displayFrameId={workspace.referenceFrameId}
+                                selectedChannelIds={selectedCameraChannels ??
+                                    cameraChannels.map((channel) => channel.channel_id)}
                             />
                         </Pane>
                         <PaneResizer
