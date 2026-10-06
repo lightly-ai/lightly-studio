@@ -17,7 +17,7 @@ Quick reference for the terms and abbreviations used throughout the LightlyStudi
 | Caption | A text description associated with a sample, for example as training data for a vision-language model. See [Captions](workflows/captions.md). |
 | Dataset | A collection of samples managed together, including their annotations, captions, embeddings, metadata, and tags. A dataset can be an image dataset or a video dataset. |
 | Dataset distribution | A summary of how annotations or metadata values occur across the current view. See [Dataset Distributions](workflows/dataset_distributions.md). |
-| Embedding plot | An interactive 2D projection of embedding space where each point represents a sample or annotation. See [Embeddings](core_concepts/embeddings.md). |
+| Embedding plot | An interactive 2D projection of embedding space where each point represents a sample or annotation. See [Embeddings](workflows/embeddings.md). |
 | Evaluation run | A saved comparison between a ground-truth and a prediction annotation source. Stores configuration, results, a confusion matrix, and per-sample metrics. See [Model Evaluation](workflows/evaluation.md). |
 | Export | A copy of dataset content saved in a standard format (such as COCO or YOLO) for use outside LightlyStudio. See [Export](workflows/export.md). |
 | Frame | A still image extracted from a video. LightlyStudio retains its frame number, timestamp, and parent video. Each frame is a sample. See [Video Dataset](workflows/video_dataset.md#frame-grid-view). |
@@ -29,6 +29,6 @@ Quick reference for the terms and abbreviations used throughout the LightlyStudi
 | Sample | An individual data item — an image, a video, or an extracted video frame. Samples are the basic unit of a dataset and can carry annotations, captions, embeddings, metadata, and tags. |
 | Sampling | Algorithmic selection of a smaller, more useful subset from a dataset. The result is stored as a tag. See [Sampling](workflows/sampling.md). |
 | Similarity search | Embedding-based search that ranks samples by visual or semantic similarity to a given input in embedding space. See [Search in the GUI](workflows/search_and_filter.md#search-in-gui). |
-| Tag | A named marker for organizing samples into reusable groups, such as `reviewed` or `train`. Sampling results are saved as tags. Compare with annotation source, which groups annotations rather than samples. See [Tags](core_concepts/tags.md). |
+| Tag | A named marker for organizing samples into reusable groups, such as `reviewed` or `train`. Sampling results are saved as tags. Compare with annotation source, which groups annotations rather than samples. See [Tags](workflows/tags.md). |
 | Video dataset | A dataset whose primary samples are videos. Supports frame extraction and frame-level annotations. See [Video Dataset](workflows/video_dataset.md). |
 | View | A filtered or sorted perspective on a dataset that shows a subset of its samples without modifying the underlying data. Filters and queries produce views. |

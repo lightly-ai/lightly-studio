@@ -125,12 +125,6 @@ hooks:
 # to the stage it serves, which is why the dataset pages sit under Data Ingest
 # rather than under Get Started.
 #
-# Core Concepts sits after Workflows, not inside Get Started. Tags and Metadata
-# are reached for mid-task — tracking curation progress, driving filters — not on
-# a first read, so a get-set-up caption did not describe them. The order is
-# FiftyOne's, whose nav this one otherwise follows: land, get running, see the
-# pipeline, then go deeper.
-#
 # Every other section keeps a single grouping level, and only where a run of
 # pages needs one — Data Ingest and the rest of the stages, and Python API. The
 # tree before last put a grouping level under every section ("Data Types",
@@ -142,7 +136,7 @@ hooks:
 # sections of an older nav (`concepts_and_tools/`, `dataset_setup/`), which
 # outlived those sections; `plugins.md` was still served from a "concepts and
 # tools" URL while the sidebar filed it under Ecosystem. Moving the pages
-# changed 17 published URLs, so `redirects.redirect_maps` below maps every old
+# changed published URLs, so `redirects.redirect_maps` below maps every old
 # path to its new one and generates a redirect page at each. Keep a page's
 # folder and section in step, and add a redirect whenever moving a file.
 #
@@ -158,11 +152,15 @@ nav:
     - Data Ingest:
       - Image Dataset: workflows/image_dataset.md
       - Video Dataset: workflows/video_dataset.md
+    - Data Management:
+      - Tags: workflows/tags.md
+      - Metadata: workflows/metadata.md
     - Curate:
       - Search and Filter: workflows/search_and_filter.md
       - Lightly Query Language: workflows/lightly_query_language.md
       - Dataset Distributions: workflows/dataset_distributions.md
       - Sampling: workflows/sampling.md
+      - Embeddings: workflows/embeddings.md
     - Annotate:
       - Create and Edit Annotations: workflows/annotations.md
       - Find Wrong Annotations: workflows/annotation_qa.md
@@ -171,10 +169,6 @@ nav:
       - Model Evaluation: workflows/evaluation.md
     - Export and Train:
       - Export: workflows/export.md
-  - Core Concepts:
-    - Tags: core_concepts/tags.md
-    - Metadata: core_concepts/metadata.md
-    - Embeddings: core_concepts/embeddings.md
   - Ecosystem:
     - Plugins: ecosystem/plugins.md
     - Cloud Storage: ecosystem/cloud_storage.md
@@ -249,10 +243,13 @@ plugins:
         concepts_and_tools/captions.md: workflows/captions.md
         concepts_and_tools/evaluation.md: workflows/evaluation.md
         concepts_and_tools/export.md: workflows/export.md
-        concepts_and_tools/tags.md: core_concepts/tags.md
-        concepts_and_tools/metadata.md: core_concepts/metadata.md
-        concepts_and_tools/embeddings.md: core_concepts/embeddings.md
+        concepts_and_tools/tags.md: workflows/tags.md
+        concepts_and_tools/metadata.md: workflows/metadata.md
+        concepts_and_tools/embeddings.md: workflows/embeddings.md
         concepts_and_tools/plugins.md: ecosystem/plugins.md
+        core_concepts/tags.md: workflows/tags.md
+        core_concepts/metadata.md: workflows/metadata.md
+        core_concepts/embeddings.md: workflows/embeddings.md
   # Generates llms.txt and per-page .md files for AI agent discoverability.
   # Keep sections in sync with nav when adding or removing pages.
   - llmstxt:
@@ -269,19 +266,18 @@ plugins:
         Workflows:
           - workflows/image_dataset.md
           - workflows/video_dataset.md
+          - workflows/tags.md
+          - workflows/metadata.md
           - workflows/search_and_filter.md
           - workflows/lightly_query_language.md
           - workflows/dataset_distributions.md
           - workflows/sampling.md
+          - workflows/embeddings.md
           - workflows/annotations.md
           - workflows/annotation_qa.md
           - workflows/captions.md
           - workflows/evaluation.md
           - workflows/export.md
-        Core Concepts:
-          - core_concepts/tags.md
-          - core_concepts/metadata.md
-          - core_concepts/embeddings.md
         Ecosystem:
           - ecosystem/plugins.md
           - ecosystem/cloud_storage.md
@@ -370,7 +366,6 @@ extra:
       sections:
         - Get Started
         - Workflows
-        - Core Concepts
         - Ecosystem
         - Resources
     - name: Tutorials
