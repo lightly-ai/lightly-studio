@@ -20,6 +20,10 @@ const defaultProps = {
     datasetId: 'dataset-1',
     sequenceId: 'sequence-1',
     seqNumber: 0,
+    cameraChannels: [
+        { channel_id: 1, group_component_name: 'front', group_component_index: 0 },
+        { channel_id: 2, group_component_name: 'rear', group_component_index: 1 }
+    ],
     selectedChannelIds: [1, 2]
 };
 
@@ -62,12 +66,13 @@ describe('CameraProjectionStrip', () => {
         tickDetailsResult.data = undefined;
     });
 
-    it('renders a frame only for channels that have a keyframe locator for the tick', () => {
+    it('keeps every selected summary channel visible when a tick has no frame', () => {
         tickDetailsResult.data = tickDetails;
         render(CameraProjectionStrip, { props: defaultProps });
 
         expect(screen.getByRole('img', { name: 'front' })).toBeInTheDocument();
         expect(screen.queryByRole('img', { name: 'rear' })).not.toBeInTheDocument();
+        expect(screen.getByText('rear')).toBeInTheDocument();
     });
 
     it('seeks frames by their keyframe timestamp', () => {
@@ -101,5 +106,7 @@ describe('CameraProjectionStrip', () => {
 
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
+        expect(screen.getByText('front')).toBeInTheDocument();
+        expect(screen.getByText('rear')).toBeInTheDocument();
     });
 });

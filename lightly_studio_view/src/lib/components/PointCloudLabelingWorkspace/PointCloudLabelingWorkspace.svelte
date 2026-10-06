@@ -224,6 +224,7 @@
                             <CameraProjectionStrip
                                 {datasetId}
                                 {sequenceId}
+                                cameraChannels={workspace.cameraChannels}
                                 seqNumber={workspace.currentTick}
                                 displayFrameId={workspace.referenceFrameId}
                                 selectedChannelIds={cameraSelection.selectedChannelIds}

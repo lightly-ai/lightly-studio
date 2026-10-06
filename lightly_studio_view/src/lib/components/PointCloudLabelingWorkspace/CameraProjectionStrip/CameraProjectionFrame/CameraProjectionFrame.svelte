@@ -11,7 +11,7 @@
         /** Dataset the recording belongs to. */
         datasetId: string;
         /** Recording that owns the frame. */
-        recordingId: string;
+        recordingId?: string;
         /** MCAP channel to render. */
         channelId: number;
         /** Frame timestamp in nanoseconds, as a string to preserve full precision. */
@@ -23,7 +23,9 @@
     let { datasetId, recordingId, channelId, timestampNs, label }: Props = $props();
 
     const frameUrl = $derived(
-        timestampNs ? getCameraFrameUrl({ datasetId, recordingId, channelId, timestampNs }) : null
+        recordingId && timestampNs
+            ? getCameraFrameUrl({ datasetId, recordingId, channelId, timestampNs })
+            : null
     );
 
     let failedFrameUrl = $state<string | null>(null);
