@@ -6,6 +6,7 @@
         SampleAnnotationSegmentationRLE
     } from '$lib/components';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/hooks/useGlobalStorage';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { Annotation } from '$lib/services/types';
     import type { BoundingBox } from '$lib/types';
@@ -27,7 +28,8 @@
         prerenderedDataUrl,
         prerenderedHeight,
         colorBySource,
-        isSelectable = false
+        isSelectable = false,
+        maskOpacity = IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -46,6 +48,8 @@
         // Renders a click target shaped like the mask when its bounding box is hidden.
         // Only set it inside a selectable parent, so other overlays stay click-through.
         isSelectable?: boolean;
+        // Opacity of the segmentation mask before the custom label alpha is applied.
+        maskOpacity?: number;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -87,7 +91,7 @@
         }
 
         const alpha = $customLabelColorsStore[colorLabel]?.alpha ?? 1.0;
-        return alpha * 0.6;
+        return alpha * maskOpacity;
     });
 
     // Do not fill the bounding box if the annotation contains a segmentation mask.

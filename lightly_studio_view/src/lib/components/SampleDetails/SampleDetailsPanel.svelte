@@ -73,6 +73,7 @@
         lastAnnotationBrushSize,
         imageBrightness,
         imageContrast,
+        segmentationMaskOpacity,
         toggleSampleAnnotationCropSelection
     } = useGlobalStorage();
 
@@ -249,6 +250,7 @@
                 <ImageAdjustments
                     bind:brightness={$imageBrightness}
                     bind:contrast={$imageContrast}
+                    bind:maskOpacity={$segmentationMaskOpacity}
                 />
             {/if}
         </div>

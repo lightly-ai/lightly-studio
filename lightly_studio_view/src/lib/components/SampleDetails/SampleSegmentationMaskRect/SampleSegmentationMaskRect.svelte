@@ -16,7 +16,8 @@
         useAnnotationLabels,
         useAnnotation,
         useAnnotationLabelContext,
-        useDeleteAnnotation
+        useDeleteAnnotation,
+        useGlobalStorage
     } from '$lib/hooks';
     import { page } from '$app/state';
     import { usePostHog } from '$lib/hooks';
@@ -61,6 +62,7 @@
     } = useAnnotationLabelContext();
 
     const { trackEvent } = usePostHog();
+    const { segmentationMaskOpacity } = useGlobalStorage();
     let drawStartFired = false;
 
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
@@ -281,7 +283,7 @@
         bind:this={previewCanvas}
         width={sample.width}
         height={sample.height}
-        style="width: 100%; height: 100%; pointer-events: none; opacity: 0.85;"
+        style="width: 100%; height: 100%; pointer-events: none; opacity: {$segmentationMaskOpacity};"
     ></canvas>
 </foreignObject>
 <SampleAnnotationRect
