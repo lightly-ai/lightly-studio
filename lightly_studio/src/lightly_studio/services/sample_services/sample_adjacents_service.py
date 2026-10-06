@@ -21,6 +21,7 @@ from lightly_studio.models.sort import AdjacentSortExpr, SortFieldSource
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
     video_frame_resolver,
     video_resolver,
 )
@@ -195,6 +196,32 @@ def get_adjacent_samples(
                 annotation_sort_by=request.annotation_sort_by,
             ),
         )
+    if request.sample_type == SampleType.SEQUENCE:
+        return _get_adjacent_sequences(session=session, sample_id=sample_id, request=request)
     raise NotImplementedError(
         f"Adjacent samples retrieval is not implemented for sample type: {request.sample_type}"
+    )
+
+
+def _get_adjacent_sequences(
+    session: Session, sample_id: UUID, request: AdjacentRequest
+) -> AdjacentResultView | None:
+    """Get adjacent MCAP sequences, rejecting the options the sequences grid does not have.
+
+    Raises:
+        ValueError: If the request has filters, a sort or a text embedding.
+    """
+    if (
+        request.filters is not None
+        or request.sort_by is not None
+        or request.text_embedding is not None
+    ):
+        raise ValueError(
+            "Filters, sorting and text embeddings are not supported"
+            f" for sample type '{request.sample_type.value}'."
+        )
+    return mcap_group_sequence_resolver.get_adjacent_sequences(
+        session=session,
+        sample_id=sample_id,
+        collection_id=request.collection_id,
     )

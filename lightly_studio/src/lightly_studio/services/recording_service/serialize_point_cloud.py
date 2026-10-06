@@ -33,7 +33,7 @@ def serialize_point_cloud(  # noqa: PLR0913
 ) -> PointCloudPayload:
     """Decode a PointCloud2 message and serialize its points as an Arrow IPC stream.
 
-    The x, y, and z coordinate fields are required. Optional intensity and RGB
+    The x, y, and z coordinate fields are required. Optional reflectivity and RGB
     fields are decoded when present, and non-finite points are dropped. Frame
     metadata is attached to the Arrow schema.
 

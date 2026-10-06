@@ -1,6 +1,8 @@
 <script lang="ts">
     import { T } from '@threlte/core';
     import { Color, Vector3 } from 'three';
+    import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
+    import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
     import type {
         CuboidHandle,
         WorkspaceTool
@@ -44,9 +46,9 @@
     }
 </script>
 
-<T.LineSegments geometry={item.geometry}>
-    <T.LineBasicMaterial color={edgeColor} />
-</T.LineSegments>
+<T is={LineSegments2} geometry={item.geometry}>
+    <T is={LineMaterial} color={edgeColor} linewidth={2} />
+</T>
 <T.ArrowHelper
     args={[new Vector3(1, 0, 0), item.headingOrigin, item.arrowLength, baseColor, 0.35, 0.2]}
 />
