@@ -39,7 +39,7 @@
             <dt class="font-medium text-muted-foreground">Annotation source</dt>
             <dd>{tooltip.annotationSourceId}</dd>
         </div>
-        {#if tooltip.trackId}
+        {#if tooltip.trackId !== null}
             <div class="space-y-0.5">
                 <dt class="font-medium text-muted-foreground">Track ID</dt>
                 <dd>{tooltip.trackId}</dd>

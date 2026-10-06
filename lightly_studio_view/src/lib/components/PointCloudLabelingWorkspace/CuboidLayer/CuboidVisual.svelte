@@ -1,12 +1,7 @@
 <script lang="ts">
     import { T } from '@threlte/core';
     import { Color, Vector3 } from 'three';
-    import type {
-        CuboidHandle,
-        WorkspaceTool
-    } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import { createCuboidRenderItems } from './cuboidRenderItems';
-    import { selectCuboid } from './cuboidSelection';
 
     interface Props {
         /** Render resources and annotation metadata for this cuboid. */
@@ -15,32 +10,29 @@
         baseColor: string;
         /** Interaction-aware edge color. */
         edgeColor: Color;
-        /** Tool that determines whether clicking can select the cuboid. */
-        activeTool: WorkspaceTool;
-        /** Fires when the user selects or deselects a cuboid. */
-        onselect?: (annotationId: string | null) => void;
-        /** Fires when the pointer enters or leaves a cuboid. */
-        onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
-        /** Records that this click selected a cuboid instead of empty space. */
-        onselected?: () => void;
+        /**
+         * Fires when the pointer clicks this cuboid. All overlapping cuboids fire without
+         * stopping propagation so the layer can pick the smallest-volume winner.
+         */
+        onhit?: (annotationId: string, volume: number) => void;
+        /**
+         * Fires when the pointer enters this cuboid. All overlapping cuboids fire without
+         * stopping propagation so the layer can track the smallest-volume winner.
+         */
+        onhoverenter?: (annotationId: string, volume: number) => void;
+        /** Fires when the pointer leaves this cuboid. */
+        onhoverleave?: (annotationId: string) => void;
     }
 
-    let { item, baseColor, edgeColor, activeTool, onselect, onhover, onselected }: Props = $props();
+    let { item, baseColor, edgeColor, onhit, onhoverenter, onhoverleave }: Props = $props();
 
-    function stopAnd(fn: () => void) {
-        return (event: { stopPropagation(): void }) => {
-            event.stopPropagation();
-            fn();
-        };
-    }
+    const volume = $derived(
+        item.annotation.size[0] * item.annotation.size[1] * item.annotation.size[2]
+    );
 
     function onClick(): void {
-        const selected = selectCuboid({
-            annotationId: item.annotation.id,
-            activeTool,
-            onselect
-        });
-        if (selected) onselected?.();
+        onhit?.(item.annotation.id, volume);
+        // No stopPropagation — all overlapping cuboids fire so the layer picks the smallest.
     }
 </script>
 
@@ -52,9 +44,9 @@
 />
 <T.Mesh
     visible={false}
-    onclick={stopAnd(onClick)}
-    onpointerenter={stopAnd(() => onhover?.(item.annotation.id, null))}
-    onpointerleave={stopAnd(() => onhover?.(null, null))}
+    onclick={onClick}
+    onpointerenter={() => onhoverenter?.(item.annotation.id, volume)}
+    onpointerleave={() => onhoverleave?.(item.annotation.id)}
 >
     <T.BoxGeometry args={[...item.annotation.size]} />
     <T.MeshBasicMaterial />
