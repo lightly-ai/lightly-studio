@@ -93,6 +93,15 @@ describe('FrameTimeline', () => {
         expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
     });
 
+    it('does not render placeholder lanes when all available channels are filtered out', () => {
+        render(FrameTimeline, {
+            props: { ...defaultProps, hasAvailableChannels: true }
+        });
+
+        expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Track 2')).not.toBeInTheDocument();
+    });
+
     it('labels ruler ticks with their timestamp relative to the first tick', () => {
         render(FrameTimeline, {
             props: {

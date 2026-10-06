@@ -119,6 +119,24 @@
 
     const lidarChannels = $derived(workspace.lidarChannels);
     const cameraChannels = $derived(workspace.cameraChannels);
+    const selectedLidarChannelNames = $derived(
+        lidarChannels
+            .filter(
+                (channel) =>
+                    selectedLidarChannels === null ||
+                    selectedLidarChannels.includes(channel.channel_id)
+            )
+            .map((channel) => channel.group_component_name)
+    );
+    const selectedCameraChannelNames = $derived(
+        cameraChannels
+            .filter(
+                (channel) =>
+                    selectedCameraChannels === null ||
+                    selectedCameraChannels.includes(channel.channel_id)
+            )
+            .map((channel) => channel.group_component_name)
+    );
     const displayedColorMode = $derived(selectedColorMode ?? 'density');
 
     const toggleChannel = (selected: number[], channelId: number): number[] =>
@@ -258,12 +276,11 @@
                                 currentTick={workspace.currentTick}
                                 isPlaying={workspace.isPlaying}
                                 playbackIntervalMs={workspace.playbackIntervalMs}
-                                lidarChannelNames={lidarChannels.map(
-                                    (channel) => channel.group_component_name
-                                )}
-                                cameraChannelNames={cameraChannels.map(
-                                    (channel) => channel.group_component_name
-                                )}
+                                lidarChannelNames={selectedLidarChannelNames}
+                                cameraChannelNames={selectedCameraChannelNames}
+                                hasAvailableChannels={
+                                    lidarChannels.length > 0 || cameraChannels.length > 0
+                                }
                                 onPreviousFrame={goToPreviousFrame}
                                 onNextFrame={goToNextFrame}
                                 onPlayToggle={togglePlayback}
