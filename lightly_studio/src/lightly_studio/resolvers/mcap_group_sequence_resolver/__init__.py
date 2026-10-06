@@ -1,6 +1,9 @@
 """Resolvers for MCAP group sequence database operations."""
 
 from lightly_studio.resolvers.mcap_group_sequence_resolver.create import create
+from lightly_studio.resolvers.mcap_group_sequence_resolver.get_adjacent_sequences import (
+    get_adjacent_sequences,
+)
 from lightly_studio.resolvers.mcap_group_sequence_resolver.get_all_by_collection_id import (
     get_all_by_collection_id,
 )
@@ -12,6 +15,7 @@ from lightly_studio.resolvers.mcap_group_sequence_resolver.get_info import get_i
 
 __all__ = [
     "create",
+    "get_adjacent_sequences",
     "get_all_by_collection_id",
     "get_all_by_dataset_id",
     "get_by_id",
