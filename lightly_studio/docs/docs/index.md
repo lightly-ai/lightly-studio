@@ -1,6 +1,6 @@
 # Welcome to LightlyStudio!
 
-One integrated computer vision platform for labeling, curation, QA, and datasets management. Open-source at its core, [LightlyStudio](https://www.lightly.ai/lightly-studio) is built for ML engineers and organizations scaling computer vision.
+One integrated computer vision platform for labeling, curation, QA, and dataset management. Open-source at its core, [LightlyStudio](https://www.lightly.ai/lightly-studio) is built for ML engineers and organizations scaling computer vision.
 
 <div class="grid cards" markdown>
 
