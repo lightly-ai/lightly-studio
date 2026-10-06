@@ -7,15 +7,24 @@ strategy of the union without a change here.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from lightly_studio.agent import sample_source
+from lightly_studio.agent import distribution_tools, sample_source
 from lightly_studio.agent.agent_tool import AgentContext, AgentTool
 from lightly_studio.agent.ui_actions import SelectTagAction
 from lightly_studio.resolvers import tag_resolver
-from lightly_studio.sampling.sampling_config import SamplingConfig, SamplingStrategy, Strategy
+from lightly_studio.resolvers.image_resolver.annotation_count_types import AnnotationCountMode
+from lightly_studio.sampling.sampling_config import (
+    AnnotationClassBalancingStrategy,
+    MetadataBalancingStrategy,
+    SamplingConfig,
+    SamplingStrategy,
+    Strategy,
+)
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
 from lightly_studio.services import sampling_metadata
 from lightly_studio.services.sampling_metadata import (
@@ -94,12 +103,18 @@ def run_selection(context: AgentContext, args: RunSelectionArgs) -> dict[str, An
     selected_ids = tag_resolver.get_sample_ids_by_tag_id(session=context.session, tag_id=tag.tag_id)
     handle = context.result_store.put(collection_id=collection_id, sample_ids=selected_ids)
     context.ui_actions.append(SelectTagAction(tag_id=tag.tag_id, tag_name=tag.name))
-    return {
+    result: dict[str, Any] = {
         "tag_name": tag.name,
         "selected_count": len(selected_ids),
         "result": handle,
         "strategies": [_describe_strategy(strategy=strategy) for strategy in args.strategies],
     }
+    achieved = _get_achieved_distributions(
+        context=context, sample_ids=selected_ids, strategies=args.strategies
+    )
+    if achieved:
+        result["achieved_distributions"] = achieved
+    return result
 
 
 SELECTION_TOOLS: list[AgentTool[Any]] = [
@@ -118,7 +133,8 @@ SELECTION_TOOLS: list[AgentTool[Any]] = [
             "Select samples with one strategy or a combination of strategies, and save them "
             "as a new tag. Combine strategies for requests such as 'diverse but "
             "representative', 'balanced over weather' or 'similar to my night images but "
-            "diverse'. The GUI then shows the tag."
+            "diverse'. The GUI then shows the tag. For metadata_balance and balance "
+            "strategies, the result shows the distribution that the selection reached."
         ),
         args_model=RunSelectionArgs,
         run=run_selection,
@@ -141,6 +157,45 @@ def _to_computation(context: AgentContext, args: ComputeMetadataArgs) -> Metadat
     return SimilarityComputation(
         kind="similarity", metadata_name=args.metadata_name, query_tag_id=tag.tag_id
     )
+
+
+def _get_achieved_distributions(
+    context: AgentContext, sample_ids: Sequence[UUID], strategies: Sequence[SamplingStrategy]
+) -> dict[str, dict[str, Any]]:
+    """Put the target of each balancing strategy next to the distribution of the selection.
+
+    A metadata balancing strategy shows the shares of the samples per value, under its
+    metadata key. A class balancing strategy shows the shares of the annotations per class,
+    under ``annotation_classes``, because the balancing counts the annotations.
+    """
+    metadata_strategies = [
+        strategy for strategy in strategies if isinstance(strategy, MetadataBalancingStrategy)
+    ]
+    achieved: dict[str, dict[str, Any]] = {}
+    if metadata_strategies:
+        values = distribution_tools.get_metadata_distributions(
+            context=context,
+            sample_ids=sample_ids,
+            keys=[strategy.metadata_key for strategy in metadata_strategies],
+        )
+        for metadata_strategy in metadata_strategies:
+            achieved[metadata_strategy.metadata_key] = {
+                "target": metadata_strategy.target_distribution,
+                "values": values[metadata_strategy.metadata_key],
+            }
+    for strategy in strategies:
+        # A class balancing over one annotation source has no achieved distribution yet,
+        # because the class counts include the annotations of all sources.
+        if isinstance(strategy, AnnotationClassBalancingStrategy) and (
+            strategy.annotation_source_id is None
+        ):
+            achieved["annotation_classes"] = {
+                "target": strategy.target_distribution,
+                "values": distribution_tools.get_annotation_class_distribution(
+                    context=context, sample_ids=sample_ids, count_mode=AnnotationCountMode.OBJECTS
+                ),
+            }
+    return achieved
 
 
 def _describe_strategy(strategy: SamplingStrategy) -> str:

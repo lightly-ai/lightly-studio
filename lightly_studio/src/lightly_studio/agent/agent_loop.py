@@ -15,6 +15,7 @@ from lightly_studio.agent.agent_events import (
 )
 from lightly_studio.agent.agent_tool import AgentContext, AgentTool
 from lightly_studio.agent.chat_messages import AgentMessage, AgentToolCall, ReasoningDelta
+from lightly_studio.agent.distribution_tools import DISTRIBUTION_TOOLS
 from lightly_studio.agent.filter_tools import FILTER_TOOLS
 from lightly_studio.agent.openrouter_client import AgentLLMError, ChatModel
 from lightly_studio.agent.operator_tools import OPERATOR_TOOLS
@@ -27,6 +28,7 @@ AGENT_TOOLS: list[AgentTool[Any]] = [
     *OVERVIEW_TOOLS,
     *SEARCH_TOOLS,
     *FILTER_TOOLS,
+    *DISTRIBUTION_TOOLS,
     *SELECTION_TOOLS,
     *TAG_TOOLS,
     *OPERATOR_TOOLS,
@@ -50,8 +52,12 @@ other tools. Never invent sample IDs or handles.
 get_collection_overview first.
 - To find samples by metadata values or annotation classes, use find_samples. To find them \
 by what the images show, use search_by_text.
+- To count the samples per metadata value, per year of a date or per annotation class, use \
+get_distribution. Do not call find_samples once per value.
 - To select samples, use run_selection. Choose the strategies and their strengths from the \
 request and from the overview. Combine strategies when the request names several goals.
+- After a selection, compare each achieved distribution with its target. Tell the user when \
+the selection did not reach a target.
 - A typicality weighting needs typicality metadata. When the overview does not list it, \
 compute it first with compute_metadata.
 - A similarity strategy needs a query tag. To use the samples of a search as the query, tag \

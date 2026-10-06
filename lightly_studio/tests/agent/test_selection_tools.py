@@ -8,7 +8,9 @@ from lightly_studio.agent.selection_tools import ComputeMetadataArgs, RunSelecti
 from lightly_studio.agent.ui_actions import SelectTagAction
 from lightly_studio.resolvers import metadata_resolver, tag_resolver
 from lightly_studio.sampling.sampling_config import (
+    AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
+    MetadataBalancingStrategy,
     MetadataWeightingStrategy,
 )
 from tests import helpers_resolvers
@@ -101,6 +103,89 @@ def test_run_selection__combined_strategies(db_session: Session) -> None:
         "strategies": ["diversity x1", "weights(score) x2"],
     }
     assert context.ui_actions == [SelectTagAction(tag_id=tag.tag_id, tag_name="picked")]
+
+
+def test_run_selection__achieved_distribution(db_session: Session) -> None:
+    collection, ids = helpers_agent.create_collection_with_embeddings(
+        session=db_session, embeddings_by_file=_EMBEDDINGS
+    )
+    for file_name, weather in [
+        ("a.jpg", "rain"),
+        ("b.jpg", "sun"),
+        ("c.jpg", "sun"),
+        ("d.jpg", "sun"),
+    ]:
+        metadata_resolver.set_value_for_sample(
+            session=db_session, sample_id=ids[file_name], key="weather", value=weather
+        )
+    context = helpers_agent.create_context(session=db_session, collection=collection)
+
+    result = selection_tools.run_selection(
+        context,
+        RunSelectionArgs(
+            n_samples=2,
+            tag_name="balanced",
+            strategies=[
+                MetadataBalancingStrategy(
+                    metadata_key="weather", target_distribution={"rain": 0.5, "sun": 0.5}
+                )
+            ],
+        ),
+    )
+
+    assert result["achieved_distributions"] == {
+        "weather": {
+            "target": {"rain": 0.5, "sun": 0.5},
+            "values": [
+                {"value": "rain", "count": 1, "share": 0.5},
+                {"value": "sun", "count": 1, "share": 0.5},
+            ],
+        }
+    }
+
+
+def test_run_selection__achieved_class_distribution(db_session: Session) -> None:
+    collection, ids = helpers_agent.create_collection_with_embeddings(
+        session=db_session, embeddings_by_file=_EMBEDDINGS
+    )
+    labels = {
+        name: helpers_resolvers.create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name=name
+        )
+        for name in ("car", "bus")
+    }
+    for file_name, class_name in [
+        ("a.jpg", "car"),
+        ("b.jpg", "car"),
+        ("c.jpg", "car"),
+        ("d.jpg", "bus"),
+    ]:
+        helpers_resolvers.create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=ids[file_name],
+            annotation_label_id=labels[class_name].annotation_label_id,
+        )
+    context = helpers_agent.create_context(session=db_session, collection=collection)
+
+    result = selection_tools.run_selection(
+        context,
+        RunSelectionArgs(
+            n_samples=2,
+            tag_name="balanced",
+            strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
+        ),
+    )
+
+    assert result["achieved_distributions"] == {
+        "annotation_classes": {
+            "target": "uniform",
+            "values": [
+                {"value": "bus", "count": 1, "share": 0.5},
+                {"value": "car", "count": 1, "share": 0.5},
+            ],
+        }
+    }
 
 
 def test_run_selection__strategies_from_json(db_session: Session) -> None:
