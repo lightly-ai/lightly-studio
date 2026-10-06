@@ -15,7 +15,7 @@
         /** Toggles a channel on or off by its `channel_id`. */
         onToggleChannel: (channelId: number) => void;
         /** Replaces the selection, used by the select-all and clear actions. */
-        onSetChannels?: (channelIds: number[]) => void;
+        onSetChannels: (channelIds: number[]) => void;
         /** `data-testid` for the trigger; list items derive from it. */
         testId: string;
     }
@@ -52,7 +52,7 @@
             ...selectedIds.filter((id) => !ids.includes(id))
         ];
         if (changed.length === 1) onToggleChannel(Number(changed[0]));
-        else onSetChannels?.(ids.map(Number));
+        else onSetChannels(ids.map(Number));
     };
 </script>
 
