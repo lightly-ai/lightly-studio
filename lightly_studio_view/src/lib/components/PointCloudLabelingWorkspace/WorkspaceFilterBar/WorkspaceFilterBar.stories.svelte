@@ -37,6 +37,8 @@
             cameraChannels: [],
             selectedLidarChannels: [],
             selectedCameraChannels: [],
+            colorMode: 'density',
+            onColorModeChange: fn(),
             onToggleLidarChannel: fn(),
             onToggleCameraChannel: fn()
         }
