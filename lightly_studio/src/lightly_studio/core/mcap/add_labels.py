@@ -16,9 +16,10 @@ from uuid import UUID
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.core.mcap import scene_update
-from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.sequence import McapSequence, McapSequenceEntry
+from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
@@ -48,12 +49,31 @@ def read_scene_updates(annotation_mcap_uri: str, topic: str) -> list[tuple[int, 
 
     Returns:
         `(log_time_ns, labels)` pairs, in file order.
+
+    Raises:
+        TopicNotFoundError: If the topic is not in the file. The message lists the
+            SceneUpdate topics and the other topics the file has.
     """
     with McapFileReader(annotation_mcap_uri) as reader:
+        _require_topic(reader=reader, topic=topic)
         return [
             (log_time_ns, scene_update.from_decoded_message(decoded_message))
             for log_time_ns, decoded_message in reader.iter_decoded_messages(topic)
         ]
+
+
+def _require_topic(reader: McapFileReader, topic: str) -> None:
+    """Check that the topic is in the file, and name the topics that are."""
+    topics = reader.get_topics()
+    if any(topic_info.name == topic for topic_info in topics):
+        return
+    scene_topics = sorted(t.name for t in topics if t.kind is TopicKind.SCENE_UPDATE)
+    other_topics = sorted(t.name for t in topics if t.kind is not TopicKind.SCENE_UPDATE)
+    raise TopicNotFoundError(
+        f"Topic '{topic}' is not in annotation MCAP '{reader.path}'. "
+        f"SceneUpdate topics in the file: {', '.join(scene_topics) or 'none'}. "
+        f"Other topics: {', '.join(other_topics) or 'none'}."
+    )
 
 
 def ticks_by_timestamp(entries: list[McapSequenceEntry]) -> dict[int, UUID]:
@@ -113,6 +133,13 @@ def log_match_summary(
         matched.empty_count,
         ticks_without_entities,
     )
+    if matched.matched_count == 0 and matched.unmatched_count == 0:
+        logger.warning(
+            "Annotation MCAP '%s' has no cuboids or frame tags in its %d messages (%d empty).",
+            annotation_mcap_uri,
+            len(messages),
+            matched.empty_count,
+        )
     if matched.unmatched_count > 0 and matched.unmatched_count >= matched.matched_count:
         _log_clock_mismatch(
             annotation_mcap_uri=annotation_mcap_uri, matched=matched, ticks=ticks, messages=messages
