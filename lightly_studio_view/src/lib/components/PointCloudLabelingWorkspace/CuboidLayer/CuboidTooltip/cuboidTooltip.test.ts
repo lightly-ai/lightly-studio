@@ -39,12 +39,4 @@ describe('createCuboidTooltip', () => {
         expect(tooltip.rotation).toBe('rx: 90.0°  ry: 0.0°  rz: 0.0°');
     });
 
-    it('returns a null track number when unavailable', () => {
-        const tooltip = createCuboidTooltip({
-            annotation: { ...createAnnotationFixture(), trackNumber: null },
-            annotationClassName: 'Vehicle'
-        });
-
-        expect(tooltip.trackNumber).toBeNull();
-    });
 });

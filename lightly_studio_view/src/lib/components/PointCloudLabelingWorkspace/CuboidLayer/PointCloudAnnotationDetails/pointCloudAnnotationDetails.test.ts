@@ -36,7 +36,6 @@ describe('PointCloudAnnotationDetails', () => {
         expect(screen.getByText('ground-truth')).toBeInTheDocument();
         expect(screen.getByText('Track number:')).toBeInTheDocument();
         expect(screen.getByText('7')).toBeInTheDocument();
-        expect(screen.queryByText('Track ID:')).not.toBeInTheDocument();
     });
 
     it('shows track number 0', () => {

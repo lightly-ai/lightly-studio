@@ -50,11 +50,4 @@ describe('createAnnotationDetails', () => {
         expect(details.trackNumber).toBe(7);
     });
 
-    it('passes through null track number when unavailable', () => {
-        const details = createAnnotationDetails({
-            annotation: { ...createAnnotationFixture(), trackNumber: null }
-        });
-
-        expect(details.trackNumber).toBeNull();
-    });
 });

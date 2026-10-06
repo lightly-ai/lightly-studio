@@ -49,6 +49,7 @@ describe('tickAnnotationsToCuboids', () => {
                 annotationSourceId: 'source-1',
                 trackId: 'track-1',
                 trackNumber: 7,
+                parentTrackNumber: null,
                 keyframeId: null,
                 center: [1, 2, 3],
                 size: [4, 5, 6],
@@ -66,6 +67,7 @@ describe('tickAnnotationsToCuboids', () => {
                 annotationSourceId: 'source-1',
                 trackId: null,
                 trackNumber: null,
+                parentTrackNumber: null,
                 keyframeId: null,
                 center: [1, 2, 3],
                 size: [4, 5, 6],
@@ -74,13 +76,16 @@ describe('tickAnnotationsToCuboids', () => {
         ]);
     });
 
-    it('maps trackId and trackNumber independently', () => {
-        const annotations = [createAnnotation({ object_track_id: 'track-2' })];
+    it('maps parentTrackNumber from parent_object_track_number', () => {
+        const annotations = [
+            createAnnotation({ object_track_id: 'track-2', parent_object_track_number: 3 }),
+            createAnnotation({ sample_id: 'annotation-2' })
+        ];
 
-        expect(tickAnnotationsToCuboids(annotations)[0]).toMatchObject({
-            trackId: 'track-2',
-            trackNumber: null
-        });
+        const cuboids = tickAnnotationsToCuboids(annotations);
+
+        expect(cuboids[0]).toMatchObject({ trackId: 'track-2', trackNumber: null, parentTrackNumber: 3 });
+        expect(cuboids[1]).toMatchObject({ parentTrackNumber: null });
     });
 
     it('keeps tick cuboids when their frame differs from the displayed frame', () => {

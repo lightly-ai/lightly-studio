@@ -135,6 +135,8 @@ export interface CuboidAnnotation {
     readonly trackId: string | null;
     /** Human-facing number assigned to the annotation's track, when available. */
     readonly trackNumber: number | null;
+    /** Human-facing number of the parent track for nested annotations (e.g. truck cabin inside a truck), or null. */
+    readonly parentTrackNumber: number | null;
     /** Authored keyframe identity, or null for an untracked/interpolated annotation. */
     readonly keyframeId: string | null;
     /** Cuboid centre in the canonical coordinate frame. */
