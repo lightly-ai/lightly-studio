@@ -77,7 +77,10 @@ class MCAPSequenceSummary(BaseModel):
 
     @classmethod
     def from_info(
-        cls, info: McapGroupSequenceInfoView, start_log_time_ns: int | None
+        cls,
+        info: McapGroupSequenceInfoView,
+        start_log_time_ns: int | None,
+        channel_ids_by_component: dict[str, int],
     ) -> MCAPSequenceSummary:
         """Builds the summary from a sequence's `McapGroupSequenceInfoView`.
 
@@ -86,12 +89,25 @@ class MCAPSequenceSummary(BaseModel):
                 `mcap_group_sequence_resolver.get_info`.
             start_log_time_ns: The earliest log time across all indexed ticks, or
                 `None` if no ticks have been indexed yet.
+            channel_ids_by_component: The channel id for each component, keyed by
+                component name, read from the sequence's indexed ticks. Overrides the
+                dataset-level schema channel ids, which may differ across files.
+                Falls back to the schema channel id for components not present here
+                (e.g. when no ticks have been indexed yet).
         """
         lidar_channels: list[ChannelSummaryView] = []
         camera_channels: list[ChannelSummaryView] = []
 
         for component in info.components:
-            channel = ChannelSummaryView.from_component(component)
+            channel_id = channel_ids_by_component.get(
+                component.group_component_name, component.channel_id
+            )
+            channel = ChannelSummaryView(
+                channel_id=channel_id,
+                group_component_name=component.group_component_name,
+                group_component_index=component.group_component_index,
+                frame_id=component.frame_id,
+            )
             if component.mcap_data_type is McapDataType.POINT_CLOUD:
                 lidar_channels.append(channel)
             elif component.mcap_data_type is McapDataType.VIDEO_FRAME:
