@@ -30,7 +30,6 @@
     import PlotPanelLegend from './PlotPanelLegend.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
-    import { isEqual } from 'lodash-es';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import {
         EXCLUDED_BY_FILTERS_CATEGORY,
@@ -75,8 +74,6 @@
 
     const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
-    // Only videos still track their lasso selection as a resolved sample-id list; images and
-    // annotations send it to the backend as region geometry (see LIG-9903).
     const activeSampleIds = $derived(
         isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
     );
@@ -180,13 +177,16 @@
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
-    // Images and annotations commit the lasso as region geometry, not as sample ids. After the
+    // Videos, images and annotations commit the lasso as region geometry. After the
     // selection is committed the live rangeSelection is cleared, so the plot re-derives the
-    // highlight from the stored polygon to keep reflecting the actually selected points. Images
-    // keep the region on the image filter store; annotations in the shared plot region store.
+    // highlight from the stored polygon to keep reflecting the actually selected points. Videos
+    // and images keep the region on their filter stores; annotations use the shared plot store.
     const committedHighlightRegion = $derived(
-        isImages
-            ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null)
+        isImages || isVideos
+            ? ((isVideos
+                  ? $videoFilter?.sample_filter?.embedding_region
+                  : $imageFilter?.sample_filter?.embedding_region
+              )?.polygon ?? null)
             : isAnnotations
               ? ($annotationPlotRegion?.polygon ?? null)
               : null
@@ -223,14 +223,14 @@
     const legendEntries = $derived.by(() =>
         getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
     );
-    // Images and annotations send the lasso to the backend as region geometry rather than a
-    // resolved sample-id list (see LIG-9903); the sidebar chip reads the selected count from the
-    // plot-propagated count store, and clearing removes the region entirely. Images keep the
-    // region on the image filter store; annotations have no such store, so it lives in the
-    // shared annotation-plot region store instead.
+    // Videos, images and annotations send the lasso as region geometry rather than a resolved
+    // sample-id list. The sidebar chip reads the count from the plot-propagated store, and
+    // clearing removes the region entirely.
     const saveRegion = (region: EmbeddingRegion | null) => {
         if (isImages) {
             imageFilters.updateEmbeddingRegion(region);
+        } else if (isVideos) {
+            videoFilters.updateEmbeddingRegion(region);
         } else {
             saveAnnotationRegion(region);
         }
@@ -258,28 +258,6 @@
         // Selecting nothing, or every selectable point, is equivalent to no filter at all.
         const selectsNothingOrEverything =
             selectedCount === 0 || (selectableCount !== null && selectedCount === selectableCount);
-
-        // Videos still commit the resolved sample-id list; images and annotations send geometry.
-        if (isVideos) {
-            const currentSampleIds = $videoFilter?.sample_filter?.sample_ids ?? [];
-            if (selectsNothingOrEverything) {
-                if (currentSampleIds.length > 0) {
-                    videoFilters.updateSampleIds([]);
-                }
-            } else if (!isEqual($selectedSampleIds, currentSampleIds)) {
-                videoFilters.updateSampleIds($selectedSampleIds);
-                if (pendingSelectionType) {
-                    trackEvent('embedding_selection_made', {
-                        collection_id: collectionId,
-                        selection_type: pendingSelectionType,
-                        selected_count: selectedCount
-                    });
-                }
-            }
-            setRangeSelection(null);
-            pendingSelectionType = null;
-            return;
-        }
 
         if (selectsNothingOrEverything) {
             clearRegion();
@@ -373,17 +351,15 @@
 
     const clearSelection = () => {
         setRangeSelection(null);
-        if (isVideos) {
-            videoFilters.updateSampleIds([]);
-        } else {
-            clearRegion();
-        }
+        clearRegion();
     };
-    // Images and annotations track their committed selection as region geometry, not sample ids:
-    // images on the image filter store, annotations in the shared annotation-plot region store.
+    // Videos and images track their committed selection on their filter stores; annotations use
+    // the shared plot region store.
     const regionSelected = $derived(
-        isImages
-            ? ($imageFilter?.sample_filter?.embedding_region ?? null) !== null
+        isImages || isVideos
+            ? ((isVideos
+                  ? $videoFilter?.sample_filter?.embedding_region
+                  : $imageFilter?.sample_filter?.embedding_region) ?? null) !== null
             : isAnnotations
               ? $annotationPlotRegion !== null
               : false
