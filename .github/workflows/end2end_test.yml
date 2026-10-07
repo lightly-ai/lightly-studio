@@ -295,7 +295,7 @@ jobs:
         with:
           lookup-only: true
           path: ${{ matrix.success_marker }}
-          key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
+          key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}-bench-${{ github.run_attempt }}  # TODO(Michal, 10/2026): CI benchmark only.
 
       ### Restore caches ###
 
@@ -466,7 +466,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ${{ matrix.success_marker }}
-          key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
+          key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}-bench-${{ github.run_attempt }}  # TODO(Michal, 10/2026): CI benchmark only.
 
       ### Cleanup steps ###
       - name: Show server logs after failure
