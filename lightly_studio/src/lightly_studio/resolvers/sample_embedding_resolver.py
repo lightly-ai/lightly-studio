@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from typing import Any, NamedTuple
 from uuid import UUID
 
 from sqlalchemy import ARRAY, BindParameter, Float, bindparam, func
 from sqlmodel import Session, col, select
+from sqlmodel.sql.expression import Select
 
 from lightly_studio.database import db_insert, db_vector
 from lightly_studio.database.db_manager import DatabaseBackend
@@ -180,12 +181,13 @@ def get_projections_by_collection_id(
     embedding_model_id: UUID,
     direction_x: Sequence[float],
     direction_y: Sequence[float],
-) -> list[SampleProjectionRow]:
+) -> Iterator[SampleProjectionRow]:
     """Get the projections of the sample embeddings of a collection onto two directions.
 
     D is the embedding dimension. The x and y values of a sample are the dot products of its
     embedding with ``direction_x`` and ``direction_y``. The database computes them, so the
-    embeddings are not loaded into Python.
+    embeddings are not loaded into Python. The rows stream from the database in batches, so
+    keep the session open until the iteration ends.
 
     Args:
         session: The database session.
@@ -195,7 +197,8 @@ def get_projections_by_collection_id(
         direction_y: The Y direction of shape (D,).
 
     Returns:
-        The projections of the samples with an embedding, ordered by sample ID.
+        The projections of the samples with an embedding, ordered by sample creation time,
+        with the sample ID as a tiebreaker.
 
     Raises:
         ValueError: If the embedding model does not exist, or if a direction does not have
@@ -216,6 +219,7 @@ def get_projections_by_collection_id(
     embeddings = (
         select(
             SampleEmbeddingTable.sample_id,
+            col(SampleTable.created_at),
             db_vector.loaded_vector(col(SampleEmbeddingTable.embedding), dimension).label(
                 "embedding"
             ),
@@ -232,11 +236,10 @@ def get_projections_by_collection_id(
         embeddings.c.sample_id,
         db_vector.inner_product(embeddings.c.embedding, _direction_param(direction_x)),
         db_vector.inner_product(embeddings.c.embedding, _direction_param(direction_y)),
-    ).order_by(embeddings.c.sample_id.asc())
-    return [
-        SampleProjectionRow(sample_id=sample_id, x=x, y=y)
-        for sample_id, x, y in session.exec(statement).all()
-    ]
+    ).order_by(embeddings.c.created_at.asc(), embeddings.c.sample_id.asc())
+    # A function with yield runs only when the iteration starts. The checks above are in this
+    # function, so that they run at the call.
+    return _stream_projections(session=session, statement=statement)
 
 
 def get_hash_by_collection_id(
@@ -322,6 +325,15 @@ def _read_embedding_rows_binary(
             SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
             for sample_id, embedding in cursor
         ]
+
+
+def _stream_projections(
+    session: Session, statement: Select[tuple[UUID, float, float]]
+) -> Iterator[SampleProjectionRow]:
+    """Yield the ``(sample_id, x, y)`` rows of a statement, fetched in batches."""
+    streamed = statement.execution_options(yield_per=batching.DEFAULT_BATCH_SIZE)
+    for sample_id, x, y in session.exec(streamed):
+        yield SampleProjectionRow(sample_id=sample_id, x=x, y=y)
 
 
 def _direction_param(direction: Sequence[float]) -> BindParameter[Sequence[float]]:

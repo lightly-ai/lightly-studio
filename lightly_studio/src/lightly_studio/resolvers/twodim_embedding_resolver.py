@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from array import array
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -114,8 +115,8 @@ def get_twodim_embeddings_from_axes(
         direction_y: The Y axis direction of shape (D,).
 
     Returns:
-        Tuple of (x coordinates of shape (N,), y coordinates of shape (N,), the N ordered
-        sample IDs).
+        Tuple of (x coordinates of shape (N,), y coordinates of shape (N,), the N sample IDs
+        ordered by sample creation time).
 
     Raises:
         ValueError: If the embedding model does not exist, or if a direction does not have
@@ -128,13 +129,19 @@ def get_twodim_embeddings_from_axes(
         direction_x=direction_x,
         direction_y=direction_y,
     )
-    x_values = np.fromiter(
-        (projection.x for projection in projections), dtype=np.float32, count=len(projections)
+    # A float32 array stores 4 bytes for each value. A list of Python floats uses about 32.
+    x_values = array("f")
+    y_values = array("f")
+    sample_ids: list[UUID] = []
+    for sample_id, x, y in projections:
+        x_values.append(x)
+        y_values.append(y)
+        sample_ids.append(sample_id)
+    return (
+        np.frombuffer(x_values, dtype=np.float32),
+        np.frombuffer(y_values, dtype=np.float32),
+        sample_ids,
     )
-    y_values = np.fromiter(
-        (projection.y for projection in projections), dtype=np.float32, count=len(projections)
-    )
-    return x_values, y_values, [projection.sample_id for projection in projections]
 
 
 def _calculate_2d_embeddings(

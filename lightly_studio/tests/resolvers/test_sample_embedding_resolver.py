@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
 )
@@ -324,6 +326,49 @@ def test_get_projections_by_collection_id(db_session: Session) -> None:
     assert sorted(projections) == sorted(
         [(image_a.sample_id, 31.0, 1.0), (image_b.sample_id, 64.0, 2.5)]
     )
+
+
+def test_get_projections_by_collection_id__ordered_by_creation_time(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=1
+    ).embedding_model_id
+    # The sample with the larger sample ID is created first, so the creation time order is
+    # the reverse of the sample ID order.
+    first_id = UUID("00000000-0000-0000-0000-000000000002")
+    second_id = UUID("00000000-0000-0000-0000-000000000001")
+    db_session.add_all(
+        [
+            SampleTable(
+                sample_id=first_id,
+                collection_id=collection_id,
+                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            ),
+            SampleTable(
+                sample_id=second_id,
+                collection_id=collection_id,
+                created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            ),
+        ]
+    )
+    db_session.commit()
+    for sample_id in [first_id, second_id]:
+        create_sample_embedding(
+            session=db_session,
+            sample_id=sample_id,
+            embedding_model_id=embedding_model_id,
+            embedding=[1.0],
+        )
+
+    projections = sample_embedding_resolver.get_projections_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        direction_x=[1.0],
+        direction_y=[1.0],
+    )
+
+    assert [projection.sample_id for projection in projections] == [first_id, second_id]
 
 
 @pytest.mark.parametrize(
