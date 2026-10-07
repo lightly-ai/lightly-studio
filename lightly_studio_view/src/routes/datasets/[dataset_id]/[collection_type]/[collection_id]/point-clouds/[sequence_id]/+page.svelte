@@ -13,7 +13,14 @@
     // lightly_studio/api/features.py. Disabling it never affects the existing sample detail view.
     const POINT_CLOUD_RENDERING_FEATURE = 'point_cloud_rendering';
     const { data }: { data: PageData } = $props();
-    const { datasetId, collectionId, collectionName, collectionType, sequenceId } = $derived(data);
+    const {
+        datasetId,
+        annotationSourceCollectionId,
+        collectionId,
+        collectionName,
+        collectionType,
+        sequenceId
+    } = $derived(data);
     const { featureFlags } = useFeatureFlags();
     const isEnabled = $derived($featureFlags.includes(POINT_CLOUD_RENDERING_FEATURE));
     const tickNumber = $derived(getTickNumberFromHash(page.url.hash));
@@ -68,6 +75,7 @@
         <LayoutCard className="min-h-0 overflow-hidden px-4 py-2">
             <PointCloudLabelingWorkspace
                 {datasetId}
+                {annotationSourceCollectionId}
                 {sequenceId}
                 {sourcePath}
                 {tickNumber}

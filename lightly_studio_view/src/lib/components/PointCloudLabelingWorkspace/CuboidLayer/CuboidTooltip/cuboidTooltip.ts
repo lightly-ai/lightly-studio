@@ -4,6 +4,7 @@ import { createAnnotationDetails } from '$lib/components/PointCloudLabelingWorks
 interface CreateCuboidTooltipParams {
     annotation: CuboidAnnotation;
     annotationClassName: string;
+    annotationSourceName?: string;
 }
 
 interface CuboidTooltip {
@@ -11,7 +12,7 @@ interface CuboidTooltip {
     location: string;
     dimensions: string;
     rotation: string;
-    annotationSourceId: string;
+    annotationSourceName?: string;
     trackId: string | null;
 }
 
@@ -26,9 +27,10 @@ interface CuboidTooltip {
  */
 export function createCuboidTooltip({
     annotation,
-    annotationClassName
+    annotationClassName,
+    annotationSourceName
 }: CreateCuboidTooltipParams): CuboidTooltip {
-    const details = createAnnotationDetails({ annotation });
+    const details = createAnnotationDetails({ annotation, annotationSourceName });
     const [x, y, z] = details.location;
     const [w, h, d] = details.dimensions;
     const [rx, ry, rz] = details.rotation;
@@ -38,7 +40,7 @@ export function createCuboidTooltip({
         location: `X: ${x}  Y: ${y}  Z: ${z}`,
         dimensions: `${w} × ${h} × ${d} m`,
         rotation: `rx: ${rx}°  ry: ${ry}°  rz: ${rz}°`,
-        annotationSourceId: details.annotationSourceId,
+        annotationSourceName: details.annotationSourceName,
         trackId: details.trackId
     };
 }

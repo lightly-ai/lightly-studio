@@ -36,10 +36,13 @@ describe('createAnnotationDetails', () => {
         expect(details.rotation).toEqual(['0.0', '0.0', '45.0']);
     });
 
-    it('passes through annotation source id', () => {
-        const details = createAnnotationDetails({ annotation: createAnnotationFixture() });
+    it('includes the resolved annotation source name', () => {
+        const details = createAnnotationDetails({
+            annotation: createAnnotationFixture(),
+            annotationSourceName: 'Ground Truth'
+        });
 
-        expect(details.annotationSourceId).toBe('ground-truth');
+        expect(details.annotationSourceName).toBe('Ground Truth');
     });
 
     it('passes through track id when present', () => {

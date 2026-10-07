@@ -8,6 +8,8 @@
         component: PointCloudLabelingWorkspace,
         tags: ['autodocs'],
         args: {
+            datasetId: 'dataset-1234',
+            annotationSourceCollectionId: 'group-collection-1234',
             sequenceId: 'sequence-1234',
             sourcePath: [
                 { label: 'Home', href: '#' },

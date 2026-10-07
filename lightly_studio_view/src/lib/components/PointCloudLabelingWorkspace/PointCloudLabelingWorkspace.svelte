@@ -13,6 +13,7 @@
     import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
+    import { useAnnotationCollections } from '$lib/hooks';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
 
     /**
@@ -28,6 +29,8 @@
     interface Props {
         /** Dataset the labeled point-cloud sequence belongs to. */
         datasetId: string;
+        /** GROUP collection containing the point cloud annotation sources. */
+        annotationSourceCollectionId?: string;
         /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
         sequenceId: string;
         /** 1-based tick to open on (from the route hash); defaults to the first frame. */
@@ -43,6 +46,7 @@
 
     let {
         datasetId,
+        annotationSourceCollectionId,
         sequenceId,
         tickNumber = 1,
         onTickChange = () => undefined,
@@ -70,6 +74,15 @@
         });
     let selectedCuboidId = $state<string | null>(null);
     const { customLabelColorsStore } = useCustomLabelColors();
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({
+        collectionId: annotationSourceCollectionId
+    }));
+    const annotationSources = $derived(
+        (annotationCollectionsQuery.data ?? []).map(({ collection_id, name }) => ({
+            id: collection_id,
+            name
+        }))
+    );
 
     // Synchronized snapshot: the cloud frame and its corresponding annotations
     // advance together.
@@ -194,6 +207,7 @@
                                     fitKey={`${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`}
                                     cuboids={sceneCuboids}
                                     {annotationClasses}
+                                    {annotationSources}
                                     selectedAnnotationId={selectedCuboidId}
                                     onselect={(id) => (selectedCuboidId = id)}
                                 />
@@ -267,7 +281,12 @@
                     </div>
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <PointCloudRightSidePanel {cuboids} {annotationClasses} bind:selectedCuboidId />
+                    <PointCloudRightSidePanel
+                        {cuboids}
+                        {annotationClasses}
+                        {annotationSources}
+                        bind:selectedCuboidId
+                    />
                 </Pane>
             </PaneGroup>
         {/if}

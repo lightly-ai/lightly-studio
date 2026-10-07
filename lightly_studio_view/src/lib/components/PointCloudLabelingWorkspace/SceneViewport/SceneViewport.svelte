@@ -10,6 +10,7 @@
     import SceneNavigationControls from './SceneNavigationControls.svelte';
     import type {
         AnnotationClass,
+        AnnotationSource,
         Bounds3,
         CuboidAnnotation,
         CuboidHandle,
@@ -26,6 +27,7 @@
         /** Static cuboid annotations rendered over the point cloud. */
         cuboids?: readonly CuboidAnnotation[];
         annotationClasses?: readonly AnnotationClass[];
+        annotationSources?: readonly AnnotationSource[];
         pointCloudBounds?: Bounds3;
         /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
@@ -55,6 +57,7 @@
         intensityRange,
         cuboids = [],
         annotationClasses = [],
+        annotationSources = [],
         pointCloudBounds = EMPTY_BOUNDS,
         fitKey,
         selectedAnnotationId = null,
@@ -116,5 +119,12 @@
     </Canvas>
     <SceneNavigationControls />
     <RotationCursor target={viewport} {cursorX} {cursorY} />
-    <CuboidTooltipOverlay {cursorX} {cursorY} {hoveredAnnotationId} {cuboids} {annotationClasses} />
+    <CuboidTooltipOverlay
+        {cursorX}
+        {cursorY}
+        {hoveredAnnotationId}
+        {cuboids}
+        {annotationClasses}
+        {annotationSources}
+    />
 </div>

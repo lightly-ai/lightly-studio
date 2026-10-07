@@ -5,11 +5,13 @@
     interface Props {
         /** Cuboid whose metadata is displayed. */
         annotation: Parameters<typeof createAnnotationDetails>[0]['annotation'];
+        /** Human-readable annotation source name, when available. */
+        annotationSourceName?: string;
     }
 
-    let { annotation }: Props = $props();
+    let { annotation, annotationSourceName }: Props = $props();
 
-    const details = $derived(createAnnotationDetails({ annotation }));
+    const details = $derived(createAnnotationDetails({ annotation, annotationSourceName }));
 </script>
 
 <dl class="space-y-3 text-diffuse-foreground" data-testid="point-cloud-annotation-details">
@@ -40,10 +42,12 @@
         </dd>
     </div>
 
-    <div class="grid grid-cols-[5rem_1fr] gap-x-2">
-        <Typography component="dt" variant="body2">Annotation source:</Typography>
-        <Typography component="dd" variant="body2">{details.annotationSourceId}</Typography>
-    </div>
+    {#if details.annotationSourceName}
+        <div class="grid grid-cols-[5rem_1fr] gap-x-2">
+            <Typography component="dt" variant="body2">Annotation source:</Typography>
+            <Typography component="dd" variant="body2">{details.annotationSourceName}</Typography>
+        </div>
+    {/if}
 
     {#if details.trackId}
         <div class="grid grid-cols-[5rem_1fr] gap-x-2">
