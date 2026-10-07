@@ -134,7 +134,7 @@ jobs:
       # change the schema inside the published wheel with no signal.
       - name: Install Dependencies
         working-directory: ${{ steps.package.outputs.directory }}
-        run: uv sync --locked --all-groups --all-extras
+        run: uv sync --locked --all-groups --no-group gpu --all-extras
 
       - name: Build the Distributions
         working-directory: ${{ steps.package.outputs.directory }}

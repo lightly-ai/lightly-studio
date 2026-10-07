@@ -61,10 +61,12 @@ endif
 
 # Note: Install target with default dependencies is not necessary as uv will
 # install the default dependencies automatically on e.g. `uv run` etc.
+# The `cpu` and `gpu` groups conflict, so `--all-groups` alone fails. Without `gpu`,
+# torch is the CPU build. Set `UV_NO_GROUP=cpu` for the CUDA build, see CONTRIBUTING.md.
 .PHONY: install-optional-deps
 install-optional-deps:
 	@echo "Installing with optional dependencies..."
-	uv sync --all-groups --all-extras
+	uv sync --all-groups --no-group gpu --all-extras
 
 # `--out-dir dist` on every `uv build` below: in a uv workspace `uv build` defaults to the
 # workspace root, so without it the wheel would land in ../dist instead of lightly_studio/dist.

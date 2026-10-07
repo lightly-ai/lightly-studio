@@ -208,6 +208,23 @@ there instead, otherwise nothing reads it.
 
 `LIGHTLY_STUDIO_INTERNAL=1`, in `.env` or the environment, does the same for a single run.
 
+### GPU Torch on Linux
+
+On Linux, the development environment installs the CPU build of `torch` from the PyTorch CPU
+index. It is much smaller than the CUDA build from PyPI. The `cpu` and `gpu` dependency groups
+select the build, and `cpu` is a default group. On macOS and Windows, both builds are the same.
+
+To use the CUDA build, exclude the `cpu` group in your shell profile and sync again:
+
+```shell
+export UV_NO_GROUP=cpu   # fish: set -Ux UV_NO_GROUP cpu
+uv sync --all-groups --all-extras
+```
+
+Set the variable permanently. A one-time `uv sync --no-group cpu` is not sufficient, because the
+next `uv run` syncs the default groups again and installs the CPU build. With the variable set,
+`make install-optional-deps` also installs the CUDA build.
+
 ### Test with a Private Mundig Development Wheel
 
 Lightly developers with access to the private Artifact Registry can test an unreleased
@@ -241,7 +258,7 @@ the public version from the lockfile. This does not affect explicit `uv sync` co
 
 ```bash
 cd lightly_studio
-uv sync --locked --all-groups --all-extras
+uv sync --locked --all-groups --no-group gpu --all-extras
 uv pip install --reinstall "lightly-mundig==$MUNDIG_DEV_VERSION"
 export UV_NO_SYNC=1
 make test
