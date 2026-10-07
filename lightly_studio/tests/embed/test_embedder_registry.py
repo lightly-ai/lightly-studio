@@ -547,6 +547,42 @@ class TestEmbedderRegistry:
         assert registry.get_image_path_embedder(space_key="mobileclip_s0") is builtin
         assert registry.get_image_path_embedder() is custom
 
+    def test_get_space_embedder__registration_without_capability(self) -> None:
+        registry = EmbedderRegistry()
+        embedder = _FakeImageEmbedder(space_key="space-a")
+        registry.register(embedder=embedder)
+
+        # A typed getter returns None, but the space has an embedder
+        assert registry.get_image_crop_path_embedder(space_key="space-a") is None
+        assert (
+            registry.get_space_embedder(space_key="space-a", capability=Capability.IMAGE_CROP_PATH)
+            is embedder
+        )
+
+    def test_get_space_embedder__no_embedder(self) -> None:
+        registry = EmbedderRegistry()
+
+        assert (
+            registry.get_space_embedder(space_key="space-a", capability=Capability.IMAGE_CROP_PATH)
+            is None
+        )
+
+    def test_is_bootstrap_registered(self) -> None:
+        registry = EmbedderRegistry()
+        assert registry.is_bootstrap_registered(capability=Capability.IMAGE_PATH) is False
+
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"))
+
+        assert registry.is_bootstrap_registered(capability=Capability.IMAGE_PATH) is True
+        assert registry.is_bootstrap_registered(capability=Capability.TEXT) is False
+
+    def test_is_bootstrap_registered__empty_bootstrap_set(self) -> None:
+        registry = EmbedderRegistry()
+
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"), bootstrap_for=set())
+
+        assert registry.is_bootstrap_registered(capability=Capability.IMAGE_PATH) is False
+
     def test_is_remote_unavailable__after_failure(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()
         mocker.patch.object(

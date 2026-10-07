@@ -85,6 +85,8 @@ class EmbedderRegistry:
         # The flag is False for a server that answers but serves no usable capability
         self._config_to_failure: dict[tuple[UUID, str], tuple[EmbedderConfig, float, bool]] = {}
         self._bootstrap_spaces = dict(_INITIAL_BOOTSTRAP_SPACES)
+        # The capabilities whose bootstrap space a registration set
+        self._registered_bootstraps: set[Capability] = set()
         self._build_locks: dict[tuple[UUID | None, str], threading.Lock] = {}
         self._lock = threading.Lock()
 
@@ -188,6 +190,38 @@ class EmbedderRegistry:
             space_key=space_key, capability=Capability.IMAGE_BYTES, config=config
         )
         return embedder if isinstance(embedder, ImageBytesEmbedder) else None
+
+    def get_space_embedder(
+        self, space_key: str, capability: Capability, config: EmbedderConfig | None = None
+    ) -> Embedder | None:
+        """Get the space's embedder, whether or not it has the capability.
+
+        A typed getter returns None both if the space has no embedder and if its embedder
+        lacks the capability. This getter tells the two cases apart.
+
+        Args:
+            space_key: The space to resolve.
+            capability: The capability the caller needs. As in the typed getters, a
+                registration that lacks it gives way to ``config``.
+            config: The stored configuration of the space, or None.
+
+        Returns:
+            The embedder of the space, or None if no source has one.
+        """
+        return self._resolve(space_key=space_key, capability=capability, config=config)
+
+    def is_bootstrap_registered(self, capability: Capability) -> bool:
+        """Tell if a registered embedder is the bootstrap choice of a capability.
+
+        Args:
+            capability: The capability to check.
+
+        Returns:
+            True if a call to ``register`` set the bootstrap space of the capability, False
+            if the capability has the built-in bootstrap space or none.
+        """
+        with self._lock:
+            return capability in self._registered_bootstraps
 
     def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
         """Get whether the embedding server of the configuration failed inside the retry window.
@@ -337,6 +371,7 @@ class EmbedderRegistry:
         )
         for capability in defaults:
             self._bootstrap_spaces[capability] = space_key
+        self._registered_bootstraps.update(defaults)
 
 
 _registry = EmbedderRegistry()
