@@ -142,7 +142,7 @@ plugins = ["pydantic.mypy"]
 untyped_calls_exclude = ["mcap_ros2"]
 
 # Only `docs/mkdocs_hooks.py` imports this. CI installs the `docs` group
-# (`make install-optional-deps` syncs all groups except `gpu`), so this is for a
+# (`make install-optional-deps`), so this is for a
 # plain local `uv run mypy .`, which resolves the default groups only.
 [[tool.mypy.overrides]]
 module = "mkdocs.*"

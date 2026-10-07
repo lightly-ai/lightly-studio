@@ -218,7 +218,7 @@ To use the CUDA build, exclude the `cpu` group in your shell profile and sync ag
 
 ```shell
 export UV_NO_GROUP=cpu   # fish: set -Ux UV_NO_GROUP cpu
-uv sync --all-groups --all-extras
+uv sync
 ```
 
 Set the variable permanently. A one-time `uv sync --no-group cpu` is not sufficient, because the
@@ -258,7 +258,7 @@ the public version from the lockfile. This does not affect explicit `uv sync` co
 
 ```bash
 cd lightly_studio
-uv sync --locked --all-groups --no-group gpu --all-extras
+uv sync --locked --group docs --extra cloud-storage
 uv pip install --reinstall "lightly-mundig==$MUNDIG_DEV_VERSION"
 export UV_NO_SYNC=1
 make test
