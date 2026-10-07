@@ -9,11 +9,11 @@ from lightly_studio.core.mcap import add_labels, add_mcaps
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.sequence import McapSequence
-from lightly_studio.core.mcap.type_definitions import CuboidLabel, SceneUpdateLabels
+from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
-from lightly_studio.resolvers import annotation_resolver, object_track_resolver
+from lightly_studio.resolvers import annotation_resolver, object_track_resolver, tag_resolver
 from tests.core.mcap import helpers
 
 POINT_CLOUD_COMPONENT = "pcl_front"
@@ -71,6 +71,53 @@ def test_write_sequence_labels(
     )
     assert track is not None
     assert track.source_track_id == 7
+
+
+def test_write_sequence_labels__frame_tags(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, group_ids = _index_recording(tmp_path=tmp_path)
+    first_ns, second_ns = helpers.LIDAR_LOG_TIMES_NS[0], helpers.LIDAR_LOG_TIMES_NS[1]
+    messages = [
+        (
+            first_ns,
+            SceneUpdateLabels(
+                cuboids=(),
+                frame_tags=FrameTags(
+                    timestamp_ns=first_ns, tags=("lidar_dropout", "night"), note=None
+                ),
+            ),
+        ),
+        (
+            second_ns,
+            SceneUpdateLabels(
+                cuboids=(),
+                frame_tags=FrameTags(timestamp_ns=second_ns, tags=("lidar_dropout",), note=None),
+            ),
+        ),
+    ]
+
+    add_labels.write_sequence_labels(
+        dataset=dataset,
+        sequence=sequence,
+        annotation_mcap_uri="memory://foo_labeled.mcap",
+        messages=messages,
+    )
+
+    session = db_manager.persistent_session()
+    tags = tag_resolver.get_all_by_collection_id(
+        session=session, collection_id=dataset.group_dataset.collection_id
+    )
+    sample_ids_by_tag_name = {
+        tag.name: set(tag_resolver.get_sample_ids_by_tag_id(session=session, tag_id=tag.tag_id))
+        for tag in tags
+    }
+    assert sample_ids_by_tag_name == {
+        "lidar_dropout": {group_ids[0], group_ids[1]},
+        "night": {group_ids[0]},
+    }
+    assert all(tag.kind == "sample" for tag in tags)
 
 
 def test_write_sequence_labels__links_parent_tracks(
