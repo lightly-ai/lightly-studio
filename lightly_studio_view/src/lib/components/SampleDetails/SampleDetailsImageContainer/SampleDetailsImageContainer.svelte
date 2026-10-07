@@ -245,7 +245,7 @@
             <BrushToolPopUp />
         {/if}
         {#if shouldShowSlicToolPopup}
-            <SlicToolPopUp />
+            <SlicToolPopUp isPending={$isPending} />
         {/if}
     {/snippet}
     {#snippet zoomPanelRightContent()}

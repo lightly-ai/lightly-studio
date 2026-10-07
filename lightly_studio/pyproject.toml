@@ -71,8 +71,15 @@ dependencies = [
     "mcap-ros2-support>=0.5.0,<0.6",
 ]
 
+[tool.uv]
+default-groups = ["dev", "cpu"]
+
 [tool.uv.sources]
 lightly-studio-serve = { workspace = true }
+# The CPU build of torch is much smaller than the CUDA build from PyPI. The sources are
+# local to this repo: they are not in the wheel metadata.
+torch = [{ index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux'" }]
 
 [project.scripts]
 lightly-studio = "lightly_studio.cli:main"
@@ -103,6 +110,11 @@ dev = [
     "testcontainers[postgres]>=4.0.0",
 ]
 
+# Select the torch build. `cpu` is the default. `gpu` adds no packages: it only makes uv
+# lock a second resolution with the CUDA build from PyPI. See CONTRIBUTING.md.
+cpu = ["torch", "torchvision"]
+gpu = ["torch", "torchvision"]
+
 docs = [
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.4.0",
@@ -130,7 +142,7 @@ plugins = ["pydantic.mypy"]
 untyped_calls_exclude = ["mcap_ros2"]
 
 # Only `docs/mkdocs_hooks.py` imports this. CI installs the `docs` group
-# (`make install-optional-deps` is `uv sync --all-groups`), so this is for a
+# (`make install-optional-deps`), so this is for a
 # plain local `uv run mypy .`, which resolves the default groups only.
 [[tool.mypy.overrides]]
 module = "mkdocs.*"

@@ -22,7 +22,7 @@
                 if (active) slicAvailable = true;
             },
             // Unsupported or blocked WASM keeps the toolbar entry hidden.
-            () => {}
+            (error) => console.error('AI-assisted labeling initialization failed', error)
         );
         return () => {
             active = false;
@@ -179,7 +179,7 @@
     const onClickBrush = () => activateBrush();
 
     const onClickSlic = () => {
-        if (!showSegmentationTool) return;
+        if (!showSegmentationTool || !slicAvailable) return;
 
         const shouldKeepSelectedAnnotation =
             annotationLabelContext.annotationId != null &&

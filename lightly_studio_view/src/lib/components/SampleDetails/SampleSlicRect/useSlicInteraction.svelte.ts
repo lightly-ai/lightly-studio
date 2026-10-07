@@ -166,7 +166,8 @@ export function useSlicInteraction(getProps: () => SampleSlicRectProps) {
                     },
                     annotationLabelContext.lockedAnnotationIds
                 );
-            } catch {
+            } catch (error) {
+                console.error('AI-assisted labeling save failed', error);
                 toast.error('Could not save the segmentation annotation');
             } finally {
                 isPersisting = false;

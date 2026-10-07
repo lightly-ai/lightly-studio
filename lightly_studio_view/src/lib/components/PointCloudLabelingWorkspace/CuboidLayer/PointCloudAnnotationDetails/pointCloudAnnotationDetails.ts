@@ -3,7 +3,7 @@ import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspa
 
 type AnnotationDetailsAnnotation = Pick<
     CuboidAnnotation,
-    'center' | 'size' | 'rotation' | 'annotationSourceId' | 'trackId'
+    'center' | 'size' | 'rotation' | 'annotationSourceId' | 'trackNumber'
 >;
 
 interface AnnotationDetails {
@@ -11,7 +11,7 @@ interface AnnotationDetails {
     dimensions: readonly [string, string, string];
     rotation: readonly [string, string, string];
     annotationSourceId: string;
-    trackId: string | null;
+    trackNumber: number | null;
 }
 
 interface CreateAnnotationDetailsParams {
@@ -41,6 +41,6 @@ export function createAnnotationDetails({
         dimensions: [w.toFixed(2), h.toFixed(2), d.toFixed(2)],
         rotation: [toDeg(euler.x), toDeg(euler.y), toDeg(euler.z)],
         annotationSourceId: annotation.annotationSourceId,
-        trackId: annotation.trackId
+        trackNumber: annotation.trackNumber
     };
 }

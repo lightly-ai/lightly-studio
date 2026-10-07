@@ -1,9 +1,10 @@
 import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import type { ComponentProps } from 'svelte';
 import SampleSlicRect from './SampleSlicRect.svelte';
+import { toast } from 'svelte-sonner';
 
 const {
     mockAnnotationContext,
@@ -150,6 +151,7 @@ const stroke = async (rect: Element) => {
 };
 
 describe('SampleSlicRect', () => {
+    afterEach(() => vi.restoreAllMocks());
     beforeEach(() => {
         vi.clearAllMocks();
         mockAnnotationContext.annotationId = null;
@@ -166,6 +168,26 @@ describe('SampleSlicRect', () => {
 
         expect(setIsDrawingMock).toHaveBeenCalledWith(true);
         expect(Array.from(finishBrushMock.mock.calls[0][0] as Uint8Array)).toEqual([0, 1, 0]);
+    });
+
+    it('reports save failures and allows another stroke', async () => {
+        const error = new Error('Save failed');
+        const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const notification = vi.spyOn(toast, 'error').mockImplementation(() => 'error-toast');
+        const onFinishBrushPendingChange = vi.fn();
+        finishBrushMock.mockRejectedValueOnce(error);
+        const { rect } = await renderReady({ onFinishBrushPendingChange });
+        await stroke(rect);
+        await waitFor(() => {
+            expect(log).toHaveBeenCalledWith('AI-assisted labeling save failed', error);
+            expect(notification).toHaveBeenCalledWith('Could not save the segmentation annotation');
+            expect(onFinishBrushPendingChange).toHaveBeenLastCalledWith({
+                operation: expect.any(String),
+                isPending: false
+            });
+        });
+        await stroke(rect);
+        expect(finishBrushMock).toHaveBeenCalledTimes(2);
     });
 
     it('cancels a stroke without saving a mask', async () => {

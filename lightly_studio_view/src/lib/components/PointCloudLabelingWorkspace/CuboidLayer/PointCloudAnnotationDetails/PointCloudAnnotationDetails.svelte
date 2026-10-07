@@ -45,10 +45,10 @@
         <Typography component="dd" variant="body2">{details.annotationSourceId}</Typography>
     </div>
 
-    {#if details.trackId}
+    {#if details.trackNumber !== null}
         <div class="grid grid-cols-[5rem_1fr] gap-x-2">
-            <Typography component="dt" variant="body2">Track ID:</Typography>
-            <Typography component="dd" variant="body2">{details.trackId}</Typography>
+            <Typography component="dt" variant="body2">Track number:</Typography>
+            <Typography component="dd" variant="body2">{details.trackNumber}</Typography>
         </div>
     {/if}
 </dl>
