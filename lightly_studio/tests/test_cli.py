@@ -178,6 +178,7 @@ def test_quickstart__runs_real_evaluation_pipeline(
 
     Runs against its own isolated 'quickstart.db', without any network access.
     """
+    pytest.importorskip("torch")  # TODO(Michal, 10/2026): CI benchmark only.
     monkeypatch.chdir(tmp_path)
     dataset_dir = _build_quickstart_dataset_dir(tmp_path)
     mocker.patch.object(
@@ -209,6 +210,7 @@ def test_quickstart__second_run_without_force_download_does_not_duplicate_or_cra
     Previously quickstart.db was only wiped for --force-download, so a second run duplicated
     annotations and then crashed with an IntegrityError on the evaluation run insert.
     """
+    pytest.importorskip("torch")  # TODO(Michal, 10/2026): CI benchmark only.
     monkeypatch.chdir(tmp_path)
     dataset_dir = _build_quickstart_dataset_dir(tmp_path)
     mocker.patch.object(

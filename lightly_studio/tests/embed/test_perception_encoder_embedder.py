@@ -4,6 +4,10 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
+# TODO(Michal, 10/2026): CI benchmark only, do not merge.
+pytest.importorskip("torch")
+
 import torch
 from lightly_studio_serve.types import ImageCrop
 from PIL import Image

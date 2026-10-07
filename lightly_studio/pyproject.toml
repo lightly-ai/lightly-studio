@@ -44,9 +44,6 @@ dependencies = [
     "scipy>=1.13.1",
     "python-multipart>=0.0.20",
     "environs<12.0.0",
-    "open-clip-torch>=2.20.0",
-    "torch>=2.6.0",
-    "torchvision>=0.20.0",
     # Mundig releases are published to PyPI: https://pypi.org/project/lightly-mundig/
     # To update, bump the pin below and relock:
     # uv lock --upgrade-package lightly-mundig==$version
@@ -213,3 +210,14 @@ extend-exclude = [
 init_typed = true
 warn_untyped_fields = true
 warn_required_dynamic_aliases = true
+
+# TODO(Michal, 10/2026): CI benchmark only, do not merge.
+[[tool.mypy.overrides]]
+module = ["torch.*", "torchvision.*", "open_clip.*"]
+ignore_missing_imports = true
+
+# TODO(Michal, 10/2026): CI benchmark only, do not merge.
+[[tool.mypy.overrides]]
+module = ["lightly_studio.embed.*", "lightly_studio.examples.*", "tests.embed.*"]
+warn_unused_ignores = false
+warn_return_any = false
