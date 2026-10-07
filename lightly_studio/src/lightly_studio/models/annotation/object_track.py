@@ -43,7 +43,7 @@ class ObjectTrackTable(SQLModel, table=True):
             primaryjoin="ObjectTrackTable.parent_object_track_id == ObjectTrackTable.object_track_id",
             foreign_keys="[ObjectTrackTable.parent_object_track_id]",
             remote_side="[ObjectTrackTable.object_track_id]",
-            lazy="joined",
+            lazy="select",
             uselist=False,
         )
     )

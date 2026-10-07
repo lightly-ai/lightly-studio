@@ -13,6 +13,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -63,6 +64,7 @@ def get_all_by_parent_sample_ids(
             )
         )
         .options(joinedload(AnnotationBaseTable.sample).load_only(SampleTable.collection_id))  # type: ignore[arg-type]
+        .options(joinedload(AnnotationBaseTable.object_track).joinedload(ObjectTrackTable.parent_object_track))
     )
     if annotation_types is not None:
         annotations_statement = annotations_statement.where(
