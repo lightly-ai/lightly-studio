@@ -73,6 +73,8 @@ dependencies = [
 
 [tool.uv.sources]
 lightly-studio-serve = { workspace = true }
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 
 [project.scripts]
 lightly-studio = "lightly_studio.cli:main"
