@@ -146,6 +146,45 @@ describe('groupAnnotationsBySource — ordering', () => {
         expect(groups[0].cuboids.map((c) => c.trackNumber)).toEqual([1, 2, null]);
     });
 
+    it('recursively emits descendants before moving to the next top-level track', () => {
+        const grandparent = {
+            ...createAnnotationFixture(),
+            id: 'a-gp',
+            annotationSourceId: 'gt',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const parent = {
+            ...createAnnotationFixture(),
+            id: 'a-p',
+            annotationSourceId: 'gt',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+        const grandchild = {
+            ...createAnnotationFixture(),
+            id: 'a-gc',
+            annotationSourceId: 'gt',
+            trackNumber: 3,
+            parentTrackNumber: 2
+        };
+        const uncle = {
+            ...createAnnotationFixture(),
+            id: 'a-uncle',
+            annotationSourceId: 'gt',
+            trackNumber: 10,
+            parentTrackNumber: null
+        };
+        const sources = [{ id: 'gt', name: 'Ground Truth' }];
+
+        const groups = groupAnnotationsBySource({
+            cuboids: [uncle, grandchild, parent, grandparent],
+            sources
+        });
+
+        expect(groups[0].cuboids.map((c) => c.trackNumber)).toEqual([1, 2, 3, 10]);
+    });
+
     it('sorts independently within each source group', () => {
         const cuboid1 = {
             ...createAnnotationFixture(),
@@ -210,4 +249,3 @@ describe('resolveAnnotationClassName', () => {
         ).toBe('unknown-id');
     });
 });
-

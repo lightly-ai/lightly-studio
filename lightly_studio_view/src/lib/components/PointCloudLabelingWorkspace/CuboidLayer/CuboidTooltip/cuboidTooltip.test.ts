@@ -38,5 +38,4 @@ describe('createCuboidTooltip', () => {
 
         expect(tooltip.rotation).toBe('rx: 90.0°  ry: 0.0°  rz: 0.0°');
     });
-
 });

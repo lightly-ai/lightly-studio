@@ -84,7 +84,11 @@ describe('tickAnnotationsToCuboids', () => {
 
         const cuboids = tickAnnotationsToCuboids(annotations);
 
-        expect(cuboids[0]).toMatchObject({ trackId: 'track-2', trackNumber: null, parentTrackNumber: 3 });
+        expect(cuboids[0]).toMatchObject({
+            trackId: 'track-2',
+            trackNumber: null,
+            parentTrackNumber: 3
+        });
         expect(cuboids[1]).toMatchObject({ parentTrackNumber: null });
     });
 

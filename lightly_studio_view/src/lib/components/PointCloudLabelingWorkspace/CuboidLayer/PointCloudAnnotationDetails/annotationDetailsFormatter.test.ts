@@ -49,5 +49,4 @@ describe('createAnnotationDetails', () => {
 
         expect(details.trackNumber).toBe(7);
     });
-
 });

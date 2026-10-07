@@ -64,16 +64,22 @@ function sortByParentAndTrackNumber({
         children.sort(byTrackNumber);
     }
 
-    const result: CuboidAnnotation[] = [];
-    for (const parent of parents) {
-        result.push(parent);
-        if (parent.trackNumber !== null) {
-            const children = childrenByParent.get(parent.trackNumber);
+    function emitWithDescendants(cuboid: CuboidAnnotation): void {
+        result.push(cuboid);
+        if (cuboid.trackNumber !== null) {
+            const children = childrenByParent.get(cuboid.trackNumber);
             if (children) {
-                result.push(...children);
-                childrenByParent.delete(parent.trackNumber);
+                childrenByParent.delete(cuboid.trackNumber);
+                for (const child of children) {
+                    emitWithDescendants(child);
+                }
             }
         }
+    }
+
+    const result: CuboidAnnotation[] = [];
+    for (const parent of parents) {
+        emitWithDescendants(parent);
     }
 
     for (const orphans of childrenByParent.values()) {
