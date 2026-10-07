@@ -6,7 +6,7 @@
         SampleAnnotationSegmentationRLE
     } from '$lib/components';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-    import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/hooks/useGlobalStorage';
+    import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/hooks';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { Annotation } from '$lib/services/types';
     import type { BoundingBox } from '$lib/types';

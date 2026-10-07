@@ -8,18 +8,13 @@ const sliderValues = () =>
     screen.getAllByRole('slider').map((thumb) => Number(thumb.getAttribute('aria-valuenow')));
 
 describe('ImageAdjustments', () => {
-    it('renders the brightness, contrast, and mask opacity sliders', () => {
+    it('renders named sliders and a disabled reset button at the defaults', () => {
         render(ImageAdjustments, { props: defaultProps });
 
-        expect(screen.getByText('Brightness')).toBeInTheDocument();
-        expect(screen.getByText('Contrast')).toBeInTheDocument();
-        expect(screen.getByText('Mask opacity')).toBeInTheDocument();
+        expect(screen.getByRole('slider', { name: 'Brightness' })).toBeInTheDocument();
+        expect(screen.getByRole('slider', { name: 'Contrast' })).toBeInTheDocument();
+        expect(screen.getByRole('slider', { name: 'Mask opacity' })).toBeInTheDocument();
         expect(sliderValues()).toEqual([1, 1, 0.6]);
-    });
-
-    it('disables the reset button when all values are at their defaults', () => {
-        render(ImageAdjustments, { props: defaultProps });
-
         expect(screen.getByRole('button', { name: 'Reset image adjustments' })).toBeDisabled();
     });
 
