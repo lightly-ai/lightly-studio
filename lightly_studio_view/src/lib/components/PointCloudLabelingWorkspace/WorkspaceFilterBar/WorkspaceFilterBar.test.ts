@@ -26,8 +26,12 @@ const defaultProps = {
     cameraChannels,
     selectedLidarChannels: [] as number[],
     selectedCameraChannels: [] as number[],
+    colorMode: 'density' as const,
+    onColorModeChange: vi.fn(),
     onToggleLidarChannel: vi.fn(),
-    onToggleCameraChannel: vi.fn()
+    onToggleCameraChannel: vi.fn(),
+    onSetLidarChannels: vi.fn(),
+    onSetCameraChannels: vi.fn()
 };
 
 describe('WorkspaceFilterBar', () => {
@@ -70,6 +74,21 @@ describe('WorkspaceFilterBar', () => {
         expect(onToggleCameraChannel).toHaveBeenCalledExactlyOnceWith(3);
     });
 
+    it('supports selecting all and clearing camera channels', async () => {
+        const user = userEvent.setup();
+        const onSetCameraChannels = vi.fn();
+        render(WorkspaceFilterBar, {
+            props: { ...defaultProps, onSetCameraChannels }
+        });
+
+        await user.click(screen.getByTestId('workspace-camera-select'));
+        await user.click(screen.getByRole('button', { name: 'Clear' }));
+        expect(onSetCameraChannels).toHaveBeenLastCalledWith([]);
+
+        await user.click(screen.getByRole('button', { name: 'Select all' }));
+        expect(onSetCameraChannels).toHaveBeenLastCalledWith([2, 3]);
+    });
+
     it('selects a reference frame by its id', async () => {
         const user = userEvent.setup();
         const onSelectReferenceFrame = vi.fn();
@@ -87,6 +106,21 @@ describe('WorkspaceFilterBar', () => {
         await user.click(screen.getByText('CABIN'));
 
         expect(onSelectReferenceFrame).toHaveBeenCalledExactlyOnceWith('CABIN');
+    });
+
+    it('selects a point color mode with the shared select control', async () => {
+        const user = userEvent.setup();
+        const onColorModeChange = vi.fn();
+        render(WorkspaceFilterBar, {
+            props: { ...defaultProps, onColorModeChange }
+        });
+
+        expect(screen.getByTestId('workspace-color-select')).toHaveTextContent('Color: Density');
+        await user.click(screen.getByTestId('workspace-color-select'));
+        expect(screen.getByText('Intensity / Reflectivity')).toBeInTheDocument();
+        await user.click(screen.getByText('Height + Distance'));
+
+        expect(onColorModeChange).toHaveBeenCalledExactlyOnceWith('height-distance');
     });
 
     it('hides the frame select without reference frames', () => {

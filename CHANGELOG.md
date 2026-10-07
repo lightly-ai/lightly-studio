@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `quickstart-enterprise` CLI command to seed a remote enterprise instance with a demo dataset.
 - Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
-- Python SDK: Attach 3D cuboids from annotation MCAPs with `dataset.add_labels_from_folder(...)`. A later call skips sequences that already have that annotation source.
+- Python SDK: Attach 3D cuboids and frame tags from annotation MCAPs with `dataset.add_labels_from_folder(...)`. A later call skips sequences that already have that annotation source.
 - Python SDK: Embed search queries on a remote embedding server with `register_remote_embedder`.
+- Add AI-Assisted labeling with adjustable superpixels for creating and editing instance segmentation masks in WASM-capable browsers.
 - Python SDK: Enable metric recomputing for instance-segmentation.
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show the Rectangle and Lasso drag shortcuts in the embedding plot tool tooltips.
 - Show categorical metadata filters in the image sidebar with an optional field picker and expanded value lists.
 - Keep the query editor button enabled in the GUI. Clicking "Re-apply" refreshes the results with the current data.
+- Move the Tags, Metadata, and Embeddings docs pages under Workflows and add Enterprise sign-up and demo buttons to the docs landing page. The old URLs redirect.
 
 ### Deprecated
 
