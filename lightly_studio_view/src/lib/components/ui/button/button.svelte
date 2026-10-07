@@ -16,6 +16,7 @@
 				link: "text-primary underline-offset-4 hover:underline",
 			},
 			size: {
+				xs: "h-7 rounded-md px-2 text-xs",
 				default: "h-10 px-4 py-2",
 				sm: "h-9 rounded-md px-3",
 				lg: "h-11 rounded-md px-8",
