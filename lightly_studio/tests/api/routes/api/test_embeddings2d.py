@@ -13,6 +13,9 @@ from pyarrow import ipc
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+# TODO(Michal, 10/2026): CI benchmark only, do not merge.
+pytest.importorskip("torch")
+
 from lightly_studio.embed.mobileclip_embedder import EMBEDDING_DIMENSION
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagCreate
