@@ -160,7 +160,7 @@ jobs:
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
-        run: make install-optional-deps
+        run: uv sync
 
       # TODO(Michal, 10/2026): CI benchmark only, do not merge.
       - name: Bench venv and uv cache size
@@ -235,7 +235,7 @@ jobs:
         working-directory: lightly_studio
         env:
           UV_PYTHON: ${{ matrix.python }}
-        run: make install-optional-deps
+        run: uv sync --all-extras
 
       # TODO(Michal, 10/2026): CI benchmark only, do not merge.
       - name: Bench venv and uv cache size
@@ -294,7 +294,7 @@ jobs:
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
-        run: make install-optional-deps
+        run: uv sync
 
       # TODO(Michal, 10/2026): CI benchmark only, do not merge.
       - name: Bench venv and uv cache size
@@ -348,7 +348,7 @@ jobs:
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
-        run: make install-optional-deps
+        run: uv sync --group docs
 
       # TODO(Michal, 10/2026): CI benchmark only, do not merge.
       - name: Bench venv and uv cache size
