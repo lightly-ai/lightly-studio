@@ -13,12 +13,12 @@ from sqlmodel import Session, col, select
 from lightly_studio.database import db_insert, db_vector
 from lightly_studio.database.db_manager import DatabaseBackend
 from lightly_studio.database.db_vector import Embedding
-from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
 )
+from lightly_studio.resolvers import embedding_model_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.utils import batching
 
@@ -201,7 +201,9 @@ def get_projections_by_collection_id(
         ValueError: If the embedding model does not exist, or if a direction does not have
             the embedding dimension.
     """
-    embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
+    embedding_model = embedding_model_resolver.get_by_id(
+        session=session, embedding_model_id=embedding_model_id
+    )
     if embedding_model is None:
         raise ValueError(f"Embedding model {embedding_model_id} not found.")
     dimension = embedding_model.embedding_dimension
