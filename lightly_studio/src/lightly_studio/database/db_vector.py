@@ -13,7 +13,7 @@ import numpy as np
 from numpy.typing import NDArray
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import core_schema
-from sqlalchemy import ARRAY, Float, cast, func
+from sqlalchemy import ARRAY, Float
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import SQLCompiler
@@ -178,6 +178,8 @@ def _compile_vector_element_postgresql(
 class inner_product(GenericFunction[float]):  # noqa: N801
     """Inner (dot) product of two vectors that compiles to dialect-specific SQL.
 
+    The first operand is a vector column, and the second operand is a query vector.
+
     - DuckDB: ``list_inner_product(a, b)`` with the second operand cast to FLOAT[]
     - PostgreSQL: pgvector's ``inner_product(a::vector, b::vector)``
     """
@@ -201,7 +203,9 @@ def _compile_inner_product_unsupported(
 def _compile_inner_product_duckdb(element: inner_product, compiler: SQLCompiler, **kw: Any) -> str:
     """DuckDB compilation: list_inner_product with the second operand cast to FLOAT[]."""
     left, right = list(element.clauses)
-    return compiler.process(func.list_inner_product(left, cast(right, ARRAY(Float))), **kw)
+    left_sql = compiler.process(left, **kw)
+    right_sql = compiler.process(right, **kw)
+    return f"list_inner_product({left_sql}, CAST({right_sql} AS FLOAT[]))"
 
 
 @compiles(inner_product, "postgresql")
