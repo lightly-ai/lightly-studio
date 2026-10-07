@@ -136,6 +136,15 @@
         // Get the grid view rendering mode from settings
 
         isReady = true;
+
+        // Called by the onboarding "Open sample" button to navigate to the first
+        // visible sample without relying on synthetic DOM event dispatch.
+        function handleOpenFirstSample() {
+            const firstSample = samples[0];
+            if (firstSample) handleOnDoubleClick(firstSample.sample_id);
+        }
+        window.addEventListener('onboarding:open-first-sample', handleOpenFirstSample);
+        return () => window.removeEventListener('onboarding:open-first-sample', handleOpenFirstSample);
     });
 
     const confusionCell = $derived(
@@ -192,6 +201,11 @@
 
     function handleOnDoubleClick(sampleId: string) {
         if (datasetId && collectionType) {
+            window.dispatchEvent(
+                new CustomEvent('onboarding:opening-sample', {
+                    detail: { collectionId: collection_id }
+                })
+            );
             goto(
                 routeHelpers.toSample({
                     sampleId,

@@ -102,6 +102,9 @@
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
+    import Onboarding from '$lib/components/Onboarding/Onboarding.svelte';
+    import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+    import { getLightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
     const { data, children } = $props();
     const {
         collection,
@@ -109,6 +112,15 @@
     } = $derived(data);
 
     const { trackEvent } = usePostHog();
+    const { featureFlags, ready: featureFlagsReady } = useFeatureFlags();
+    let featuresLoaded = $state(false);
+    let replayRequest = $state(0);
+    const onboardingEnabled = $derived(
+        featuresLoaded &&
+            $featureFlags.includes('onboarding') &&
+            collection.sample_type === 'image' &&
+            !getLightlyEnterpriseSession()
+    );
     const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
     const { isRefineClassifiersPanelOpen } = useRefineClassifiersPanel();
 
@@ -256,6 +268,9 @@
 
     // Setup event handlers for keyboard shortcuts
     onMount(() => {
+        void featureFlagsReady.then(() => {
+            featuresLoaded = true;
+        });
         if (browser) {
             window.addEventListener('keydown', handleKeyEvent);
             window.addEventListener('keyup', handleKeyEvent);
@@ -935,11 +950,21 @@
 </script>
 
 <div class="flex-none">
-    <Header {collection} />
+    <Header {collection} showTour={onboardingEnabled} onShowTour={() => replayRequest++} />
     <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
+    <Onboarding
+        enabled={onboardingEnabled}
+        {isImages}
+        {isSampleDetails}
+        {collectionId}
+        collectionType={page.params.collection_type!}
+        {datasetId}
+        sampleCount={collection.total_sample_count}
+        {replayRequest}
+    />
     {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails}
         {@render children()}
     {:else}

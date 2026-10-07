@@ -21,7 +21,8 @@ vi.mock('$app/environment', () => ({ browser: false }));
 vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
-    readAnnotationEmbedding: vi.fn()
+    readAnnotationEmbedding: vi.fn(),
+    getFeatures: vi.fn().mockResolvedValue({ data: [] })
 }));
 vi.mock('$lib/workers/maskRendererPool', () => ({
     shutdownMaskRendererPool: vi.fn()

@@ -12,12 +12,57 @@ import { get } from 'svelte/store';
 const ANALYTICS_FEATURE = 'analytics';
 
 let initialized = false;
+let readyPromise: Promise<boolean> | null = null;
+
+async function startInit(): Promise<boolean> {
+    if (!browser || initialized) return initialized;
+
+    const configResponse = getAnalyticsConfig().catch((error: unknown) => {
+        console.warn('Failed to read the analytics configuration', error);
+        return undefined;
+    });
+
+    const { featureFlags, ready } = useFeatureFlags();
+    await ready;
+    if (!get(featureFlags).includes(ANALYTICS_FEATURE)) return false;
+
+    const config = (await configResponse)?.data;
+    if (!config) return false;
+    if (initialized) return true;
+
+    posthog.init(config.posthog_key, {
+        api_host: config.posthog_host,
+        person_profiles: 'identified_only',
+        capture_pageview: true,
+        capture_pageleave: true,
+        capture_exceptions: true
+    });
+    posthog.register({ app_version: version });
+    initialized = true;
+
+    // Only identify with the install_id for non-enterprise.
+    // In enterprise, users would already be logged in/identified, and we don't want to
+    // overwrite that. Overwriting with the install_id would collapse every logged-in user
+    // onto a single install_id.
+    const currentId = posthog.get_distinct_id();
+    const identifiedAsEnterpriseUser = typeof currentId === 'string' && currentId.includes('@');
+    if (!identifiedAsEnterpriseUser) {
+        // One distinct id per install, shared with the Python SDK, instead of two.
+        posthog.identify(config.install_id);
+    }
+
+    return true;
+}
 
 /**
  * PostHog analytics hook for tracking user behavior and events.
  *
  * Automatically tracks page views, navigation, and JavaScript errors.
  * Use trackEvent() to capture custom user actions like collection loads, exports, or feature usage.
+ *
+ * Initialization starts eagerly on first call. Await `ready` to know whether PostHog initialized
+ * before firing events that must be attributed (e.g. onboarding steps). `ready` always resolves —
+ * it is `true` when PostHog is active, `false` when tracking is disabled or unavailable.
  *
  * @example
  * ```ts
@@ -26,48 +71,7 @@ let initialized = false;
  * ```
  */
 export const usePostHog = () => {
-    /**
-     * Start PostHog, unless the backend reports that usage tracking is switched off.
-     *
-     * Resolves once the decision is made. Events fired before then are dropped by trackEvent().
-     */
-    const init = async () => {
-        if (!browser || initialized) return;
-
-        const configResponse = getAnalyticsConfig().catch((error: unknown) => {
-            console.warn('Failed to read the analytics configuration', error);
-            return undefined;
-        });
-
-        const { featureFlags, ready } = useFeatureFlags();
-        await ready;
-        if (!get(featureFlags).includes(ANALYTICS_FEATURE)) return;
-
-        const config = (await configResponse)?.data;
-        if (!config) return;
-        if (initialized) return;
-
-        posthog.init(config.posthog_key, {
-            api_host: config.posthog_host,
-            person_profiles: 'identified_only',
-            capture_pageview: true,
-            capture_pageleave: true,
-            capture_exceptions: true
-        });
-        posthog.register({ app_version: version });
-        initialized = true;
-
-        // Only identify with the install_id for non-enterprise.
-        // In enterprise, users would already be logged in/identified, and we don't want to
-        // overwrite that. Overwriting with the install_id would collapse every logged-in user
-        // onto a single install_id.
-        const currentId = posthog.get_distinct_id();
-        const identifiedAsEnterpriseUser = typeof currentId === 'string' && currentId.includes('@');
-        if (!identifiedAsEnterpriseUser) {
-            // One distinct id per install, shared with the Python SDK, instead of two.
-            posthog.identify(config.install_id);
-        }
-    };
+    readyPromise ??= startInit().catch(() => false);
 
     /**
      * Track a custom event with optional properties.
@@ -92,7 +96,7 @@ export const usePostHog = () => {
     };
 
     return {
-        init,
+        ready: readyPromise,
         trackEvent
     };
 };

@@ -16,7 +16,8 @@
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
         WandSparkles as WandSparklesIcon,
-        Menu as MenuIcon
+        Menu as MenuIcon,
+        Compass as CompassIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -28,13 +29,17 @@
         isVideos = false,
         hasEmbeddings = false,
         collection,
-        user
+        user,
+        showTour = false,
+        onShowTour
     } = $props<{
         isImages?: boolean;
         isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
         user?: LightlyEnterpriseSession['user'];
+        showTour?: boolean;
+        onShowTour?: () => void;
     }>();
 
     const { openDatasetSplitDialog } = useDatasetSplitDialog();
@@ -118,6 +123,14 @@
             icon: SettingsIcon,
             testId: 'menu-settings',
             onSelect: openSettingsDialog
+        });
+
+        addAction(items, showTour && !!onShowTour, {
+            value: 'menu-show-tour',
+            label: 'Show tour',
+            icon: CompassIcon,
+            testId: 'menu-show-tour',
+            onSelect: () => onShowTour?.()
         });
 
         return items;

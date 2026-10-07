@@ -203,7 +203,11 @@
     <div class="mb-3 w-full space-y-1">
         <div class="space-y-1">
             {#each $tags as tag (tag.tag_id)}
-                <div class="flex items-center gap-2 py-0.5" data-testid="tag-menu-item">
+                <div
+                    class="flex items-center gap-2 py-0.5"
+                    data-testid="tag-menu-item"
+                    data-onboarding-tag
+                >
                     <div class="min-w-0 flex-1">
                         {#if editingTagId === tag.tag_id}
                             <TagRenameInput

@@ -59,8 +59,8 @@ describe('usePostHog', () => {
     });
 
     it('should initialize PostHog with correct configuration', async () => {
-        const { init } = await freshPostHog();
-        await init();
+        const { ready } = await freshPostHog();
+        await ready;
 
         expect(mockInit).toHaveBeenCalledWith('prod-key', {
             api_host: 'https://eu.i.posthog.com',
@@ -75,8 +75,8 @@ describe('usePostHog', () => {
     it('should identify with the backend install id when the visitor is anonymous', async () => {
         mockGetDistinctId.mockReturnValue(ANONYMOUS_ID);
 
-        const { init } = await freshPostHog();
-        await init();
+        const { ready } = await freshPostHog();
+        await ready;
 
         expect(mockIdentify).toHaveBeenCalledWith(INSTALL_ID);
     });
@@ -84,8 +84,8 @@ describe('usePostHog', () => {
     it('should keep an enterprise user identified by email instead of the install id', async () => {
         mockGetDistinctId.mockReturnValue('user@lightly.ai');
 
-        const { init } = await freshPostHog();
-        await init();
+        const { ready } = await freshPostHog();
+        await ready;
 
         expect(mockInit).toHaveBeenCalled();
         expect(mockIdentify).not.toHaveBeenCalled();
@@ -94,8 +94,8 @@ describe('usePostHog', () => {
     it('should reconcile a stale install id to the current one', async () => {
         mockGetDistinctId.mockReturnValue('0199aaaa-b775-76b8-9b09-000000000000');
 
-        const { init } = await freshPostHog();
-        await init();
+        const { ready } = await freshPostHog();
+        await ready;
 
         expect(mockIdentify).toHaveBeenCalledWith(INSTALL_ID);
     });
@@ -103,8 +103,8 @@ describe('usePostHog', () => {
     it('should not initialize when the config request fails', async () => {
         mockGetAnalyticsConfig.mockRejectedValue(new Error('API Error'));
 
-        const { init } = await freshPostHog();
-        await init();
+        const { ready } = await freshPostHog();
+        await ready;
 
         expect(mockInit).not.toHaveBeenCalled();
         expect(mockIdentify).not.toHaveBeenCalled();
@@ -115,23 +115,26 @@ describe('usePostHog', () => {
             data: { ...CONFIG, posthog_key: 'dev-key' }
         });
 
-        await (await freshPostHog()).init();
+        await (await freshPostHog()).ready;
 
         expect(mockInit).toHaveBeenCalledWith('dev-key', expect.anything());
     });
 
     it('should track events after initialization', async () => {
-        const { init, trackEvent } = await freshPostHog();
-        await init();
+        const { ready, trackEvent } = await freshPostHog();
+        await ready;
         trackEvent('test_event', { test: 'data' });
 
         expect(mockCapture).toHaveBeenCalledWith('test_event', { test: 'data' });
     });
 
-    it('should initialize once when init is called twice concurrently', async () => {
-        const { init } = await freshPostHog();
+    it('should initialize once when usePostHog is called twice', async () => {
+        vi.resetModules();
+        const { usePostHog } = await import('./usePostHog');
+        const { ready: ready1 } = usePostHog();
+        const { ready: ready2 } = usePostHog();
 
-        await Promise.all([init(), init()]);
+        await Promise.all([ready1, ready2]);
 
         expect(mockInit).toHaveBeenCalledTimes(1);
     });
@@ -139,7 +142,7 @@ describe('usePostHog', () => {
     it('should not initialize when the backend reports analytics as off', async () => {
         mockGetFeatures.mockResolvedValue({ data: [] });
 
-        await (await freshPostHog()).init();
+        await (await freshPostHog()).ready;
 
         expect(mockInit).not.toHaveBeenCalled();
     });
@@ -149,21 +152,20 @@ describe('usePostHog', () => {
         let resolveFeatures: (features: unknown) => void = () => {};
         mockGetFeatures.mockReturnValue(new Promise((resolve) => (resolveFeatures = resolve)));
 
-        const { init } = await freshPostHog();
-        const initialized = init();
+        const { ready } = await freshPostHog();
         await Promise.resolve();
 
         expect(mockGetAnalyticsConfig).toHaveBeenCalled();
 
         resolveFeatures({ data: ['analytics'] });
-        await initialized;
+        await ready;
         expect(mockInit).toHaveBeenCalled();
     });
 
     it('should not initialize when the features request fails', async () => {
         mockGetFeatures.mockRejectedValue(new Error('API Error'));
 
-        await (await freshPostHog()).init();
+        await (await freshPostHog()).ready;
 
         expect(mockInit).not.toHaveBeenCalled();
     });
