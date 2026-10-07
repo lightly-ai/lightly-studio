@@ -229,7 +229,10 @@
 >
     {#snippet toolbarContent()}
         {#if $isEditingMode}
-            <SampleDetailsToolbar showSegmentationTool={shouldShowSegmentationToolInToolbar} />
+            <SampleDetailsToolbar
+                showSegmentationTool={shouldShowSegmentationToolInToolbar}
+                isPending={$isPending}
+            />
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
