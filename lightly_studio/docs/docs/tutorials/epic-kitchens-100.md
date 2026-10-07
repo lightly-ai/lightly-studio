@@ -216,7 +216,7 @@ The first script creates the dataset and computes the embeddings for all clips w
 - **Text search**: Finds clips with specific content. LightlyStudio compares the embedding of your text with the clip embeddings and shows a similarity score between 0 and 1 for each clip.
 
 !!! note "Embedding model"
-    By default, LightlyStudio embeds videos with the tiny `PE-Core-T16-384` variant of Perception Encoder. For this tutorial, we use the large `PE-Core-L14-336` variant, which the scripts load from `embedding_model.py`. It gives better results for the alignment score between narrations and videos, and for the other workflows that use embeddings. To learn how to use your own model, see [Using Your Own Embeddings](../core_concepts/embeddings.md#using-your-own-embeddings).
+    By default, LightlyStudio embeds videos with the tiny `PE-Core-T16-384` variant of Perception Encoder. For this tutorial, we use the large `PE-Core-L14-336` variant, which the scripts load from `embedding_model.py`. It gives better results for the alignment score between narrations and videos, and for the other workflows that use embeddings. To learn how to use your own model, see [Using Your Own Embeddings](../workflows/embeddings.md#using-your-own-embeddings).
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_overview_full.mp4" type="video/mp4">
