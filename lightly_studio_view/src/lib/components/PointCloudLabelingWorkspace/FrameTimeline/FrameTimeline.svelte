@@ -27,6 +27,10 @@
         onPlayToggle: () => void;
         onPlaybackIntervalChange: (intervalMs: number) => void;
         onSelectTick: (seqNumber: number) => void;
+        /** Open the previous sequence; the control is disabled when absent. */
+        onPreviousSequence?: () => void;
+        /** Open the next sequence; the control is disabled when absent. */
+        onNextSequence?: () => void;
     }
 
     let {
@@ -40,7 +44,9 @@
         onNextFrame,
         onPlayToggle,
         onPlaybackIntervalChange,
-        onSelectTick
+        onSelectTick,
+        onPreviousSequence,
+        onNextSequence
     }: Props = $props();
 
     // Ticks can be sparse, so resolve the active seq number to its array position rather than
@@ -76,6 +82,8 @@
         {onNextFrame}
         {onPlayToggle}
         {onPlaybackIntervalChange}
+        {onPreviousSequence}
+        {onNextSequence}
     />
     <TimelineTracks {ticks} {currentTick} {lanes} {onSelectTick} />
 </div>

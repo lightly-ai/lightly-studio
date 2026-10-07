@@ -15,16 +15,19 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, NamedTuple
 from uuid import UUID
 
+from mcap.exceptions import McapError
+
 from lightly_studio.core.file_outcome_report import (
     AlreadyPresentInputFileError,
     BrokenInputFileError,
     FileOutcomeReport,
+    MissingInputFileError,
 )
 from lightly_studio.core.mcap import dataset_schema, matching, reference_frames
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
-from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.reader import STATIC_TRANSFORM_TOPIC, McapFileReader
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequenceEntry
@@ -62,8 +65,9 @@ def index_recordings(  # noqa: PLR0913
     """Index several recordings into a dataset, one sequence each.
 
     A recording whose URI is already in the dataset is skipped, including a path that
-    appears twice in `mcap_paths`. A recording that cannot be read is reported and the
-    others are still indexed.
+    appears twice in `mcap_paths`. A recording that cannot be indexed, e.g. because the
+    file is missing, is not an MCAP file or lacks a topic of a component, is logged with
+    the reason and the others are still indexed.
 
     Args:
         dataset: The dataset to index into.
@@ -119,8 +123,13 @@ def index_recordings(  # noqa: PLR0913
                         reference_frame_ids=reference_frame_ids,
                     )
                 )
-            except McapAccessError as exc:
-                raise BrokenInputFileError(f"Cannot index '{mcap_path}': {exc}") from exc
+            except FileNotFoundError as exc:
+                logger.error("Cannot index '%s': the file does not exist.", mcap_path)
+                raise MissingInputFileError() from exc
+            except (McapAccessError, McapError) as exc:
+                # The report only counts the failure, so the reason is logged here.
+                logger.error("Cannot index '%s': %s", mcap_path, exc)
+                raise BrokenInputFileError() from exc
     report.raise_if_all_failed()
     report.log_summary()
     return sequence_sample_ids
@@ -160,7 +169,11 @@ def index_recording(  # noqa: PLR0913
             `sync_component` is not one of them, or if a reference frame id is empty
             or repeated.
         McapAccessError: If the recording cannot be read, if it has no topic of a
-            component, or if a reference frame is not in the recording.
+            component, if the sync component has no usable message, or if a reference
+            frame is not in the recording. A recording where no tick has a message for
+            every component is indexed as an empty sequence, with a warning.
+        mcap.exceptions.McapError: If the file is not an MCAP file.
+        FileNotFoundError: If the file does not exist.
     """
     reference_frames.check_reference_frame_ids(frame_ids=reference_frame_ids)
     dataset_schema.check_components_match(
@@ -182,6 +195,22 @@ def index_recording(  # noqa: PLR0913
     # Resolved before anything is written, so an unknown frame leaves no rows behind.
     frame_ids = _reference_frame_ids(loaded=loaded, reference_frame_ids=reference_frame_ids)
     rows = _complete_rows(components=components, locators=loaded.locators)
+    if not loaded.locators[sync_object.name]:
+        raise McapAccessError(
+            f"No usable message on topic '{sync_object.topic}' of the sync component "
+            f"'{sync_object.name}' in '{mcap_path}'. A message needs a decodable payload "
+            "and a header stamp."
+        )
+    if not rows:
+        logger.warning(
+            _no_complete_tick_message(
+                mcap_path=mcap_path,
+                components=components,
+                sync_component=sync_object,
+                locators=loaded.locators,
+                max_pairing_diff_ns=max_pairing_diff_ns,
+            )
+        )
     logger.info(
         "Indexing %d of %d ticks of '%s'.",
         len(rows),
@@ -265,6 +294,7 @@ def _read_recording(
     reference frames are requested, and only until those frames have been seen.
     """
     with McapFileReader(mcap_path) as reader:
+        _check_topics_present(reader=reader, components=components)
         reader.load_data_for_topics(
             _topics_to_load(components=components),
             static_transform_topic=STATIC_TRANSFORM_TOPIC,
@@ -302,6 +332,56 @@ def _read_recording(
         channel_ids=channel_ids,
         static_transforms=static_transforms,
         dynamic_edges=dynamic_edges,
+    )
+
+
+def _check_topics_present(reader: McapFileReader, components: Sequence[McapComponentSpec]) -> None:
+    """Check that the file has the topics of every component.
+
+    Raises:
+        TopicNotFoundError: If topics are missing. The error names all of them, and the
+            topics the file has.
+    """
+    available = {topic_info.name for topic_info in reader.get_topics()}
+    missing: list[str] = []
+    for component in components:
+        if component.topic not in available:
+            missing.append(f"'{component.topic}' (component '{component.name}')")
+        if component.camera_info_topic is not None and component.camera_info_topic not in available:
+            missing.append(
+                f"'{component.camera_info_topic}' (camera info of component '{component.name}')"
+            )
+    if missing:
+        raise TopicNotFoundError(
+            f"MCAP file '{reader.path}' has no topic {', '.join(missing)}. "
+            f"Topics in the file: {', '.join(sorted(available)) or 'none'}."
+        )
+
+
+def _no_complete_tick_message(
+    mcap_path: str,
+    components: Sequence[McapComponentSpec],
+    sync_component: McapComponentSpec,
+    locators: Mapping[str, Sequence[FrameLocator | None]],
+    max_pairing_diff_ns: int,
+) -> str:
+    """Explain why no tick of the recording has a message for every component."""
+    unpaired = [
+        component.name
+        for component in components
+        if all(locator is None for locator in locators[component.name])
+    ]
+    if unpaired:
+        return (
+            f"No message of component(s) {', '.join(repr(name) for name in unpaired)} in "
+            f"'{mcap_path}' is within {max_pairing_diff_ns} ns of a message of the sync "
+            f"component '{sync_component.name}'. Check that the topics have messages and "
+            "increase `max_pairing_diff_ns` if their clocks differ."
+        )
+    return (
+        f"No tick of '{mcap_path}' has a message for every component within "
+        f"{max_pairing_diff_ns} ns of the sync component '{sync_component.name}'. "
+        "Increase `max_pairing_diff_ns` or check the topics."
     )
 
 

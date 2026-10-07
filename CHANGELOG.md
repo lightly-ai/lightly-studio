@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
 - Python SDK: Attach 3D cuboids from annotation MCAPs with `dataset.add_labels_from_folder(...)`. A later call skips sequences that already have that annotation source.
 - Python SDK: Embed search queries on a remote embedding server with `register_remote_embedder`.
+- Add AI-Assisted labeling with adjustable superpixels for creating and editing instance segmentation masks in WASM-capable browsers.
 - Python SDK: Enable metric recomputing for instance-segmentation.
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
