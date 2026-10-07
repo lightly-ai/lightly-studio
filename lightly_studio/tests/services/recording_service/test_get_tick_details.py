@@ -12,10 +12,15 @@ from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundEr
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.models.static_transform import StaticTransformCreate
-from lightly_studio.resolvers import annotation_resolver, group_resolver, static_transform_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    group_resolver,
+    static_transform_resolver,
+    tag_resolver,
+)
 from lightly_studio.services import recording_service
 from tests.core.mcap import helpers as mcap_helpers
-from tests.helpers_resolvers import create_annotation_label, create_mcap, cuboid_create
+from tests.helpers_resolvers import create_annotation_label, create_mcap, create_tag, cuboid_create
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 from tests.resolvers.mcap_group_sequence_resolver.helpers import McapSequenceFixture
 
@@ -130,6 +135,53 @@ def test_get_tick_details__annotations(db_session: Session) -> None:
     assert annotation.annotation_label.annotation_label_name == "truck"
     assert annotation.cuboid_3d_details is not None
     assert annotation.cuboid_3d_details.px == pytest.approx(1.0)
+
+
+def test_get_tick_details__tags(db_session: Session) -> None:
+    fixture = helpers.create_mcap_sequence(session=db_session)
+    group_ids = group_resolver.create_many(
+        session=db_session,
+        collection_id=fixture.group_collection.collection_id,
+        groups=[set(), set()],
+    )
+    for seq_number, group_id in enumerate(group_ids):
+        db_session.add(
+            SampleSequenceLinkTable(
+                sample_id=group_id,
+                sequence_sample_id=fixture.sample_id,
+                seq_number=seq_number,
+                timestamp_ns=1_000 + seq_number,
+            )
+        )
+    tag = create_tag(
+        session=db_session,
+        collection_id=fixture.group_collection.collection_id,
+        tag_name="lidar_dropout",
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[group_ids[0]]
+    )
+
+    first = recording_service.get_tick_details(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+        seq_number=0,
+    )
+    second = recording_service.get_tick_details(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+        seq_number=1,
+    )
+
+    assert first is not None
+    assert first.sample_id == group_ids[0]
+    assert first.collection_id == fixture.group_collection.collection_id
+    assert [(t.tag_id, t.name) for t in first.tags] == [(tag.tag_id, "lidar_dropout")]
+    assert second is not None
+    assert second.sample_id == group_ids[1]
+    assert second.tags == []
 
 
 def test_get_tick_details__target_frame_id(db_session: Session, tmp_path: Path) -> None:
