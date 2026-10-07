@@ -131,20 +131,12 @@ jobs:
       # `--locked` rather than the Makefile's plain `uv sync`, which re-resolves
       # a lock that is stale against the tagged pyproject.toml. `make build`
       # then runs export-schema under that environment, so a stale lock would
-      # change the schema inside the published wheel with no signal.
-      # Only lightly-studio has the conflicting `cpu` and `gpu` groups. uv fails on
-      # `--no-group` for a group that the package does not define.
+      # change the schema inside the published wheel with no signal. Default
+      # groups only: the build needs no other group, and each package selects
+      # its own defaults (`cpu` torch for lightly-studio).
       - name: Install Dependencies
         working-directory: ${{ steps.package.outputs.directory }}
-        env:
-          DIRECTORY: ${{ steps.package.outputs.directory }}
-        run: |
-          set -euo pipefail
-          no_group=()
-          if [ "${DIRECTORY}" = "lightly_studio" ]; then
-            no_group=(--no-group gpu)
-          fi
-          uv sync --locked --all-groups "${no_group[@]}" --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Build the Distributions
         working-directory: ${{ steps.package.outputs.directory }}
