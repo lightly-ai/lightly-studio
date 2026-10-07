@@ -33,7 +33,8 @@ const settingsStore = writable({
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
-    key_toolbar_segmentation_mask: 'm'
+    key_toolbar_segmentation_mask: 'm',
+    key_toolbar_slic: 'a'
 });
 
 vi.mock('$lib/hooks/useSettings', () => ({
@@ -172,6 +173,26 @@ describe('SampleDetailsToolbar', () => {
         expect(mockSampleDetailsToolbarContext.status).toBe('slic');
         expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
+    });
+
+    it('uses the configured AI-assisted shortcut and shows it in the tooltip', async () => {
+        settingsStore.update((settings) => ({ ...settings, key_toolbar_slic: 'q' }));
+        const view = render(SampleDetailsToolbar);
+        const button = await view.findByLabelText('AI-Assisted labeling');
+        await fireEvent.pointerEnter(button.parentElement!);
+        expect(view.getByRole('tooltip')).toHaveTextContent('Press Q to activate');
+        expect(view.getByRole('tooltip')).not.toHaveTextContent('SLIC');
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.isDrawing = true;
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+        mockAnnotationLabelContext.isDrawing = false;
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockAnnotationLabelContext.annotationId).toBeNull();
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        settingsStore.update((settings) => ({ ...settings, key_toolbar_slic: 'a' }));
     });
 
     it('activates drag tool', async () => {
