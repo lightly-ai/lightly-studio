@@ -145,10 +145,14 @@ describe('SampleDetailsToolbar', () => {
     });
 
     it('keeps AI-Assisted labeling hidden when WASM initialization fails', async () => {
-        initializeSlic.mockRejectedValueOnce(new Error('WASM unavailable'));
+        const error = new Error('WASM unavailable');
+        const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+        initializeSlic.mockRejectedValueOnce(error);
         const view = render(SampleDetailsToolbar);
         await waitFor(() => expect(initializeSlic).toHaveBeenCalled());
         expect(view.queryByLabelText('AI-Assisted labeling')).not.toBeInTheDocument();
+        expect(log).toHaveBeenCalledWith('AI-assisted labeling initialization failed', error);
+        log.mockRestore();
     });
 
     it('activates the SLIC tool and sets segmentation mask type', async () => {

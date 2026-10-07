@@ -13,8 +13,8 @@ const LEVEL_CONFIG: Record<
     { targetSegments: number; compactness: number; smoothing: 'bilateral' }
 > = {
     coarse: { targetSegments: 80, compactness: 35, smoothing: 'bilateral' },
-    medium: { targetSegments: 240, compactness: 28, smoothing: 'bilateral' },
-    fine: { targetSegments: 480, compactness: 22, smoothing: 'bilateral' }
+    medium: { targetSegments: 320, compactness: 28, smoothing: 'bilateral' },
+    fine: { targetSegments: 640, compactness: 22, smoothing: 'bilateral' }
 };
 
 const stripTrailingSlash = (value = '') => value.replace(/\/+$/, '');
