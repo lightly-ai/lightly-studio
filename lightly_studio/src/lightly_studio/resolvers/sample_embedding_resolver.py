@@ -234,8 +234,8 @@ def get_projections_by_collection_id(
     )
     statement = select(
         embeddings.c.sample_id,
-        db_vector.inner_product(embeddings.c.embedding, _direction_param(direction_x)),
-        db_vector.inner_product(embeddings.c.embedding, _direction_param(direction_y)),
+        db_vector.inner_product(embeddings.c.embedding, _direction_param(direction=direction_x)),
+        db_vector.inner_product(embeddings.c.embedding, _direction_param(direction=direction_y)),
     ).order_by(embeddings.c.created_at.asc(), embeddings.c.sample_id.asc())
     # A function with yield runs only when the iteration starts. The checks above are in this
     # function, so that they run at the call.
