@@ -126,7 +126,10 @@
     });
 
     const tick = $derived.by(() => {
-        const details = workspace.tickDetails.data;
+        // Placeholder data belongs to the previous tick; hide it so tag edits never target it.
+        const details = workspace.tickDetails.isPlaceholderData
+            ? undefined
+            : workspace.tickDetails.data;
         return details
             ? {
                   sampleId: details.sample_id,
