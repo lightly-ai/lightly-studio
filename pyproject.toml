@@ -14,4 +14,10 @@ required-version = "==0.12.6"
 # only loads it lazily for StepFunctions mocking, which we never use (moto is only
 # used for S3 mocking in tests). The lightly_train plugin's omegaconf/hydra require
 # antlr 4.9.* and crash on import with 4.13.x, so we pin it back to 4.9.3.
-constraint-dependencies = ["antlr4-python3-runtime==4.9.3"]
+constraint-dependencies = ["antlr4-python3-runtime==4.9.3", "torch==2.8.0; python_version < '3.10'", "torch==2.10.0; python_version >= '3.10'", "torchvision==0.23.0; python_version < '3.10'", "torchvision==0.25.0; python_version >= '3.10'"]
+
+# TODO(Michal, 10/2026): CI benchmark only, do not merge.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
