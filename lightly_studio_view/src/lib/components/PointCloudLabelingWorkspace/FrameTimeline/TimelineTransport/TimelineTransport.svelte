@@ -1,9 +1,12 @@
 <script lang="ts">
-    import { ChevronLeft, ChevronRight, Pause, Play } from '@lucide/svelte';
+    import { ChevronLeft, ChevronRight, Pause, Play, SkipBack, SkipForward } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import { Input } from '$lib/components/ui/input';
 
-    /** Transport controls (step, play/pause) and the frame counter for the timeline. */
+    /**
+     * Transport controls (sequence and frame step, play/pause) and the frame counter for the
+     * timeline.
+     */
     interface Props {
         /** One-based `Frame n / total`, or an em-dash placeholder when the sequence is empty. */
         frameLabel: string;
@@ -23,6 +26,10 @@
         /** Toggle playback between playing and paused. */
         onPlayToggle: () => void;
         onPlaybackIntervalChange: (intervalMs: number) => void;
+        /** Open the previous sequence; the control is disabled when absent. */
+        onPreviousSequence?: () => void;
+        /** Open the next sequence; the control is disabled when absent. */
+        onNextSequence?: () => void;
     }
 
     let {
@@ -35,11 +42,24 @@
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
-        onPlaybackIntervalChange
+        onPlaybackIntervalChange,
+        onPreviousSequence,
+        onNextSequence
     }: Props = $props();
 </script>
 
 <div class="flex shrink-0 items-center gap-1 border-b px-2 py-1">
+    <Button
+        variant="ghost"
+        icon={SkipBack}
+        ariaLabel="Previous sequence"
+        buttonProps={{
+            onclick: onPreviousSequence,
+            disabled: !onPreviousSequence,
+            size: 'sm',
+            class: 'h-7 w-7 p-0'
+        }}
+    />
     <Button
         variant="ghost"
         icon={ChevronLeft}
@@ -89,6 +109,17 @@
         buttonProps={{
             onclick: onNextFrame,
             disabled: !canGoNext,
+            size: 'sm',
+            class: 'h-7 w-7 p-0'
+        }}
+    />
+    <Button
+        variant="ghost"
+        icon={SkipForward}
+        ariaLabel="Next sequence"
+        buttonProps={{
+            onclick: onNextSequence,
+            disabled: !onNextSequence,
             size: 'sm',
             class: 'h-7 w-7 p-0'
         }}

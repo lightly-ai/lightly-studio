@@ -21,6 +21,10 @@ FLOCI_MCAP_FILES ?= datasets/mcap/perception.mcap
 # S3 URI of the first uploaded file — shared by every MCAP example/demo target so
 # bucket, prefix, or file-selection changes stay consistent across all of them.
 FLOCI_MCAP_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/$(notdir $(firstword $(FLOCI_MCAP_FILES)))
+# Local folder of MCAP recordings for the folder-indexing example (all *.mcap files inside are uploaded).
+FLOCI_MCAP_DIR ?= datasets/mcap/
+# S3 folder URI used as EXAMPLES_MCAP_PATH so the example reads the whole prefix.
+FLOCI_MCAP_DIR_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
 FLOCI_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
 	AWS_ENDPOINT_URL=http://localhost:$(FLOCI_PORT)
 
@@ -57,10 +61,11 @@ endif
 
 # Note: Install target with default dependencies is not necessary as uv will
 # install the default dependencies automatically on e.g. `uv run` etc.
+# Lists the groups and extras that are not installed by default. Add new ones here.
 .PHONY: install-optional-deps
 install-optional-deps:
 	@echo "Installing with optional dependencies..."
-	uv sync --all-groups --all-extras
+	uv sync --group docs --extra cloud-storage
 
 # `--out-dir dist` on every `uv build` below: in a uv workspace `uv build` defaults to the
 # workspace root, so without it the wheel would land in ../dist instead of lightly_studio/dist.
@@ -326,6 +331,31 @@ start-example:
 start-example-mcap-s3: setup-floci build
 	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
 	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+
+# Runs the MCAP sequence-indexing example from S3 for a folder of recordings: syncs all
+# *.mcap files in FLOCI_MCAP_DIR to the local Floci S3 emulator, then points the example
+# at the uploaded s3:// prefix so it indexes every recording in one pass.
+# Point FLOCI_MCAP_DIR at a folder of recordings whose topics match COMPONENTS in
+# example_mcap.py (edit that file for your own sensor topics).
+#
+# Usage:
+#   make start-example-mcap-folder-s3 FLOCI_MCAP_DIR=/path/to/mcap-folder/
+.PHONY: setup-floci-dir
+setup-floci-dir: start-floci
+	@echo "Uploading *.mcap files from $(FLOCI_MCAP_DIR) to s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/..."
+	@for file in "$(FLOCI_MCAP_DIR)"/*.mcap; do \
+		key="$(FLOCI_S3_PREFIX)/$$(basename "$$file")"; \
+		echo "Uploading $$file to s3://$(FLOCI_S3_BUCKET)/$$key..."; \
+		$(FLOCI_ENV) aws s3 cp "$$file" "s3://$(FLOCI_S3_BUCKET)/$$key"; \
+	done
+	@echo "Available MCAP recordings:"
+	@$(FLOCI_ENV) aws s3 ls s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
+
+.PHONY: start-example-mcap-folder-s3
+start-example-mcap-folder-s3: setup-floci-dir build
+	@echo "Starting MCAP folder example (from S3: $(FLOCI_MCAP_DIR_S3_URI))..."
+	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_DIR_S3_URI) \
 		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Demo targets for the camera-frame endpoint.

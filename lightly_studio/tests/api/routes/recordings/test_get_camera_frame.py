@@ -76,6 +76,7 @@ def test_get_camera_frame(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.headers["content-type"] == "image/jpeg"
+    assert response.headers["cache-control"] == "public, max-age=604800"
     assert response.headers["x-frame-log-time-ns"] == str(keyframe_ns)
     assert response.content == b"\xff\xd8\xff"
 

@@ -1,7 +1,8 @@
 <script lang="ts">
-    import WorkspaceChannelSelect from './WorkspaceChannelSelect/WorkspaceChannelSelect.svelte';
-    import { Select } from '$lib/components/Select';
+    import WorkspaceChannelFilters from './WorkspaceChannelFilters/WorkspaceChannelFilters.svelte';
+    import WorkspaceViewFilters from './WorkspaceViewFilters/WorkspaceViewFilters.svelte';
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { ColorMode } from '$lib/components/PointCloudViewer';
 
     interface Props {
         /** Coordinate frames the scene can be shown in. */
@@ -28,11 +29,20 @@
         /** `channel_id`s of the camera channels currently shown. */
         selectedCameraChannels: number[];
 
+        colorMode: Exclude<ColorMode, 'none'>;
+        onColorModeChange: (colorMode: Exclude<ColorMode, 'none'>) => void;
+
         /** Toggles a lidar channel on or off by its `channel_id`. */
         onToggleLidarChannel: (channelId: number) => void;
 
         /** Toggles a camera channel on or off by its `channel_id`. */
         onToggleCameraChannel: (channelId: number) => void;
+
+        /** Replaces the selected LiDAR channels. */
+        onSetLidarChannels: (channelIds: number[]) => void;
+
+        /** Replaces the selected camera channels. */
+        onSetCameraChannels: (channelIds: number[]) => void;
     }
 
     let {
@@ -44,49 +54,32 @@
         cameraChannels,
         selectedLidarChannels,
         selectedCameraChannels,
+        colorMode,
+        onColorModeChange,
         onToggleLidarChannel,
-        onToggleCameraChannel
+        onToggleCameraChannel,
+        onSetLidarChannels,
+        onSetCameraChannels
     }: Props = $props();
-
-    const frameItems = $derived(
-        referenceFrames.map((frame) => ({
-            value: frame.name,
-            label: frame.name,
-            testId: `workspace-frame-select-${frame.name}`
-        }))
-    );
-    const frameTriggerLabel = $derived(`Frame: ${referenceFrameId}`);
 </script>
 
 <div class="flex shrink-0 items-center gap-4 border-b py-2" data-testid="workspace-filter-bar">
-    {#if referenceFrames.length > 0}
-        <Select
-            items={frameItems}
-            value={referenceFrameId}
-            triggerLabel={frameTriggerLabel}
-            size="xs"
-            class="w-40"
-            testId="workspace-frame-select"
-            onValueChange={onSelectReferenceFrame}
-        />
-        {#if isShowingSensorFrames}
-            <span class="text-xs text-muted-foreground" data-testid="workspace-frame-fallback">
-                No transform at this tick. Showing sensor frames.
-            </span>
-        {/if}
-    {/if}
-    <WorkspaceChannelSelect
-        label="Lidar"
-        channels={lidarChannels}
-        selectedChannels={selectedLidarChannels}
-        onToggleChannel={onToggleLidarChannel}
-        testId="workspace-lidar-select"
+    <WorkspaceViewFilters
+        {referenceFrames}
+        {referenceFrameId}
+        {onSelectReferenceFrame}
+        {isShowingSensorFrames}
+        {colorMode}
+        {onColorModeChange}
     />
-    <WorkspaceChannelSelect
-        label="Camera"
-        channels={cameraChannels}
-        selectedChannels={selectedCameraChannels}
-        onToggleChannel={onToggleCameraChannel}
-        testId="workspace-camera-select"
+    <WorkspaceChannelFilters
+        {lidarChannels}
+        {cameraChannels}
+        {selectedLidarChannels}
+        {selectedCameraChannels}
+        {onToggleLidarChannel}
+        {onToggleCameraChannel}
+        {onSetLidarChannels}
+        {onSetCameraChannels}
     />
 </div>

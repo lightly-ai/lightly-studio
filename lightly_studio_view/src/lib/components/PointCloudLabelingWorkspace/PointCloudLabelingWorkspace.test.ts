@@ -55,7 +55,18 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
                         group_component_index: 0
                     }
                 ],
-                camera_channels: []
+                camera_channels: [
+                    {
+                        channel_id: 2,
+                        group_component_name: 'front',
+                        group_component_index: 0
+                    },
+                    {
+                        channel_id: 3,
+                        group_component_name: 'rear',
+                        group_component_index: 1
+                    }
+                ]
             },
             get isLoading() {
                 return summaryState.isLoading;
@@ -269,4 +280,19 @@ describe('PointCloudLabelingWorkspace', () => {
             );
         }
     );
+
+    it('filters the timeline lanes with the camera selection', async () => {
+        const user = userEvent.setup();
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        const timeline = screen.getByTestId('workspace-frame-timeline');
+        expect(timeline).toHaveTextContent('front');
+        expect(timeline).toHaveTextContent('rear');
+
+        await user.click(screen.getByTestId('workspace-camera-select'));
+        await user.click(screen.getByTestId('workspace-camera-select-2'));
+
+        expect(timeline).not.toHaveTextContent('front');
+        expect(timeline).toHaveTextContent('rear');
+    });
 });

@@ -7,6 +7,7 @@
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
     import { getTickNumberFromHash } from './getTickNumberFromHash';
     import { routeHelpers } from '$lib/routes';
+    import { useAdjacentMcapSequences } from '$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences';
 
     // The backend only reports this once LIGHTLY_STUDIO_POINT_CLOUD_ENABLED is set, so
     // this one string keeps the route (and the entry point in GroupsComponentsMenu) in sync with
@@ -56,6 +57,25 @@
         { label: summary.data?.file_name ?? `Point cloud ${sequenceId}` }
     ]);
 
+    // Neighbours in the sequences grid order of the SEQUENCE collection.
+    const { query: adjacentSequencesQuery } = $derived(
+        useAdjacentMcapSequences({ sampleId: sequenceId, collectionId })
+    );
+    const previousSequenceId = $derived(adjacentSequencesQuery.data?.previous_sample_id);
+    const nextSequenceId = $derived(adjacentSequencesQuery.data?.next_sample_id);
+
+    // Opens on the first tick: the tick hash of the current sequence is not carried over.
+    const goToSequence = (targetSequenceId: string) => {
+        void goto(
+            routeHelpers.toPointCloudLabeling({
+                datasetId: page.params.dataset_id!,
+                collectionType,
+                collectionId,
+                sequenceId: targetSequenceId
+            })
+        );
+    };
+
     const updateTickNumber = (nextTickNumber: number) => {
         const url = new URL(page.url);
         const hash = new URLSearchParams(url.hash.slice(1));
@@ -80,6 +100,10 @@
                 {sourcePath}
                 {tickNumber}
                 onTickChange={updateTickNumber}
+                onPreviousSequence={previousSequenceId
+                    ? () => goToSequence(previousSequenceId)
+                    : undefined}
+                onNextSequence={nextSequenceId ? () => goToSequence(nextSequenceId) : undefined}
             />
         </LayoutCard>
     {/if}

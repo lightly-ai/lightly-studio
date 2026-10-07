@@ -93,6 +93,15 @@ describe('FrameTimeline', () => {
         expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
     });
 
+    it('does not render placeholder lanes when all available channels are filtered out', () => {
+        render(FrameTimeline, {
+            props: { ...defaultProps, hasAvailableChannels: true }
+        });
+
+        expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Track 2')).not.toBeInTheDocument();
+    });
+
     it('labels ruler ticks with their timestamp relative to the first tick', () => {
         render(FrameTimeline, {
             props: {
@@ -142,6 +151,27 @@ describe('FrameTimeline', () => {
 
         expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Play frames' })).not.toBeInTheDocument();
+    });
+
+    it('steps between sequences through the exposed handlers', () => {
+        const onPreviousSequence = vi.fn();
+        const onNextSequence = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onPreviousSequence, onNextSequence }
+        });
+
+        screen.getByRole('button', { name: 'Previous sequence' }).click();
+        screen.getByRole('button', { name: 'Next sequence' }).click();
+
+        expect(onPreviousSequence).toHaveBeenCalledOnce();
+        expect(onNextSequence).toHaveBeenCalledOnce();
+    });
+
+    it('disables sequence stepping when no adjacent sequence handler is given', () => {
+        render(FrameTimeline, { props: defaultProps });
+
+        expect(screen.getByRole('button', { name: 'Previous sequence' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Next sequence' })).toBeDisabled();
     });
 
     it('disables stepping past the ends of the sequence', () => {
