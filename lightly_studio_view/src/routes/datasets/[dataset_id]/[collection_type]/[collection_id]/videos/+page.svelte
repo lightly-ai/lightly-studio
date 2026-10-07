@@ -22,8 +22,7 @@
     const collectionId = $derived($page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
         useTags({
-            collection_id: collectionId,
-            kind: ['sample']
+            collection_id: collectionId
         })
     );
 

@@ -220,32 +220,6 @@ def test_create_combination_sampling__unknown_preselected_tag(
     assert response.json()["error"] == "Invalid preselected sample tag."
 
 
-def test_create_combination_sampling__annotation_preselected_tag(
-    test_client: TestClient, db_session: Session
-) -> None:
-    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-        session=db_session, n_samples=3, embedding_model_names=["test_embedding_model"]
-    )
-    annotation_tag = helpers_resolvers.create_tag(
-        session=db_session,
-        collection_id=collection_id,
-        tag_name="annotations",
-        kind="annotation",
-    )
-
-    response = test_client.post(
-        f"/api/collections/{collection_id}/sampling",
-        json=_sampling_request_data(
-            n_samples_to_select=1,
-            sampling_result_tag_name="new_batch",
-            preselected_tag_id=annotation_tag.tag_id,
-        ),
-    )
-
-    assert response.status_code == 400
-    assert response.json()["error"] == "Invalid preselected sample tag."
-
-
 def test_create_sampling__passes_request_to_sampling(
     db_session: Session, mocker: MockerFixture
 ) -> None:

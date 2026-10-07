@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { PreselectedTagField } from '.';
 
 const tags = [
-    { tag_id: 'tag-1', name: 'First batch', kind: 'sample' as const },
-    { tag_id: 'tag-2', name: 'Second batch', kind: 'sample' as const }
+    { tag_id: 'tag-1', name: 'First batch' },
+    { tag_id: 'tag-2', name: 'Second batch' }
 ];
 
 describe('PreselectedTagField', () => {

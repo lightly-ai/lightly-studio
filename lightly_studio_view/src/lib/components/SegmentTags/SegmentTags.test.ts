@@ -39,7 +39,6 @@ vi.spyOn(hooks, 'useTags').mockImplementation(() => ({
         {
             tag_id: 'existing-tag',
             name: 'Existing Tag',
-            kind: 'sample',
 
             created_at: new Date(),
             updated_at: new Date()
@@ -47,7 +46,6 @@ vi.spyOn(hooks, 'useTags').mockImplementation(() => ({
         {
             tag_id: 'other-tag',
             name: 'Other Tag',
-            kind: 'sample',
 
             created_at: new Date(),
             updated_at: new Date()
@@ -281,7 +279,6 @@ describe('SegmentTags', () => {
         expect(addExistingMock).toHaveBeenCalledWith({
             tag_id: 'existing-tag',
             name: 'Existing Tag',
-            kind: 'sample',
 
             created_at: expect.any(Date),
             updated_at: expect.any(Date)

@@ -13,13 +13,11 @@ def test_add_and_remove_sample_ids_to_tag_id(
         session=db_session,
         collection_id=collection_id,
         tag_name="tag_all",
-        kind="sample",
     )
     tag_2 = create_tag(
         session=db_session,
         collection_id=collection_id,
         tag_name="tag_odd",
-        kind="sample",
     )
 
     total_samples = 10
@@ -81,7 +79,6 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
         session=db_session,
         collection_id=collection_id,
         tag_name="tag_all",
-        kind="sample",
     )
 
     total_samples = 10

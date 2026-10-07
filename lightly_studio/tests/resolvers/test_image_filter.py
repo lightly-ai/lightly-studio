@@ -173,7 +173,6 @@ class TestImageFilter:
             session=db_session,
             collection_id=collection_id,
             tag_name="test_tag",
-            kind="sample",
         )
         tag_resolver.add_sample_ids_to_tag_id(
             session=db_session,

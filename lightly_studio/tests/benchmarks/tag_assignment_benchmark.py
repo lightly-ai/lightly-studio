@@ -171,7 +171,6 @@ def _setup(config: BenchmarkConfig) -> tuple[list[UUID], UUID]:
             tag=TagCreate(
                 name=DEFAULT_TAG_NAME,
                 collection_id=collection.collection_id,
-                kind="sample",
             ),
         )
         return sample_ids, tag.tag_id

@@ -1,8 +1,7 @@
 <script lang="ts">
     import { Button, Segment } from '$lib/components';
     import { TagsIcon, X } from '@lucide/svelte';
-    import { SampleType } from '$lib/api/lightly_studio_local';
-    import { useTags, useGlobalStorage, useAddTagToSample } from '$lib/hooks';
+    import { useTags, useAddTagToSample } from '$lib/hooks';
     import { useRemoveTagFromSample } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -45,13 +44,8 @@
         onRefetch();
     }
 
-    const { collections } = useGlobalStorage();
-    const tagKind = $derived(
-        $collections[collectionId]?.sampleType === SampleType.ANNOTATION ? 'annotation' : 'sample'
-    );
-
     const { tags: allCollectionTags, loadTags } = $derived(
-        useTags({ collection_id: collectionId, kind: [tagKind] })
+        useTags({ collection_id: collectionId })
     );
 
     const {
@@ -61,7 +55,6 @@
     } = useAddTagToSample({
         getCollectionId: () => collectionId,
         getSampleId: () => sampleId,
-        getTagKind: () => tagKind,
         onRefetch: (...args) => onRefetch(...args),
         onTagsRefetch: () => loadTags()
     });

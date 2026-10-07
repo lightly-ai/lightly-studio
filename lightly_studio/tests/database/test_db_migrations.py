@@ -608,14 +608,14 @@ def test_postgres_tag_name_uniqueness__consolidates_cross_kind_duplicates(
 
         with engine.connect() as connection:
             tags = connection.execute(
-                statement=text("SELECT tag_id, kind FROM tag WHERE name = 'duplicate'")
+                statement=text("SELECT tag_id FROM tag WHERE name = 'duplicate'")
             ).all()
             links = connection.execute(
                 statement=text(
                     "SELECT sample_id, tag_id FROM sampletaglinktable ORDER BY sample_id"
                 )
             ).all()
-        assert [(str(tag_id), kind) for tag_id, kind in tags] == [(sample_tag_id, "sample")]
+        assert [str(tag_id) for (tag_id,) in tags] == [sample_tag_id]
         assert [(str(sample_id), str(tag_id)) for sample_id, tag_id in links] == [
             (first_sample_id, sample_tag_id),
             (second_sample_id, sample_tag_id),
@@ -623,6 +623,141 @@ def test_postgres_tag_name_uniqueness__consolidates_cross_kind_duplicates(
 
         config.attributes.pop("connection", None)
         command.check(config)
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
+def test_postgres_tag_kind__dropped_and_restored(
+    postgres_url: str | None,
+) -> None:
+    """The tag kind migration drops the column and the downgrade restores it from members."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    image_collection_id = "00000000-0000-0000-0000-000000000002"
+    annotation_collection_id = "00000000-0000-0000-0000-000000000003"
+    annotation_sample_id = "00000000-0000-0000-0000-000000000004"
+    annotation_tag_id = "00000000-0000-0000-0000-000000000005"
+    empty_tag_id = "00000000-0000-0000-0000-000000000006"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="f2a3b4c5d6e7",
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, dataset_id, created_at, updated_at
+                    ) VALUES
+                        ('images', 'IMAGE', :image_collection_id, :dataset_id, NOW(), NOW()),
+                        (
+                            'annotations', 'ANNOTATION', :annotation_collection_id,
+                            :dataset_id, NOW(), NOW()
+                        )
+                    """
+                ),
+                parameters={
+                    "image_collection_id": image_collection_id,
+                    "annotation_collection_id": annotation_collection_id,
+                    "dataset_id": dataset_id,
+                },
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sample (sample_id, collection_id, created_at, updated_at)
+                    VALUES (:annotation_sample_id, :annotation_collection_id, NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "annotation_sample_id": annotation_sample_id,
+                    "annotation_collection_id": annotation_collection_id,
+                },
+            )
+            # Both tags start as annotation tags. Only the tag with an annotation member
+            # keeps that kind after the downgrade.
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO tag (
+                        name, kind, tag_id, collection_id, created_at, updated_at
+                    ) VALUES
+                        (
+                            'reviewed', 'annotation', :annotation_tag_id,
+                            :image_collection_id, NOW(), NOW()
+                        ),
+                        (
+                            'empty', 'annotation', :empty_tag_id,
+                            :image_collection_id, NOW(), NOW()
+                        )
+                    """
+                ),
+                parameters={
+                    "annotation_tag_id": annotation_tag_id,
+                    "empty_tag_id": empty_tag_id,
+                    "image_collection_id": image_collection_id,
+                },
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sampletaglinktable (sample_id, tag_id)
+                    VALUES (:annotation_sample_id, :annotation_tag_id)
+                    """
+                ),
+                parameters={
+                    "annotation_sample_id": annotation_sample_id,
+                    "annotation_tag_id": annotation_tag_id,
+                },
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        columns = db_migrations._get_inspector(engine=engine).get_columns(table_name="tag")
+        assert "kind" not in {column["name"] for column in columns}
+        with engine.connect() as connection:
+            tag_ids = connection.execute(
+                statement=text("SELECT tag_id FROM tag ORDER BY tag_id")
+            ).all()
+        assert [str(tag_id) for (tag_id,) in tag_ids] == [annotation_tag_id, empty_tag_id]
+
+        config.attributes.pop("connection", None)
+        command.check(config)
+
+        # The downgrade restores the column as NOT NULL and derives the kind from members.
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.downgrade,
+            revision="f2a3b4c5d6e7",
+        )
+        columns = db_migrations._get_inspector(engine=engine).get_columns(table_name="tag")
+        kind_column = next(column for column in columns if column["name"] == "kind")
+        assert kind_column["nullable"] is False
+        with engine.connect() as connection:
+            tags = connection.execute(
+                statement=text("SELECT tag_id, kind FROM tag ORDER BY tag_id")
+            ).all()
+        assert [(str(tag_id), kind) for tag_id, kind in tags] == [
+            (annotation_tag_id, "annotation"),
+            (empty_tag_id, "sample"),
+        ]
     finally:
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()
