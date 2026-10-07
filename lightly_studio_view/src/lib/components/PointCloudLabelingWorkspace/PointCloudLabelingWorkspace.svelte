@@ -23,8 +23,9 @@
      *
      * Layout, top to bottom: source breadcrumb, fast-filter strip, then a working column whose 3D
      * viewport takes the full width and most of the height, with the camera/projection strip
-     * beneath it and the frame timeline at the bottom. Annotations stay in a resizable right pane,
-     * and the tool rail floats over the viewport rather than taking a column of its own.
+     * beneath it and the frame timeline at the bottom. The tags and annotations of the active tick
+     * stay in a resizable right pane, and the tool rail floats over the viewport rather than taking
+     * a column of its own.
      *
      * Loads the selected LiDAR payloads for the active tick and renders them in the 3D scene.
      */
@@ -122,6 +123,17 @@
     const sceneCuboids = $derived.by(() => {
         const frameIds = new Set(sceneSnapshot?.frame.channels.map((c) => c.frameId));
         return cuboids.filter((c) => frameIds.has(c.frameId));
+    });
+
+    const tick = $derived.by(() => {
+        const details = workspace.tickDetails.data;
+        return details
+            ? {
+                  sampleId: details.sample_id,
+                  collectionId: details.collection_id,
+                  tags: details.tags
+              }
+            : undefined;
     });
 
     let containerEl = $state<HTMLDivElement | undefined>(undefined);
@@ -274,7 +286,13 @@
                     </div>
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <PointCloudRightSidePanel {cuboids} {annotationClasses} bind:selectedCuboidId />
+                    <PointCloudRightSidePanel
+                        {cuboids}
+                        {annotationClasses}
+                        bind:selectedCuboidId
+                        {tick}
+                        onTagsChange={() => void workspace.tickDetails.refetch()}
+                    />
                 </Pane>
             </PaneGroup>
         {/if}
