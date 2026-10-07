@@ -3822,7 +3822,7 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "1.1.2"
+version = "1.1.3"
 source = { editable = "lightly_studio" }
 dependencies = [
     { name = "alembic", version = "1.16.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
