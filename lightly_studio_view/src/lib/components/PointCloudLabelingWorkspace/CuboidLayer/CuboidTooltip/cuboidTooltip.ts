@@ -12,7 +12,7 @@ interface CuboidTooltip {
     dimensions: string;
     rotation: string;
     annotationSourceId: string;
-    trackId: string | null;
+    trackNumber: number | null;
 }
 
 /**
@@ -39,6 +39,6 @@ export function createCuboidTooltip({
         dimensions: `${w} × ${h} × ${d} m`,
         rotation: `rx: ${rx}°  ry: ${ry}°  rz: ${rz}°`,
         annotationSourceId: details.annotationSourceId,
-        trackId: details.trackId
+        trackNumber: details.trackNumber
     };
 }
