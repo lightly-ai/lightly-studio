@@ -6,10 +6,7 @@
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
-    import {
-        addCuboidSelectionListeners,
-        pickSmallestFromIntersections
-    } from './cuboidSelection';
+    import { addCuboidSelectionListeners, pickSmallestFromIntersections } from './cuboidSelection';
 
     type CuboidIntersection = Parameters<typeof pickSmallestFromIntersections>[0][number];
 
@@ -90,6 +87,8 @@
     }
 
     $effect(() => {
+        hoveredCuboids.clear();
+        onhover?.(null, null);
         const next = createCuboidRenderItems(cuboids);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
@@ -116,7 +115,16 @@
     {@const isHovered = hoveredAnnotationId === item.annotation.id}
     {@const color = highlightCuboidColor(base, isSelected, isHovered)}
     <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
-        <CuboidVisual {item} baseColor={base} edgeColor={color} {isHovered} {isSelected} onhit={onCuboidHit} onhoverenter={onCuboidHoverEnter} onhoverleave={onCuboidHoverLeave} />
+        <CuboidVisual
+            {item}
+            baseColor={base}
+            edgeColor={color}
+            {isHovered}
+            {isSelected}
+            onhit={onCuboidHit}
+            onhoverenter={onCuboidHoverEnter}
+            onhoverleave={onCuboidHoverLeave}
+        />
         {#if isSelected}
             <CuboidGizmo />
         {/if}

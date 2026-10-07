@@ -28,8 +28,6 @@ const defaultProps = {
 };
 
 const tickDetails: TickDetailView = {
-    sample_id: 'sample-1',
-    collection_id: 'collection-1',
     recording_id: 'recording-1',
     seq_number: 0,
     timestamp_ns: 1000,
@@ -50,8 +48,7 @@ const tickDetails: TickDetailView = {
         }
     },
     lidar_channels: {},
-    annotations: [],
-    tags: []
+    annotations: []
 };
 
 describe('CameraProjectionStrip', () => {

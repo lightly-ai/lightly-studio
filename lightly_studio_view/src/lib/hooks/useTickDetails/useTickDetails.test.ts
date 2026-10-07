@@ -12,15 +12,12 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({ getTickDetails: vi.fn(
 
 describe('useTickDetails', () => {
     const data = {
-        sample_id: 'sample-1',
-        collection_id: 'collection-1',
         recording_id: 'recording-1',
         seq_number: 0,
         timestamp_ns: 1000,
         camera_channels: {},
         lidar_channels: {},
-        annotations: [],
-        tags: []
+        annotations: []
     } satisfies TickDetailView;
     const query = { data, isSuccess: true } satisfies Partial<
         CreateQueryResult<TickDetailView, Error>
