@@ -293,6 +293,7 @@ def test_get_all_by_parent_sample_ids__eager_loads_parent_object_track(
     assert len(result) == 1
     assert result[0].object_track is not None
     object_track_state = inspect(result[0].object_track)
+    assert object_track_state is not None
     assert "parent_object_track" not in object_track_state.unloaded
     assert result[0].object_track.parent_object_track is not None
     assert result[0].object_track.parent_object_track.object_track_number == 1
@@ -334,5 +335,6 @@ def test_get_all_by_parent_sample_ids__no_parent_object_track(
     assert len(result) == 1
     assert result[0].object_track is not None
     object_track_state = inspect(result[0].object_track)
+    assert object_track_state is not None
     assert "parent_object_track" not in object_track_state.unloaded
     assert result[0].object_track.parent_object_track is None
