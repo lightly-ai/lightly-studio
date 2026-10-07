@@ -371,6 +371,47 @@ def test_get_projections_by_collection_id__ordered_by_creation_time(db_session: 
     assert [projection.sample_id for projection in projections] == [first_id, second_id]
 
 
+def test_get_projections_by_collection_id__large_vectors(db_session: Session) -> None:
+    # PostgreSQL stores a value over about 2 KB out of line (TOAST). 1024 float32 values use
+    # 4 KB, and random values do not compress, so each vector is stored out of line.
+    dimension = 1024
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=dimension
+    ).embedding_model_id
+    rng = np.random.default_rng(seed=0)
+    embedding_a = rng.random(dimension, dtype=np.float32)
+    embedding_b = rng.random(dimension, dtype=np.float32)
+    image_a, image_b = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="a.png"), embedding_a.tolist()),
+            (ImageStub(path="b.png"), embedding_b.tolist()),
+        ],
+    )
+    # The directions select the last and the first embedding value, without rounding. The last
+    # value is only correct if the full vector loads.
+    direction_x = [0.0] * dimension
+    direction_x[dimension - 1] = 1.0
+    direction_y = [0.0] * dimension
+    direction_y[0] = 1.0
+
+    projections = sample_embedding_resolver.get_projections_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        direction_x=direction_x,
+        direction_y=direction_y,
+    )
+
+    assert {projection.sample_id: (projection.x, projection.y) for projection in projections} == {
+        image_a.sample_id: (float(embedding_a[-1]), float(embedding_a[0])),
+        image_b.sample_id: (float(embedding_b[-1]), float(embedding_b[0])),
+    }
+
+
 @pytest.mark.parametrize(
     ("direction_x", "direction_y"),
     [
