@@ -24,10 +24,10 @@
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
 
-    const tagKind = $derived(gridType === 'annotations' ? 'annotation' : 'sample');
+    const isAnnotationGrid = $derived(gridType === 'annotations');
 
     const { tags, tagsSelected, tagSelectionToggle, loadTags, clearTagSelected } = $derived(
-        useTags({ collection_id, kind: [tagKind] })
+        useTags({ collection_id })
     );
 
     const {
@@ -39,12 +39,12 @@
 
     const selectedSampleIds = $derived(getSelectedSampleIds(collection_id));
     const hasSelection = $derived(
-        tagKind === 'annotation'
+        isAnnotationGrid
             ? ($selectedSampleAnnotationCropIds[collection_id]?.size ?? 0) > 0
             : $selectedSampleIds.size > 0
     );
     const selectedIds = $derived(
-        tagKind === 'annotation'
+        isAnnotationGrid
             ? ($selectedSampleAnnotationCropIds[collection_id] ?? new Set<string>())
             : $selectedSampleIds
     );
@@ -64,7 +64,7 @@
     // a potentially large ID list), else fall back to the ID-list path.
     function assignSelectionToTag(tag_id: string) {
         const snapshot = get(
-            tagKind === 'annotation'
+            isAnnotationGrid
                 ? getSelectAllAnnotationSnapshot(collection_id)
                 : getSelectAllSnapshot(collection_id)
         );
@@ -89,7 +89,7 @@
             try {
                 trackEvent('samples_tagged', {
                     collection_id,
-                    tag_kind: tagKind,
+                    grid_type: gridType,
                     sample_count: snapshotCount,
                     is_new_tag: isNewTag
                 });
@@ -112,7 +112,7 @@
             } else {
                 const createResponse = await createTag({
                     path: { collection_id },
-                    body: { name, kind: tagKind }
+                    body: { name }
                 });
                 if (createResponse.error || !createResponse.data?.tag_id) {
                     toast.error('Failed to create tag. Please try again.');

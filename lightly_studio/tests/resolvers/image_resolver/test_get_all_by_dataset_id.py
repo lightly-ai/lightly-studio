@@ -356,13 +356,11 @@ def test_get_all_by_collection_id__with_tag_filtering(
         session=db_session,
         collection_id=collection_id,
         tag_name="tag_1",
-        kind="sample",
     )
     tag_part2 = create_tag(
         session=db_session,
         collection_id=collection_id,
         tag_name="tag_2",
-        kind="sample",
     )
 
     total_samples = 10

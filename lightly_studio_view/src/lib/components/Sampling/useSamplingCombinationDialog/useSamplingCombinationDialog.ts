@@ -24,8 +24,7 @@ export function useSamplingCombinationDialog({
     onSubmitSuccess
 }: UseSamplingCombinationDialogParams) {
     const { tags, loadTags, setTagSelected } = useTags({
-        collection_id: getCollectionId(),
-        kind: ['sample']
+        collection_id: getCollectionId()
     });
 
     const { filteredSampleCount } = useGlobalStorage();

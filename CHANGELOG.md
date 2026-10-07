@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- BREAKING: Remove the `kind` field of tags from the API and the database. DuckDB users need to re-index their data to create tags. PostgreSQL users (Enterprise) are unaffected, the migration is automatic.
+
 ### Fixed
 
 - The GUI footer no longer shows a dev commit hash for released versions.

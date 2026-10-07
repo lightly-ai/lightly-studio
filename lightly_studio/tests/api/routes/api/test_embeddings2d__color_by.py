@@ -448,11 +448,11 @@ def test_get_embeddings2d__with_tag_color_by(
 
     tag_a = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="alpha", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="alpha"),
     )
     tag_b = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="beta", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="beta"),
     )
 
     # samples[0] in alpha only, samples[1] in beta only,
@@ -523,15 +523,15 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
 
     tag_color = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="color_tag", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="color_tag"),
     )
     tag_filter = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="filter_tag", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="filter_tag"),
     )
     tag_hidden = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="hidden_tag", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="hidden_tag"),
     )
 
     # All samples get the color tag.

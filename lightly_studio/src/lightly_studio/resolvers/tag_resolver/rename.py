@@ -57,7 +57,6 @@ def rename(session: Session, tag_id: UUID, new_name: str) -> TagTable | None:
         tag_id=tag_id,
         collection_id=tag.collection_id,
         name=new_name,
-        kind=tag.kind,
         created_at=tag.created_at,
         updated_at=datetime.now(timezone.utc),
     )
