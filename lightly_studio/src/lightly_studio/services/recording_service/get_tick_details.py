@@ -14,6 +14,7 @@ from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.mcap_sequence_ticks import TickChannelView, TickDetailView
+from lightly_studio.models.tag import TagView
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -40,8 +41,8 @@ def get_tick_details(
     """Return the tick details for one tick of a sequence.
 
     The tick is identified by `sequence_id` and `seq_number`, and the details
-    hold the MCAP locators for every channel of that tick and the annotations
-    attached to the tick group.
+    hold the MCAP locators for every channel of that tick, and the annotations
+    and tags attached to the tick group.
 
     Args:
         session: The database session.
@@ -101,13 +102,18 @@ def get_tick_details(
             target_frame_id=target_frame_id,
             timestamp_ns=link.timestamp_ns,
         )
+    tick_sample = sample_resolver.get_by_id(session=session, sample_id=link.sample_id)
+    assert tick_sample is not None
     return TickDetailView(
+        sample_id=link.sample_id,
+        collection_id=tick_sample.collection_id,
         recording_id=mcap_sequence.recording_id,
         seq_number=link.seq_number,
         timestamp_ns=link.timestamp_ns,
         camera_channels=camera_channels,
         lidar_channels=lidar_channels,
         annotations=annotations,
+        tags=[TagView.model_validate(tag) for tag in tick_sample.tags],
     )
 
 

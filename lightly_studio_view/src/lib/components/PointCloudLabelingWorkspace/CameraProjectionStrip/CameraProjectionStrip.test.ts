@@ -19,10 +19,17 @@ const TEST_BASE_URL = 'http://api.test';
 const defaultProps = {
     datasetId: 'dataset-1',
     sequenceId: 'sequence-1',
-    seqNumber: 0
+    seqNumber: 0,
+    cameraChannels: [
+        { channel_id: 1, group_component_name: 'front', group_component_index: 0 },
+        { channel_id: 2, group_component_name: 'rear', group_component_index: 1 }
+    ],
+    selectedChannelIds: [1, 2]
 };
 
 const tickDetails: TickDetailView = {
+    sample_id: 'sample-1',
+    collection_id: 'collection-1',
     recording_id: 'recording-1',
     seq_number: 0,
     timestamp_ns: 1000,
@@ -43,7 +50,8 @@ const tickDetails: TickDetailView = {
         }
     },
     lidar_channels: {},
-    annotations: []
+    annotations: [],
+    tags: []
 };
 
 describe('CameraProjectionStrip', () => {
@@ -61,12 +69,13 @@ describe('CameraProjectionStrip', () => {
         tickDetailsResult.data = undefined;
     });
 
-    it('renders a frame only for channels that have a keyframe locator for the tick', () => {
+    it('keeps every selected summary channel visible when a tick has no frame', () => {
         tickDetailsResult.data = tickDetails;
         render(CameraProjectionStrip, { props: defaultProps });
 
         expect(screen.getByRole('img', { name: 'front' })).toBeInTheDocument();
         expect(screen.queryByRole('img', { name: 'rear' })).not.toBeInTheDocument();
+        expect(screen.getByText('rear')).toBeInTheDocument();
     });
 
     it('seeks frames by their keyframe timestamp', () => {
@@ -79,10 +88,28 @@ describe('CameraProjectionStrip', () => {
         );
     });
 
+    it('renders only the selected camera channels', () => {
+        tickDetailsResult.data = {
+            ...tickDetails,
+            camera_channels: {
+                ...tickDetails.camera_channels,
+                rear: { ...tickDetails.camera_channels.rear, keyframe_log_time_ns: '2500' }
+            }
+        };
+        render(CameraProjectionStrip, {
+            props: { ...defaultProps, selectedChannelIds: [1] }
+        });
+
+        expect(screen.getByRole('img', { name: 'front' })).toBeInTheDocument();
+        expect(screen.queryByRole('img', { name: 'rear' })).not.toBeInTheDocument();
+    });
+
     it('renders no frames while the tick details are still loading', () => {
         render(CameraProjectionStrip, { props: defaultProps });
 
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
+        expect(screen.getByText('front')).toBeInTheDocument();
+        expect(screen.getByText('rear')).toBeInTheDocument();
     });
 });

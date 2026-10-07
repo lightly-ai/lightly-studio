@@ -40,7 +40,9 @@
             colorMode: 'density',
             onColorModeChange: fn(),
             onToggleLidarChannel: fn(),
-            onToggleCameraChannel: fn()
+            onToggleCameraChannel: fn(),
+            onSetLidarChannels: fn(),
+            onSetCameraChannels: fn()
         }
     });
 </script>
