@@ -126,15 +126,14 @@
     });
 
     const tick = $derived.by(() => {
-        // Placeholder data belongs to the previous tick; hide it so tag edits never target it.
-        const details = workspace.tickDetails.isPlaceholderData
-            ? undefined
-            : workspace.tickDetails.data;
+        const details = workspace.tickDetails.data;
         return details
             ? {
                   sampleId: details.sample_id,
                   collectionId: details.collection_id,
-                  tags: details.tags
+                  tags: details.tags,
+                  // Placeholder data belongs to the previous tick, so it must not be edited.
+                  isStale: workspace.tickDetails.isPlaceholderData
               }
             : undefined;
     });

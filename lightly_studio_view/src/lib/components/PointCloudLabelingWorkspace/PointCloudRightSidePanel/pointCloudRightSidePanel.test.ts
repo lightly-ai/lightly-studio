@@ -74,4 +74,21 @@ describe('PointCloudRightSidePanel', () => {
             tagsTitle.compareDocumentPosition(annotationsTitle) & Node.DOCUMENT_POSITION_FOLLOWING
         ).toBeTruthy();
     });
+
+    it('keeps stale tags visible but blocks editing them', () => {
+        render(PointCloudRightSidePanel, {
+            props: {
+                ...defaultProps,
+                tick: {
+                    sampleId: 'tick-1',
+                    collectionId: 'group-collection',
+                    tags: [{ tag_id: 'tag-1', name: 'lidar_dropout' }],
+                    isStale: true
+                }
+            }
+        });
+
+        expect(screen.getByTestId('segment-tag-name')).toHaveTextContent('lidar_dropout');
+        expect(screen.getByTestId('point-cloud-tick-tags').inert).toBe(true);
+    });
 });

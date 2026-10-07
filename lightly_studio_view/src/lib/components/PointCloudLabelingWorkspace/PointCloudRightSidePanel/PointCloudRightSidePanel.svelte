@@ -21,6 +21,8 @@
             sampleId: string;
             collectionId: string;
             tags: { tag_id?: string; name: string }[];
+            /** True while the tags still belong to the previous tick; editing is blocked. */
+            isStale?: boolean;
         };
         /** Reloads the tick after a tag is added or removed. */
         onTagsChange?: () => void;
@@ -42,14 +44,17 @@
 >
     <div class="flex flex-1 flex-col">
         {#if tick}
-            {#key tick.sampleId}
-                <SegmentTags
-                    tags={tick.tags}
-                    collectionId={tick.collectionId}
-                    sampleId={tick.sampleId}
-                    onRefetch={onTagsChange}
-                />
-            {/key}
+            <!-- Stays mounted while the next tick loads to keep the layout steady. -->
+            <div inert={tick.isStale} data-testid="point-cloud-tick-tags">
+                {#key tick.sampleId}
+                    <SegmentTags
+                        tags={tick.tags}
+                        collectionId={tick.collectionId}
+                        sampleId={tick.sampleId}
+                        onRefetch={onTagsChange}
+                    />
+                {/key}
+            </div>
         {/if}
         <Segment title="Annotations">
             <PointCloudAnnotationList
