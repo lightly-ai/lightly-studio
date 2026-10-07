@@ -17,6 +17,11 @@ interface GroupAnnotationsBySourceParams {
     sources: readonly AnnotationSource[];
 }
 
+interface ResolveAnnotationSourceNameParams {
+    annotationSourceId: string | null | undefined;
+    sources: readonly AnnotationSource[];
+}
+
 interface ResolveAnnotationClassNameParams {
     annotationClasses: readonly AnnotationClass[];
     annotationClassId: string;
@@ -26,10 +31,7 @@ interface ResolveAnnotationClassNameParams {
 export function resolveAnnotationSourceName({
     annotationSourceId,
     sources
-}: {
-    annotationSourceId: string | null | undefined;
-    sources: readonly AnnotationSource[];
-}): string | undefined {
+}: ResolveAnnotationSourceNameParams): string | undefined {
     if (!annotationSourceId) return undefined;
     const name = sources.find(({ id }) => id === annotationSourceId)?.name;
     return name?.trim() ? name : undefined;

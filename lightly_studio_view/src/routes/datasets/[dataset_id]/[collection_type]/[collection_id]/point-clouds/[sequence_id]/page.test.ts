@@ -33,7 +33,8 @@ vi.mock('$lib/hooks', () => ({
     useTickDetails: () => ({ tickDetails: { data: undefined } }),
     useCloudPointFrame: () => ({
         query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
-    })
+    }),
+    useAnnotationCollections: () => ({ data: [] })
 }));
 
 const mockPageData = {
