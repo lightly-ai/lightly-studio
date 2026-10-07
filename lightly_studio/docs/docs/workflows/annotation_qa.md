@@ -42,7 +42,7 @@ editing mode with `Edit Annotations`.
 - **Edit a single annotation.** Open the annotation or its sample in detail view and correct the
   class or the region there (see [Annotations](annotations.md)).
 - **Tag it for a relabeling batch.** If somebody else makes the correction, tag the samples and
-  share the tag (see [Tags](../core_concepts/tags.md)).
+  share the tag (see [Tags](tags.md)).
 
 ## Scan the Annotation Grid
 
@@ -79,7 +79,7 @@ wrong.
     This method needs embeddings for the annotation crops, not just for the samples. LightlyStudio
     computes them for the annotations that exist at that moment, so a dataset whose annotations
     were added later may have none. See
-    [Embeddings](../core_concepts/embeddings.md#object-level-embeddings) for how crop embeddings
+    [Embeddings](embeddings.md#object-level-embeddings) for how crop embeddings
     are computed and how to trigger them.
 
 1. In the `Annotations` view, open the embedding plot with the `Embed` button in the top right.

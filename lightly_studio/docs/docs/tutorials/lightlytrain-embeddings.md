@@ -322,7 +322,7 @@ for sample in dataset:
 !!! warning "Keep the same LightlyTrain version"
     `torch.load(..., weights_only=False)` unpickles the model class of LightlyTrain. The environment that runs LightlyStudio needs the same `lightly-train` version that you exported with. This load also runs code from the file. Load only model files that you trust.
 
-Text search stays off, because the model has no text encoder. See [Using your own embeddings](../core_concepts/embeddings.md#using-your-own-embeddings) and the [Embeddings API](../api/embeddings.md) for the full set of embedder capability interfaces.
+Text search stays off, because the model has no text encoder. See [Using your own embeddings](../workflows/embeddings.md#using-your-own-embeddings) and the [Embeddings API](../api/embeddings.md) for the full set of embedder capability interfaces.
 
 !!! note "Alternative: precompute the embeddings"
     To embed once, offline, run `lightly_train.embed(...)` to write vectors to a file. Then load them with the pattern in [`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py). That path embeds whole images only.
@@ -342,7 +342,7 @@ python train_and_export.py   # distill and export the model (slow; run once)
 python explore.py            # embed your data and open LightlyStudio
 ```
 
-Click the `Embed` button in the top right to open the [embedding plot](../core_concepts/embeddings.md#the-embedding-plot-gui). The plot shows every image as a point in a 2D projection (PaCMAP) of the embedding space. To color the points by species, open **Color by** at the bottom of the plot and pick **annotations**. You get the plot at the top of this page.
+Click the `Embed` button in the top right to open the [embedding plot](../workflows/embeddings.md#the-embedding-plot-gui). The plot shows every image as a point in a 2D projection (PaCMAP) of the embedding space. To color the points by species, open **Color by** at the bottom of the plot and pick **annotations**. You get the plot at the top of this page.
 
 Read the map:
 
@@ -389,7 +389,7 @@ dataset.query().sampling().diverse(
 )
 ```
 
-The result is saved as a [tag](../core_concepts/tags.md). Open the tag in the grid to review the picks. You can also color the embedding plot by the tag to see the spread.
+The result is saved as a [tag](../workflows/tags.md). Open the tag in the grid to review the picks. You can also color the embedding plot by the tag to see the spread.
 
 You can do the same by hand. Lasso a region in the plot to scope the grid to those samples, review them, and tag what you want to keep. Selection works in both directions. For every strategy, see [Sampling](../workflows/sampling.md).
 
@@ -401,4 +401,4 @@ The connection between the two products is a single model file. The distilled Vi
 
 After LightlyStudio loads the model file, the embedding plot and every sampling strategy work as they do with a built-in model. Text search is the one exception, because this model is vision-only.
 
-To go further, distill on your full dataset, try a different teacher from `lightly_train.list_models()`, or read [Embeddings](../core_concepts/embeddings.md) and [Sampling](../workflows/sampling.md).
+To go further, distill on your full dataset, try a different teacher from `lightly_train.list_models()`, or read [Embeddings](../workflows/embeddings.md) and [Sampling](../workflows/sampling.md).
