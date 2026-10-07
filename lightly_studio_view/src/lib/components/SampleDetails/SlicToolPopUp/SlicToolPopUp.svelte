@@ -4,15 +4,9 @@
         type SlicLevel
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { Button } from '$lib/components/ui/button';
-    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import FinishAnnotationButton from '../FinishAnnotationButton/FinishAnnotationButton.svelte';
 
     const { isPending = false }: { isPending?: boolean } = $props();
-    const {
-        context: annotationLabelContext,
-        setAnnotationId,
-        setLastCreatedAnnotationId
-    } = useAnnotationLabelContext();
-
     const { context: sampleDetailsToolbarContext, setSlicLevel } = useSampleDetailsToolbarContext();
 
     const levelLabels: Record<SlicLevel, string> = {
@@ -52,20 +46,6 @@
             </div>
         </div>
 
-        {#if !annotationLabelContext.isOnAnnotationDetailsView}
-            <div class="grid">
-                <Button
-                    size="xs"
-                    disabled={!annotationLabelContext.annotationId ||
-                        annotationLabelContext.isDrawing ||
-                        isPending}
-                    onclick={() => {
-                        // Strokes save on pointerup; Finish starts a new object on the next stroke.
-                        setAnnotationId(null);
-                        setLastCreatedAnnotationId(null);
-                    }}>Finish</Button
-                >
-            </div>
-        {/if}
+        <FinishAnnotationButton {isPending} />
     </div>
 </div>
