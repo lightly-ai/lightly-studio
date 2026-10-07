@@ -354,7 +354,6 @@ def annotation_tags(
             TagCreate(
                 collection_id=collections[i % 2].collection_id,
                 name=f"Test Tag {i}",
-                kind="annotation",
             ),
         )
         tags.append(tag)
@@ -374,7 +373,6 @@ def sample_tags(
             TagCreate(
                 collection_id=collection.collection_id,
                 name=f"Test Sample Tag {i}",
-                kind="sample",
             ),
         )
         tags.append(tag)
@@ -504,7 +502,6 @@ def annotation_tags_assigned(
             TagCreate(
                 collection_id=annotation_collection_id,
                 name=f"Test Annotation Tag {i}",
-                kind="annotation",
             ),
         )
         for i in range(2)

@@ -60,7 +60,7 @@
 
     const collectionId = $page.params.collection_id!;
 
-    const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
+    const { tagsSelected } = useTags({ collection_id: collectionId });
 
     const { scopeLabel, contextFilter } = useOperatorContext(pageContext, tagsSelected);
 

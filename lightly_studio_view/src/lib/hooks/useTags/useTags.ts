@@ -1,4 +1,4 @@
-import type { TagView as Tag, TagKind } from '$lib/services/types';
+import type { TagView as Tag } from '$lib/services/types';
 import { derived, get, readonly, writable, type Readable } from 'svelte/store';
 import { readTags } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '../useGlobalStorage';
@@ -7,7 +7,6 @@ import { toggleTagSelection } from './toggleTagSelection';
 
 interface UseTagsOptions {
     collection_id: string;
-    kind?: TagKind[];
 }
 
 interface UseTagsReturn {
@@ -25,7 +24,7 @@ interface UseTagsReturn {
 const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 
 export function useTags(options: UseTagsOptions): UseTagsReturn {
-    const { collection_id, kind } = options;
+    const { collection_id } = options;
     const { tags: tagsData } = useGlobalStorage();
     const { trackEvent } = usePostHog();
     const isLoaded = writable(false);
@@ -86,13 +85,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         isLoaded.set(true);
     }
 
-    const tags = derived(tagsData, ($tagsData) => {
-        // Get tags for the current collection_id
-        const allTags = $tagsData[collection_id] ?? [];
-        if (!kind) return allTags;
-
-        return allTags.filter((tag) => kind.includes(tag.kind));
-    });
+    const tags = derived(tagsData, ($tagsData) => $tagsData[collection_id] ?? []);
 
     const tagsSelectedForCollection = derived(
         tagsSelectedByCollection,

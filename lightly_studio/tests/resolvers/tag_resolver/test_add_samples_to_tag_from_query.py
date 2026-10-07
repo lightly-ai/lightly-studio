@@ -9,7 +9,7 @@ from tests.helpers_resolvers import create_collection, create_image, create_tag
 
 def test_add_samples_to_tag_from_query__tags_only_query_matches(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     images = [
         create_image(session=db_session, collection_id=collection_id, file_path_abs=f"s{i}.png")
         for i in range(4)

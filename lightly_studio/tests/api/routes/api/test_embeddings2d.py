@@ -115,7 +115,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
 
     tag = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="tagged", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="tagged"),
     )
     for sample in tagged_samples:
         tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample.sample)
@@ -201,7 +201,7 @@ def test_get_embeddings2d__with_video_filter(
 
     tag = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="tagged", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="tagged"),
     )
     tagged_video = videos[0]
     sample_table = sample_resolver.get_by_id(session=db_session, sample_id=tagged_video.sample_id)

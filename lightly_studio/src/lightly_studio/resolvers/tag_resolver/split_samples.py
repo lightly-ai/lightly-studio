@@ -67,7 +67,7 @@ def split_samples(
     counts = _allocate_counts(sample_count=len(unique_sample_ids), splits=normalized_splits)
     try:
         tags = [
-            TagTable(name=split.tag_name, collection_id=collection_id, kind="sample")
+            TagTable(name=split.tag_name, collection_id=collection_id)
             for split in normalized_splits
         ]
         session.add_all(tags)

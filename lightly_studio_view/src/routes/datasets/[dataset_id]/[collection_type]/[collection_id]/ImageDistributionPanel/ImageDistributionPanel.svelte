@@ -105,9 +105,7 @@
     // The class count queries skip the request while every annotation source is unchecked.
     const distributionCountsEnabled = $derived(!$allSourcesHidden);
 
-    const { tags: distributionSampleTags } = $derived(
-        useTags({ collection_id: datasetId, kind: ['sample'] })
-    );
+    const { tags: distributionSampleTags } = $derived(useTags({ collection_id: datasetId }));
     const distributionSampleTagItems = $derived(
         $distributionSampleTags.map((tag) => ({
             value: tag.tag_id,

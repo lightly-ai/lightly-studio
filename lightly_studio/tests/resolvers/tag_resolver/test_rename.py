@@ -95,34 +95,6 @@ def test_rename_tag__unique_tag_name__preserves_original_tag_and_links(
     )
 
 
-def test_rename_tag__unique_tag_name__different_kind(
-    db_session: Session,
-) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    sample_tag = create_tag(
-        session=db_session,
-        collection_id=collection_id,
-        kind="sample",
-        tag_name="sample_tag_1",
-    )
-    annotation_tag = create_tag(
-        session=db_session,
-        collection_id=collection_id,
-        kind="annotation",
-        tag_name="annotation_tag_1",
-    )
-
-    # A name used by an annotation tag cannot be reused by a sample tag.
-    with pytest.raises(IntegrityError):
-        tag_resolver.rename(
-            session=db_session,
-            tag_id=sample_tag.tag_id,
-            new_name=annotation_tag.name,
-        )
-
-
 def test_rename_tag__unknown_tag_returns_none(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id

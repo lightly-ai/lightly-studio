@@ -35,7 +35,7 @@ def test_add_samples_by_filter__image_empty_filter_tags_whole_collection(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     images = create_images(
         db_session=db_session,
         collection_id=collection_id,
@@ -57,7 +57,7 @@ def test_add_samples_by_filter__image_subset_filter_tags_only_subset(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     wide = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="wide.png", width=1920
     )
@@ -78,7 +78,7 @@ def test_add_samples_by_filter__idempotent_on_rerun(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     image = create_image(session=db_session, collection_id=collection_id, file_path_abs="s.png")
     body = {"filter": {"filter_type": "image"}}
 
@@ -109,7 +109,7 @@ def test_add_samples_by_filter__annotation_grid(
         collection_id=collection.collection_id,
         sample_type=SampleType.ANNOTATION,
     )
-    tag = create_tag(session=db_session, collection_id=annotation_collection_id, kind="annotation")
+    tag = create_tag(session=db_session, collection_id=annotation_collection_id)
 
     response = test_client.post(
         f"/api/collections/{annotation_collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
@@ -137,7 +137,7 @@ def test_add_samples_by_filter__wrong_collection_returns_404(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
 
     # Tag exists, but not in the collection on the path.
     response = test_client.post(
@@ -154,7 +154,7 @@ def test_add_samples_by_filter__image_filter_with_embedding_region_tags_only_reg
     """Tagging by filter with an embedding region only tags samples inside the region."""
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     embedding_model = create_embedding_model(
         session=db_session,
         collection_id=collection_id,
@@ -251,7 +251,7 @@ def test_add_samples_by_filter__annotations_filter_with_embedding_region_tags_on
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
     )
-    tag = create_tag(session=db_session, collection_id=annotation_collection_id, kind="annotation")
+    tag = create_tag(session=db_session, collection_id=annotation_collection_id)
     embedding_model = create_embedding_model(
         session=db_session,
         collection_id=annotation_collection_id,

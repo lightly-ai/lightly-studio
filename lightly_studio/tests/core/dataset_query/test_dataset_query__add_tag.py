@@ -54,7 +54,6 @@ class TestDatasetQueryAddTag:
         )
         assert tag is not None
         assert tag.name == "my_tag"
-        assert tag.kind == "sample"
 
         # Refresh samples to get updated tags
         db_session.refresh(image10)
