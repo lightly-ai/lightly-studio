@@ -11,10 +11,12 @@
     import type { WorkspaceCrumb } from './types';
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
     import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
+    import type { PointCloudWorkspaceContext } from './provider/types';
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
+    import { useChannelSelection } from './useChannelSelection.svelte';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -58,21 +60,29 @@
         onRetry
     }: Props = $props();
 
-    let selectedLidarChannels = $state<number[] | null>(null);
-    let selectedCameraChannels = $state<number[]>([]);
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
 
-    const workspace = createPointCloudWorkspaceContext(() => ({
+    let workspace = $state<PointCloudWorkspaceContext>({} as PointCloudWorkspaceContext);
+    const lidarSelection = useChannelSelection({
+        getChannels: () => workspace.lidarChannels,
+        getResetKey: () => sequenceId
+    });
+    const cameraSelection = useChannelSelection({
+        getChannels: () => workspace.cameraChannels,
+        getResetKey: () => sequenceId
+    });
+
+    workspace = createPointCloudWorkspaceContext(() => ({
         datasetId,
         sequenceId,
-        selectedLidarChannels: selectedLidarChannels ?? undefined,
+        selectedLidarChannels: lidarSelection.selectedChannels ?? undefined,
         // The hash tick is 1-based; the transport tracks 0-based seq numbers.
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
     const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
         usePointCloudTickNavigation({
-            workspace,
+            getWorkspace: () => workspace,
             getTickNumber: () => tickNumber,
             getOnTickChange: () => onTickChange
         });
@@ -121,11 +131,6 @@
     const cameraChannels = $derived(workspace.cameraChannels);
     const displayedColorMode = $derived(selectedColorMode ?? 'density');
 
-    const toggleChannel = (selected: number[], channelId: number): number[] =>
-        selected.includes(channelId)
-            ? selected.filter((id) => id !== channelId)
-            : [...selected, channelId];
-
     const handleFullscreenChange = () => {
         isFullscreen = document.fullscreenElement === containerEl;
     };
@@ -138,11 +143,6 @@
             await containerEl.requestFullscreen();
         }
     };
-
-    $effect(() => {
-        if (!datasetId || !sequenceId) return;
-        selectedLidarChannels = null;
-    });
 
     $effect(() => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -168,18 +168,14 @@
         isShowingSensorFrames={workspace.isShowingSensorFrames}
         {lidarChannels}
         {cameraChannels}
-        selectedLidarChannels={selectedLidarChannels ??
-            lidarChannels.map((channel) => channel.channel_id)}
-        {selectedCameraChannels}
+        selectedLidarChannels={lidarSelection.selectedChannelIds}
+        selectedCameraChannels={cameraSelection.selectedChannelIds}
         colorMode={displayedColorMode}
         onColorModeChange={(mode) => (selectedColorMode = mode)}
-        onToggleLidarChannel={(channelId) =>
-            (selectedLidarChannels = toggleChannel(
-                selectedLidarChannels ?? lidarChannels.map((channel) => channel.channel_id),
-                channelId
-            ))}
-        onToggleCameraChannel={(channelId) =>
-            (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
+        onToggleLidarChannel={lidarSelection.toggleChannel}
+        onToggleCameraChannel={cameraSelection.toggleChannel}
+        onSetLidarChannels={lidarSelection.setChannels}
+        onSetCameraChannels={cameraSelection.setChannels}
     />
     <div class="flex min-h-0 flex-1">
         {#if workspace.status === 'unsupported' || workspace.status === 'error'}
@@ -228,8 +224,10 @@
                             <CameraProjectionStrip
                                 {datasetId}
                                 {sequenceId}
+                                cameraChannels={workspace.cameraChannels}
                                 seqNumber={workspace.currentTick}
                                 displayFrameId={workspace.referenceFrameId}
+                                selectedChannelIds={cameraSelection.selectedChannelIds}
                             />
                         </Pane>
                         <PaneResizer
@@ -249,12 +247,10 @@
                                 currentTick={workspace.currentTick}
                                 isPlaying={workspace.isPlaying}
                                 playbackIntervalMs={workspace.playbackIntervalMs}
-                                lidarChannelNames={lidarChannels.map(
-                                    (channel) => channel.group_component_name
-                                )}
-                                cameraChannelNames={cameraChannels.map(
-                                    (channel) => channel.group_component_name
-                                )}
+                                lidarChannelNames={lidarSelection.selectedChannelNames}
+                                cameraChannelNames={cameraSelection.selectedChannelNames}
+                                hasAvailableChannels={lidarChannels.length > 0 ||
+                                    cameraChannels.length > 0}
                                 onPreviousFrame={goToPreviousFrame}
                                 onNextFrame={goToNextFrame}
                                 onPlayToggle={togglePlayback}

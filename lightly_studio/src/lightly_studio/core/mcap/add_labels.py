@@ -29,6 +29,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     object_track_resolver,
+    tag_resolver,
 )
 
 if TYPE_CHECKING:
@@ -153,7 +154,10 @@ def write_sequence_labels(
     messages: list[tuple[int, SceneUpdateLabels]],
     annotation_source: str = DEFAULT_ANNOTATION_SOURCE,
 ) -> None:
-    """Match annotation MCAP messages to ticks and persist cuboids and object tracks."""
+    """Match annotation MCAP messages to ticks and persist cuboids, object tracks and tags.
+
+    Frame tags are added as sample tags to the tick groups in the group collection.
+    """
     session = dataset.group_dataset.session
     ticks = ticks_by_timestamp(entries=sequence.get_samples())
     matched = match_labels(messages=messages, ticks=ticks)
@@ -172,6 +176,11 @@ def write_sequence_labels(
             collection_name=annotation_source,
         )
     session.commit()
+    _add_frame_tags(
+        session=session,
+        collection_id=dataset.group_dataset.collection_id,
+        tags_by_group=matched.tags_by_group,
+    )
 
 
 def _match_one_message(
@@ -353,6 +362,23 @@ def _annotation_creates(
         for group_id, cuboids in matched.cuboids_by_group.items()
         for cuboid in cuboids
     ]
+
+
+def _add_frame_tags(
+    session: Session, collection_id: UUID, tags_by_group: Mapping[UUID, FrameTags]
+) -> None:
+    """Get or create a sample tag for each frame tag name and add its groups to it."""
+    group_ids_by_tag_name: dict[str, list[UUID]] = defaultdict(list)
+    for group_id, frame_tags in tags_by_group.items():
+        for tag_name in frame_tags.tags:
+            group_ids_by_tag_name[tag_name].append(group_id)
+    for tag_name, group_ids in group_ids_by_tag_name.items():
+        tag = tag_resolver.get_or_create_sample_tag_by_name(
+            session=session, collection_id=collection_id, tag_name=tag_name
+        )
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=session, tag_id=tag.tag_id, sample_ids=group_ids
+        )
 
 
 def _cuboid_create(cuboid: CuboidLabel) -> Cuboid3DCreate:

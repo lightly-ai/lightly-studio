@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.tag import TagView
 
 
 class TickView(BaseModel):
@@ -58,8 +59,10 @@ class TickChannelView(BaseModel):
 
 
 class TickDetailView(BaseModel):
-    """One tick with its per-component MCAP locators and annotations."""
+    """One tick with its per-component MCAP locators, annotations and tags."""
 
+    sample_id: UUID = Field(description="The group sample ID of the tick.")
+    collection_id: UUID = Field(description="The group collection that holds the tick.")
     recording_id: UUID = Field(description="The recording this tick belongs to.")
     seq_number: int = Field(description="Zero-based position of the tick in the sequence.")
     timestamp_ns: int | None = Field(
@@ -74,3 +77,4 @@ class TickDetailView(BaseModel):
     annotations: list[AnnotationView] = Field(
         description="Annotations attached to the tick, e.g. 3D cuboids."
     )
+    tags: list[TagView] = Field(description="Sample tags of the tick group.")
