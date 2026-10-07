@@ -13,6 +13,7 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 vi.mock('$app/state', () => ({
     page: {
+        data: { collection: { dataset_id: 'dataset-1' } },
         params: {
             dataset_id: 'route-dataset-id',
             collection_type: 'mcap',
@@ -37,7 +38,8 @@ vi.mock('$lib/hooks', () => ({
         },
         loadMore: vi.fn(),
         totalCount: writable(1)
-    })
+    }),
+    useMcapSequencePrefetch: () => ({ prefetch: vi.fn(), cancel: vi.fn() })
 }));
 
 class MockResizeObserver {
