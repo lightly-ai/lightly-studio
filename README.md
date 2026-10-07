@@ -187,7 +187,7 @@ Step-by-step guides covering complete workflows — from raw, unlabeled data to 
 
 - [Query, filter, and sort](https://docs.lightly.ai/studio/workflows/search_and_filter/#query-in-python) — build reusable subsets in Python
 - [Lightly Query Language](https://docs.lightly.ai/studio/workflows/lightly_query_language/) — the query syntax for the GUI query editor
-- [Annotations](https://docs.lightly.ai/studio/workflows/annotations/), [Tags](https://docs.lightly.ai/studio/core_concepts/tags/), [Metadata](https://docs.lightly.ai/studio/core_concepts/metadata/), [Captions](https://docs.lightly.ai/studio/workflows/captions/), [Embeddings](https://docs.lightly.ai/studio/core_concepts/embeddings/)
+- [Annotations](https://docs.lightly.ai/studio/workflows/annotations/), [Tags](https://docs.lightly.ai/studio/workflows/tags/), [Metadata](https://docs.lightly.ai/studio/workflows/metadata/), [Captions](https://docs.lightly.ai/studio/workflows/captions/), [Embeddings](https://docs.lightly.ai/studio/workflows/embeddings/)
 - [Sampling](https://docs.lightly.ai/studio/workflows/sampling/) — pick the most typical and diverse samples to cut labeling cost
 - [Model evaluation](https://docs.lightly.ai/studio/workflows/evaluation/) — compare predictions against ground truth
 - [Plugins](https://docs.lightly.ai/studio/ecosystem/plugins/) — auto-label with SAM and other models

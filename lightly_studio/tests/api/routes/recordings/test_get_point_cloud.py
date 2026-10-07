@@ -54,6 +54,7 @@ def test_get_point_cloud(
 
     assert response.status_code == status.HTTP_STATUS_OK
     assert response.headers["content-type"] == "application/vnd.apache.arrow.stream"
+    assert response.headers["cache-control"] == "public, max-age=604800"
     assert response.headers["x-frame-log-time-ns"] == str(timestamp_ns)
     assert response.content
 

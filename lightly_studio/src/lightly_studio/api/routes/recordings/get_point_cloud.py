@@ -77,6 +77,7 @@ def get_point_cloud(
         headers={
             "Content-Disposition": "inline; filename=point-cloud.arrow",
             "Content-Type": "application/vnd.apache.arrow.stream",
+            "Cache-Control": "public, max-age=604800",
             "X-Content-Type-Options": "nosniff",
             "X-Frame-Log-Time-Ns": str(point_cloud.log_time_ns),
         },
