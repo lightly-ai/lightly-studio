@@ -4,7 +4,7 @@
     import { usePostHog, useOnboarding, TOUR_VERSION } from '$lib/hooks';
     import { get } from 'svelte/store';
     import { onDestroy, onMount } from 'svelte';
-    import { type TourRef, tileElement, visible, createTourSteps } from './Onboarding.steps';
+    import { type TourRef, tileElement, visible, createTourSteps, DEFAULT_STEP_PLAN } from './Onboarding.steps';
     import Invitation from './Invitation.svelte';
 
     interface Props {
@@ -38,7 +38,7 @@
     const { state } = onboarding;
     const { ready, trackEvent } = usePostHog();
 
-    const ref: TourRef = { tour: undefined, stage: null, menuHighlightCleanup: null };
+    const ref: TourRef = { tour: undefined, stage: null, menuHighlightCleanup: null, stepPlan: DEFAULT_STEP_PLAN };
     let trackingReady = false;
     let checkingEligibility = false;
     let suppressDismiss = false;
