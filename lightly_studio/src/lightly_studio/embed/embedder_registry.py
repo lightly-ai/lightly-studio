@@ -1,10 +1,10 @@
 """Registry that maps embedding spaces to embedders.
 
 Holds at most one embedder per ``space_key``. Callers look up an embedder by the
-capability they need with the matching typed getter, which returns the space's
+interface of the capability they need with ``get_embedder``, which returns the space's
 embedder only when it implements that capability.
 
-A getter that gets the stored configuration of a space also resolves an embedder that
+A lookup that gets the stored configuration of a space also resolves an embedder that
 nobody registered: it builds the one the configuration names.
 """
 
@@ -64,14 +64,14 @@ class EmbedderRegistry:
 
     An embedder can provide several capabilities. The registry keeps one embedder
     per ``space_key``; registering another embedder for the same space replaces
-    it. The typed getters return the space's embedder only when it implements the
+    it. ``get_embedder`` returns the space's embedder only when it implements the
     requested capability.
 
-    Calling a getter without a ``space_key`` selects that capability's bootstrap
+    Calling ``get_embedder`` without a ``space_key`` selects that capability's bootstrap
     space. Initially, MobileCLIP and Perception Encoder serve as default bootstraps
     for preselected capabilities. Bootstraps are updated when a custom embedder is registered.
 
-    Calling a getter with the stored ``config`` of a space adds a third source, and the
+    Calling ``get_embedder`` with the stored ``config`` of a space adds a third source, and the
     three rank per capability: a registration wins for the capabilities it implements,
     a configuration wins over a built-in.
     A registration is process-global and keyed on the space alone, while a configured
@@ -168,54 +168,10 @@ class EmbedderRegistry:
         embedder = self._resolve(space_key=space_key, capability=capability, config=config)
         return embedder if isinstance(embedder, embedder_type) else None
 
-    def get_image_path_embedder(
-        self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> ImagePathEmbedder | None:
-        """Get the space's embedder if it embeds images by path, else None."""
-        return self.get_embedder(
-            embedder_type=ImagePathEmbedder, space_key=space_key, config=config
-        )
-
-    def get_image_crop_path_embedder(
-        self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> ImageCropPathEmbedder | None:
-        """Get the space's embedder if it embeds image crops by path, else None."""
-        return self.get_embedder(
-            embedder_type=ImageCropPathEmbedder, space_key=space_key, config=config
-        )
-
-    def get_video_path_embedder(
-        self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> VideoPathEmbedder | None:
-        """Get the space's embedder if it embeds videos by path, else None."""
-        return self.get_embedder(
-            embedder_type=VideoPathEmbedder, space_key=space_key, config=config
-        )
-
-    def get_image_pil_embedder(
-        self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> ImagePILEmbedder | None:
-        """Get the space's embedder if it embeds PIL images, else None."""
-        return self.get_embedder(embedder_type=ImagePILEmbedder, space_key=space_key, config=config)
-
-    def get_text_embedder(
-        self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> TextEmbedder | None:
-        """Get the space's embedder if it embeds text, else None."""
-        return self.get_embedder(embedder_type=TextEmbedder, space_key=space_key, config=config)
-
-    def get_image_bytes_embedder(
-        self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> ImageBytesEmbedder | None:
-        """Get the space's embedder if it embeds images by bytes, else None."""
-        return self.get_embedder(
-            embedder_type=ImageBytesEmbedder, space_key=space_key, config=config
-        )
-
     def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
         """Get whether the embedding server of the configuration failed inside the retry window.
 
-        The getters return None for an unusable server and for a space without the capability.
+        ``get_embedder`` returns None for an unusable server and for a space without the capability.
         This tells the two apart.
         """
         with self._lock:
