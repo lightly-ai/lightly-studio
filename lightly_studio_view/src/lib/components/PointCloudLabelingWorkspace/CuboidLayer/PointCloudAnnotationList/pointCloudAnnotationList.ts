@@ -17,9 +17,24 @@ interface GroupAnnotationsBySourceParams {
     sources: readonly AnnotationSource[];
 }
 
+interface ResolveAnnotationSourceNameParams {
+    annotationSourceId: string | null | undefined;
+    sources: readonly AnnotationSource[];
+}
+
 interface ResolveAnnotationClassNameParams {
     annotationClasses: readonly AnnotationClass[];
     annotationClassId: string;
+}
+
+/** Resolves the human-readable source name for a cuboid, if one is available. */
+export function resolveAnnotationSourceName({
+    annotationSourceId,
+    sources
+}: ResolveAnnotationSourceNameParams): string | undefined {
+    if (!annotationSourceId) return undefined;
+    const name = sources.find(({ id }) => id === annotationSourceId)?.name;
+    return name?.trim() ? name : undefined;
 }
 
 interface SortByParentAndTrackNumberParams {

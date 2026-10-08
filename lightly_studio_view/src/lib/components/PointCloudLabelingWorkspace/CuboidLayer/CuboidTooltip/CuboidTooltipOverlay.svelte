@@ -1,9 +1,11 @@
 <script lang="ts">
     import type {
         AnnotationClass,
+        AnnotationSource,
         CuboidAnnotation
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidTooltip from './CuboidTooltip.svelte';
+    import { resolveAnnotationSourceName } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList';
 
     /**
      * Cursor-following overlay that renders CuboidTooltip outside the Threlte canvas.
@@ -20,12 +22,21 @@
         cuboids: readonly CuboidAnnotation[];
         /** Annotation classes — used to resolve the hovered cuboid's display name. */
         annotationClasses: readonly AnnotationClass[];
+        /** Sources used to resolve each cuboid's human-readable source name. */
+        annotationSources?: readonly AnnotationSource[];
     }
 
     const TOOLTIP_OFFSET_PX = 12;
     const HOVER_DELAY_MS = 100;
 
-    let { cursorX, cursorY, hoveredAnnotationId, cuboids, annotationClasses }: Props = $props();
+    let {
+        cursorX,
+        cursorY,
+        hoveredAnnotationId,
+        cuboids,
+        annotationClasses,
+        annotationSources = []
+    }: Props = $props();
 
     let overlayEl = $state<HTMLDivElement | undefined>(undefined);
     let tooltipEl = $state<HTMLDivElement | undefined>(undefined);
@@ -85,6 +96,10 @@
             <CuboidTooltip
                 annotation={hoveredCuboid}
                 annotationClassName={hoveredAnnotationClassName}
+                annotationSourceName={resolveAnnotationSourceName({
+                    annotationSourceId: hoveredCuboid.annotationSourceId,
+                    sources: annotationSources
+                })}
             />
         </div>
     {/if}

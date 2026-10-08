@@ -52,11 +52,13 @@ vi.mock('$lib/hooks', () => ({
     useTickDetails: () => ({ tickDetails: { data: undefined } }),
     useCloudPointFrame: () => ({
         query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
-    })
+    }),
+    useAnnotationCollections: () => ({ data: [] })
 }));
 
 const mockPageData = {
     datasetId: 'dataset-1',
+    annotationSourceCollectionId: 'group-collection-1',
     collectionId: 'collection-1',
     collectionName: 'Collection 1',
     collectionType: 'mcap',
@@ -165,7 +167,7 @@ describe('point-cloud sequence page load', () => {
             parent: async () => parentData
         } as unknown as Parameters<typeof load>[0]);
 
-    it('keeps a sequence collection as the breadcrumb target and derives the dataset id', async () => {
+    it('uses the MCAP group collection for sources and keeps the sequence breadcrumb', async () => {
         const result = await loadWith('?group_id=group', {
             collection: {
                 dataset_id: 'dataset',
@@ -174,11 +176,18 @@ describe('point-cloud sequence page load', () => {
                 sample_type: 'sequence',
                 parent_collection_id: 'root-collection'
             },
-            collectionHierarchy: []
+            collectionHierarchy: [
+                {
+                    collection_id: 'group-collection',
+                    name: 'Sequences_groups',
+                    sample_type: 'group'
+                }
+            ]
         });
 
         expect(result).toEqual({
             datasetId: 'dataset',
+            annotationSourceCollectionId: 'group-collection',
             collectionName: 'Sequences',
             collectionType: 'sequence',
             collectionId: 'sequence-collection',
@@ -187,7 +196,7 @@ describe('point-cloud sequence page load', () => {
         });
     });
 
-    it('points the breadcrumb at the parent sequence collection when reached from a group', async () => {
+    it('uses the current group collection for sources and breadcrumbs its sequence parent', async () => {
         const result = await loadWith('', {
             collection: {
                 dataset_id: 'dataset',
@@ -203,6 +212,7 @@ describe('point-cloud sequence page load', () => {
 
         expect(result).toEqual({
             datasetId: 'dataset',
+            annotationSourceCollectionId: 'group-collection',
             collectionName: 'Sequences',
             collectionType: 'sequence',
             collectionId: 'sequence-collection',

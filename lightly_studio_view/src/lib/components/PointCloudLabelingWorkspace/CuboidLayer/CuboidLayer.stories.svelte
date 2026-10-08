@@ -104,6 +104,7 @@
             {hoveredAnnotationId}
             cuboids={args.cuboids ?? []}
             annotationClasses={args.annotationClasses ?? []}
+            annotationSources={[{ id: 'ground-truth', name: 'Ground Truth' }]}
         />
     </div>
 {/snippet}
