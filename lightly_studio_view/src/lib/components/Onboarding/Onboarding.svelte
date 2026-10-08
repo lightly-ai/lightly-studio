@@ -4,7 +4,13 @@
     import { usePostHog, useOnboarding, TOUR_VERSION } from '$lib/hooks';
     import { get } from 'svelte/store';
     import { onDestroy, onMount } from 'svelte';
-    import { type TourRef, tileElement, visible, createTourSteps, DEFAULT_STEP_PLAN } from './Onboarding.steps';
+    import {
+        type TourRef,
+        tileElement,
+        visible,
+        createTourSteps,
+        DEFAULT_STEP_PLAN
+    } from './Onboarding.steps';
     import Invitation from './Invitation.svelte';
 
     interface Props {
@@ -38,7 +44,12 @@
     const { state } = onboarding;
     const { ready, trackEvent } = usePostHog();
 
-    const ref: TourRef = { tour: undefined, stage: null, menuHighlightCleanup: null, stepPlan: DEFAULT_STEP_PLAN };
+    const ref: TourRef = {
+        tour: undefined,
+        stage: null,
+        menuHighlightCleanup: null,
+        stepPlan: DEFAULT_STEP_PLAN
+    };
     let trackingReady = false;
     let checkingEligibility = false;
     let suppressDismiss = false;
@@ -152,7 +163,8 @@
         }
         activeCollectionId = collectionId;
         if (get(state) === 'unseen') void offerInvitation();
-        if (get(state) === 'running' && !ref.stage && isImages && tileElement()) steps.highlightGrid();
+        if (get(state) === 'running' && !ref.stage && isImages && tileElement())
+            steps.highlightGrid();
         if (
             get(state) === 'opening_sample' &&
             isSampleDetails &&
@@ -293,7 +305,7 @@
         color: hsl(var(--primary-foreground));
     }
 
-/* Color only the visible border for each arrow direction.
+    /* Color only the visible border for each arrow direction.
        Driver.js sets the other three to transparent in the same rule — those
        must be left alone or the triangle breaks. */
     :global(body .driver-popover-arrow-side-top) {

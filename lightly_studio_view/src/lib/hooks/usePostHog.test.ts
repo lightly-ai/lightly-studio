@@ -115,7 +115,9 @@ describe('usePostHog', () => {
             data: { ...CONFIG, posthog_key: 'dev-key' }
         });
 
-        await (await freshPostHog()).ready;
+        await (
+            await freshPostHog()
+        ).ready;
 
         expect(mockInit).toHaveBeenCalledWith('dev-key', expect.anything());
     });
@@ -142,7 +144,9 @@ describe('usePostHog', () => {
     it('should not initialize when the backend reports analytics as off', async () => {
         mockGetFeatures.mockResolvedValue({ data: [] });
 
-        await (await freshPostHog()).ready;
+        await (
+            await freshPostHog()
+        ).ready;
 
         expect(mockInit).not.toHaveBeenCalled();
     });
@@ -165,7 +169,9 @@ describe('usePostHog', () => {
     it('should not initialize when the features request fails', async () => {
         mockGetFeatures.mockRejectedValue(new Error('API Error'));
 
-        await (await freshPostHog()).ready;
+        await (
+            await freshPostHog()
+        ).ready;
 
         expect(mockInit).not.toHaveBeenCalled();
     });

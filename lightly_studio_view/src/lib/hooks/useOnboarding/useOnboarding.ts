@@ -45,9 +45,7 @@ export function useOnboarding() {
         },
         dispatchOpenFirstSample: () => openFirstSampleHandler?.(),
         /** Register the handler that intercepts navigation-to-sample during the tour. */
-        registerOpeningSampleHandler: (
-            handler: (collectionId: string) => void
-        ): (() => void) => {
+        registerOpeningSampleHandler: (handler: (collectionId: string) => void): (() => void) => {
             openingSampleHandler = handler;
             return () => {
                 openingSampleHandler = null;

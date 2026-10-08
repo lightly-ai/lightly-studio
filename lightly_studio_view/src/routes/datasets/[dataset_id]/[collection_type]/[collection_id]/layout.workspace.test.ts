@@ -54,6 +54,7 @@ vi.mock('$lib/components', async () => {
         Footer: Stub,
         LabelsMenu: Stub,
         MetadataFilterChips: Stub,
+        Onboarding: Stub,
         SelectionPill: Stub,
         ShowFiltersButton: Stub,
         TagsMenu: Stub,
@@ -168,6 +169,7 @@ vi.mock('$lib/hooks', () => ({
         refetch: vi.fn()
     })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
+    useFeatureFlags: vi.fn(() => ({ featureFlags: writable([]), ready: Promise.resolve() })),
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({

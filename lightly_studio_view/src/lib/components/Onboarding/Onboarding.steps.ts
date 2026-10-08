@@ -97,8 +97,16 @@ function openMenuDropdown(el: HTMLElement) {
 }
 
 export function createTourSteps(opts: StepsOptions) {
-    const { ref, eligible, tile, isSampleDetails, onSkip, onFinish, onStartOnboarding, onOpenFirstSample } =
-        opts;
+    const {
+        ref,
+        eligible,
+        tile,
+        isSampleDetails,
+        onSkip,
+        onFinish,
+        onStartOnboarding,
+        onOpenFirstSample
+    } = opts;
 
     function popoverFooter(stage: TourStage, skipFn: (() => void) | null) {
         return ({ footerButtons }: Pick<PopoverDOM, 'footerButtons'>) => {

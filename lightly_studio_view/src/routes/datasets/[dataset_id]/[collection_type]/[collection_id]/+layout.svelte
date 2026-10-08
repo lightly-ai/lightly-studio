@@ -950,7 +950,11 @@
 </script>
 
 <div class="flex-none">
-    <Header {collection} showTour={onboardingEnabled} onShowTour={() => useOnboarding().requestReplay()} />
+    <Header
+        {collection}
+        showTour={onboardingEnabled}
+        onShowTour={() => useOnboarding().requestReplay()}
+    />
     <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
