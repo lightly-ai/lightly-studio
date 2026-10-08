@@ -628,6 +628,174 @@ def test_postgres_tag_name_uniqueness__consolidates_cross_kind_duplicates(
         engine.dispose()
 
 
+def test_postgres_tag_links__moved_to_sample_collection(
+    postgres_url: str | None,
+) -> None:
+    """A tag link whose sample is in another collection moves to a tag in that collection."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    image_collection_id = "00000000-0000-0000-0000-000000000002"
+    gt_collection_id = "00000000-0000-0000-0000-000000000003"
+    pred_collection_id = "00000000-0000-0000-0000-000000000004"
+    image_id = "00000000-0000-0000-0000-000000000005"
+    gt_annotation_id = "00000000-0000-0000-0000-000000000006"
+    pred_annotation_id = "00000000-0000-0000-0000-000000000007"
+    review_tag_id = "00000000-0000-0000-0000-000000000008"
+    qa_tag_id = "00000000-0000-0000-0000-000000000009"
+    empty_tag_id = "00000000-0000-0000-0000-000000000010"
+    pred_review_tag_id = "00000000-0000-0000-0000-000000000011"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="94ca81e6b023",
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, parent_collection_id, dataset_id,
+                        created_at, updated_at
+                    ) VALUES
+                        ('images', 'IMAGE', :image_collection_id, NULL, :dataset_id,
+                         NOW(), NOW()),
+                        ('ground_truth', 'ANNOTATION', :gt_collection_id, :image_collection_id,
+                         :dataset_id, NOW(), NOW()),
+                        ('predictions', 'ANNOTATION', :pred_collection_id, :image_collection_id,
+                         :dataset_id, NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "dataset_id": dataset_id,
+                    "image_collection_id": image_collection_id,
+                    "gt_collection_id": gt_collection_id,
+                    "pred_collection_id": pred_collection_id,
+                },
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sample (sample_id, collection_id, created_at, updated_at)
+                    VALUES
+                        (:image_id, :image_collection_id, NOW(), NOW()),
+                        (:gt_annotation_id, :gt_collection_id, NOW(), NOW()),
+                        (:pred_annotation_id, :pred_collection_id, NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "image_id": image_id,
+                    "gt_annotation_id": gt_annotation_id,
+                    "pred_annotation_id": pred_annotation_id,
+                    "image_collection_id": image_collection_id,
+                    "gt_collection_id": gt_collection_id,
+                    "pred_collection_id": pred_collection_id,
+                },
+            )
+            # "review" holds annotations of both sources. "qa" holds the image and a ground
+            # truth annotation. The predictions collection already has a "review" tag.
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO tag (name, kind, tag_id, collection_id, created_at, updated_at)
+                    VALUES
+                        ('review', 'annotation', :review_tag_id, :image_collection_id,
+                         NOW(), NOW()),
+                        ('qa', 'sample', :qa_tag_id, :image_collection_id, NOW(), NOW()),
+                        ('empty', 'sample', :empty_tag_id, :image_collection_id, NOW(), NOW()),
+                        ('review', 'annotation', :pred_review_tag_id, :pred_collection_id,
+                         NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "review_tag_id": review_tag_id,
+                    "qa_tag_id": qa_tag_id,
+                    "empty_tag_id": empty_tag_id,
+                    "pred_review_tag_id": pred_review_tag_id,
+                    "image_collection_id": image_collection_id,
+                    "pred_collection_id": pred_collection_id,
+                },
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sampletaglinktable (sample_id, tag_id)
+                    VALUES
+                        (:gt_annotation_id, :review_tag_id),
+                        (:pred_annotation_id, :review_tag_id),
+                        (:image_id, :qa_tag_id),
+                        (:gt_annotation_id, :qa_tag_id)
+                    """
+                ),
+                parameters={
+                    "image_id": image_id,
+                    "gt_annotation_id": gt_annotation_id,
+                    "pred_annotation_id": pred_annotation_id,
+                    "review_tag_id": review_tag_id,
+                    "qa_tag_id": qa_tag_id,
+                },
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+
+        with engine.connect() as connection:
+            tags = connection.execute(
+                statement=text(
+                    "SELECT collection_id, name, kind FROM tag ORDER BY collection_id, name"
+                )
+            ).all()
+            links = connection.execute(
+                statement=text(
+                    """
+                    SELECT link.sample_id, tag.collection_id, tag.name
+                    FROM sampletaglinktable AS link
+                    JOIN tag ON tag.tag_id = link.tag_id
+                    ORDER BY link.sample_id, tag.name
+                    """
+                )
+            ).all()
+            pred_review_tag_ids = connection.execute(
+                statement=text("SELECT tag_id FROM tag WHERE collection_id = :pred_collection_id"),
+                parameters={"pred_collection_id": pred_collection_id},
+            ).all()
+        assert [(str(collection_id), name, kind) for collection_id, name, kind in tags] == [
+            (image_collection_id, "empty", "sample"),
+            (image_collection_id, "qa", "sample"),
+            (gt_collection_id, "qa", "annotation"),
+            (gt_collection_id, "review", "annotation"),
+            (pred_collection_id, "review", "annotation"),
+        ]
+        assert [
+            (str(sample_id), str(collection_id), name) for sample_id, collection_id, name in links
+        ] == [
+            (image_id, image_collection_id, "qa"),
+            (gt_annotation_id, gt_collection_id, "qa"),
+            (gt_annotation_id, gt_collection_id, "review"),
+            (pred_annotation_id, pred_collection_id, "review"),
+        ]
+        assert [str(tag_id) for (tag_id,) in pred_review_tag_ids] == [pred_review_tag_id]
+
+        config.attributes.pop("connection", None)
+        command.check(config)
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
 def _metadata_column_data_type(engine: Engine, column_name: str) -> str:
     """Return the SQL ``data_type`` of a ``metadata`` column, e.g. ``json`` or ``jsonb``."""
     with engine.connect() as connection:
