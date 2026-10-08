@@ -178,9 +178,7 @@ def _compile_vector_element_postgresql(
 class inner_product(GenericFunction[float]):  # noqa: N801
     """Inner (dot) product of two vectors that compiles to dialect-specific SQL.
 
-    The first operand is a vector column, and the second operand is a query vector.
-
-    - DuckDB: ``list_inner_product(a, b)`` with the second operand cast to FLOAT[]
+    - DuckDB: ``list_inner_product(a, b)`` without casts
     - PostgreSQL: pgvector's ``inner_product(a::vector, b::vector)``
     """
 
@@ -201,11 +199,9 @@ def _compile_inner_product_unsupported(
 
 @compiles(inner_product, "duckdb")
 def _compile_inner_product_duckdb(element: inner_product, compiler: SQLCompiler, **kw: Any) -> str:
-    """DuckDB compilation: list_inner_product with the second operand cast to FLOAT[]."""
+    """DuckDB compilation: list_inner_product without cast."""
     left, right = list(element.clauses)
-    left_sql = compiler.process(left, **kw)
-    right_sql = compiler.process(right, **kw)
-    return f"list_inner_product({left_sql}, CAST({right_sql} AS FLOAT[]))"
+    return f"list_inner_product({compiler.process(left, **kw)}, {compiler.process(right, **kw)})"
 
 
 @compiles(inner_product, "postgresql")

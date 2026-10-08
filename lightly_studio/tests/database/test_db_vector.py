@@ -77,10 +77,10 @@ def test_vector_element__unsupported() -> None:
 
 
 def test_inner_product__duckdb() -> None:
-    """inner_product compiles to list_inner_product with a FLOAT[] cast for DuckDB."""
+    """inner_product compiles to list_inner_product without casts for DuckDB."""
     expr = db_vector.inner_product(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
     result = expr.compile(dialect=Dialect())
-    assert str(result) == "list_inner_product(col1, CAST(col2 AS FLOAT[]))"
+    assert str(result) == "list_inner_product(col1, col2)"
 
 
 def test_inner_product__postgresql() -> None:
