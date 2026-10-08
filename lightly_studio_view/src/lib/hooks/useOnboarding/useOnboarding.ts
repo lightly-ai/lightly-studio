@@ -1,9 +1,25 @@
-import { writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
 
 export const ONBOARDING_STORAGE_KEY = 'lightly-studio:onboarding-invitation:v1';
 export const TOUR_VERSION = 1;
 
 export type OnboardingState = 'unseen' | 'invited' | 'running' | 'opening_sample' | 'finished';
+
+interface UseOnboardingReturn {
+    state: Writable<OnboardingState>;
+    invite: () => boolean;
+    start: () => void;
+    openingSample: () => void;
+    dismiss: () => void;
+    complete: () => void;
+    replay: () => void;
+    requestReplay: () => void;
+    replayRequested: Writable<number>;
+    registerOpenFirstSampleHandler: (handler: () => void) => () => void;
+    dispatchOpenFirstSample: () => void;
+    registerOpeningSampleHandler: (handler: (collectionId: string) => void) => () => void;
+    dispatchOpeningSample: (collectionId: string) => void;
+}
 
 let invitationShownThisSession = false;
 const state = writable<OnboardingState>('unseen');
@@ -24,7 +40,7 @@ function invite(): boolean {
     return true;
 }
 
-export function useOnboarding() {
+export function useOnboarding(): UseOnboardingReturn {
     return {
         state,
         invite,

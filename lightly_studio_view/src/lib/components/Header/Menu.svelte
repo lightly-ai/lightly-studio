@@ -24,6 +24,16 @@
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import type { LightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
 
+    interface Props {
+        isImages?: boolean;
+        isVideos?: boolean;
+        hasEmbeddings?: boolean;
+        collection: CollectionView;
+        user?: LightlyEnterpriseSession['user'];
+        showTour?: boolean;
+        onShowTour?: () => void;
+    }
+
     let {
         isImages = false,
         isVideos = false,
@@ -32,15 +42,7 @@
         user,
         showTour = false,
         onShowTour
-    } = $props<{
-        isImages?: boolean;
-        isVideos?: boolean;
-        hasEmbeddings?: boolean;
-        collection: CollectionView;
-        user?: LightlyEnterpriseSession['user'];
-        showTour?: boolean;
-        onShowTour?: () => void;
-    }>();
+    }: Props = $props();
 
     const { openDatasetSplitDialog } = useDatasetSplitDialog();
     const { openClassifiersMenu } = useClassifiersMenu();

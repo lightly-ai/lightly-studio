@@ -139,7 +139,8 @@
             const firstSample = samples[0];
             if (firstSample) handleOnDoubleClick(firstSample.sample_id);
         }
-        const cleanupOnboarding = useOnboarding().registerOpenFirstSampleHandler(handleOpenFirstSample);
+        const cleanupOnboarding =
+            useOnboarding().registerOpenFirstSampleHandler(handleOpenFirstSample);
 
         // Load collection version for caching; guard isReady against stale updates.
         let mounted = true;

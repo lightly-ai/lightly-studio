@@ -17,11 +17,13 @@
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { usePostHog } from '$lib/hooks';
 
-    let {
-        collection,
-        showTour = false,
-        onShowTour
-    }: { collection: CollectionView; showTour?: boolean; onShowTour?: () => void } = $props();
+    interface Props {
+        collection: CollectionView;
+        showTour?: boolean;
+        onShowTour?: () => void;
+    }
+
+    let { collection, showTour = false, onShowTour }: Props = $props();
 
     const isImages = $derived(isImagesRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
