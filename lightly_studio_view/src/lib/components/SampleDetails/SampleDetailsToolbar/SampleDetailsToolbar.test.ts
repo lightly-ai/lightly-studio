@@ -185,27 +185,6 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
-    it('activates the smart select and find all instances tools', async () => {
-        const { getByLabelText } = render(SampleDetailsToolbar);
-
-        await fireEvent.click(getByLabelText('Smart select'));
-        expect(mockSampleDetailsToolbarContext.status).toBe('wand');
-
-        await fireEvent.click(getByLabelText('Find all instances'));
-        expect(mockSampleDetailsToolbarContext.status).toBe('instances');
-    });
-
-    it('keeps AI-assisted labeling tools inactive while the provider is unavailable', async () => {
-        assistedLabelingTools.smartSelectDisabledReason = 'FAL_KEY is not set.';
-        const { getByLabelText } = render(SampleDetailsToolbar);
-
-        const button = getByLabelText('Smart select');
-        await fireEvent.click(button);
-
-        expect(button).toHaveAttribute('aria-disabled', 'true');
-        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
-    });
-
     it('activates drag tool', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);

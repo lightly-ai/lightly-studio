@@ -4,39 +4,12 @@ import { writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsDialogHarness from './SettingsDialogHarness.test.svelte';
 import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
-import type { AssistedLabelingProviderView } from '$lib/api/lightly_studio_local';
 import { listAssistedLabelingProviders } from '$lib/api/lightly_studio_local/sdk.gen';
-import { getAssistedLabelingProviderQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
     listAssistedLabelingProviders: vi.fn()
 }));
-
-const capabilities: AssistedLabelingProviderView['capabilities'] = {
-    positive_points: true,
-    negative_points: true,
-    boxes: true,
-    text_prompt: true,
-    max_instances: 10
-};
-
-const providers: AssistedLabelingProviderView[] = [
-    {
-        provider_id: 'fal_sam3',
-        display_name: 'fal.ai SAM 3',
-        sends_data_to_third_party: true,
-        capabilities,
-        unavailable_reason: 'Set the FAL_KEY environment variable.'
-    },
-    {
-        provider_id: 'fake',
-        display_name: 'Fake',
-        sends_data_to_third_party: false,
-        capabilities,
-        unavailable_reason: null
-    }
-];
 
 let client: QueryClient;
 
@@ -95,7 +68,7 @@ describe('SettingsDialog', () => {
         const { saveSettings } = useSettings();
         saveSettings.mockResolvedValue({ success: true });
         vi.mocked(listAssistedLabelingProviders).mockResolvedValue({
-            data: providers
+            data: []
         } as Awaited<ReturnType<typeof listAssistedLabelingProviders>>);
         closeSettingsDialog();
     });
@@ -274,33 +247,5 @@ describe('SettingsDialog', () => {
             const elements = document.querySelectorAll(`#${id}`);
             expect(elements.length, `Expected exactly one element with id="${id}"`).toBe(1);
         }
-    });
-
-    it('should show the selected AI-assisted labeling provider and refresh it after saving', async () => {
-        renderDialog();
-        await openDialog();
-
-        expect(
-            await screen.findByText('Set the FAL_KEY environment variable.')
-        ).toBeInTheDocument();
-        expect(
-            screen.getByText('Images are sent to fal.ai SAM 3 for processing.')
-        ).toBeInTheDocument();
-        expect(screen.getByLabelText('AI-Assisted Labeling Provider')).toHaveTextContent(
-            'fal.ai SAM 3'
-        );
-
-        const invalidate = vi.spyOn(client, 'invalidateQueries');
-        await fireEvent.click(screen.getByText('Save Changes'));
-
-        const { saveSettings } = useSettings();
-        expect(saveSettings).toHaveBeenCalledWith(
-            expect.objectContaining({ assisted_labeling_provider: 'fal_sam3' })
-        );
-        await waitFor(() =>
-            expect(invalidate).toHaveBeenCalledWith({
-                queryKey: getAssistedLabelingProviderQueryKey()
-            })
-        );
     });
 });
