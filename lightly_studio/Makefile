@@ -1,3 +1,5 @@
+SCHEMA_CACHE_FILE := .schema-cache
+
 # Postgres E2E test configuration
 POSTGRES_CONTAINER_NAME := lightly-studio-postgres
 POSTGRES_PORT := 5433
@@ -296,17 +298,30 @@ start-e2e-postgres-video-groups: build
 .PHONY: export-schema
 export-schema:
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "if (-not (Test-Path src\lightly_studio\dist_lightly_studio_view_app)) { New-Item -ItemType Directory -Path src\lightly_studio\dist_lightly_studio_view_app | Out-Null }"
-	@powershell -Command "New-Item -ItemType File -Path src\lightly_studio\dist_lightly_studio_view_app\index.html -Force | Out-Null"
-	@echo "Exporting schema for API..."
-	uv run src/lightly_studio/export_schema.py
-	@powershell -Command "Remove-Item -Path src\lightly_studio\dist_lightly_studio_view_app -Recurse -Force -ErrorAction SilentlyContinue"
+	@powershell -NoProfile -Command "& { \
+		$$currentHash = (python -c \"import hashlib,os; h=hashlib.md5(); [h.update(open(os.path.join(r,f),'rb').read()) for r,_,fs in sorted(os.walk('src/lightly_studio')) for f in sorted(fs) if f.endswith('.py')]; print(h.hexdigest())\"); \
+		$$cachedHash = if (Test-Path '$(SCHEMA_CACHE_FILE)') { (Get-Content '$(SCHEMA_CACHE_FILE)').Trim() } else { '' }; \
+		if ($$currentHash -eq $$cachedHash) { Write-Host 'Schema is up-to-date, skipping export.'; exit 0 }; \
+		if (-not (Test-Path 'src\lightly_studio\dist_lightly_studio_view_app')) { New-Item -ItemType Directory -Path 'src\lightly_studio\dist_lightly_studio_view_app' | Out-Null }; \
+		New-Item -ItemType File -Path 'src\lightly_studio\dist_lightly_studio_view_app\index.html' -Force | Out-Null; \
+		Write-Host 'Exporting schema for API...'; \
+		uv run src/lightly_studio/export_schema.py; \
+		Remove-Item -Path 'src\lightly_studio\dist_lightly_studio_view_app' -Recurse -Force -ErrorAction SilentlyContinue; \
+		Set-Content -Path '$(SCHEMA_CACHE_FILE)' -Value $$currentHash \
+	}"
 else
-	mkdir -p src/lightly_studio/dist_lightly_studio_view_app
-	touch src/lightly_studio/dist_lightly_studio_view_app/index.html
-	@echo "Exporting schema for API..."
-	uv run src/lightly_studio/export_schema.py
-	rm -rf src/lightly_studio/dist_lightly_studio_view_app
+	@CURRENT_HASH=$$(python3 -c "import hashlib,os; h=hashlib.md5(); [h.update(open(os.path.join(r,f),'rb').read()) for r,_,fs in sorted(os.walk('src/lightly_studio')) for f in sorted(fs) if f.endswith('.py')]; print(h.hexdigest())"); \
+	CACHED_HASH=$$(cat $(SCHEMA_CACHE_FILE) 2>/dev/null || echo ""); \
+	if [ "$$CURRENT_HASH" != "$$CACHED_HASH" ]; then \
+		mkdir -p src/lightly_studio/dist_lightly_studio_view_app; \
+		touch src/lightly_studio/dist_lightly_studio_view_app/index.html; \
+		echo "Exporting schema for API..."; \
+		uv run src/lightly_studio/export_schema.py; \
+		rm -rf src/lightly_studio/dist_lightly_studio_view_app; \
+		echo "$$CURRENT_HASH" > $(SCHEMA_CACHE_FILE); \
+	else \
+		echo "Schema is up-to-date, skipping export."; \
+	fi
 endif
 
 .PHONY: export-version
