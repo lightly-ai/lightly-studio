@@ -437,6 +437,46 @@ def write_json_mcap(
     return path
 
 
+def write_json_mcap_with_two_channels(
+    path: Path,
+    topic: str,
+    log_times_ns: Sequence[int],
+) -> Path:
+    """Writes an indexed MCAP with one topic recorded on two JSON-encoded channels.
+
+    Each channel has one message per log time. The payload of a message is
+    `{"channel": index}`, with index 0 for the first channel and 1 for the second.
+
+    Args:
+        path: The path to write the file to.
+        topic: The topic both channels publish on.
+        log_times_ns: The log times of the messages of each channel.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        schema_id = writer.register_schema(
+            name="test_msgs/msg/Json", encoding="jsonschema", data=b"{}"
+        )
+        channel_ids = [
+            writer.register_channel(topic=topic, message_encoding="json", schema_id=schema_id)
+            for _ in range(2)
+        ]
+        for log_time_ns in log_times_ns:
+            for index, channel_id in enumerate(channel_ids):
+                writer.add_message(
+                    channel_id=channel_id,
+                    log_time=log_time_ns,
+                    publish_time=log_time_ns,
+                    data=json.dumps({"channel": index}).encode(),
+                )
+        writer.finish()
+    return path
+
+
 def compressed_image_payload(log_time_ns: int) -> bytes:
     """Returns a distinguishable fake encoded-image payload for a given log time."""
     return f"{IMAGE_FORMAT}-bytes-{log_time_ns}".encode()

@@ -584,6 +584,27 @@ class TestMcapFileReader:
 
         assert result == []
 
+    def test_get_decoded_messages_in_range__skips_other_channels_of_topic(
+        self, tmp_path: Path
+    ) -> None:
+        path = helpers.write_json_mcap_with_two_channels(
+            path=tmp_path / "two_channels.mcap", topic="/shared", log_times_ns=[1_000, 2_000]
+        )
+        with McapFileReader(path) as reader:
+            # The channel registered second has the higher id.
+            second_channel_id = max(topic.channel_id for topic in reader.get_topics())
+
+            result = reader.get_decoded_messages_in_range(
+                channel_id=second_channel_id, start_time_ns=1_000, end_time_ns=2_000
+            )
+
+        assert [message.log_time_ns for message in result] == [1_000, 2_000]
+        assert all(message.channel_id == second_channel_id for message in result)
+        assert [message.decoded_message for message in result] == [
+            {"channel": 1},
+            {"channel": 1},
+        ]
+
     def test_get_decoded_message_at__unknown_channel(self, reader: McapFileReader) -> None:
         with pytest.raises(ChannelNotFoundError):
             reader.get_decoded_message_at(channel_id=999_999, timestamp_ns=0)
