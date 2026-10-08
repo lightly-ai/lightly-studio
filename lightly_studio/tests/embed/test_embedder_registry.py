@@ -19,7 +19,7 @@ from pytest_mock import MockerFixture
 
 from lightly_studio.embed import embedder_config, embedder_registry
 from lightly_studio.embed.embedder_config import EmbedderConfig
-from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry, NoEmbedder
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
 from lightly_studio.embed.remote.errors import (
@@ -97,11 +97,14 @@ class TestEmbedderRegistry:
         # Getters for implemented capabilities return the embedder.
         assert registry.get_text_embedder(space_key="space-a") is embedder
         assert registry.get_image_path_embedder(space_key="space-a") is embedder
-        # Getters for capabilities the embedder lacks return None.
-        assert registry.get_image_crop_path_embedder(space_key="space-a") is None
-        assert registry.get_video_path_embedder(space_key="space-a") is None
-        assert registry.get_image_pil_embedder(space_key="space-a") is None
-        assert registry.get_image_bytes_embedder(space_key="space-a") is None
+        # Getters for capabilities the embedder lacks return LACKS_CAPABILITY.
+        assert (
+            registry.get_image_crop_path_embedder(space_key="space-a")
+            is NoEmbedder.LACKS_CAPABILITY
+        )
+        assert registry.get_video_path_embedder(space_key="space-a") is NoEmbedder.LACKS_CAPABILITY
+        assert registry.get_image_pil_embedder(space_key="space-a") is NoEmbedder.LACKS_CAPABILITY
+        assert registry.get_image_bytes_embedder(space_key="space-a") is NoEmbedder.LACKS_CAPABILITY
 
     def test_register__remote_image_bytes_embeds_image_paths(self) -> None:
         registry = EmbedderRegistry()
@@ -109,7 +112,7 @@ class TestEmbedderRegistry:
         registry.register(embedder=_remote_image_bytes_embedder())
 
         embedder = registry.get_image_path_embedder()
-        assert embedder is not None
+        assert isinstance(embedder, ImagePathEmbedder)
         assert embedder.embedding_space_spec().space_key == SPACE_KEY
         # Typed as `object`, because the composed class exists only at runtime.
         image_bytes_embedder: object = registry.get_image_bytes_embedder()
@@ -141,7 +144,7 @@ class TestEmbedderRegistry:
         registry.register(embedder=replacement, bootstrap_for=set())
 
         assert registry.get_image_path_embedder() is replacement
-        assert registry.get_text_embedder() is None
+        assert registry.get_text_embedder() is NoEmbedder.LACKS_CAPABILITY
 
     def test_register__conflicting_spec_raises(self) -> None:
         registry = EmbedderRegistry()
@@ -196,8 +199,8 @@ class TestEmbedderRegistry:
 
         registry.register(embedder=embedder, bootstrap_for=set())
 
-        assert registry.get_image_path_embedder() is None
-        assert registry.get_text_embedder() is None
+        assert registry.get_image_path_embedder() is NoEmbedder.UNAVAILABLE
+        assert registry.get_text_embedder() is NoEmbedder.UNAVAILABLE
         load_builtin.assert_called_once_with(space_key="mobileclip_s0")
 
     def test_register__explicit_bootstrap_set_uses_supported_intersection(
@@ -214,7 +217,7 @@ class TestEmbedderRegistry:
         )
 
         assert registry.get_image_path_embedder() is embedder
-        assert registry.get_text_embedder() is None
+        assert registry.get_text_embedder() is NoEmbedder.UNAVAILABLE
         assert registry.get_video_path_embedder() is video
 
     def test_register__instances_have_independent_bootstrap_spaces(
@@ -234,8 +237,8 @@ class TestEmbedderRegistry:
     def test_get_text_embedder__missing(self) -> None:
         registry = EmbedderRegistry()
 
-        assert registry.get_text_embedder(space_key="space-a") is None
-        assert registry.get_text_embedder() is None
+        assert registry.get_text_embedder(space_key="space-a") is NoEmbedder.UNAVAILABLE
+        assert registry.get_text_embedder() is NoEmbedder.UNAVAILABLE
 
     def test_get_text_embedder__from_config(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()
@@ -284,8 +287,11 @@ class TestEmbedderRegistry:
         build_remote = mocker.patch.object(embedder_config, "build_remote")
         load_builtin = mocker.patch.object(embedder_registry, "_load_builtin_embedder")
 
-        assert registry.get_text_embedder(space_key="space-a") is None
-        assert registry.get_text_embedder(config=_config(space_key="space-a")) is None
+        assert registry.get_text_embedder(space_key="space-a") is NoEmbedder.LACKS_CAPABILITY
+        assert (
+            registry.get_text_embedder(config=_config(space_key="space-a"))
+            is NoEmbedder.LACKS_CAPABILITY
+        )
         build_remote.assert_not_called()
         load_builtin.assert_not_called()
 
@@ -374,7 +380,7 @@ class TestEmbedderRegistry:
                 config=_config(space_key="space-a", url="http://first.test")
             )
 
-        assert embedder is None
+        assert embedder is NoEmbedder.UNAVAILABLE
         assert "Cannot use the embedding server" in caplog.text
 
     def test_get_text_embedder__config_without_url_loads_builtin(
@@ -397,8 +403,8 @@ class TestEmbedderRegistry:
         )
         config = _config(space_key="space-a", url="http://first.test")
 
-        assert registry.get_text_embedder(config=config) is None
-        assert registry.get_text_embedder(config=config) is None
+        assert registry.get_text_embedder(config=config) is NoEmbedder.UNAVAILABLE
+        assert registry.get_text_embedder(config=config) is NoEmbedder.UNAVAILABLE
 
         build_remote.assert_called_once_with(config=config)
 
@@ -421,7 +427,7 @@ class TestEmbedderRegistry:
             config=_config(space_key="space-a", url="http://second.test", dataset_id=dataset_id)
         )
 
-        assert first is None
+        assert first is NoEmbedder.UNAVAILABLE
         assert second is remote
 
     def test_get_text_embedder__slow_build_leaves_other_spaces_available(
@@ -493,7 +499,7 @@ class TestEmbedderRegistry:
 
         embedder = registry.get_image_path_embedder(config=config)
 
-        assert embedder is not None
+        assert isinstance(embedder, ImagePathEmbedder)
         # Typed as `object`, because the composed class exists only at runtime.
         text_embedder: object = registry.get_text_embedder(config=config)
         assert text_embedder is embedder
@@ -508,7 +514,7 @@ class TestEmbedderRegistry:
             embedder_registry, "_load_builtin_embedder", return_value=None
         )
 
-        assert registry.get_image_path_embedder(space_key="unknown") is None
+        assert registry.get_image_path_embedder(space_key="unknown") is NoEmbedder.UNAVAILABLE
         load_builtin.assert_called_once_with(space_key="unknown")
 
     def test_get_image_crop_path_embedder__registered_partial_builtin_is_authoritative(
@@ -519,7 +525,7 @@ class TestEmbedderRegistry:
         registry.register(embedder=partial, bootstrap_for=set())
         load_builtin = mocker.patch.object(embedder_registry, "_load_builtin_embedder")
 
-        assert registry.get_image_crop_path_embedder() is None
+        assert registry.get_image_crop_path_embedder() is NoEmbedder.LACKS_CAPABILITY
         load_builtin.assert_not_called()
 
     def test_get_video_path_embedder__loads_builtin_once(self, mocker: MockerFixture) -> None:
@@ -547,46 +553,31 @@ class TestEmbedderRegistry:
         assert registry.get_image_path_embedder(space_key="mobileclip_s0") is builtin
         assert registry.get_image_path_embedder() is custom
 
-    def test_is_remote_unavailable__after_failure(self, mocker: MockerFixture) -> None:
-        registry = EmbedderRegistry()
-        mocker.patch.object(
-            embedder_config, "build_remote", side_effect=RemoteEmbedderUnreachableError("down")
-        )
-        config = _config(space_key="space-a", url="http://first.test")
-
-        assert registry.is_remote_unavailable(config=config) is False
-        registry.get_text_embedder(config=config)
-
-        assert registry.is_remote_unavailable(config=config) is True
-
-    def test_is_remote_unavailable__after_success(self, mocker: MockerFixture) -> None:
+    def test_get_text_embedder__server_without_capability(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()
         remote = _FakeImageEmbedder(space_key="space-a")
         mocker.patch.object(embedder_config, "build_remote", return_value=remote)
         config = _config(space_key="space-a", url="http://first.test")
 
         # The server is usable, but it cannot embed text
-        assert registry.get_text_embedder(config=config) is None
-        assert registry.is_remote_unavailable(config=config) is False
+        assert registry.get_text_embedder(config=config) is NoEmbedder.LACKS_CAPABILITY
+        assert registry.get_image_path_embedder(config=config) is remote
 
-    def test_is_remote_unavailable__server_without_usable_capability(
+    def test_get_text_embedder__server_without_usable_capability(
         self, mocker: MockerFixture
     ) -> None:
         registry = EmbedderRegistry()
-        mocker.patch.object(
+        build_remote = mocker.patch.object(
             embedder_config,
             "build_remote",
             side_effect=RemoteEmbedderCapabilityError("no usable capability"),
         )
         config = _config(space_key="space-a", url="http://first.test")
 
-        assert registry.get_text_embedder(config=config) is None
-        assert registry.is_remote_unavailable(config=config) is False
-
-    def test_is_remote_unavailable__without_url(self) -> None:
-        registry = EmbedderRegistry()
-
-        assert registry.is_remote_unavailable(config=_config(space_key="space-a")) is False
+        assert registry.get_text_embedder(config=config) is NoEmbedder.LACKS_CAPABILITY
+        # The stored failure keeps the reason inside the retry window
+        assert registry.get_text_embedder(config=config) is NoEmbedder.LACKS_CAPABILITY
+        build_remote.assert_called_once()
 
     def test_preload_builtin_embedders__loads_each_builtin_once(
         self, mocker: MockerFixture

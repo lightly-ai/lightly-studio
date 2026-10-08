@@ -12,7 +12,7 @@ from sqlmodel import Session
 
 from lightly_studio.embed import embedder_config, embedder_registry
 from lightly_studio.embed.embedder_config import EmbedderConfig
-from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry, NoEmbedder
 from lightly_studio.embed.errors import (
     MissingCapabilityError,
     NoDefaultEmbeddingModelError,
@@ -35,7 +35,7 @@ def resolve_default_embedder(
     session: Session,
     collection_id: UUID,
     get_embedder_fn: Callable[
-        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
+        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | NoEmbedder
     ],
 ) -> tuple[_EmbedderT, UUID] | None:
     """Resolve the embedder and model id an embed function should use, or None to skip.
@@ -57,7 +57,8 @@ def resolve_default_embedder(
             exist; only validated when a bootstrap model is registered.
         get_embedder_fn: The typed getter of the needed capability. It takes the registry, the
             space key (None for the capability's bootstrap space) and the stored
-            configuration of that space (None when there is none).
+            configuration of that space (None when there is none). It returns the embedder,
+            or a ``NoEmbedder`` that tells why there is none.
 
     Returns:
         The embedder and the model id to store embeddings under, or None to skip.
@@ -73,13 +74,13 @@ def resolve_default_embedder(
     )
     if default_model is not None:
         embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
-        if embedder is None:
+        if isinstance(embedder, NoEmbedder):
             logger.warning("No embedding model loaded. Skipping embedding generation.")
             return None
         return embedder, default_model.embedding_model_id
 
     embedder = get_embedder_fn(embedder_registry.get_registry(), None, None)
-    if embedder is None:
+    if isinstance(embedder, NoEmbedder):
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return None
     model_id = _register_default_model(
@@ -92,7 +93,7 @@ def resolve_query_embedder(
     session: Session,
     collection_id: UUID,
     get_embedder_fn: Callable[
-        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
+        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | NoEmbedder
     ],
     query_kind: str,
 ) -> _EmbedderT:
@@ -127,22 +128,20 @@ def resolve_query_embedder(
         raise NoDefaultEmbeddingModelError("The collection has no default embedding model.")
 
     embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
-    if embedder is not None:
+    if not isinstance(embedder, NoEmbedder):
         return embedder
-    config = embedder_config.from_embedding_model(embedding_model=default_model)
-    if config.url is not None and embedder_registry.get_registry().is_remote_unavailable(
-        config=config
-    ):
-        raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=config.url)
+    url = default_model.remote_embedder_url
+    if embedder is NoEmbedder.UNAVAILABLE and url is not None:
+        raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=url)
     raise MissingCapabilityError(space_key=default_model.name, query_kind=query_kind)
 
 
 def _embedder_for_model(
     default_model: EmbeddingModelTable,
     get_embedder_fn: Callable[
-        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
+        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | NoEmbedder
     ],
-) -> _EmbedderT | None:
+) -> _EmbedderT | NoEmbedder:
     """Resolve and dimension-check the embedder of an existing default model.
 
     The model row carries the configuration of its space, so a space that no embedder is
@@ -154,7 +153,7 @@ def _embedder_for_model(
             ``resolve_default_embedder``.
 
     Returns:
-        The embedder for the model's space, or None if no source has a matching embedder.
+        The embedder for the model's space, or why no source has a matching embedder.
 
     Raises:
         ValueError: If the embedder's dimension does not match the model's stored dimension
@@ -162,8 +161,8 @@ def _embedder_for_model(
     """
     config = embedder_config.from_embedding_model(embedding_model=default_model)
     embedder = get_embedder_fn(embedder_registry.get_registry(), default_model.name, config)
-    if embedder is None:
-        return None
+    if isinstance(embedder, NoEmbedder):
+        return embedder
     spec = embedder.embedding_space_spec()
     if spec.dimension != default_model.embedding_dimension:
         raise ValueError(

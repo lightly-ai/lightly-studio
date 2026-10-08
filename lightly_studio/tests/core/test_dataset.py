@@ -12,7 +12,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.image import image_dataset
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
-from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry, NoEmbedder
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
@@ -460,7 +460,7 @@ def test_generate_embeddings__no_generator(
     mocker.patch.object(
         EmbedderRegistry,
         "get_image_path_embedder",
-        return_value=None,
+        return_value=NoEmbedder.UNAVAILABLE,
     )
 
     session = db_manager.persistent_session()

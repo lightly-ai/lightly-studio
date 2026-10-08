@@ -2,7 +2,7 @@
 
 Holds at most one embedder per ``space_key``. Callers look up an embedder by the
 capability they need with the matching typed getter, which returns the space's
-embedder only when it implements that capability.
+embedder only when it implements that capability, else a ``NoEmbedder`` that tells why.
 
 A getter that gets the stored configuration of a space also resolves an embedder that
 nobody registered: it builds the one the configuration names.
@@ -14,6 +14,7 @@ import logging
 import threading
 import time
 from collections.abc import Set
+from enum import Enum
 from uuid import UUID
 
 from lightly_studio_serve.embedder import (
@@ -55,13 +56,23 @@ _INITIAL_BOOTSTRAP_SPACES = {
 }
 
 
+class NoEmbedder(Enum):
+    """Why a lookup in the registry found no embedder."""
+
+    UNAVAILABLE = "unavailable"
+    """No embedder serves the space at this time. A later lookup can succeed."""
+
+    LACKS_CAPABILITY = "lacks_capability"
+    """The embedder of the space does not have the capability."""
+
+
 class EmbedderRegistry:
     """Stores at most one embedder per embedding space.
 
     An embedder can provide several capabilities. The registry keeps one embedder
     per ``space_key``; registering another embedder for the same space replaces
     it. The typed getters return the space's embedder only when it implements the
-    requested capability.
+    requested capability, else a ``NoEmbedder`` that tells why.
 
     Calling a getter without a ``space_key`` selects that capability's bootstrap
     space. Initially, MobileCLIP and Perception Encoder serve as default bootstraps
@@ -82,8 +93,9 @@ class EmbedderRegistry:
         self._space_key_to_embedder: dict[str, Embedder] = {}
         self._space_key_to_builtin: dict[str, Embedder] = {}
         self._config_to_embedder: dict[tuple[UUID, str], tuple[EmbedderConfig, Embedder]] = {}
-        # The flag is False for a server that answers but serves no usable capability
-        self._config_to_failure: dict[tuple[UUID, str], tuple[EmbedderConfig, float, bool]] = {}
+        self._config_to_failure: dict[
+            tuple[UUID, str], tuple[EmbedderConfig, float, NoEmbedder]
+        ] = {}
         self._bootstrap_spaces = dict(_INITIAL_BOOTSTRAP_SPACES)
         self._build_locks: dict[tuple[UUID | None, str], threading.Lock] = {}
         self._lock = threading.Lock()
@@ -139,66 +151,67 @@ class EmbedderRegistry:
 
     def get_image_path_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> ImagePathEmbedder | None:
-        """Get the space's embedder if it embeds images by path, else None."""
+    ) -> ImagePathEmbedder | NoEmbedder:
+        """Get the space's embedder if it embeds images by path, else why it has none."""
         embedder = self._resolve(
             space_key=space_key, capability=Capability.IMAGE_PATH, config=config
         )
-        return embedder if isinstance(embedder, ImagePathEmbedder) else None
+        if isinstance(embedder, ImagePathEmbedder):
+            return embedder
+        return _no_embedder(result=embedder)
 
     def get_image_crop_path_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> ImageCropPathEmbedder | None:
-        """Get the space's embedder if it embeds image crops by path, else None."""
+    ) -> ImageCropPathEmbedder | NoEmbedder:
+        """Get the space's embedder if it embeds image crops by path, else why it has none."""
         embedder = self._resolve(
             space_key=space_key, capability=Capability.IMAGE_CROP_PATH, config=config
         )
-        return embedder if isinstance(embedder, ImageCropPathEmbedder) else None
+        if isinstance(embedder, ImageCropPathEmbedder):
+            return embedder
+        return _no_embedder(result=embedder)
 
     def get_video_path_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> VideoPathEmbedder | None:
-        """Get the space's embedder if it embeds videos by path, else None."""
+    ) -> VideoPathEmbedder | NoEmbedder:
+        """Get the space's embedder if it embeds videos by path, else why it has none."""
         embedder = self._resolve(
             space_key=space_key, capability=Capability.VIDEO_PATH, config=config
         )
-        return embedder if isinstance(embedder, VideoPathEmbedder) else None
+        if isinstance(embedder, VideoPathEmbedder):
+            return embedder
+        return _no_embedder(result=embedder)
 
     def get_image_pil_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> ImagePILEmbedder | None:
-        """Get the space's embedder if it embeds PIL images, else None."""
+    ) -> ImagePILEmbedder | NoEmbedder:
+        """Get the space's embedder if it embeds PIL images, else why it has none."""
         embedder = self._resolve(
             space_key=space_key, capability=Capability.IMAGE_PIL, config=config
         )
-        return embedder if isinstance(embedder, ImagePILEmbedder) else None
+        if isinstance(embedder, ImagePILEmbedder):
+            return embedder
+        return _no_embedder(result=embedder)
 
     def get_text_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> TextEmbedder | None:
-        """Get the space's embedder if it embeds text, else None."""
+    ) -> TextEmbedder | NoEmbedder:
+        """Get the space's embedder if it embeds text, else why it has none."""
         embedder = self._resolve(space_key=space_key, capability=Capability.TEXT, config=config)
-        return embedder if isinstance(embedder, TextEmbedder) else None
+        if isinstance(embedder, TextEmbedder):
+            return embedder
+        return _no_embedder(result=embedder)
 
     def get_image_bytes_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
-    ) -> ImageBytesEmbedder | None:
-        """Get the space's embedder if it embeds images by bytes, else None."""
+    ) -> ImageBytesEmbedder | NoEmbedder:
+        """Get the space's embedder if it embeds images by bytes, else why it has none."""
         embedder = self._resolve(
             space_key=space_key, capability=Capability.IMAGE_BYTES, config=config
         )
-        return embedder if isinstance(embedder, ImageBytesEmbedder) else None
-
-    def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
-        """Get whether the embedding server of the configuration failed inside the retry window.
-
-        The getters return None for an unusable server and for a space without the capability.
-        This tells the two apart.
-        """
-        with self._lock:
-            if not self._failed_recently(config=config):
-                return False
-            return self._config_to_failure[(config.dataset_id, config.space_key)][2]
+        if isinstance(embedder, ImageBytesEmbedder):
+            return embedder
+        return _no_embedder(result=embedder)
 
     def preload_builtin_embedders(self) -> None:
         """Load and cache the built-in bootstrap embedders.
@@ -210,7 +223,7 @@ class EmbedderRegistry:
 
     def _resolve(
         self, space_key: str | None, capability: Capability, config: EmbedderConfig | None
-    ) -> Embedder | None:
+    ) -> Embedder | NoEmbedder:
         """Resolve the embedder of a space from a registration, a configuration or a built-in.
 
         Args:
@@ -221,7 +234,8 @@ class EmbedderRegistry:
                 registered for it implements the capability.
 
         Returns:
-            The embedder of the space, or None if no source has one.
+            The embedder of the space, or why no source has one. The embedder can lack
+            the capability.
         """
         if config is not None:
             space_key = config.space_key
@@ -231,32 +245,36 @@ class EmbedderRegistry:
             if space_key is None:
                 space_key = self._bootstrap_spaces.get(capability)
             if space_key is None:
-                return None
-            embedder = self._cached_embedder(
-                space_key=space_key, capability=capability, config=config
-            )
-            if embedder is not None:
-                return embedder
-            if config is not None and self._failed_recently(config=config):
-                return None
+                return NoEmbedder.UNAVAILABLE
+            found = self._cached(space_key=space_key, capability=capability, config=config)
+            if found is not None:
+                return found
             build_lock = self._build_locks.setdefault(
                 _build_key(space_key=space_key, config=config), threading.Lock()
             )
         with build_lock:
             with self._lock:
-                embedder = self._cached_embedder(
-                    space_key=space_key, capability=capability, config=config
-                )
-                if embedder is not None:
-                    return embedder
-                if config is not None and self._failed_recently(config=config):
-                    return None
+                found = self._cached(space_key=space_key, capability=capability, config=config)
+                if found is not None:
+                    return found
             if config is not None:
                 self._build_from_config(config=config)
             else:
                 self._build_builtin(space_key=space_key)
         with self._lock:
-            return self._cached_embedder(space_key=space_key, capability=capability, config=config)
+            found = self._cached(space_key=space_key, capability=capability, config=config)
+        return NoEmbedder.UNAVAILABLE if found is None else found
+
+    def _cached(
+        self, space_key: str, capability: Capability, config: EmbedderConfig | None
+    ) -> Embedder | NoEmbedder | None:
+        """Get the cached embedder or the recent failure, else None. Needs ``_lock``."""
+        embedder = self._cached_embedder(space_key=space_key, capability=capability, config=config)
+        if embedder is not None:
+            return embedder
+        if config is None:
+            return None
+        return self._recent_failure(config=config)
 
     def _cached_embedder(
         self, space_key: str, capability: Capability, config: EmbedderConfig | None
@@ -280,15 +298,17 @@ class EmbedderRegistry:
         cached_config, cached_embedder = cached
         return cached_embedder if cached_config == config else None
 
-    def _failed_recently(self, config: EmbedderConfig) -> bool:
-        """Get whether the configuration failed inside the retry window. Needs ``_lock``."""
+    def _recent_failure(self, config: EmbedderConfig) -> NoEmbedder | None:
+        """Get why the configuration failed inside the retry window, else None. Needs ``_lock``."""
         failure = self._config_to_failure.get((config.dataset_id, config.space_key))
         if failure is None:
-            return False
-        failed_config, failed_at, _ = failure
+            return None
+        failed_config, failed_at, no_embedder = failure
         if failed_config != config:
-            return False
-        return time.monotonic() - failed_at < _REMOTE_RETRY_DELAY_SECONDS
+            return None
+        if time.monotonic() - failed_at >= _REMOTE_RETRY_DELAY_SECONDS:
+            return None
+        return no_embedder
 
     def _build_from_config(self, config: EmbedderConfig) -> None:
         """Build the embedder of a configuration and cache it, or cache the failure."""
@@ -310,7 +330,9 @@ class EmbedderRegistry:
                 self._config_to_failure[key] = (
                     config,
                     time.monotonic(),
-                    not isinstance(error, RemoteEmbedderCapabilityError),
+                    NoEmbedder.LACKS_CAPABILITY
+                    if isinstance(error, RemoteEmbedderCapabilityError)
+                    else NoEmbedder.UNAVAILABLE,
                 )
             return
         with self._lock:
@@ -352,6 +374,11 @@ def _capabilities_of(embedder: Embedder) -> set[Capability]:
     return {
         capability for capability, cls in _CAPABILITY_TO_TYPE.items() if isinstance(embedder, cls)
     }
+
+
+def _no_embedder(result: Embedder | NoEmbedder) -> NoEmbedder:
+    """Get why a resolve result is not an embedder with the capability."""
+    return result if isinstance(result, NoEmbedder) else NoEmbedder.LACKS_CAPABILITY
 
 
 def _build_key(space_key: str, config: EmbedderConfig | None) -> tuple[UUID | None, str]:

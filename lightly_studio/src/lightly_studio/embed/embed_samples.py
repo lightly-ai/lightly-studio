@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import logging
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from uuid import UUID
 
@@ -31,7 +32,7 @@ from tqdm import tqdm
 from lightly_studio.core.file_outcome_report import BROKEN_IMAGE_ERRORS
 from lightly_studio.embed import default_embedder, embedding_storage
 from lightly_studio.embed.embedder_config import EmbedderConfig
-from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.embedder_registry import EmbedderRegistry, NoEmbedder
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
@@ -347,7 +348,7 @@ def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
 
 def _get_query_image_embedder(
     registry: EmbedderRegistry, space_key: str | None, config: EmbedderConfig | None
-) -> ImageBytesEmbedder | ImagePILEmbedder | ImagePathEmbedder | None:
+) -> ImageBytesEmbedder | ImagePILEmbedder | ImagePathEmbedder | NoEmbedder:
     """Get the space's image embedder, preferring bytes, then PIL images, then paths.
 
     A space with a remote URL gets no path embedder. The server answers queries there, and a
@@ -362,14 +363,25 @@ def _get_query_image_embedder(
             registered for it implements the capability. Its URL also disables the path step.
 
     Returns:
-        The space's image embedder, or None if the space has no embedder for an upload.
+        The space's image embedder, or why the space has no embedder for an upload.
+        ``NoEmbedder.UNAVAILABLE`` wins if any step gives it.
     """
-    embedder = registry.get_image_bytes_embedder(
-        space_key=space_key, config=config
-    ) or registry.get_image_pil_embedder(space_key=space_key, config=config)
-    if embedder is not None or (config is not None and config.url is not None):
-        return embedder
-    return registry.get_image_path_embedder(space_key=space_key, config=config)
+    getters: list[
+        Callable[
+            [EmbedderRegistry, str | None, EmbedderConfig | None],
+            ImageBytesEmbedder | ImagePILEmbedder | ImagePathEmbedder | NoEmbedder,
+        ]
+    ] = [EmbedderRegistry.get_image_bytes_embedder, EmbedderRegistry.get_image_pil_embedder]
+    if config is None or config.url is None:
+        getters.append(EmbedderRegistry.get_image_path_embedder)
+    no_embedder = NoEmbedder.LACKS_CAPABILITY
+    for getter in getters:
+        embedder = getter(registry, space_key, config)
+        if not isinstance(embedder, NoEmbedder):
+            return embedder
+        if embedder is NoEmbedder.UNAVAILABLE:
+            no_embedder = embedder
+    return no_embedder
 
 
 def _embed_image_bytes(embedder: Embedder, image_bytes: bytes) -> NDArray[np.float32]:
