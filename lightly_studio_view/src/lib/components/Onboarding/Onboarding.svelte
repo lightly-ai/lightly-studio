@@ -294,6 +294,7 @@
             animate: true,
             stagePadding: 2,
             allowClose: true,
+            overlayOpacity: 0.85,
             overlayClickBehavior: () => dismiss(stage ?? 'grid'),
             onDestroyed: () => {
                 if (!suppressDismiss && get(state) === 'running') dismiss(stage ?? 'grid');
@@ -385,6 +386,7 @@
 </script>
 
 {#if $state === 'invited'}
+    <div class="fixed inset-0 z-[10000] bg-black/85"></div>
     <Invitation onStart={start} onDismiss={() => dismiss('invitation')} />
 {/if}
 
@@ -427,7 +429,7 @@
         display: flex;
         gap: 5px;
         justify-content: center;
-        padding-bottom: 2px;
+        padding-bottom: 6px;
     }
 
     :global(body .driver-tour-dot) {
