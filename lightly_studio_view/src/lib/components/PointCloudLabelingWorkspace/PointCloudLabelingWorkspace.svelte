@@ -92,6 +92,7 @@
             getOnTickChange: () => onTickChange
         });
     let selectedCuboidId = $state<string | null>(null);
+    let hoveredCuboidId = $state<string | null>(null);
     const { customLabelColorsStore } = useCustomLabelColors();
     const annotationCollectionsQuery = useAnnotationCollections(() => ({
         collectionId: annotationSourceCollectionId
@@ -111,7 +112,11 @@
     } | null>(null);
 
     $effect(() => {
-        if (workspace.cloudPointFrame.data && !workspace.cloudPointFrame.isPlaceholderData) {
+        if (
+            workspace.cloudPointFrame.data &&
+            !workspace.cloudPointFrame.isPlaceholderData &&
+            !workspace.tickDetails.isPlaceholderData
+        ) {
             sceneSnapshot = {
                 frame: workspace.cloudPointFrame.data,
                 annotations: workspace.tickDetails.data?.annotations ?? []
@@ -228,7 +233,9 @@
                                     {annotationClasses}
                                     {annotationSources}
                                     selectedAnnotationId={selectedCuboidId}
+                                    hoveredAnnotationId={hoveredCuboidId}
                                     onselect={(id) => (selectedCuboidId = id)}
+                                    onhover={(id) => (hoveredCuboidId = id)}
                                 />
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
                                 <WorkspaceStatusPanel status="loading" />

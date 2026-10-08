@@ -1,8 +1,8 @@
 """Functions to index MCAP recordings into a dataset in the database.
 
 One recording becomes one sequence of groups: every message of the sync component is
-a tick, the other components are paired against it, and a tick that any component
-cannot be paired to is dropped, so every group that is written is complete.
+a tick, and the other components are paired against it. A component that cannot be
+paired to a tick is left out of that group.
 
 The writes are batched, so a recording costs a handful of commits rather than a few per
 tick.
@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from uuid import UUID
 
 from mcap.exceptions import McapError
+from sqlmodel import Session
 
 from lightly_studio.core.file_outcome_report import (
     AlreadyPresentInputFileError,
@@ -170,8 +171,8 @@ def index_recording(  # noqa: PLR0913
             or repeated.
         McapAccessError: If the recording cannot be read, if it has no topic of a
             component, if the sync component has no usable message, or if a reference
-            frame is not in the recording. A recording where no tick has a message for
-            every component is indexed as an empty sequence, with a warning.
+            frame is not in the recording. A component that never pairs is left out of
+            every tick, with a warning.
         mcap.exceptions.McapError: If the file is not an MCAP file.
         FileNotFoundError: If the file does not exist.
     """
@@ -194,29 +195,21 @@ def index_recording(  # noqa: PLR0913
     )
     # Resolved before anything is written, so an unknown frame leaves no rows behind.
     frame_ids = _reference_frame_ids(loaded=loaded, reference_frame_ids=reference_frame_ids)
-    rows = _complete_rows(components=components, locators=loaded.locators)
+    rows = _tick_rows(components=components, locators=loaded.locators)
     if not loaded.locators[sync_object.name]:
         raise McapAccessError(
             f"No usable message on topic '{sync_object.topic}' of the sync component "
             f"'{sync_object.name}' in '{mcap_path}'. A message needs a decodable payload "
             "and a header stamp."
         )
-    if not rows:
-        logger.warning(
-            _no_complete_tick_message(
-                mcap_path=mcap_path,
-                components=components,
-                sync_component=sync_object,
-                locators=loaded.locators,
-                max_pairing_diff_ns=max_pairing_diff_ns,
-            )
-        )
-    logger.info(
-        "Indexing %d of %d ticks of '%s'.",
-        len(rows),
-        len(loaded.locators[sync_object.name]),
-        mcap_path,
+    _warn_unpaired_components(
+        mcap_path=mcap_path,
+        components=components,
+        sync_component=sync_object,
+        locators=loaded.locators,
+        max_pairing_diff_ns=max_pairing_diff_ns,
     )
+    logger.info("Indexing %d ticks of '%s'.", len(rows), mcap_path)
 
     recording = dataset.create_recording(uri=mcap_path)
     _add_calibrations(
@@ -358,30 +351,31 @@ def _check_topics_present(reader: McapFileReader, components: Sequence[McapCompo
         )
 
 
-def _no_complete_tick_message(
+def _warn_unpaired_components(
     mcap_path: str,
     components: Sequence[McapComponentSpec],
     sync_component: McapComponentSpec,
     locators: Mapping[str, Sequence[FrameLocator | None]],
     max_pairing_diff_ns: int,
-) -> str:
-    """Explain why no tick of the recording has a message for every component."""
+) -> None:
+    """Warn when a component pairs with no tick. Those ticks are still indexed."""
     unpaired = [
         component.name
         for component in components
-        if all(locator is None for locator in locators[component.name])
+        if component.name != sync_component.name
+        and locators[component.name]
+        and all(locator is None for locator in locators[component.name])
     ]
-    if unpaired:
-        return (
-            f"No message of component(s) {', '.join(repr(name) for name in unpaired)} in "
-            f"'{mcap_path}' is within {max_pairing_diff_ns} ns of a message of the sync "
-            f"component '{sync_component.name}'. Check that the topics have messages and "
-            "increase `max_pairing_diff_ns` if their clocks differ."
-        )
-    return (
-        f"No tick of '{mcap_path}' has a message for every component within "
-        f"{max_pairing_diff_ns} ns of the sync component '{sync_component.name}'. "
-        "Increase `max_pairing_diff_ns` or check the topics."
+    if not unpaired:
+        return
+    logger.warning(
+        "No message of component(s) %s in '%s' is within %d ns of a message of the sync "
+        "component '%s'. Ticks are indexed without that sensor. Check that the topics have "
+        "messages and increase `max_pairing_diff_ns` if their clocks differ.",
+        ", ".join(repr(name) for name in unpaired),
+        mcap_path,
+        max_pairing_diff_ns,
+        sync_component.name,
     )
 
 
@@ -421,21 +415,19 @@ def _topics_to_load(components: Sequence[McapComponentSpec]) -> list[str]:
     return topics
 
 
-def _complete_rows(
+def _tick_rows(
     components: Sequence[McapComponentSpec],
     locators: Mapping[str, Sequence[FrameLocator | None]],
 ) -> list[dict[str, FrameLocator]]:
-    """Keep the ticks that have a locator for every component.
+    """Return one row per sync tick, omitting components that did not pair.
 
-    A group with a missing component would show a hole in the viewer, so a tick that
-    any component cannot be paired to is dropped instead.
+    The sync component is present on every row. A component farther than the pairing
+    limit is left out of that tick.
     """
     names = [component.name for component in components]
     rows: list[dict[str, FrameLocator]] = []
     for tick in zip(*(locators[name] for name in names)):
-        row = {name: locator for name, locator in zip(names, tick) if locator is not None}
-        if len(row) == len(names):
-            rows.append(row)
+        rows.append({name: locator for name, locator in zip(names, tick) if locator is not None})
     return rows
 
 
@@ -571,31 +563,52 @@ def _write_groups(
     mcap_components: Mapping[str, McapComponent],
     rows: Sequence[Mapping[str, FrameLocator]],
 ) -> list[UUID]:
-    """Write the locators of every component and the groups that hold them.
+    """Write the locators present on each tick and the groups that hold them.
 
-    The locators of one component are written in a single call, so a recording costs one
-    call per component rather than one per tick.
+    A tick may omit a component that did not pair. The locators of one component are
+    written in a single call, so a recording costs one call per component rather than
+    one per tick.
 
     Returns:
         The IDs of the group samples, in the order of `rows`.
     """
     session = dataset.group_dataset.session
-    sample_ids_by_component = {
-        component.name: mcap_resolver.create_many(
+    sample_ids_by_row: list[set[UUID]] = [set() for _ in rows]
+    for component in components:
+        _add_component_samples(
             session=session,
             collection_id=mcap_components[component.name].collection_id,
-            samples=[_mcap_create(locator=row[component.name]) for row in rows],
+            component_name=component.name,
+            rows=rows,
+            sample_ids_by_row=sample_ids_by_row,
         )
-        for component in components
-    }
     return group_resolver.create_many(
         session=session,
         collection_id=dataset.group_dataset.collection_id,
-        groups=[
-            {sample_ids_by_component[component.name][index] for component in components}
-            for index in range(len(rows))
-        ],
+        groups=sample_ids_by_row,
     )
+
+
+def _add_component_samples(
+    session: Session,
+    collection_id: UUID,
+    component_name: str,
+    rows: Sequence[Mapping[str, FrameLocator]],
+    sample_ids_by_row: list[set[UUID]],
+) -> None:
+    """Write one component's locators and attach each sample to its tick."""
+    present = [
+        (index, row[component_name]) for index, row in enumerate(rows) if component_name in row
+    ]
+    if not present:
+        return
+    sample_ids = mcap_resolver.create_many(
+        session=session,
+        collection_id=collection_id,
+        samples=[_mcap_create(locator=locator) for _, locator in present],
+    )
+    for (index, _), sample_id in zip(present, sample_ids):
+        sample_ids_by_row[index].add(sample_id)
 
 
 def _mcap_create(locator: FrameLocator) -> McapCreate:

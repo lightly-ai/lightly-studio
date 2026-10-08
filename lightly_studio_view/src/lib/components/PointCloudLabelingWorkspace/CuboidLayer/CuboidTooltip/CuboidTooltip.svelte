@@ -45,10 +45,10 @@
                 <dd>{tooltip.annotationSourceName}</dd>
             </div>
         {/if}
-        {#if tooltip.trackId}
+        {#if tooltip.trackNumber !== null}
             <div class="space-y-0.5">
-                <dt class="font-medium text-muted-foreground">Track ID</dt>
-                <dd>{tooltip.trackId}</dd>
+                <dt class="font-medium text-muted-foreground">Track number</dt>
+                <dd>{tooltip.trackNumber}</dd>
             </div>
         {/if}
     </dl>

@@ -9,7 +9,8 @@ describe('createCuboidTooltip', () => {
                 ...createAnnotationFixture(),
                 center: [10, -2, 1.234],
                 size: [4.5, 1.8, 1.5],
-                rotation: [0, 0, Math.sin(Math.PI / 8), Math.cos(Math.PI / 8)]
+                rotation: [0, 0, Math.sin(Math.PI / 8), Math.cos(Math.PI / 8)],
+                trackNumber: 7
             },
             annotationClassName: 'Vehicle',
             annotationSourceName: 'Ground Truth'
@@ -21,7 +22,7 @@ describe('createCuboidTooltip', () => {
             dimensions: '4.50 × 1.80 × 1.50 m',
             rotation: 'rx: 0.0°  ry: 0.0°  rz: 45.0°',
             annotationSourceName: 'Ground Truth',
-            trackId: 'track-0'
+            trackNumber: 7
         });
     });
 
@@ -37,14 +38,5 @@ describe('createCuboidTooltip', () => {
         });
 
         expect(tooltip.rotation).toBe('rx: 90.0°  ry: 0.0°  rz: 0.0°');
-    });
-
-    it('omits the track ID for an untracked annotation', () => {
-        const tooltip = createCuboidTooltip({
-            annotation: { ...createAnnotationFixture(), trackId: null },
-            annotationClassName: 'Vehicle'
-        });
-
-        expect(tooltip.trackId).toBeNull();
     });
 });

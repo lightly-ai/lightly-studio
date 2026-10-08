@@ -1,24 +1,32 @@
-import { describe, expect, it, vi } from 'vitest';
-import { selectCuboid } from './cuboidSelection';
+import { describe, expect, it } from 'vitest';
+import { pickSmallestFromIntersections } from './cuboidSelection';
 
-describe('selectCuboid', () => {
-    it('selects a cuboid only with the select tool active', () => {
-        const onselect = vi.fn();
+describe('pickSmallestFromIntersections', () => {
+    it('returns null when there are no intersections', () => {
+        expect(pickSmallestFromIntersections([])).toBeNull();
+    });
 
-        const selected = selectCuboid({
-            annotationId: 'cuboid-1',
-            activeTool: 'select',
-            onselect
-        });
-        const ignored = selectCuboid({
-            annotationId: 'cuboid-1',
-            activeTool: 'rotate',
-            onselect
-        });
+    it('returns the annotation ID of the only intersected cuboid', () => {
+        expect(pickSmallestFromIntersections([{ annotationId: 'cuboid-1', volume: 8 }])).toBe(
+            'cuboid-1'
+        );
+    });
 
-        expect(selected).toBe(true);
-        expect(ignored).toBe(false);
-        expect(onselect).toHaveBeenCalledTimes(1);
-        expect(onselect).toHaveBeenCalledWith('cuboid-1');
+    it('returns the smallest-volume cuboid when multiple cuboids are hit', () => {
+        expect(
+            pickSmallestFromIntersections([
+                { annotationId: 'outer', volume: 100 },
+                { annotationId: 'inner', volume: 4 }
+            ])
+        ).toBe('inner');
+    });
+
+    it('returns the smallest-volume cuboid regardless of intersection order', () => {
+        expect(
+            pickSmallestFromIntersections([
+                { annotationId: 'inner', volume: 4 },
+                { annotationId: 'outer', volume: 100 }
+            ])
+        ).toBe('inner');
     });
 });

@@ -45,17 +45,11 @@ describe('createAnnotationDetails', () => {
         expect(details.annotationSourceName).toBe('Ground Truth');
     });
 
-    it('passes through track id when present', () => {
-        const details = createAnnotationDetails({ annotation: createAnnotationFixture() });
-
-        expect(details.trackId).toBe('track-0');
-    });
-
-    it('passes through null track id for untracked annotations', () => {
+    it('passes through track number when present', () => {
         const details = createAnnotationDetails({
-            annotation: { ...createAnnotationFixture(), trackId: null }
+            annotation: { ...createAnnotationFixture(), trackNumber: 7 }
         });
 
-        expect(details.trackId).toBeNull();
+        expect(details.trackNumber).toBe(7);
     });
 });
