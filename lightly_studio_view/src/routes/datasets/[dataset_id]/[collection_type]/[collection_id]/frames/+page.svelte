@@ -31,8 +31,7 @@
         useSelectedAnnotationsFilter();
     const { tagsSelected } = $derived(
         useTags({
-            collection_id: collectionId,
-            kind: ['sample']
+            collection_id: collectionId
         })
     );
 

@@ -25,7 +25,7 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
 
     let tagsSelected: Readable<Set<string>> | undefined;
     if (collectionId) {
-        const tagsHook = useTags({ collection_id: collectionId, kind: ['annotation'] });
+        const tagsHook = useTags({ collection_id: collectionId });
         tagsSelected = tagsHook.tagsSelected;
     }
 

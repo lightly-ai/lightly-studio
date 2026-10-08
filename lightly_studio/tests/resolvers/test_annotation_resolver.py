@@ -553,13 +553,11 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
         session=db_session,
         collection_id=annotation_collection_id,
         tag_name="tag_all",
-        kind="annotation",
     )
     tag_2 = create_tag(
         session=db_session,
         collection_id=annotation_collection_id,
         tag_name="tag_odd",
-        kind="annotation",
     )
 
     # add first half to tag_1

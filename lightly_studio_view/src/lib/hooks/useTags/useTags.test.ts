@@ -18,9 +18,9 @@ type QueryResult = {
 };
 
 const mockTags: TagView[] = [
-    { tag_id: '1', name: 'Tag 1', description: 'Description 1', kind: 'sample' },
-    { tag_id: '2', name: 'Tag 2', description: 'Description 2', kind: 'annotation' },
-    { tag_id: '3', name: 'Tag 3', description: 'Description 3', kind: 'sample' }
+    { tag_id: '1', name: 'Tag 1', description: 'Description 1' },
+    { tag_id: '2', name: 'Tag 2', description: 'Description 2' },
+    { tag_id: '3', name: 'Tag 3', description: 'Description 3' }
 ];
 
 describe('useTags Hook', () => {
@@ -53,20 +53,10 @@ describe('useTags Hook', () => {
         expect(get(tagsSelected).size).toBe(0);
     });
 
-    it('should return all tags when no kind filter is provided', async () => {
+    it('should return all tags of the collection', async () => {
         const { tags } = useTags({ collection_id: '123' });
 
         await waitFor(() => expect(get(tags)).toEqual(mockTags));
-    });
-
-    it('should filter tags by kind', async () => {
-        const { tags } = useTags({
-            collection_id: '123',
-            kind: ['sample']
-        });
-
-        await waitFor(() => expect(get(tags)).toHaveLength(2));
-        await waitFor(() => expect(get(tags).every((tag) => tag.kind === 'sample')).toBe(true));
     });
 
     it('should toggle tag selection', () => {
@@ -130,18 +120,6 @@ describe('useTags Hook', () => {
         expect(selected.size).toBe(2);
         expect(selected.has('1')).toBe(true);
         expect(selected.has('2')).toBe(true);
-    });
-
-    it('should maintain selected tags when filter changes', async () => {
-        const { tagsSelected, tagSelectionToggle, tags, clearTagsSelected } = useTags({
-            collection_id: '123',
-            kind: ['sample']
-        });
-        clearTagsSelected();
-        tagSelectionToggle('1');
-
-        await waitFor(() => expect(get(tagsSelected).has('1')).toBe(true));
-        await waitFor(() => expect(get(tags).length).toBe(2)); // Only sample tags
     });
 
     it('should maintain separate tag selections for different collections', () => {

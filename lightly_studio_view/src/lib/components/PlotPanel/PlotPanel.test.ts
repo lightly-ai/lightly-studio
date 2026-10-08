@@ -36,8 +36,8 @@ let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
 const mockResetCategoryVisibility = vi.fn();
 
 const tagsStore = writable([
-    { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
-    { tag_id: 'tag-b', name: 'beta', kind: 'sample' }
+    { tag_id: 'tag-a', name: 'alpha' },
+    { tag_id: 'tag-b', name: 'beta' }
 ]);
 
 const mockSetShowEmbeddingPlot = vi.fn();
@@ -199,8 +199,8 @@ describe('PlotPanel.svelte', () => {
         colorLegendStore = writable(new Map());
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
         tagsStore.set([
-            { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
-            { tag_id: 'tag-b', name: 'beta', kind: 'sample' }
+            { tag_id: 'tag-a', name: 'alpha' },
+            { tag_id: 'tag-b', name: 'beta' }
         ]);
         (useEmbeddings as vi.Mock).mockReturnValue(
             writable({

@@ -110,11 +110,9 @@
     });
 
     const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
-    // Annotation samples carry annotation-kind tags. Captured once at mount, like
-    // collectionId above.
+    // Captured once at mount, like collectionId above.
     const { tags } = useTags({
-        collection_id: untrack(() => collectionId),
-        kind: isAnnotationsRoute(page.route?.id ?? null) ? ['annotation'] : ['sample']
+        collection_id: untrack(() => collectionId)
     });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
     const annotationLabels = writable<{ annotation_label_id: string }[]>([]);

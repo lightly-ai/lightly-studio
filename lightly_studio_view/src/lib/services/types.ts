@@ -18,7 +18,6 @@ export type Collection = CollectionTable;
 export type ImageSample = ImageView;
 export type TagView = TagViewType;
 export type TagInputBody = TagCreateBody;
-export type TagKind = TagCreateBody['kind'];
 export type SampleIdsBody = SampleIdsBodyType;
 export type Annotation = AnnotationView;
 

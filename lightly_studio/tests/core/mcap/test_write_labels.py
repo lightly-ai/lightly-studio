@@ -117,7 +117,6 @@ def test_write_sequence_labels__frame_tags(
         "lidar_dropout": {group_ids[0], group_ids[1]},
         "night": {group_ids[0]},
     }
-    assert all(tag.kind == "sample" for tag in tags)
 
 
 def test_write_sequence_labels__links_parent_tracks(

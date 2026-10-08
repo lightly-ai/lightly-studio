@@ -34,7 +34,7 @@ from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
 )
-from lightly_studio.models.tag import TagCreate, TagKind, TagTable
+from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -126,7 +126,6 @@ def create_tag(
     session: Session,
     collection_id: UUID,
     tag_name: str = "example_tag",
-    kind: TagKind = "sample",
 ) -> TagTable:
     """Helper function to create a tag."""
     return tag_resolver.create(
@@ -134,7 +133,6 @@ def create_tag(
         tag=TagCreate(
             collection_id=collection_id,
             name=tag_name,
-            kind=kind,
             description="example description",
         ),
     )

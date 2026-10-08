@@ -60,7 +60,6 @@ def test_get_dimension_bounds__with_tag_filtering(
         session=db_session,
         collection_id=collection_id,
         tag_name="bigger",
-        kind="sample",
     )
     tag_resolver.add_sample_ids_to_tag_id(
         session=db_session,
@@ -73,7 +72,6 @@ def test_get_dimension_bounds__with_tag_filtering(
         session=db_session,
         collection_id=collection_id,
         tag_name="smaller",
-        kind="sample",
     )
     tag_resolver.add_sample_ids_to_tag_id(
         session=db_session,

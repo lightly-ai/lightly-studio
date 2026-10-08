@@ -27,4 +27,3 @@ def test_get_or_create_sample_tag_by_name(db_session: Session) -> None:
     assert new_tag.tag_id != existing_tag.tag_id
     assert new_tag.name == "new_tag"
     assert new_tag.collection_id == collection_id
-    assert new_tag.kind == "sample"

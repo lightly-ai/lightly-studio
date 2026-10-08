@@ -6,7 +6,6 @@ import { toast } from 'svelte-sonner';
 interface Options {
     getCollectionId: () => string;
     getSampleId: () => string;
-    getTagKind: () => TagView['kind'];
     onRefetch: () => void;
     onTagsRefetch: () => void;
 }
@@ -14,7 +13,6 @@ interface Options {
 export function useAddTagToSample({
     getCollectionId,
     getSampleId,
-    getTagKind,
     onRefetch,
     onTagsRefetch
 }: Options) {
@@ -47,7 +45,7 @@ export function useAddTagToSample({
         try {
             const response = await createTag({
                 path: { collection_id: collectionId },
-                body: { name: trimmed, kind: getTagKind() }
+                body: { name: trimmed }
             });
             if (response.error) throw new Error('create tag failed');
             if (response.data?.tag_id) {
