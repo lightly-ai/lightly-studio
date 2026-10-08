@@ -305,7 +305,7 @@ def test_embed_image_for_collection__no_bytes_capability_raises(
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
-            image_bytes=b"image bytes",
+            image_bytes=b"broken image",
         )
 
 
