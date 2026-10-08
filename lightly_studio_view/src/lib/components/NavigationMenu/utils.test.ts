@@ -27,31 +27,45 @@ describe('getMenuItem', () => {
         [SampleType.CAPTION, 'Captions', 'caption-col-id'],
         [SampleType.GROUP, 'Groups', 'group-col-id']
     ] as const)('%s returns correct title, and id', (sampleType, expectedTitle, expectedId) => {
-        const item = getMenuItem('dataset-id', undefined, 'col-id', sampleType);
+        const item = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: undefined,
+            collectionId: 'col-id',
+            sampleType
+        });
         if (!item) throw new Error('expected a menu item');
         expect(item.title).toBe(expectedTitle);
         expect(item.id).toBe(expectedId);
     });
 
     it('MCAP returns null, having no dedicated view', () => {
-        const item = getMenuItem('dataset-id', undefined, 'col-id', SampleType.MCAP);
+        const item = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: undefined,
+            collectionId: 'col-id',
+            sampleType: SampleType.MCAP
+        });
         expect(item).toBeNull();
     });
 
     it('GROUP returns null when the root dataset is a SEQUENCE (MCAP recording)', () => {
-        const item = getMenuItem(
-            'dataset-id',
-            undefined,
-            'col-id',
-            SampleType.GROUP,
-            undefined,
-            SampleType.SEQUENCE
-        );
+        const item = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: undefined,
+            collectionId: 'col-id',
+            sampleType: SampleType.GROUP,
+            rootSampleType: SampleType.SEQUENCE
+        });
         expect(item).toBeNull();
     });
 
     it('SEQUENCE returns a point-clouds menu item', () => {
-        const item = getMenuItem('dataset-id', undefined, 'col-id', SampleType.SEQUENCE);
+        const item = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: undefined,
+            collectionId: 'col-id',
+            sampleType: SampleType.SEQUENCE
+        });
         if (!item) throw new Error('expected a menu item');
         expect(item.title).toBe('Point clouds');
         expect(item.id).toBe('sequence-col-id');
@@ -59,39 +73,54 @@ describe('getMenuItem', () => {
     });
 
     it('uses groupComponentName as title when provided', () => {
-        const item = getMenuItem(
-            'dataset-id',
-            undefined,
-            'col-id',
-            SampleType.IMAGE,
-            'Group Component Name'
-        );
+        const item = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: undefined,
+            collectionId: 'col-id',
+            sampleType: SampleType.IMAGE,
+            groupComponentName: 'Group Component Name'
+        });
         if (!item) throw new Error('expected a menu item');
         expect(item.title).toBe('Group Component Name');
     });
 
     it('prefixes annotation title with "Annotations:" when groupComponentName is provided', () => {
-        const item = getMenuItem(
-            'dataset-id',
-            undefined,
-            'col-id',
-            SampleType.ANNOTATION,
-            'ground_truth'
-        );
+        const item = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: undefined,
+            collectionId: 'col-id',
+            sampleType: SampleType.ANNOTATION,
+            groupComponentName: 'ground_truth'
+        });
         if (!item) throw new Error('expected a menu item');
         expect(item.title).toBe('Annotations: ground_truth');
     });
 
     it('sets isSelected when collectionId matches currentCollectionId', () => {
-        const selected = getMenuItem('dataset-id', 'col-id', 'col-id', SampleType.IMAGE);
-        const notSelected = getMenuItem('dataset-id', 'other-col-id', 'col-id', SampleType.IMAGE);
+        const selected = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: 'col-id',
+            collectionId: 'col-id',
+            sampleType: SampleType.IMAGE
+        });
+        const notSelected = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: 'other-col-id',
+            collectionId: 'col-id',
+            sampleType: SampleType.IMAGE
+        });
         if (!selected || !notSelected) throw new Error('expected a menu item');
         expect(selected.isSelected).toBe(true);
         expect(notSelected.isSelected).toBe(false);
     });
 
     it('generates correct href', () => {
-        const item = getMenuItem('dataset-id', 'current-col-id', 'col-id', SampleType.IMAGE);
+        const item = getMenuItem({
+            datasetId: 'dataset-id',
+            currentCollectionId: 'current-col-id',
+            collectionId: 'col-id',
+            sampleType: SampleType.IMAGE
+        });
         if (!item) throw new Error('expected a menu item');
         expect(item.href).toBe('/datasets/dataset-id/image/col-id/images');
     });

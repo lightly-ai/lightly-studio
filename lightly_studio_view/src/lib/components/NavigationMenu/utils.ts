@@ -12,18 +12,27 @@ import {
 } from '@lucide/svelte';
 import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
+interface GetMenuItemParams {
+    datasetId: string;
+    currentCollectionId: string | undefined;
+    collectionId: string;
+    sampleType: SampleType;
+    groupComponentName?: string | null;
+    rootSampleType?: SampleType;
+}
+
 /**
  * Builds the nav menu item for a collection, or null if the sample type has no
  * dedicated view to navigate to (e.g. MCAP, which has no view yet).
  */
-export function getMenuItem(
-    datasetId: string,
-    currentCollectionId: string | undefined,
-    collectionId: string,
-    sampleType: SampleType,
-    groupComponentName?: string | null,
-    rootSampleType?: SampleType
-): NavigationMenuItem | null {
+export function getMenuItem({
+    datasetId,
+    currentCollectionId,
+    collectionId,
+    sampleType,
+    groupComponentName,
+    rootSampleType
+}: GetMenuItemParams): NavigationMenuItem | null {
     const collectionType = sampleType.toLowerCase();
     const isSelected = collectionId === currentCollectionId;
     const elementId = `${collectionType}-${collectionId}`;
@@ -148,17 +157,18 @@ export function buildBreadcrumbLevels(
         ? rootCollection.children.filter((c) => c.sample_type === SampleType.ANNOTATION).length > 1
         : false;
     const toMenuItem = (c: CollectionView): NavigationMenuItem | null =>
-        getMenuItem(
+        getMenuItem({
             datasetId,
             currentCollectionId,
-            c.collection_id,
-            c.sample_type,
+            collectionId: c.collection_id,
+            sampleType: c.sample_type,
             // For annotation collections, show the collection name to distinguish them if there are several; otherwise, use the group component name or a generic title.
-            c.sample_type === SampleType.ANNOTATION && hasSeveralAnnotationCollections
-                ? c.name
-                : c.group_component_definition?.group_component_name,
-            rootCollection.sample_type
-        );
+            groupComponentName:
+                c.sample_type === SampleType.ANNOTATION && hasSeveralAnnotationCollections
+                    ? c.name
+                    : c.group_component_definition?.group_component_name,
+            rootSampleType: rootCollection.sample_type
+        });
     const isNavigationMenuItem = (item: NavigationMenuItem | null): item is NavigationMenuItem =>
         item !== null;
 
