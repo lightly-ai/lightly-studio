@@ -129,22 +129,28 @@
     const { initialize, savePosition, getRestoredPosition } =
         useScrollRestoration('samples_scroll');
 
-    onMount(async () => {
+    onMount(() => {
         initialize();
-        // Load collection version for caching
-        await getCollectionVersion(collection_id);
-
-        // Get the grid view rendering mode from settings
-
-        isReady = true;
 
         // Called by the onboarding "Open sample" button to navigate to the first
         // visible sample without relying on synthetic DOM event dispatch.
+        // Registered synchronously so Svelte can invoke the returned cleanup on unmount.
         function handleOpenFirstSample() {
             const firstSample = samples[0];
             if (firstSample) handleOnDoubleClick(firstSample.sample_id);
         }
-        return useOnboarding().registerOpenFirstSampleHandler(handleOpenFirstSample);
+        const cleanupOnboarding = useOnboarding().registerOpenFirstSampleHandler(handleOpenFirstSample);
+
+        // Load collection version for caching; guard isReady against stale updates.
+        let mounted = true;
+        getCollectionVersion(collection_id).then(() => {
+            if (mounted) isReady = true;
+        });
+
+        return () => {
+            mounted = false;
+            cleanupOnboarding();
+        };
     });
 
     const confusionCell = $derived(
