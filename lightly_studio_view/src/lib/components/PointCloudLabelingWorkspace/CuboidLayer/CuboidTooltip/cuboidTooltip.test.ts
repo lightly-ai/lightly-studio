@@ -12,7 +12,8 @@ describe('createCuboidTooltip', () => {
                 rotation: [0, 0, Math.sin(Math.PI / 8), Math.cos(Math.PI / 8)],
                 trackNumber: 7
             },
-            annotationClassName: 'Vehicle'
+            annotationClassName: 'Vehicle',
+            annotationSourceName: 'Ground Truth'
         });
 
         expect(tooltip).toEqual({
@@ -20,7 +21,7 @@ describe('createCuboidTooltip', () => {
             location: 'X: 10.00  Y: -2.00  Z: 1.23',
             dimensions: '4.50 × 1.80 × 1.50 m',
             rotation: 'rx: 0.0°  ry: 0.0°  rz: 45.0°',
-            annotationSourceId: 'ground-truth',
+            annotationSourceName: 'Ground Truth',
             trackNumber: 7
         });
     });

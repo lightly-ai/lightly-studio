@@ -3,11 +3,16 @@ import type { AnnotationCollectionView } from '$lib/api/lightly_studio_local/typ
 import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
 
 export const useAnnotationCollections = (
-    getParams: () => { collectionId: string }
+    getParams: () => { collectionId?: string }
 ): CreateQueryResult<AnnotationCollectionView[], Error> => {
-    return createQuery(() =>
-        readAnnotationCollectionsOptions({
-            path: { collection_id: getParams().collectionId }
-        })
-    );
+    return createQuery(() => {
+        const { collectionId } = getParams();
+        const options = readAnnotationCollectionsOptions({
+            path: { collection_id: collectionId ?? '' }
+        });
+        return {
+            ...options,
+            enabled: Boolean(collectionId)
+        };
+    });
 };

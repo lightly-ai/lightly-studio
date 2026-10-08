@@ -1,3 +1,4 @@
+import type { Component } from 'svelte';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import { routeHelpers } from '$lib/routes';
@@ -12,81 +13,85 @@ import {
 } from '@lucide/svelte';
 import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
+interface GetMenuItemParams {
+    datasetId: string;
+    currentCollectionId: string | undefined;
+    collectionId: string;
+    sampleType: SampleType;
+    groupComponentName?: string | null;
+    rootSampleType?: SampleType;
+}
+
+type SampleTypeConfig = {
+    icon: Component;
+    toHref: (datasetId: string, collectionType: string, collectionId: string) => string;
+    title: (groupComponentName?: string | null) => string;
+    isHidden?: (rootSampleType?: SampleType) => boolean;
+};
+
+const SAMPLE_TYPE_CONFIGS: Partial<Record<SampleType, SampleTypeConfig>> = {
+    [SampleType.IMAGE]: {
+        icon: Image,
+        toHref: (d, t, c) => routeHelpers.toImages(d, t, c),
+        title: (name) => name || 'Images'
+    },
+    [SampleType.VIDEO]: {
+        icon: Video,
+        toHref: (d, t, c) => routeHelpers.toVideos(d, t, c),
+        title: (name) => name || 'Videos'
+    },
+    [SampleType.VIDEO_FRAME]: {
+        icon: Frame,
+        toHref: (d, t, c) => routeHelpers.toFrames(d, t, c),
+        title: (name) => name || 'Frames'
+    },
+    [SampleType.ANNOTATION]: {
+        icon: ComponentIcon,
+        toHref: (d, t, c) => routeHelpers.toAnnotations(d, t, c),
+        title: (name) => (name ? `Annotations: ${name}` : 'Annotations')
+    },
+    [SampleType.CAPTION]: {
+        icon: WholeWord,
+        toHref: (d, t, c) => routeHelpers.toCaptions(d, t, c),
+        title: (name) => name || 'Captions'
+    },
+    [SampleType.GROUP]: {
+        icon: LayoutDashboard,
+        toHref: (d, t, c) => routeHelpers.toGroups(d, t, c),
+        title: (name) => name || 'Groups',
+        isHidden: (rootSampleType) => rootSampleType === SampleType.SEQUENCE
+    },
+    [SampleType.SEQUENCE]: {
+        icon: Box,
+        toHref: (d, t, c) => routeHelpers.toPointClouds(d, t, c),
+        title: (name) => name || 'Point clouds'
+    }
+    // MCAP intentionally absent — no dedicated view
+};
+
 /**
  * Builds the nav menu item for a collection, or null if the sample type has no
  * dedicated view to navigate to (e.g. MCAP, which has no view yet).
  */
-export function getMenuItem(
-    datasetId: string,
-    currentCollectionId: string | undefined,
-    collectionId: string,
-    sampleType: SampleType,
-    groupComponentName?: string | null
-): NavigationMenuItem | null {
-    const collectionType = sampleType.toLowerCase();
-    const isSelected = collectionId === currentCollectionId;
-    const elementId = `${collectionType}-${collectionId}`;
-    switch (sampleType) {
-        case SampleType.IMAGE:
-            return {
-                title: groupComponentName || 'Images',
-                id: elementId,
-                href: routeHelpers.toImages(datasetId, collectionType, collectionId),
-                isSelected,
-                icon: Image
-            };
+export function getMenuItem({
+    datasetId,
+    currentCollectionId,
+    collectionId,
+    sampleType,
+    groupComponentName,
+    rootSampleType
+}: GetMenuItemParams): NavigationMenuItem | null {
+    const config = SAMPLE_TYPE_CONFIGS[sampleType];
+    if (!config || config.isHidden?.(rootSampleType)) return null;
 
-        case SampleType.VIDEO:
-            return {
-                title: groupComponentName || 'Videos',
-                id: elementId,
-                href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
-                isSelected,
-                icon: Video
-            };
-        case SampleType.VIDEO_FRAME:
-            return {
-                title: groupComponentName || 'Frames',
-                id: elementId,
-                icon: Frame,
-                href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
-                isSelected
-            };
-        case SampleType.ANNOTATION:
-            return {
-                title: groupComponentName ? `Annotations: ${groupComponentName}` : 'Annotations',
-                id: elementId,
-                icon: ComponentIcon,
-                href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
-                isSelected
-            };
-        case SampleType.CAPTION:
-            return {
-                title: groupComponentName || 'Captions',
-                id: elementId,
-                href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
-                isSelected,
-                icon: WholeWord
-            };
-        case SampleType.GROUP:
-            return {
-                title: groupComponentName || 'Groups',
-                id: elementId,
-                href: routeHelpers.toGroups(datasetId, collectionType, collectionId),
-                isSelected,
-                icon: LayoutDashboard
-            };
-        case SampleType.SEQUENCE:
-            return {
-                title: groupComponentName || 'Point clouds',
-                id: elementId,
-                href: routeHelpers.toPointClouds(datasetId, collectionType, collectionId),
-                isSelected,
-                icon: Box
-            };
-        case SampleType.MCAP:
-            return null;
-    }
+    const collectionType = sampleType.toLowerCase();
+    return {
+        title: config.title(groupComponentName),
+        id: `${collectionType}-${collectionId}`,
+        href: config.toHref(datasetId, collectionType, collectionId),
+        isSelected: collectionId === currentCollectionId,
+        icon: config.icon
+    };
 }
 
 /**
@@ -146,16 +151,18 @@ export function buildBreadcrumbLevels(
         ? rootCollection.children.filter((c) => c.sample_type === SampleType.ANNOTATION).length > 1
         : false;
     const toMenuItem = (c: CollectionView): NavigationMenuItem | null =>
-        getMenuItem(
+        getMenuItem({
             datasetId,
             currentCollectionId,
-            c.collection_id,
-            c.sample_type,
+            collectionId: c.collection_id,
+            sampleType: c.sample_type,
             // For annotation collections, show the collection name to distinguish them if there are several; otherwise, use the group component name or a generic title.
-            c.sample_type === SampleType.ANNOTATION && hasSeveralAnnotationCollections
-                ? c.name
-                : c.group_component_definition?.group_component_name
-        );
+            groupComponentName:
+                c.sample_type === SampleType.ANNOTATION && hasSeveralAnnotationCollections
+                    ? c.name
+                    : c.group_component_definition?.group_component_name,
+            rootSampleType: rootCollection.sample_type
+        });
     const isNavigationMenuItem = (item: NavigationMenuItem | null): item is NavigationMenuItem =>
         item !== null;
 

@@ -15,6 +15,7 @@
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
+    import { useAnnotationCollections } from '$lib/hooks';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
 
@@ -32,6 +33,8 @@
     interface Props {
         /** Dataset the labeled point-cloud sequence belongs to. */
         datasetId: string;
+        /** GROUP collection containing the point cloud annotation sources. */
+        annotationSourceCollectionId?: string;
         /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
         sequenceId: string;
         /** 1-based tick to open on (from the route hash); defaults to the first frame. */
@@ -51,6 +54,7 @@
 
     let {
         datasetId,
+        annotationSourceCollectionId,
         sequenceId,
         tickNumber = 1,
         onTickChange = () => undefined,
@@ -88,7 +92,17 @@
             getOnTickChange: () => onTickChange
         });
     let selectedCuboidId = $state<string | null>(null);
+    let hoveredCuboidId = $state<string | null>(null);
     const { customLabelColorsStore } = useCustomLabelColors();
+    const annotationCollectionsQuery = useAnnotationCollections(() => ({
+        collectionId: annotationSourceCollectionId
+    }));
+    const annotationSources = $derived(
+        (annotationCollectionsQuery.data ?? []).map(({ collection_id, name }) => ({
+            id: collection_id,
+            name
+        }))
+    );
 
     // Synchronized snapshot: the cloud frame and its corresponding annotations
     // advance together.
@@ -98,7 +112,11 @@
     } | null>(null);
 
     $effect(() => {
-        if (workspace.cloudPointFrame.data && !workspace.cloudPointFrame.isPlaceholderData) {
+        if (
+            workspace.cloudPointFrame.data &&
+            !workspace.cloudPointFrame.isPlaceholderData &&
+            !workspace.tickDetails.isPlaceholderData
+        ) {
             sceneSnapshot = {
                 frame: workspace.cloudPointFrame.data,
                 annotations: workspace.tickDetails.data?.annotations ?? []
@@ -213,8 +231,11 @@
                                     fitKey={`${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`}
                                     cuboids={sceneCuboids}
                                     {annotationClasses}
+                                    {annotationSources}
                                     selectedAnnotationId={selectedCuboidId}
+                                    hoveredAnnotationId={hoveredCuboidId}
                                     onselect={(id) => (selectedCuboidId = id)}
+                                    onhover={(id) => (hoveredCuboidId = id)}
                                 />
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
                                 <WorkspaceStatusPanel status="loading" />
@@ -291,6 +312,7 @@
                     <PointCloudRightSidePanel
                         {cuboids}
                         {annotationClasses}
+                        {annotationSources}
                         bind:selectedCuboidId
                         {tick}
                         onTagsChange={() => void workspace.tickDetails.refetch()}

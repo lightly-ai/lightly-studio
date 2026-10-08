@@ -20,6 +20,10 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails })
 }));
 
+vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
+    useAnnotationCollections: () => ({ data: [] })
+}));
+
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
         query: cloudQuery
@@ -73,7 +77,11 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     })
 }));
 
-const defaultProps = { datasetId: 'dataset-1', sequenceId: 'sequence-1' };
+const defaultProps = {
+    datasetId: 'dataset-1',
+    annotationSourceCollectionId: 'group-collection-1',
+    sequenceId: 'sequence-1'
+};
 
 describe('PointCloudLabelingWorkspace', () => {
     afterEach(() => {
