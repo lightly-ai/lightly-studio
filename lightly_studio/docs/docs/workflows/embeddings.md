@@ -128,13 +128,6 @@ Examples below show how an embedder is built from the image interfaces.
     A capability you do not subclass, such as `TextEmbedder`, leaves its feature
     unavailable — text search, in that case.
 
-!!! info "Image search needs `ImageBytesEmbedder`"
-    Image search uploads an image and calls `embed_image_bytes` only. An embedder that
-    subclasses `ImagePILEmbedder` or `ImagePathEmbedder` but not `ImageBytesEmbedder`
-    does not serve image search. To enable it, subclass `ImageBytesEmbedder` and decode
-    the bytes in `embed_image_bytes`, for example with
-    `PIL.Image.open(io.BytesIO(image_bytes))`.
-
 ### Loading precomputed embeddings
 
 Use this when you already have vectors — from a previous run, an external pipeline,
