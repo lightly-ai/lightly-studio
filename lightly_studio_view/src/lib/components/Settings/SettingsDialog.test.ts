@@ -1,8 +1,49 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { QueryClient } from '@tanstack/svelte-query';
 import { writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import SettingsDialog from './SettingsDialog.svelte';
+import SettingsDialogHarness from './SettingsDialogHarness.test.svelte';
 import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+import type { AssistedLabelingProviderView } from '$lib/api/lightly_studio_local';
+import { listAssistedLabelingProviders } from '$lib/api/lightly_studio_local/sdk.gen';
+import { getAssistedLabelingProviderQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
+    listAssistedLabelingProviders: vi.fn()
+}));
+
+const capabilities: AssistedLabelingProviderView['capabilities'] = {
+    positive_points: true,
+    negative_points: true,
+    boxes: true,
+    text_prompt: true,
+    max_instances: 10
+};
+
+const providers: AssistedLabelingProviderView[] = [
+    {
+        provider_id: 'fal_sam3',
+        display_name: 'fal.ai SAM 3',
+        sends_data_to_third_party: true,
+        capabilities,
+        unavailable_reason: 'Set the FAL_KEY environment variable.'
+    },
+    {
+        provider_id: 'fake',
+        display_name: 'Fake',
+        sends_data_to_third_party: false,
+        capabilities,
+        unavailable_reason: null
+    }
+];
+
+let client: QueryClient;
+
+function renderDialog() {
+    client = new QueryClient();
+    return render(SettingsDialogHarness, { props: { client } });
+}
 
 // Mock the useSettings hook
 vi.mock('$lib/hooks/useSettings', () => {
@@ -23,7 +64,8 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_toolbar_bounding_box: 'b',
         key_toolbar_segmentation_mask: 'm',
         key_toolbar_brush: 'r',
-        key_toolbar_eraser: 'x'
+        key_toolbar_eraser: 'x',
+        assisted_labeling_provider: 'fal_sam3'
     });
     const isLoadedStore = writable(true);
 
@@ -52,6 +94,9 @@ describe('SettingsDialog', () => {
         vi.resetAllMocks();
         const { saveSettings } = useSettings();
         saveSettings.mockResolvedValue({ success: true });
+        vi.mocked(listAssistedLabelingProviders).mockResolvedValue({
+            data: providers
+        } as Awaited<ReturnType<typeof listAssistedLabelingProviders>>);
         closeSettingsDialog();
     });
 
@@ -61,14 +106,14 @@ describe('SettingsDialog', () => {
     });
 
     it('should be closed by default', () => {
-        render(SettingsDialog);
+        renderDialog();
         expect(
             screen.queryByText('Configure your application preferences.')
         ).not.toBeInTheDocument();
     });
 
     it('should open the dialog when requested through useSettingsDialog', async () => {
-        render(SettingsDialog);
+        renderDialog();
         expect(
             screen.queryByText('Configure your application preferences.')
         ).not.toBeInTheDocument();
@@ -79,7 +124,7 @@ describe('SettingsDialog', () => {
     });
 
     it('should record and save a keyboard shortcut', async () => {
-        render(SettingsDialog);
+        renderDialog();
         await openDialog();
 
         // Use getByLabelText to find the shortcut button via its <Label for="hide-annotations">
@@ -102,7 +147,7 @@ describe('SettingsDialog', () => {
     });
 
     it('should toggle a switch and save the updated value', async () => {
-        render(SettingsDialog);
+        renderDialog();
         await openDialog();
 
         const toggle = screen.getByRole('switch', { name: 'Show Annotation Class Names' });
@@ -120,7 +165,7 @@ describe('SettingsDialog', () => {
     });
 
     it('should show and save the enforce coloring by class switch', async () => {
-        render(SettingsDialog);
+        renderDialog();
         await openDialog();
 
         const toggle = screen.getByRole('switch', { name: 'Enforce Coloring by Class' });
@@ -138,7 +183,7 @@ describe('SettingsDialog', () => {
     });
 
     it('should save all initial settings unchanged when no edits are made', async () => {
-        render(SettingsDialog);
+        renderDialog();
         await openDialog();
 
         await fireEvent.click(screen.getByText('Save Changes'));
@@ -159,7 +204,8 @@ describe('SettingsDialog', () => {
             key_toolbar_bounding_box: 'b',
             key_toolbar_segmentation_mask: 'm',
             key_toolbar_brush: 'r',
-            key_toolbar_eraser: 'x'
+            key_toolbar_eraser: 'x',
+            assisted_labeling_provider: 'fal_sam3'
         });
     });
 
@@ -173,7 +219,7 @@ describe('SettingsDialog', () => {
                 })
         );
 
-        render(SettingsDialog);
+        renderDialog();
         await openDialog();
 
         await fireEvent.click(screen.getByText('Save Changes'));
@@ -189,7 +235,7 @@ describe('SettingsDialog', () => {
     });
 
     it('should close without saving when cancel is clicked', async () => {
-        render(SettingsDialog);
+        renderDialog();
         await openDialog();
 
         // Make a change first
@@ -208,7 +254,7 @@ describe('SettingsDialog', () => {
     });
 
     it('should have unique IDs for all shortcut controls', async () => {
-        render(SettingsDialog);
+        renderDialog();
         await openDialog();
 
         const ids = [
@@ -228,5 +274,33 @@ describe('SettingsDialog', () => {
             const elements = document.querySelectorAll(`#${id}`);
             expect(elements.length, `Expected exactly one element with id="${id}"`).toBe(1);
         }
+    });
+
+    it('should show the selected AI-assisted labeling provider and refresh it after saving', async () => {
+        renderDialog();
+        await openDialog();
+
+        expect(
+            await screen.findByText('Set the FAL_KEY environment variable.')
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText('Images are sent to fal.ai SAM 3 for processing.')
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText('AI-Assisted Labeling Provider')).toHaveTextContent(
+            'fal.ai SAM 3'
+        );
+
+        const invalidate = vi.spyOn(client, 'invalidateQueries');
+        await fireEvent.click(screen.getByText('Save Changes'));
+
+        const { saveSettings } = useSettings();
+        expect(saveSettings).toHaveBeenCalledWith(
+            expect.objectContaining({ assisted_labeling_provider: 'fal_sam3' })
+        );
+        await waitFor(() =>
+            expect(invalidate).toHaveBeenCalledWith({
+                queryKey: getAssistedLabelingProviderQueryKey()
+            })
+        );
     });
 });

@@ -28,6 +28,7 @@ interface SettingsDialogFormState {
     showSampleFilenames: boolean;
     showBoundingBoxesForSegmentation: boolean;
     enforceColoringByClass: boolean;
+    assistedLabelingProvider: string;
 }
 
 interface ShortcutKeyboardEvent {
@@ -53,7 +54,8 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
         showAnnotationTextLabels: settings.show_annotation_text_labels,
         showSampleFilenames: settings.show_sample_filenames,
         showBoundingBoxesForSegmentation: settings.show_bounding_boxes_for_segmentation,
-        enforceColoringByClass: settings.enforce_coloring_by_class
+        enforceColoringByClass: settings.enforce_coloring_by_class,
+        assistedLabelingProvider: settings.assisted_labeling_provider
     };
 }
 
@@ -75,7 +77,8 @@ export function createSettingsSavePayload(
         key_toolbar_bounding_box: formState.shortcutSettings.keyToolbarBoundingBox,
         key_toolbar_segmentation_mask: formState.shortcutSettings.keyToolbarSegmentationMask,
         key_toolbar_brush: formState.shortcutSettings.keyToolbarBrush,
-        key_toolbar_eraser: formState.shortcutSettings.keyToolbarEraser
+        key_toolbar_eraser: formState.shortcutSettings.keyToolbarEraser,
+        assisted_labeling_provider: formState.assistedLabelingProvider
     };
 }
 
@@ -119,6 +122,7 @@ export class SettingsDialogState {
     showSampleFilenames = $state(false);
     showBoundingBoxesForSegmentation = $state(true);
     enforceColoringByClass = $state(false);
+    assistedLabelingProvider = $state('');
     recordingShortcut: ShortcutSettingKey | null = $state(null);
     isSaving = $state(false);
 
@@ -132,6 +136,7 @@ export class SettingsDialogState {
         this.showSampleFilenames = formState.showSampleFilenames;
         this.showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
         this.enforceColoringByClass = formState.enforceColoringByClass;
+        this.assistedLabelingProvider = formState.assistedLabelingProvider;
     }
 
     startRecording(key: ShortcutSettingKey): void {
@@ -160,7 +165,8 @@ export class SettingsDialogState {
             showAnnotationTextLabels: this.showAnnotationTextLabels,
             showSampleFilenames: this.showSampleFilenames,
             showBoundingBoxesForSegmentation: this.showBoundingBoxesForSegmentation,
-            enforceColoringByClass: this.enforceColoringByClass
+            enforceColoringByClass: this.enforceColoringByClass,
+            assistedLabelingProvider: this.assistedLabelingProvider
         });
     }
 }

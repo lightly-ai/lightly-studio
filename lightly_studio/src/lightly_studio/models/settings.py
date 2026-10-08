@@ -8,6 +8,8 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel
 
+from lightly_studio.assisted_labeling.registry import DEFAULT_PROVIDER_ID
+
 
 class GridViewSampleRenderingType(str, Enum):
     """Defines how samples are rendered in the grid view."""
@@ -80,6 +82,10 @@ class SettingBase(SQLModel):
         description="Key to activate eraser mode in the segmentation tool",
     )
 
+    assisted_labeling_provider: str = Field(
+        description="ID of the provider for AI-assisted labeling",
+    )
+
 
 class SettingDefaults(SettingBase):
     """Settings fields with defaults for database inserts."""
@@ -128,6 +134,9 @@ class SettingDefaults(SettingBase):
     )
     key_toolbar_eraser: str = Field(
         default="x",
+    )
+    assisted_labeling_provider: str = Field(
+        default=DEFAULT_PROVIDER_ID,
     )
 
 

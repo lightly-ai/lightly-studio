@@ -27,6 +27,9 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
+    import AssistedLabelingPopUp from '../AssistedLabelingPopUp/AssistedLabelingPopUp.svelte';
+    import AssistedLabelingOverlay from '../AssistedLabelingOverlay/AssistedLabelingOverlay.svelte';
+    import { useAssistedLabelingTools } from './useAssistedLabelingTools.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -74,6 +77,7 @@
     const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
+    const assistedLabeling = useAssistedLabelingTools(() => ({ collectionId, sampleId }));
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
@@ -219,7 +223,13 @@
 <ZoomableContainer
     width={sample.width}
     height={sample.height}
-    panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
+    panEnabled={!(
+        annotationLabelContext.isDrawing ||
+        annotationLabelContext.isErasing ||
+        sampleDetailsToolbarContext.status === 'wand' ||
+        (sampleDetailsToolbarContext.status === 'instances' &&
+            assistedLabeling.state.isDrawingInstancesBox)
+    )}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
     autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
@@ -243,6 +253,15 @@
         {/if}
         {#if shouldShowSlicToolPopup}
             <SlicToolPopUp />
+        {/if}
+        {#if $isEditingMode && assistedLabeling.activeTool}
+            <AssistedLabelingPopUp
+                activeTool={assistedLabeling.activeTool}
+                {collectionId}
+                toolState={assistedLabeling.state}
+                tools={assistedLabeling.tools}
+                defaultAnnotationClass={annotationLabelContext.annotationLabel}
+            />
         {/if}
     {/snippet}
     {#snippet zoomPanelRightContent()}
@@ -362,6 +381,19 @@
                     {drawerStrokeColor}
                     {refetch}
                     onCreateBoundingBoxPendingChange={handlePendingChange}
+                />
+            {:else if assistedLabeling.activeTool}
+                <AssistedLabelingOverlay
+                    bind:interactionRect
+                    activeTool={assistedLabeling.activeTool}
+                    {collectionId}
+                    {sampleId}
+                    {sample}
+                    {refetch}
+                    toolState={assistedLabeling.state}
+                    tools={assistedLabeling.tools}
+                    defaultAnnotationClass={annotationLabelContext.annotationLabel}
+                    annotationSource={annotationLabelContext.annotationSource}
                 />
             {/if}
         {/if}

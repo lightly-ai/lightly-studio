@@ -84,6 +84,12 @@ const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
     {}
 );
 
+// Store the output type of the smart select and find all instances tools.
+const lastAnnotationOutputType = useSessionStorage<'mask' | 'box'>(
+    'lightlyStudio_annotation_output_type',
+    'mask'
+);
+
 // Store tags grouped by collection_id
 const tags = writable<Record<string, Tag[]>>({});
 const classifiers = writable<ClassifierInfo[]>([]);
@@ -445,6 +451,10 @@ export const useGlobalStorage = () => {
                 value[collectionId] = size;
                 return value;
             });
+        },
+        lastAnnotationOutputType,
+        setLastAnnotationOutputType: (outputType: 'mask' | 'box') => {
+            lastAnnotationOutputType.set(outputType);
         },
         // Reversible actions
         ...reversibleActionsHook

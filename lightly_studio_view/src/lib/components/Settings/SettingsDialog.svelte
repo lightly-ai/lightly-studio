@@ -3,16 +3,20 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Select } from '$lib/components/Select';
     import { Switch } from '$lib/components/ui/switch';
+    import { useQueryClient } from '@tanstack/svelte-query';
+    import { getAssistedLabelingProviderQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { SettingsDialogState } from './settingsDialogState.svelte';
     import { shortcutSettings, staticShortcuts } from './settingsDialogConfig';
     import { ShortcutSettingRow } from './ShortcutSettingRow';
     import { SettingsFieldRow } from './SettingsFieldRow';
+    import { AssistedLabelingProviderRow } from './AssistedLabelingProviderRow';
 
     const { settingsStore, saveSettings } = useSettings();
     const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
 
+    const queryClient = useQueryClient();
     const dialogState = new SettingsDialogState();
 
     // Hydrate form state each time the dialog opens.
@@ -39,6 +43,9 @@
 
         try {
             await saveSettings(dialogState.getSavePayload());
+            void queryClient.invalidateQueries({
+                queryKey: getAssistedLabelingProviderQueryKey()
+            });
             setOpen(false);
         } catch (error) {
             console.error('Error saving settings:', error);
@@ -167,6 +174,11 @@
                                 disabled={dialogState.isSaving}
                             />
                         </SettingsFieldRow>
+                        <AssistedLabelingProviderRow
+                            value={dialogState.assistedLabelingProvider}
+                            disabled={dialogState.isSaving}
+                            onValueChange={(v) => (dialogState.assistedLabelingProvider = v)}
+                        />
                     </div>
                 </div>
 

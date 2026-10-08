@@ -7,6 +7,7 @@
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useAutoLabelDialog } from '$lib/hooks/useAutoLabelDialog';
     import { get } from 'svelte/store';
     import { useGlobalStorage } from '$lib/hooks';
     import {
@@ -44,6 +45,7 @@
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
+    const { openAutoLabelDialog } = useAutoLabelDialog();
 
     type MenuAction = SelectItem & { onSelect: () => void };
 
@@ -63,6 +65,14 @@
 
     const menuActions = $derived.by<MenuAction[]>(() => {
         const items: MenuAction[] = [];
+
+        addAction(items, isImages && collection.sample_type === 'image' && isEditor, {
+            value: 'menu-auto-label',
+            label: 'Auto-label...',
+            icon: WandSparklesIcon,
+            testId: 'menu-auto-label',
+            onSelect: openAutoLabelDialog
+        });
 
         addAction(items, hasClassifier && isEditor, {
             value: 'menu-classifiers',
