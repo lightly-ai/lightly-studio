@@ -10,13 +10,19 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from lightly_studio_serve.embedder import ImageCropPathEmbedder, ImagePathEmbedder
+from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    ImagePILEmbedder,
+    TextEmbedder,
+    VideoPathEmbedder,
+)
 from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.embed import default_embedder, embedding_storage
-from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
@@ -72,7 +78,7 @@ def embed_image_for_collection(
     embedder = default_embedder.resolve_query_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_bytes_embedder,
+        embedder_type=ImageBytesEmbedder,
         query_kind="image bytes",
     )
     result = embedder.embed_image_bytes(images=[image_bytes])
@@ -109,7 +115,7 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
     embedder = default_embedder.resolve_query_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_text_embedder,
+        embedder_type=TextEmbedder,
         query_kind="text",
     )
     result = embedder.embed_text(texts=[text])
@@ -148,7 +154,7 @@ def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[
     default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        embedder_type=ImagePathEmbedder,
     )
     if default_embedder_and_model_id is None:
         return
@@ -183,7 +189,7 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
     default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=annotation_collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_crop_path_embedder,
+        embedder_type=ImageCropPathEmbedder,
     )
     if default_embedder_and_model_id is None:
         return
@@ -241,7 +247,7 @@ def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[
     default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_video_path_embedder,
+        embedder_type=VideoPathEmbedder,
     )
     if default_embedder_and_model_id is None:
         return
@@ -290,7 +296,7 @@ def embed_frame_samples(
     default_embedder_and_model_id = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
+        embedder_type=ImagePILEmbedder,
     )
     if default_embedder_and_model_id is None:
         return
@@ -328,7 +334,7 @@ def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
         default_embedder.resolve_default_embedder(
             session=session,
             collection_id=collection_id,
-            get_embedder_fn=EmbedderRegistry.get_image_pil_embedder,
+            embedder_type=ImagePILEmbedder,
         )
         is not None
     )
