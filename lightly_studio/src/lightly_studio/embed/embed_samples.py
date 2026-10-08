@@ -73,7 +73,7 @@ def embed_image_for_collection(
         session=session,
         collection_id=collection_id,
         get_embedder_fn=EmbedderRegistry.get_image_bytes_embedder,
-        query_kind="images",
+        query_kind="image bytes",
     )
     result = embedder.embed_image_bytes(images=[image_bytes])
     if result.kept_indices != [0]:

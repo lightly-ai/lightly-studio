@@ -261,7 +261,7 @@ def test_embed_image_for_collection__no_embedder_for_space_raises(
     # An empty registry cannot supply an embedder for the default model's space.
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
 
-    with pytest.raises(MissingCapabilityError, match="cannot embed images"):
+    with pytest.raises(MissingCapabilityError, match="cannot embed image bytes"):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
@@ -301,7 +301,7 @@ def test_embed_image_for_collection__no_bytes_capability_raises(
     registry.register(embedder=embedder)
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
-    with pytest.raises(MissingCapabilityError, match="cannot embed images"):
+    with pytest.raises(MissingCapabilityError, match="cannot embed image bytes"):
         embed_samples.embed_image_for_collection(
             session=db_session,
             collection_id=collection.collection_id,
