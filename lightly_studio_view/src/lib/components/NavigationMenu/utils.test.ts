@@ -152,6 +152,16 @@ describe('buildBreadcrumbLevels', () => {
         expect(levels[1].siblings.map((s) => s.id)).toEqual(['video-child-1']);
     });
 
+    it('excludes GROUP siblings when root is a SEQUENCE (MCAP recording) dataset', () => {
+        const child1 = makeCollection('child-1', SampleType.ANNOTATION);
+        const child2 = makeCollection('child-2', SampleType.GROUP);
+        const root = makeCollection('root', SampleType.SEQUENCE, [child1, child2]);
+
+        const levels = buildBreadcrumbLevels([root, child1], root, 'child-1', 'dataset-id');
+
+        expect(levels[1].siblings.map((s) => s.id)).toEqual(['annotation-child-1']);
+    });
+
     it('returns two levels for root > child path', () => {
         const child1 = makeCollection('child-1', SampleType.VIDEO);
         const child2 = makeCollection('child-2', SampleType.ANNOTATION);
