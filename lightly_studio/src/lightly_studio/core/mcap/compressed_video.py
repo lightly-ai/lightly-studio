@@ -107,14 +107,22 @@ class VideoDecoder:
             log_time_ns: The log time of the message. Must be later than the log
                 time of the last message.
             retain_log_time_ns: The earliest picture log time to keep. Defaults to
-                keeping every emitted picture.
+                `log_time_ns`, so earlier emitted pictures are discarded.
 
         Raises:
+            ValueError: If the decoder was flushed, or `log_time_ns` is not later
+                than the log time of the last message.
             McapAccessError: If the message fields are missing, the video format is
                 not supported (not H.264 or H.265), or PyAV cannot decode the payload.
+                The decoder cannot decode further after PyAV fails.
         """
-        assert not self._is_flushed
-        assert self.last_log_time_ns is None or log_time_ns > self.last_log_time_ns
+        if self._is_flushed:
+            raise ValueError("Cannot decode with a flushed decoder.")
+        if self.last_log_time_ns is not None and log_time_ns <= self.last_log_time_ns:
+            raise ValueError(
+                f"Log time {log_time_ns} must be later than the log time of the last "
+                f"message {self.last_log_time_ns}."
+            )
         data, video_format = _payload(decoded_message=decoded_message)
         if self._codec is None:
             self._codec_name = _codec_name(video_format=video_format)
@@ -126,13 +134,15 @@ class VideoDecoder:
         # the picture of each message.
         packet = av.Packet(data)
         packet.pts = log_time_ns
-        self.last_log_time_ns = log_time_ns
         try:
             frames = self._codec.decode(packet)  # type: ignore[attr-defined]
         except av.FFmpegError as exc:
+            # The codec state is unknown after a failure, so later messages must not use it.
+            self._is_flushed = True
             raise McapAccessError(
                 f"PyAV could not decode the {self._codec_name} payload: {exc}"
             ) from exc
+        self.last_log_time_ns = log_time_ns
         _retain_frames(frames=frames, retained=self._frames, retain_from_ns=retain_from_ns)
 
     def require_frame(self, log_time_ns: int) -> VideoFrame:

@@ -125,6 +125,52 @@ class TestVideoDecoder:
                 decoded_message=SimpleNamespace(data="not bytes", format="h264"), log_time_ns=100
             )
 
+    def test_decode__undecodable_payload(self) -> None:
+        (keyframe,) = helpers.h264_access_units(gray_levels=[0])
+        decoder = VideoDecoder(keyframe_log_time_ns=100)
+        decoder.decode(
+            decoded_message=SimpleNamespace(data=keyframe, format="h264"), log_time_ns=100
+        )
+
+        with pytest.raises(McapAccessError, match="could not decode"):
+            decoder.decode(
+                decoded_message=SimpleNamespace(
+                    data=b"\x00\x00\x00\x01\x65\x00\x01\x02", format="h264"
+                ),
+                log_time_ns=200,
+            )
+
+        assert decoder.last_log_time_ns == 100
+        assert not decoder.can_continue_to(keyframe_log_time_ns=100, log_time_ns=300)
+        with pytest.raises(ValueError, match="flushed"):
+            decoder.decode(
+                decoded_message=SimpleNamespace(data=keyframe, format="h264"), log_time_ns=300
+            )
+
+    def test_decode__after_flush(self) -> None:
+        (keyframe,) = helpers.h264_access_units(gray_levels=[0])
+        decoder = VideoDecoder(keyframe_log_time_ns=100)
+        decoder.flush()
+
+        with pytest.raises(ValueError, match="flushed"):
+            decoder.decode(
+                decoded_message=SimpleNamespace(data=keyframe, format="h264"), log_time_ns=100
+            )
+
+    @pytest.mark.parametrize("log_time_ns", [100, 50])
+    def test_decode__log_time_not_later(self, log_time_ns: int) -> None:
+        keyframe, delta_frame = helpers.h264_access_units(gray_levels=[0, 255])
+        decoder = VideoDecoder(keyframe_log_time_ns=100)
+        decoder.decode(
+            decoded_message=SimpleNamespace(data=keyframe, format="h264"), log_time_ns=100
+        )
+
+        with pytest.raises(ValueError, match="must be later"):
+            decoder.decode(
+                decoded_message=SimpleNamespace(data=delta_frame, format="h264"),
+                log_time_ns=log_time_ns,
+            )
+
 
 def test_from_decoded_message__h264() -> None:
     message = SimpleNamespace(data=_h264_keyframe(), format="h264")
