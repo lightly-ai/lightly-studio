@@ -28,6 +28,21 @@ interface StepsOptions {
     onOpenFirstSample: () => void;
 }
 
+interface TourStepOptions {
+    stage: TourStage;
+    element: Element | string;
+    title: string;
+    description: string;
+    showButtons: ('previous' | 'next')[];
+    nextBtnText?: string;
+    prevBtnText?: string;
+    doneBtnText?: string;
+    onNextClick?: () => void;
+    onPrevClick?: () => void;
+    onFooterRender?: (popover: Pick<PopoverDOM, 'footerButtons'>) => void;
+    skipFn?: (() => void) | null;
+}
+
 /** Initial step plan used before the tour starts; recomputed at each tour start via buildStepPlan(). */
 export const DEFAULT_STEP_PLAN: StepPlan = {
     count: 5,
@@ -109,6 +124,31 @@ export function createTourSteps(opts: StepsOptions) {
         };
     }
 
+    function highlightStep(options: TourStepOptions) {
+        const tour = ref.tour;
+        if (!tour) return;
+
+        ref.stage = options.stage;
+        tour.highlight({
+            element: options.element,
+            popover: {
+                title: options.title,
+                description: options.description,
+                showButtons: options.showButtons,
+                ...(options.nextBtnText ? { nextBtnText: options.nextBtnText } : {}),
+                ...(options.prevBtnText ? { prevBtnText: options.prevBtnText } : {}),
+                ...(options.doneBtnText ? { doneBtnText: options.doneBtnText } : {}),
+                ...(options.onNextClick ? { onNextClick: options.onNextClick } : {}),
+                ...(options.onPrevClick ? { onPrevClick: options.onPrevClick } : {}),
+                onPopoverRender: (popover) => {
+                    const skipFn = options.skipFn === undefined ? onSkip : options.skipFn;
+                    popoverFooter(options.stage, skipFn)(popover);
+                    options.onFooterRender?.(popover);
+                }
+            }
+        });
+    }
+
     function cleanupMenuHighlight() {
         ref.menuHighlightCleanup?.();
         ref.menuHighlightCleanup = null;
@@ -117,38 +157,32 @@ export function createTourSteps(opts: StepsOptions) {
     function highlightGrid() {
         if (!ref.tour || !eligible()) return;
         ref.stepPlan = buildStepPlan();
-        ref.stage = 'grid';
-        ref.tour.highlight({
+        highlightStep({
+            stage: 'grid',
             element: '[data-testid="images-grid"]',
-            popover: {
-                title: 'Browse your collection',
-                description:
-                    'Find what you need here. Filter by tag or search in the left panel to narrow down the images.',
-                showButtons: ['next'],
-                nextBtnText: 'Next',
-                onNextClick: highlightTagAssign,
-                onPopoverRender: popoverFooter('grid', onSkip)
-            }
+            title: 'Browse your collection',
+            description:
+                'Find what you need here. Filter by tag or search in the left panel to narrow down the images.',
+            showButtons: ['next'],
+            nextBtnText: 'Next',
+            onNextClick: highlightTagAssign
         });
     }
 
     function highlightTagAssign() {
         const tagAssign = visible('[data-onboarding-tag-assign]');
         if (!ref.tour || !tagAssign) return highlightMenuContent();
-        ref.stage = 'tag_assign';
-        ref.tour.highlight({
+        highlightStep({
+            stage: 'tag_assign',
             element: tagAssign,
-            popover: {
-                title: 'Tag your images',
-                description:
-                    'Click any image to select it, then type a tag name here and press Enter to tag your selection.',
-                showButtons: ['previous', 'next'],
-                nextBtnText: 'Next',
-                prevBtnText: 'Prev',
-                onNextClick: highlightMenuContent,
-                onPrevClick: highlightGrid,
-                onPopoverRender: popoverFooter('tag_assign', onSkip)
-            }
+            title: 'Tag your images',
+            description:
+                'Click any image to select it, then type a tag name here and press Enter to tag your selection.',
+            showButtons: ['previous', 'next'],
+            nextBtnText: 'Next',
+            prevBtnText: 'Prev',
+            onNextClick: highlightMenuContent,
+            onPrevClick: highlightGrid
         });
     }
 
@@ -210,43 +244,37 @@ export function createTourSteps(opts: StepsOptions) {
     function highlightEditButton() {
         const editButton = visible('[data-testid="header-editing-mode-button"]');
         if (!ref.tour || !editButton) return highlightEmbedding();
-        ref.stage = 'edit_button';
-        ref.tour.highlight({
+        highlightStep({
+            stage: 'edit_button',
             element: editButton,
-            popover: {
-                title: 'Edit annotations',
-                description:
-                    'Click Edit annotations to enter edit mode. From there you can draw bounding boxes, paint segmentation masks, and modify existing annotations directly on your images.',
-                showButtons: ['previous', 'next'],
-                nextBtnText: 'Next',
-                prevBtnText: 'Prev',
-                onNextClick: highlightEmbedding,
-                onPrevClick: highlightMenuContent,
-                onPopoverRender: popoverFooter('edit_button', onSkip)
-            }
+            title: 'Edit annotations',
+            description:
+                'Click Edit annotations to enter edit mode. From there you can draw bounding boxes, paint segmentation masks, and modify existing annotations directly on your images.',
+            showButtons: ['previous', 'next'],
+            nextBtnText: 'Next',
+            prevBtnText: 'Prev',
+            onNextClick: highlightEmbedding,
+            onPrevClick: highlightMenuContent
         });
     }
 
     function highlightEmbedding() {
         const embedButton = visible('[data-testid="side-panel-tabs-embed"]');
         if (!ref.tour || !embedButton) return highlightTile();
-        ref.stage = 'embedding';
-        ref.tour.highlight({
+        highlightStep({
+            stage: 'embedding',
             element: embedButton,
-            popover: {
-                title: 'Explore the embedding space',
-                description:
-                    'Click the Embed icon to open an interactive scatter plot. See how your images relate to each other and filter your dataset by similarity.',
-                showButtons: ['previous', 'next'],
-                nextBtnText: 'Next',
-                prevBtnText: 'Prev',
-                onNextClick: highlightTile,
-                onPrevClick: () => {
-                    const editButton = visible('[data-testid="header-editing-mode-button"]');
-                    if (editButton) highlightEditButton();
-                    else highlightMenuContent();
-                },
-                onPopoverRender: popoverFooter('embedding', onSkip)
+            title: 'Explore the embedding space',
+            description:
+                'Click the Embed icon to open an interactive scatter plot. See how your images relate to each other and filter your dataset by similarity.',
+            showButtons: ['previous', 'next'],
+            nextBtnText: 'Next',
+            prevBtnText: 'Prev',
+            onNextClick: highlightTile,
+            onPrevClick: () => {
+                const editButton = visible('[data-testid="header-editing-mode-button"]');
+                if (editButton) highlightEditButton();
+                else highlightMenuContent();
             }
         });
     }
@@ -254,31 +282,28 @@ export function createTourSteps(opts: StepsOptions) {
     function highlightTile() {
         const target = tile();
         if (!ref.tour || !target) return;
-        ref.stage = 'tile';
-        ref.tour.highlight({
+        highlightStep({
+            stage: 'tile',
             element: target,
-            popover: {
-                title: 'Open an image',
-                description:
-                    'Single-click to select for tagging, double-click to open and inspect in detail.',
-                showButtons: ['previous'],
-                prevBtnText: 'Prev',
-                onPrevClick: () => {
-                    const embedButton = visible('[data-testid="side-panel-tabs-embed"]');
-                    if (embedButton) return highlightEmbedding();
-                    const editButton = visible('[data-testid="header-editing-mode-button"]');
-                    if (editButton) return highlightEditButton();
-                    highlightMenuContent();
-                },
-                onPopoverRender: (popover) => {
-                    popoverFooter('tile', onSkip)(popover);
-                    const openBtn = document.createElement('button');
-                    openBtn.type = 'button';
-                    openBtn.textContent = 'Open sample';
-                    openBtn.className = 'driver-tour-open-btn driver-popover-footer-btn';
-                    openBtn.addEventListener('click', onOpenFirstSample);
-                    popover.footerButtons.appendChild(openBtn);
-                }
+            title: 'Open an image',
+            description:
+                'Single-click to select for tagging, double-click to open and inspect in detail.',
+            showButtons: ['previous'],
+            prevBtnText: 'Prev',
+            onPrevClick: () => {
+                const embedButton = visible('[data-testid="side-panel-tabs-embed"]');
+                if (embedButton) return highlightEmbedding();
+                const editButton = visible('[data-testid="header-editing-mode-button"]');
+                if (editButton) return highlightEditButton();
+                highlightMenuContent();
+            },
+            onFooterRender: (popover) => {
+                const openBtn = document.createElement('button');
+                openBtn.type = 'button';
+                openBtn.textContent = 'Open sample';
+                openBtn.className = 'driver-tour-open-btn driver-popover-footer-btn';
+                openBtn.addEventListener('click', onOpenFirstSample);
+                popover.footerButtons.appendChild(openBtn);
             }
         });
     }
@@ -286,19 +311,17 @@ export function createTourSteps(opts: StepsOptions) {
     function highlightDetail() {
         if (!ref.tour || !isSampleDetails() || !visible('[data-onboarding-detail]')) return;
         onStartOnboarding();
-        ref.stage = 'detail';
-        ref.tour.highlight({
+        highlightStep({
+            stage: 'detail',
             element: '[data-onboarding-detail]',
-            popover: {
-                title: 'Inspect and annotate',
-                description:
-                    'Explore the image, its annotations, and metadata. Use the arrows to walk through your collection one by one.',
-                showButtons: ['next'],
-                doneBtnText: 'Done',
-                nextBtnText: 'Done',
-                onNextClick: onFinish,
-                onPopoverRender: popoverFooter('detail', null)
-            }
+            title: 'Inspect and annotate',
+            description:
+                'Explore the image, its annotations, and metadata. Use the arrows to walk through your collection one by one.',
+            showButtons: ['next'],
+            doneBtnText: 'Done',
+            nextBtnText: 'Done',
+            onNextClick: onFinish,
+            skipFn: null
         });
     }
 

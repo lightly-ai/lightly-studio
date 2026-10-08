@@ -8,6 +8,7 @@
         Footer,
         LabelsMenu,
         MetadataFilterChips,
+        Onboarding,
         SelectionPill,
         ShowFiltersButton,
         TagsMenu
@@ -86,6 +87,7 @@
         useImageAnnotationCountsQueryKey,
         useNumericMetadataDistribution,
         usePostHog,
+        useFeatureFlags,
         useCategoricalMetadataDistribution,
         useMetadataDistributionsBySampleTags,
         useTags,
@@ -102,9 +104,7 @@
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
-    import Onboarding from '$lib/components/Onboarding/Onboarding.svelte';
     import { useOnboarding } from '$lib/hooks';
-    import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
     import { getLightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
     const { data, children } = $props();
     const {
