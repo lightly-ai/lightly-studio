@@ -6,7 +6,6 @@ import logging
 import os
 import threading
 from collections import OrderedDict
-from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -34,69 +33,31 @@ RLE_START_OFFSET = 0
 """Value to subtract from each RLE start to get a 0-based pixel index."""
 
 
-@dataclass(frozen=True)
-class FalSamModel:
-    """A SAM 3 model on fal.ai and its request quirks.
-
-    Attributes:
-        provider_id: Stable ID of the provider.
-        display_name: Human-readable name of the provider.
-        endpoint: fal.ai model endpoint, for example `fal-ai/sam-3/image-rle`.
-        supports_points: True if the endpoint handles point prompts.
-        blank_text_prompt: Text prompt to send if the prompt has no text. The endpoints
-            use a default text prompt if the field is missing.
-    """
-
-    provider_id: str
-    display_name: str
-    endpoint: str
-    supports_points: bool
-    blank_text_prompt: str
-
-
-SAM3 = FalSamModel(
-    provider_id="fal_sam3",
-    display_name="fal.ai SAM 3",
-    endpoint="fal-ai/sam-3/image-rle",
-    supports_points=True,
-    blank_text_prompt="",
-)
-# SAM 3.1 returns a full-image mask for boxes with an empty text prompt, and ignores
-# point prompts or returns noise for them.
-SAM3_1 = FalSamModel(
-    provider_id="fal_sam3_1",
-    display_name="fal.ai SAM 3.1",
-    endpoint="fal-ai/sam-3-1/image-rle",
-    supports_points=False,
-    blank_text_prompt=" ",
-)
+ENDPOINT = "fal-ai/sam-3/image-rle"
 
 
 class FalSam3Provider:
-    """Segments images with a SAM 3 model on fal.ai through the fal.ai queue API.
+    """Segments images with SAM 3 on fal.ai through the fal.ai queue API.
 
     Reads the API key from the `FAL_KEY` environment variable on each call. Uploads each
     image once and caches its URL by sample ID.
     """
 
+    provider_id = "fal_sam3"
+    display_name = "fal.ai SAM 3"
     sends_data_to_third_party = True
 
     def __init__(
         self,
-        model: FalSamModel = SAM3,
         session: requests.Session | None = None,
         polling: fal_http.PollingConfig | None = None,
     ) -> None:
         """Creates the provider.
 
         Args:
-            model: The fal.ai model to call.
             session: HTTP session for all requests. A new session is used if None.
             polling: Timing of the queue status requests. Defaults are used if None.
         """
-        self.provider_id = model.provider_id
-        self.display_name = model.display_name
-        self._model = model
         self._session = session if session is not None else requests.Session()
         self._polling = polling if polling is not None else fal_http.PollingConfig()
         self._uploader = fal_http.FalUploader(session=self._session)
@@ -107,8 +68,8 @@ class FalSam3Provider:
     def capabilities(self) -> ProviderCapabilities:
         """Returns the supported prompt types with up to 32 instances."""
         return ProviderCapabilities(
-            positive_points=self._model.supports_points,
-            negative_points=self._model.supports_points,
+            positive_points=True,
+            negative_points=True,
             boxes=True,
             text_prompt=True,
             max_instances=MAX_MASKS,
@@ -125,20 +86,14 @@ class FalSam3Provider:
         self._get_image_url(image=image, fal_key=_get_fal_key())
 
     def segment(self, image: ProviderImage, prompt: SegmentationPrompt) -> list[Prediction]:
-        """Runs the SAM 3 model on fal.ai and returns the predicted masks."""
-        if prompt.points and not self._model.supports_points:
-            raise ProviderError(f"{self.display_name} does not support point prompts.")
+        """Runs SAM 3 on fal.ai and returns the predicted masks."""
         fal_key = _get_fal_key()
         image_url = self._get_image_url(image=image, fal_key=fal_key)
         output = fal_http.run_queue_request(
             session=self._session,
             fal_key=fal_key,
-            endpoint=self._model.endpoint,
-            body=build_request_body(
-                image_url=image_url,
-                prompt=prompt,
-                blank_text_prompt=self._model.blank_text_prompt,
-            ),
+            endpoint=ENDPOINT,
+            body=build_request_body(image_url=image_url, prompt=prompt),
             polling=self._polling,
         )
         return parse_response(output=output, width=image.width, height=image.height)
@@ -164,21 +119,18 @@ class FalSam3Provider:
             return url
 
 
-def build_request_body(
-    image_url: str, prompt: SegmentationPrompt, blank_text_prompt: str = ""
-) -> dict[str, Any]:
-    """Returns the JSON input of the fal.ai SAM 3 and SAM 3.1 RLE endpoints.
+def build_request_body(image_url: str, prompt: SegmentationPrompt) -> dict[str, Any]:
+    """Returns the JSON input of the fal.ai SAM 3 RLE endpoint.
 
     Args:
         image_url: URL of the image.
-        prompt: The prompts to send.
-        blank_text_prompt: Text prompt to send if the prompt has no text, because the
-            endpoints use a default text prompt otherwise.
+        prompt: The prompts to send. Without text, an empty text prompt is sent,
+            because the endpoint uses a default text prompt otherwise.
     """
     max_masks = max(1, min(prompt.max_masks, MAX_MASKS))
     body: dict[str, Any] = {
         "image_url": image_url,
-        "prompt": prompt.text or blank_text_prompt,
+        "prompt": prompt.text or "",
         "max_masks": max_masks,
         "return_multiple_masks": max_masks > 1,
         "include_scores": True,
@@ -205,7 +157,7 @@ def build_request_body(
 
 
 def parse_response(output: dict[str, Any], width: int, height: int) -> list[Prediction]:
-    """Converts the JSON output of the SAM 3 and SAM 3.1 RLE endpoints to predictions.
+    """Converts the JSON output of the SAM 3 RLE endpoint to predictions.
 
     Args:
         output: JSON output with `rle` as a string or a list of strings, and optional

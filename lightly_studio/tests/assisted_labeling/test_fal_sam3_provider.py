@@ -19,7 +19,7 @@ CDN_UPLOAD_URL = "https://v3.fal.media/files/upload"
 IMAGE_URL = "https://v3.fal.media/files/image.jpg"
 
 
-def _make_session(rle_output: dict[str, object], submit_url: str = SUBMIT_URL) -> FakeSession:
+def _make_session(rle_output: dict[str, object]) -> FakeSession:
     return FakeSession(
         responses={
             ("POST", fal_http.CDN_TOKEN_URL): [
@@ -33,7 +33,7 @@ def _make_session(rle_output: dict[str, object], submit_url: str = SUBMIT_URL) -
                 )
             ],
             ("POST", CDN_UPLOAD_URL): [FakeResponse(json_body={"access_url": IMAGE_URL})],
-            ("POST", submit_url): [
+            ("POST", SUBMIT_URL): [
                 FakeResponse(
                     json_body={
                         "request_id": "1",
@@ -48,11 +48,8 @@ def _make_session(rle_output: dict[str, object], submit_url: str = SUBMIT_URL) -
     )
 
 
-def _make_provider(
-    session: FakeSession, model: fal_sam3_provider.FalSamModel = fal_sam3_provider.SAM3
-) -> FalSam3Provider:
+def _make_provider(session: FakeSession) -> FalSam3Provider:
     return FalSam3Provider(
-        model=model,
         session=cast(requests.Session, session),
         polling=fal_http.PollingConfig(timeout_s=10.0, interval_s=0.0),
     )
@@ -120,34 +117,6 @@ class TestFalSam3Provider:
         provider.segment(image=image, prompt=make_prompt(text="car", max_masks=5))
 
         assert len(session.calls_to(method="POST", url=CDN_UPLOAD_URL)) == 1
-
-    def test_segment__sam3_1(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("FAL_KEY", "secret")
-        submit_url = f"{fal_http.QUEUE_BASE_URL}/{fal_sam3_provider.SAM3_1.endpoint}"
-        session = _make_session(rle_output={"rle": []}, submit_url=submit_url)
-        provider = _make_provider(session=session, model=fal_sam3_provider.SAM3_1)
-        prompt = make_prompt(boxes=[BoxPrompt(x_min=0, y_min=0, x_max=2, y_max=1)])
-
-        provider.segment(image=make_image(width=4, height=2), prompt=prompt)
-
-        submit_call = session.calls_to(method="POST", url=submit_url)[0]
-        assert submit_call["json"]["prompt"] == " "
-
-    def test_segment__sam3_1_rejects_points(self) -> None:
-        provider = _make_provider(session=FakeSession(responses={}), model=fal_sam3_provider.SAM3_1)
-        prompt = make_prompt(points=[PointPrompt(x=1, y=0, positive=True)])
-
-        with pytest.raises(ProviderError, match="does not support point prompts"):
-            provider.segment(image=make_image(width=4, height=2), prompt=prompt)
-
-    def test_capabilities__sam3_1(self) -> None:
-        provider = _make_provider(session=FakeSession(responses={}), model=fal_sam3_provider.SAM3_1)
-
-        capabilities = provider.capabilities()
-
-        assert not capabilities.positive_points
-        assert not capabilities.negative_points
-        assert capabilities.boxes
 
 
 class TestBuildRequestBody:

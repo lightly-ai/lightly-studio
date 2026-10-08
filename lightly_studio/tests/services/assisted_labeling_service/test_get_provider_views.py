@@ -33,8 +33,6 @@ def test_list_provider_views() -> None:
 
     assert [view.provider_id for view in views] == [
         "fal_sam3",
-        "fal_sam3_1",
-        "openai_astra",
         "fake",
     ]
     assert views[0].sends_data_to_third_party is True

@@ -47,8 +47,6 @@ def test_list_assisted_labeling_providers(test_client: TestClient) -> None:
     assert response.status_code == HTTP_STATUS_OK
     assert [provider["provider_id"] for provider in response.json()] == [
         "fal_sam3",
-        "fal_sam3_1",
-        "openai_astra",
         "fake",
     ]
 

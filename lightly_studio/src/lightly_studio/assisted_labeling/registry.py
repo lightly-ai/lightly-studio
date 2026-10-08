@@ -2,23 +2,15 @@
 
 from __future__ import annotations
 
-from lightly_studio.assisted_labeling import fal_sam3_provider
 from lightly_studio.assisted_labeling.fake_provider import FakeProvider
 from lightly_studio.assisted_labeling.fal_sam3_provider import FalSam3Provider
-from lightly_studio.assisted_labeling.openai_astra_provider import OpenAIAstraProvider
 from lightly_studio.assisted_labeling.provider import AssistedLabelingProvider
 
 DEFAULT_PROVIDER_ID = "fal_sam3"
 
 # The providers are singletons, so that caches like uploaded image URLs persist.
 _PROVIDERS: dict[str, AssistedLabelingProvider] = {
-    provider.provider_id: provider
-    for provider in (
-        FalSam3Provider(model=fal_sam3_provider.SAM3),
-        FalSam3Provider(model=fal_sam3_provider.SAM3_1),
-        OpenAIAstraProvider(),
-        FakeProvider(),
-    )
+    provider.provider_id: provider for provider in (FalSam3Provider(), FakeProvider())
 }
 
 
