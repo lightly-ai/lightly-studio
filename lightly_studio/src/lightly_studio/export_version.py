@@ -28,9 +28,9 @@ class VersionInfo(TypedDict):
 def get_version_info() -> VersionInfo:
     """Retrieve version information of LightlyStudio."""
     version = metadata.version("lightly-studio")
-    head_sha = _rev_parse("HEAD")
+    head_sha = _rev_parse(rev="HEAD")
     # Release tags are annotated. "^{commit}" gets the tagged commit, not the tag object.
-    tag_sha = _rev_parse(f"v{version}^{{commit}}")
+    tag_sha = _rev_parse(rev=f"v{version}^{{commit}}")
 
     return VersionInfo(
         version=version,
