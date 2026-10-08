@@ -494,14 +494,14 @@ def annotation_tags_assigned(
     """Create two tags in the first annotation collection and assign them to its annotations."""
     annotation_collection_id = annotations_test_data.collections[0].children[0].collection_id
     annotations_all = annotation_resolver.get_all(
-        db_session,
+        session=db_session,
         filters=AnnotationsFilter(collection_ids=[annotation_collection_id]),
     ).annotations
 
     tags = [
         tag_resolver.create(
-            db_session,
-            TagCreate(
+            session=db_session,
+            tag=TagCreate(
                 collection_id=annotation_collection_id,
                 name=f"Test Annotation Tag {i}",
                 kind="annotation",
