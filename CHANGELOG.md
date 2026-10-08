@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The GUI footer no longer shows a dev commit hash for released versions.
+
 ### Security
 
 ## \[1.1.3\] - 2026-10-07
