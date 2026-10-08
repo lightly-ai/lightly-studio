@@ -38,6 +38,18 @@ describe('getMenuItem', () => {
         expect(item).toBeNull();
     });
 
+    it('GROUP returns null when the root dataset is a SEQUENCE (MCAP recording)', () => {
+        const item = getMenuItem(
+            'dataset-id',
+            undefined,
+            'col-id',
+            SampleType.GROUP,
+            undefined,
+            SampleType.SEQUENCE
+        );
+        expect(item).toBeNull();
+    });
+
     it('SEQUENCE returns a point-clouds menu item', () => {
         const item = getMenuItem('dataset-id', undefined, 'col-id', SampleType.SEQUENCE);
         if (!item) throw new Error('expected a menu item');

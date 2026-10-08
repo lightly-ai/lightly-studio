@@ -21,7 +21,8 @@ export function getMenuItem(
     currentCollectionId: string | undefined,
     collectionId: string,
     sampleType: SampleType,
-    groupComponentName?: string | null
+    groupComponentName?: string | null,
+    rootSampleType?: SampleType
 ): NavigationMenuItem | null {
     const collectionType = sampleType.toLowerCase();
     const isSelected = collectionId === currentCollectionId;
@@ -69,6 +70,7 @@ export function getMenuItem(
                 icon: WholeWord
             };
         case SampleType.GROUP:
+            if (rootSampleType === SampleType.SEQUENCE) return null;
             return {
                 title: groupComponentName || 'Groups',
                 id: elementId,
@@ -154,7 +156,8 @@ export function buildBreadcrumbLevels(
             // For annotation collections, show the collection name to distinguish them if there are several; otherwise, use the group component name or a generic title.
             c.sample_type === SampleType.ANNOTATION && hasSeveralAnnotationCollections
                 ? c.name
-                : c.group_component_definition?.group_component_name
+                : c.group_component_definition?.group_component_name,
+            rootCollection.sample_type
         );
     const isNavigationMenuItem = (item: NavigationMenuItem | null): item is NavigationMenuItem =>
         item !== null;
