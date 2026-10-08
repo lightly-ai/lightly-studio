@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, FiniteFloat
 
 
 class ProjectionAxes(BaseModel):
@@ -13,5 +13,5 @@ class ProjectionAxes(BaseModel):
     that plot, so both use the same coordinates.
     """
 
-    x: list[float] = Field(min_length=1, description="X axis direction in embedding space")
-    y: list[float] = Field(min_length=1, description="Y axis direction in embedding space")
+    x: list[FiniteFloat] = Field(min_length=1, description="X axis direction in embedding space")
+    y: list[FiniteFloat] = Field(min_length=1, description="Y axis direction in embedding space")

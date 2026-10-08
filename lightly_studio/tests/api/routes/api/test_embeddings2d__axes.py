@@ -67,6 +67,29 @@ def test_get_embeddings2d__axes__invalid(
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("axis", ["x", "y"])
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity"])
+def test_get_embeddings2d__axes__non_finite(
+    test_client: TestClient,
+    db_session: Session,
+    axis: str,
+    value: str,
+) -> None:
+    collection_id, _ = _create_samples(session=db_session)
+    axes: dict[str, list[float | str]] = {"x": [1.0, 0.0, 0.0], "y": [0.0, 1.0, 0.0]}
+    axes[axis][0] = value
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={"filters": {}, "axes": axes},
+    )
+
+    assert response.status_code == 422
+    error = response.json()["detail"][0]
+    assert error["type"] == "finite_number"
+    assert error["loc"] == ["body", "axes", axis, 0]
+
+
 def test_get_embeddings2d__axes__dimension_mismatch(
     test_client: TestClient,
     db_session: Session,
