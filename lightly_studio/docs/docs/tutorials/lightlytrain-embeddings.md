@@ -194,6 +194,7 @@ from lightly_studio.embed import image_crop_embedding, image_embedding
 from lightly_studio.embed.image_embedding import EmbeddingContext
 from lightly_studio import EmbeddingResult
 from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
@@ -213,7 +214,9 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
-class LightlyTrainEmbedder(ImagePathEmbedder, ImageCropPathEmbedder, ImagePILEmbedder):
+class LightlyTrainEmbedder(
+    ImagePathEmbedder, ImageCropPathEmbedder, ImagePILEmbedder, ImageBytesEmbedder
+):
     """Run a model exported from LightlyTrain to embed images on the fly.
 
     The model is vision-only, so this embedder does not subclass ``TextEmbedder``
@@ -263,6 +266,11 @@ class LightlyTrainEmbedder(ImagePathEmbedder, ImageCropPathEmbedder, ImagePILEmb
 
     def embed_images_pil(self, images: list[Image.Image]) -> EmbeddingResult:
         return image_embedding.embed_pil_images_batched(
+            images=images, context=self._context(), show_progress=False
+        )
+
+    def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:
+        return image_embedding.embed_image_bytes_batched(
             images=images, context=self._context(), show_progress=False
         )
 
