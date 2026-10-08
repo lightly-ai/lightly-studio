@@ -1,4 +1,5 @@
 import { SampleType } from '$lib/api/lightly_studio_local';
+import { fetchCollectionHierarchy } from '$lib/utils';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params, url, parent }) => {
@@ -14,8 +15,19 @@ export const load: PageLoad = async ({ params, url, parent }) => {
                   (candidate) => candidate.collection_id === collection.parent_collection_id
               ) ?? collection)
             : collection;
+    // The collection layout skips loading the hierarchy when this is the root collection.
+    // Point-cloud annotation sources are children of the MCAP GROUP collection.
+    const hierarchy =
+        collection.sample_type === SampleType.GROUP || collectionHierarchy.length > 0
+            ? collectionHierarchy
+            : await fetchCollectionHierarchy(collection.collection_id);
+    const annotationSourceCollection =
+        collection.sample_type === SampleType.GROUP
+            ? collection
+            : hierarchy.find((candidate) => candidate.sample_type === SampleType.GROUP);
     return {
         datasetId: collection.dataset_id,
+        annotationSourceCollectionId: annotationSourceCollection?.collection_id,
         collectionName: breadcrumbCollection.name,
         collectionType: breadcrumbCollection.sample_type,
         collectionId: breadcrumbCollection.collection_id,

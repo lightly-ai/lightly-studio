@@ -22,7 +22,8 @@
         tags: ['autodocs'],
         parameters: { layout: 'padded' },
         args: {
-            annotation: baseAnnotation
+            annotation: baseAnnotation,
+            annotationSourceName: 'Ground Truth'
         }
     });
 </script>
