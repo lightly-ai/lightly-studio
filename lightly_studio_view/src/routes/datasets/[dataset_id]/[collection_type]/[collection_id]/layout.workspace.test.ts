@@ -179,7 +179,26 @@ vi.mock('$lib/hooks', () => ({
     useTags: vi.fn(() => ({
         tags: writable([{ tag_id: 'tag-a', name: 'Reviewed' }]),
         tagsSelected: writable(new Set())
-    }))
+    })),
+    useOnboarding: vi.fn(() => ({
+        state: writable('unseen'),
+        invite: vi.fn(() => false),
+        start: vi.fn(),
+        openingSample: vi.fn(),
+        dismiss: vi.fn(),
+        complete: vi.fn(),
+        replay: vi.fn(),
+        requestReplay: vi.fn(),
+        replayRequested: writable(0),
+        registerOpenFirstSampleHandler: vi.fn(() => vi.fn()),
+        dispatchOpenFirstSample: vi.fn(),
+        registerOpeningSampleHandler: vi.fn(() => vi.fn()),
+        dispatchOpeningSample: vi.fn()
+    })),
+    TOUR_VERSION: 1
+}));
+vi.mock('$lib/components/Onboarding/Onboarding.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({
     useSelectAll: vi.fn(() => ({ handleSelectAll: vi.fn() }))

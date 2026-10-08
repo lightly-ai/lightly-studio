@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { Button } from '$lib/components/ui/button';
+
     interface Props {
         onStart: () => void;
         onDismiss: () => void;
@@ -16,17 +18,13 @@
         Take a short tour of the image grid and sample details.
     </p>
     <div class="mt-4 flex justify-end gap-2">
-        <button type="button" class="rounded px-3 py-1 text-sm" onclick={onDismiss}>Dismiss</button>
-        <button
-            type="button"
-            class="start-btn rounded bg-primary px-3 py-1 text-sm text-primary-foreground"
-            onclick={onStart}>Start</button
-        >
+        <Button variant="ghost" size="sm" onclick={onDismiss}>Dismiss</Button>
+        <Button size="sm" class="invitation-start" onclick={onStart}>Start</Button>
     </div>
 </aside>
 
 <style>
-    .start-btn {
+    :global(.invitation-start) {
         animation: ring-pulse 1.5s ease-out infinite;
     }
 

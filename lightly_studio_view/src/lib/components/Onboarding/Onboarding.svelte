@@ -1,11 +1,10 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
-    import { usePostHog } from '$lib/hooks';
-    import { TOUR_VERSION, useOnboarding } from '$lib/hooks/useOnboarding/useOnboarding';
+    import { usePostHog, useOnboarding, TOUR_VERSION } from '$lib/hooks';
     import { get } from 'svelte/store';
     import { onDestroy, onMount } from 'svelte';
-    import type { Driver, PopoverDOM } from 'driver.js';
+    import { type TourRef, tileElement, visible, createTourSteps } from './Onboarding.steps';
     import Invitation from './Invitation.svelte';
 
     interface Props {
@@ -23,11 +22,6 @@
         datasetId: string;
         /** Number of samples in the collection; used to gate the tour invitation. */
         sampleCount: number;
-        /**
-         * Monotonically-incrementing counter. Incrementing it triggers a tour
-         * replay without needing a separate callback prop.
-         */
-        replayRequest: number;
     }
 
     let {
@@ -37,22 +31,17 @@
         collectionId,
         collectionType,
         datasetId,
-        sampleCount,
-        replayRequest
+        sampleCount
     }: Props = $props();
 
     const onboarding = useOnboarding();
     const { state } = onboarding;
     const { ready, trackEvent } = usePostHog();
-    const STEP_COUNT = 5;
 
-    let tour: Driver | undefined;
-    let menuHighlightCleanup: (() => void) | null = null;
-    let stage: 'grid' | 'menu' | 'tag_assign' | 'tile' | 'detail' | null = null;
+    const ref: TourRef = { tour: undefined, stage: null, menuHighlightCleanup: null };
     let trackingReady = false;
     let checkingEligibility = false;
     let suppressDismiss = false;
-    let replaySeen = 0;
     let loadingDetail = false;
     let activeCollectionId: string | null = null;
 
@@ -67,39 +56,8 @@
 
     const skipTour = () => dismiss('skip_button');
 
-    function popoverFooter(stepIndex: number, skipFn: (() => void) | null) {
-        return ({ footerButtons }: Pick<PopoverDOM, 'footerButtons'>) => {
-            const dots = document.createElement('div');
-            dots.className = 'driver-tour-dots';
-            for (let i = 1; i <= STEP_COUNT; i++) {
-                const dot = document.createElement('span');
-                dot.className = `driver-tour-dot${i === stepIndex ? ' driver-tour-dot--active' : ''}`;
-                dots.appendChild(dot);
-            }
-            footerButtons.before(dots);
-
-            if (skipFn) {
-                const skip = document.createElement('button');
-                skip.type = 'button';
-                skip.textContent = 'Skip tour';
-                skip.className = 'driver-popover-footer-btn driver-tour-skip-btn';
-                skip.addEventListener('click', skipFn);
-                footerButtons.before(skip);
-            }
-        };
-    }
-
-    function visible(selector: string): Element | null {
-        const element = document.querySelector(selector);
-        return element?.getClientRects().length ? element : null;
-    }
-
-    function tile(): Element | null {
-        return visible('[data-testid="images-grid"] [data-testid="sample-grid-item"]');
-    }
-
     function eligible(): boolean {
-        return enabled && isImages && sampleCount > 0 && !!tile();
+        return enabled && isImages && sampleCount > 0 && !!tileElement();
     }
 
     async function offerInvitation() {
@@ -112,192 +70,47 @@
         }
     }
 
-    function cleanupMenuHighlight() {
-        menuHighlightCleanup?.();
-        menuHighlightCleanup = null;
-    }
-
     function dismiss(dismissalStage: string) {
         if (get(state) === 'finished' || get(state) === 'unseen') return;
-        cleanupMenuHighlight();
+        steps.cleanupMenuHighlight();
         track('onboarding_dismissed', { dismissal_stage: dismissalStage });
         onboarding.dismiss();
-        stage = null;
-        tour?.destroy();
-        tour = undefined;
+        ref.stage = null;
+        ref.tour?.destroy();
+        ref.tour = undefined;
     }
 
     function finish() {
-        cleanupMenuHighlight();
+        steps.cleanupMenuHighlight();
         track('onboarding_completed');
         onboarding.complete();
-        stage = null;
-        tour?.destroy();
-        tour = undefined;
+        ref.stage = null;
+        ref.tour?.destroy();
+        ref.tour = undefined;
     }
 
-    function highlightGrid() {
-        if (!tour || !eligible()) return;
-        stage = 'grid';
-        tour.highlight({
-            element: '[data-testid="images-grid"]',
-            popover: {
-                title: 'Browse your collection',
-                description:
-                    'Find what you need here. Filter by tag or search in the left panel to narrow down the images.',
-                showButtons: ['next'],
-                nextBtnText: 'Next',
-                onNextClick: highlightTagAssign,
-                onPopoverRender: popoverFooter(1, skipTour)
-            }
-        });
-    }
-
-    function openMenuDropdown(el: HTMLElement) {
-        el.dispatchEvent(
-            new PointerEvent('pointerdown', {
-                bubbles: true,
-                cancelable: true,
-                isPrimary: true,
-                button: 0,
-                pointerType: 'mouse'
-            })
-        );
-    }
-
-    function highlightTagAssign() {
-        const tagAssign = visible('[data-onboarding-tag-assign]');
-        if (!tour || !tagAssign) return highlightMenuContent();
-        stage = 'tag_assign';
-        tour.highlight({
-            element: tagAssign,
-            popover: {
-                title: 'Label your images',
-                description:
-                    'Click any image to select it, then type a tag name here and press Enter to label your selection.',
-                showButtons: ['previous', 'next'],
-                nextBtnText: 'Next',
-                prevBtnText: 'Prev',
-                onNextClick: highlightMenuContent,
-                onPrevClick: highlightGrid,
-                onPopoverRender: popoverFooter(2, skipTour)
-            }
-        });
-    }
-
-    function highlightMenuContent() {
-        const menuButton = visible('[data-testid="menu-trigger"]');
-        if (!tour || !menuButton) return highlightTile();
-        stage = 'menu';
-
-        openMenuDropdown(menuButton as HTMLElement);
-
-        const observer = new MutationObserver(() => {
-            if (!tour || stage !== 'menu') {
-                observer.disconnect();
-                return;
-            }
-
-            const content = visible('[data-select-content]');
-            if (!content) return;
-
-            observer.disconnect();
-
-            // Lift the portal above driver.js's overlay (z-index 10000)
-            const zStyle = document.createElement('style');
-            zStyle.textContent = '[data-select-content]{z-index:10001!important;}';
-            document.head.appendChild(zStyle);
-
-            menuHighlightCleanup = () => zStyle.remove();
-
-            tour?.highlight({
-                element: content,
-                popover: {
-                    title: 'Run actions on your data',
-                    description:
-                        'Sample a representative subset, export your data, or split the dataset - all from this menu.',
-                    showButtons: ['previous', 'next'],
-                    nextBtnText: 'Next',
-                    prevBtnText: 'Prev',
-                    onNextClick: () => {
-                        cleanupMenuHighlight();
-                        // Transition driver.js to the new element BEFORE removing the
-                        // portal from the DOM — prevents onDestroyed firing mid-tour.
-                        highlightTile();
-                        openMenuDropdown(menuButton as HTMLElement);
-                    },
-                    onPrevClick: () => {
-                        cleanupMenuHighlight();
-                        highlightTagAssign();
-                        openMenuDropdown(menuButton as HTMLElement);
-                    },
-                    onPopoverRender: popoverFooter(3, skipTour)
-                }
-            });
-        });
-
-        menuHighlightCleanup = () => observer.disconnect();
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    function highlightTile() {
-        const target = tile();
-        if (!tour || !target) return;
-        stage = 'tile';
-        tour.highlight({
-            element: target,
-            popover: {
-                title: 'Open an image',
-                description:
-                    'Single-click to select for tagging, double-click to open and inspect in detail.',
-                showButtons: ['previous'],
-                prevBtnText: 'Prev',
-                onPrevClick: highlightMenuContent,
-                onPopoverRender: (popover) => {
-                    popoverFooter(4, skipTour)(popover);
-                    const openBtn = document.createElement('button');
-                    openBtn.type = 'button';
-                    openBtn.textContent = 'Open sample';
-                    openBtn.className = 'driver-tour-open-btn driver-popover-footer-btn';
-                    openBtn.addEventListener('click', () => {
-                        window.dispatchEvent(new CustomEvent('onboarding:open-first-sample'));
-                    });
-                    popover.footerButtons.appendChild(openBtn);
-                }
-            }
-        });
-    }
-
-    function highlightDetail() {
-        if (!tour || !isSampleDetails || !visible('[data-onboarding-detail]')) return;
-        onboarding.start();
-        stage = 'detail';
-        tour.highlight({
-            element: '[data-onboarding-detail]',
-            popover: {
-                title: 'Inspect and annotate',
-                description:
-                    'Explore the image, its annotations, and metadata. Use the arrows to walk through your collection one by one.',
-                showButtons: ['next'],
-                doneBtnText: 'Done',
-                nextBtnText: 'Done',
-                onNextClick: finish,
-                onPopoverRender: popoverFooter(5, null)
-            }
-        });
-    }
+    const steps = createTourSteps({
+        ref,
+        eligible,
+        tile: tileElement,
+        isSampleDetails: () => isSampleDetails,
+        onSkip: skipTour,
+        onFinish: finish,
+        onStartOnboarding: onboarding.start,
+        onOpenFirstSample: onboarding.dispatchOpenFirstSample
+    });
 
     async function loadTour() {
         await import('driver.js/dist/driver.css');
         const { driver } = await import('driver.js');
-        tour = driver({
+        ref.tour = driver({
             animate: true,
             stagePadding: 2,
             allowClose: true,
             overlayOpacity: 0.85,
-            overlayClickBehavior: () => dismiss(stage ?? 'grid'),
+            overlayClickBehavior: () => dismiss(ref.stage ?? 'grid'),
             onDestroyed: () => {
-                if (!suppressDismiss && get(state) === 'running') dismiss(stage ?? 'grid');
+                if (!suppressDismiss && get(state) === 'running') dismiss(ref.stage ?? 'grid');
             }
         });
     }
@@ -306,13 +119,14 @@
         onboarding.start();
         track('onboarding_started');
         await loadTour();
-        if (get(state) === 'running') highlightGrid();
-        else tour?.destroy();
+        if (get(state) === 'running') steps.highlightGrid();
+        else ref.tour?.destroy();
     }
 
     async function replay() {
         if (!enabled) return;
-        dismiss(stage ?? 'invitation');
+        // Skip dismiss when there is no active session to clean up.
+        if (get(state) !== 'unseen') dismiss(ref.stage ?? 'invitation');
         onboarding.replay();
         track('onboarding_replayed');
         if (!isImages) {
@@ -322,24 +136,23 @@
         update();
     }
 
-    function handoff(event: Event) {
-        const detail = (event as CustomEvent<{ collectionId: string }>).detail;
-        if (detail.collectionId !== collectionId || stage !== 'tile') return;
+    function handoff(handoffCollectionId: string) {
+        if (handoffCollectionId !== collectionId || ref.stage !== 'tile') return;
         suppressDismiss = true;
         onboarding.openingSample();
-        tour?.destroy();
-        tour = undefined;
-        stage = null;
+        ref.tour?.destroy();
+        ref.tour = undefined;
+        ref.stage = null;
         suppressDismiss = false;
     }
 
     function update() {
         if (activeCollectionId !== null && collectionId !== activeCollectionId) {
-            dismiss(stage ?? 'navigation');
+            dismiss(ref.stage ?? 'navigation');
         }
         activeCollectionId = collectionId;
         if (get(state) === 'unseen') void offerInvitation();
-        if (get(state) === 'running' && !stage && isImages && tile()) highlightGrid();
+        if (get(state) === 'running' && !ref.stage && isImages && tileElement()) steps.highlightGrid();
         if (
             get(state) === 'opening_sample' &&
             isSampleDetails &&
@@ -348,22 +161,31 @@
         ) {
             loadingDetail = true;
             void loadTour()
-                .then(highlightDetail)
+                .then(steps.highlightDetail)
                 .finally(() => {
                     loadingDetail = false;
                 });
         }
-        if (get(state) === 'running' && !isImages && stage !== 'detail') dismiss('navigation');
+        if (get(state) === 'running' && !isImages && ref.stage !== 'detail') dismiss('navigation');
     }
 
+    let replaySeen = 0;
+
     onMount(() => {
-        const observer = new MutationObserver(update);
-        observer.observe(document.body, { childList: true, subtree: true });
-        window.addEventListener('onboarding:opening-sample', handoff);
+        const domObserver = new MutationObserver(update);
+        domObserver.observe(document.body, { childList: true, subtree: true });
+        const unregisterHandoff = onboarding.registerOpeningSampleHandler(handoff);
+        const unsubscribeReplay = onboarding.replayRequested.subscribe((n) => {
+            if (n > replaySeen) {
+                replaySeen = n;
+                void replay();
+            }
+        });
         update();
         return () => {
-            observer.disconnect();
-            window.removeEventListener('onboarding:opening-sample', handoff);
+            domObserver.disconnect();
+            unregisterHandoff();
+            unsubscribeReplay();
         };
     });
 
@@ -372,10 +194,7 @@
         void isImages;
         void isSampleDetails;
         void collectionId;
-        if (replayRequest > replaySeen) {
-            replaySeen = replayRequest;
-            void replay();
-        } else if (typeof document !== 'undefined') {
+        if (typeof document !== 'undefined') {
             queueMicrotask(update);
         }
     });

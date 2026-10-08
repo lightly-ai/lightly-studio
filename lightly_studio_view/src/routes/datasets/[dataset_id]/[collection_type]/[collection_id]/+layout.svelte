@@ -103,6 +103,7 @@
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
     import Onboarding from '$lib/components/Onboarding/Onboarding.svelte';
+    import { useOnboarding } from '$lib/hooks';
     import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
     import { getLightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
     const { data, children } = $props();
@@ -114,7 +115,6 @@
     const { trackEvent } = usePostHog();
     const { featureFlags, ready: featureFlagsReady } = useFeatureFlags();
     let featuresLoaded = $state(false);
-    let replayRequest = $state(0);
     const onboardingEnabled = $derived(
         featuresLoaded &&
             $featureFlags.includes('onboarding') &&
@@ -950,7 +950,7 @@
 </script>
 
 <div class="flex-none">
-    <Header {collection} showTour={onboardingEnabled} onShowTour={() => replayRequest++} />
+    <Header {collection} showTour={onboardingEnabled} onShowTour={() => useOnboarding().requestReplay()} />
     <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
@@ -963,7 +963,6 @@
         collectionType={page.params.collection_type!}
         {datasetId}
         sampleCount={collection.total_sample_count}
-        {replayRequest}
     />
     {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails}
         {@render children()}

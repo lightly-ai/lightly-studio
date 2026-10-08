@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+    import { useOnboarding } from '$lib/hooks';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import {
         useMetadataFilters,
@@ -143,8 +144,7 @@
             const firstSample = samples[0];
             if (firstSample) handleOnDoubleClick(firstSample.sample_id);
         }
-        window.addEventListener('onboarding:open-first-sample', handleOpenFirstSample);
-        return () => window.removeEventListener('onboarding:open-first-sample', handleOpenFirstSample);
+        return useOnboarding().registerOpenFirstSampleHandler(handleOpenFirstSample);
     });
 
     const confusionCell = $derived(
@@ -201,11 +201,7 @@
 
     function handleOnDoubleClick(sampleId: string) {
         if (datasetId && collectionType) {
-            window.dispatchEvent(
-                new CustomEvent('onboarding:opening-sample', {
-                    detail: { collectionId: collection_id }
-                })
-            );
+            useOnboarding().dispatchOpeningSample(collection_id);
             goto(
                 routeHelpers.toSample({
                     sampleId,
