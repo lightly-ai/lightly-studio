@@ -54,7 +54,7 @@ make static-checks
 make test
 ```
 
-For `lightly_studio` backend, tests need the frontend to be built. If not built previously,
+For `lightly_studio` backend, tests need a frontend build. If not built previously,
 run `make build-lightly_studio_view` (or `make test`).
 
 ### The uv Workspace
