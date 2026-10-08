@@ -45,6 +45,7 @@ from uuid import UUID
 import numpy as np
 import pgvector.psycopg
 import pyarrow as pa
+from lightly_studio_serve.embedder import ImagePathEmbedder
 from numpy.typing import NDArray
 from PIL import Image
 from sqlmodel import Session
@@ -55,7 +56,6 @@ from lightly_studio import enterprise
 from lightly_studio.api.server import Server
 from lightly_studio.database import db_manager
 from lightly_studio.embed import default_embedder
-from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
@@ -386,7 +386,7 @@ def _resolve_embedding_model(session: Session, collection_id: UUID) -> tuple[UUI
     resolved = default_embedder.resolve_default_embedder(
         session=session,
         collection_id=collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        embedder_type=ImagePathEmbedder,
     )
     if resolved is not None:
         _embedder, model_id = resolved

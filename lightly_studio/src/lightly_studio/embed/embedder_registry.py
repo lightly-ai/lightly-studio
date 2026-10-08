@@ -14,6 +14,7 @@ import logging
 import threading
 import time
 from collections.abc import Set
+from typing import TypeVar
 from uuid import UUID
 
 from lightly_studio_serve.embedder import (
@@ -34,6 +35,8 @@ from lightly_studio.embed.remote.errors import RemoteEmbedderCapabilityError, Re
 
 logger = logging.getLogger(__name__)
 
+_EmbedderT = TypeVar("_EmbedderT", bound=Embedder)
+
 _CAPABILITY_TO_TYPE = {
     Capability.IMAGE_PATH: ImagePathEmbedder,
     Capability.IMAGE_CROP_PATH: ImageCropPathEmbedder,
@@ -42,6 +45,7 @@ _CAPABILITY_TO_TYPE = {
     Capability.TEXT: TextEmbedder,
     Capability.IMAGE_BYTES: ImageBytesEmbedder,
 }
+_TYPE_TO_CAPABILITY = {cls: capability for capability, cls in _CAPABILITY_TO_TYPE.items()}
 _MOBILECLIP_SPACE_KEY = "mobileclip_s0"
 _PERCEPTION_ENCODER_SPACE_KEY = "PE-Core-T16-384"
 # How long a configuration that could not be built is remembered as unusable.
@@ -137,57 +141,76 @@ class EmbedderRegistry:
                 bootstrap_for=bootstrap_for,
             )
 
+    def get_embedder(
+        self,
+        embedder_type: type[_EmbedderT],
+        space_key: str | None = None,
+        config: EmbedderConfig | None = None,
+    ) -> _EmbedderT | None:
+        """Get the space's embedder if it is an instance of ``embedder_type``, else None.
+
+        Args:
+            embedder_type: The embedder interface of the needed capability, such as
+                ``TextEmbedder``.
+            space_key: The space to get the embedder of. None selects the bootstrap space
+                of the capability.
+            config: The stored configuration of the space, None when there is none.
+
+        Returns:
+            The embedder of the space, or None if no source has one with the capability.
+
+        Raises:
+            ValueError: If ``embedder_type`` is not the interface of a capability.
+        """
+        capability = _TYPE_TO_CAPABILITY.get(embedder_type)
+        if capability is None:
+            raise ValueError(f"{embedder_type.__name__!r} is not an embedder capability type.")
+        embedder = self._resolve(space_key=space_key, capability=capability, config=config)
+        return embedder if isinstance(embedder, embedder_type) else None
+
     def get_image_path_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
     ) -> ImagePathEmbedder | None:
         """Get the space's embedder if it embeds images by path, else None."""
-        embedder = self._resolve(
-            space_key=space_key, capability=Capability.IMAGE_PATH, config=config
+        return self.get_embedder(
+            embedder_type=ImagePathEmbedder, space_key=space_key, config=config
         )
-        return embedder if isinstance(embedder, ImagePathEmbedder) else None
 
     def get_image_crop_path_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
     ) -> ImageCropPathEmbedder | None:
         """Get the space's embedder if it embeds image crops by path, else None."""
-        embedder = self._resolve(
-            space_key=space_key, capability=Capability.IMAGE_CROP_PATH, config=config
+        return self.get_embedder(
+            embedder_type=ImageCropPathEmbedder, space_key=space_key, config=config
         )
-        return embedder if isinstance(embedder, ImageCropPathEmbedder) else None
 
     def get_video_path_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
     ) -> VideoPathEmbedder | None:
         """Get the space's embedder if it embeds videos by path, else None."""
-        embedder = self._resolve(
-            space_key=space_key, capability=Capability.VIDEO_PATH, config=config
+        return self.get_embedder(
+            embedder_type=VideoPathEmbedder, space_key=space_key, config=config
         )
-        return embedder if isinstance(embedder, VideoPathEmbedder) else None
 
     def get_image_pil_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
     ) -> ImagePILEmbedder | None:
         """Get the space's embedder if it embeds PIL images, else None."""
-        embedder = self._resolve(
-            space_key=space_key, capability=Capability.IMAGE_PIL, config=config
-        )
-        return embedder if isinstance(embedder, ImagePILEmbedder) else None
+        return self.get_embedder(embedder_type=ImagePILEmbedder, space_key=space_key, config=config)
 
     def get_text_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
     ) -> TextEmbedder | None:
         """Get the space's embedder if it embeds text, else None."""
-        embedder = self._resolve(space_key=space_key, capability=Capability.TEXT, config=config)
-        return embedder if isinstance(embedder, TextEmbedder) else None
+        return self.get_embedder(embedder_type=TextEmbedder, space_key=space_key, config=config)
 
     def get_image_bytes_embedder(
         self, space_key: str | None = None, config: EmbedderConfig | None = None
     ) -> ImageBytesEmbedder | None:
         """Get the space's embedder if it embeds images by bytes, else None."""
-        embedder = self._resolve(
-            space_key=space_key, capability=Capability.IMAGE_BYTES, config=config
+        return self.get_embedder(
+            embedder_type=ImageBytesEmbedder, space_key=space_key, config=config
         )
-        return embedder if isinstance(embedder, ImageBytesEmbedder) else None
 
     def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
         """Get whether the embedding server of the configuration failed inside the retry window.

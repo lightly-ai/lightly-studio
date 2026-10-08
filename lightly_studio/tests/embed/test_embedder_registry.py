@@ -231,6 +231,20 @@ class TestEmbedderRegistry:
         assert first.get_image_path_embedder() is custom
         assert second.get_image_path_embedder() is builtin
 
+    def test_get_embedder(self) -> None:
+        registry = EmbedderRegistry()
+        embedder = _FakeTextImageEmbedder(space_key="space-a")
+        registry.register(embedder=embedder)
+
+        assert registry.get_embedder(embedder_type=TextEmbedder, space_key="space-a") is embedder
+        assert registry.get_embedder(embedder_type=VideoPathEmbedder, space_key="space-a") is None
+
+    def test_get_embedder__not_a_capability_type(self) -> None:
+        registry = EmbedderRegistry()
+
+        with pytest.raises(ValueError, match=r"'Embedder' is not an embedder capability type"):
+            registry.get_embedder(embedder_type=Embedder)
+
     def test_get_text_embedder__missing(self) -> None:
         registry = EmbedderRegistry()
 
