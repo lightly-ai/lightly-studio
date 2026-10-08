@@ -28,7 +28,7 @@ const createAnnotation = (overrides: Partial<AnnotationView> = {}): AnnotationVi
 describe('tickAnnotationsToCuboids', () => {
     it('maps every cuboid in the tick', () => {
         const annotations = [
-            createAnnotation({ object_track_id: 'track-1' }),
+            createAnnotation({ object_track_id: 'track-1', object_track_number: 7 }),
             createAnnotation({
                 sample_id: 'annotation-2',
                 cuboid_3d_details: { ...createAnnotation().cuboid_3d_details!, frame_id: 'lidar' }
@@ -48,6 +48,8 @@ describe('tickAnnotationsToCuboids', () => {
                 annotationClassId: 'car',
                 annotationSourceId: 'source-1',
                 trackId: 'track-1',
+                trackNumber: 7,
+                parentTrackNumber: null,
                 keyframeId: null,
                 center: [1, 2, 3],
                 size: [4, 5, 6],
@@ -64,12 +66,30 @@ describe('tickAnnotationsToCuboids', () => {
                 annotationClassId: 'car',
                 annotationSourceId: 'source-1',
                 trackId: null,
+                trackNumber: null,
+                parentTrackNumber: null,
                 keyframeId: null,
                 center: [1, 2, 3],
                 size: [4, 5, 6],
                 rotation: [0, 0, 0, 1]
             }
         ]);
+    });
+
+    it('maps parentTrackNumber from parent_object_track_number', () => {
+        const annotations = [
+            createAnnotation({ object_track_id: 'track-2', parent_object_track_number: 3 }),
+            createAnnotation({ sample_id: 'annotation-2' })
+        ];
+
+        const cuboids = tickAnnotationsToCuboids(annotations);
+
+        expect(cuboids[0]).toMatchObject({
+            trackId: 'track-2',
+            trackNumber: null,
+            parentTrackNumber: 3
+        });
+        expect(cuboids[1]).toMatchObject({ parentTrackNumber: null });
     });
 
     it('keeps tick cuboids when their frame differs from the displayed frame', () => {

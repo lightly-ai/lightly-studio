@@ -229,7 +229,10 @@
 >
     {#snippet toolbarContent()}
         {#if $isEditingMode}
-            <SampleDetailsToolbar showSegmentationTool={shouldShowSegmentationToolInToolbar} />
+            <SampleDetailsToolbar
+                showSegmentationTool={shouldShowSegmentationToolInToolbar}
+                isPending={$isPending}
+            />
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
@@ -242,7 +245,7 @@
             <BrushToolPopUp />
         {/if}
         {#if shouldShowSlicToolPopup}
-            <SlicToolPopUp />
+            <SlicToolPopUp isPending={$isPending} />
         {/if}
     {/snippet}
     {#snippet zoomPanelRightContent()}

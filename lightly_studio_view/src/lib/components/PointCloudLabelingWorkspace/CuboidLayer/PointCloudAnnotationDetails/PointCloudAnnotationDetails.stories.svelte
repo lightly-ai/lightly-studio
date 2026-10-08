@@ -30,8 +30,8 @@
 <Story name="Default" />
 
 <Story
-    name="Without track ID"
+    name="Without track number"
     args={{
-        annotation: { ...baseAnnotation, trackId: null }
+        annotation: { ...baseAnnotation, trackNumber: null }
     }}
 />

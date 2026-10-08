@@ -149,13 +149,13 @@ def test_index_recording__pairs_the_closest_frame(
     ]
 
 
-def test_index_recording__drops_unpaired_ticks(
+def test_index_recording__keeps_ticks_without_a_paired_component(
     patch_collection: None,  # noqa: ARG001
     mcap_path: Path,
 ) -> None:
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
-    # No camera frame is within 1 ms of a sweep, so no group is complete.
+    # No camera frame is within 1 ms of a sweep, so the camera is left off every tick.
     sequence_sample_id = add_mcaps.index_recording(
         dataset=dataset,
         mcap_path=str(mcap_path),
@@ -164,8 +164,13 @@ def test_index_recording__drops_unpaired_ticks(
         max_pairing_diff_ns=1_000_000,
     )
 
-    assert _get_sample_links(sequence_sample_id=sequence_sample_id) == []
-    # The channel is a property of the topic, so it is filled even with no paired ticks.
+    links = _get_sample_links(sequence_sample_id=sequence_sample_id)
+    assert [link.timestamp_ns for link in links] == list(helpers.LIDAR_LOG_TIMES_NS)
+    for link in links:
+        group_sample = dataset.group_dataset.get_sample(sample_id=link.sample_id)
+        assert group_sample[VIDEO_COMPONENT] is None
+        assert isinstance(group_sample[POINT_CLOUD_COMPONENT], McapSample)
+    # The channel is a property of the topic, so it is filled even with no paired frames.
     front = dataset.group_dataset.get_component(name=VIDEO_COMPONENT)
     pcl_front = dataset.group_dataset.get_component(name=POINT_CLOUD_COMPONENT)
     assert front.channel_id is not None
@@ -482,7 +487,7 @@ def test_index_recording__warns_when_no_component_pairs_to_sync(
 ) -> None:
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
-    add_mcaps.index_recording(
+    sequence_sample_id = add_mcaps.index_recording(
         dataset=dataset,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
@@ -490,6 +495,8 @@ def test_index_recording__warns_when_no_component_pairs_to_sync(
         max_pairing_diff_ns=1,
     )
 
+    links = _get_sample_links(sequence_sample_id=sequence_sample_id)
+    assert [link.timestamp_ns for link in links] == list(helpers.LIDAR_LOG_TIMES_NS)
     assert "No message of component(s) 'front'" in caplog.text
     assert "within 1 ns" in caplog.text
 

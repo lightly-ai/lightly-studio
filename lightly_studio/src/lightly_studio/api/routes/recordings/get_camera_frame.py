@@ -103,7 +103,7 @@ def get_camera_frame(
         content=frame.data,
         media_type=frame.media_type,
         headers={
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": "public, max-age=604800",
             "Content-Length": str(len(frame.data)),
             "ETag": etag,
             "X-Frame-Log-Time-Ns": str(frame.log_time_ns),

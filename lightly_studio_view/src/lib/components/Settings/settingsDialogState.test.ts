@@ -41,6 +41,7 @@ describe('createSettingsDialogFormState', () => {
                 keyToolbarDrag: 'd',
                 keyToolbarBoundingBox: 'b',
                 keyToolbarSegmentationMask: 'm',
+                keyToolbarSlic: 'a',
                 keyToolbarBrush: 'r',
                 keyToolbarEraser: 'x'
             },
@@ -66,6 +67,7 @@ describe('createSettingsSavePayload', () => {
                     keyToolbarDrag: 'g',
                     keyToolbarBoundingBox: 'q',
                     keyToolbarSegmentationMask: 'w',
+                    keyToolbarSlic: 'f',
                     keyToolbarBrush: 'p',
                     keyToolbarEraser: 'o'
                 },
@@ -90,6 +92,7 @@ describe('createSettingsSavePayload', () => {
             key_toolbar_drag: 'g',
             key_toolbar_bounding_box: 'q',
             key_toolbar_segmentation_mask: 'w',
+            key_toolbar_slic: 'f',
             key_toolbar_brush: 'p',
             key_toolbar_eraser: 'o'
         });
