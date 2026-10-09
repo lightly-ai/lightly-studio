@@ -245,12 +245,16 @@ class EmbedderRegistry:
     def _cached_embedder(
         self, space_key: str, capability: Capability, config: EmbedderConfig | None
     ) -> Embedder | NoEmbedderReason | None:
-        """Get the embedder the caches hold for the space, or None. Needs ``_lock``.
+        """Get the embedder the caches hold for the space. Needs ``_lock``.
 
         A registration that lacks the capability gives way to a configuration. A
         configuration is served only by the embedder built from that same configuration,
-        so a changed URL or a rotated key misses. A configuration that failed inside the
-        retry window gets the reason of the failure.
+        so a changed URL or a rotated key misses.
+
+        Returns:
+            The cached embedder of the space. Else the reason of a failure of the
+            configuration inside the retry window. Else None, and the caller must build
+            the embedder.
         """
         registered = self._space_key_to_embedder.get(space_key)
         if registered is not None and (
