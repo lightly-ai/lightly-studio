@@ -89,6 +89,8 @@ class EmbedderRegistry:
         # The flag is False for a server that answers but serves no usable capability
         self._config_to_failure: dict[tuple[UUID, str], tuple[EmbedderConfig, float, bool]] = {}
         self._bootstrap_spaces = dict(_INITIAL_BOOTSTRAP_SPACES)
+        # The capabilities whose bootstrap space a registration set
+        self._registered_bootstraps: set[Capability] = set()
         self._build_locks: dict[tuple[UUID | None, str], threading.Lock] = {}
         self._lock = threading.Lock()
 
@@ -162,11 +164,59 @@ class EmbedderRegistry:
         Raises:
             ValueError: If ``embedder_type`` is not the interface of a capability.
         """
-        capability = _TYPE_TO_CAPABILITY.get(embedder_type)
-        if capability is None:
-            raise ValueError(f"{embedder_type.__name__!r} is not an embedder capability type.")
-        embedder = self._resolve(space_key=space_key, capability=capability, config=config)
+        embedder = self._resolve(
+            space_key=space_key,
+            capability=_capability_of(embedder_type=embedder_type),
+            config=config,
+        )
         return embedder if isinstance(embedder, embedder_type) else None
+
+    def get_space_embedder(
+        self,
+        embedder_type: type[Embedder],
+        space_key: str,
+        config: EmbedderConfig | None = None,
+    ) -> Embedder | None:
+        """Get the space's embedder, also if it is not an instance of ``embedder_type``.
+
+        ``get_embedder`` returns None if the space has no embedder and if its embedder lacks
+        the capability. This getter tells the two cases apart.
+
+        Args:
+            embedder_type: The embedder interface of the needed capability. As in
+                ``get_embedder``, a registration that lacks it gives way to ``config``.
+            space_key: The space to get the embedder of.
+            config: The stored configuration of the space, None when there is none.
+
+        Returns:
+            The embedder of the space, or None if no source has one.
+
+        Raises:
+            ValueError: If ``embedder_type`` is not the interface of a capability.
+        """
+        return self._resolve(
+            space_key=space_key,
+            capability=_capability_of(embedder_type=embedder_type),
+            config=config,
+        )
+
+    def is_bootstrap_registered(self, embedder_type: type[Embedder]) -> bool:
+        """Get whether a registration set the bootstrap space of a capability.
+
+        Args:
+            embedder_type: The embedder interface of the capability, such as
+                ``ImageCropPathEmbedder``.
+
+        Returns:
+            True if a call to ``register`` set the bootstrap space of the capability, False
+            if the capability has its built-in bootstrap space or none.
+
+        Raises:
+            ValueError: If ``embedder_type`` is not the interface of a capability.
+        """
+        capability = _capability_of(embedder_type=embedder_type)
+        with self._lock:
+            return capability in self._registered_bootstraps
 
     def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
         """Get whether the embedding server of the configuration failed inside the retry window.
@@ -316,6 +366,7 @@ class EmbedderRegistry:
         )
         for capability in defaults:
             self._bootstrap_spaces[capability] = space_key
+        self._registered_bootstraps.update(defaults)
 
 
 _registry = EmbedderRegistry()
@@ -331,6 +382,14 @@ def _capabilities_of(embedder: Embedder) -> set[Capability]:
     return {
         capability for capability, cls in _CAPABILITY_TO_TYPE.items() if isinstance(embedder, cls)
     }
+
+
+def _capability_of(embedder_type: type[Embedder]) -> Capability:
+    """Get the capability of an embedder interface, such as ``TextEmbedder``."""
+    capability = _TYPE_TO_CAPABILITY.get(embedder_type)
+    if capability is None:
+        raise ValueError(f"{embedder_type.__name__!r} is not an embedder capability type.")
+    return capability
 
 
 def _build_key(space_key: str, config: EmbedderConfig | None) -> tuple[UUID | None, str]:

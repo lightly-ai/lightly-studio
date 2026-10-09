@@ -178,8 +178,9 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
     """Embed the crops of an annotation collection and store the result.
 
     When the collection has a default embedding model, its space selects the embedder.
-    Otherwise the registry's default crop embedder is used and registered as the
-    collection's default. Does nothing (and logs a warning) if no crop embedder is
+    Otherwise the collection takes the default model of its parent collection, or the
+    registry's default crop embedder is used and registered as the collection's default,
+    see ``resolve_default_embedder``. Does nothing (and logs a warning) if no crop embedder is
     available.
 
     Args:
@@ -273,8 +274,9 @@ def embed_frame_samples(
     """Embed the frames of a single video and store the result.
 
     When the collection has a default embedding model, its space selects the embedder.
-    Otherwise the registry's default PIL embedder is used and registered as the
-    collection's default. Does nothing (and logs a warning) if no PIL embedder is
+    Otherwise the collection takes the default model of its parent collection, or the
+    registry's default PIL embedder is used and registered as the collection's default,
+    see ``resolve_default_embedder``. Does nothing (and logs a warning) if no PIL embedder is
     available.
 
     Args:
