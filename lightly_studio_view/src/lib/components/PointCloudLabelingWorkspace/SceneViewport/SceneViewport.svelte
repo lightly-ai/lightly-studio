@@ -6,6 +6,7 @@
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
     import GroundPlane from '$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.svelte';
+    import OriginAxes from '$lib/components/PointCloudLabelingWorkspace/OriginAxes/OriginAxes.svelte';
     import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
     import SceneNavigationControls from './SceneNavigationControls.svelte';
     import type {
@@ -41,6 +42,10 @@
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
         onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
+        /** Fires on the left arrow key. */
+        onPreviousTick?: () => void;
+        /** Fires on the right arrow key. */
+        onNextTick?: () => void;
     }
 
     const EMPTY_BATCH: PointBatch = {
@@ -64,8 +69,34 @@
         hoveredAnnotationId = null,
         activeTool = 'select',
         onselect,
-        onhover
+        onhover,
+        onPreviousTick,
+        onNextTick
     }: Props = $props();
+
+    $effect(() => {
+        const handleKeydown = (event: KeyboardEvent) => {
+            if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+            const handler =
+                event.key === 'ArrowLeft'
+                    ? onPreviousTick
+                    : event.key === 'ArrowRight'
+                      ? onNextTick
+                      : undefined;
+            if (!handler) return;
+            const target = event.target;
+            if (
+                target instanceof HTMLElement &&
+                target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]')
+            ) {
+                return;
+            }
+            event.preventDefault();
+            handler();
+        };
+        window.addEventListener('keydown', handleKeydown);
+        return () => window.removeEventListener('keydown', handleKeydown);
+    });
 
     // The ground plane keeps the bounds it was placed with, so it stays put while ticks change.
     // It is placed again only when `fitKey` changes, e.g. for another coordinate frame.
@@ -106,6 +137,7 @@
     <Canvas>
         <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} {fitKey} />
         <GroundPlane pointCloudBounds={groundPlaneBounds} />
+        <OriginAxes />
         <CuboidLayer
             {cuboids}
             {annotationClasses}
