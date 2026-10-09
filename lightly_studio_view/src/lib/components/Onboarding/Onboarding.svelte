@@ -138,11 +138,13 @@
         if (!enabled) return;
         // Skip dismiss when there is no active session to clean up.
         if (get(state) !== 'unseen') dismiss(ref.stage ?? 'invitation');
-        onboarding.replay();
-        track('onboarding_replayed');
         if (!isImages) {
+            // Defer replay() until after navigation so that update() triggered
+            // by the route change cannot dismiss the new session.
             await goto(routeHelpers.toImages(datasetId, collectionType, collectionId));
         }
+        onboarding.replay();
+        track('onboarding_replayed');
         await loadTour();
         update();
     }
