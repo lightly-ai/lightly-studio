@@ -34,7 +34,7 @@ const tickDetails: TickDetailView = {
     seq_number: 0,
     timestamp_ns: 1000,
     camera_channels: {
-        // Camera channel with a keyframe locator: renders, seeking to the keyframe.
+        // Camera channel with a keyframe locator: renders, decoding from the keyframe.
         front: {
             channel_id: 1,
             group_component_name: 'front',
@@ -78,13 +78,13 @@ describe('CameraProjectionStrip', () => {
         expect(screen.getByText('rear')).toBeInTheDocument();
     });
 
-    it('seeks frames by their keyframe timestamp', () => {
+    it('requests the frame of the tick, decoded from its keyframe', () => {
         tickDetailsResult.data = tickDetails;
         render(CameraProjectionStrip, { props: defaultProps });
 
         expect(screen.getByRole('img', { name: 'front' })).toHaveAttribute(
             'src',
-            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=1&keyframe_timestamp_ns=1500`
+            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=1&keyframe_timestamp_ns=1500&log_time_ns=2000`
         );
     });
 

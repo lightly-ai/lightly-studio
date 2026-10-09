@@ -14,17 +14,26 @@
         recordingId?: string;
         /** MCAP channel to render. */
         channelId: number;
-        /** Frame timestamp in nanoseconds, as a string to preserve full precision. */
-        timestampNs?: string;
+        /** Keyframe to decode from, in nanoseconds, as a string to preserve full precision. */
+        keyframeTimestampNs?: string;
+        /** Frame to show, in nanoseconds, as a string to preserve full precision. */
+        logTimeNs?: string;
         /** Studio slot name shown as the caption, e.g. `front`. */
         label: string;
     }
 
-    let { datasetId, recordingId, channelId, timestampNs, label }: Props = $props();
+    let { datasetId, recordingId, channelId, keyframeTimestampNs, logTimeNs, label }: Props =
+        $props();
 
     const frameUrl = $derived(
-        recordingId && timestampNs
-            ? getCameraFrameUrl({ datasetId, recordingId, channelId, timestampNs })
+        recordingId && keyframeTimestampNs && logTimeNs
+            ? getCameraFrameUrl({
+                  datasetId,
+                  recordingId,
+                  channelId,
+                  keyframeTimestampNs,
+                  logTimeNs
+              })
             : null
     );
 

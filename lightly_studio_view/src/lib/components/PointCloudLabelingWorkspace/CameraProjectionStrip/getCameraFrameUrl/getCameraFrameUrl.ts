@@ -4,8 +4,10 @@ interface CameraFrameUrlParams {
     datasetId: string;
     recordingId: string;
     channelId: number;
-    /** Nanosecond seek time, kept as a string to preserve full precision. */
-    timestampNs: string;
+    /** Nanosecond log time of the keyframe to decode from, kept as a string to preserve full precision. */
+    keyframeTimestampNs: string;
+    /** Nanosecond log time of the frame to show, kept as a string to preserve full precision. */
+    logTimeNs: string;
 }
 
 /**
@@ -18,12 +20,17 @@ export function getCameraFrameUrl({
     datasetId,
     recordingId,
     channelId,
-    timestampNs
+    keyframeTimestampNs,
+    logTimeNs
 }: CameraFrameUrlParams): string {
     return client.buildUrl({
         url: '/datasets/{dataset_id}/recordings/{recording_id}/camera-frame',
         baseUrl: client.getConfig().baseUrl,
         path: { dataset_id: datasetId, recording_id: recordingId },
-        query: { channel_id: channelId, keyframe_timestamp_ns: timestampNs }
+        query: {
+            channel_id: channelId,
+            keyframe_timestamp_ns: keyframeTimestampNs,
+            log_time_ns: logTimeNs
+        }
     });
 }
