@@ -596,6 +596,44 @@ class TestEmbedderRegistry:
         )
         assert registry.get_embedder(embedder_type=ImagePathEmbedder) is custom
 
+    def test_get_space_embedder__registration_without_capability(self) -> None:
+        registry = EmbedderRegistry()
+        embedder = _FakeImageEmbedder(space_key="space-a")
+        registry.register(embedder=embedder)
+
+        # get_embedder returns None, but the space has an embedder
+        assert (
+            registry.get_embedder(embedder_type=ImageCropPathEmbedder, space_key="space-a") is None
+        )
+        assert (
+            registry.get_space_embedder(embedder_type=ImageCropPathEmbedder, space_key="space-a")
+            is embedder
+        )
+
+    def test_get_space_embedder__no_embedder(self) -> None:
+        registry = EmbedderRegistry()
+
+        assert (
+            registry.get_space_embedder(embedder_type=ImageCropPathEmbedder, space_key="space-a")
+            is None
+        )
+
+    def test_is_bootstrap_registered(self) -> None:
+        registry = EmbedderRegistry()
+        assert registry.is_bootstrap_registered(embedder_type=ImagePathEmbedder) is False
+
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"))
+
+        assert registry.is_bootstrap_registered(embedder_type=ImagePathEmbedder) is True
+        assert registry.is_bootstrap_registered(embedder_type=TextEmbedder) is False
+
+    def test_is_bootstrap_registered__empty_bootstrap_set(self) -> None:
+        registry = EmbedderRegistry()
+
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"), bootstrap_for=set())
+
+        assert registry.is_bootstrap_registered(embedder_type=ImagePathEmbedder) is False
+
     def test_is_remote_unavailable__after_failure(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()
         mocker.patch.object(

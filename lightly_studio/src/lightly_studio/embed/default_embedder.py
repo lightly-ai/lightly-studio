@@ -39,9 +39,14 @@ def resolve_default_embedder(
     capability the caller needs (image, text, ...) from the registry:
 
     - The collection has a default model in the DB: its embedding space selects the embedder.
-    - The collection has no default in the DB yet: the registry's bootstrap embedder is used and
-      registered as the collection's default. The model stores the server of an embedder that
-      names one, see ``PersistableEmbedder``.
+    - The collection has no default in the DB yet, but its parent collection has one: the
+      collection takes the parent's model, so that crops and frames share the space of
+      their parent. This does not apply if a registration set the bootstrap space of the
+      capability, or if the parent's embedder lacks the capability. If no embedder of the
+      parent's space is available, the collection is skipped and gets no default.
+    - Else: the registry's bootstrap embedder is used and registered as the collection's
+      default. The model stores the server of an embedder that names one, see
+      ``PersistableEmbedder``.
 
     Logs a warning and returns None when the registry has no matching embedder, so the
     caller only needs to return on None.
@@ -71,6 +76,27 @@ def resolve_default_embedder(
             logger.warning("No embedding model loaded. Skipping embedding generation.")
             return None
         return embedder, default_model.embedding_model_id
+
+    parent_model = _parent_model_to_take(
+        session=session, collection_id=collection_id, embedder_type=embedder_type
+    )
+    if parent_model is not None:
+        # A default model never changes, so the collection gets no default until the
+        # embedder of the parent's space is available.
+        embedder = _embedder_for_model(default_model=parent_model, embedder_type=embedder_type)
+        if embedder is None:
+            logger.warning(
+                "No embedder is available for the embedding space %r of the parent "
+                "collection. Skipping embedding generation.",
+                parent_model.name,
+            )
+            return None
+        _set_default_model(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=parent_model.embedding_model_id,
+        )
+        return embedder, parent_model.embedding_model_id
 
     embedder = embedder_registry.get_registry().get_embedder(embedder_type=embedder_type)
     if embedder is None:
@@ -166,6 +192,41 @@ def _embedder_for_model(
     return embedder
 
 
+def _parent_model_to_take(
+    session: Session, collection_id: UUID, embedder_type: type[Embedder]
+) -> EmbeddingModelTable | None:
+    """Get the parent's default model if the collection takes it as its default, else None.
+
+    The collection does not take the parent's model if a registration set the bootstrap
+    space of the capability, if the parent has no default model, or if the embedder of
+    the parent's space lacks the capability.
+
+    Raises:
+        ValueError: If the collection does not exist.
+    """
+    registry = embedder_registry.get_registry()
+    if registry.is_bootstrap_registered(embedder_type=embedder_type):
+        return None
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError("Provided collection_id could not be found.")
+    if collection.parent_collection_id is None:
+        return None
+    parent_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=session, collection_id=collection.parent_collection_id
+    )
+    if parent_model is None:
+        return None
+    space_embedder = registry.get_space_embedder(
+        embedder_type=embedder_type,
+        space_key=parent_model.name,
+        config=embedder_config.from_embedding_model(embedding_model=parent_model),
+    )
+    if space_embedder is not None and not isinstance(space_embedder, embedder_type):
+        return None
+    return parent_model
+
+
 def _register_default_model(session: Session, collection_id: UUID, embedder: Embedder) -> UUID:
     """Register the embedder's space as the collection's default model and return its id.
 
@@ -192,13 +253,18 @@ def _register_default_model(session: Session, collection_id: UUID, embedder: Emb
     )
     model_id = db_model.embedding_model_id
     _store_remote_endpoint(session=session, embedding_model=db_model, embedder=embedder)
+    _set_default_model(session=session, collection_id=collection_id, embedding_model_id=model_id)
+    return model_id
+
+
+def _set_default_model(session: Session, collection_id: UUID, embedding_model_id: UUID) -> None:
+    """Link the embedding model to the collection and make it the collection's default."""
     collection_embedding_model_resolver.get_or_add_collection_model(
-        session=session, collection_id=collection_id, embedding_model_id=model_id
+        session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
     )
     collection_embedding_model_resolver.set_default(
-        session=session, collection_id=collection_id, embedding_model_id=model_id
+        session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
     )
-    return model_id
 
 
 def _store_remote_endpoint(
