@@ -94,7 +94,7 @@ env = Env()
 env.read_env()
 # Read as a string, not as a path, so that a URI such as `s3://my-bucket/bags/` survives
 # unchanged. Set `EXAMPLES_MCAP_PATH` to a folder of indexed `.mcap` files to run this.
-mcap_path = env.str("EXAMPLES_MCAP_PATH", r"D:\data\mcap\example_data_ingest\mcaps")
+mcap_path = env.str("EXAMPLES_MCAP_PATH", "datasets/mcap/")
 
 db_manager.connect(cleanup_existing=True)
 dataset = ls.McapDataset.load_or_create(components=COMPONENTS, name="mcap_sequence_example")
@@ -105,7 +105,7 @@ dataset.add_mcaps_from_path(
     max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
     reference_frame_ids=REFERENCE_FRAME_IDS,
 )
-#dataset.add_labels_from_folder(path=mcap_path, topic=ANNOTATION_TOPIC)
+dataset.add_labels_from_folder(path=mcap_path, topic=ANNOTATION_TOPIC)
 
 group_dataset = dataset.group_dataset
 print(f"\nComponents of '{dataset.name}':")
