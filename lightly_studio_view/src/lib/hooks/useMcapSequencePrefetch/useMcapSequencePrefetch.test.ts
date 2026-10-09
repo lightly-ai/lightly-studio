@@ -2,11 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { QueryClient } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
 import * as queryOptions from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { prefetchMcapTick } from '$lib/hooks/useMcapTickDetailsPrefetch/prefetchMcapTick';
 import { useMcapSequencePrefetch } from './useMcapSequencePrefetch';
+
+vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/prefetchMcapTick', () => ({
+    prefetchMcapTick: vi.fn().mockResolvedValue(undefined)
+}));
 
 describe('useMcapSequencePrefetch', () => {
     const prefetchQuery = vi.fn();
     const cancelQueries = vi.fn();
+    const ensureQueryData = vi.fn();
     const summaryOptions = { queryKey: ['summary'] } as unknown as ReturnType<
         typeof queryOptions.getSummaryOptions
     >;
@@ -18,18 +24,27 @@ describe('useMcapSequencePrefetch', () => {
         vi.resetAllMocks();
         vi.spyOn(tanstackQuery, 'useQueryClient').mockReturnValue({
             prefetchQuery,
-            cancelQueries
+            cancelQueries,
+            ensureQueryData
         } as unknown as QueryClient);
         vi.spyOn(queryOptions, 'getSummaryOptions').mockReturnValue(summaryOptions);
         vi.spyOn(queryOptions, 'getTicksOptions').mockReturnValue(ticksOptions);
     });
 
-    it('prefetches only the selected sequence metadata', () => {
+    it('prefetches the first ten ticks for the selected sequence', async () => {
+        ensureQueryData.mockImplementation((options: { queryKey: string[] }) =>
+            options === (ticksOptions as unknown)
+                ? Promise.resolve({
+                      ticks: Array.from({ length: 12 }, (_, seq_number) => ({ seq_number }))
+                  })
+                : Promise.resolve({})
+        );
         const { prefetch } = useMcapSequencePrefetch(() => 'dataset-1');
 
-        prefetch('sequence-1');
+        await prefetch('sequence-1');
 
-        expect(prefetchQuery).toHaveBeenCalledTimes(2);
+        expect(ensureQueryData).toHaveBeenCalledTimes(2);
+        expect(prefetchMcapTick).toHaveBeenCalledTimes(10);
         expect(queryOptions.getSummaryOptions).toHaveBeenCalledWith({
             path: { dataset_id: 'dataset-1', sequence_id: 'sequence-1' }
         });

@@ -1,4 +1,4 @@
 export {
-    MCAP_PLAYBACK_PREFETCH_TICKS,
+    MCAP_PLAYBACK_BUFFER_SECONDS,
     useMcapTickDetailsPrefetch
 } from './useMcapTickDetailsPrefetch.svelte';

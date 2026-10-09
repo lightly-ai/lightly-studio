@@ -24,6 +24,7 @@ type SequenceTicks = ReturnType<typeof useMcapSequenceTicks>['ticks'];
 type TickDetails = ReturnType<typeof useTickDetails>['tickDetails'];
 type CloudPointQuery = ReturnType<typeof useCloudPointFrame>['query'];
 type CloudPointFrameParams = ReturnType<Parameters<typeof useCloudPointFrame>[0]>;
+type TickPrefetch = ReturnType<typeof useMcapTickDetailsPrefetch>;
 
 function createTickDetails(
     getInputs: GetInputs,
@@ -151,6 +152,10 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         return frameId !== '' && channels.some((channel) => channel.frameId !== frameId);
     });
     readonly ticks: TickView[] = $derived.by(() => this.#sequenceTicks.data?.ticks ?? []);
+    readonly #tickPrefetch: TickPrefetch | undefined;
+    get bufferedTickNumbers(): readonly number[] {
+        return this.#tickPrefetch?.bufferedTickNumbers ?? [];
+    }
 
     constructor(getInputs: GetInputs) {
         const { summary, refetch } = useMcapSequenceSummary({
@@ -164,12 +169,13 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
             getSequenceId: () => getInputs().sequenceId
         });
         this.#sequenceTicks = ticks;
-        useMcapTickDetailsPrefetch({
+        this.#tickPrefetch = useMcapTickDetailsPrefetch({
             getDatasetId: () => getInputs().datasetId,
             getSequenceId: () => getInputs().sequenceId,
             getDisplayFrameId: () => this.referenceFrameId || undefined,
             getTicks: () => this.ticks,
-            getCurrentTick: () => this.currentTick
+            getCurrentTick: () => this.currentTick,
+            getPlaybackIntervalMs: () => this.playbackIntervalMs
         });
         // Read once at construction: this is the starting position, not a reactive binding.
         this.currentTick = getInputs().initialTick ?? 0;

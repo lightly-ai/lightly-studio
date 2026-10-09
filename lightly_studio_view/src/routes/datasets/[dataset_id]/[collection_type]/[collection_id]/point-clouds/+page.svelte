@@ -15,12 +15,16 @@
     const mcapDatasetId = $derived(page.data.collection?.dataset_id ?? '');
 
     const { data, query, loadMore, totalCount } = useMcapSequencesInfinite(() => collectionId);
-    const { prefetch, cancel } = useMcapSequencePrefetch(() => mcapDatasetId);
+    const { prefetch } = useMcapSequencePrefetch(() => mcapDatasetId);
     const { setfilteredSampleCount } = useGlobalStorage();
-    let selectedSequenceId = '';
 
     $effect(() => {
         setfilteredSampleCount($totalCount);
+    });
+
+    $effect(() => {
+        if (!mcapDatasetId) return;
+        for (const sequence of $data) prefetch(sequence.sample_id);
     });
 
     const sequences = $derived(
@@ -40,7 +44,6 @@
     // The dataset slot carries a collection id (what the collection layout resolves the hierarchy
     // by); the labeling page derives the real dataset id from the loaded collection.
     const handleSequenceClick = (sampleId: string) => {
-        selectedSequenceId = sampleId;
         prefetch(sampleId);
         void goto(
             routeHelpers.toPointCloudLabeling({
@@ -50,11 +53,6 @@
                 sequenceId: sampleId
             })
         );
-    };
-
-    const handleSequenceHover = (sampleId: string) => prefetch(sampleId);
-    const handleSequenceHoverEnd = (sampleId: string) => {
-        if (sampleId !== selectedSequenceId) cancel(sampleId);
     };
 </script>
 
@@ -67,6 +65,4 @@
     {isFetchingNextPage}
     onLoadMore={loadMore}
     onSequenceClick={handleSequenceClick}
-    onSequenceHover={handleSequenceHover}
-    onSequenceHoverEnd={handleSequenceHoverEnd}
 />
