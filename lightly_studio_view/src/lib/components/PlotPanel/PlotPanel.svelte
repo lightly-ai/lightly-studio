@@ -2,7 +2,10 @@
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
+    import { Select } from '$lib/components/Select';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
+    import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
@@ -17,7 +20,7 @@
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
     import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
+    import type { EmbeddingRegion, ProjectionAxes } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
@@ -132,7 +135,16 @@
         annotationLabels
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
+    // A region drawn on the plot carries the axes of the layout, so the server resolves the
+    // region in the same layout.
+    const PLOT_LAYOUT_ITEMS = [
+        { value: 'pacmap', label: 'PaCMAP' },
+        { value: 'text', label: 'Text' }
+    ];
+    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, isAwaitingAxes, commitTextAxes } =
+        usePlotLayout(untrack(() => collectionId));
+
+    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
     const {
         data: arrowData,
@@ -236,7 +248,7 @@
         }
     };
     const commitRegion = (polygon: Point[], count: number) => {
-        saveRegion({ polygon });
+        saveRegion($plotAxes ? { polygon, axes: $plotAxes } : { polygon });
         setPlotSelectionCount(collectionId, count);
     };
     const clearRegion = () => {
@@ -404,6 +416,23 @@
         viewportState = state;
     };
 
+    // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
+    // region belongs to the layout it was drawn on. Start from the layout at mount, so a
+    // reopened plot keeps the region that was drawn on it.
+    let previousPlotLayout: PlotLayout = get(plotLayout);
+    let previousPlotAxes: ProjectionAxes | null = get(plotAxes);
+    $effect(() => {
+        const layout = $plotLayout;
+        const axes = $plotAxes;
+        untrack(() => {
+            if (layout === previousPlotLayout && axes === previousPlotAxes) return;
+            previousPlotLayout = layout;
+            previousPlotAxes = axes;
+            viewportState = null;
+            if (hasActiveSelection) clearSelection();
+        });
+    });
+
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
     // The array-based EmbeddingView only emits hover tooltips when querySelection
     // is provided; ours returns the nearest visible point with its sample ID.
@@ -456,7 +485,17 @@
 
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="text-lg font-semibold">Embedding Plot</div>
+        <div class="flex items-center gap-3">
+            <div class="text-lg font-semibold">Embedding Plot</div>
+            <Select
+                items={PLOT_LAYOUT_ITEMS}
+                value={$plotLayout}
+                onValueChange={(value) => plotLayout.set(value as PlotLayout)}
+                size="xs"
+                class="w-28"
+                testId="plot-layout-select"
+            />
+        </div>
         <Button
             variant="ghost"
             buttonProps={{
@@ -469,13 +508,19 @@
             ✕
         </Button>
     </div>
-    <div class="flex min-h-0 flex-1 flex-col space-y-6">
-        {#if embeddingsData.isLoading}
-            <div class="flex items-center justify-center p-8">
+    <!-- Relative: the text-axis inputs overlay every state below, so the user can fix the texts
+         while the plot loads or shows an error. -->
+    <div class="relative flex min-h-0 flex-1 flex-col">
+        {#if $isAwaitingAxes}
+            <div class="flex flex-1 items-center justify-center p-8 text-muted-foreground">
+                <div class="text-lg">Type the four axis texts and press Enter.</div>
+            </div>
+        {:else if embeddingsData.isLoading}
+            <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
         {:else if errorText}
-            <div class="flex items-center justify-center p-8 text-red-500">
+            <div class="flex flex-1 items-center justify-center p-8 text-red-500">
                 <div class="text-lg">Error loading embeddings: {errorText}</div>
             </div>
         {:else if isReady}
@@ -543,6 +588,13 @@
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">No data available</div>
             </div>
+        {/if}
+        {#if $plotLayout === 'text'}
+            <PlotTextAxesInputs
+                bind:draft={$textAxesDraft}
+                onCommit={commitTextAxes}
+                isPending={$isEmbeddingAxes}
+            />
         {/if}
     </div>
     {#if isReady}
