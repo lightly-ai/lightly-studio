@@ -53,7 +53,9 @@ class MockIntersectionObserver {
 }
 
 describe('McapSequencesGrid', () => {
-    const sequences = [{ sampleId: 'sequence-1', sampleCount: 5, sequenceFrame: null }];
+    const sequences = [
+        { sampleId: 'sequence-1', fileName: 'recording.mcap', sampleCount: 5, sequenceFrame: null }
+    ];
     const defaultProps = {
         sequences,
         isLoading: false,

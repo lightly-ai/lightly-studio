@@ -81,6 +81,7 @@ class McapSequenceView(BaseModel):
 
     sample_id: UUID
     recording_id: UUID
+    file_name: str
     sample_count: int
     sequence_frame: McapSequenceFrame | None = None
 
