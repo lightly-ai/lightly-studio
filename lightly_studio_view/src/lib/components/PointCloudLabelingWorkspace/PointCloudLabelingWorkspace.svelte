@@ -106,9 +106,12 @@
 
     // Synchronized snapshot: the cloud frame and its corresponding annotations
     // advance together.
+    // The fit key is captured with the snapshot, so the camera is re-centered once the points of
+    // the newly selected display frame have loaded, not while the previous frame is still shown.
     let sceneSnapshot = $state<{
         frame: NonNullable<(typeof workspace.cloudPointFrame)['data']>;
         annotations: Parameters<typeof tickAnnotationsToCuboids>[0];
+        fitKey: string;
     } | null>(null);
 
     $effect(() => {
@@ -119,7 +122,8 @@
         ) {
             sceneSnapshot = {
                 frame: workspace.cloudPointFrame.data,
-                annotations: workspace.tickDetails.data?.annotations ?? []
+                annotations: workspace.tickDetails.data?.annotations ?? [],
+                fitKey: `${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`
             };
         }
     });
@@ -161,7 +165,7 @@
 
     const lidarChannels = $derived(workspace.lidarChannels);
     const cameraChannels = $derived(workspace.cameraChannels);
-    const displayedColorMode = $derived(selectedColorMode ?? 'density');
+    const displayedColorMode = $derived(selectedColorMode ?? 'intensity');
 
     const handleFullscreenChange = () => {
         isFullscreen = document.fullscreenElement === containerEl;
@@ -228,7 +232,7 @@
                                     batch={sceneSnapshot.frame.batch}
                                     colorMode={displayedColorMode}
                                     pointCloudBounds={sceneSnapshot.frame.bounds ?? undefined}
-                                    fitKey={`${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`}
+                                    fitKey={sceneSnapshot.fitKey}
                                     cuboids={sceneCuboids}
                                     {annotationClasses}
                                     {annotationSources}
@@ -236,6 +240,8 @@
                                     hoveredAnnotationId={hoveredCuboidId}
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
+                                    onPreviousTick={goToPreviousFrame}
+                                    onNextTick={goToNextFrame}
                                 />
                             {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
                                 <WorkspaceStatusPanel status="loading" />
