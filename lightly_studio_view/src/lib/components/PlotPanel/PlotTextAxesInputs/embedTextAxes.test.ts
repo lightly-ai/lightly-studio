@@ -1,13 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { embedTextAxes } from './embedTextAxes';
 
-const mocks = vi.hoisted(() => ({
-    embedText: vi.fn()
-}));
+const mocks = vi.hoisted(() => ({ embedText: vi.fn() }));
 
-vi.mock('$lib/api/lightly_studio_local', () => ({
-    embedText: mocks.embedText
-}));
+vi.mock('$lib/api/lightly_studio_local', () => ({ embedText: mocks.embedText }));
 
 const EMBEDDINGS: Record<string, number[]> = {
     young: [1, 0, 0],
@@ -24,21 +20,7 @@ const TEXT_AXES = {
 describe('embedTextAxes', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns embed(positive) - embed(negative) for each axis', async () => {
-        mocks.embedText.mockImplementation(({ query }: { query: { query_text: string } }) =>
-            Promise.resolve({ data: EMBEDDINGS[query.query_text], error: undefined })
-        );
-
-        const axes = await embedTextAxes('collection-id', TEXT_AXES);
-
-        expect(axes).toEqual({ x: [2, 1, 0], y: [0, 0, 5] });
-        expect(mocks.embedText).toHaveBeenCalledWith({
-            path: { collection_id: 'collection-id' },
-            query: { query_text: 'young', embedding_model_id: null }
-        });
-    });
-
-    it('sends one request at a time', async () => {
+    it('returns embed(positive) - embed(negative) per axis, one request at a time', async () => {
         let inFlight = 0;
         let maxInFlight = 0;
         mocks.embedText.mockImplementation(async ({ query }: { query: { query_text: string } }) => {
@@ -49,10 +31,14 @@ describe('embedTextAxes', () => {
             return { data: EMBEDDINGS[query.query_text], error: undefined };
         });
 
-        await embedTextAxes('collection-id', TEXT_AXES);
+        const axes = await embedTextAxes('collection-id', TEXT_AXES);
 
-        expect(mocks.embedText).toHaveBeenCalledTimes(4);
+        expect(axes).toEqual({ x: [2, 1, 0], y: [0, 0, 5] });
         expect(maxInFlight).toBe(1);
+        expect(mocks.embedText).toHaveBeenCalledWith({
+            path: { collection_id: 'collection-id' },
+            query: { query_text: 'young', embedding_model_id: null }
+        });
     });
 
     it('throws an Error with the server message when a text fails to embed', async () => {

@@ -8,18 +8,12 @@ type TextAxes = NonNullable<ReturnType<typeof toTextAxes>>;
 // axis directions embed(positive) - embed(negative). Throws an Error with the server message.
 export const embedTextAxes = async (
     collectionId: string,
-    textAxes: TextAxes
+    { x, y }: TextAxes
 ): Promise<ProjectionAxes> => {
-    const texts = [
-        textAxes.x.negative,
-        textAxes.x.positive,
-        textAxes.y.negative,
-        textAxes.y.positive
-    ];
     // One request at a time: the server has one embedding model, so parallel requests wait
     // for each other and only add load.
     const embeddings: number[][] = [];
-    for (const text of texts) {
+    for (const text of [x.negative, x.positive, y.negative, y.positive]) {
         embeddings.push(await embed(collectionId, text));
     }
     const [xNegative, xPositive, yNegative, yPositive] = embeddings;

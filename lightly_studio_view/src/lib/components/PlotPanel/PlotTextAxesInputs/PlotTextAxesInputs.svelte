@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Input } from '$lib/components/ui/input';
-    import { ArrowLeft, ArrowRight } from '@lucide/svelte';
+    import { ArrowLeftRight } from '@lucide/svelte';
     import { cn } from '$lib/utils';
     import { createEmptyTextAxesDraft, toTextAxes } from './textAxesDraft';
 
@@ -23,7 +23,8 @@
     let showMissing = $state(false);
 
     const onKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Enter') return;
+        // During IME composition, Enter confirms the composed text, not the axes.
+        if (event.key !== 'Enter' || event.isComposing) return;
         event.preventDefault();
         const textAxes = toTextAxes(draft);
         showMissing = textAxes === null;
@@ -48,16 +49,11 @@
     />
 {/snippet}
 
-{#snippet arrows()}
-    <ArrowLeft class="h-4 w-4 text-white" />
-    <ArrowRight class="h-4 w-4 text-white" />
-{/snippet}
-
 <!-- At the top: the legend and the tool pill use the bottom edge of the plot. -->
 <div class="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
     <div class="pointer-events-auto flex items-center gap-2 rounded bg-black/70 px-2 py-1">
         {@render anchorInput('xNegative', 'X axis start', 'X−  (e.g. young)')}
-        {@render arrows()}
+        <ArrowLeftRight class="h-4 w-4 text-white" />
         {@render anchorInput('xPositive', 'X axis end', 'X+  (e.g. old)')}
     </div>
 </div>
@@ -70,7 +66,7 @@
         class="pointer-events-auto flex -rotate-90 items-center gap-2 whitespace-nowrap rounded bg-black/70 px-2 py-1"
     >
         {@render anchorInput('yNegative', 'Y axis start', 'Y−  (e.g. sad)')}
-        {@render arrows()}
+        <ArrowLeftRight class="h-4 w-4 text-white" />
         {@render anchorInput('yPositive', 'Y axis end', 'Y+  (e.g. happy)')}
     </div>
 </div>

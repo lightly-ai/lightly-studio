@@ -8,17 +8,11 @@ export const createEmptyTextAxesDraft = () => ({
 
 type TextAxesDraft = ReturnType<typeof createEmptyTextAxesDraft>;
 
-// Returns the text axes when all four texts are filled, otherwise null.
+// Returns the trimmed text axes when all four texts are filled, otherwise null.
 export const toTextAxes = (draft: TextAxesDraft) => {
-    const xNegative = draft.xNegative.trim();
-    const xPositive = draft.xPositive.trim();
-    const yNegative = draft.yNegative.trim();
-    const yPositive = draft.yPositive.trim();
-    if (!xNegative || !xPositive || !yNegative || !yPositive) {
-        return null;
-    }
+    if (!Object.values(draft).every((text) => text.trim())) return null;
     return {
-        x: { negative: xNegative, positive: xPositive },
-        y: { negative: yNegative, positive: yPositive }
+        x: { negative: draft.xNegative.trim(), positive: draft.xPositive.trim() },
+        y: { negative: draft.yNegative.trim(), positive: draft.yPositive.trim() }
     };
 };
