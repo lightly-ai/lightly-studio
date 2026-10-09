@@ -115,6 +115,30 @@ describe('FrameTimeline', () => {
         expect(screen.getByTitle('1.25s')).toBeInTheDocument();
     });
 
+    it('renders the buffered range ahead of the active tick', () => {
+        render(FrameTimeline, {
+            props: {
+                ...defaultProps,
+                bufferedTickNumbers: [1, 2]
+            }
+        });
+
+        expect(screen.getByTestId('timeline-buffered-range')).toHaveStyle({
+            width: '100%'
+        });
+    });
+
+    it('keeps separate buffered ranges when a tick is not ready', () => {
+        render(FrameTimeline, {
+            props: {
+                ...defaultProps,
+                bufferedTickNumbers: [2]
+            }
+        });
+
+        expect(screen.getAllByTestId('timeline-buffered-range')).toHaveLength(2);
+    });
+
     it('leaves ticks unlabelled when no timestamps are indexed yet', () => {
         render(FrameTimeline, { props: { ...defaultProps, ticks: createTicks([null, null]) } });
 

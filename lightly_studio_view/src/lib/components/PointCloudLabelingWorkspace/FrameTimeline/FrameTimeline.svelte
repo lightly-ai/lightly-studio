@@ -12,6 +12,8 @@
         ticks: TickView[];
         /** Seq number of the active tick; drives the frame counter and ruler highlight. */
         currentTick: number;
+        /** Tick numbers whose data has been buffered ahead of playback. */
+        bufferedTickNumbers?: readonly number[];
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
         playbackIntervalMs: number;
@@ -38,6 +40,7 @@
     let {
         ticks,
         currentTick,
+        bufferedTickNumbers = [],
         isPlaying,
         playbackIntervalMs,
         lidarChannelNames = [],
@@ -88,5 +91,5 @@
         {onPreviousSequence}
         {onNextSequence}
     />
-    <TimelineTracks {ticks} {currentTick} {lanes} {onSelectTick} />
+    <TimelineTracks {ticks} {currentTick} {bufferedTickNumbers} {lanes} {onSelectTick} />
 </div>

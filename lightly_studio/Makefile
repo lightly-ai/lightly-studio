@@ -30,6 +30,10 @@ FLOCI_MCAP_DIR_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
 # Cache file that stores a checksum of the last uploaded MCAP folder so repeated calls skip the upload.
 FLOCI_MCAP_CACHE ?= /tmp/lightly-floci-mcap-upload.sum
 FLOCI_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
+
+# Real (remote) S3 URI for start-example-mcap-remote-s3 — no Floci needed.
+# Usage: make start-example-mcap-remote-s3 MCAP_REMOTE_S3_URI=s3://bucket/path/recording.mcap
+MCAP_REMOTE_S3_URI ?= s3://horatiu-mcap-test/full_size/rosbag2_2026_07_14-12_52_13_0.mcap
 	AWS_ENDPOINT_URL=http://localhost:$(FLOCI_PORT)
 
 # Floci GCP (GCS emulator) development storage for MCAP recordings.
@@ -356,6 +360,19 @@ start-example:
 start-example-mcap-s3: setup-floci build
 	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
 	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+
+# Runs the MCAP sequence-indexing example against a real (remote) S3 URI without
+# starting the local Floci emulator.  AWS credentials must be available in the
+# environment (AWS_PROFILE, AWS_ACCESS_KEY_ID/SECRET, instance role, etc.).
+#
+# Usage:
+#   make start-example-mcap-remote-s3
+#   make start-example-mcap-remote-s3 MCAP_REMOTE_S3_URI=s3://other-bucket/path/file.mcap
+.PHONY: start-example-mcap-remote-s3
+start-example-mcap-remote-s3: build
+	@echo "Starting MCAP sequence example (from remote S3: $(MCAP_REMOTE_S3_URI))..."
+	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(MCAP_REMOTE_S3_URI) \
 		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Runs the MCAP sequence-indexing example from S3 for a folder of recordings: syncs all
