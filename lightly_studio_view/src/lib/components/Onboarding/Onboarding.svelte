@@ -183,7 +183,7 @@
         if (get(state) === 'running' && !isImages && ref.stage !== 'detail') dismiss('navigation');
     }
 
-    let replaySeen = 0;
+    let replaySeen = get(onboarding.replayRequested);
 
     onMount(() => {
         const domObserver = new MutationObserver(update);
