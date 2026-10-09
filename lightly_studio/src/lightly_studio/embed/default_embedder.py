@@ -54,7 +54,7 @@ def resolve_default_embedder(
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used. Expected to
-            exist; only validated when a bootstrap model is registered.
+            exist; only validated when the collection has no default model.
         embedder_type: The embedder interface of the needed capability, such as
             ``ImagePathEmbedder``.
 
@@ -71,41 +71,20 @@ def resolve_default_embedder(
         session=session, collection_id=collection_id
     )
     if default_model is not None:
-        embedder = _embedder_for_model(default_model=default_model, embedder_type=embedder_type)
-        if embedder is None:
-            logger.warning("No embedding model loaded. Skipping embedding generation.")
-            return None
-        return embedder, default_model.embedding_model_id
-
+        return _use_existing_default(default_model=default_model, embedder_type=embedder_type)
     parent_model = _parent_model_to_take(
         session=session, collection_id=collection_id, embedder_type=embedder_type
     )
     if parent_model is not None:
-        # A default model never changes, so the collection gets no default until the
-        # embedder of the parent's space is available.
-        embedder = _embedder_for_model(default_model=parent_model, embedder_type=embedder_type)
-        if embedder is None:
-            logger.warning(
-                "No embedder is available for the embedding space %r of the parent "
-                "collection. Skipping embedding generation.",
-                parent_model.name,
-            )
-            return None
-        _set_default_model(
+        return _take_parent_model(
             session=session,
             collection_id=collection_id,
-            embedding_model_id=parent_model.embedding_model_id,
+            parent_model=parent_model,
+            embedder_type=embedder_type,
         )
-        return embedder, parent_model.embedding_model_id
-
-    embedder = embedder_registry.get_registry().get_embedder(embedder_type=embedder_type)
-    if embedder is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
-        return None
-    model_id = _register_default_model(
-        session=session, collection_id=collection_id, embedder=embedder
+    return _bootstrap_default_model(
+        session=session, collection_id=collection_id, embedder_type=embedder_type
     )
-    return embedder, model_id
 
 
 def resolve_query_embedder(
@@ -153,6 +132,58 @@ def resolve_query_embedder(
     ):
         raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=config.url)
     raise MissingCapabilityError(space_key=default_model.name, query_kind=query_kind)
+
+
+def _use_existing_default(
+    default_model: EmbeddingModelTable, embedder_type: type[_EmbedderT]
+) -> tuple[_EmbedderT, UUID] | None:
+    """Resolve the embedder of the collection's default model, or None to skip."""
+    embedder = _embedder_for_model(default_model=default_model, embedder_type=embedder_type)
+    if embedder is None:
+        logger.warning("No embedding model loaded. Skipping embedding generation.")
+        return None
+    return embedder, default_model.embedding_model_id
+
+
+def _take_parent_model(
+    session: Session,
+    collection_id: UUID,
+    parent_model: EmbeddingModelTable,
+    embedder_type: type[_EmbedderT],
+) -> tuple[_EmbedderT, UUID] | None:
+    """Make the parent's default model the collection's default, or return None to skip.
+
+    A default model never changes, so the collection gets no default until the embedder
+    of the parent's space is available.
+    """
+    embedder = _embedder_for_model(default_model=parent_model, embedder_type=embedder_type)
+    if embedder is None:
+        logger.warning(
+            "No embedder is available for the embedding space %r of the parent "
+            "collection. Skipping embedding generation.",
+            parent_model.name,
+        )
+        return None
+    _set_default_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=parent_model.embedding_model_id,
+    )
+    return embedder, parent_model.embedding_model_id
+
+
+def _bootstrap_default_model(
+    session: Session, collection_id: UUID, embedder_type: type[_EmbedderT]
+) -> tuple[_EmbedderT, UUID] | None:
+    """Make the space of the bootstrap embedder the collection's default, or return None."""
+    embedder = embedder_registry.get_registry().get_embedder(embedder_type=embedder_type)
+    if embedder is None:
+        logger.warning("No embedding model loaded. Skipping embedding generation.")
+        return None
+    model_id = _register_default_model(
+        session=session, collection_id=collection_id, embedder=embedder
+    )
+    return embedder, model_id
 
 
 def _embedder_for_model(
