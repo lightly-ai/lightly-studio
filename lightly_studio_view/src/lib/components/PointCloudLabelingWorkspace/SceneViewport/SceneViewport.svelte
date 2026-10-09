@@ -54,6 +54,9 @@
         count: 0
     };
     const EMPTY_BOUNDS: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
+    // `[contenteditable]` also matches `""` and `plaintext-only`, and editable ancestors.
+    const IGNORED_KEY_TARGETS =
+        'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="slider"]';
 
     let {
         batch = EMPTY_BATCH,
@@ -85,12 +88,7 @@
                       : undefined;
             if (!handler) return;
             const target = event.target;
-            if (
-                target instanceof HTMLElement &&
-                target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]')
-            ) {
-                return;
-            }
+            if (target instanceof HTMLElement && target.closest(IGNORED_KEY_TARGETS)) return;
             event.preventDefault();
             handler();
         };
