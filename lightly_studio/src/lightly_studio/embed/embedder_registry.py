@@ -2,7 +2,7 @@
 
 Holds at most one embedder per ``space_key``. Callers look up an embedder by the
 interface of the capability they need with ``get_embedder``, which returns the space's
-embedder only when it implements that capability.
+embedder only when it implements that capability, else a ``NoEmbedderReason`` that tells why.
 
 A lookup that gets the stored configuration of a space also resolves an embedder that
 nobody registered: it builds the one the configuration names.
@@ -14,6 +14,7 @@ import logging
 import threading
 import time
 from collections.abc import Set
+from enum import Enum
 from typing import TypeVar
 from uuid import UUID
 
@@ -59,13 +60,23 @@ _INITIAL_BOOTSTRAP_SPACES = {
 }
 
 
+class NoEmbedderReason(Enum):
+    """Why a lookup in the registry found no embedder."""
+
+    UNAVAILABLE = "unavailable"
+    """No embedder serves the space at this time. A later lookup can succeed."""
+
+    LACKS_CAPABILITY = "lacks_capability"
+    """The embedder of the space does not have the capability."""
+
+
 class EmbedderRegistry:
     """Stores at most one embedder per embedding space.
 
     An embedder can provide several capabilities. The registry keeps one embedder
     per ``space_key``; registering another embedder for the same space replaces
     it. ``get_embedder`` returns the space's embedder only when it implements the
-    requested capability.
+    requested capability, else a ``NoEmbedderReason`` that tells why.
 
     Calling ``get_embedder`` without a ``space_key`` selects that capability's bootstrap
     space. Initially, MobileCLIP and Perception Encoder serve as default bootstraps
@@ -86,8 +97,9 @@ class EmbedderRegistry:
         self._space_key_to_embedder: dict[str, Embedder] = {}
         self._space_key_to_builtin: dict[str, Embedder] = {}
         self._config_to_embedder: dict[tuple[UUID, str], tuple[EmbedderConfig, Embedder]] = {}
-        # The flag is False for a server that answers but serves no usable capability
-        self._config_to_failure: dict[tuple[UUID, str], tuple[EmbedderConfig, float, bool]] = {}
+        self._config_to_failure: dict[
+            tuple[UUID, str], tuple[EmbedderConfig, float, NoEmbedderReason]
+        ] = {}
         self._bootstrap_spaces = dict(_INITIAL_BOOTSTRAP_SPACES)
         self._build_locks: dict[tuple[UUID | None, str], threading.Lock] = {}
         self._lock = threading.Lock()
@@ -146,8 +158,8 @@ class EmbedderRegistry:
         embedder_type: type[_EmbedderT],
         space_key: str | None = None,
         config: EmbedderConfig | None = None,
-    ) -> _EmbedderT | None:
-        """Get the space's embedder if it is an instance of ``embedder_type``, else None.
+    ) -> _EmbedderT | NoEmbedderReason:
+        """Get the space's embedder if it is an instance of ``embedder_type``, else why not.
 
         Args:
             embedder_type: The embedder interface of the needed capability, such as
@@ -157,7 +169,7 @@ class EmbedderRegistry:
             config: The stored configuration of the space, None when there is none.
 
         Returns:
-            The embedder of the space, or None if no source has one with the capability.
+            The embedder of the space, or why no source has one with the capability.
 
         Raises:
             ValueError: If ``embedder_type`` is not the interface of a capability.
@@ -166,18 +178,11 @@ class EmbedderRegistry:
         if capability is None:
             raise ValueError(f"{embedder_type.__name__!r} is not an embedder capability type.")
         embedder = self._resolve(space_key=space_key, capability=capability, config=config)
-        return embedder if isinstance(embedder, embedder_type) else None
-
-    def is_remote_unavailable(self, config: EmbedderConfig) -> bool:
-        """Get whether the embedding server of the configuration failed inside the retry window.
-
-        ``get_embedder`` returns None for an unusable server and for a space without the capability.
-        This tells the two apart.
-        """
-        with self._lock:
-            if not self._failed_recently(config=config):
-                return False
-            return self._config_to_failure[(config.dataset_id, config.space_key)][2]
+        if isinstance(embedder, NoEmbedderReason):
+            return embedder
+        if isinstance(embedder, embedder_type):
+            return embedder
+        return NoEmbedderReason.LACKS_CAPABILITY
 
     def preload_builtin_embedders(self) -> None:
         """Load and cache the built-in bootstrap embedders.
@@ -189,7 +194,7 @@ class EmbedderRegistry:
 
     def _resolve(
         self, space_key: str | None, capability: Capability, config: EmbedderConfig | None
-    ) -> Embedder | None:
+    ) -> Embedder | NoEmbedderReason:
         """Resolve the embedder of a space from a registration, a configuration or a built-in.
 
         Args:
@@ -200,7 +205,8 @@ class EmbedderRegistry:
                 registered for it implements the capability.
 
         Returns:
-            The embedder of the space, or None if no source has one.
+            The embedder of the space, or why no source has one. The embedder can lack
+            the capability.
         """
         if config is not None:
             space_key = config.space_key
@@ -210,32 +216,36 @@ class EmbedderRegistry:
             if space_key is None:
                 space_key = self._bootstrap_spaces.get(capability)
             if space_key is None:
-                return None
-            embedder = self._cached_embedder(
-                space_key=space_key, capability=capability, config=config
-            )
-            if embedder is not None:
-                return embedder
-            if config is not None and self._failed_recently(config=config):
-                return None
+                return NoEmbedderReason.UNAVAILABLE
+            found = self._cached(space_key=space_key, capability=capability, config=config)
+            if found is not None:
+                return found
             build_lock = self._build_locks.setdefault(
                 _build_key(space_key=space_key, config=config), threading.Lock()
             )
         with build_lock:
             with self._lock:
-                embedder = self._cached_embedder(
-                    space_key=space_key, capability=capability, config=config
-                )
-                if embedder is not None:
-                    return embedder
-                if config is not None and self._failed_recently(config=config):
-                    return None
+                found = self._cached(space_key=space_key, capability=capability, config=config)
+                if found is not None:
+                    return found
             if config is not None:
                 self._build_from_config(config=config)
             else:
                 self._build_builtin(space_key=space_key)
         with self._lock:
-            return self._cached_embedder(space_key=space_key, capability=capability, config=config)
+            found = self._cached(space_key=space_key, capability=capability, config=config)
+        return NoEmbedderReason.UNAVAILABLE if found is None else found
+
+    def _cached(
+        self, space_key: str, capability: Capability, config: EmbedderConfig | None
+    ) -> Embedder | NoEmbedderReason | None:
+        """Get the cached embedder or the recent failure, else None. Needs ``_lock``."""
+        embedder = self._cached_embedder(space_key=space_key, capability=capability, config=config)
+        if embedder is not None:
+            return embedder
+        if config is None:
+            return None
+        return self._recent_failure(config=config)
 
     def _cached_embedder(
         self, space_key: str, capability: Capability, config: EmbedderConfig | None
@@ -259,15 +269,17 @@ class EmbedderRegistry:
         cached_config, cached_embedder = cached
         return cached_embedder if cached_config == config else None
 
-    def _failed_recently(self, config: EmbedderConfig) -> bool:
-        """Get whether the configuration failed inside the retry window. Needs ``_lock``."""
+    def _recent_failure(self, config: EmbedderConfig) -> NoEmbedderReason | None:
+        """Get why the configuration failed inside the retry window, else None. Needs ``_lock``."""
         failure = self._config_to_failure.get((config.dataset_id, config.space_key))
         if failure is None:
-            return False
-        failed_config, failed_at, _ = failure
+            return None
+        failed_config, failed_at, reason = failure
         if failed_config != config:
-            return False
-        return time.monotonic() - failed_at < _REMOTE_RETRY_DELAY_SECONDS
+            return None
+        if time.monotonic() - failed_at >= _REMOTE_RETRY_DELAY_SECONDS:
+            return None
+        return reason
 
     def _build_from_config(self, config: EmbedderConfig) -> None:
         """Build the embedder of a configuration and cache it, or cache the failure."""
@@ -289,7 +301,9 @@ class EmbedderRegistry:
                 self._config_to_failure[key] = (
                     config,
                     time.monotonic(),
-                    not isinstance(error, RemoteEmbedderCapabilityError),
+                    NoEmbedderReason.LACKS_CAPABILITY
+                    if isinstance(error, RemoteEmbedderCapabilityError)
+                    else NoEmbedderReason.UNAVAILABLE,
                 )
             return
         with self._lock:
