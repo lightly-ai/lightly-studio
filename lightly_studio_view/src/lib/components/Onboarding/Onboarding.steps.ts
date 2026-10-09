@@ -289,7 +289,8 @@ export function createTourSteps(opts: StepsOptions) {
 
     function highlightTile() {
         const target = tile();
-        if (!ref.tour || !target) return;
+        if (!ref.tour) return;
+        if (!target) return onSkip();
         highlightStep({
             stage: 'tile',
             element: target,

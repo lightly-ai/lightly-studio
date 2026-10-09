@@ -168,6 +168,33 @@ describe('highlightEditButton fallthrough', () => {
     });
 });
 
+describe('highlightTile', () => {
+    it('calls onSkip when tile target is missing', () => {
+        const ref = makeRef();
+        ref.tour = { highlight: vi.fn() } as unknown as TourRef['tour'];
+
+        mockQuerySelector({});
+
+        const onSkip = vi.fn();
+        const steps = makeOpts(ref, { tile: () => null, onSkip });
+        steps.highlightTile();
+
+        expect(onSkip).toHaveBeenCalledOnce();
+    });
+
+    it('does not call onSkip when ref.tour is unavailable', () => {
+        const onSkip = vi.fn();
+        const ref = makeRef(); // ref.tour is undefined
+
+        mockQuerySelector({});
+
+        const steps = makeOpts(ref, { tile: () => null, onSkip });
+        steps.highlightTile();
+
+        expect(onSkip).not.toHaveBeenCalled();
+    });
+});
+
 describe('highlightEmbedding fallthrough', () => {
     it('falls through to highlightTile when embed button is absent', () => {
         const ref = makeRef();
