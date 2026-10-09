@@ -16,7 +16,8 @@
         useAnnotationLabels,
         useAnnotation,
         useAnnotationLabelContext,
-        useDeleteAnnotation
+        useDeleteAnnotation,
+        useGlobalStorage
     } from '$lib/hooks';
     import { page } from '$app/state';
     import { usePostHog } from '$lib/hooks';
@@ -61,6 +62,7 @@
     } = useAnnotationLabelContext();
 
     const { trackEvent } = usePostHog();
+    const { segmentationMaskOpacity } = useGlobalStorage();
     let drawStartFired = false;
 
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
@@ -210,6 +212,13 @@
         return sample.annotations.find((a) => a.sample_id === activeAnnotationId) ?? null;
     };
 
+    const isSelectedAnnotationLocked = (): boolean => {
+        const annotation = resolveSelectedAnnotation();
+        if (!annotation) return false;
+
+        return annotationLabelContext.isAnnotationLocked?.(annotation.sample_id) ?? false;
+    };
+
     const releasePointerCapture = (e: PointerEvent) => {
         const pointerTarget = e.currentTarget as Element | null;
         pointerTarget?.releasePointerCapture?.(e.pointerId);
@@ -220,11 +229,7 @@
         drawStartFired = false;
         resetPreviewState({ clearDrawing: false });
 
-        const targetAnnotation = resolveSelectedAnnotation();
-        if (
-            targetAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
-        ) {
+        if (isSelectedAnnotationLocked()) {
             setIsDrawing(false);
             return;
         }
@@ -237,6 +242,7 @@
         // Keep local base in sync after committing stroke.
         baseMask = updatedMask;
 
+        const targetAnnotation = resolveSelectedAnnotation();
         const pendingOperation = startFinishBrushPending();
         void (async () => {
             try {
@@ -281,7 +287,7 @@
         bind:this={previewCanvas}
         width={sample.width}
         height={sample.height}
-        style="width: 100%; height: 100%; pointer-events: none; opacity: 0.85;"
+        style="width: 100%; height: 100%; pointer-events: none; opacity: {$segmentationMaskOpacity};"
     ></canvas>
 </foreignObject>
 <SampleAnnotationRect
@@ -290,12 +296,7 @@
     cursor={'crosshair'}
     onpointermove={(e) => {
         if (!annotationLabelContext.isDrawing) return;
-        const currentAnnotation = resolveSelectedAnnotation();
-        if (
-            currentAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(currentAnnotation.sample_id)
-        )
-            return;
+        if (isSelectedAnnotationLocked()) return;
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
@@ -344,12 +345,8 @@
             setAnnotationId(activeAnnotationId);
         }
 
-        const targetAnnotation = resolveSelectedAnnotation();
-        if (
-            targetAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
-        ) {
-            e.currentTarget?.releasePointerCapture?.(e.pointerId);
+        if (isSelectedAnnotationLocked()) {
+            releasePointerCapture(e);
             return;
         }
 

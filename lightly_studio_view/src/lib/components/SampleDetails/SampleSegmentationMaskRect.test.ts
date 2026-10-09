@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/hooks';
 import SampleSegmentationMaskRect from './SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
 
 const {
@@ -295,6 +296,9 @@ describe('SampleSegmentationMaskRect', () => {
 
         expect(mockCanvasContext.drawImage).toHaveBeenCalledTimes(1);
         expect(getPreviewLayer(container).classList.contains('previewHidden')).toBe(false);
+        expect(container.querySelector('canvas')?.style.opacity).toBe(
+            String(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity)
+        );
     });
 
     it('replaces a queued preview animation frame with the latest update', async () => {
