@@ -22,6 +22,7 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_toolbar_drag: 'd',
         key_toolbar_bounding_box: 'b',
         key_toolbar_segmentation_mask: 'm',
+        key_toolbar_slic: 'a',
         key_toolbar_brush: 'r',
         key_toolbar_eraser: 'x'
     });
@@ -158,6 +159,7 @@ describe('SettingsDialog', () => {
             key_toolbar_drag: 'd',
             key_toolbar_bounding_box: 'b',
             key_toolbar_segmentation_mask: 'm',
+            key_toolbar_slic: 'a',
             key_toolbar_brush: 'r',
             key_toolbar_eraser: 'x'
         });

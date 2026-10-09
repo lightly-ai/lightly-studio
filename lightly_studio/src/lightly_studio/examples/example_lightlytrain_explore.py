@@ -16,7 +16,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import torch
-from lightly_studio_serve.embedder import ImageCropPathEmbedder, ImagePathEmbedder
+from lightly_studio_serve.embedder import (
+    ImageBytesEmbedder,
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+)
 from torchvision import transforms  # type: ignore[import-untyped]
 
 import lightly_studio as ls
@@ -35,14 +39,15 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
-class LightlyTrainEmbedder(ImagePathEmbedder, ImageCropPathEmbedder):
+class LightlyTrainEmbedder(ImagePathEmbedder, ImageCropPathEmbedder, ImageBytesEmbedder):
     """Embed images on the fly with a model exported from LightlyTrain.
 
     Loads the ``EmbeddingModel`` written by
     ``lightly_train.export(part="embedding_model", format="torch_model")`` and runs
     it inside LightlyStudio, so whole images and object crops are embedded live
-    during ingestion. A LightlyTrain backbone is vision-only, so this embedder does
-    not subclass ``TextEmbedder`` and text search stays on the default.
+    during ingestion, and uploaded images are embedded for image search. A LightlyTrain
+    backbone is vision-only, so this embedder does not subclass ``TextEmbedder`` and text
+    search stays on the default.
     """
 
     def __init__(self, model_file: str) -> None:
@@ -98,6 +103,14 @@ class LightlyTrainEmbedder(ImagePathEmbedder, ImageCropPathEmbedder):
             image_crops=crops,
             context=self._embedding_context(),
             show_progress=True,
+        )
+
+    def embed_image_bytes(self, images: list[bytes]) -> ls.EmbeddingResult:
+        """Embed uploaded images given as encoded bytes (for image search in the GUI)."""
+        return image_embedding.embed_image_bytes_batched(
+            images=images,
+            context=self._embedding_context(),
+            show_progress=False,
         )
 
     def _embedding_context(self) -> EmbeddingContext:

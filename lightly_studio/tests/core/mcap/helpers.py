@@ -6,14 +6,19 @@ compiled schemas.
 
 from __future__ import annotations
 
+import io
 import json
 import struct
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+import av
+import numpy as np
+from av import VideoStream
 from mcap.writer import Writer as RawWriter
 from mcap_ros2.writer import Writer
+from PIL import Image
 
 CAMERA_VIDEO_TOPIC = "/cam/front/compressed_video"
 CAMERA_INFO_TOPIC = "/cam/front/camera_info"
@@ -253,6 +258,37 @@ def write_mcap_with_compressed_image(path: Path) -> Path:
     return path
 
 
+def write_mcap_with_video(path: Path, frames: Sequence[tuple[int, bytes]]) -> Path:
+    """Writes an MCAP with an H.264 video topic, for decoding tests.
+
+    Args:
+        path: The path to write the file to.
+        frames: `(log_time_ns, access_unit)` pairs, in log-time order, e.g. from
+            `h264_access_units`.
+
+    Returns:
+        The path of the written file.
+    """
+    writer = Writer(output=str(path))
+    video_schema = writer.register_msgdef(
+        datatype="foxglove_msgs/msg/CompressedVideo", msgdef_text=_COMPRESSED_VIDEO_MSGDEF
+    )
+    for log_time_ns, access_unit in frames:
+        writer.write_message(
+            topic=CAMERA_VIDEO_TOPIC,
+            schema=video_schema,
+            message={
+                "timestamp": _time(log_time_ns),
+                "frame_id": CAMERA_FRAME_ID,
+                "data": access_unit,
+                "format": "h264",
+            },
+            log_time=log_time_ns,
+        )
+    writer.finish()
+    return path
+
+
 def write_unchunked_mcap(path: Path) -> Path:
     """Writes an MCAP file with a summary but no chunk index.
 
@@ -437,6 +473,46 @@ def write_json_mcap(
     return path
 
 
+def write_json_mcap_with_two_channels(
+    path: Path,
+    topic: str,
+    log_times_ns: Sequence[int],
+) -> Path:
+    """Writes an indexed MCAP with one topic recorded on two JSON-encoded channels.
+
+    Each channel has one message per log time. The payload of a message is
+    `{"channel": index}`, with index 0 for the first channel and 1 for the second.
+
+    Args:
+        path: The path to write the file to.
+        topic: The topic both channels publish on.
+        log_times_ns: The log times of the messages of each channel.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        schema_id = writer.register_schema(
+            name="test_msgs/msg/Json", encoding="jsonschema", data=b"{}"
+        )
+        channel_ids = [
+            writer.register_channel(topic=topic, message_encoding="json", schema_id=schema_id)
+            for _ in range(2)
+        ]
+        for log_time_ns in log_times_ns:
+            for index, channel_id in enumerate(channel_ids):
+                writer.add_message(
+                    channel_id=channel_id,
+                    log_time=log_time_ns,
+                    publish_time=log_time_ns,
+                    data=json.dumps({"channel": index}).encode(),
+                )
+        writer.finish()
+    return path
+
+
 def compressed_image_payload(log_time_ns: int) -> bytes:
     """Returns a distinguishable fake encoded-image payload for a given log time."""
     return f"{IMAGE_FORMAT}-bytes-{log_time_ns}".encode()
@@ -460,6 +536,44 @@ def h264_keyframe(payload: bytes = b"\x00\x01\x02") -> bytes:
 def h264_delta_frame(payload: bytes = b"\x00\x01\x02") -> bytes:
     """Returns an Annex B H.264 frame holding a non-IDR picture."""
     return b"\x00\x00\x00\x01\x41" + payload
+
+
+def h264_access_units(gray_levels: Sequence[int], width: int = 16, height: int = 16) -> list[bytes]:
+    """Encodes one solid gray frame per gray level as real, decodable H.264.
+
+    The first frame is a keyframe and the others are delta frames. The stream has no
+    B-frames, so the decoder outputs each frame as soon as it gets its access unit.
+
+    Args:
+        gray_levels: The gray level (0-255) of each frame.
+        width: The frame width in pixels.
+        height: The frame height in pixels.
+
+    Returns:
+        One Annex B access unit per frame, in decoding order.
+    """
+    buf = io.BytesIO()
+    access_units: list[bytes] = []
+    with av.open(buf, "w", format="h264") as container:
+        stream = container.add_stream("libx264", rate=25)
+        assert isinstance(stream, VideoStream)
+        stream.width = width
+        stream.height = height
+        stream.pix_fmt = "yuv420p"
+        stream.options = {"tune": "zerolatency", "preset": "ultrafast"}
+        for pts, gray_level in enumerate(gray_levels):
+            pixels = np.full((height, width, 3), gray_level, dtype=np.uint8)
+            frame = av.VideoFrame.from_ndarray(pixels, format="rgb24").reformat(format="yuv420p")
+            frame.pts = pts
+            access_units.extend(bytes(packet) for packet in stream.encode(frame))
+        access_units.extend(bytes(packet) for packet in stream.encode())
+    return access_units
+
+
+def jpeg_mean_gray_level(data: bytes) -> float:
+    """Returns the mean gray level (0-255) of a JPEG image."""
+    image = Image.open(io.BytesIO(data)).convert("L")
+    return float(np.asarray(image).mean())
 
 
 def _compressed_image_message(log_time_ns: int) -> dict[str, Any]:

@@ -16,6 +16,7 @@ interface SettingsDialogShortcutState {
     keyToolbarDrag: string;
     keyToolbarBoundingBox: string;
     keyToolbarSegmentationMask: string;
+    keyToolbarSlic: string;
     keyToolbarBrush: string;
     keyToolbarEraser: string;
 }
@@ -45,6 +46,7 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
             keyToolbarDrag: settings.key_toolbar_drag,
             keyToolbarBoundingBox: settings.key_toolbar_bounding_box,
             keyToolbarSegmentationMask: settings.key_toolbar_segmentation_mask,
+            keyToolbarSlic: settings.key_toolbar_slic ?? 'a',
             keyToolbarBrush: settings.key_toolbar_brush,
             keyToolbarEraser: settings.key_toolbar_eraser
         },
@@ -74,6 +76,7 @@ export function createSettingsSavePayload(
         key_toolbar_drag: formState.shortcutSettings.keyToolbarDrag,
         key_toolbar_bounding_box: formState.shortcutSettings.keyToolbarBoundingBox,
         key_toolbar_segmentation_mask: formState.shortcutSettings.keyToolbarSegmentationMask,
+        key_toolbar_slic: formState.shortcutSettings.keyToolbarSlic,
         key_toolbar_brush: formState.shortcutSettings.keyToolbarBrush,
         key_toolbar_eraser: formState.shortcutSettings.keyToolbarEraser
     };
@@ -110,6 +113,7 @@ export class SettingsDialogState {
         keyToolbarDrag: 'd',
         keyToolbarBoundingBox: 'b',
         keyToolbarSegmentationMask: 'm',
+        keyToolbarSlic: 'a',
         keyToolbarBrush: 'r',
         keyToolbarEraser: 'x'
     });

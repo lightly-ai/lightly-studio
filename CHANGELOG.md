@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+- Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.1.3\] - 2026-10-07
+
+### Added
+
 - Add `quickstart-enterprise` CLI command to seed a remote enterprise instance with a demo dataset.
 - Python SDK: Index `.mcap` recordings into a dataset with `McapDataset.load_or_create(...)` and `dataset.add_mcaps_from_path(...)`.
 - Python SDK: Attach 3D cuboids and frame tags from annotation MCAPs with `dataset.add_labels_from_folder(...)`. A later call skips sequences that already have that annotation source.
@@ -28,10 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep the query editor button enabled in the GUI. Clicking "Re-apply" refreshes the results with the current data.
 - Move the Tags, Metadata, and Embeddings docs pages under Workflows and add Enterprise sign-up and demo buttons to the docs landing page. The old URLs redirect.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Disable the subpart diversity sampling strategy when no object detection or segmentation annotation sources exist in the collection.
@@ -42,9 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix undoing an annotation deletion restoring it to the default source instead of its original one.
 - Return 409 instead of 500 for text and image search on a collection whose embedding space cannot embed the query, and 502 when its embedding server cannot be used.
 - Python SDK: Keep the image embeddings stored before an embedder failure, and embed only the images without an embedding when the images are added again with `embed=True`.
-
-
-### Security
 
 ## \[1.1.2\] - 2026-09-21
 

@@ -214,9 +214,8 @@ class McapDataset:
         """Index every `.mcap` recording under a path into the dataset.
 
         One recording becomes one sequence of groups. Every message of the sync
-        component is a tick, the other components are paired against the tick closest
-        in time, and a tick that any component cannot be paired to is dropped, so every
-        group is complete:
+        component is a tick, and the other components are paired against the tick closest
+        in time. A component that cannot be paired to a tick is left out of that group:
 
         ```python
         dataset.add_mcaps_from_path(

@@ -73,6 +73,9 @@ class SettingBase(SQLModel):
     key_toolbar_segmentation_mask: str = Field(
         description="Key to activate the segmentation mask tool in the toolbar",
     )
+    key_toolbar_slic: str = Field(
+        default="a", description="Key to activate AI-assisted labeling in the toolbar"
+    )
     key_toolbar_brush: str = Field(
         description="Key to activate brush mode in the segmentation tool",
     )
