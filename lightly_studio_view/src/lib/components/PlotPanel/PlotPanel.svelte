@@ -3,11 +3,9 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import { Select } from '$lib/components/Select';
-    import { toast } from 'svelte-sonner';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
-    import { createEmptyTextAxesDraft } from './PlotTextAxesInputs/textAxesDraft';
-    import { embedTextAxes } from './PlotTextAxesInputs/embedTextAxes';
+    import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
@@ -137,32 +135,16 @@
         annotationLabels
     });
 
-    // The plot shows the PaCMAP layout. In Text mode it shows the projection onto two text axes,
-    // once all four texts are committed. A region drawn on the plot carries the same axes, so
-    // the server resolves the region in the same layout.
-    type PlotLayout = 'pacmap' | 'text';
+    // A region drawn on the plot carries the axes of the layout, so the server resolves the
+    // region in the same layout.
     const PLOT_LAYOUT_ITEMS = [
         { value: 'pacmap', label: 'PaCMAP' },
         { value: 'text', label: 'Text' }
     ];
-    let plotLayout = $state<PlotLayout>('pacmap');
-    let textAxesDraft = $state(createEmptyTextAxesDraft());
-    let committedAxes = $state<ProjectionAxes | null>(null);
-    let isEmbeddingAxes = $state(false);
-    const plotAxes = $derived(plotLayout === 'text' ? committedAxes : null);
+    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, isAwaitingAxes, commitTextAxes } =
+        usePlotLayout(untrack(() => collectionId));
 
-    const commitTextAxes = async (textAxes: Parameters<typeof embedTextAxes>[1]) => {
-        isEmbeddingAxes = true;
-        try {
-            committedAxes = await embedTextAxes(collectionId, textAxes);
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'Failed to embed the axis texts.');
-        } finally {
-            isEmbeddingAxes = false;
-        }
-    };
-
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, plotAxes));
+    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
     const {
         data: arrowData,
@@ -266,7 +248,7 @@
         }
     };
     const commitRegion = (polygon: Point[], count: number) => {
-        saveRegion(plotAxes ? { polygon, axes: plotAxes } : { polygon });
+        saveRegion($plotAxes ? { polygon, axes: $plotAxes } : { polygon });
         setPlotSelectionCount(collectionId, count);
     };
     const clearRegion = () => {
@@ -435,12 +417,16 @@
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
-    // region belongs to the layout it was drawn on.
-    let previousPlotAxes: ProjectionAxes | null = null;
+    // region belongs to the layout it was drawn on. Start from the layout at mount, so a
+    // reopened plot keeps the region that was drawn on it.
+    let previousPlotLayout: PlotLayout = get(plotLayout);
+    let previousPlotAxes: ProjectionAxes | null = get(plotAxes);
     $effect(() => {
-        const axes = plotAxes;
+        const layout = $plotLayout;
+        const axes = $plotAxes;
         untrack(() => {
-            if (axes === previousPlotAxes) return;
+            if (layout === previousPlotLayout && axes === previousPlotAxes) return;
+            previousPlotLayout = layout;
             previousPlotAxes = axes;
             viewportState = null;
             if (hasActiveSelection) clearSelection();
@@ -503,8 +489,8 @@
             <div class="text-lg font-semibold">Embedding Plot</div>
             <Select
                 items={PLOT_LAYOUT_ITEMS}
-                value={plotLayout}
-                onValueChange={(value) => (plotLayout = value as PlotLayout)}
+                value={$plotLayout}
+                onValueChange={(value) => plotLayout.set(value as PlotLayout)}
                 size="xs"
                 class="w-28"
                 testId="plot-layout-select"
@@ -522,13 +508,19 @@
             ✕
         </Button>
     </div>
-    <div class="flex min-h-0 flex-1 flex-col space-y-6">
-        {#if embeddingsData.isLoading}
-            <div class="flex items-center justify-center p-8">
+    <!-- Relative: the text-axis inputs overlay every state below, so the user can fix the texts
+         while the plot loads or shows an error. -->
+    <div class="relative flex min-h-0 flex-1 flex-col">
+        {#if $isAwaitingAxes}
+            <div class="flex flex-1 items-center justify-center p-8 text-muted-foreground">
+                <div class="text-lg">Type the four axis texts and press Enter.</div>
+            </div>
+        {:else if embeddingsData.isLoading}
+            <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
         {:else if errorText}
-            <div class="flex items-center justify-center p-8 text-red-500">
+            <div class="flex flex-1 items-center justify-center p-8 text-red-500">
                 <div class="text-lg">Error loading embeddings: {errorText}</div>
             </div>
         {:else if isReady}
@@ -591,18 +583,18 @@
                         <PlotToolPill {plotContainer} bind:activeTool />
                     </div>
                 {/if}
-                {#if plotLayout === 'text'}
-                    <PlotTextAxesInputs
-                        bind:draft={textAxesDraft}
-                        onCommit={commitTextAxes}
-                        isPending={isEmbeddingAxes}
-                    />
-                {/if}
             </div>
         {:else}
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">No data available</div>
             </div>
+        {/if}
+        {#if $plotLayout === 'text'}
+            <PlotTextAxesInputs
+                bind:draft={$textAxesDraft}
+                onCommit={commitTextAxes}
+                isPending={$isEmbeddingAxes}
+            />
         {/if}
     </div>
     {#if isReady}

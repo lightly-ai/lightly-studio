@@ -16,6 +16,7 @@ import {
 import { tick } from 'svelte';
 import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
 import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
+import { clearPlotLayout } from './usePlotLayout/usePlotLayout';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
@@ -173,10 +174,14 @@ const SQUARE_POLYGON = [
 ];
 const TEXT_LAYOUT_AXES = { x: [1, 0, 0], y: [0, 1, 0] };
 
-// Switches the plot to the Text layout and commits four axis texts.
-const commitTextAxes = async (user: ReturnType<typeof userEvent.setup>) => {
+const selectTextLayout = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByTestId('plot-layout-select'));
     await user.click(await screen.findByRole('option', { name: 'Text' }));
+};
+
+// Switches the plot to the Text layout and commits four axis texts.
+const commitTextAxes = async (user: ReturnType<typeof userEvent.setup>) => {
+    await selectTextLayout(user);
     await user.type(screen.getByLabelText('X axis start'), 'young');
     await user.type(screen.getByLabelText('X axis end'), 'old');
     await user.type(screen.getByLabelText('Y axis start'), 'sad');
@@ -210,6 +215,7 @@ describe('PlotPanel.svelte', () => {
         routeState.id = IMAGES_ROUTE;
         actualVideoFilters = null;
         clearAnnotationPlotSelection('test-collection-id');
+        clearPlotLayout('test-collection-id');
         usePlotColorByType('test-collection-id').clearSelectedColorByType();
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
@@ -628,19 +634,75 @@ describe('PlotPanel.svelte', () => {
         });
     });
 
-    it('clears the committed region when the plot layout changes', async () => {
+    it('clears the region and shows a hint when the Text layout is selected', async () => {
         const user = userEvent.setup();
-        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
         imageFilterStore = writable({
             sample_filter: { sample_ids: [], embedding_region: { polygon: SQUARE_POLYGON } }
         });
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
-        await commitTextAxes(user);
+        await selectTextLayout(user);
 
         // The region was drawn on the PaCMAP layout, so it does not apply to the text axes.
-        await vi.waitFor(() => expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null));
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
         expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+        expect(screen.getByText('Type the four axis texts and press Enter.')).toBeInTheDocument();
+    });
+
+    it('keeps the axis inputs while the embeddings request fails', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: true,
+            error: new Error('Projection failed'),
+            isLoading: false,
+            data: null
+        });
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+        await commitTextAxes(user);
+
+        // The user can still change the texts and commit again.
+        expect(
+            await screen.findByText('Error loading embeddings: Projection failed')
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText('X axis start')).toHaveValue('young');
+    });
+
+    it('restores the text layout and keeps its region when the plot opens again', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        const { unmount } = render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await commitTextAxes(user);
+        await vi.waitFor(() =>
+            expect(useEmbeddings).toHaveBeenLastCalledWith(
+                'test-collection-id',
+                expect.anything(),
+                null,
+                TEXT_LAYOUT_AXES
+            )
+        );
+        unmount();
+
+        // The saved region keeps its axes while the plot is closed.
+        imageFilterStore.set({
+            sample_filter: {
+                sample_ids: [],
+                embedding_region: { polygon: SQUARE_POLYGON, axes: TEXT_LAYOUT_AXES }
+            }
+        });
+        (useEmbeddings as vi.Mock).mockClear();
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await tick();
+
+        expect(screen.getByLabelText('X axis start')).toHaveValue('young');
+        expect(useEmbeddings).toHaveBeenLastCalledWith(
+            'test-collection-id',
+            expect.anything(),
+            null,
+            TEXT_LAYOUT_AXES
+        );
+        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
     });
 
     it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
