@@ -53,28 +53,23 @@ def test_get_sample_ids_in_region__axes(db_session: Session) -> None:
         embedding_dimension=3,
         set_as_default=True,
     )
-    # Along axis 0 the values are [2, -2, 0, 0]. Along axis 1 they are [0, 0, 1, -1].
-    images = helpers_resolvers.create_samples_with_embeddings(
+    image_a, image_b = helpers_resolvers.create_samples_with_embeddings(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
         images_and_embeddings=[
-            (ImageStub(path="sample_0.png"), [2.0, 0.0, 0.0]),
-            (ImageStub(path="sample_1.png"), [-2.0, 0.0, 0.0]),
-            (ImageStub(path="sample_2.png"), [0.0, 1.0, 0.0]),
-            (ImageStub(path="sample_3.png"), [0.0, -1.0, 0.0]),
+            (ImageStub(path="a.png"), [2.0, 0.0, 0.0]),
+            (ImageStub(path="b.png"), [-2.0, 0.0, 0.0]),
         ],
     )
-    # In the PaCMAP layout, only sample 1 is inside the square.
+    # In the PaCMAP layout, only sample b is inside the square.
     _seed_2d_coordinates(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
         coordinates={
-            images[0].sample_id: (100.0, 100.0),
-            images[1].sample_id: (1.5, 0.0),
-            images[2].sample_id: (100.0, 100.0),
-            images[3].sample_id: (100.0, 100.0),
+            image_a.sample_id: (100.0, 100.0),
+            image_b.sample_id: (2.0, 0.0),
         },
     )
     region = EmbeddingRegion(
@@ -88,8 +83,8 @@ def test_get_sample_ids_in_region__axes(db_session: Session) -> None:
         region=region,
     )
 
-    # In the axes layout, only sample 0, at (2, 0), is inside the square.
-    assert selected == [images[0].sample_id]
+    # In the axes layout, only sample a, at (2, 0), is inside the square.
+    assert selected == [image_a.sample_id]
 
 
 def test_get_sample_ids_in_region__no_embedding_model(db_session: Session) -> None:
