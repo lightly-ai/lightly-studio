@@ -1,11 +1,13 @@
 <script lang="ts">
     import { Camera } from '@lucide/svelte';
+    import * as Dialog from '$lib/components/ui/dialog';
     import { getCameraFrameUrl } from '../getCameraFrameUrl/getCameraFrameUrl';
 
     /**
      * A single camera tile in the projection strip. Renders the channel's frame
      * for the active tick, falling back to a placeholder camera icon when the
-     * image fails to load.
+     * image fails to load. Clicking the frame enlarges it in a dialog over the
+     * workspace; the enlarged frame follows the active tick.
      */
     interface Props {
         /** Dataset the recording belongs to. */
@@ -38,20 +40,37 @@
     );
 
     let failedFrameUrl = $state<string | null>(null);
+    let isEnlarged = $state(false);
 </script>
 
 <figure
     class="flex aspect-square h-full shrink-0 flex-col overflow-hidden rounded-md border bg-muted/30"
 >
     {#if frameUrl && frameUrl !== failedFrameUrl}
-        <a href={frameUrl} target="_blank" rel="noopener noreferrer" class="flex min-h-0 flex-1">
+        <button
+            type="button"
+            class="flex min-h-0 flex-1 cursor-zoom-in"
+            aria-label={`Enlarge ${label}`}
+            onclick={() => (isEnlarged = true)}
+        >
             <img
                 src={frameUrl}
                 alt={label}
                 class="min-h-0 flex-1 object-cover"
                 onerror={() => (failedFrameUrl = frameUrl)}
             />
-        </a>
+        </button>
+        <Dialog.Root bind:open={isEnlarged}>
+            <Dialog.Content class="max-w-[90vw] gap-2 p-3 sm:max-w-[90vw]">
+                <Dialog.Title class="text-sm font-medium">{label}</Dialog.Title>
+                <Dialog.Description class="sr-only">Enlarged camera frame</Dialog.Description>
+                <img
+                    src={frameUrl}
+                    alt={`${label} enlarged`}
+                    class="max-h-[80vh] w-full rounded-md object-contain"
+                />
+            </Dialog.Content>
+        </Dialog.Root>
     {:else}
         <div class="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">
             <Camera class="size-5" aria-hidden="true" />
