@@ -59,7 +59,7 @@
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
-    const { addReversibleAction } = useGlobalStorage();
+    const { addReversibleAction, segmentationMaskOpacity } = useGlobalStorage();
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const eraserApi = $derived.by(() =>
         useSegmentationMaskEraser({
@@ -261,7 +261,7 @@
         bind:this={previewCanvas}
         width={sample.width}
         height={sample.height}
-        style="width: 100%; height: 100%; pointer-events: none; opacity: 0.85;"
+        style="width: 100%; height: 100%; pointer-events: none; opacity: {$segmentationMaskOpacity};"
     ></canvas>
 </foreignObject>
 
