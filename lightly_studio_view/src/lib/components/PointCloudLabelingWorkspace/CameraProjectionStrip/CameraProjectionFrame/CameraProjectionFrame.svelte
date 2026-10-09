@@ -41,22 +41,36 @@
 
     let failedFrameUrl = $state<string | null>(null);
     let isEnlarged = $state(false);
+    // Tile width follows the frame's own aspect ratio; square until the image has loaded.
+    let aspectRatio = $state(1);
+    let figureHeight = $state(0);
+    const CAPTION_HEIGHT_PX = 24;
+    const BORDER_PX = 2;
+    const tileWidth = $derived(
+        Math.max(0, figureHeight - CAPTION_HEIGHT_PX) * aspectRatio + BORDER_PX
+    );
 </script>
 
 <figure
-    class="flex aspect-square h-full shrink-0 flex-col overflow-hidden rounded-md border bg-muted/30"
+    class="flex h-full shrink-0 flex-col overflow-hidden rounded-md border bg-muted/30"
+    style:width={`${tileWidth}px`}
+    bind:clientHeight={figureHeight}
 >
     {#if frameUrl && frameUrl !== failedFrameUrl}
         <button
             type="button"
-            class="flex min-h-0 flex-1 cursor-zoom-in"
+            class="block min-h-0 flex-1 cursor-zoom-in"
             aria-label={`Enlarge ${label}`}
             onclick={() => (isEnlarged = true)}
         >
             <img
                 src={frameUrl}
                 alt={label}
-                class="min-h-0 flex-1 object-cover"
+                class="h-full w-full object-contain"
+                onload={(event) => {
+                    const { naturalWidth, naturalHeight } = event.currentTarget as HTMLImageElement;
+                    if (naturalWidth && naturalHeight) aspectRatio = naturalWidth / naturalHeight;
+                }}
                 onerror={() => (failedFrameUrl = frameUrl)}
             />
         </button>
@@ -76,7 +90,9 @@
             <Camera class="size-5" aria-hidden="true" />
         </div>
     {/if}
-    <figcaption class="shrink-0 px-2 py-1 text-center text-xs text-muted-foreground">
+    <figcaption
+        class="h-6 shrink-0 truncate px-2 text-center text-xs leading-6 text-muted-foreground"
+    >
         {label}
     </figcaption>
 </figure>
