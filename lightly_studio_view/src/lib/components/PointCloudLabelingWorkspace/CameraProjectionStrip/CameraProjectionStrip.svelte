@@ -53,7 +53,8 @@
                 {datasetId}
                 {recordingId}
                 channelId={summaryChannel.channel_id}
-                timestampNs={channel?.keyframe_log_time_ns ?? undefined}
+                keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
+                logTimeNs={channel?.log_time_ns}
                 label={summaryChannel.group_component_name}
             />
         {/each}
