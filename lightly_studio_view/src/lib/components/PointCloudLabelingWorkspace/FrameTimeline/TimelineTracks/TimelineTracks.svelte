@@ -29,7 +29,7 @@
         ticks.flatMap((tick, index) => (index % markStride === 0 ? [{ tick, index }] : []))
     );
 
-    const formatTickTime =(timestampNs: number | null): string | undefined => {
+    const formatTickTime = (timestampNs: number | null): string | undefined => {
         if (timestampNs === null || baseTimestampNs === null) return undefined;
         return `${((timestampNs - baseTimestampNs) / NANOS_PER_SECOND).toFixed(2)}s`;
     };

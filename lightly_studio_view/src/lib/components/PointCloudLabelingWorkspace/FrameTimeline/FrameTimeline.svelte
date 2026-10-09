@@ -53,7 +53,6 @@
     const frameLabel = $derived(
         activeIndex >= 0 ? `Frame ${activeIndex + 1} / ${ticks.length}` : 'Frame — / —'
     );
-
 </script>
 
 <div

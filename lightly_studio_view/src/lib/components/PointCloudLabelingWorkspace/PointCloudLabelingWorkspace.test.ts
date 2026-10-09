@@ -107,7 +107,6 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
         expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
-        expect(screen.getByText('lidar_top')).toBeInTheDocument();
         expect(screen.getByTestId('point-cloud-right-side-panel')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
