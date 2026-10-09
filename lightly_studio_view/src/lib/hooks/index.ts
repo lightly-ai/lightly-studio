@@ -87,3 +87,8 @@ export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMca
 export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
 export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
+export { useMcapSequencePrefetch } from '$lib/hooks/useMcapSequencePrefetch/useMcapSequencePrefetch';
+export {
+    MCAP_PLAYBACK_PREFETCH_TICKS,
+    useMcapTickDetailsPrefetch
+} from '$lib/hooks/useMcapTickDetailsPrefetch';

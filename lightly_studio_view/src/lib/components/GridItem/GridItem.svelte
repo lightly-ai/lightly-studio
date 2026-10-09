@@ -19,7 +19,9 @@
         dragData,
         onDragStart,
         onSelect,
-        ondblclick
+        ondblclick,
+        onmouseenter,
+        onmouseleave
     }: {
         children: Snippet;
         width?: string | number;
@@ -37,6 +39,8 @@
         onDragStart?: () => void;
         onSelect?: (event: MouseEvent | KeyboardEvent) => void;
         ondblclick?: (event: MouseEvent) => void;
+        onmouseenter?: () => void;
+        onmouseleave?: () => void;
     } = $props();
 
     const drag = useGridItemDrag(
@@ -87,6 +91,8 @@
         class:cursor-grab={dragData && !drag.isPointerDragging}
         class:cursor-grabbing={drag.isPointerDragging}
         {ondblclick}
+        {onmouseenter}
+        {onmouseleave}
         onclick={handleOnClick}
         onpointerdown={drag.handlePointerDown}
         onpointermove={drag.handlePointerMove}

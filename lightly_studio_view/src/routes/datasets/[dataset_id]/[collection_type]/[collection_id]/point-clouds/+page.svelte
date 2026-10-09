@@ -2,15 +2,22 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { McapSequencesGrid } from '$lib/components/McapSequencesGrid';
-    import { useGlobalStorage, useMcapSequencesInfinite } from '$lib/hooks';
+    import {
+        useGlobalStorage,
+        useMcapSequencePrefetch,
+        useMcapSequencesInfinite
+    } from '$lib/hooks';
     import { routeHelpers } from '$lib/routes';
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
     const collectionType = $derived(page.params.collection_type!);
+    const mcapDatasetId = $derived(page.data.collection?.dataset_id ?? '');
 
     const { data, query, loadMore, totalCount } = useMcapSequencesInfinite(() => collectionId);
+    const { prefetch, cancel } = useMcapSequencePrefetch(() => mcapDatasetId);
     const { setfilteredSampleCount } = useGlobalStorage();
+    let selectedSequenceId = '';
 
     $effect(() => {
         setfilteredSampleCount($totalCount);
@@ -33,6 +40,8 @@
     // The dataset slot carries a collection id (what the collection layout resolves the hierarchy
     // by); the labeling page derives the real dataset id from the loaded collection.
     const handleSequenceClick = (sampleId: string) => {
+        selectedSequenceId = sampleId;
+        prefetch(sampleId);
         void goto(
             routeHelpers.toPointCloudLabeling({
                 datasetId,
@@ -41,6 +50,11 @@
                 sequenceId: sampleId
             })
         );
+    };
+
+    const handleSequenceHover = (sampleId: string) => prefetch(sampleId);
+    const handleSequenceHoverEnd = (sampleId: string) => {
+        if (sampleId !== selectedSequenceId) cancel(sampleId);
     };
 </script>
 
@@ -53,4 +67,6 @@
     {isFetchingNextPage}
     onLoadMore={loadMore}
     onSequenceClick={handleSequenceClick}
+    onSequenceHover={handleSequenceHover}
+    onSequenceHoverEnd={handleSequenceHoverEnd}
 />
