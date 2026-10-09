@@ -4,9 +4,6 @@
     import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
     import FrameTimeline from './FrameTimeline.svelte';
 
-    const lidarChannelNames = ['top'];
-    const cameraChannelNames = ['front', 'front_left', 'front_right', 'rear'];
-
     // Placeholder ruler with no timestamps yet, mirroring the pre-frame-loading state.
     const placeholderTicks: TickView[] = Array.from({ length: 24 }, (_, index) => ({
         seq_number: index,
@@ -28,7 +25,7 @@
             ticks: placeholderTicks,
             currentTick: 0,
             isPlaying: false,
-            playbackIntervalMs: 300,
+            playbackIntervalMs: 100,
             onPreviousFrame: fn(),
             onNextFrame: fn(),
             onPlayToggle: fn(),
@@ -39,27 +36,14 @@
 </script>
 
 {#snippet frame(args)}
-    <div class="h-64 w-full">
+    <div class="h-24 w-full">
         <FrameTimeline {...args} />
     </div>
 {/snippet}
 
 <Story
-    name="Lidar and camera channels"
-    args={{ lidarChannelNames, cameraChannelNames }}
-    template={frame}
-    parameters={{
-        docs: {
-            description: {
-                story: 'One lane per channel, lidar channels first, labelled by their slot name.'
-            }
-        }
-    }}
-/>
-
-<Story
     name="Timestamped ruler"
-    args={{ ticks, currentTick: 8, lidarChannelNames, cameraChannelNames }}
+    args={{ ticks, currentTick: 8 }}
     template={frame}
     parameters={{
         docs: {
@@ -72,7 +56,7 @@
 
 <Story
     name="Playing"
-    args={{ ticks, currentTick: 8, isPlaying: true, lidarChannelNames, cameraChannelNames }}
+    args={{ ticks, currentTick: 8, isPlaying: true }}
     template={frame}
     parameters={{
         docs: {

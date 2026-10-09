@@ -101,7 +101,7 @@ function createRetryHandler(
 export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     currentTick = $state(0);
     isPlaying = $state(false);
-    playbackIntervalMs = $state(300);
+    playbackIntervalMs = $state(100);
     // The first frame is the default. A pick is kept only while it is still in the list, and
     // it is keyed by its source so it resets when the dataset or the sequence changes.
     #pickedReferenceFrame = $state<{ source: string; frameId: string } | null>(null);

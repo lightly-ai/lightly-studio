@@ -4,8 +4,8 @@
     import TimelineTracks from './TimelineTracks/TimelineTracks.svelte';
 
     /**
-     * Frame navigation, object tracks and keyframes for the active recording. Placeholder ruler
-     * and lanes until frame loading lands; stepping controls disable at the ends of the sequence.
+     * Frame navigation for the active recording with a tick ruler; stepping controls disable at
+     * the ends of the sequence.
      */
     interface Props {
         /** Sequence ticks (seq number + anchor timestamp). */
@@ -15,12 +15,6 @@
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
         playbackIntervalMs: number;
-        /** Point-cloud channel names rendered as timeline lanes. */
-        lidarChannelNames?: string[];
-        /** Image and video channel names rendered as timeline lanes. */
-        cameraChannelNames?: string[];
-        /** Whether the source has channels, even when the current selection is empty. */
-        hasAvailableChannels?: boolean;
         /** Step to the previous frame. */
         onPreviousFrame: () => void;
         /** Step to the next frame. */
@@ -40,9 +34,6 @@
         currentTick,
         isPlaying,
         playbackIntervalMs,
-        lidarChannelNames = [],
-        cameraChannelNames = [],
-        hasAvailableChannels = false,
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
@@ -61,12 +52,6 @@
 
     const frameLabel = $derived(
         activeIndex >= 0 ? `Frame ${activeIndex + 1} / ${ticks.length}` : 'Frame — / —'
-    );
-
-    const lanes = $derived(
-        lidarChannelNames.length > 0 || cameraChannelNames.length > 0 || hasAvailableChannels
-            ? [...lidarChannelNames, ...cameraChannelNames]
-            : ['Track 1', 'Track 2']
     );
 </script>
 
@@ -88,5 +73,5 @@
         {onPreviousSequence}
         {onNextSequence}
     />
-    <TimelineTracks {ticks} {currentTick} {lanes} {onSelectTick} />
+    <TimelineTracks {ticks} {currentTick} {onSelectTick} />
 </div>

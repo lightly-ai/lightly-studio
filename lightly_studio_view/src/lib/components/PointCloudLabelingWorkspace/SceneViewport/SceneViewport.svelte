@@ -9,6 +9,7 @@
     import OriginAxes from '$lib/components/PointCloudLabelingWorkspace/OriginAxes/OriginAxes.svelte';
     import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
     import SceneNavigationControls from './SceneNavigationControls.svelte';
+    import PointSizeControl from './PointSizeControl/PointSizeControl.svelte';
     import type {
         AnnotationClass,
         AnnotationSource,
@@ -61,7 +62,7 @@
     let {
         batch = EMPTY_BATCH,
         colorMode = 'none',
-        pointSize = 2,
+        pointSize = $bindable(2),
         intensityRange,
         cuboids = [],
         annotationClasses = [],
@@ -148,6 +149,7 @@
         />
     </Canvas>
     <SceneNavigationControls />
+    <PointSizeControl bind:value={pointSize} />
     <RotationCursor target={viewport} {cursorX} {cursorY} />
     <CuboidTooltipOverlay
         {cursorX}

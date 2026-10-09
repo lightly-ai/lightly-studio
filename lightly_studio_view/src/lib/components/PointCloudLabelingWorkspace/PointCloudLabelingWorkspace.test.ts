@@ -107,7 +107,6 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
         expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
-        expect(screen.getByText('lidar_top')).toBeInTheDocument();
         expect(screen.getByTestId('point-cloud-right-side-panel')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
@@ -236,11 +235,11 @@ describe('PointCloudLabelingWorkspace', () => {
         render(PointCloudLabelingWorkspace, { props: defaultProps });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Play frames' }));
-        await vi.advanceTimersByTimeAsync(300);
+        await vi.advanceTimersByTimeAsync(100);
         flushSync();
         expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
 
-        await vi.advanceTimersByTimeAsync(300);
+        await vi.advanceTimersByTimeAsync(100);
         flushSync();
         expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
     });
@@ -280,19 +279,4 @@ describe('PointCloudLabelingWorkspace', () => {
             );
         }
     );
-
-    it('filters the timeline lanes with the camera selection', async () => {
-        const user = userEvent.setup();
-        render(PointCloudLabelingWorkspace, { props: defaultProps });
-
-        const timeline = screen.getByTestId('workspace-frame-timeline');
-        expect(timeline).toHaveTextContent('front');
-        expect(timeline).toHaveTextContent('rear');
-
-        await user.click(screen.getByTestId('workspace-camera-select'));
-        await user.click(screen.getByTestId('workspace-camera-select-2'));
-
-        expect(timeline).not.toHaveTextContent('front');
-        expect(timeline).toHaveTextContent('rear');
-    });
 });
