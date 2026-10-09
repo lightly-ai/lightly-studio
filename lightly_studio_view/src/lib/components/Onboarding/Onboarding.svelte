@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
-    import { usePostHog, useOnboarding, TOUR_VERSION } from '$lib/hooks';
+    import { usePostHog, useOnboarding, TOUR_VERSION, useGlobalStorage } from '$lib/hooks';
     import { get } from 'svelte/store';
     import { onDestroy, onMount } from 'svelte';
     import {
@@ -42,6 +42,7 @@
 
     const onboarding = useOnboarding();
     const { state } = onboarding;
+    const { openFilterPanel, filterPanelCollapsed } = useGlobalStorage();
     const { ready, trackEvent } = usePostHog();
 
     const ref: TourRef = {
@@ -108,7 +109,9 @@
         onSkip: skipTour,
         onFinish: finish,
         onStartOnboarding: onboarding.start,
-        onOpenFirstSample: onboarding.dispatchOpenFirstSample
+        onOpenFirstSample: onboarding.dispatchOpenFirstSample,
+        openFilterPanel,
+        isFilterPanelCollapsed: () => get(filterPanelCollapsed)
     });
 
     async function loadTour() {

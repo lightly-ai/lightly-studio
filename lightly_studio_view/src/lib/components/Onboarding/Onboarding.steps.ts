@@ -1,6 +1,14 @@
 import type { Driver, PopoverDOM } from 'driver.js';
 
-type TourStage = 'grid' | 'menu' | 'tag_assign' | 'tile' | 'detail' | 'edit_button' | 'embedding';
+type TourStage =
+    | 'grid'
+    | 'open_filter_panel'
+    | 'tag_assign'
+    | 'menu'
+    | 'tile'
+    | 'detail'
+    | 'edit_button'
+    | 'embedding';
 
 interface StepPlan {
     count: number;
@@ -26,6 +34,10 @@ interface StepsOptions {
     onStartOnboarding: () => void;
     /** Calls `onboarding.dispatchOpenFirstSample()` from the driver.js "Open sample" button. */
     onOpenFirstSample: () => void;
+    /** Opens the filter panel by setting filterPanelCollapsed to false. */
+    openFilterPanel: () => void;
+    /** Returns whether the filter panel is currently collapsed. */
+    isFilterPanelCollapsed: () => boolean;
 }
 
 interface TourStepOptions {
@@ -61,13 +73,15 @@ export function tileElement(): Element | null {
 /**
  * Computes which optional steps are present and returns the step count and per-stage index.
  * Called once at tour start so the dot indicators reflect the actual visible steps.
+ * Pass `filterPanelCollapsed: true` to include the open_filter_panel step.
  */
-export function buildStepPlan(): StepPlan {
+export function buildStepPlan(filterPanelCollapsed = false): StepPlan {
     const hasEditButton = !!visible('[data-testid="header-editing-mode-button"]');
     const hasEmbedding = !!visible('[data-testid="side-panel-tabs-embed"]');
 
     const stages: TourStage[] = [
         'grid',
+        ...(filterPanelCollapsed ? (['open_filter_panel'] as TourStage[]) : []),
         'tag_assign',
         'menu',
         ...(hasEditButton ? (['edit_button'] as TourStage[]) : []),
@@ -105,7 +119,9 @@ export function createTourSteps(opts: StepsOptions) {
         onSkip,
         onFinish,
         onStartOnboarding,
-        onOpenFirstSample
+        onOpenFirstSample,
+        openFilterPanel,
+        isFilterPanelCollapsed
     } = opts;
 
     function popoverFooter(stage: TourStage, skipFn: (() => void) | null) {
@@ -164,7 +180,7 @@ export function createTourSteps(opts: StepsOptions) {
 
     function highlightGrid() {
         if (!ref.tour || !eligible()) return;
-        ref.stepPlan = buildStepPlan();
+        ref.stepPlan = buildStepPlan(isFilterPanelCollapsed());
         highlightStep({
             stage: 'grid',
             element: '[data-testid="images-grid"]',
@@ -173,7 +189,31 @@ export function createTourSteps(opts: StepsOptions) {
                 'Find what you need here. Filter by tag or search in the left panel to narrow down the images.',
             showButtons: ['next'],
             nextBtnText: 'Next',
-            onNextClick: highlightTagAssign
+            onNextClick: ref.stepPlan.indices['open_filter_panel']
+                ? highlightOpenFilterPanel
+                : highlightTagAssign
+        });
+    }
+
+    function highlightOpenFilterPanel() {
+        if (!ref.tour) return;
+        openFilterPanel();
+        requestAnimationFrame(() => {
+            if (!ref.tour) return;
+            const panelBody = document.querySelector('[data-onboarding-filter-panel]');
+            if (!panelBody) return;
+            highlightStep({
+                stage: 'open_filter_panel',
+                element: panelBody,
+                title: 'Filter panel',
+                description:
+                    'Narrow down your images by tag, metadata, search, and more — everything visible in the grid reflects your active filters.',
+                showButtons: ['previous', 'next'],
+                nextBtnText: 'Next',
+                prevBtnText: 'Prev',
+                onNextClick: highlightTagAssign,
+                onPrevClick: highlightGrid
+            });
         });
     }
 
@@ -336,6 +376,7 @@ export function createTourSteps(opts: StepsOptions) {
 
     return {
         highlightGrid,
+        highlightOpenFilterPanel,
         highlightTagAssign,
         highlightMenuContent,
         highlightEditButton,

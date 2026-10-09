@@ -981,6 +981,7 @@
                 <div
                     class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
                     data-testid="filter-panel-body"
+                    data-onboarding-filter-panel
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
