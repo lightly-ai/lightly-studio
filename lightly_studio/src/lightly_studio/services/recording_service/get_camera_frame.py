@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -13,7 +12,6 @@ from lightly_studio.core.mcap import compressed_video
 from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY, VideoDecoder
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
-from lightly_studio.core.mcap.type_definitions import DecodedMessage
 from lightly_studio.resolvers import recording_resolver
 from lightly_studio.services.recording_service import reader_cache, video_decoder_cache
 
@@ -84,26 +82,24 @@ def get_camera_frame(  # noqa: PLR0913
         McapAccessError: If the channel's messages cannot be decoded, or the schema
             is not `CompressedVideo`.
     """
-    target_time_ns = _target_time_ns(
-        keyframe_timestamp_ns=keyframe_timestamp_ns, log_time_ns=log_time_ns
-    )
+    target_time_ns = keyframe_timestamp_ns if log_time_ns is None else log_time_ns
+    if target_time_ns < keyframe_timestamp_ns:
+        raise ValueError(
+            f"The frame log time {target_time_ns} is before the keyframe log time "
+            f"{keyframe_timestamp_ns}."
+        )
     recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
     if recording is None or recording.dataset_id != dataset_id:
         return None
 
     reader = reader_cache.get_cached_reader(uri=recording.uri)
-    decoder = _take_decoder(
-        uri=recording.uri,
-        channel_id=channel_id,
-        keyframe_log_time_ns=keyframe_timestamp_ns,
-        target_time_ns=target_time_ns,
-    )
+    decoder = video_decoder_cache.take_decoder(uri=recording.uri, channel_id=channel_id)
+    if decoder is None or not decoder.can_continue_to(
+        keyframe_log_time_ns=keyframe_timestamp_ns, log_time_ns=target_time_ns
+    ):
+        decoder = VideoDecoder(keyframe_log_time_ns=keyframe_timestamp_ns)
     frame = _frame_at(
-        reader=reader,
-        decoder=decoder,
-        channel_id=channel_id,
-        keyframe_timestamp_ns=keyframe_timestamp_ns,
-        target_time_ns=target_time_ns,
+        reader=reader, decoder=decoder, channel_id=channel_id, target_time_ns=target_time_ns
     )
     if frame is None:
         _store_decoder(uri=recording.uri, channel_id=channel_id, decoder=decoder)
@@ -113,36 +109,6 @@ def get_camera_frame(  # noqa: PLR0913
     decoder.release_frames_up_to(log_time_ns=target_time_ns)
     _store_decoder(uri=recording.uri, channel_id=channel_id, decoder=decoder)
     return CameraFrame(data=data, media_type="image/jpeg", log_time_ns=target_time_ns)
-
-
-def _target_time_ns(keyframe_timestamp_ns: int, log_time_ns: int | None) -> int:
-    """Returns the log time to decode, and rejects a frame that precedes its keyframe.
-
-    Raises:
-        ValueError: If `log_time_ns` is before `keyframe_timestamp_ns`.
-    """
-    target_time_ns = keyframe_timestamp_ns if log_time_ns is None else log_time_ns
-    if target_time_ns < keyframe_timestamp_ns:
-        raise ValueError(
-            f"The frame log time {target_time_ns} is before the keyframe log time "
-            f"{keyframe_timestamp_ns}."
-        )
-    return target_time_ns
-
-
-def _take_decoder(
-    uri: str, channel_id: int, keyframe_log_time_ns: int, target_time_ns: int
-) -> VideoDecoder:
-    """Returns the cached decoder of a channel if it can produce the target frame.
-
-    Otherwise returns a new decoder that starts at the keyframe.
-    """
-    decoder = video_decoder_cache.take_decoder(uri=uri, channel_id=channel_id)
-    if decoder is not None and decoder.can_continue_to(
-        keyframe_log_time_ns=keyframe_log_time_ns, log_time_ns=target_time_ns
-    ):
-        return decoder
-    return VideoDecoder(keyframe_log_time_ns=keyframe_log_time_ns)
 
 
 def _store_decoder(uri: str, channel_id: int, decoder: VideoDecoder) -> None:
@@ -155,94 +121,48 @@ def _frame_at(
     reader: McapFileReader,
     decoder: VideoDecoder,
     channel_id: int,
-    keyframe_timestamp_ns: int,
     target_time_ns: int,
 ) -> VideoFrame | None:
     """Feeds the decoder until the target picture is available.
 
-    Returns `None` when the channel has no message at the target log time.
+    Returns `None` when the channel has no message at the target log time. A new
+    decoder must start with the message at its keyframe.
 
     Raises:
-        McapAccessError: If the target message exists but its picture cannot be decoded.
+        McapAccessError: If the schema is not `CompressedVideo`, or the target
+            message exists but its picture cannot be decoded.
     """
     if decoder.has_frame(target_time_ns):
         return decoder.frame(log_time_ns=target_time_ns)
-    if not _feed_through_target(
-        reader=reader,
-        decoder=decoder,
-        channel_id=channel_id,
-        keyframe_timestamp_ns=keyframe_timestamp_ns,
-        target_time_ns=target_time_ns,
-    ):
+
+    start_time_ns = (
+        decoder.keyframe_log_time_ns
+        if decoder.last_log_time_ns is None
+        else decoder.last_log_time_ns + 1
+    )
+    messages = reader.get_decoded_messages_in_range(
+        channel_id=channel_id, start_time_ns=start_time_ns, end_time_ns=target_time_ns
+    )
+    if not messages or messages[-1].log_time_ns != target_time_ns:
         return None
+    if decoder.last_log_time_ns is None and messages[0].log_time_ns != decoder.keyframe_log_time_ns:
+        return None
+
+    _require_compressed_video(schema_name=messages[0].schema_name)
+    for message in messages:
+        if decoder.has_frame(target_time_ns):
+            break
+        decoder.decode(
+            decoded_message=message.decoded_message,
+            log_time_ns=message.log_time_ns,
+            retain_log_time_ns=target_time_ns,
+        )
     frame = decoder.frame(log_time_ns=target_time_ns)
     if frame is None:
         raise McapAccessError(
             f"No decodable frame at log time {target_time_ns} on channel {channel_id}."
         )
     return frame
-
-
-def _feed_through_target(
-    reader: McapFileReader,
-    decoder: VideoDecoder,
-    channel_id: int,
-    keyframe_timestamp_ns: int,
-    target_time_ns: int,
-) -> bool:
-    """Feeds messages from the decoder's position through the target message.
-
-    Returns whether the channel has a message at `target_time_ns`. A new decoder
-    must start with the message at its keyframe.
-    """
-    start_time_ns = (
-        keyframe_timestamp_ns if decoder.last_log_time_ns is None else decoder.last_log_time_ns + 1
-    )
-    if start_time_ns > target_time_ns:
-        return False
-    messages = reader.get_decoded_messages_in_range(
-        channel_id=channel_id, start_time_ns=start_time_ns, end_time_ns=target_time_ns
-    )
-    if not _reaches_target(decoder=decoder, messages=messages, target_time_ns=target_time_ns):
-        return False
-    _feed(decoder=decoder, messages=messages, retain_log_time_ns=target_time_ns)
-    return True
-
-
-def _feed(
-    decoder: VideoDecoder, messages: Sequence[DecodedMessage], retain_log_time_ns: int
-) -> None:
-    """Feeds messages to the decoder, keeping pictures at or after `retain_log_time_ns`.
-
-    Raises:
-        McapAccessError: If the schema is not `CompressedVideo`.
-    """
-    if not messages:
-        return
-    _require_compressed_video(schema_name=messages[0].schema_name)
-    for message in messages:
-        if decoder.has_frame(retain_log_time_ns):
-            break
-        decoder.decode(
-            decoded_message=message.decoded_message,
-            log_time_ns=message.log_time_ns,
-            retain_log_time_ns=retain_log_time_ns,
-        )
-
-
-def _reaches_target(
-    decoder: VideoDecoder, messages: Sequence[DecodedMessage], target_time_ns: int
-) -> bool:
-    """Returns whether feeding `messages` to `decoder` ends at the target frame.
-
-    A new decoder must start with the message at its keyframe.
-    """
-    if decoder.last_log_time_ns is None and (
-        not messages or messages[0].log_time_ns != decoder.keyframe_log_time_ns
-    ):
-        return False
-    last_log_time_ns = messages[-1].log_time_ns if messages else decoder.last_log_time_ns
-    return last_log_time_ns == target_time_ns
 
 
 def _require_compressed_video(schema_name: str | None) -> None:
