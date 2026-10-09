@@ -54,16 +54,13 @@ def _check_samples_in_collection(
     query: SelectOfScalar[UUID],
 ) -> None:
     """Raise if the query does not return every sample id, ignoring duplicates."""
-    unique_sample_ids = list(dict.fromkeys(sample_ids))
+    unique_sample_ids = set(sample_ids)
     matched_count = session.exec(select(func.count()).select_from(query.subquery())).one()
     if matched_count == len(unique_sample_ids):
         return
 
-    matched_sample_ids = set(session.exec(query).all())
-    unmatched_sample_ids = [
-        sample_id for sample_id in unique_sample_ids if sample_id not in matched_sample_ids
-    ]
+    unmatched_sample_ids = unique_sample_ids - set(session.exec(query).all())
     raise ValueError(
-        f"Samples {unmatched_sample_ids[:5]} do not exist or do not belong to the collection "
-        f"of tag '{tag.name}'."
+        f"Samples {list(unmatched_sample_ids)[:5]} do not exist or do not belong to the "
+        f"collection of tag '{tag.name}'."
     )
