@@ -35,7 +35,7 @@ def get_sample_ids_in_region(
     if embedding_model_id is None:
         return []
 
-    x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+    x_array, y_array, sample_ids, _ = twodim_embedding_resolver.get_twodim_embeddings(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
