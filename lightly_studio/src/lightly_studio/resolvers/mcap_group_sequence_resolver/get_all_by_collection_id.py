@@ -86,10 +86,16 @@ def get_all_by_collection_id(
         collection_id=collection_id,
     )
 
+    file_name_by_recording_id = _get_file_names_by_recording_id(
+        session=session,
+        recording_ids=list({seq.recording_id for seq in sequences}),
+    )
+
     views = [
         McapSequenceView(
             sample_id=seq.sample_id,
             recording_id=seq.recording_id,
+            file_name=file_name_by_recording_id[seq.recording_id],
             sample_count=sequence_sample_counts.get(seq.sample_id, 0),
             sequence_frame=sequence_frames.get(seq.sample_id),
         )
@@ -190,6 +196,20 @@ def _get_dataset_ids_by_recording_id(
         col(RecordingTable.recording_id).in_(recording_ids)
     )
     return dict(session.exec(query).all())
+
+
+def _get_file_names_by_recording_id(
+    session: Session,
+    recording_ids: Sequence[UUID],
+) -> dict[UUID, str]:
+    """Get the file name, the last segment of the URI, for each recording ID."""
+    query = select(RecordingTable.recording_id, RecordingTable.uri).where(
+        col(RecordingTable.recording_id).in_(recording_ids)
+    )
+    return {
+        recording_id: uri.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+        for recording_id, uri in session.exec(query).all()
+    }
 
 
 def _get_first_video_frame_collection_id(
