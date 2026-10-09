@@ -12,15 +12,16 @@ from mcap.exceptions import InvalidMagic
 from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
-from lightly_studio.core.mcap import matching
-from lightly_studio.core.mcap import reader as reader_module
+from lightly_studio.core.mcap import matching, transforms
 from lightly_studio.core.mcap.errors import (
     ChannelNotFoundError,
     DataNotLoadedError,
     McapAccessError,
     TopicNotFoundError,
+    TransformNotFoundError,
 )
 from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
+from lightly_studio.core.mcap.reader import session as session_module
 from tests.core.mcap import helpers
 
 # The bucket and key the recording is uploaded to, to read it back over S3.
@@ -336,6 +337,175 @@ class TestMcapFileReader:
                 topic="/unknown",
             )
 
+    def test_get_static_transforms(self, reader: McapFileReader) -> None:
+        static_transforms = reader.get_static_transforms()
+
+        assert [
+            (transform.parent_frame_id, transform.child_frame_id, transform.translation)
+            for transform in static_transforms
+        ] == [
+            (helpers.BASE_FRAME_ID, helpers.CAMERA_FRAME_ID, (1.0, 0.0, 2.0)),
+            (helpers.BASE_FRAME_ID, helpers.LIDAR_FRAME_ID, (0.0, 1.0, 2.0)),
+        ]
+
+    def test_get_static_transforms__unknown_topic(self, reader: McapFileReader) -> None:
+        assert reader.get_static_transforms(topic="/unknown") == []
+
+    def test_get_static_transforms__read_by_load_data_for_topics(
+        self, reader: McapFileReader, mocker: MockerFixture
+    ) -> None:
+        iter_messages = mocker.spy(reader._reader, "iter_messages")
+
+        reader.load_data_for_topics(
+            [helpers.LIDAR_POINTS_TOPIC], static_transform_topic="/tf_static"
+        )
+        static_transforms = reader.get_static_transforms()
+
+        # The locators and the transforms come from one pass over the file.
+        assert iter_messages.call_count == 1
+        assert [transform.child_frame_id for transform in static_transforms] == [
+            helpers.CAMERA_FRAME_ID,
+            helpers.LIDAR_FRAME_ID,
+        ]
+        assert len(reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)) == 2
+
+    def test_get_static_transforms__skips_bad_message(self, tmp_path: Path) -> None:
+        path = helpers.write_json_mcap(
+            path=tmp_path / "bad_tf_static.mcap",
+            topic="/tf_static",
+            schema_name="tf2_msgs/msg/TFMessage",
+            messages=[
+                # The first message has no header, so it holds no transform.
+                (1_000_000_000, {"transforms": [{"child_frame_id": "lidar"}]}),
+                (
+                    1_100_000_000,
+                    {
+                        "transforms": [
+                            {
+                                "header": {"frame_id": "base_link"},
+                                "child_frame_id": "lidar",
+                                "transform": {
+                                    "translation": {"x": 0.0, "y": 1.0, "z": 2.0},
+                                    "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                                },
+                            }
+                        ]
+                    },
+                ),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            static_transforms = reader.get_static_transforms()
+
+        assert [
+            (transform.parent_frame_id, transform.child_frame_id, transform.translation)
+            for transform in static_transforms
+        ] == [("base_link", "lidar", (0.0, 1.0, 2.0))]
+
+    def test_get_transform_at(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_050_000_000, (20.0, 0.0, 0.0)),
+                (1_100_000_000, (30.0, 0.0, 0.0)),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            matrix = reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=1_040_000_000,
+                static_transforms=reader.get_static_transforms(),
+            )
+
+        # The pose at 1.05 s is the closest, so the base frame is at x = 20 m. The lidar
+        # sits at (0, 1, 2) m in the base frame.
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [20.0, 1.0, 2.0, 1.0])
+
+    def test_get_transform_at__selects_by_capture_time(self, tmp_path: Path) -> None:
+        # Each pose is logged 90 ms after its capture time, so the poses are captured
+        # at 0.91 s, 0.96 s and 1.01 s.
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_050_000_000, (20.0, 0.0, 0.0)),
+                (1_100_000_000, (30.0, 0.0, 0.0)),
+            ],
+            tf_stamp_offset_ns=-90_000_000,
+        )
+
+        with McapFileReader(path) as reader:
+            matrix = reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=960_000_000,
+                static_transforms=reader.get_static_transforms(),
+            )
+
+        # The pose captured at 0.96 s is used, not the pose logged at 1.0 s, which is
+        # closer by log time.
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [20.0, 1.0, 2.0, 1.0])
+
+    def test_get_transform_at__static_only(self, reader: McapFileReader) -> None:
+        matrix = reader.get_transform_at(
+            parent_frame_id=helpers.BASE_FRAME_ID,
+            child_frame_id=helpers.LIDAR_FRAME_ID,
+            timestamp_ns=1_000_000_000,
+            static_transforms=reader.get_static_transforms(),
+        )
+
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 2.0, 1.0])
+
+    def test_get_transform_at__pose_outside_window(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap", base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))]
+        )
+
+        # The only pose is 300 ms + 1 ns before the requested time, which is outside the
+        # 300 ms window.
+        with McapFileReader(path) as reader, pytest.raises(TransformNotFoundError):
+            reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=1_300_000_001,
+                static_transforms=reader.get_static_transforms(),
+            )
+
+    def test_get_transform_at__pose_captured_outside_window(self, tmp_path: Path) -> None:
+        # The pose is logged at 1.0 s, the requested time, but captured at 0.6 s, which
+        # is outside the 300 ms window.
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))],
+            tf_stamp_offset_ns=-400_000_000,
+        )
+
+        with McapFileReader(path) as reader, pytest.raises(TransformNotFoundError):
+            reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=1_000_000_000,
+                static_transforms=reader.get_static_transforms(),
+            )
+
+    def test_get_transform_at__without_static_transforms(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap", base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))]
+        )
+
+        # Only the stored static edges are composed, so the lidar is not connected.
+        with McapFileReader(path) as reader, pytest.raises(TransformNotFoundError):
+            reader.get_transform_at(
+                parent_frame_id="map",
+                child_frame_id=helpers.LIDAR_FRAME_ID,
+                timestamp_ns=1_000_000_000,
+                static_transforms=[],
+            )
+
     def test_get_decoded_message_at(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
         with McapFileReader(path) as reader:
@@ -373,6 +543,68 @@ class TestMcapFileReader:
 
         assert result is None
 
+    def test_get_decoded_messages_in_range(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            result = reader.get_decoded_messages_in_range(
+                channel_id=channel_id,
+                start_time_ns=helpers.IMAGE_LOG_TIMES_NS[0],
+                end_time_ns=helpers.IMAGE_LOG_TIMES_NS[1],
+            )
+
+        assert [message.log_time_ns for message in result] == [
+            helpers.IMAGE_LOG_TIMES_NS[0],
+            helpers.IMAGE_LOG_TIMES_NS[1],
+        ]
+        assert all(message.channel_id == channel_id for message in result)
+        assert result[1].decoded_message.data == helpers.compressed_image_payload(
+            helpers.IMAGE_LOG_TIMES_NS[1]
+        )
+
+    def test_get_decoded_messages_in_range__empty(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "with_image.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(
+                topic.channel_id
+                for topic in reader.get_topics()
+                if topic.name == helpers.CAMERA_IMAGE_TOPIC
+            )
+
+            result = reader.get_decoded_messages_in_range(
+                channel_id=channel_id,
+                start_time_ns=helpers.IMAGE_LOG_TIMES_NS[0] + 1,
+                end_time_ns=helpers.IMAGE_LOG_TIMES_NS[1] - 1,
+            )
+
+        assert result == []
+
+    def test_get_decoded_messages_in_range__skips_other_channels_of_topic(
+        self, tmp_path: Path
+    ) -> None:
+        path = helpers.write_json_mcap_with_two_channels(
+            path=tmp_path / "two_channels.mcap", topic="/shared", log_times_ns=[1_000, 2_000]
+        )
+        with McapFileReader(path) as reader:
+            # The channel registered second has the higher id.
+            second_channel_id = max(topic.channel_id for topic in reader.get_topics())
+
+            result = reader.get_decoded_messages_in_range(
+                channel_id=second_channel_id, start_time_ns=1_000, end_time_ns=2_000
+            )
+
+        assert [message.log_time_ns for message in result] == [1_000, 2_000]
+        assert all(message.channel_id == second_channel_id for message in result)
+        assert [message.decoded_message for message in result] == [
+            {"channel": 1},
+            {"channel": 1},
+        ]
+
     def test_get_decoded_message_at__unknown_channel(self, reader: McapFileReader) -> None:
         with pytest.raises(ChannelNotFoundError):
             reader.get_decoded_message_at(channel_id=999_999, timestamp_ns=0)
@@ -391,6 +623,27 @@ class TestMcapFileReader:
                     channel_id=channel_id,
                     timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
                 )
+
+    def test_read_dynamic_edges_until__stops_when_the_frames_are_seen(
+        self, tmp_path: Path, mocker: MockerFixture
+    ) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[
+                (1_000_000_000, (10.0, 0.0, 0.0)),
+                (1_100_000_000, (20.0, 0.0, 0.0)),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            frame_edges = mocker.spy(transforms, "frame_edges")
+            edges = reader.read_dynamic_edges_until(frame_ids=["map"])
+
+        assert edges == [("map", "base_link")]
+        assert frame_edges.call_count == 1
+
+    def test_read_dynamic_edges_until__missing_topic(self, reader: McapFileReader) -> None:
+        assert reader.read_dynamic_edges_until(frame_ids=["map"]) == []
 
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
@@ -494,11 +747,11 @@ def test_mcap_file_reader__read_pattern_random(mcap_path: Path) -> None:
 
 
 def test_read_cache_options() -> None:
-    assert reader_module._read_cache_options(ReadPattern.SEQUENTIAL) == {}
+    assert session_module._read_cache_options(ReadPattern.SEQUENTIAL) == {}
 
 
 def test_read_cache_options__random() -> None:
-    options = reader_module._read_cache_options(ReadPattern.RANDOM)
+    options = session_module._read_cache_options(ReadPattern.RANDOM)
 
     assert options["cache_type"] == "readahead"
     assert 0 < options["block_size"] <= 4 * 1024 * 1024

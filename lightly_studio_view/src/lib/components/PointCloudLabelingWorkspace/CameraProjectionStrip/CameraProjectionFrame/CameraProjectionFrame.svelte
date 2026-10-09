@@ -11,19 +11,30 @@
         /** Dataset the recording belongs to. */
         datasetId: string;
         /** Recording that owns the frame. */
-        recordingId: string;
+        recordingId?: string;
         /** MCAP channel to render. */
         channelId: number;
-        /** Frame timestamp in nanoseconds, as a string to preserve full precision. */
-        timestampNs: string;
+        /** Keyframe to decode from, in nanoseconds, as a string to preserve full precision. */
+        keyframeTimestampNs?: string;
+        /** Frame to show, in nanoseconds, as a string to preserve full precision. */
+        logTimeNs?: string;
         /** Studio slot name shown as the caption, e.g. `front`. */
         label: string;
     }
 
-    let { datasetId, recordingId, channelId, timestampNs, label }: Props = $props();
+    let { datasetId, recordingId, channelId, keyframeTimestampNs, logTimeNs, label }: Props =
+        $props();
 
     const frameUrl = $derived(
-        getCameraFrameUrl({ datasetId, recordingId, channelId, timestampNs })
+        recordingId && keyframeTimestampNs && logTimeNs
+            ? getCameraFrameUrl({
+                  datasetId,
+                  recordingId,
+                  channelId,
+                  keyframeTimestampNs,
+                  logTimeNs
+              })
+            : null
     );
 
     let failedFrameUrl = $state<string | null>(null);
@@ -32,7 +43,7 @@
 <figure
     class="flex aspect-square h-full shrink-0 flex-col overflow-hidden rounded-md border bg-muted/30"
 >
-    {#if frameUrl !== failedFrameUrl}
+    {#if frameUrl && frameUrl !== failedFrameUrl}
         <a href={frameUrl} target="_blank" rel="noopener noreferrer" class="flex min-h-0 flex-1">
             <img
                 src={frameUrl}

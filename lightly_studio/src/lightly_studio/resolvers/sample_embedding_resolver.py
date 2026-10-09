@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from typing import Any, NamedTuple
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import ARRAY, BindParameter, Float, bindparam, func
 from sqlmodel import Session, col, select
+from sqlmodel.sql.expression import Select
 
-from lightly_studio.database import db_vector
+from lightly_studio.database import db_insert, db_vector
 from lightly_studio.database.db_manager import DatabaseBackend
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.sample import SampleTable
@@ -18,6 +19,7 @@ from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
 )
+from lightly_studio.resolvers import embedding_model_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.utils import batching
 
@@ -31,6 +33,14 @@ class SampleEmbeddingRow(NamedTuple):
 
     sample_id: UUID
     embedding: Embedding
+
+
+class SampleProjectionRow(NamedTuple):
+    """A sample id paired with the projections of its embedding onto two directions."""
+
+    sample_id: UUID
+    x: float
+    y: float
 
 
 def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleEmbeddingTable:
@@ -47,14 +57,17 @@ def create_many(
 ) -> None:
     """Create many sample embeddings.
 
+    Skips an embedding whose sample and model already have an embedding, for example one
+    that a concurrent caller stored first.
+
     Args:
         session: The database session.
         sample_embeddings: The embeddings to insert.
         commit: Whether to commit. Pass ``False`` to insert as part of a larger
             transaction that the caller commits, so multiple calls stay atomic.
     """
-    db_sample_embeddings = [SampleEmbeddingTable.model_validate(e) for e in sample_embeddings]
-    session.bulk_save_objects(db_sample_embeddings)
+    rows = [SampleEmbeddingTable.model_validate(e).model_dump() for e in sample_embeddings]
+    db_insert.insert_ignoring_conflicts(session=session, table=SampleEmbeddingTable, rows=rows)
     if commit:
         session.commit()
 
@@ -162,6 +175,73 @@ def get_all_by_collection_id(
     ]
 
 
+def get_projections_by_collection_id(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    direction_x: Sequence[float],
+    direction_y: Sequence[float],
+) -> Iterator[SampleProjectionRow]:
+    """Get the projections of the sample embeddings of a collection onto two directions.
+
+    D is the embedding dimension. The x and y values of a sample are the dot products of its
+    embedding with ``direction_x`` and ``direction_y``. The database computes them, so the
+    embeddings are not loaded into Python. The rows stream from the database in batches, so
+    keep the session open until the iteration ends.
+
+    Args:
+        session: The database session.
+        collection_id: The collection ID to filter by.
+        embedding_model_id: The embedding model ID to filter by.
+        direction_x: The X direction of shape (D,).
+        direction_y: The Y direction of shape (D,).
+
+    Returns:
+        The projections of the samples with an embedding, ordered by sample creation time,
+        with the sample ID as a tiebreaker.
+
+    Raises:
+        ValueError: If the embedding model does not exist, or if a direction does not have
+            the embedding dimension.
+    """
+    embedding_model = embedding_model_resolver.get_by_id(
+        session=session, embedding_model_id=embedding_model_id
+    )
+    if embedding_model is None:
+        raise ValueError(f"Embedding model {embedding_model_id} not found.")
+    dimension = embedding_model.embedding_dimension
+    if dimension != len(direction_x) or dimension != len(direction_y):
+        raise ValueError(
+            f"The axis directions must have the embedding dimension {dimension}, "
+            f"got {len(direction_x)} and {len(direction_y)}."
+        )
+
+    embeddings = (
+        select(
+            SampleEmbeddingTable.sample_id,
+            col(SampleTable.created_at),
+            db_vector.loaded_vector(col(SampleEmbeddingTable.embedding), dimension).label(
+                "embedding"
+            ),
+        )
+        .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.collection_id == collection_id)
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        # OFFSET 0 keeps PostgreSQL from merging the subquery into the outer query. Then both
+        # dot products use the same loaded vector, and each vector loads only once.
+        .offset(0)
+        .subquery()
+    )
+    statement = select(
+        embeddings.c.sample_id,
+        db_vector.inner_product(embeddings.c.embedding, _direction_param(direction=direction_x)),
+        db_vector.inner_product(embeddings.c.embedding, _direction_param(direction=direction_y)),
+    ).order_by(embeddings.c.created_at.asc(), embeddings.c.sample_id.asc())
+    # A function with yield runs only when the iteration starts. The checks above are in this
+    # function, so that they run at the call.
+    return _stream_projections(session=session, statement=statement)
+
+
 def get_hash_by_collection_id(
     session: Session,
     collection_id: UUID,
@@ -245,3 +325,19 @@ def _read_embedding_rows_binary(
             SampleEmbeddingRow(sample_id=sample_id, embedding=embedding)
             for sample_id, embedding in cursor
         ]
+
+
+def _stream_projections(
+    session: Session, statement: Select[tuple[UUID, float, float]]
+) -> Iterator[SampleProjectionRow]:
+    """Yield the ``(sample_id, x, y)`` rows of a statement, fetched in batches."""
+    streamed = statement.execution_options(yield_per=batching.DEFAULT_BATCH_SIZE)
+    for sample_id, x, y in session.exec(streamed):
+        yield SampleProjectionRow(sample_id=sample_id, x=x, y=y)
+
+
+def _direction_param(direction: Sequence[float]) -> BindParameter[Sequence[float]]:
+    """Return a bound parameter with the values of a direction vector."""
+    return bindparam(
+        None, value=[float(value) for value in direction], type_=ARRAY(Float), unique=True
+    )

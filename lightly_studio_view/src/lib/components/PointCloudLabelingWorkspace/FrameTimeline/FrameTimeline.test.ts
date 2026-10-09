@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 import FrameTimeline from './FrameTimeline.svelte';
 
@@ -10,9 +10,12 @@ const defaultProps = {
     ticks: createTicks([null, null, null]),
     currentTick: 0,
     isPlaying: false,
+    playbackIntervalMs: 300,
     onPreviousFrame: vi.fn(),
     onNextFrame: vi.fn(),
-    onPlayToggle: vi.fn()
+    onPlayToggle: vi.fn(),
+    onPlaybackIntervalChange: vi.fn(),
+    onSelectTick: vi.fn()
 };
 
 describe('FrameTimeline', () => {
@@ -42,6 +45,30 @@ describe('FrameTimeline', () => {
         expect(screen.getByText('Frame — / —')).toBeInTheDocument();
     });
 
+    it('selects ticks with the timeline slider and exposes the playback interval control', async () => {
+        const onSelectTick = vi.fn();
+        render(FrameTimeline, {
+            props: {
+                ...defaultProps,
+                ticks: createTicks([null, null, null]).map((tick, index) => ({
+                    ...tick,
+                    seq_number: index * 4
+                })),
+                currentTick: 0,
+                onSelectTick
+            }
+        });
+
+        await fireEvent.input(screen.getByRole('slider', { name: 'Frame position' }), {
+            target: { value: '2' }
+        });
+        expect(
+            screen.getByRole('spinbutton', { name: 'Playback interval in seconds' })
+        ).toHaveValue(0.3);
+        expect(screen.getByRole('slider', { name: 'Frame position' })).toHaveAttribute('max', '2');
+        expect(onSelectTick).toHaveBeenCalledWith(8);
+    });
+
     it('renders a lane per lidar and camera channel by name', () => {
         render(FrameTimeline, {
             props: {
@@ -64,6 +91,15 @@ describe('FrameTimeline', () => {
 
         expect(screen.getByText('top')).toBeInTheDocument();
         expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
+    });
+
+    it('does not render placeholder lanes when all available channels are filtered out', () => {
+        render(FrameTimeline, {
+            props: { ...defaultProps, hasAvailableChannels: true }
+        });
+
+        expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Track 2')).not.toBeInTheDocument();
     });
 
     it('labels ruler ticks with their timestamp relative to the first tick', () => {
@@ -115,6 +151,27 @@ describe('FrameTimeline', () => {
 
         expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Play frames' })).not.toBeInTheDocument();
+    });
+
+    it('steps between sequences through the exposed handlers', () => {
+        const onPreviousSequence = vi.fn();
+        const onNextSequence = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onPreviousSequence, onNextSequence }
+        });
+
+        screen.getByRole('button', { name: 'Previous sequence' }).click();
+        screen.getByRole('button', { name: 'Next sequence' }).click();
+
+        expect(onPreviousSequence).toHaveBeenCalledOnce();
+        expect(onNextSequence).toHaveBeenCalledOnce();
+    });
+
+    it('disables sequence stepping when no adjacent sequence handler is given', () => {
+        render(FrameTimeline, { props: defaultProps });
+
+        expect(screen.getByRole('button', { name: 'Previous sequence' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Next sequence' })).toBeDisabled();
     });
 
     it('disables stepping past the ends of the sequence', () => {

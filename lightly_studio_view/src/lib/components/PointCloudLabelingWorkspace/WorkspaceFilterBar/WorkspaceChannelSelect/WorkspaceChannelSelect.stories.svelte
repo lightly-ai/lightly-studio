@@ -25,6 +25,7 @@
             channels: cameraChannels,
             selectedChannels: [],
             onToggleChannel: fn(),
+            onSetChannels: fn(),
             testId: 'workspace-camera-select'
         }
     });

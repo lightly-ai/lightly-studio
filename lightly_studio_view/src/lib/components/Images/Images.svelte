@@ -22,6 +22,7 @@
     import { goto } from '$app/navigation';
     import { isEqual } from 'lodash-es';
     import { mergeExternalFilters, paramsWithoutExternalFilters } from './syncFilterParams';
+    import { clearPlotSelectionForCollection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { GridContainer } from '../GridContainer';
     import { Grid } from '../Grid';
     import { GridItem } from '../GridItem';
@@ -60,6 +61,7 @@
         getCollectionVersion,
         setfilteredSampleCount,
         getSelectedSampleIds,
+        setRangeSelectionForCollection,
         toggleSampleSelection,
         sampleSize
     } = useGlobalStorage();
@@ -87,6 +89,13 @@
         // Synchronize the global filter parameters with the local samples parameters
         const baseParams = samplesParams as ImagesInfiniteParams;
         const currentParams = $filterParams;
+
+        if (currentParams && currentParams.collection_id !== baseParams.collection_id) {
+            clearPlotSelectionForCollection(
+                currentParams.collection_id,
+                setRangeSelectionForCollection
+            );
+        }
 
         // Compare parameters excluding the externally-set filters (sample_ids /
         // confusion_cell) to detect if other filters have changed.

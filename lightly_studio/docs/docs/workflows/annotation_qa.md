@@ -42,7 +42,7 @@ editing mode with `Edit Annotations`.
 - **Edit a single annotation.** Open the annotation or its sample in detail view and correct the
   class or the region there (see [Annotations](annotations.md)).
 - **Tag it for a relabeling batch.** If somebody else makes the correction, tag the samples and
-  share the tag (see [Tags](../core_concepts/tags.md)).
+  share the tag (see [Tags](tags.md)).
 
 ## Scan the Annotation Grid
 
@@ -79,7 +79,7 @@ wrong.
     This method needs embeddings for the annotation crops, not just for the samples. LightlyStudio
     computes them for the annotations that exist at that moment, so a dataset whose annotations
     were added later may have none. See
-    [Embeddings](../core_concepts/embeddings.md#object-level-embeddings) for how crop embeddings
+    [Embeddings](embeddings.md#object-level-embeddings) for how crop embeddings
     are computed and how to trigger them.
 
 1. In the `Annotations` view, open the embedding plot with the `Embed` button in the top right.
@@ -140,6 +140,6 @@ to it. Click `Recompute evaluation` to bring the order back in step with your ed
 
 ## Next Steps
 
-- [Annotations](annotations.md): create, edit, and import annotations.
+- [Annotations](annotations.md): create, edit, and add annotations.
 - [Model Evaluation](evaluation.md): the full evaluation workflow, including the confusion matrix.
 - [Curate a Traffic CCTV Dataset for YOLO Training](../tutorials/yolo-traffic-cctv-object-detection.md): a worked example that includes a grid-based QA pass on a real dataset.

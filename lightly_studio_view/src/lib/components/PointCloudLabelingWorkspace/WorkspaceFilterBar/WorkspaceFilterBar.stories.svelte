@@ -30,12 +30,19 @@
         component: WorkspaceFilterBar,
         tags: ['autodocs'],
         args: {
+            referenceFrames: [],
+            referenceFrameId: '',
+            onSelectReferenceFrame: fn(),
             lidarChannels: [],
             cameraChannels: [],
             selectedLidarChannels: [],
             selectedCameraChannels: [],
+            colorMode: 'density',
+            onColorModeChange: fn(),
             onToggleLidarChannel: fn(),
-            onToggleCameraChannel: fn()
+            onToggleCameraChannel: fn(),
+            onSetLidarChannels: fn(),
+            onSetCameraChannels: fn()
         }
     });
 </script>

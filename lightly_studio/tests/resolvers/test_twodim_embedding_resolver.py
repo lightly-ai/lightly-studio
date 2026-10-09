@@ -207,3 +207,35 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     assert x_second.shape == (2,)
     assert y_second.shape == (2,)
     assert len(sample_ids_second) == 2
+
+
+def test_get_twodim_embeddings_from_axes(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_dimension=3,
+    )
+    image_a, image_b = helpers_resolvers.create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="a.jpg"), [1.0, 2.0, 3.0]),
+            (ImageStub(path="b.jpg"), [4.0, 5.0, 6.0]),
+        ],
+    )
+
+    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        direction_x=[1.0, 0.0, 0.0],
+        direction_y=[0.0, 1.0, 0.0],
+    )
+
+    # The directions select the first and the second embedding value.
+    assert dict(zip(sample_ids, zip(x_values.tolist(), y_values.tolist()))) == {
+        image_a.sample_id: (1.0, 2.0),
+        image_b.sample_id: (4.0, 5.0),
+    }

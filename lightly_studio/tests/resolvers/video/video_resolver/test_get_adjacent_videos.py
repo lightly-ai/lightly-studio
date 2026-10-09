@@ -1,9 +1,11 @@
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.order_by import OrderByField, OrderByMetadataField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import metadata_resolver, video_resolver
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
+from lightly_studio.resolvers import embedding_region_resolver, metadata_resolver, video_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
@@ -45,6 +47,53 @@ def test_get_adjacent_videos__orders_by_path(db_session: Session) -> None:
     assert result.next_sample_id == video_c.sample_id
     assert result.current_sample_position == 2
     assert result.total_count == 3
+
+
+def test_get_adjacent_videos__with_embedding_region(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
+    video_a = video_helpers.create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=video_helpers.VideoStub(path="/videos/a.mp4"),
+    )
+    video_helpers.create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=video_helpers.VideoStub(path="/videos/b.mp4"),
+    )
+    video_c = video_helpers.create_video(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=video_helpers.VideoStub(path="/videos/c.mp4"),
+    )
+    mocker.patch.object(
+        embedding_region_resolver,
+        "get_sample_ids_in_region",
+        return_value=[video_a.sample_id, video_c.sample_id],
+    )
+
+    result = video_resolver.get_adjacent_videos(
+        session=db_session,
+        sample_id=video_c.sample_id,
+        collection_id=collection.collection_id,
+        filters=VideoFilter(
+            sample_filter=SampleFilter(
+                embedding_region=EmbeddingRegion(
+                    polygon=[Point2D(x=0, y=0), Point2D(x=1, y=0), Point2D(x=1, y=1)]
+                )
+            )
+        ),
+    )
+
+    assert result is not None
+    assert result.sample_id == video_c.sample_id
+    assert result.previous_sample_id == video_a.sample_id
+    assert result.next_sample_id is None
+    assert result.total_count == 2
 
 
 def test_get_adjacent_videos__orders_by_requested_sort(db_session: Session) -> None:

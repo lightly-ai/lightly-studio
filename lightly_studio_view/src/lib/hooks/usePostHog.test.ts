@@ -67,7 +67,11 @@ describe('usePostHog', () => {
             person_profiles: 'identified_only',
             capture_pageview: true,
             capture_pageleave: true,
-            capture_exceptions: true
+            capture_exceptions: {
+                capture_unhandled_errors: true,
+                capture_unhandled_rejections: true,
+                capture_console_errors: true
+            }
         });
         expect(mockRegister).toHaveBeenCalledWith({ app_version: '1.2.3' });
     });

@@ -1,14 +1,21 @@
-import { render, fireEvent } from '@testing-library/svelte';
+import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
 import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { BrushMode, ToolbarStatus } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
+const { initializeSlic } = vi.hoisted(() => ({ initializeSlic: vi.fn(async () => ({})) }));
+vi.mock('@lightly-ai/slic', () => ({ getSlicEngine: initializeSlic }));
+
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush',
+    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'slic',
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
+    },
+    slic: {
+        level: 'medium' as 'coarse' | 'medium' | 'fine',
+        status: 'idle' as 'idle' | 'computing' | 'ready' | 'error'
     }
 };
 
@@ -26,7 +33,8 @@ const settingsStore = writable({
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
-    key_toolbar_segmentation_mask: 'm'
+    key_toolbar_segmentation_mask: 'm',
+    key_toolbar_slic: 'a'
 });
 
 vi.mock('$lib/hooks/useSettings', () => ({
@@ -121,6 +129,74 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
+    });
+
+    it('hides AI-Assisted labeling until WASM initialization succeeds', async () => {
+        let ready: (value: object) => void = () => {};
+        initializeSlic.mockImplementationOnce(
+            () =>
+                new Promise((resolve) => {
+                    ready = resolve;
+                })
+        );
+        const view = render(SampleDetailsToolbar);
+        expect(view.queryByLabelText('AI-Assisted labeling')).not.toBeInTheDocument();
+        ready({});
+        expect(await view.findByLabelText('AI-Assisted labeling')).toBeInTheDocument();
+    });
+
+    it('keeps AI-Assisted labeling hidden when WASM initialization fails', async () => {
+        const error = new Error('WASM unavailable');
+        const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+        initializeSlic.mockRejectedValueOnce(error);
+        const view = render(SampleDetailsToolbar);
+        await waitFor(() => expect(initializeSlic).toHaveBeenCalled());
+        expect(view.queryByLabelText('AI-Assisted labeling')).not.toBeInTheDocument();
+        expect(log).toHaveBeenCalledWith('AI-assisted labeling initialization failed', error);
+        log.mockRestore();
+    });
+
+    it('activates the SLIC tool and sets segmentation mask type', async () => {
+        const { findByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(await findByLabelText('AI-Assisted labeling'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
+    });
+
+    it('keeps the selected segmentation annotation when activating the SLIC tool', async () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.annotationType = AnnotationType.SEGMENTATION_MASK;
+
+        const { findByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(await findByLabelText('AI-Assisted labeling'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
+    });
+
+    it('uses the configured AI-assisted shortcut and shows it in the tooltip', async () => {
+        settingsStore.update((settings) => ({ ...settings, key_toolbar_slic: 'q' }));
+        const view = render(SampleDetailsToolbar);
+        const button = await view.findByLabelText('AI-Assisted labeling');
+        await fireEvent.pointerEnter(button.parentElement!);
+        expect(view.getByRole('tooltip')).toHaveTextContent('Press Q to activate');
+        expect(view.getByRole('tooltip')).not.toHaveTextContent('SLIC');
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.isDrawing = true;
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+        mockAnnotationLabelContext.isDrawing = false;
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockAnnotationLabelContext.annotationId).toBeNull();
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        settingsStore.update((settings) => ({ ...settings, key_toolbar_slic: 'a' }));
     });
 
     it('activates drag tool', async () => {

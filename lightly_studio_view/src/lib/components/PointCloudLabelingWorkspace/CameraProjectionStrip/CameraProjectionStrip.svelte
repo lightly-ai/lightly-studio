@@ -1,7 +1,7 @@
 <script lang="ts">
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
     import { useTickDetails } from '$lib/hooks';
-    import type { TickChannelView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
 
     /**
      * Horizontal strip of camera tiles for the active point-cloud tick. Each
@@ -15,41 +15,48 @@
         sequenceId: string;
         /** Zero-based tick position to render frames for. */
         seqNumber: number;
+        /** Frame the workspace requests cuboids in, so both share one tick-details query. */
+        displayFrameId?: string;
+        /** All camera slots configured for the sequence; this is the stable tile layout. */
+        cameraChannels: ChannelSummaryView[];
+        /** Camera channel IDs currently shown in the projection strip. */
+        selectedChannelIds: number[];
     }
 
-    let { datasetId, sequenceId, seqNumber }: Props = $props();
+    let {
+        datasetId,
+        sequenceId,
+        seqNumber,
+        displayFrameId,
+        cameraChannels: summaryCameraChannels,
+        selectedChannelIds
+    }: Props = $props();
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
         getSequenceId: () => sequenceId,
-        getSeqNumber: () => seqNumber
+        getSeqNumber: () => seqNumber,
+        getDisplayFrameId: () => displayFrameId || undefined
     });
     const recordingId = $derived(tickDetails.data?.recording_id);
-    const cameraChannels: TickChannelView[] = $derived(
-        tickDetails.data?.channels ? Object.values(tickDetails.data?.channels) : []
-    );
 </script>
 
 <div
-    class="flex h-full min-h-0 flex-col border-t bg-background"
+    class="flex h-full min-h-0 flex-col border-t bg-background p-2"
     data-testid="workspace-projection-strip"
 >
-    <div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-        <span class="font-medium text-foreground">Cameras</span>
+    <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-auto">
+        {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
+            {@const channel =
+                tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
+            <CameraProjectionFrame
+                {datasetId}
+                {recordingId}
+                channelId={summaryChannel.channel_id}
+                keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
+                logTimeNs={channel?.log_time_ns}
+                label={summaryChannel.group_component_name}
+            />
+        {/each}
     </div>
-    {#if recordingId}
-        <div class="flex min-h-0 flex-1 gap-2 overflow-x-auto px-3 pb-2">
-            {#each cameraChannels as channel}
-                {#if channel.keyframe_log_time_ns}
-                    <CameraProjectionFrame
-                        {datasetId}
-                        {recordingId}
-                        channelId={channel.channel_id}
-                        timestampNs={channel.keyframe_log_time_ns}
-                        label={channel.group_component_name}
-                    />
-                {/if}
-            {/each}
-        </div>
-    {/if}
 </div>

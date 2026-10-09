@@ -15,7 +15,7 @@ const defaultAnnotation = {
     ]
 };
 
-const defaultProps = { annotation: defaultAnnotation };
+const defaultProps = { annotation: defaultAnnotation, annotationSourceName: 'Ground Truth' };
 
 describe('PointCloudAnnotationDetails', () => {
     it('renders annotation metadata', () => {
@@ -33,7 +33,17 @@ describe('PointCloudAnnotationDetails', () => {
         expect(screen.getByText('ry 0.0°')).toBeInTheDocument();
         expect(screen.getByText('rz 45.0°')).toBeInTheDocument();
 
-        expect(screen.getByText('ground-truth')).toBeInTheDocument();
-        expect(screen.getByText('track-0')).toBeInTheDocument();
+        expect(screen.getByText('Ground Truth')).toBeInTheDocument();
+        expect(screen.getByText('Track number:')).toBeInTheDocument();
+        expect(screen.getByText('7')).toBeInTheDocument();
+    });
+
+    it('shows track number 0', () => {
+        render(PointCloudAnnotationDetails, {
+            props: { annotation: { ...defaultAnnotation, trackNumber: 0 } }
+        });
+
+        expect(screen.getByText('Track number:')).toBeInTheDocument();
+        expect(screen.getByText('0')).toBeInTheDocument();
     });
 });

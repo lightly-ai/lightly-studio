@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 import numpy as np
+import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
 )
@@ -17,6 +20,7 @@ from tests.helpers_resolvers import (
     create_image,
     create_images,
     create_sample_embedding,
+    create_samples_with_embeddings,
     create_tag,
 )
 
@@ -87,6 +91,39 @@ def test_create_many_sample_embeddings(db_session: Session) -> None:
             float(i + 1),
             float(i + 2),
         ]
+
+
+def test_create_many__skips_existing_embeddings(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    embedding_model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=2
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 2.0],
+    )
+
+    sample_embedding_resolver.create_many(
+        session=db_session,
+        sample_embeddings=[
+            SampleEmbeddingCreate(
+                sample_id=image.sample_id,
+                embedding_model_id=embedding_model.embedding_model_id,
+                embedding=np.array([3.0, 4.0], dtype=np.float32),
+            )
+        ],
+    )
+
+    # The first embedding stays and the insert does not fail
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session,
+        sample_ids=[image.sample_id],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    assert [list(row.embedding) for row in rows] == [[1.0, 2.0]]
 
 
 def test_add_sample_embedding_to_sample(db_session: Session) -> None:
@@ -237,6 +274,182 @@ def test_get_all_by_collection_id_with_filter(db_session: Session) -> None:
     embedding_by_id = {row.sample_id: list(row.embedding) for row in filtered}
     assert embedding_by_id[samples[0].sample_id] == [0.0, 1.0, 2.0]
     assert embedding_by_id[samples[1].sample_id] == [1.0, 2.0, 3.0]
+
+
+def test_get_projections_by_collection_id(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    other_collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="model_1",
+        embedding_dimension=3,
+    ).embedding_model_id
+    other_embedding_model_id = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="model_2",
+        embedding_dimension=3,
+    ).embedding_model_id
+    image_a, image_b = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="a.png"), [1.0, 2.0, 3.0]),
+            (ImageStub(path="b.png"), [4.0, 5.0, 6.0]),
+        ],
+    )
+    # An embedding of another model, and a sample in another collection.
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding_model_id=other_embedding_model_id,
+        embedding=[7.0, 8.0, 9.0],
+    )
+    create_samples_with_embeddings(
+        session=db_session,
+        collection_id=other_collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[(ImageStub(path="c.png"), [1.0, 1.0, 1.0])],
+    )
+
+    projections = sample_embedding_resolver.get_projections_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        direction_x=[1.0, 0.0, 10.0],
+        direction_y=[0.0, 0.5, 0.0],
+    )
+
+    # x of a is 1 * 1 + 10 * 3 = 31, and x of b is 4 * 1 + 10 * 6 = 64.
+    assert sorted(projections) == sorted(
+        [(image_a.sample_id, 31.0, 1.0), (image_b.sample_id, 64.0, 2.5)]
+    )
+
+
+def test_get_projections_by_collection_id__ordered_by_creation_time(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=1
+    ).embedding_model_id
+    # The sample with the larger sample ID is created first, so the creation time order is
+    # the reverse of the sample ID order.
+    first_id = UUID("00000000-0000-0000-0000-000000000002")
+    second_id = UUID("00000000-0000-0000-0000-000000000001")
+    db_session.add_all(
+        [
+            SampleTable(
+                sample_id=first_id,
+                collection_id=collection_id,
+                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            ),
+            SampleTable(
+                sample_id=second_id,
+                collection_id=collection_id,
+                created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            ),
+        ]
+    )
+    db_session.commit()
+    for sample_id in [first_id, second_id]:
+        create_sample_embedding(
+            session=db_session,
+            sample_id=sample_id,
+            embedding_model_id=embedding_model_id,
+            embedding=[1.0],
+        )
+
+    projections = sample_embedding_resolver.get_projections_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        direction_x=[1.0],
+        direction_y=[1.0],
+    )
+
+    assert [projection.sample_id for projection in projections] == [first_id, second_id]
+
+
+def test_get_projections_by_collection_id__large_vectors(db_session: Session) -> None:
+    # PostgreSQL stores a value over about 2 KB out of line (TOAST). 1024 float32 values use
+    # 4 KB, and random values do not compress, so each vector is stored out of line.
+    dimension = 1024
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=dimension
+    ).embedding_model_id
+    rng = np.random.default_rng(seed=0)
+    embedding_a = rng.random(dimension, dtype=np.float32)
+    embedding_b = rng.random(dimension, dtype=np.float32)
+    image_a, image_b = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="a.png"), embedding_a.tolist()),
+            (ImageStub(path="b.png"), embedding_b.tolist()),
+        ],
+    )
+    # The directions select the last and the first embedding value, without rounding. The last
+    # value is only correct if the full vector loads.
+    direction_x = [0.0] * dimension
+    direction_x[dimension - 1] = 1.0
+    direction_y = [0.0] * dimension
+    direction_y[0] = 1.0
+
+    projections = sample_embedding_resolver.get_projections_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        direction_x=direction_x,
+        direction_y=direction_y,
+    )
+
+    assert {projection.sample_id: (projection.x, projection.y) for projection in projections} == {
+        image_a.sample_id: (float(embedding_a[-1]), float(embedding_a[0])),
+        image_b.sample_id: (float(embedding_b[-1]), float(embedding_b[0])),
+    }
+
+
+@pytest.mark.parametrize(
+    ("direction_x", "direction_y"),
+    [
+        ([1.0, 0.0], [0.0, 1.0, 0.0]),
+        ([1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]),
+    ],
+    ids=["x_too_short", "y_too_long"],
+)
+def test_get_projections_by_collection_id__dimension_mismatch(
+    db_session: Session, direction_x: list[float], direction_y: list[float]
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=3
+    ).embedding_model_id
+
+    with pytest.raises(ValueError, match="embedding dimension 3"):
+        sample_embedding_resolver.get_projections_by_collection_id(
+            session=db_session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            direction_x=direction_x,
+            direction_y=direction_y,
+        )
+
+
+def test_get_projections_by_collection_id__unknown_model(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = uuid4()
+
+    with pytest.raises(ValueError, match=f"Embedding model {embedding_model_id} not found"):
+        sample_embedding_resolver.get_projections_by_collection_id(
+            session=db_session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            direction_x=[1.0, 0.0, 0.0],
+            direction_y=[0.0, 1.0, 0.0],
+        )
 
 
 def test_get_embedding_count(db_session: Session) -> None:

@@ -10,12 +10,23 @@ import sqlalchemy
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.resolvers.metadata_resolver.sample import categorical_value_counts
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from tests.helpers_resolvers import create_collection, create_image
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from tests.helpers_resolvers import (
+    AnnotationDetails,
+    create_annotation_label,
+    create_annotations,
+    create_collection,
+    create_image,
+)
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_with_frames
 
 
 def test_get_metadata_value_counts__categorical_values_and_missing(
@@ -243,6 +254,76 @@ def test_get_metadata_value_counts__filters_and_own_key_exclusion(
         ("B", 1),
     ]
     assert [(entry.value, entry.count) for entry in counts["group"].value_counts] == [("x", 1)]
+
+
+def test_get_metadata_value_counts__video_width_filter(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    for path, width, weather in [("a.mp4", 640, "sunny"), ("b.mp4", 1920, "rainy")]:
+        video = create_video(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video=VideoStub(path=path, width=width),
+        )
+        video.sample["weather"] = weather
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=VideoFilter(width=FilterDimensions(min=1000)),
+    )
+
+    assert [(entry.value, entry.count) for entry in counts["weather"].value_counts] == [
+        ("rainy", 1)
+    ]
+
+
+def test_get_metadata_value_counts__video_frame_annotation_filter(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    annotated = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="annotated.mp4", duration_s=1.0, fps=2.0),
+    )
+    not_annotated = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="not_annotated.mp4", duration_s=1.0, fps=2.0),
+    )
+    for video_with_frames, weather in [(annotated, "sunny"), (not_annotated, "rainy")]:
+        video = video_resolver.get_by_id(
+            session=db_session, sample_id=video_with_frames.video_sample_id
+        )
+        assert video is not None
+        video.sample["weather"] = weather
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=annotated.video_frames_collection_id,
+        label_name="car",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=annotated.video_frames_collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=annotated.frame_sample_ids[0],
+                annotation_label_id=label.annotation_label_id,
+            )
+        ],
+    )
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=VideoFilter(
+            frame_annotation_filter=AnnotationsFilter(
+                annotation_label_ids=[label.annotation_label_id]
+            )
+        ),
+    )
+
+    assert [(entry.value, entry.count) for entry in counts["weather"].value_counts] == [
+        ("sunny", 1)
+    ]
 
 
 def test_get_metadata_value_counts__fields_limits_counted_keys(

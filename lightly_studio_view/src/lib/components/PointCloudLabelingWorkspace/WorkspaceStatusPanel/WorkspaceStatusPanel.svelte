@@ -12,10 +12,9 @@
     interface Props {
         status: 'loading' | 'unsupported' | 'empty' | 'error';
         onRetry?: () => void;
-        onExit?: () => void;
     }
 
-    let { status, onRetry, onExit }: Props = $props();
+    let { status, onRetry }: Props = $props();
 
     const copy: Record<typeof status, { title: string; description: string }> = {
         loading: {
@@ -49,14 +48,11 @@
     {/if}
     <p class="text-sm font-medium">{copy[status].title}</p>
     <p class="max-w-sm text-sm text-muted-foreground">{copy[status].description}</p>
-    <div class="mt-2 flex gap-2">
-        {#if status === 'error' && onRetry}
+    {#if status === 'error' && onRetry}
+        <div class="mt-2 flex gap-2">
             <Button icon={RotateCw} variant="outline" buttonProps={{ onclick: onRetry }}>
                 Retry
             </Button>
-        {/if}
-        {#if onExit}
-            <Button variant="ghost" buttonProps={{ onclick: onExit }}>Back to samples</Button>
-        {/if}
-    </div>
+        </div>
+    {/if}
 </div>

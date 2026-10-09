@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlmodel import Session
 
+from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.resolvers import group_resolver, mcap_resolver
 from tests.helpers_resolvers import create_mcap
 from tests.resolvers.mcap_group_sequence_resolver.helpers import create_mcap_sequence
@@ -36,12 +37,16 @@ def test_get_tick_channels(db_session: Session) -> None:
     result = mcap_resolver.get_tick_channels(session=db_session, group_sample_id=group_ids[0])
 
     assert set(result.keys()) == {"front", "pcl_front"}
-    assert result["front"].channel_id == 3
-    assert result["front"].log_time_ns == 1_000
-    assert result["front"].keyframe_log_time_ns == 1_000
-    assert result["pcl_front"].channel_id == 7
-    assert result["pcl_front"].log_time_ns == 1_001
-    assert result["pcl_front"].keyframe_log_time_ns is None
+    front_mcap, front_type = result["front"]
+    assert front_mcap.channel_id == 3
+    assert front_mcap.log_time_ns == 1_000
+    assert front_mcap.keyframe_log_time_ns == 1_000
+    assert front_type is McapDataType.VIDEO_FRAME
+    pcl_mcap, pcl_type = result["pcl_front"]
+    assert pcl_mcap.channel_id == 7
+    assert pcl_mcap.log_time_ns == 1_001
+    assert pcl_mcap.keyframe_log_time_ns is None
+    assert pcl_type is McapDataType.POINT_CLOUD
 
 
 def test_get_tick_channels__unknown_group(db_session: Session) -> None:

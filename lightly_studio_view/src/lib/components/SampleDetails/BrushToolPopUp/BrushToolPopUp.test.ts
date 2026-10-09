@@ -70,6 +70,7 @@ describe('BrushTool component', () => {
             }
         };
         mockAnnotationLabelContext.annotationId = null;
+        mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.lastCreatedAnnotationId = null;
         mockAnnotationLabelContext.isChangingBrushSize = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
@@ -218,6 +219,13 @@ describe('BrushTool component', () => {
         const finishButton = getByLabelText(container, 'Finish');
 
         expect(finishButton).toBeDisabled();
+    });
+
+    it('disables Finish while drawing', () => {
+        mockAnnotationLabelContext.annotationId = 'annotation-1';
+        mockAnnotationLabelContext.isDrawing = true;
+        const view = render(BrushTool);
+        expect(view.getByRole('button', { name: 'Finish' })).toBeDisabled();
     });
 
     it('hides the Finish button on annotation details view', async () => {

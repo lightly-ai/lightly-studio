@@ -14,4 +14,10 @@ def test_sequence_and_sample_tables_have_no_uri() -> None:
         assert "recording_id" not in fields
 
     recording_fields = set(RecordingTable.model_fields)
-    assert recording_fields == {"recording_id", "dataset_id", "format", "uri"}
+    assert recording_fields == {
+        "recording_id",
+        "dataset_id",
+        "format",
+        "uri",
+        "reference_frame_ids",
+    }

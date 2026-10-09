@@ -2,13 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import Page from './+page.svelte';
-import type { PageData } from './$types';
 import { goto } from '$app/navigation';
 
-// The route param dataset_id intentionally differs from the collection's dataset_id
-// to prove navigation uses the collection's dataset_id (the regression this page fixes).
+// The labeling route sits under the collection layout, which resolves the hierarchy by the
+// dataset slot — so that slot must be a collection id. Navigation forwards the route dataset
+// id (a collection id); the labeling page derives the real dataset id from the loaded collection.
 const ROUTE_DATASET_ID = 'route-dataset-id';
-const COLLECTION_DATASET_ID = 'collection-dataset-id';
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
@@ -40,10 +39,6 @@ vi.mock('$lib/hooks', () => ({
         totalCount: writable(1)
     })
 }));
-
-const mockPageData = {
-    collection: { dataset_id: COLLECTION_DATASET_ID }
-} as unknown as PageData;
 
 class MockResizeObserver {
     constructor(private callback: ResizeObserverCallback) {}
@@ -82,14 +77,13 @@ describe('point-clouds/+page.svelte', () => {
 
     afterEach(() => vi.restoreAllMocks());
 
-    it("navigates using the collection's dataset_id, not the route param", async () => {
-        render(Page, { props: { data: mockPageData } });
+    it('navigates with the route dataset id (a collection id the layout can resolve)', async () => {
+        render(Page);
 
         await fireEvent.click(screen.getByRole('button', { name: 'View MCAP sequence 1' }));
 
         expect(goto).toHaveBeenCalledOnce();
         const destination = vi.mocked(goto).mock.calls[0][0] as string;
-        expect(destination).toContain(COLLECTION_DATASET_ID);
-        expect(destination).not.toContain(ROUTE_DATASET_ID);
+        expect(destination).toContain(ROUTE_DATASET_ID);
     });
 });

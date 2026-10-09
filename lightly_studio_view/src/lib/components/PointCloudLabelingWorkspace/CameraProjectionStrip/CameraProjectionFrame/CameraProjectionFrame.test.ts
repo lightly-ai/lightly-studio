@@ -12,7 +12,8 @@ const defaultProps = {
     datasetId: 'dataset-1',
     recordingId: 'recording-1',
     channelId: 3,
-    timestampNs: '2000',
+    keyframeTimestampNs: '1500',
+    logTimeNs: '2000',
     label: 'front'
 };
 
@@ -32,7 +33,7 @@ describe('CameraProjectionFrame', () => {
 
         expect(screen.getByRole('img', { name: 'front' })).toHaveAttribute(
             'src',
-            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=2000`
+            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=1500&log_time_ns=2000`
         );
         expect(screen.getByText('front')).toBeInTheDocument();
     });

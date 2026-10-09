@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createThumbnailResolver } from './thumbnailUrlResolver';
 
 vi.mock('$env/static/public', () => ({
+    PUBLIC_LIGHTLY_STUDIO_API_URL: 'https://example.com/',
     PUBLIC_SAMPLES_URL: 'https://example.com/images',
     PUBLIC_VIDEOS_FRAMES_MEDIA_URL: 'https://example.com/frames'
 }));

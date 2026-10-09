@@ -14,27 +14,42 @@
         currentTick: number;
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
+        playbackIntervalMs: number;
         /** Point-cloud channel names rendered as timeline lanes. */
         lidarChannelNames?: string[];
         /** Image and video channel names rendered as timeline lanes. */
         cameraChannelNames?: string[];
+        /** Whether the source has channels, even when the current selection is empty. */
+        hasAvailableChannels?: boolean;
         /** Step to the previous frame. */
         onPreviousFrame: () => void;
         /** Step to the next frame. */
         onNextFrame: () => void;
         /** Toggle playback between playing and paused. */
         onPlayToggle: () => void;
+        onPlaybackIntervalChange: (intervalMs: number) => void;
+        onSelectTick: (seqNumber: number) => void;
+        /** Open the previous sequence; the control is disabled when absent. */
+        onPreviousSequence?: () => void;
+        /** Open the next sequence; the control is disabled when absent. */
+        onNextSequence?: () => void;
     }
 
     let {
         ticks,
         currentTick,
         isPlaying,
+        playbackIntervalMs,
         lidarChannelNames = [],
         cameraChannelNames = [],
+        hasAvailableChannels = false,
         onPreviousFrame,
         onNextFrame,
-        onPlayToggle
+        onPlayToggle,
+        onPlaybackIntervalChange,
+        onSelectTick,
+        onPreviousSequence,
+        onNextSequence
     }: Props = $props();
 
     // Ticks can be sparse, so resolve the active seq number to its array position rather than
@@ -49,7 +64,7 @@
     );
 
     const lanes = $derived(
-        lidarChannelNames.length > 0 || cameraChannelNames.length > 0
+        lidarChannelNames.length > 0 || cameraChannelNames.length > 0 || hasAvailableChannels
             ? [...lidarChannelNames, ...cameraChannelNames]
             : ['Track 1', 'Track 2']
     );
@@ -62,12 +77,16 @@
     <TimelineTransport
         {frameLabel}
         {isPlaying}
+        {playbackIntervalMs}
         hasTicks={ticks.length > 0}
         {canGoPrevious}
         {canGoNext}
         {onPreviousFrame}
         {onNextFrame}
         {onPlayToggle}
+        {onPlaybackIntervalChange}
+        {onPreviousSequence}
+        {onNextSequence}
     />
-    <TimelineTracks {ticks} {currentTick} {lanes} />
+    <TimelineTracks {ticks} {currentTick} {lanes} {onSelectTick} />
 </div>

@@ -207,6 +207,37 @@ def test_get_adjacent_samples__delegates_to_video_frame_resolver(
     )
 
 
+def test_get_adjacent_samples__delegates_to_mcap_group_sequence_resolver(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    expected = _make_adjacent_result()
+    mock_get_adjacent_sequences = mocker.patch(
+        "lightly_studio.resolvers.mcap_group_sequence_resolver.get_adjacent_sequences",
+        return_value=expected,
+    )
+
+    sample_id = uuid4()
+    collection_id = uuid4()
+    request = AdjacentRequest(
+        sample_type=SampleType.SEQUENCE,
+        collection_id=collection_id,
+    )
+
+    result = get_adjacent_samples(
+        session=db_session,
+        sample_id=sample_id,
+        request=request,
+    )
+
+    assert result == expected
+    mock_get_adjacent_sequences.assert_called_once_with(
+        session=db_session,
+        sample_id=sample_id,
+        collection_id=collection_id,
+    )
+
+
 def test_get_adjacent_samples__delegates_to_annotation_resolver(
     db_session: Session,
     mocker: MockerFixture,
@@ -384,6 +415,38 @@ def test_get_adjacent_samples__raises_for_annotation_with_wrong_filter_type(
     )
 
     with pytest.raises(ValueError, match=r"Invalid filter provided. Expected AnnotationsFilter"):
+        get_adjacent_samples(
+            session=db_session,
+            sample_id=uuid4(),
+            request=request,
+        )
+
+
+@pytest.mark.parametrize(
+    "request_options",
+    [
+        {"filters": VideoFilter()},
+        {
+            "sort_by": [
+                VideoSortFieldExpr(
+                    source=SortFieldSource.video,
+                    field_name="duration_s",
+                    direction=SortDirection.desc,
+                )
+            ]
+        },
+        {"text_embedding": [0.1, 0.2]},
+    ],
+)
+def test_get_adjacent_samples__raises_for_sequence_with_unsupported_options(
+    db_session: Session,
+    request_options: dict[str, object],
+) -> None:
+    request = AdjacentRequest.model_validate(
+        {"sample_type": SampleType.SEQUENCE, "collection_id": uuid4(), **request_options}
+    )
+
+    with pytest.raises(ValueError, match=r"are not supported for sample type 'sequence'"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),

@@ -32,8 +32,10 @@
 
 <Card className="h-full">
     <CardContent className="h-full flex flex-col">
+        <!-- px-1 keeps the focus ring of the full-width controls inside overflow-hidden.
+             -mx-1 keeps the controls where they are. -->
         <div
-            class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
+            class="-mx-1 flex h-full min-h-0 flex-col space-y-4 overflow-hidden px-1 dark:[color-scheme:dark]"
         >
             <Segment title={`Selected images: ${selectedCount}`}>
                 <div class="flex flex-col space-y-4">

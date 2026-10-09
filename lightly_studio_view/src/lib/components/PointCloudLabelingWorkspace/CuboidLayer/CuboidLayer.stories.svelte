@@ -2,6 +2,7 @@
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { Canvas, T } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
+    import * as THREE from 'three';
     import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
     import { createCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidLayer from './CuboidLayer.svelte';
@@ -34,6 +35,7 @@
             size: vehicle.size,
             rotation: [0, 0, Math.sin(halfYaw), Math.cos(halfYaw)],
             trackId: null,
+            trackNumber: null,
             keyframeId: null
         });
     });
@@ -73,8 +75,18 @@
     >
         <Canvas>
             <T.Color attach="background" args={['#10141c']} />
-            <T.PerspectiveCamera position={[18, -22, 16]} makeDefault fov={50}>
-                <OrbitControls target={[0, 0, 0]} enableDamping />
+            <T.PerspectiveCamera position={[18, -22, 16]} makeDefault fov={50} up={[0, 0, 1]}>
+                <OrbitControls
+                    target={[0, 0, 0]}
+                    enableDamping
+                    screenSpacePanning={false}
+                    mouseButtons={{
+                        LEFT: THREE.MOUSE.PAN,
+                        MIDDLE: THREE.MOUSE.DOLLY,
+                        RIGHT: THREE.MOUSE.ROTATE
+                    }}
+                    touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
+                />
             </T.PerspectiveCamera>
             <T.AmbientLight intensity={1.5} />
             <T.GridHelper args={[24, 24, '#344054', '#202938']} rotation={[Math.PI / 2, 0, 0]} />
@@ -92,6 +104,7 @@
             {hoveredAnnotationId}
             cuboids={args.cuboids ?? []}
             annotationClasses={args.annotationClasses ?? []}
+            annotationSources={[{ id: 'ground-truth', name: 'Ground Truth' }]}
         />
     </div>
 {/snippet}

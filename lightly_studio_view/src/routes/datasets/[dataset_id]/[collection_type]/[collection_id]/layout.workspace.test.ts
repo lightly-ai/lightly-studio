@@ -144,7 +144,8 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: vi.fn(() => ({ imageFilter: writable(null) }))
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
-    useVideoFilters: vi.fn(() => ({ videoFilter: writable(null) }))
+    useVideoFilters: vi.fn(() => ({ videoFilter: writable(null), filterParams: writable(null) })),
+    buildVideoFilter: vi.fn(() => null)
 }));
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
     useAnnotationCollectionsFilter: vi.fn(() => ({
@@ -152,7 +153,12 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
         allSourcesHidden: writable(false)
     }))
 }));
-vi.mock('$lib/hooks', () => ({
+// The panels also import these hooks through the barrel, so reuse their mocks from above.
+vi.mock('$lib/hooks', async () => ({
+    ...(await import('$lib/hooks/useMetadataFilters/useMetadataFilters.js')),
+    ...(await import('$lib/hooks/useVideoFilters/useVideoFilters')),
+    ...(await import('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter')),
+    ...(await import('$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js')),
     useSelectionSummary: vi.fn(() => ({
         selectedCount: writable(0),
         clearSelection: vi.fn()
@@ -305,6 +311,17 @@ describe('distribution comparison query selection', () => {
         expect(vi.mocked(useMetadataDistributionsBySampleTags).mock.calls[0][0]()).toMatchObject({
             field: undefined
         });
+    });
+});
+
+describe('video distribution panel', () => {
+    it('opens the video panel on the videos route', async () => {
+        setPageRoute(APP_ROUTES.videos);
+        mockActivePanel.set('distribution');
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+
+        expect(await screen.findByText('Annotation classes')).toBeInTheDocument();
     });
 });
 
@@ -599,6 +616,15 @@ describe('SidePanelTabs availability', () => {
         await tick();
 
         expect(screen.queryByTestId('side-panel-tabs')).not.toBeInTheDocument();
+    });
+
+    it('is present on videos route without embeddings', async () => {
+        setPageRoute(APP_ROUTES.videos);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
     });
 
     it('is absent on a collection-grid route without embeddings', async () => {

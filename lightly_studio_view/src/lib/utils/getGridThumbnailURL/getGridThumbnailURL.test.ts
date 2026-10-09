@@ -13,7 +13,25 @@ vi.mock('$env/static/public', () => ({
 
 describe('getGridThumbnailRequestSize', () => {
     test('caps device pixel ratio at 2', () => {
-        expect(getGridThumbnailRequestSize(120, 3)).toBe(240);
+        expect(getGridThumbnailRequestSize(120, 3)).toBe(256);
+    });
+
+    test('rounds up to the next size step', () => {
+        expect(getGridThumbnailRequestSize(10)).toBe(128);
+        expect(getGridThumbnailRequestSize(257)).toBe(384);
+        expect(getGridThumbnailRequestSize(300)).toBe(384);
+    });
+
+    test('keeps a size that equals a step', () => {
+        expect(getGridThumbnailRequestSize(256)).toBe(256);
+    });
+
+    test('caps the size at the largest step', () => {
+        expect(getGridThumbnailRequestSize(5000)).toBe(2048);
+    });
+
+    test('returns 0 for a size of 0', () => {
+        expect(getGridThumbnailRequestSize(0)).toBe(0);
     });
 });
 

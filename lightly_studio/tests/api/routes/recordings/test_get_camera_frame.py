@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -16,13 +17,18 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
-from lightly_studio.core.mcap import compressed_video
+from lightly_studio.core.mcap.compressed_video import VideoDecoder
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import collection_resolver, recording_resolver
+from lightly_studio.services.recording_service import video_decoder_cache
 from tests.core.mcap import helpers
+
+# One GOP of real H.264 video: a keyframe and a delta frame.
+KEYFRAME_NS = 1_000_000_000
+DELTA_FRAME_NS = 1_100_000_000
 
 
 @dataclass
@@ -33,9 +39,20 @@ class RecordingFixture:
     mcap_path: Path
 
 
+@pytest.fixture(autouse=True)
+def clear_decoder_cache() -> Iterator[None]:
+    video_decoder_cache.clear()
+    yield
+    video_decoder_cache.clear()
+
+
 @pytest.fixture
 def recording(db_session: Session, tmp_path: Path) -> RecordingFixture:
-    mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
+    access_units = helpers.h264_access_units(gray_levels=(0, 255))
+    mcap_path = helpers.write_mcap_with_video(
+        tmp_path / "recording.mcap",
+        frames=list(zip((KEYFRAME_NS, DELTA_FRAME_NS), access_units)),
+    )
     collection = collection_resolver.create(
         db_session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
     )
@@ -63,21 +80,50 @@ def _camera_frame_url(dataset_id: UUID, recording_id: UUID) -> str:
     return f"/datasets/{dataset_id}/recordings/{recording_id}/camera-frame"
 
 
-def test_get_camera_frame(
-    test_client: TestClient, recording: RecordingFixture, mocker: MockerFixture
-) -> None:
-    mocker.patch.object(compressed_video, "from_decoded_message", return_value=b"\xff\xd8\xff")
-    keyframe_ns = helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0]
-
+def test_get_camera_frame(test_client: TestClient, recording: RecordingFixture) -> None:
     response = test_client.get(
         _camera_frame_url(recording.dataset_id, recording.recording_id),
-        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": keyframe_ns},
+        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": KEYFRAME_NS},
     )
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.headers["content-type"] == "image/jpeg"
-    assert response.headers["x-frame-log-time-ns"] == str(keyframe_ns)
-    assert response.content == b"\xff\xd8\xff"
+    assert response.headers["cache-control"] == "public, max-age=604800"
+    assert response.headers["x-frame-log-time-ns"] == str(KEYFRAME_NS)
+    assert response.content[:3] == b"\xff\xd8\xff"  # JPEG magic
+
+
+def test_get_camera_frame__delta_frame(
+    test_client: TestClient, recording: RecordingFixture
+) -> None:
+    response = test_client.get(
+        _camera_frame_url(recording.dataset_id, recording.recording_id),
+        params={
+            "channel_id": recording.channel_id,
+            "keyframe_timestamp_ns": KEYFRAME_NS,
+            "log_time_ns": DELTA_FRAME_NS,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["x-frame-log-time-ns"] == str(DELTA_FRAME_NS)
+    assert response.headers["etag"] == f'"{DELTA_FRAME_NS}-{recording.channel_id}-None-None-85"'
+    assert helpers.jpeg_mean_gray_level(response.content) > 223
+
+
+def test_get_camera_frame__400_on_log_time_before_keyframe(
+    test_client: TestClient, recording: RecordingFixture
+) -> None:
+    response = test_client.get(
+        _camera_frame_url(recording.dataset_id, recording.recording_id),
+        params={
+            "channel_id": recording.channel_id,
+            "keyframe_timestamp_ns": DELTA_FRAME_NS,
+            "log_time_ns": KEYFRAME_NS,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
 
 
 def test_get_camera_frame__unknown_recording(test_client: TestClient) -> None:
@@ -101,46 +147,38 @@ def test_get_camera_frame__unknown_channel(
 
 
 def test_get_camera_frame__etag_in_response(
-    test_client: TestClient, recording: RecordingFixture, mocker: MockerFixture
+    test_client: TestClient, recording: RecordingFixture
 ) -> None:
-    mocker.patch.object(compressed_video, "from_decoded_message", return_value=b"\xff\xd8\xff")
-    keyframe_ns = helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0]
-
     response = test_client.get(
         _camera_frame_url(recording.dataset_id, recording.recording_id),
-        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": keyframe_ns},
+        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": KEYFRAME_NS},
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.headers["etag"] == f'"{keyframe_ns}-{recording.channel_id}-None-None-85"'
+    assert response.headers["etag"] == f'"{KEYFRAME_NS}-{recording.channel_id}-None-None-85"'
 
 
 def test_get_camera_frame__400_on_mcap_access_error(
     test_client: TestClient, recording: RecordingFixture, mocker: MockerFixture
 ) -> None:
-    mocker.patch.object(
-        compressed_video, "from_decoded_message", side_effect=McapAccessError("bad codec")
-    )
-    keyframe_ns = helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0]
+    mocker.patch.object(VideoDecoder, "decode", side_effect=McapAccessError("bad codec"))
 
     response = test_client.get(
         _camera_frame_url(recording.dataset_id, recording.recording_id),
-        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": keyframe_ns},
+        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": KEYFRAME_NS},
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
 
 
 def test_get_camera_frame__304_on_matching_if_none_match(
-    test_client: TestClient, recording: RecordingFixture, mocker: MockerFixture
+    test_client: TestClient, recording: RecordingFixture
 ) -> None:
-    mocker.patch.object(compressed_video, "from_decoded_message", return_value=b"\xff\xd8\xff")
-    keyframe_ns = helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0]
-    etag = f'"{keyframe_ns}-{recording.channel_id}-None-None-85"'
+    etag = f'"{KEYFRAME_NS}-{recording.channel_id}-None-None-85"'
 
     response = test_client.get(
         _camera_frame_url(recording.dataset_id, recording.recording_id),
-        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": keyframe_ns},
+        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": KEYFRAME_NS},
         headers={"if-none-match": etag},
     )
 
@@ -149,14 +187,11 @@ def test_get_camera_frame__304_on_matching_if_none_match(
 
 
 def test_get_camera_frame__200_on_mismatched_if_none_match(
-    test_client: TestClient, recording: RecordingFixture, mocker: MockerFixture
+    test_client: TestClient, recording: RecordingFixture
 ) -> None:
-    mocker.patch.object(compressed_video, "from_decoded_message", return_value=b"\xff\xd8\xff")
-    keyframe_ns = helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0]
-
     response = test_client.get(
         _camera_frame_url(recording.dataset_id, recording.recording_id),
-        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": keyframe_ns},
+        params={"channel_id": recording.channel_id, "keyframe_timestamp_ns": KEYFRAME_NS},
         headers={"if-none-match": '"stale-etag"'},
     )
 

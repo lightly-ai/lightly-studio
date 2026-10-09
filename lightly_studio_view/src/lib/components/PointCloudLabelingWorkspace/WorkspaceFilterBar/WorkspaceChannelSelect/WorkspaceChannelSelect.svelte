@@ -14,11 +14,14 @@
         selectedChannels: number[];
         /** Toggles a channel on or off by its `channel_id`. */
         onToggleChannel: (channelId: number) => void;
+        /** Replaces the selection, used by the select-all and clear actions. */
+        onSetChannels: (channelIds: number[]) => void;
         /** `data-testid` for the trigger; list items derive from it. */
         testId: string;
     }
 
-    let { label, channels, selectedChannels, onToggleChannel, testId }: Props = $props();
+    let { label, channels, selectedChannels, onToggleChannel, onSetChannels, testId }: Props =
+        $props();
 
     let open = $state(false);
 
@@ -44,9 +47,12 @@
     // relay it back through the toggle contract.
     const handleChange = (ids: string[]) => {
         const before = new Set(selectedIds);
-        const toggled =
-            ids.find((id) => !before.has(id)) ?? selectedIds.find((id) => !ids.includes(id));
-        if (toggled !== undefined) onToggleChannel(Number(toggled));
+        const changed = [
+            ...ids.filter((id) => !before.has(id)),
+            ...selectedIds.filter((id) => !ids.includes(id))
+        ];
+        if (changed.length === 1) onToggleChannel(Number(changed[0]));
+        else onSetChannels(ids.map(Number));
     };
 </script>
 
@@ -73,6 +79,7 @@
             {items}
             {selectedIds}
             onChange={handleChange}
+            showSelectAll
             itemNoun="channel"
             itemNounPlural="channels"
         />
