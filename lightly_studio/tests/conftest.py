@@ -43,6 +43,7 @@ from lightly_studio.resolvers import (
     collection_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from tests.helpers_resolvers import (
     ImageStub,
     create_images,
@@ -363,15 +364,15 @@ def annotation_tags(
 @pytest.fixture
 def sample_tags(
     db_session: Session,
-    collections: list[CollectionTable],
+    collection: CollectionTable,
 ) -> list[TagTable]:
-    """Create a list of sample tags for testing."""
+    """Create a list of sample tags in the collection of the samples fixture."""
     tags = []
     for i in range(4):
         tag = tag_resolver.create(
             db_session,
             TagCreate(
-                collection_id=collections[i % 2].collection_id,
+                collection_id=collection.collection_id,
                 name=f"Test Sample Tag {i}",
                 kind="sample",
             ),
@@ -488,17 +489,26 @@ def annotations_test_data(
 @pytest.fixture
 def annotation_tags_assigned(
     db_session: Session,
-    collections: list[CollectionTable],
-    annotations_test_data: list[AnnotationBaseTable],  # noqa: ARG001
+    annotations_test_data: AnnotationsTestData,
 ) -> list[TagTable]:
-    """Create a list of annotation labels for testing."""
+    """Create two tags in the first annotation collection and assign them to its annotations."""
+    annotation_collection_id = annotations_test_data.collections[0].children[0].collection_id
     annotations_all = annotation_resolver.get_all(
-        db_session,
+        session=db_session,
+        filters=AnnotationsFilter(collection_ids=[annotation_collection_id]),
     ).annotations
 
-    tags = tag_resolver.get_all_by_collection_id(
-        db_session, collection_id=collections[0].collection_id
-    )
+    tags = [
+        tag_resolver.create(
+            session=db_session,
+            tag=TagCreate(
+                collection_id=annotation_collection_id,
+                name=f"Test Annotation Tag {i}",
+                kind="annotation",
+            ),
+        )
+        for i in range(2)
+    ]
 
     # assign the first tag to the 2 annotations
     for i in range(2):
