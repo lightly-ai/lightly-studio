@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 from sqlmodel import Session
 
@@ -143,6 +145,39 @@ def test_add_sample_ids_to_tag_id__sample_of_other_collection(
             session=db_session,
             tag_id=tag.tag_id,
             sample_ids=[image.sample_id, other_image.sample_id],
+        )
+
+    assert tag.samples == []
+
+
+def test_add_sample_ids_to_tag_id__duplicate_sample_ids(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    tag = create_tag(session=db_session, collection_id=collection.collection_id)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag.tag_id,
+        sample_ids=[image.sample_id, image.sample_id],
+    )
+
+    assert tag.samples == [image.sample]
+
+
+def test_add_sample_ids_to_tag_id__unknown_sample(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    tag = create_tag(session=db_session, collection_id=collection.collection_id)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    with pytest.raises(ValueError, match="do not exist or do not belong to the collection of tag"):
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=db_session,
+            tag_id=tag.tag_id,
+            sample_ids=[image.sample_id, uuid4()],
         )
 
     assert tag.samples == []
