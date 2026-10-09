@@ -137,6 +137,8 @@ exclude = [
     "scripts/download_coco_subset.py",
 ]
 plugins = ["pydantic.mypy"]
+# Allows passing an abstract embedder interface, such as `TextEmbedder`, as `type[T]`.
+disable_error_code = ["type-abstract"]
 # The writer of mcap-ros2-support, which the tests use to build MCAP fixtures, is only
 # partially annotated.
 untyped_calls_exclude = ["mcap_ros2"]
