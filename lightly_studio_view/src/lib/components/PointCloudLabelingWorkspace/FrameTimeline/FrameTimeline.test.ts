@@ -10,7 +10,7 @@ const defaultProps = {
     ticks: createTicks([null, null, null]),
     currentTick: 0,
     isPlaying: false,
-    playbackIntervalMs: 300,
+    playbackIntervalMs: 100,
     onPreviousFrame: vi.fn(),
     onNextFrame: vi.fn(),
     onPlayToggle: vi.fn(),
@@ -19,14 +19,6 @@ const defaultProps = {
 };
 
 describe('FrameTimeline', () => {
-    it('renders placeholder lanes when no channels are given', () => {
-        render(FrameTimeline, { props: defaultProps });
-
-        expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
-        expect(screen.getByText('Track 1')).toBeInTheDocument();
-        expect(screen.getByText('Track 2')).toBeInTheDocument();
-    });
-
     it.each([
         { currentTick: 0, label: 'Frame 1 / 3' },
         { currentTick: 1, label: 'Frame 2 / 3' }
@@ -62,44 +54,9 @@ describe('FrameTimeline', () => {
         await fireEvent.input(screen.getByRole('slider', { name: 'Frame position' }), {
             target: { value: '2' }
         });
-        expect(
-            screen.getByRole('spinbutton', { name: 'Playback interval in seconds' })
-        ).toHaveValue(0.3);
+        expect(screen.getByLabelText('Playback speed')).toHaveTextContent('1×');
         expect(screen.getByRole('slider', { name: 'Frame position' })).toHaveAttribute('max', '2');
         expect(onSelectTick).toHaveBeenCalledWith(8);
-    });
-
-    it('renders a lane per lidar and camera channel by name', () => {
-        render(FrameTimeline, {
-            props: {
-                ...defaultProps,
-                lidarChannelNames: ['top'],
-                cameraChannelNames: ['front', 'rear']
-            }
-        });
-
-        expect(screen.getByText('top')).toBeInTheDocument();
-        expect(screen.getByText('front')).toBeInTheDocument();
-        expect(screen.getByText('rear')).toBeInTheDocument();
-        expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
-    });
-
-    it('uses channels even when only one channel kind is present', () => {
-        render(FrameTimeline, {
-            props: { ...defaultProps, lidarChannelNames: ['top'] }
-        });
-
-        expect(screen.getByText('top')).toBeInTheDocument();
-        expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
-    });
-
-    it('does not render placeholder lanes when all available channels are filtered out', () => {
-        render(FrameTimeline, {
-            props: { ...defaultProps, hasAvailableChannels: true }
-        });
-
-        expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
-        expect(screen.queryByText('Track 2')).not.toBeInTheDocument();
     });
 
     it('labels ruler ticks with their timestamp relative to the first tick', () => {

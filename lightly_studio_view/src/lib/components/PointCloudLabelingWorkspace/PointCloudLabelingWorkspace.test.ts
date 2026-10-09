@@ -236,11 +236,11 @@ describe('PointCloudLabelingWorkspace', () => {
         render(PointCloudLabelingWorkspace, { props: defaultProps });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Play frames' }));
-        await vi.advanceTimersByTimeAsync(300);
+        await vi.advanceTimersByTimeAsync(100);
         flushSync();
         expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
 
-        await vi.advanceTimersByTimeAsync(300);
+        await vi.advanceTimersByTimeAsync(100);
         flushSync();
         expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
     });
@@ -280,19 +280,4 @@ describe('PointCloudLabelingWorkspace', () => {
             );
         }
     );
-
-    it('filters the timeline lanes with the camera selection', async () => {
-        const user = userEvent.setup();
-        render(PointCloudLabelingWorkspace, { props: defaultProps });
-
-        const timeline = screen.getByTestId('workspace-frame-timeline');
-        expect(timeline).toHaveTextContent('front');
-        expect(timeline).toHaveTextContent('rear');
-
-        await user.click(screen.getByTestId('workspace-camera-select'));
-        await user.click(screen.getByTestId('workspace-camera-select-2'));
-
-        expect(timeline).not.toHaveTextContent('front');
-        expect(timeline).toHaveTextContent('rear');
-    });
 });

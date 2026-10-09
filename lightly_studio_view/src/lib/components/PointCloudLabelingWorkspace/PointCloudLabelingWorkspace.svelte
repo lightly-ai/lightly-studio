@@ -282,10 +282,6 @@
                                 currentTick={workspace.currentTick}
                                 isPlaying={workspace.isPlaying}
                                 playbackIntervalMs={workspace.playbackIntervalMs}
-                                lidarChannelNames={lidarSelection.selectedChannelNames}
-                                cameraChannelNames={cameraSelection.selectedChannelNames}
-                                hasAvailableChannels={lidarChannels.length > 0 ||
-                                    cameraChannels.length > 0}
                                 onPreviousFrame={goToPreviousFrame}
                                 onNextFrame={goToNextFrame}
                                 onPlayToggle={togglePlayback}

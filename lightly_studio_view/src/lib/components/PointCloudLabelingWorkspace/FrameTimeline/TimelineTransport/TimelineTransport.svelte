@@ -1,7 +1,15 @@
 <script lang="ts">
     import { ChevronLeft, ChevronRight, Pause, Play, SkipBack, SkipForward } from '@lucide/svelte';
     import { Button } from '$lib/components';
-    import { Input } from '$lib/components/ui/input';
+    import { Select } from '$lib/components/Select';
+
+    /** Playback interval at 1x speed, i.e. 10 Hz. */
+    const BASE_INTERVAL_MS = 100;
+    /** Item values are the interval multiplier relative to 1x (0.2x speed is 5x the interval). */
+    const speedItems = [0.1, 0.2, 0.5, 0.8, 1].map((speed) => ({
+        value: String(1 / speed),
+        label: `${speed}×`
+    }));
 
     /**
      * Transport controls (sequence and frame step, play/pause) and the frame counter for the
@@ -82,26 +90,16 @@
             class: 'h-7 w-7 p-0'
         }}
     />
-    <label class="ml-1 flex items-center gap-1 text-xs text-muted-foreground">
-        Interval
-        <Input
-            aria-label="Playback interval in seconds"
-            class="h-7 w-14 px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            wrapperClass="w-14"
-            type="number"
-            min="0.1"
-            max="5"
-            step="0.1"
-            value={playbackIntervalMs / 1000}
-            oninput={(event) => {
-                const seconds = Number(event.currentTarget.value);
-                if (Number.isFinite(seconds)) {
-                    onPlaybackIntervalChange(Math.min(5000, Math.max(100, seconds * 1000)));
-                }
-            }}
-        />
-        s
-    </label>
+    <Select
+        items={speedItems}
+        value={String(playbackIntervalMs / BASE_INTERVAL_MS)}
+        size="xs"
+        variant="ghost"
+        class="ml-1 h-7 w-auto"
+        testId="playback-speed-select"
+        selectProps={{ 'aria-label': 'Playback speed' }}
+        onValueChange={(slowdown) => onPlaybackIntervalChange(BASE_INTERVAL_MS * Number(slowdown))}
+    />
     <Button
         variant="ghost"
         icon={ChevronRight}
