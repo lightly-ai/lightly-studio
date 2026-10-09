@@ -35,7 +35,12 @@ async function startInit(): Promise<boolean> {
         person_profiles: 'identified_only',
         capture_pageview: true,
         capture_pageleave: true,
-        capture_exceptions: true
+        // Handled failures are logged with console.error, rather than thrown again.
+        capture_exceptions: {
+            capture_unhandled_errors: true,
+            capture_unhandled_rejections: true,
+            capture_console_errors: true
+        }
     });
     posthog.register({ app_version: version });
     initialized = true;
