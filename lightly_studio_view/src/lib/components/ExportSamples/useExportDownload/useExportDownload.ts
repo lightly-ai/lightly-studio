@@ -5,8 +5,8 @@ interface UseExportDownloadReturn {
     isLoading: Readable<boolean>;
     /** Error message to display if the download preparation fails, or empty string on success. */
     errorMessage: Readable<string>;
-    /** Triggers the download by calling the provided `prepare` function. */
-    handleDownload: () => Promise<void>;
+    /** Triggers the download by calling the provided `prepare` function. Returns true on success, false on failure. */
+    handleDownload: () => Promise<boolean>;
 }
 
 /**
@@ -32,13 +32,15 @@ export function useExportDownload(prepare: () => Promise<void>): UseExportDownlo
     const isLoading = writable(false);
     const errorMessage = writable('');
 
-    const handleDownload = async () => {
+    const handleDownload = async (): Promise<boolean> => {
         isLoading.set(true);
         errorMessage.set('');
         try {
             await prepare();
+            return true;
         } catch (e) {
             errorMessage.set(`Export failed: ${String(e)}`);
+            return false;
         } finally {
             isLoading.set(false);
         }
