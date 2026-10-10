@@ -24,7 +24,8 @@ const DEFAULT_SETTINGS: SettingView = {
     key_toolbar_segmentation_mask: 'm',
     key_toolbar_slic: 'a',
     key_toolbar_brush: 'r',
-    key_toolbar_eraser: 'x'
+    key_toolbar_eraser: 'x',
+    assisted_labeling_provider: 'fal_sam3'
 };
 
 // Create stores for settings state

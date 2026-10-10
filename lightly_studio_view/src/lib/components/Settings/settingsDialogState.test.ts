@@ -27,7 +27,8 @@ const TEST_SETTINGS: SettingView = {
     key_toolbar_bounding_box: 'b',
     key_toolbar_segmentation_mask: 'm',
     key_toolbar_brush: 'r',
-    key_toolbar_eraser: 'x'
+    key_toolbar_eraser: 'x',
+    assisted_labeling_provider: 'fal_sam3'
 };
 
 describe('createSettingsDialogFormState', () => {
@@ -50,7 +51,8 @@ describe('createSettingsDialogFormState', () => {
             showAnnotationTextLabels: false,
             showSampleFilenames: false,
             showBoundingBoxesForSegmentation: true,
-            enforceColoringByClass: false
+            enforceColoringByClass: false,
+            assistedLabelingProvider: 'fal_sam3'
         });
     });
 });
@@ -76,7 +78,8 @@ describe('createSettingsSavePayload', () => {
                 showAnnotationTextLabels: true,
                 showSampleFilenames: true,
                 showBoundingBoxesForSegmentation: false,
-                enforceColoringByClass: true
+                enforceColoringByClass: true,
+                assistedLabelingProvider: 'fake'
             })
         ).toEqual({
             key_hide_annotations: 'h',
@@ -94,7 +97,8 @@ describe('createSettingsSavePayload', () => {
             key_toolbar_segmentation_mask: 'w',
             key_toolbar_slic: 'f',
             key_toolbar_brush: 'p',
-            key_toolbar_eraser: 'o'
+            key_toolbar_eraser: 'o',
+            assisted_labeling_provider: 'fake'
         });
     });
 });
