@@ -2,6 +2,7 @@ import {
     useCloudPointFrame,
     useMcapSequenceSummary,
     useMcapSequenceTicks,
+    useMcapTickDetailsPrefetch,
     useTickDetails
 } from '$lib/hooks';
 import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local/types.gen';
@@ -163,6 +164,13 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
             getSequenceId: () => getInputs().sequenceId
         });
         this.#sequenceTicks = ticks;
+        useMcapTickDetailsPrefetch({
+            getDatasetId: () => getInputs().datasetId,
+            getSequenceId: () => getInputs().sequenceId,
+            getDisplayFrameId: () => this.referenceFrameId || undefined,
+            getTicks: () => this.ticks,
+            getCurrentTick: () => this.currentTick
+        });
         // Read once at construction: this is the starting position, not a reactive binding.
         this.currentTick = getInputs().initialTick ?? 0;
         const tickDetails = createTickDetails(

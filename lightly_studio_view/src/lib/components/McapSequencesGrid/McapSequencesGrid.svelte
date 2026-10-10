@@ -23,6 +23,8 @@
         isFetchingNextPage: boolean;
         onLoadMore: () => void;
         onSequenceClick: (sampleId: string) => void;
+        onSequenceHover?: (sampleId: string) => void;
+        onSequenceHoverEnd?: (sampleId: string) => void;
     }
 
     let {
@@ -33,7 +35,9 @@
         hasNextPage,
         isFetchingNextPage,
         onLoadMore,
-        onSequenceClick
+        onSequenceClick,
+        onSequenceHover,
+        onSequenceHoverEnd
     }: Props = $props();
 
     const { showSampleFilenamesStore } = useSettings();
@@ -82,6 +86,8 @@
                             dataTestId={`mcap-sequence-grid-item-button-${sequences[index].sampleId}`}
                             tag={false}
                             onSelect={() => onSequenceClick(sequences[index].sampleId)}
+                            onmouseenter={() => onSequenceHover?.(sequences[index].sampleId)}
+                            onmouseleave={() => onSequenceHoverEnd?.(sequences[index].sampleId)}
                             ariaLabel={`View MCAP sequence ${index + 1}`}
                         >
                             <McapSequenceGridItem

@@ -64,7 +64,9 @@ describe('McapSequencesGrid', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         onLoadMore: vi.fn(),
-        onSequenceClick: vi.fn()
+        onSequenceClick: vi.fn(),
+        onSequenceHover: vi.fn(),
+        onSequenceHoverEnd: vi.fn()
     };
 
     beforeEach(() => {
@@ -101,6 +103,21 @@ describe('McapSequencesGrid', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'View MCAP sequence 1' }));
 
         expect(onSequenceClick).toHaveBeenCalledWith(sequences[0].sampleId);
+    });
+
+    it('prefetches the hovered MCAP sequence and cancels when it is left', async () => {
+        const onSequenceHover = vi.fn();
+        const onSequenceHoverEnd = vi.fn();
+        render(McapSequencesGridTestWrapper, {
+            props: { ...defaultProps, onSequenceHover, onSequenceHoverEnd }
+        });
+
+        const sequence = screen.getByRole('button', { name: 'View MCAP sequence 1' });
+        await fireEvent.mouseEnter(sequence);
+        await fireEvent.mouseLeave(sequence);
+
+        expect(onSequenceHover).toHaveBeenCalledWith(sequences[0].sampleId);
+        expect(onSequenceHoverEnd).toHaveBeenCalledWith(sequences[0].sampleId);
     });
 
     it('loads another page when it is available', () => {
