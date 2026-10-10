@@ -24,6 +24,10 @@ from lightly_studio.models.collection_embedding_model import CollectionEmbedding
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
+from lightly_studio.models.evaluation_class_metric import (
+    EvaluationClassMetricCreate,
+    EvaluationClassMetricTable,
+)
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import (
     EvaluationSampleMetricCreate,
@@ -48,6 +52,7 @@ from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import (
     collection_resolver,
     dataset_resolver,
+    evaluation_class_metric_resolver,
     evaluation_sample_metric_resolver,
     mcap_group_sequence_resolver,
     object_track_resolver,
@@ -162,6 +167,10 @@ def _dataset_table_counts(session: Session, dataset_id: UUID) -> dict[str, int]:
             EvaluationAnnotationMetricTable,
             col(EvaluationAnnotationMetricTable.evaluation_run_id).in_(run_ids),
         ),
+        "evaluation_class_metric": count(
+            EvaluationClassMetricTable,
+            col(EvaluationClassMetricTable.evaluation_run_id).in_(run_ids),
+        ),
         "dataset": count(DatasetTable, col(DatasetTable.dataset_id) == dataset_id),
     }
 
@@ -252,7 +261,7 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
         },
     )
 
-    # evaluation run + sample metric + annotation metric (gt/pred annotations)
+    # evaluation run + sample metric + annotation metric (gt/pred annotations) + class metric
     run = evaluation_sample_metric_helpers.create_run(
         session=session, collection_id=root.collection_id
     )
@@ -265,6 +274,17 @@ def _build_full_dataset(session: Session, name: str) -> UUID:
                 sample_id=eval_image.sample_id,
                 metric_name="precision",
                 value=0.9,
+            )
+        ],
+    )
+    evaluation_class_metric_resolver.create_many(
+        session=session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=label.annotation_label_id,
+                metric_name="average_precision",
+                value=0.6,
             )
         ],
     )
@@ -377,6 +397,7 @@ def test_deep_copy_then_delete_round_trip(db_session: Session) -> None:
         "evaluation_run",
         "evaluation_sample_metric",
         "evaluation_annotation_metric",
+        "evaluation_class_metric",
         "sequence",
         "mcap_group_sequence",
         "sensor_calibration",
