@@ -16,26 +16,33 @@
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
         WandSparkles as WandSparklesIcon,
-        Menu as MenuIcon
+        Menu as MenuIcon,
+        Compass as CompassIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import type { LightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
 
-    let {
-        isImages = false,
-        isVideos = false,
-        hasEmbeddings = false,
-        collection,
-        user
-    } = $props<{
+    interface Props {
         isImages?: boolean;
         isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
         user?: LightlyEnterpriseSession['user'];
-    }>();
+        showTour?: boolean;
+        onShowTour?: () => void;
+    }
+
+    let {
+        isImages = false,
+        isVideos = false,
+        hasEmbeddings = false,
+        collection,
+        user,
+        showTour = false,
+        onShowTour
+    }: Props = $props();
 
     const { openDatasetSplitDialog } = useDatasetSplitDialog();
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -118,6 +125,14 @@
             icon: SettingsIcon,
             testId: 'menu-settings',
             onSelect: openSettingsDialog
+        });
+
+        addAction(items, showTour && !!onShowTour, {
+            value: 'menu-show-tour',
+            label: 'Show tour',
+            icon: CompassIcon,
+            testId: 'menu-show-tour',
+            onSelect: () => onShowTour?.()
         });
 
         return items;

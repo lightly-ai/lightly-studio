@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+    import { useOnboarding } from '$lib/hooks';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import {
         useMetadataFilters,
@@ -137,14 +138,29 @@
     const { initialize, savePosition, getRestoredPosition } =
         useScrollRestoration('samples_scroll');
 
-    onMount(async () => {
+    onMount(() => {
         initialize();
-        // Load collection version for caching
-        await getCollectionVersion(collection_id);
 
-        // Get the grid view rendering mode from settings
+        // Called by the onboarding "Open sample" button to navigate to the first
+        // visible sample without relying on synthetic DOM event dispatch.
+        // Registered synchronously so Svelte can invoke the returned cleanup on unmount.
+        function handleOpenFirstSample() {
+            const firstSample = samples[0];
+            if (firstSample) handleOnDoubleClick(firstSample.sample_id);
+        }
+        const cleanupOnboarding =
+            useOnboarding().registerOpenFirstSampleHandler(handleOpenFirstSample);
 
-        isReady = true;
+        // Load collection version for caching; guard isReady against stale updates.
+        let mounted = true;
+        getCollectionVersion(collection_id).then(() => {
+            if (mounted) isReady = true;
+        });
+
+        return () => {
+            mounted = false;
+            cleanupOnboarding();
+        };
     });
 
     const confusionCell = $derived(
@@ -201,6 +217,7 @@
 
     function handleOnDoubleClick(sampleId: string) {
         if (datasetId && collectionType) {
+            useOnboarding().dispatchOpeningSample(collection_id);
             goto(
                 routeHelpers.toSample({
                     sampleId,

@@ -91,7 +91,7 @@
     </div>
 {/snippet}
 
-<div class="relative pt-2">
+<div class="relative pt-2" data-onboarding-tag-assign>
     {#if showSelectionHint}
         <Tooltip
             content="Select items in the grid, then assign or create a tag here."

@@ -17,7 +17,13 @@
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { usePostHog } from '$lib/hooks';
 
-    let { collection }: { collection: CollectionView } = $props();
+    interface Props {
+        collection: CollectionView;
+        showTour?: boolean;
+        onShowTour?: () => void;
+    }
+
+    let { collection, showTour = false, onShowTour }: Props = $props();
 
     const isImages = $derived(isImagesRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
@@ -99,7 +105,15 @@
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isImages} {isVideos} {hasEmbeddings} {collection} {user} />
+                <Menu
+                    {isImages}
+                    {isVideos}
+                    {hasEmbeddings}
+                    {collection}
+                    {user}
+                    {showTour}
+                    {onShowTour}
+                />
                 {#if hasMinimumRole(user?.role, 'labeler')}
                     {#if $isEditingMode}
                         <Button

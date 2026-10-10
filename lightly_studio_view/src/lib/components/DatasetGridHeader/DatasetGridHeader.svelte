@@ -74,7 +74,7 @@
         {/if}
     {/snippet}
     {#if hasMediaWithEmbeddings}
-        <div class="relative" role="region" data-grid-search-drop-target>
+        <div class="relative" role="region" data-grid-search-drop-target data-onboarding-search>
             <CollectionSearch
                 image={searchImage}
                 isPending={searchPending}
