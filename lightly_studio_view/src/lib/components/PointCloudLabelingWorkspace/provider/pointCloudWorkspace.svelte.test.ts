@@ -66,7 +66,6 @@ vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
     useMcapSequenceTicks: () => ({ ticks: ticksState, refetch: ticksRefetch })
 }));
 vi.mock('$lib/hooks/useMcapTickDetailsPrefetch', () => ({
-    MCAP_PLAYBACK_BUFFER_SECONDS: 5,
     useMcapTickDetailsPrefetch: () => ({ bufferedTickNumbers: [] })
 }));
 

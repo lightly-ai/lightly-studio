@@ -174,8 +174,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
             getSequenceId: () => getInputs().sequenceId,
             getDisplayFrameId: () => this.referenceFrameId || undefined,
             getTicks: () => this.ticks,
-            getCurrentTick: () => this.currentTick,
-            getPlaybackIntervalMs: () => this.playbackIntervalMs
+            getCurrentTick: () => this.currentTick
         });
         // Read once at construction: this is the starting position, not a reactive binding.
         this.currentTick = getInputs().initialTick ?? 0;

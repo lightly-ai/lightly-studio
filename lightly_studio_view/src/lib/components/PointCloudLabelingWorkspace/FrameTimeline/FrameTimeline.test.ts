@@ -37,6 +37,20 @@ describe('FrameTimeline', () => {
         expect(screen.getByText('Frame — / —')).toBeInTheDocument();
     });
 
+    it('renders the available channel names as timeline lanes', () => {
+        render(FrameTimeline, {
+            props: {
+                ...defaultProps,
+                lidarChannelNames: ['lidar_top'],
+                cameraChannelNames: ['front']
+            }
+        });
+
+        expect(screen.getByText('lidar_top')).toBeInTheDocument();
+        expect(screen.getByText('front')).toBeInTheDocument();
+        expect(screen.queryByText('Track 1')).not.toBeInTheDocument();
+    });
+
     it('selects ticks with the timeline slider and exposes the playback interval control', async () => {
         const onSelectTick = vi.fn();
         render(FrameTimeline, {

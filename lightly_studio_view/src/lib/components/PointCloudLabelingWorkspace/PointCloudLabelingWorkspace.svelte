@@ -287,6 +287,15 @@
                                 ticks={workspace.ticks}
                                 bufferedTickNumbers={workspace.bufferedTickNumbers}
                                 currentTick={workspace.currentTick}
+                                lidarChannelNames={workspace.lidarChannels.map(
+                                    (channel) => channel.group_component_name
+                                )}
+                                cameraChannelNames={workspace.cameraChannels.map(
+                                    (channel) => channel.group_component_name
+                                )}
+                                hasAvailableChannels={workspace.lidarChannels.length +
+                                    workspace.cameraChannels.length >
+                                    0}
                                 isPlaying={workspace.isPlaying}
                                 playbackIntervalMs={workspace.playbackIntervalMs}
                                 onPreviousFrame={goToPreviousFrame}
