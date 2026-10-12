@@ -102,4 +102,10 @@
             }}
         />
     </div>
+    {#each lanes as lane (lane)}
+        <div class="flex items-center gap-2">
+            <span class="w-24 shrink-0 truncate text-xs text-muted-foreground">{lane}</span>
+            <div class="h-4 flex-1 rounded bg-muted/50"></div>
+        </div>
+    {/each}
 </div>

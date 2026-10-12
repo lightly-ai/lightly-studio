@@ -17,6 +17,12 @@
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
         playbackIntervalMs: number;
+        /** Point-cloud channel names rendered as timeline lanes. */
+        lidarChannelNames?: string[];
+        /** Image and video channel names rendered as timeline lanes. */
+        cameraChannelNames?: string[];
+        /** Whether the source has channels, even when the current selection is empty. */
+        hasAvailableChannels?: boolean;
         /** Step to the previous frame. */
         onPreviousFrame: () => void;
         /** Step to the next frame. */
@@ -37,6 +43,9 @@
         bufferedTickNumbers = [],
         isPlaying,
         playbackIntervalMs,
+        lidarChannelNames = [],
+        cameraChannelNames = [],
+        hasAvailableChannels = false,
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
@@ -55,6 +64,12 @@
 
     const frameLabel = $derived(
         activeIndex >= 0 ? `Frame ${activeIndex + 1} / ${ticks.length}` : 'Frame — / —'
+    );
+
+    const lanes = $derived(
+        lidarChannelNames.length > 0 || cameraChannelNames.length > 0 || hasAvailableChannels
+            ? [...lidarChannelNames, ...cameraChannelNames]
+            : ['Track 1', 'Track 2']
     );
 </script>
 
