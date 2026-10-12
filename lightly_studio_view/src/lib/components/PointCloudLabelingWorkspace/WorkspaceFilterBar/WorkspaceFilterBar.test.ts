@@ -117,7 +117,7 @@ describe('WorkspaceFilterBar', () => {
 
         expect(screen.getByTestId('workspace-color-select')).toHaveTextContent('Color: Density');
         await user.click(screen.getByTestId('workspace-color-select'));
-        expect(screen.getByText('Intensity / Reflectivity')).toBeInTheDocument();
+        expect(screen.getByText('Intensity')).toBeInTheDocument();
         await user.click(screen.getByText('Height + Distance'));
 
         expect(onColorModeChange).toHaveBeenCalledExactlyOnceWith('height-distance');

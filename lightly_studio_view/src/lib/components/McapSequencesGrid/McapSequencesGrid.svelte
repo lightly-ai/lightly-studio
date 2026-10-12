@@ -4,10 +4,12 @@
     import { GridItem } from '$lib/components/GridItem';
     import { McapSequenceGridItem } from '$lib/components/McapSequenceGridItem';
     import { useGlobalStorage } from '$lib/hooks';
+    import { useSettings } from '$lib/hooks/useSettings';
     import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
 
     interface McapSequence {
         sampleId: string;
+        fileName: string;
         sampleCount: number;
         sequenceFrame: McapSequenceFrame | null | undefined;
     }
@@ -38,6 +40,7 @@
         onSequenceHoverEnd
     }: Props = $props();
 
+    const { showSampleFilenamesStore } = useSettings();
     const { sampleSize } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
 </script>
@@ -90,6 +93,9 @@
                             <McapSequenceGridItem
                                 sampleCount={sequences[index].sampleCount}
                                 sequenceFrame={sequences[index].sequenceFrame}
+                                displayTextOnImage={$showSampleFilenamesStore
+                                    ? sequences[index].fileName
+                                    : undefined}
                                 {width}
                                 {height}
                             />
