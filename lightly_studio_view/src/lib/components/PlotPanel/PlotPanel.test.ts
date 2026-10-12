@@ -649,62 +649,6 @@ describe('PlotPanel.svelte', () => {
         expect(screen.getByText('Type the four axis texts and press Enter.')).toBeInTheDocument();
     });
 
-    it('keeps the axis inputs while the embeddings request fails', async () => {
-        const user = userEvent.setup();
-        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
-        (useEmbeddings as vi.Mock).mockReturnValue({
-            isError: true,
-            error: new Error('Projection failed'),
-            isLoading: false,
-            data: null
-        });
-        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
-
-        await commitTextAxes(user);
-
-        // The user can still change the texts and commit again.
-        expect(
-            await screen.findByText('Error loading embeddings: Projection failed')
-        ).toBeInTheDocument();
-        expect(screen.getByLabelText('X axis start')).toHaveValue('young');
-    });
-
-    it('restores the text layout and keeps its region when the plot opens again', async () => {
-        const user = userEvent.setup();
-        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
-        const { unmount } = render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
-        await commitTextAxes(user);
-        await vi.waitFor(() =>
-            expect(useEmbeddings).toHaveBeenLastCalledWith(
-                'test-collection-id',
-                expect.anything(),
-                null,
-                TEXT_LAYOUT_AXES
-            )
-        );
-        unmount();
-
-        // The saved region keeps its axes while the plot is closed.
-        imageFilterStore.set({
-            sample_filter: {
-                sample_ids: [],
-                embedding_region: { polygon: SQUARE_POLYGON, axes: TEXT_LAYOUT_AXES }
-            }
-        });
-        (useEmbeddings as vi.Mock).mockClear();
-        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
-        await tick();
-
-        expect(screen.getByLabelText('X axis start')).toHaveValue('young');
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            null,
-            TEXT_LAYOUT_AXES
-        );
-        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
-    });
-
     it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();

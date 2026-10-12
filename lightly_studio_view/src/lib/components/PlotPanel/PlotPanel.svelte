@@ -20,7 +20,7 @@
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
     import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import type { EmbeddingRegion, ProjectionAxes } from '$lib/api/lightly_studio_local';
+    import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
@@ -135,14 +135,14 @@
         annotationLabels
     });
 
-    // A region drawn on the plot carries the axes of the layout, so the server resolves the
-    // region in the same layout.
     const PLOT_LAYOUT_ITEMS = [
         { value: 'pacmap', label: 'PaCMAP' },
         { value: 'text', label: 'Text' }
     ];
-    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, isAwaitingAxes, commitTextAxes } =
-        usePlotLayout(untrack(() => collectionId));
+    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, commitTextAxes } = usePlotLayout(
+        untrack(() => collectionId)
+    );
+    const isAwaitingAxes = $derived($plotLayout === 'text' && $plotAxes === null);
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
@@ -247,6 +247,8 @@
             saveAnnotationRegion(region);
         }
     };
+    // A region drawn on the plot carries the axes of the layout, so the server resolves the
+    // region in the same layout.
     const commitRegion = (polygon: Point[], count: number) => {
         saveRegion($plotAxes ? { polygon, axes: $plotAxes } : { polygon });
         setPlotSelectionCount(collectionId, count);
@@ -417,21 +419,18 @@
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
-    // region belongs to the layout it was drawn on. Start from the layout at mount, so a
-    // reopened plot keeps the region that was drawn on it.
-    let previousPlotLayout: PlotLayout = get(plotLayout);
-    let previousPlotAxes: ProjectionAxes | null = get(plotAxes);
-    $effect(() => {
-        const layout = $plotLayout;
-        const axes = $plotAxes;
-        untrack(() => {
-            if (layout === previousPlotLayout && axes === previousPlotAxes) return;
-            previousPlotLayout = layout;
-            previousPlotAxes = axes;
-            viewportState = null;
-            if (hasActiveSelection) clearSelection();
-        });
-    });
+    // region belongs to the layout it was drawn on.
+    const resetForNewLayout = () => {
+        viewportState = null;
+        if (hasActiveSelection) clearSelection();
+    };
+    const selectPlotLayout = (layout: PlotLayout) => {
+        plotLayout.set(layout);
+        resetForNewLayout();
+    };
+    const commitPlotAxes = async (textAxes: Parameters<typeof commitTextAxes>[0]) => {
+        if (await commitTextAxes(textAxes)) resetForNewLayout();
+    };
 
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
     // The array-based EmbeddingView only emits hover tooltips when querySelection
@@ -490,7 +489,7 @@
             <Select
                 items={PLOT_LAYOUT_ITEMS}
                 value={$plotLayout}
-                onValueChange={(value) => plotLayout.set(value as PlotLayout)}
+                onValueChange={(value) => selectPlotLayout(value as PlotLayout)}
                 size="xs"
                 class="w-28"
                 testId="plot-layout-select"
@@ -511,7 +510,7 @@
     <!-- Relative: the text-axis inputs overlay every state below, so the user can fix the texts
          while the plot loads or shows an error. -->
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if $isAwaitingAxes}
+        {#if isAwaitingAxes}
             <div class="flex flex-1 items-center justify-center p-8 text-muted-foreground">
                 <div class="text-lg">Type the four axis texts and press Enter.</div>
             </div>
@@ -592,7 +591,7 @@
         {#if $plotLayout === 'text'}
             <PlotTextAxesInputs
                 bind:draft={$textAxesDraft}
-                onCommit={commitTextAxes}
+                onCommit={commitPlotAxes}
                 isPending={$isEmbeddingAxes}
             />
         {/if}

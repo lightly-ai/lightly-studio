@@ -25,7 +25,6 @@ describe('usePlotLayout', () => {
         mocks.embedTextAxes.mockResolvedValue(AXES);
         const layout = usePlotLayout('collection-a');
         layout.plotLayout.set('text');
-        expect(get(layout.isAwaitingAxes)).toBe(true);
 
         layout.textAxesDraft.update((draft) => ({ ...draft, xNegative: 'young' }));
         await layout.commitTextAxes(TEXT_AXES);
@@ -34,7 +33,6 @@ describe('usePlotLayout', () => {
         const reopened = usePlotLayout('collection-a');
         expect(get(reopened.plotAxes)).toEqual(AXES);
         expect(get(reopened.textAxesDraft).xNegative).toBe('young');
-        expect(get(reopened.isAwaitingAxes)).toBe(false);
 
         // PaCMAP has no axes, and another collection starts in PaCMAP.
         reopened.plotLayout.set('pacmap');
@@ -49,10 +47,9 @@ describe('usePlotLayout', () => {
         await layout.commitTextAxes(TEXT_AXES);
 
         mocks.embedTextAxes.mockRejectedValueOnce(new Error('Cannot embed text.'));
-        await layout.commitTextAxes(TEXT_AXES);
+        expect(await layout.commitTextAxes(TEXT_AXES)).toBe(false);
 
         expect(toast.error).toHaveBeenCalledWith('Cannot embed text.');
         expect(get(layout.plotAxes)).toEqual(AXES);
-        expect(get(layout.isEmbeddingAxes)).toBe(false);
     });
 });

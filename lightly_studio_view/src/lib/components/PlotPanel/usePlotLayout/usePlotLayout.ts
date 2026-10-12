@@ -30,23 +30,22 @@ export function usePlotLayout(collectionId: string) {
     const plotAxes = derived([plotLayout, committedAxes], ([$plotLayout, $committedAxes]) =>
         $plotLayout === 'text' ? $committedAxes : null
     );
-    const isAwaitingAxes = derived(
-        [plotLayout, committedAxes],
-        ([$plotLayout, $committedAxes]) => $plotLayout === 'text' && $committedAxes === null
-    );
 
+    // Returns false when the texts fail to embed. The committed axes then stay as they are.
     const commitTextAxes = async (textAxes: Parameters<typeof embedTextAxes>[1]) => {
         isEmbeddingAxes.set(true);
         try {
             committedAxes.set(await embedTextAxes(collectionId, textAxes));
+            return true;
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Failed to embed the axis texts.');
+            return false;
         } finally {
             isEmbeddingAxes.set(false);
         }
     };
 
-    return { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, isAwaitingAxes, commitTextAxes };
+    return { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, commitTextAxes };
 }
 
 // Forgets the layout of `collectionId`, so the next plot starts in PaCMAP.
