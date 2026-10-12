@@ -10,10 +10,12 @@ interface QueryState {
     isEnabled?: boolean;
 }
 
-function createWorkspace(overrides: {
-    tickDetails?: Partial<QueryState>;
-    cloudPointFrame?: Partial<QueryState>;
-} = {}) {
+function createWorkspace(
+    overrides: {
+        tickDetails?: Partial<QueryState>;
+        cloudPointFrame?: Partial<QueryState>;
+    } = {}
+) {
     return {
         isPlaying: true,
         playbackIntervalMs: 100,
