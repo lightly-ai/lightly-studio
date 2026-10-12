@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add AI-Assisted labeling with adjustable superpixels for creating and editing instance segmentation masks in WASM-capable browsers.
 - Python SDK: Enable metric recomputing for instance-segmentation.
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
+- Lay out the embedding plot along two text axes in the GUI, for example from "young" to "old" and from "sad" to "happy". Rectangle and lasso selection work on this layout.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
 - Python SDK: Store the URL and API key of a remote embedder that `register_default_embedder` registered before an import, so that a later process, such as `lightly-studio gui`, searches on the server with no new registration.
 - Python SDK: Embed annotation crops on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.

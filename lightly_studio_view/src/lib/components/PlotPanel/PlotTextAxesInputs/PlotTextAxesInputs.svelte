@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Input } from '$lib/components/ui/input';
-    import { ArrowLeftRight } from '@lucide/svelte';
+    import { MoveHorizontal, MoveVertical } from '@lucide/svelte';
     import { cn } from '$lib/utils';
     import { createEmptyTextAxesDraft, toTextAxes } from './textAxesDraft';
 
@@ -44,7 +44,8 @@
         bind:value={draft[key]}
         onkeydown={onKeyDown}
         {isPending}
-        class={cn('h-8 w-32 text-xs', isMissing && 'border-destructive')}
+        wrapperClass="w-32"
+        class={cn('h-8 text-xs', isMissing && 'border-destructive')}
         data-testid="plot-text-axis-{key}-input"
     />
 {/snippet}
@@ -53,20 +54,17 @@
 <div class="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
     <div class="pointer-events-auto flex items-center gap-2 rounded bg-black/70 px-2 py-1">
         {@render anchorInput('xNegative', 'X axis start', 'X−  (e.g. young)')}
-        <ArrowLeftRight class="h-4 w-4 text-white" />
+        <MoveHorizontal class="h-4 w-4 shrink-0 text-white" />
         {@render anchorInput('xPositive', 'X axis end', 'X+  (e.g. old)')}
     </div>
 </div>
-<!-- The strip is narrow. The rotated bar overflows it in the unrotated layout, but after the
-     rotation it stays inside the strip. -->
-<div
-    class="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-10 items-center justify-center"
->
+<!-- The column is reversed, so Y+ shows on top while Tab still goes from start to end. -->
+<div class="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center">
     <div
-        class="pointer-events-auto flex -rotate-90 items-center gap-2 whitespace-nowrap rounded bg-black/70 px-2 py-1"
+        class="pointer-events-auto flex flex-col-reverse items-center gap-2 rounded bg-black/70 px-2 py-1"
     >
         {@render anchorInput('yNegative', 'Y axis start', 'Y−  (e.g. sad)')}
-        <ArrowLeftRight class="h-4 w-4 text-white" />
+        <MoveVertical class="h-4 w-4 shrink-0 text-white" />
         {@render anchorInput('yPositive', 'Y axis end', 'Y+  (e.g. happy)')}
     </div>
 </div>
