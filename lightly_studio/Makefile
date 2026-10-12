@@ -29,8 +29,7 @@ FLOCI_MCAP_DIR ?= datasets/mcap/
 FLOCI_MCAP_DIR_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
 # Cache file that stores a checksum of the last uploaded MCAP folder so repeated calls skip the upload.
 FLOCI_MCAP_CACHE ?= /tmp/lightly-floci-mcap-upload.sum
-FLOCI_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
-	AWS_ENDPOINT_URL=http://localhost:$(FLOCI_PORT)
+FLOCI_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 AWS_ENDPOINT_URL=http://localhost:$(FLOCI_PORT)
 
 # Real (remote) S3 URI for start-example-mcap-remote-s3 — no Floci needed.
 # Usage: make start-example-mcap-remote-s3 MCAP_REMOTE_S3_URI=s3://bucket/path/recording.mcap
