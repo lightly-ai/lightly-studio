@@ -57,6 +57,19 @@ export function usePointCloudTickNavigation({
         const intervalMs = workspace.playbackIntervalMs;
         const ticks = workspace.ticks;
         const currentTick = workspace.currentTick;
+
+        // Do not outrun the frame queries. While a query key changes, TanStack keeps the
+        // previous frame as placeholder data; advancing again in that state can continually
+        // replace the request before it completes and leave the scene on the last settled frame.
+        if (
+            workspace.tickDetails.isFetching ||
+            workspace.cloudPointFrame.isFetching ||
+            workspace.tickDetails.isPlaceholderData ||
+            workspace.cloudPointFrame.isPlaceholderData
+        ) {
+            return;
+        }
+
         const activeIndex = ticks.findIndex((tick) => tick.seq_number === currentTick);
         const timeout = setTimeout(() => {
             if (activeIndex >= ticks.length - 1) {

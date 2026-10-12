@@ -140,7 +140,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         ) {
             return picked.frameId;
         }
-        return frames[0]?.name ?? '';
+        return frames.find((frame) => frame.name === 'CABIN')?.name ?? frames[0]?.name ?? '';
     });
     // True when the frame could not be loaded in the reference frame, so the hook loaded
     // it in the sensor frames instead.
