@@ -12,6 +12,7 @@ from mcap.records import Channel, Message, Schema
 
 from lightly_studio.core.mcap import camera_info, transforms
 from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.reader import dynamic_transform_cache
 from lightly_studio.core.mcap.reader.session import ChannelDecoder
 from lightly_studio.core.mcap.type_definitions import CameraIntrinsics, StaticTransform
 
@@ -22,7 +23,7 @@ DYNAMIC_TRANSFORM_TOPIC = "/tf"
 
 # Dynamic transforms captured in this window before and after the requested time are
 # used. The window holds a message of every transform published at 10 Hz or faster.
-_DYNAMIC_TRANSFORM_WINDOW_NS = 100_000_000
+DYNAMIC_TRANSFORM_WINDOW_NS = 100_000_000
 
 
 def dynamic_edges_until(
@@ -141,8 +142,9 @@ def dynamic_transforms_near(
 ) -> list[StaticTransform]:
     """Returns, per child frame, the transform captured closest to a time.
 
-    Only the transforms captured within `_DYNAMIC_TRANSFORM_WINDOW_NS` of the time are
-    used. Returns none if the topic is not in the file.
+    Only the transforms captured within `DYNAMIC_TRANSFORM_WINDOW_NS` of the time are
+    used. Returns none if the topic is not in the file. A remote file reads each time
+    bucket once and reuses those edges for the other lookups in the bucket.
 
     Args:
         mcap_reader: The seeking reader of the open file.
@@ -160,26 +162,85 @@ def dynamic_transforms_near(
     """
     if not topic_in_file:
         return []
-    closest_by_child: dict[str, StaticTransform] = {}
+    edges = _edges_near_time(
+        mcap_reader=mcap_reader, path=path, topic=topic, timestamp_ns=timestamp_ns
+    )
+    return _closest_per_child(edges=edges, timestamp_ns=timestamp_ns)
+
+
+def _edges_near_time(
+    mcap_reader: McapReader, path: str, topic: str, timestamp_ns: int
+) -> list[StaticTransform]:
+    """Returns the dynamic edges a lookup at `timestamp_ns` may select."""
+    if dynamic_transform_cache.caches(uri=path):
+        return dynamic_transform_cache.edges_covering(
+            uri=path,
+            topic=topic,
+            timestamp_ns=timestamp_ns,
+            window_ns=DYNAMIC_TRANSFORM_WINDOW_NS,
+            load=lambda start_ns, end_ns: _read_dynamic_edges(
+                mcap_reader=mcap_reader,
+                path=path,
+                topic=topic,
+                start_ns=start_ns,
+                end_ns=end_ns,
+            ),
+        )
+    return _read_dynamic_edges(
+        mcap_reader=mcap_reader,
+        path=path,
+        topic=topic,
+        start_ns=max(timestamp_ns - DYNAMIC_TRANSFORM_WINDOW_NS, 0),
+        end_ns=timestamp_ns + DYNAMIC_TRANSFORM_WINDOW_NS + 1,
+    )
+
+
+def _read_dynamic_edges(
+    mcap_reader: McapReader, path: str, topic: str, start_ns: int, end_ns: int
+) -> list[StaticTransform]:
+    """Returns the dynamic edges whose log time is in `[start_ns, end_ns)`.
+
+    Raises:
+        McapAccessError: If a message on the topic cannot be decoded.
+    """
+    edges: list[StaticTransform] = []
     try:
         for _, _, message, decoded_message in mcap_reader.iter_decoded_messages(
-            topics=[topic],
-            start_time=max(timestamp_ns - _DYNAMIC_TRANSFORM_WINDOW_NS, 0),
-            end_time=timestamp_ns + _DYNAMIC_TRANSFORM_WINDOW_NS + 1,
+            topics=[topic], start_time=start_ns, end_time=end_ns
         ):
-            for transform in transforms.from_decoded_message(
-                decoded_message, log_time_ns=message.log_time
-            ):
-                offset_ns = abs(transform.timestamp_ns - timestamp_ns)
-                if offset_ns > _DYNAMIC_TRANSFORM_WINDOW_NS:
-                    continue
-                closest = closest_by_child.get(transform.child_frame_id)
-                if closest is None or offset_ns < abs(closest.timestamp_ns - timestamp_ns):
-                    closest_by_child[transform.child_frame_id] = transform
+            edges.extend(
+                transforms.from_decoded_message(decoded_message, log_time_ns=message.log_time)
+            )
     except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
         raise McapAccessError(
             f"Cannot decode the messages of topic '{topic}' in '{path}': {exc}"
         ) from exc
+    return edges
+
+
+def closest_dynamic_transforms(
+    edges: Iterable[StaticTransform], timestamp_ns: int
+) -> list[StaticTransform]:
+    """Returns the edge closest to `timestamp_ns` for each child frame.
+
+    An edge captured more than `DYNAMIC_TRANSFORM_WINDOW_NS` from `timestamp_ns` is
+    left out.
+    """
+    return _closest_per_child(edges=edges, timestamp_ns=timestamp_ns)
+
+
+def _closest_per_child(
+    edges: Iterable[StaticTransform], timestamp_ns: int
+) -> list[StaticTransform]:
+    """Returns the edge closest to `timestamp_ns` for each child frame."""
+    closest_by_child: dict[str, StaticTransform] = {}
+    for transform in edges:
+        offset_ns = abs(transform.timestamp_ns - timestamp_ns)
+        if offset_ns > DYNAMIC_TRANSFORM_WINDOW_NS:
+            continue
+        closest = closest_by_child.get(transform.child_frame_id)
+        if closest is None or offset_ns < abs(closest.timestamp_ns - timestamp_ns):
+            closest_by_child[transform.child_frame_id] = transform
     return list(closest_by_child.values())
 
 

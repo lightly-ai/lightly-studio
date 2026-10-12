@@ -83,6 +83,7 @@ class McapFileReader:
         self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
         self._transform_tree_by_topic: dict[str, TransformTree] = {}
         self._static_transforms_by_topic: dict[str, list[StaticTransform]] = {}
+        self._dynamic_transforms_by_topic: dict[str, list[StaticTransform]] = {}
 
     def close(self) -> None:
         """Closes the MCAP file."""
@@ -107,6 +108,7 @@ class McapFileReader:
         start_time_ns: int | None = None,
         end_time_ns: int | None = None,
         static_transform_topic: str | None = None,
+        dynamic_transform_topic: str | None = None,
     ) -> None:
         """Reads several topics in a single pass and caches their frame locators.
 
@@ -127,6 +129,10 @@ class McapFileReader:
                 the same pass and cached for `get_static_transforms`. Only the
                 transforms logged in the time range are read. A topic that is not in
                 the file caches no transforms.
+            dynamic_transform_topic: If given, the transforms of this topic are read in
+                the same pass and cached for `get_dynamic_transforms`. Every edge is
+                kept, including later edges of the same child frame. A topic that is
+                not in the file caches no transforms.
 
         Raises:
             TopicNotFoundError: If one of the topics is not in the file.
@@ -148,11 +154,14 @@ class McapFileReader:
                 start_time_ns=start_time_ns,
                 end_time_ns=end_time_ns,
                 static_transform_topic=static_transform_topic,
+                dynamic_transform_topic=dynamic_transform_topic,
             )
         )
         self._locators_by_topic.update(scan.locators_by_topic)
         if static_transform_topic:
             self._static_transforms_by_topic[static_transform_topic] = scan.static_transforms
+        if dynamic_transform_topic:
+            self._dynamic_transforms_by_topic[dynamic_transform_topic] = scan.dynamic_transforms
 
     @overload
     def get_frame_locators(
@@ -290,6 +299,23 @@ class McapFileReader:
         """
         return list(self._cached_static_transforms(topic=topic))
 
+    def get_dynamic_transforms(self, topic: str = DYNAMIC_TRANSFORM_TOPIC) -> list[StaticTransform]:
+        """Returns the dynamic transforms cached by `load_data_for_topics`.
+
+        Call `load_data_for_topics` with `dynamic_transform_topic` first. Every edge is
+        returned, in log time order, so a later edge for the same child frame is its
+        own entry. A topic that was not loaded, or that is not in the file, returns
+        no transforms.
+
+        Args:
+            topic: The topic the dynamic transforms are published on.
+
+        Returns:
+            One transform per edge in the topic. A message that cannot be decoded, or
+            holds no transform, is skipped.
+        """
+        return list(self._dynamic_transforms_by_topic.get(topic, []))
+
     def read_dynamic_edges_until(
         self,
         frame_ids: Sequence[str],
@@ -318,12 +344,13 @@ class McapFileReader:
             mcap_reader=self._reader, path=self.path, topic=topic, frame_ids=frame_ids
         )
 
-    def get_transform_at(
+    def get_transform_at(  # noqa: PLR0913
         self,
         parent_frame_id: str,
         child_frame_id: str,
         timestamp_ns: int,
         static_transforms: Sequence[StaticTransform],
+        dynamic_transforms: Sequence[StaticTransform] | None = None,
         dynamic_topic: str = DYNAMIC_TRANSFORM_TOPIC,
     ) -> NDArray[np.float64]:
         """Returns the transform between two coordinate frames at a point in time.
@@ -332,9 +359,10 @@ class McapFileReader:
         moving vehicle in the world frame. The static transforms are the edges stored
         for the recording. For each child frame, the dynamic transform whose capture
         time, from `header.stamp` or `timestamp`, is closest to `timestamp_ns` is used.
-        Only the dynamic transforms captured within `_DYNAMIC_TRANSFORM_WINDOW_NS` of
+        Only the dynamic transforms captured within `DYNAMIC_TRANSFORM_WINDOW_NS` of
         `timestamp_ns` are used. A topic that is not in the file counts as a topic
-        without transforms.
+        without transforms. When `dynamic_transforms` is given, those edges are used
+        and the file is not read.
 
         Args:
             parent_frame_id: The frame to map points to, e.g. the frame of a lidar.
@@ -345,7 +373,10 @@ class McapFileReader:
                 delay of the sensor.
             static_transforms: The static edges to compose, e.g. the edges stored for
                 the recording when it was indexed.
-            dynamic_topic: The topic the dynamic transforms are published on.
+            dynamic_transforms: The dynamic edges to compose, e.g. the edges stored for
+                the recording near `timestamp_ns`. `None` reads them from the file.
+            dynamic_topic: The topic the dynamic transforms are published on. Used only
+                when `dynamic_transforms` is `None`.
 
         Returns:
             The 4x4 homogeneous transform that maps points from the child frame to the
@@ -358,12 +389,18 @@ class McapFileReader:
         tree = TransformTree(
             [
                 *static_transforms,
-                *calibration.dynamic_transforms_near(
-                    mcap_reader=self._reader,
-                    path=self.path,
-                    topic=dynamic_topic,
-                    timestamp_ns=timestamp_ns,
-                    topic_in_file=self._topic_index.has_topic(dynamic_topic),
+                *(
+                    calibration.closest_dynamic_transforms(
+                        edges=dynamic_transforms, timestamp_ns=timestamp_ns
+                    )
+                    if dynamic_transforms is not None
+                    else calibration.dynamic_transforms_near(
+                        mcap_reader=self._reader,
+                        path=self.path,
+                        topic=dynamic_topic,
+                        timestamp_ns=timestamp_ns,
+                        topic_in_file=self._topic_index.has_topic(dynamic_topic),
+                    )
                 ),
             ]
         )

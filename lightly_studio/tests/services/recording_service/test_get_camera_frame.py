@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -42,21 +40,10 @@ class RecordingFixture:
 
 @pytest.fixture(autouse=True)
 def clear_caches() -> Iterator[None]:
-    cache = cast(
-        "OrderedDict[str, McapFileReader] | None",
-        getattr(reader_cache._thread_local, "reader_cache", None),
-    )
-    if cache is None:
-        cache = OrderedDict()
-        reader_cache._thread_local.reader_cache = cache
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
     video_decoder_cache.clear()
     yield
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
     video_decoder_cache.clear()
 
 

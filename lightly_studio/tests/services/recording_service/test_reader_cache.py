@@ -1,61 +1,73 @@
-"""Tests for the thread-local MCAP reader cache."""
+"""Tests for the process-wide MCAP reader pool."""
 
 from __future__ import annotations
 
-from collections import OrderedDict
+import threading
 from collections.abc import Iterator
 from pathlib import Path
-from typing import cast
 
 import pytest
 
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.services.recording_service import reader_cache
-from lightly_studio.services.recording_service.reader_cache import get_cached_reader
 from tests.core.mcap import helpers
 
 
 @pytest.fixture(autouse=True)
 def clear_reader_cache() -> Iterator[None]:
-    cache = cast(
-        "OrderedDict[str, McapFileReader] | None",
-        getattr(reader_cache._thread_local, "reader_cache", None),
-    )
-    if cache is None:
-        cache = OrderedDict()
-        reader_cache._thread_local.reader_cache = cache
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
     yield
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
 
 
-def test_get_cached_reader__returns_same_reader_on_hit(tmp_path: Path) -> None:
+def test_borrow_reader__reuses_a_returned_reader(tmp_path: Path) -> None:
     uri = str(helpers.write_mcap(tmp_path / "recording.mcap"))
-    first = get_cached_reader(uri)
-    second = get_cached_reader(uri)
-    assert first is second
+    with reader_cache.borrow_reader(uri=uri) as first:
+        opened = first
+    with reader_cache.borrow_reader(uri=uri) as second:
+        assert second is opened
 
 
-def test_get_cached_reader__evicts_lru_and_closes_it(tmp_path: Path) -> None:
+def test_borrow_reader__parallel_borrows_open_distinct_readers(tmp_path: Path) -> None:
+    uri = str(helpers.write_mcap(tmp_path / "recording.mcap"))
+    ready = threading.Barrier(2)
+    opened: list[object] = []
+
+    def borrow() -> None:
+        with reader_cache.borrow_reader(uri=uri) as reader:
+            opened.append(reader)
+            ready.wait(timeout=5)
+
+    first = threading.Thread(target=borrow)
+    second = threading.Thread(target=borrow)
+    first.start()
+    second.start()
+    first.join(timeout=5)
+    second.join(timeout=5)
+
+    assert not first.is_alive()
+    assert not second.is_alive()
+    assert len(opened) == 2
+    assert opened[0] is not opened[1]
+
+
+def test_borrow_reader__closes_the_least_recently_used_idle_reader(tmp_path: Path) -> None:
     uris = [
-        str(helpers.write_mcap(tmp_path / f"r{i}.mcap"))
-        for i in range(reader_cache._READER_CACHE_SIZE + 1)
+        str(helpers.write_mcap(tmp_path / f"r{index}.mcap"))
+        for index in range(reader_cache._MAX_IDLE_READERS + 1)
     ]
-    evicted = get_cached_reader(uris[0])
-    for uri in uris[1:]:
-        get_cached_reader(uri)
+    opened: list[McapFileReader] = []
+    for uri in uris:
+        with reader_cache.borrow_reader(uri=uri) as reader:
+            opened.append(reader)
 
-    # The first reader was evicted; opening it again should yield a new object.
-    replacement = get_cached_reader(uris[0])
-    assert evicted is not replacement
+    with pytest.raises(ValueError, match="closed file"):
+        opened[0].get_topics()
+    with reader_cache.borrow_reader(uri=uris[0]) as replacement:
+        assert replacement is not opened[0]
 
 
-def test_get_cached_reader__local_uri_has_no_storage_options(tmp_path: Path) -> None:
+def test_borrow_reader__local_uri_opens(tmp_path: Path) -> None:
     uri = str(helpers.write_mcap(tmp_path / "recording.mcap"))
-    reader = get_cached_reader(uri)
-    # Local paths must not use blockcache — the fsspec open call would fail if it tried.
-    assert reader is not None
+    with reader_cache.borrow_reader(uri=uri) as reader:
+        assert reader.get_topics()

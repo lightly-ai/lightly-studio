@@ -21,6 +21,7 @@ from lightly_studio.core.mcap.errors import (
     McapAccessError,
     TopicNotFoundError,
 )
+from lightly_studio.core.mcap.reader import range_cache, summary_cache
 from lightly_studio.core.mcap.type_definitions import TopicInfo
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,9 @@ logger = logging.getLogger(__name__)
 # The fsspec read cache of a reader opened for random access. A small block keeps the
 # first read small, because a filesystem fetches a whole block for every read that
 # misses the cache, and the default block of a remote filesystem is tens of megabytes.
-_RANDOM_READ_CACHE_TYPE = "readahead"
-_RANDOM_READ_BLOCK_SIZE_BYTES = 64 * 1024
+_RANDOM_READ_CACHE_TYPE = "blockcache"
+_RANDOM_READ_BLOCK_SIZE_BYTES = 1024 * 1024
+_RANDOM_READ_MAX_BLOCKS = 32
 
 
 class ReadPattern(Enum):
@@ -225,7 +227,8 @@ def open_reader(
 
     Returns:
         The binary stream, the seeking reader, and the payload decoder. The caller
-        closes the stream.
+        closes the stream. A remote file's summary is reused from a process-wide
+        cache, and identical byte reads are shared with other readers of the URI.
 
     Raises:
         mcap.exceptions.McapError: If the file is not an MCAP file.
@@ -242,10 +245,12 @@ def open_reader(
                 "seekable files can be read, so a remote file needs a filesystem "
                 "that supports range requests."
             )
+        stream = range_cache.share_remote_reads(stream=stream, uri=path)
         # Kept, so that a single message can be decoded without a second pass.
         factories = decoding.decoder_factories()
         decoder = ChannelDecoder(path=path, factories=factories)
         reader = mcap_reader.make_reader(stream, decoder_factories=factories)
+        summary_cache.install_cached_summary(reader=reader, uri=path)
     except Exception:
         stream.close()
         raise
@@ -290,6 +295,7 @@ def _read_cache_options(read_pattern: ReadPattern) -> dict[str, Any]:
     return {
         "cache_type": _RANDOM_READ_CACHE_TYPE,
         "block_size": _RANDOM_READ_BLOCK_SIZE_BYTES,
+        "max_blocks": _RANDOM_READ_MAX_BLOCKS,
     }
 
 
