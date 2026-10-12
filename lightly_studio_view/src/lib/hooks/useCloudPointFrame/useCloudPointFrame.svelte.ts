@@ -7,6 +7,25 @@ interface UseCloudPointFrameReturn {
     query: CreateQueryResult<CloudPointFrame, Error>;
 }
 
+/** Builds the cacheable query used for a merged point-cloud frame. */
+export const getCloudPointFrameOptions = (params: CloudPointFrameParams) => ({
+    queryKey: [
+        'cloud-point-frame',
+        params.datasetId,
+        params.recordingId,
+        params.channels,
+        params.displayFrameId ?? ''
+    ],
+    queryFn: async ({ signal }: { signal?: AbortSignal }): Promise<CloudPointFrame> => {
+        try {
+            return await fetchMergedFrame({ ...params, signal });
+        } catch (error) {
+            if (!params.displayFrameId || signal?.aborted) throw error;
+            return fetchMergedFrame({ ...params, displayFrameId: undefined, signal });
+        }
+    }
+});
+
 /**
  * Fetches and merges cloud point frames across the requested channels.
  *
@@ -21,29 +40,13 @@ export const useCloudPointFrame = (
     getParams: () => CloudPointFrameParams
 ): UseCloudPointFrameReturn => {
     const query = createQuery(() => {
-        const { datasetId, recordingId, channels, displayFrameId } = getParams();
+        const params = getParams();
         return {
-            queryKey: ['cloud-point-frame', datasetId, recordingId, channels, displayFrameId ?? ''],
+            ...getCloudPointFrameOptions(params),
             // Skip fetching until a dataset, recording, and at least one channel are known.
-            enabled: Boolean(datasetId && recordingId && channels.length),
+            enabled: Boolean(params.datasetId && params.recordingId && params.channels.length),
             // Preserve the mounted scene and its camera while the next tick is loading.
-            placeholderData: (previous: CloudPointFrame | undefined) => previous,
-            queryFn: async ({ signal }): Promise<CloudPointFrame> => {
-                try {
-                    return await fetchMergedFrame({
-                        datasetId,
-                        recordingId,
-                        channels,
-                        displayFrameId,
-                        signal
-                    });
-                } catch (error) {
-                    // A tick without a transform to the target frame, e.g. a gap in `/tf`,
-                    // still renders. Every channel falls back so the frames never mix.
-                    if (!displayFrameId || signal?.aborted) throw error;
-                    return fetchMergedFrame({ datasetId, recordingId, channels, signal });
-                }
-            }
+            placeholderData: (previous: CloudPointFrame | undefined) => previous
         };
     });
     return { query };
