@@ -190,7 +190,7 @@ def test_text_search__server_without_text(
         )
 
     assert text_response.status_code == HTTP_STATUS_CONFLICT
-    assert "cannot embed text" in text_response.json()["error"]
+    assert "has no TextEmbedder" in text_response.json()["error"]
     # The server is in use, so the conflict is not the one of a space with no server
     assert image_response.status_code == HTTP_STATUS_OK
 

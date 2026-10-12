@@ -459,7 +459,7 @@ def test_generate_embeddings__no_generator(
 ) -> None:
     mocker.patch.object(
         EmbedderRegistry,
-        "get_image_path_embedder",
+        "get_embedder",
         return_value=None,
     )
 
@@ -480,7 +480,7 @@ def test_generate_embeddings__empty_sample_ids(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    spy_get_embedder = mocker.spy(EmbedderRegistry, "get_image_path_embedder")
+    spy_get_embedder = mocker.spy(EmbedderRegistry, "get_embedder")
 
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)

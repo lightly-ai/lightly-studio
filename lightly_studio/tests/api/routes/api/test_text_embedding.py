@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from lightly_studio_serve.embedder import TextEmbedder
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -62,9 +63,9 @@ def test_embed_text__model_override_not_supported(test_client: TestClient) -> No
     ("error", "status_code", "message"),
     [
         (
-            MissingCapabilityError(space_key="my-space", query_kind="text"),
+            MissingCapabilityError(space_key="my-space", embedder_type=TextEmbedder),
             HTTP_STATUS_CONFLICT,
-            "The embedding space 'my-space' of this collection cannot embed text.",
+            "The embedding space 'my-space' has no TextEmbedder.",
         ),
         (
             NoDefaultEmbeddingModelError("No default model."),
