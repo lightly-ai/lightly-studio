@@ -79,7 +79,6 @@ def embed_image_for_collection(
         session=session,
         collection_id=collection_id,
         embedder_type=ImageBytesEmbedder,
-        query_kind="image bytes",
     )
     result = embedder.embed_image_bytes(images=[image_bytes])
     if result.kept_indices != [0]:
@@ -116,7 +115,6 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
         session=session,
         collection_id=collection_id,
         embedder_type=TextEmbedder,
-        query_kind="text",
     )
     result = embedder.embed_text(texts=[text])
     if result.kept_indices != [0]:

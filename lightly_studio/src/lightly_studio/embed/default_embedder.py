@@ -86,7 +86,6 @@ def resolve_query_embedder(
     session: Session,
     collection_id: UUID,
     embedder_type: type[_EmbedderT],
-    query_kind: str,
 ) -> _EmbedderT:
     """Resolve the embedder for an interactive query, without mutating the collection.
 
@@ -100,7 +99,6 @@ def resolve_query_embedder(
         collection_id: The collection whose default embedding model is used.
         embedder_type: The embedder interface of the needed capability, such as
             ``TextEmbedder``.
-        query_kind: What the query embeds, such as "text" or "images". Used in errors.
 
     Returns:
         The embedder for the collection's default embedding space.
@@ -126,7 +124,7 @@ def resolve_query_embedder(
         config=config
     ):
         raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=config.url)
-    raise MissingCapabilityError(space_key=default_model.name, query_kind=query_kind)
+    raise MissingCapabilityError(space_key=default_model.name, embedder_type=embedder_type)
 
 
 def _embedder_for_model(
