@@ -18,8 +18,7 @@ on:
 permissions: {}
 
 jobs:
-  # Runs the checked-out ref's own code (mkdocs hooks), so it gets no secrets:
-  # all it hands onwards is the built site.
+  # Runs the ref's code, so it gets no secrets.
   build:
     name: Build documentation
     runs-on: ubuntu-latest
@@ -29,18 +28,21 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.tag }}
       ALLOW_VERSION_MISMATCH: ${{ inputs.allow_version_mismatch }}
+      VERSION_TAG_PATTERN: '^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$'
     steps:
-      # `refs/tags/` for a vX.Y.Z tag because actions/checkout resolves an
-      # unqualified ref as a branch first, and a branch sharing the tag's name
-      # would be built in the tag's place.
+      # A tag wins over a branch of the same name.
       - name: Resolve the ref
         id: ref
         run: |
-          if [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "ref=refs/tags/$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-          fi
+          set +e
+          git ls-remote --exit-code --tags "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "refs/tags/$RELEASE_TAG" > /dev/null
+          status=$?
+          set -e
+          case $status in
+            0) echo "ref=refs/tags/$RELEASE_TAG" >> "$GITHUB_OUTPUT" ;;
+            2) echo "ref=$RELEASE_TAG" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$status" ;;
+          esac
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
@@ -51,7 +53,7 @@ jobs:
         run: |
           VERSION_FROM_TOML=$(grep -oP '^\s*version\s*=\s*"\K[^"]+' lightly_studio/pyproject.toml)
           VERSION_FROM_TOML="v$VERSION_FROM_TOML"
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$RELEASE_TAG" =~ $VERSION_TAG_PATTERN ]]; then
             if [ "$ALLOW_VERSION_MISMATCH" != "true" ]; then
               echo "::error::'$RELEASE_TAG' is not a vX.Y.Z tag, so it cannot be checked against the version in pyproject.toml ($VERSION_FROM_TOML). This is expected when releasing docs from a branch or a fix commit; if that's the case here, re-run this workflow with allow_version_mismatch=true."
               exit 1
@@ -63,8 +65,7 @@ jobs:
           else
             echo "version from pyproject.toml $VERSION_FROM_TOML matches tag $RELEASE_TAG"
           fi
-      # No cache: this job runs the ref's code, which could seed a cache
-      # that main's workflows later restore.
+      # No cache: the ref's code could poison it for main.
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
@@ -86,10 +87,7 @@ jobs:
           retention-days: 7
           include-hidden-files: true
 
-  # Runs no ref-controlled code: it only downloads the site and copies it.
-  # The `if` keeps a branch dispatch from deploying by mistake. It is not a
-  # security gate: a branch can edit it. The `docs` environment is the gate once
-  # it is restricted to main and holds the GCP and DOCS_INSTANCE_* secrets.
+  # The `if` only prevents mistakes; the `docs` environment is the gate.
   release-documentation:
     name: Release documentation
     needs: build
@@ -98,18 +96,17 @@ jobs:
     timeout-minutes: 15
     environment: docs
     permissions: {}
-    # One deploy at a time, never cancelled mid-copy. GitHub keeps one pending
-    # run per group, and a newer one replaces it.
+    # One deploy at a time, never cancelled mid-copy.
     concurrency:
       group: ${{ github.workflow }}-deploy
       cancel-in-progress: false
     steps:
+      # Pinned by digest: this job gets the GCP key.
       - name: Download the Site
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: site
           path: site
-      # Pinned by digest: these steps see the GCP key.
       - id: 'auth'
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
@@ -138,9 +135,7 @@ jobs:
           echo ""
           echo "=== Keys remaining ==="
           gcloud compute os-login ssh-keys list --format="value(key)" | wc -l
-      # --quiet: a fresh runner has to generate its SSH key without a prompt.
-      # `./site` into `docs/` rather than `./site/*` into `docs/site`, so that
-      # top-level dotfiles are copied too.
+      # --quiet: no prompt for the new SSH key.
       - name: Release
         env:
           DOCS_INSTANCE_ZONE: ${{ secrets.DOCS_INSTANCE_ZONE }}
@@ -156,12 +151,11 @@ jobs:
     needs:
       - build
       - release-documentation
-    # Also on a failed build, but not for a branch dispatch, which never deploys.
+    # Also on a failed build, but not for a branch dispatch.
     if: always() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # As in announce_release.yml. Meant to hold SLACK_ACTION_BOT_TOKEN once
-    # restricted to main; today the token is an org secret.
+    # Meant to hold SLACK_ACTION_BOT_TOKEN, as in announce_release.yml.
     environment: slack
     permissions: {}
     steps:
