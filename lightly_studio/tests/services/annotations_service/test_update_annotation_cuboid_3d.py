@@ -5,13 +5,13 @@ from __future__ import annotations
 import pytest
 from sqlmodel import Session
 
+import lightly_studio.services.annotations_service.create_annotation as create_annotation_module
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.services import annotations_service
-import lightly_studio.services.annotations_service.create_annotation as create_annotation_module
 from lightly_studio.services.annotations_service.create_annotation import AnnotationCreateParams
 from lightly_studio.services.annotations_service.update_annotation import AnnotationUpdate
 
