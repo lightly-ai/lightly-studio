@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
+
 ### Changed
 
 - Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
