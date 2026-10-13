@@ -140,6 +140,23 @@ class TestCuboid3DCreate:
                 sz=1.0,
             )
 
+    def test_init__non_unit_quaternion__very_large_component(self) -> None:
+        """A finite but very large quaternion component is rejected as non-unit."""
+        with pytest.raises(ValueError, match="unit quaternion"):
+            Cuboid3DCreate(
+                frame_id="odom",
+                px=0.0,
+                py=0.0,
+                pz=0.0,
+                qx=1e308,
+                qy=0.0,
+                qz=0.0,
+                qw=0.0,
+                sx=1.0,
+                sy=1.0,
+                sz=1.0,
+            )
+
     def test_init__unit_quaternion_near_boundary(self) -> None:
         """Quaternion within floating-point tolerance (1e-6) is accepted."""
         Cuboid3DCreate(

@@ -56,7 +56,7 @@ class Cuboid3DCreate(SQLModel):
             raise ValueError("All cuboid float fields must be finite.")
         if self.sx <= 0 or self.sy <= 0 or self.sz <= 0:
             raise ValueError("Cuboid size dimensions sx, sy, sz must each be positive.")
-        norm = math.sqrt(self.qx**2 + self.qy**2 + self.qz**2 + self.qw**2)
+        norm = math.hypot(self.qx, self.qy, self.qz, self.qw)
         if abs(norm - 1.0) > _QUATERNION_UNIT_TOLERANCE:
             raise ValueError("Cuboid quaternion must be a unit quaternion.")
         return self
