@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 from sqlmodel import Session
 
-import lightly_studio.services.annotations_service.create_annotation as create_annotation_module
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation_label import AnnotationLabelTable
@@ -23,7 +22,7 @@ def test_update_annotation__cuboid_3d_geometry(
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     """Updating cuboid geometry persists the new values."""
-    annotation = create_annotation_module.create_annotation(
+    annotation = annotations_service.create_annotation(
         session=db_session,
         annotation=AnnotationCreateParams(
             annotation_label_id=annotation_labels[0].annotation_label_id,
@@ -84,7 +83,7 @@ def test_update_annotation__cuboid_3d_type_mismatch(
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     """Updating cuboid geometry on a non-cuboid annotation raises ValueError."""
-    annotation = create_annotation_module.create_annotation(
+    annotation = annotations_service.create_annotation(
         session=db_session,
         annotation=AnnotationCreateParams(
             annotation_label_id=annotation_labels[0].annotation_label_id,
@@ -128,7 +127,7 @@ def test_update_annotation__cuboid_label_only(
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     """Updating only the label on a cuboid annotation succeeds without geometry."""
-    annotation = create_annotation_module.create_annotation(
+    annotation = annotations_service.create_annotation(
         session=db_session,
         annotation=AnnotationCreateParams(
             annotation_label_id=annotation_labels[0].annotation_label_id,
