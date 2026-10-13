@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag or branch to checkout, e.g. v0.0.0'
+        description: 'Tag, branch or commit SHA to checkout, e.g. v0.0.0'
         required: true
         type: string
       allow_version_mismatch:
@@ -53,7 +53,7 @@ jobs:
           VERSION_FROM_TOML="v$VERSION_FROM_TOML"
           if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             if [ "$ALLOW_VERSION_MISMATCH" != "true" ]; then
-              echo "::error::'$RELEASE_TAG' is not a vX.Y.Z tag, so it cannot be checked against the version in pyproject.toml ($VERSION_FROM_TOML). Per RELEASE.md this is expected when releasing docs from a branch or a fix commit; if that's the case here, re-run this workflow with allow_version_mismatch=true."
+              echo "::error::'$RELEASE_TAG' is not a vX.Y.Z tag, so it cannot be checked against the version in pyproject.toml ($VERSION_FROM_TOML). This is expected when releasing docs from a branch or a fix commit; if that's the case here, re-run this workflow with allow_version_mismatch=true."
               exit 1
             fi
             echo "::warning::Skipping version assert: '$RELEASE_TAG' is not a vX.Y.Z tag and allow_version_mismatch=true was set explicitly. Version in pyproject.toml is $VERSION_FROM_TOML; it was NOT checked against '$RELEASE_TAG'."
@@ -63,10 +63,13 @@ jobs:
           else
             echo "version from pyproject.toml $VERSION_FROM_TOML matches tag $RELEASE_TAG"
           fi
+      # No cache: this job runs the ref's code, which could seed a cache
+      # that main's workflows later restore.
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
+          enable-cache: false
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
@@ -95,8 +98,8 @@ jobs:
     timeout-minutes: 15
     environment: docs
     permissions: {}
-    # One deploy at a time: a cancelled upload leaves the site half-copied.
-    # GitHub keeps one pending run per group, and a newer one replaces it.
+    # One deploy at a time, never cancelled mid-copy. GitHub keeps one pending
+    # run per group, and a newer one replaces it.
     concurrency:
       group: ${{ github.workflow }}-deploy
       cancel-in-progress: false
@@ -157,7 +160,8 @@ jobs:
     if: always() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Where SLACK_ACTION_BOT_TOKEN lives, as in announce_release.yml.
+    # As in announce_release.yml. Meant to hold SLACK_ACTION_BOT_TOKEN once
+    # restricted to main; today the token is an org secret.
     environment: slack
     permissions: {}
     steps:
@@ -171,7 +175,7 @@ jobs:
           if [ "$RELEASE_RESULT" = success ]; then
             text=$(printf ':white_check_mark: LightlyStudio documentation release succeeded.\nhttps://docs.lightly.ai/studio\n%s' "$run_link")
           elif [ "$BUILD_RESULT" = cancelled ] || [ "$RELEASE_RESULT" = cancelled ]; then
-            text=":warning: LightlyStudio documentation release was cancelled; the site may be partly updated. $run_link"
+            text=":warning: LightlyStudio documentation release was cancelled; it may not have started, or the site may be partly updated. $run_link"
           elif [ "$BUILD_RESULT" != success ]; then
             text=":x: LightlyStudio documentation build failed, nothing was deployed. Please check the logs and take necessary action. $run_link"
           else
