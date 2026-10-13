@@ -58,6 +58,9 @@ from lightly_studio.resolvers.annotation_resolver.update_annotation_label import
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
     update_bounding_box,
 )
+from lightly_studio.resolvers.annotation_resolver.update_cuboid_3d import (
+    update_cuboid_3d,
+)
 from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask import (
     update_segmentation_mask,
 )
@@ -91,6 +94,7 @@ __all__ = [
     "get_unembedded_annotation_ids",
     "update_annotation_label",
     "update_bounding_box",
+    "update_cuboid_3d",
     "update_segmentation_mask",
     "update_temporal_span",
 ]
