@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from lightly_studio_serve.embedder import Embedder
+
 
 class QueryEmbedderError(ValueError):
     """Raised when no embedder can answer a query for a collection."""
@@ -14,11 +16,9 @@ class NoDefaultEmbeddingModelError(QueryEmbedderError):
 class MissingCapabilityError(QueryEmbedderError):
     """Raised when no embedder of the default embedding space has the queried capability."""
 
-    def __init__(self, space_key: str, query_kind: str) -> None:
-        """Create the error for a space that cannot embed ``query_kind``, such as "text"."""
-        super().__init__(
-            f"The embedding space {space_key!r} of this collection cannot embed {query_kind}."
-        )
+    def __init__(self, space_key: str, embedder_type: type[Embedder]) -> None:
+        """Create the error for a space with no embedder of ``embedder_type``."""
+        super().__init__(f"The embedding space {space_key!r} has no {embedder_type.__name__}.")
 
 
 class RemoteEmbedderUnavailableError(QueryEmbedderError):

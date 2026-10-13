@@ -21,7 +21,8 @@ vi.mock('$app/environment', () => ({ browser: false }));
 vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
-    readAnnotationEmbedding: vi.fn()
+    readAnnotationEmbedding: vi.fn(),
+    getFeatures: vi.fn().mockResolvedValue({ data: [] })
 }));
 vi.mock('$lib/workers/maskRendererPool', () => ({
     shutdownMaskRendererPool: vi.fn()
@@ -53,6 +54,7 @@ vi.mock('$lib/components', async () => {
         Footer: Stub,
         LabelsMenu: Stub,
         MetadataFilterChips: Stub,
+        Onboarding: Stub,
         SelectionPill: Stub,
         ShowFiltersButton: Stub,
         TagsMenu: Stub,
@@ -173,6 +175,7 @@ vi.mock('$lib/hooks', async () => ({
         refetch: vi.fn()
     })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
+    useFeatureFlags: vi.fn(() => ({ featureFlags: writable([]), ready: Promise.resolve() })),
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({
@@ -184,7 +187,26 @@ vi.mock('$lib/hooks', async () => ({
     useTags: vi.fn(() => ({
         tags: writable([{ tag_id: 'tag-a', name: 'Reviewed' }]),
         tagsSelected: writable(new Set())
-    }))
+    })),
+    useOnboarding: vi.fn(() => ({
+        state: writable('unseen'),
+        invite: vi.fn(() => false),
+        start: vi.fn(),
+        openingSample: vi.fn(),
+        dismiss: vi.fn(),
+        complete: vi.fn(),
+        replay: vi.fn(),
+        requestReplay: vi.fn(),
+        replayRequested: writable(0),
+        registerOpenFirstSampleHandler: vi.fn(() => vi.fn()),
+        dispatchOpenFirstSample: vi.fn(),
+        registerOpeningSampleHandler: vi.fn(() => vi.fn()),
+        dispatchOpeningSample: vi.fn()
+    })),
+    TOUR_VERSION: 1
+}));
+vi.mock('$lib/components/Onboarding/Onboarding.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({
     useSelectAll: vi.fn(() => ({ handleSelectAll: vi.fn() }))

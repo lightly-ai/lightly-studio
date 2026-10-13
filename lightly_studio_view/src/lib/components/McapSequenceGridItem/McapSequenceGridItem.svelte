@@ -9,9 +9,10 @@
         width: number;
         height: number;
         sequenceFrame: McapSequenceFrame | null | undefined;
+        displayTextOnImage?: string;
     }
 
-    let { sampleCount, width, height, sequenceFrame }: Props = $props();
+    let { sampleCount, width, height, sequenceFrame, displayTextOnImage }: Props = $props();
 
     const frameUrl = $derived(
         sequenceFrame
@@ -65,9 +66,21 @@
             <span class="text-sm font-medium">MCAP sequence</span>
         </div>
     {/if}
+    {#if displayTextOnImage}
+        <div
+            class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
+            data-testid="mcap-sequence-file-name"
+        >
+            <span class="block truncate" title={displayTextOnImage}>
+                {displayTextOnImage}
+            </span>
+        </div>
+    {/if}
     {#if sampleCount > 1}
         <div
-            class="absolute bottom-1 right-1 rounded-sm bg-black/60 px-1.5 py-0.5 text-xs font-bold text-white"
+            class="absolute right-1 rounded-sm {displayTextOnImage
+                ? 'bottom-8'
+                : 'bottom-1'} bg-black/60 px-1.5 py-0.5 text-xs font-bold text-white"
             data-testid="mcap-sequence-frame-count"
         >
             +{sampleCount - 1}

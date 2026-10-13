@@ -30,7 +30,7 @@
     const frameTriggerLabel = $derived(`Frame: ${referenceFrameId}`);
     const colorItems = [
         { value: 'height', label: 'Height' },
-        { value: 'intensity', label: 'Intensity / Reflectivity' },
+        { value: 'intensity', label: 'Intensity' },
         { value: 'distance', label: 'Distance' },
         { value: 'density', label: 'Density' },
         { value: 'height-distance', label: 'Height + Distance' },
