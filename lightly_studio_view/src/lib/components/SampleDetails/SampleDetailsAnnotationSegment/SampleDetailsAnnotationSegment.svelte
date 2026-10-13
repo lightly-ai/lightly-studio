@@ -42,7 +42,7 @@
         refetch
     }: SampleDetailsAnnotationSegmentProps = $props();
 
-    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { addReversibleAction, updateLastAnnotationLabel, isEditingMode } = useGlobalStorage();
 
     const {
         context: annotationLabelContext,
@@ -223,7 +223,15 @@
 {/snippet}
 
 <Segment title="Annotations">
-    {#if isGrouped}
+    {#if annotationsSort.length === 0}
+        <p class="text-sm text-muted-foreground">
+            {#if $isEditingMode}
+                No annotations. Use the toolbar to add one.
+            {:else}
+                No annotations. Click <strong>Edit annotations</strong> and use the toolbar.
+            {/if}
+        </p>
+    {:else if isGrouped}
         <div class="flex flex-col gap-3">
             {#each sourceGroups as group (group.id)}
                 <SampleDetailsAnnotationSourceGroup

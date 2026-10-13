@@ -305,7 +305,11 @@
 <Segment title="Classification">
     <div class="flex flex-col gap-3 space-y-4">
         <div class="flex flex-col gap-2">
-            {#if isGrouped}
+            {#if classificationAnnotations.length === 0 && !$isEditingMode}
+                <p class="text-sm text-muted-foreground">
+                    No classifications. Click <strong>Edit annotations</strong> to add one.
+                </p>
+            {:else if isGrouped}
                 <div class="flex flex-col gap-3">
                     {#each sourceGroups as group (group.id)}
                         <SampleDetailsAnnotationSourceGroup

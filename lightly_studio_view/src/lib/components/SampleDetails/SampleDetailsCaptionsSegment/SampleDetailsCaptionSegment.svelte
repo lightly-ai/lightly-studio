@@ -75,6 +75,11 @@
                     onUpdate={refetch}
                 />
             {/each}
+            {#if !captions?.length && !$isEditingMode}
+                <p class="text-sm text-muted-foreground">
+                    No captions. Click <strong>Edit annotations</strong> to add one.
+                </p>
+            {/if}
             {#if $isEditingMode}
                 <CreateCaptionField onCreate={(text) => onCreateCaption(sampleId, text)} />
             {/if}
