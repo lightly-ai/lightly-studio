@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
     AnnotationView,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.create_annotation import AnnotationCreateParams
 
@@ -38,6 +39,7 @@ class AnnotationCreateInput(BaseModel):
     segmentation_mask: list[int] | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
+    cuboid_3d: Cuboid3DCreate | None = None
 
 
 @create_annotation_router.post(

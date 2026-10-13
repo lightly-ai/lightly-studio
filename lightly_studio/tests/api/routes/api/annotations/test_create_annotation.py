@@ -7,6 +7,7 @@ from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.annotation.annotation_base import AnnotationType, AnnotationView
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationView
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationView
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationView,
@@ -244,5 +245,94 @@ def test_create_annotation_with_collection_name(
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
+        tags=[],
+    )
+
+
+def test_create_annotation_cuboid_3d(
+    mocker: MockerFixture,
+    collection: CollectionTable,
+    test_client: TestClient,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    expected_label = annotation_labels[0]
+    parent_sample_id = samples[0].sample_id
+
+    spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
+    route = f"/api/collections/{collection.collection_id!s}/annotations"
+
+    response = test_client.post(
+        route,
+        json={
+            "annotation_label_id": str(expected_label.annotation_label_id),
+            "annotation_type": AnnotationType.CUBOID_3D,
+            "collection_id": str(collection.collection_id),
+            "parent_sample_id": str(parent_sample_id),
+            "cuboid_3d": {
+                "frame_id": "odom",
+                "px": 1.0,
+                "py": 0.0,
+                "pz": 0.5,
+                "qx": 0.0,
+                "qy": 0.0,
+                "qz": 0.0,
+                "qw": 1.0,
+                "sx": 2.0,
+                "sy": 1.0,
+                "sz": 1.5,
+            },
+        },
+    )
+
+    spy_create_annotation.assert_called_once_with(
+        session=mocker.ANY,
+        annotation=AnnotationCreateParams.model_validate(
+            {
+                "annotation_label_id": str(expected_label.annotation_label_id),
+                "annotation_type": AnnotationType.CUBOID_3D,
+                "collection_id": str(collection.collection_id),
+                "parent_sample_id": str(parent_sample_id),
+                "cuboid_3d": {
+                    "frame_id": "odom",
+                    "px": 1.0,
+                    "py": 0.0,
+                    "pz": 0.5,
+                    "qx": 0.0,
+                    "qy": 0.0,
+                    "qz": 0.0,
+                    "qw": 1.0,
+                    "sx": 2.0,
+                    "sy": 1.0,
+                    "sz": 1.5,
+                },
+            }
+        ),
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = AnnotationView(**response.json())
+
+    assert result == AnnotationView(
+        annotation_type=AnnotationType.CUBOID_3D,
+        sample_id=result.sample_id,
+        annotation_collection_id=result.annotation_collection_id,
+        parent_sample_id=UUID(str(parent_sample_id)),
+        annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
+        created_at=result.created_at,
+        cuboid_3d_details=Cuboid3DAnnotationView(
+            frame_id="odom",
+            px=1.0,
+            py=0.0,
+            pz=0.5,
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            sx=2.0,
+            sy=1.0,
+            sz=1.5,
+            interpolated=False,
+        ),
         tags=[],
     )
