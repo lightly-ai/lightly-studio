@@ -17,11 +17,6 @@ on:
 
 permissions: {}
 
-# Queued rather than cancelled: a cancelled upload leaves the site half-copied.
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
-
 jobs:
   # Runs the checked-out ref's own code (mkdocs hooks), so it gets no secrets:
   # all it hands onwards is the built site.
@@ -86,18 +81,25 @@ jobs:
           path: lightly_studio/docs/site
           if-no-files-found: error
           retention-days: 7
+          include-hidden-files: true
 
   # Runs no ref-controlled code: it only downloads the site and copies it.
-  # GCP_SERVICE_ACCOUNT_KEY is an org secret, so the gate is the default-branch
-  # ref, as in finish_release.yml: a dispatch from another branch builds but
-  # never deploys.
+  # The `if` keeps a branch dispatch from deploying by mistake. It is not a
+  # security gate: a branch can edit it. The `docs` environment is the gate once
+  # it is restricted to main and holds the GCP and DOCS_INSTANCE_* secrets.
   release-documentation:
     name: Release documentation
     needs: build
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: docs
     permissions: {}
+    # One deploy at a time: a cancelled upload leaves the site half-copied.
+    # GitHub keeps one pending run per group, and a newer one replaces it.
+    concurrency:
+      group: ${{ github.workflow }}-deploy
+      cancel-in-progress: false
     steps:
       - name: Download the Site
         uses: actions/download-artifact@v8
@@ -134,6 +136,8 @@ jobs:
           echo "=== Keys remaining ==="
           gcloud compute os-login ssh-keys list --format="value(key)" | wc -l
       # --quiet: a fresh runner has to generate its SSH key without a prompt.
+      # `./site` into `docs/` rather than `./site/*` into `docs/site`, so that
+      # top-level dotfiles are copied too.
       - name: Release
         env:
           DOCS_INSTANCE_ZONE: ${{ secrets.DOCS_INSTANCE_ZONE }}
@@ -142,7 +146,7 @@ jobs:
         run: |
           gcloud compute scp --quiet \
             --zone "$DOCS_INSTANCE_ZONE" \
-            --recurse ./site/* "$DOCS_INSTANCE_ID:$DOCS_INSTANCE_DIR/lightly-studio/docs/site"
+            --recurse ./site "$DOCS_INSTANCE_ID:$DOCS_INSTANCE_DIR/lightly-studio/docs/"
 
   slack-notification:
     name: Send Slack Notification
@@ -153,46 +157,32 @@ jobs:
     if: always() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Where SLACK_ACTION_BOT_TOKEN lives, as in announce_release.yml.
+    environment: slack
     permissions: {}
     steps:
-      - name: Set Up uv
-        uses: astral-sh/setup-uv@v10.0.1
-        with:
-          version: "0.12.6"
-      - name: Set Up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: 3.12
-      - name: Send Slack Notification
+      - name: Write the Message
         env:
-          # Go to https://api.slack.com/apps/ to configure the Action Bot
-          SLACK_TOKEN: ${{ secrets.SLACK_ACTION_BOT_TOKEN }}
-          JOB_STATUS: ${{ needs.release-documentation.result }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-        shell: uv run --no-project --with slack_sdk==3.34.0 python {0}
+          BUILD_RESULT: ${{ needs.build.result }}
+          RELEASE_RESULT: ${{ needs.release-documentation.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          from slack_sdk import WebClient
-          import os
-
-          run_link = f"<https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}|View workflow run>"
-
-          job_status = os.environ["JOB_STATUS"]
-
-          if job_status == "success":
-              message = (
-                  ":white_check_mark: LightlyStudio documentation release succeeded.\n"
-                  "https://docs.lightly.ai/studio\n"
-                  f"{run_link}"
-              )
-          else:
-              message = (
-                  ":x: LightlyStudio documentation release failed. "
-                  f"Please check the logs and take necessary action. {run_link}"
-              )
-
-          slack_client = WebClient(token=os.environ["SLACK_TOKEN"])
-          slack_client.chat_postMessage(
-              channel="releases",
-              text=message
-          )
+          run_link="<$RUN_URL|View workflow run>"
+          if [ "$RELEASE_RESULT" = success ]; then
+            text=$(printf ':white_check_mark: LightlyStudio documentation release succeeded.\nhttps://docs.lightly.ai/studio\n%s' "$run_link")
+          elif [ "$BUILD_RESULT" = cancelled ] || [ "$RELEASE_RESULT" = cancelled ]; then
+            text=":warning: LightlyStudio documentation release was cancelled; the site may be partly updated. $run_link"
+          elif [ "$BUILD_RESULT" != success ]; then
+            text=":x: LightlyStudio documentation build failed, nothing was deployed. Please check the logs and take necessary action. $run_link"
+          else
+            text=":x: LightlyStudio documentation release failed. Please check the logs and take necessary action. $run_link"
+          fi
+          jq -n --arg text "$text" '{channel: "releases", text: $text}' > "$RUNNER_TEMP/slack-payload.json"
+      - name: Send Slack Notification
+        # Go to https://api.slack.com/apps/ to configure the Action Bot
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_ACTION_BOT_TOKEN }}
+          payload-file-path: ${{ runner.temp }}/slack-payload.json
+          errors: true
