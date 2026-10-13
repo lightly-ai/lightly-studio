@@ -27,6 +27,7 @@ LIGHTLY_STUDIO_API_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_API_KEY", defaul
 # Anonymous usage tracking. Covers the Python package and the GUI, which reads the flag back from
 # the API. See lightly_studio/analytics/tracking.py.
 LIGHTLY_STUDIO_ANALYTICS_ENABLED: bool = env.bool("LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
+LIGHTLY_STUDIO_ONBOARDING_ENABLED: bool = env.bool("LIGHTLY_STUDIO_ONBOARDING_ENABLED", False)
 # Overrides the project to report against. Unset or empty, it follows the cohort of the
 # installation, see lightly_studio/analytics/posthog_project.py.
 LIGHTLY_STUDIO_POSTHOG_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_POSTHOG_KEY", default=None)
