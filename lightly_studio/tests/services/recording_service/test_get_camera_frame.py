@@ -85,6 +85,21 @@ def test_get_camera_frame(db_session: Session, video_recording: RecordingFixture
     assert helpers.jpeg_mean_gray_level(frame.data) < 32
 
 
+def test_get_camera_frame__compressed_image(db_session: Session, tmp_path: Path) -> None:
+    access_units = helpers.h264_access_units(gray_levels=GRAY_LEVELS)
+    mcap_path = helpers.write_mcap_with_video(
+        tmp_path / "compressed_image.mcap",
+        frames=list(zip((KEYFRAME_NS, GRAY_FRAME_NS, WHITE_FRAME_NS), access_units)),
+        compressed_image=True,
+    )
+    recording = _create_recording(session=db_session, mcap_path=mcap_path)
+
+    frame = _get_frame(session=db_session, recording=recording, log_time_ns=WHITE_FRAME_NS)
+
+    assert frame.log_time_ns == WHITE_FRAME_NS
+    assert helpers.jpeg_mean_gray_level(frame.data) > 223
+
+
 def test_get_camera_frame__delta_frame(
     db_session: Session, video_recording: RecordingFixture
 ) -> None:

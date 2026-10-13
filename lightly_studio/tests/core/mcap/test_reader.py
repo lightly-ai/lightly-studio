@@ -122,6 +122,42 @@ class TestMcapFileReader:
         ]
         assert [locator.log_time_ns for locator in locators] == list(helpers.LIDAR_LOG_TIMES_NS)
 
+    def test_get_frame_locators__h264_compressed_image_keyframes(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_video(
+            tmp_path / "h264_image.mcap",
+            frames=[
+                (
+                    log_time_ns,
+                    helpers.h264_keyframe()
+                    if log_time_ns in helpers.VIDEO_KEYFRAME_LOG_TIMES_NS
+                    else helpers.h264_delta_frame(),
+                )
+                for log_time_ns in helpers.VIDEO_LOG_TIMES_NS
+            ],
+            compressed_image=True,
+        )
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_VIDEO_TOPIC])
+            locators = reader.get_frame_locators(helpers.CAMERA_VIDEO_TOPIC)
+
+        assert [locator.keyframe_log_time_ns for locator in locators] == [
+            helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0],
+            helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[0],
+            helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[1],
+            helpers.VIDEO_KEYFRAME_LOG_TIMES_NS[1],
+        ]
+
+    def test_get_frame_locators__jpeg_compressed_image_no_keyframes(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_compressed_image(tmp_path / "jpeg_image.mcap")
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_IMAGE_TOPIC])
+            locators = reader.get_frame_locators(helpers.CAMERA_IMAGE_TOPIC)
+
+        assert [locator.log_time_ns for locator in locators] == list(helpers.IMAGE_LOG_TIMES_NS)
+        assert all(locator.keyframe_log_time_ns is None for locator in locators)
+
     def test_get_frame_locators__video_without_decoder(self, tmp_path: Path) -> None:
         path = helpers.write_mcap_with_undecodable_video(tmp_path / "undecodable.mcap")
 

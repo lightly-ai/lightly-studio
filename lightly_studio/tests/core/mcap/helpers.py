@@ -258,21 +258,30 @@ def write_mcap_with_compressed_image(path: Path) -> Path:
     return path
 
 
-def write_mcap_with_video(path: Path, frames: Sequence[tuple[int, bytes]]) -> Path:
+def write_mcap_with_video(
+    path: Path, frames: Sequence[tuple[int, bytes]], compressed_image: bool = False
+) -> Path:
     """Writes an MCAP with an H.264 video topic, for decoding tests.
 
     Args:
         path: The path to write the file to.
         frames: `(log_time_ns, access_unit)` pairs, in log-time order, e.g. from
             `h264_access_units`.
+        compressed_image: Whether to write the frames as `CompressedImage` messages
+            instead of `CompressedVideo` messages.
 
     Returns:
         The path of the written file.
     """
     writer = Writer(output=str(path))
-    video_schema = writer.register_msgdef(
-        datatype="foxglove_msgs/msg/CompressedVideo", msgdef_text=_COMPRESSED_VIDEO_MSGDEF
-    )
+    if compressed_image:
+        video_schema = writer.register_msgdef(
+            datatype="foxglove_msgs/msg/CompressedImage", msgdef_text=_COMPRESSED_IMAGE_MSGDEF
+        )
+    else:
+        video_schema = writer.register_msgdef(
+            datatype="foxglove_msgs/msg/CompressedVideo", msgdef_text=_COMPRESSED_VIDEO_MSGDEF
+        )
     for log_time_ns, access_unit in frames:
         writer.write_message(
             topic=CAMERA_VIDEO_TOPIC,

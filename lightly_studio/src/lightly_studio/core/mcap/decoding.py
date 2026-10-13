@@ -14,6 +14,7 @@ from typing import Any
 from mcap.decoder import DecoderFactory
 from mcap.records import Schema
 from mcap.well_known import MessageEncoding, SchemaEncoding
+from mcap_protobuf import decoder as protobuf_decoder
 from mcap_ros2 import decoder as ros2_decoder
 
 # Foxglove ROS 1 SceneEntity uses these primitives. The ROS 2 decoder lists them
@@ -81,10 +82,12 @@ def decoder_factories() -> list[DecoderFactory]:
     """Returns a decoder for every message encoding the access layer can read.
 
     Returns:
-        Decoder factories for CDR-encoded ROS 2 messages and JSON messages.
+        Decoder factories for CDR-encoded ROS 2 messages, protobuf messages, e.g.
+        `foxglove.CompressedVideo`, and JSON messages.
     """
     return [
         Ros2DecoderFactory(),
+        protobuf_decoder.DecoderFactory(),
         JsonDecoderFactory(),
     ]
 

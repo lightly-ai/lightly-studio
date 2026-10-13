@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from google.protobuf.timestamp_pb2 import Timestamp
 from mcap.records import Schema
 from mcap.well_known import MessageEncoding, SchemaEncoding
 from mcap.writer import Writer as RawWriter
+from mcap_protobuf.writer import Writer as ProtobufWriter
 from mcap_ros2._dynamic import serialize_dynamic
 
 from lightly_studio.core.mcap import decoding
@@ -92,6 +94,28 @@ def test_get_decoded_message_at__ros1_time_fields(tmp_path: Path) -> None:
     assert message.decoded_message.timestamp.sec == 2
     assert message.decoded_message.timestamp.nanosec == 250_000_000
     assert message.decoded_message.frame_id == "base_link"
+
+
+def test_get_decoded_message_at__protobuf(tmp_path: Path) -> None:
+    path = tmp_path / "stamp.mcap"
+    with path.open("wb") as stream:
+        writer = ProtobufWriter(output=stream)
+        writer.write_message(
+            topic="/stamp",
+            message=Timestamp(seconds=2, nanos=250_000_000),
+            log_time=1000,
+            publish_time=1000,
+        )
+        writer.finish()
+
+    with McapFileReader(path) as reader:
+        (topic,) = reader.get_topics()
+        message = reader.get_decoded_message_at(channel_id=topic.channel_id, timestamp_ns=1000)
+
+    assert message is not None
+    assert message.schema_name == "google.protobuf.Timestamp"
+    assert message.decoded_message.seconds == 2
+    assert message.decoded_message.nanos == 250_000_000
 
 
 def _encode_cdr(schema_text: str, message: dict[str, object]) -> bytes:

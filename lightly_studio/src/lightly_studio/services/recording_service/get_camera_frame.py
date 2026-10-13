@@ -15,6 +15,9 @@ from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.resolvers import recording_resolver
 from lightly_studio.services.recording_service import reader_cache, video_decoder_cache
 
+# The camera message types whose payload can be an H.264 or H.265 video frame.
+_VIDEO_MESSAGE_TYPES = frozenset({"CompressedVideo", "CompressedImage"})
+
 
 @dataclass(frozen=True)
 class CameraFrame:
@@ -80,7 +83,8 @@ def get_camera_frame(  # noqa: PLR0913
         ValueError: If `log_time_ns` is before `keyframe_timestamp_ns`.
         ChannelNotFoundError: If `channel_id` is not in the recording's file.
         McapAccessError: If the channel's messages cannot be decoded, or the schema
-            is not `CompressedVideo`.
+            is not `CompressedVideo` or `CompressedImage`, or the format is not H.264
+            or H.265.
     """
     target_time_ns = keyframe_timestamp_ns if log_time_ns is None else log_time_ns
     if target_time_ns < keyframe_timestamp_ns:
@@ -166,12 +170,15 @@ def _frame_at(
 
 
 def _require_compressed_video(schema_name: str | None) -> None:
-    """Raises if a camera schema is not `CompressedVideo`.
+    """Raises if a camera schema cannot carry video.
+
+    A `CompressedImage` can also carry video, e.g. of format `h264`. The decoder rejects
+    a format that is not video.
 
     Raises:
-        McapAccessError: If the schema is not `CompressedVideo`.
+        McapAccessError: If the schema is not `CompressedVideo` or `CompressedImage`.
     """
     schema = schema_name or ""
     message_type = schema.split("/")[-1].split(".")[-1]
-    if message_type != "CompressedVideo":
+    if message_type not in _VIDEO_MESSAGE_TYPES:
         raise McapAccessError(f"Unsupported camera message schema: '{schema}'.")

@@ -26,6 +26,15 @@ def test_from_decoded_message__protobuf_timestamp() -> None:
     assert capture_time.from_decoded_message(message) == 2_000_000_100
 
 
+def test_from_decoded_message__header_timestamp_ns() -> None:
+    message = SimpleNamespace(
+        timestamp=SimpleNamespace(seconds=0, nanos=0),
+        header=SimpleNamespace(timestamp=1_765_348_442_325_606_000),
+    )
+
+    assert capture_time.from_decoded_message(message) == 1_765_348_442_325_606_000
+
+
 def test_from_decoded_message__missing() -> None:
     with pytest.raises(McapAccessError, match="header stamp or timestamp"):
         capture_time.from_decoded_message(SimpleNamespace(frame_id="odom"))

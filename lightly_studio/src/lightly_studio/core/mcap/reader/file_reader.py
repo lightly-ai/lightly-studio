@@ -133,10 +133,13 @@ class McapFileReader:
             McapAccessError: If the file has messages but no chunk index to locate them.
         """
         unique_topics = list(dict.fromkeys(topics))
+        # An image topic can also carry video, e.g. a `CompressedImage` of format `h264`.
+        # Keyframes are only found in a payload of a video format.
         video_topics = {
             topic
             for topic in unique_topics
-            if self._topic_index.require_topic_info(topic).kind is TopicKind.VIDEO
+            if self._topic_index.require_topic_info(topic).kind
+            in (TopicKind.VIDEO, TopicKind.IMAGE)
         }
         self._topic_index.require_chunk_index()
         scan = FrameScanner(

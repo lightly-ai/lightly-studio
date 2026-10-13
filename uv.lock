@@ -3849,6 +3849,7 @@ dependencies = [
     { name = "lightly-mundig" },
     { name = "lightly-studio-serve" },
     { name = "mcap" },
+    { name = "mcap-protobuf-support" },
     { name = "mcap-ros2-support" },
     { name = "open-clip-torch" },
     { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
@@ -3975,6 +3976,7 @@ requires-dist = [
     { name = "lightly-mundig", specifier = "==0.1.16" },
     { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
     { name = "mcap", specifier = ">=1.2.0,<2.0" },
+    { name = "mcap-protobuf-support", specifier = ">=0.5.0,<0.6" },
     { name = "mcap-ros2-support", specifier = ">=0.5.0,<0.6" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
@@ -4444,6 +4446,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f8/d7/0f17e59733a71bd4d5b38afc8484531c2cd7648b08c79863ee95fc42b002/mcap-1.4.0.tar.gz", hash = "sha256:0528e2f86a61bfec73779e0628e6cf27af83d01d89e20b27d5ec9f0b556a63ac", size = 22155, upload-time = "2026-06-18T21:50:07.965Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl", hash = "sha256:0b48b1cc951b8d5aabd2599e60d410bae4f1be1819094f54117b7cbf6b3ee2e9", size = 20826, upload-time = "2026-06-18T21:50:06.704Z" },
+]
+
+[[package]]
+name = "mcap-protobuf-support"
+version = "0.5.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcap" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cc/8e/98af824adce25082f1c7fb8e8aab48b1678a370f97633a55bfb06c40e3fd/mcap_protobuf_support-0.5.4.tar.gz", hash = "sha256:3af2de2c2dbda9d1dbb1a526d2ad0cf3604ab44947dd1c99a52a2f990b1eb308", size = 7059, upload-time = "2025-12-24T21:22:57.716Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/ee/cb4beace2bbaf3877848dbc555366c5a72ec1dabba5d620bf746143d91c4/mcap_protobuf_support-0.5.4-py3-none-any.whl", hash = "sha256:072f83b7b147b5faa25df21c175cbf6e53bf959f8a6aea534167055bc4526649", size = 7286, upload-time = "2025-12-24T21:22:56.393Z" },
 ]
 
 [[package]]

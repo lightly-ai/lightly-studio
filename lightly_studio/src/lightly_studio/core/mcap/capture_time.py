@@ -2,7 +2,8 @@
 
 ROS messages carry the time in `header.stamp`. Foxglove messages carry it in
 `timestamp`. Both are `sec` plus `nanosec` (or `nsec`) since the Unix epoch.
-Protobuf messages use `seconds` plus `nanos`.
+Protobuf messages use `seconds` plus `nanos`. Some protobuf messages carry the time
+as integer nanoseconds in `header.timestamp` instead.
 """
 
 from __future__ import annotations
@@ -44,7 +45,9 @@ def from_decoded_message(decoded_message: Any) -> int:
 
 
 def _timestamp_ns(stamp: Any) -> int:
-    """Returns a Time message as nanoseconds since the Unix epoch."""
+    """Returns a Time message, or integer nanoseconds, as nanoseconds since the Unix epoch."""
+    if isinstance(stamp, int):
+        return stamp
     sec = message_fields.require_field(stamp, _SEC_FIELDS)
     nsec = message_fields.get_field(stamp, _NSEC_FIELDS)
     try:
