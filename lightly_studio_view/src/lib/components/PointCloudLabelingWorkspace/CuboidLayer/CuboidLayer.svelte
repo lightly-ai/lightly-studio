@@ -7,8 +7,19 @@
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
     import { addCuboidSelectionListeners, pickSmallestFromIntersections } from './cuboidSelection';
+    import { computeGroundPlaneLayout } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
 
     type CuboidIntersection = Parameters<typeof pickSmallestFromIntersections>[0][number];
+
+    interface GroundPlaneClickPoint {
+        x: number;
+        y: number;
+        z: number;
+    }
+
+    interface GroundPlaneClickEvent {
+        point: GroundPlaneClickPoint;
+    }
 
     interactivity();
 
@@ -30,6 +41,8 @@
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
+        /** Fires when the user clicks the ground plane in create-cuboid mode. */
+        onCreateCuboid?: (position: Domain.Vector3) => void;
     }
 
     let {
@@ -38,8 +51,10 @@
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
+        pointCloudBounds,
         onselect,
-        onhover
+        onhover,
+        onCreateCuboid
     }: Props = $props();
 
     const { renderer } = useThrelte();
@@ -53,6 +68,17 @@
     // Currently-hovered cuboids: annotationId → volume. Maintained across pointer-enter/leave
     // events so that the smallest overlapping cuboid is always highlighted.
     let hoveredCuboids = new Map<string, number>();
+
+    const GROUND_PLANE_SIZE_FACTOR = 10;
+    const groundPlaneLayout = $derived(computeGroundPlaneLayout(pointCloudBounds));
+    const groundPlaneSize = $derived(
+        groundPlaneLayout
+            ? Math.max(
+                  pointCloudBounds.max[0] - pointCloudBounds.min[0],
+                  pointCloudBounds.max[1] - pointCloudBounds.min[1]
+              ) * GROUND_PLANE_SIZE_FACTOR
+            : 0
+    );
 
     function onCuboidHit(annotationId: string, volume: number): void {
         if (activeTool !== 'select') return;
@@ -86,6 +112,11 @@
         onhover?.(pickSmallestFromIntersections(hoveredAsIntersections()), null);
     }
 
+    function handleGroundPlaneClick(event: GroundPlaneClickEvent): void {
+        if (activeTool !== 'create-cuboid') return;
+        onCreateCuboid?.([event.point.x, event.point.y, event.point.z]);
+    }
+
     $effect(() => {
         hoveredCuboids.clear();
         onhover?.(null, null);
@@ -108,6 +139,13 @@
         });
     });
 </script>
+
+{#if groundPlaneLayout}
+    <T.Mesh position={[...groundPlaneLayout.center]} visible={false} onclick={handleGroundPlaneClick}>
+        <T.PlaneGeometry args={[groundPlaneSize, groundPlaneSize]} />
+        <T.MeshBasicMaterial />
+    </T.Mesh>
+{/if}
 
 {#each renderCuboids as item (item.annotation.id)}
     {@const base = resolveCuboidColor(annotationClasses, item.annotation.annotationClassId)}
