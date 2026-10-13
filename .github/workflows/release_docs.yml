@@ -87,7 +87,7 @@ jobs:
           retention-days: 7
           include-hidden-files: true
 
-  # The `if` only prevents mistakes; the `docs` environment is the gate.
+  # The `if` only prevents mistakes; it is not a security gate.
   release-documentation:
     name: Release documentation
     needs: build
