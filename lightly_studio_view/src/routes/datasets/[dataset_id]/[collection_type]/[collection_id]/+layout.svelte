@@ -8,6 +8,7 @@
         Footer,
         LabelsMenu,
         MetadataFilterChips,
+        Onboarding,
         SelectionPill,
         ShowFiltersButton,
         TagsMenu
@@ -36,6 +37,7 @@
         isSampleDetailsRoute,
         isImagesRoute,
         isPointCloudsRoute,
+        isPointCloudLabelingRoute,
         isVideoFramesRoute,
         isVideosRoute,
         isGroupsRoute,
@@ -72,6 +74,7 @@
         useSelectionSummary,
         useImageAnnotationCounts,
         usePostHog,
+        useFeatureFlags,
         useSeedAnnotationSourceFilter
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
@@ -85,6 +88,8 @@
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
+    import { useOnboarding } from '$lib/hooks';
+    import { getLightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
     const { data, children } = $props();
     const {
         collection,
@@ -92,6 +97,14 @@
     } = $derived(data);
 
     const { trackEvent } = usePostHog();
+    const { featureFlags, ready: featureFlagsReady } = useFeatureFlags();
+    let featuresLoaded = $state(false);
+    const onboardingEnabled = $derived(
+        featuresLoaded &&
+            $featureFlags.includes('onboarding') &&
+            collection.sample_type === 'image' &&
+            !getLightlyEnterpriseSession()
+    );
     const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
     const { isRefineClassifiersPanelOpen } = useRefineClassifiersPanel();
 
@@ -141,6 +154,7 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
@@ -241,6 +255,9 @@
 
     // Setup event handlers for keyboard shortcuts
     onMount(() => {
+        void featureFlagsReady.then(() => {
+            featuresLoaded = true;
+        });
         if (browser) {
             window.addEventListener('keydown', handleKeyEvent);
             window.addEventListener('keyup', handleKeyEvent);
@@ -544,12 +561,25 @@
 </script>
 
 <div class="flex-none">
-    <Header {collection} />
+    <Header
+        {collection}
+        showTour={onboardingEnabled}
+        onShowTour={() => useOnboarding().requestReplay()}
+    />
     <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails}
+    <Onboarding
+        enabled={onboardingEnabled}
+        {isImages}
+        {isSampleDetails}
+        {collectionId}
+        collectionType={page.params.collection_type!}
+        {datasetId}
+        sampleCount={collection.total_sample_count}
+    />
+    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails || isPointCloudLabeling}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
@@ -562,6 +592,7 @@
                 <div
                     class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
                     data-testid="filter-panel-body"
+                    data-onboarding-filter-panel
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">

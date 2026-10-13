@@ -1852,6 +1852,38 @@ html .md-typeset :is(.admonition, details) > :last-child {
   color: var(--ls-on-accent);
 }
 
+/* Call-to-action pair on the landing page: a filled accent button next to an
+   outlined one, matching the buttons on lightly.ai */
+.md-typeset .ls-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  justify-content: center;
+  margin: 1.2em 0;
+}
+
+.md-typeset .ls-cta .md-button {
+  border-color: var(--ls-accent);
+  color: var(--ls-accent);
+  font-size: 0.9em;
+  padding: 0.5em 1.2em;
+}
+
+.md-typeset .ls-cta .md-button:hover {
+  background-color: var(--ls-accent-surface);
+}
+
+.md-typeset .ls-cta .md-button--primary {
+  background-color: var(--ls-accent);
+  color: var(--ls-on-accent);
+}
+
+.md-typeset .ls-cta .md-button--primary:hover {
+  background-color: var(--ls-accent-hover);
+  border-color: var(--ls-accent-hover);
+  color: var(--ls-on-accent);
+}
+
 /* ==========================================================================
    8. Footer
 

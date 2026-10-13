@@ -2,6 +2,9 @@
 # Add noqa to silence unused import and unsorted imports linter warnings.
 from . import setup_logging  # noqa: F401 I001
 
+# Initialize the analytics tracker at package import so events before GUI startup are captured.
+from lightly_studio.analytics import tracking  # noqa: F401
+
 # Import db_manager for SQLModel to discover db models.
 from lightly_studio.database import db_manager  # noqa: F401
 

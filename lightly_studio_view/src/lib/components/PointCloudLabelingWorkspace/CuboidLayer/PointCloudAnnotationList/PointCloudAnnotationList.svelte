@@ -6,7 +6,8 @@
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import {
         groupAnnotationsBySource,
-        resolveAnnotationClassName
+        resolveAnnotationClassName,
+        resolveAnnotationSourceName
     } from './pointCloudAnnotationList';
     import { resolveCuboidColor } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidColors';
     import PointCloudAnnotationListGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListGroup';
@@ -48,6 +49,10 @@
                 annotationClassId: cuboid.annotationClassId
             })}
             isSelected={selectedCuboidId === cuboid.id}
+            annotationSourceName={resolveAnnotationSourceName({
+                annotationSourceId: cuboid.annotationSourceId,
+                sources: annotationSources
+            })}
             onToggle={toggle}
         />
     {/each}

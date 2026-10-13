@@ -89,8 +89,8 @@ describe('mergeExternalFilters', () => {
         }
     });
 
-    it('carries the embedding_region forward across collections', () => {
-        const baseParams = baseNormalParams('col-2');
+    it('preserves the embedding_region when the collection matches', () => {
+        const baseParams = baseNormalParams();
         const currentParams = normalParams('col-1', { embedding_region: embeddingRegion });
 
         const result = mergeExternalFilters(baseParams, currentParams);
@@ -111,30 +111,17 @@ describe('mergeExternalFilters', () => {
         }
     });
 
-    it('drops the confusion_cell when navigating to a different collection', () => {
-        const baseParams = baseNormalParams('col-2');
-        const currentParams = normalParams('col-1', { confusion_cell: confusionCell });
-
-        const result = mergeExternalFilters(baseParams, currentParams);
-
-        if (result.mode === 'normal') {
-            expect(result.filters?.confusion_cell).toBeUndefined();
-        }
-    });
-
-    it('keeps sample_ids but drops a stale confusion_cell across collections', () => {
+    it('does not carry external filters to a different collection', () => {
         const baseParams = baseNormalParams('col-2');
         const currentParams = normalParams('col-1', {
             sample_ids: ['s1'],
+            embedding_region: embeddingRegion,
             confusion_cell: confusionCell
         });
 
         const result = mergeExternalFilters(baseParams, currentParams);
 
-        if (result.mode === 'normal') {
-            expect(result.filters?.sample_ids).toEqual(['s1']);
-            expect(result.filters?.confusion_cell).toBeUndefined();
-        }
+        expect(result).toBe(baseParams);
     });
 
     it('returns the base params unchanged when there are no external filters', () => {

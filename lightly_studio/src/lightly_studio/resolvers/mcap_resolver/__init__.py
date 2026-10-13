@@ -2,6 +2,9 @@
 
 from lightly_studio.resolvers.mcap_resolver.create_many import create_many
 from lightly_studio.resolvers.mcap_resolver.get_by_id import get_by_id
+from lightly_studio.resolvers.mcap_resolver.get_channel_ids_by_component import (
+    get_channel_ids_by_component,
+)
 from lightly_studio.resolvers.mcap_resolver.get_many_by_id import get_many_by_id
 from lightly_studio.resolvers.mcap_resolver.get_start_log_time_ns import get_start_log_time_ns
 from lightly_studio.resolvers.mcap_resolver.get_tick_channels import get_tick_channels
@@ -9,6 +12,7 @@ from lightly_studio.resolvers.mcap_resolver.get_tick_channels import get_tick_ch
 __all__ = [
     "create_many",
     "get_by_id",
+    "get_channel_ids_by_component",
     "get_many_by_id",
     "get_start_log_time_ns",
     "get_tick_channels",

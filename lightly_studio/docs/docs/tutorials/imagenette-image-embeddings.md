@@ -169,7 +169,7 @@ which makes it slower than later runs.
 Click **Embed** <span class="ls-inline-icon ls-inline-icon--embed"></span> in the right-hand
 tab rail to open the embedding plot. Each point is one image, placed by a two-dimensional
 projection (PaCMAP) of its embedding. See
-[the embedding plot](../core_concepts/embeddings.md#the-embedding-plot-gui).
+[the embedding plot](../workflows/embeddings.md#the-embedding-plot-gui).
 
 !!! note "No Embed tab?"
     The tab only appears when the dataset has embeddings. If it is missing, ingestion ran
@@ -540,8 +540,8 @@ A follow-up workflow could use embeddings and a small set of annotated examples 
 generate nearest-neighbor suggestions. Keep suggestions in their own annotation source
 and inspect them before you accept them.
 
-Related guides: [Embeddings](../core_concepts/embeddings.md), which also shows how to
-[load precomputed embeddings](../core_concepts/embeddings.md#loading-precomputed-embeddings)
+Related guides: [Embeddings](../workflows/embeddings.md), which also shows how to
+[load precomputed embeddings](../workflows/embeddings.md#loading-precomputed-embeddings)
 instead of computing them at ingestion,
 [Image Dataset](../workflows/image_dataset.md), and
 [Annotations](../workflows/annotations.md).

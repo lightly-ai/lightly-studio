@@ -14,6 +14,7 @@ const defaultProps = {
     channels,
     selectedChannels: [] as number[],
     onToggleChannel: vi.fn(),
+    onSetChannels: vi.fn(),
     testId: 'workspace-camera-select'
 };
 

@@ -6,7 +6,9 @@
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
-    import { addCuboidSelectionListeners } from './cuboidSelection';
+    import { addCuboidSelectionListeners, pickSmallestFromIntersections } from './cuboidSelection';
+
+    type CuboidIntersection = Parameters<typeof pickSmallestFromIntersections>[0][number];
 
     interactivity();
 
@@ -44,7 +46,49 @@
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
     let cuboidClicked = false;
 
+    // Pending hits from the current click event — all overlapping cuboids report here.
+    let pendingHits: CuboidIntersection[] = [];
+    let hitScheduled = false;
+
+    // Currently-hovered cuboids: annotationId → volume. Maintained across pointer-enter/leave
+    // events so that the smallest overlapping cuboid is always highlighted.
+    let hoveredCuboids = new Map<string, number>();
+
+    function onCuboidHit(annotationId: string, volume: number): void {
+        if (activeTool !== 'select') return;
+        cuboidClicked = true;
+        pendingHits.push({ annotationId, volume });
+        if (!hitScheduled) {
+            hitScheduled = true;
+            queueMicrotask(() => {
+                const winnerId = pickSmallestFromIntersections(pendingHits);
+                if (winnerId !== null) onselect?.(winnerId);
+                pendingHits = [];
+                hitScheduled = false;
+            });
+        }
+    }
+
+    function hoveredAsIntersections(): CuboidIntersection[] {
+        return [...hoveredCuboids.entries()].map(([annotationId, volume]) => ({
+            annotationId,
+            volume
+        }));
+    }
+
+    function onCuboidHoverEnter(annotationId: string, volume: number): void {
+        hoveredCuboids.set(annotationId, volume);
+        onhover?.(pickSmallestFromIntersections(hoveredAsIntersections()), null);
+    }
+
+    function onCuboidHoverLeave(annotationId: string): void {
+        hoveredCuboids.delete(annotationId);
+        onhover?.(pickSmallestFromIntersections(hoveredAsIntersections()), null);
+    }
+
     $effect(() => {
+        hoveredCuboids.clear();
+        onhover?.(null, null);
         const next = createCuboidRenderItems(cuboids);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
@@ -55,6 +99,10 @@
             canvas: renderer.domElement,
             activeTool,
             onselect,
+            onhover: (id, handle) => {
+                if (id === null) hoveredCuboids.clear();
+                onhover?.(id, handle);
+            },
             isCuboidClicked: () => cuboidClicked,
             resetCuboidClicked: () => (cuboidClicked = false)
         });
@@ -71,10 +119,11 @@
             {item}
             baseColor={base}
             edgeColor={color}
-            {activeTool}
-            {onselect}
-            {onhover}
-            onselected={() => (cuboidClicked = true)}
+            {isHovered}
+            {isSelected}
+            onhit={onCuboidHit}
+            onhoverenter={onCuboidHoverEnter}
+            onhoverleave={onCuboidHoverLeave}
         />
         {#if isSelected}
             <CuboidGizmo />

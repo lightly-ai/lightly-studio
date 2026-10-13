@@ -19,7 +19,7 @@
     ];
 </script>
 
-<div class="pointer-events-none absolute left-1 top-1 z-20">
+<div class="pointer-events-none absolute left-0 top-0 z-20 ml-5 mt-4">
     <nav
         class="pointer-events-auto flex select-none flex-col items-stretch gap-1 rounded-lg bg-muted p-1 shadow-md"
         data-testid="workspace-tool-rail"

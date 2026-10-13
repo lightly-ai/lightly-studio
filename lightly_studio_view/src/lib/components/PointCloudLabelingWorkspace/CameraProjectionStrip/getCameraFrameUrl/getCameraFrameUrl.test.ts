@@ -21,12 +21,13 @@ describe('getCameraFrameUrl', () => {
         datasetId: 'dataset-1',
         recordingId: 'recording-1',
         channelId: 3,
-        timestampNs: '1234567890'
+        keyframeTimestampNs: '1234567890',
+        logTimeNs: '1234567990'
     };
 
     it("builds the camera-frame URL from the client's base URL and route template", () => {
         expect(getCameraFrameUrl(defaultParams)).toBe(
-            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=1234567890`
+            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=1234567890&log_time_ns=1234567990`
         );
     });
 

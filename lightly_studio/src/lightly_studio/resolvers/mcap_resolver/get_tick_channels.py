@@ -9,10 +9,16 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.group import SampleGroupLinkTable
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionTable,
+)
 from lightly_studio.models.sample import SampleTable
 
 
-def get_tick_channels(session: Session, group_sample_id: UUID) -> dict[str, McapTable]:
+def get_tick_channels(
+    session: Session, group_sample_id: UUID
+) -> dict[str, tuple[McapTable, McapDataType]]:
     """Return the seek locator for each sensor channel in one synchronized group (tick).
 
     A tick is one moment in time where every sensor was sampled together: a lidar
@@ -26,11 +32,16 @@ def get_tick_channels(session: Session, group_sample_id: UUID) -> dict[str, Mcap
 
     Returns:
         A mapping from sensor slot name (e.g. ``"front"``, ``"pcl_front"``) to the
-        MCAP seek locator for that sensor's message at this tick. Slots with no
-        recorded MCAP message are omitted.
+        MCAP seek locator for that sensor's message at this tick and the slot's data
+        type (video frame or point cloud). Slots with no recorded MCAP message are
+        omitted.
     """
     statement = (
-        select(GroupComponentDefinitionTable.group_component_name, McapTable)
+        select(
+            GroupComponentDefinitionTable.group_component_name,
+            McapTable,
+            McapGroupComponentDefinitionTable.mcap_data_type,
+        )
         .join(SampleTable, col(SampleTable.sample_id) == col(McapTable.sample_id))
         .join(
             SampleGroupLinkTable,
@@ -40,7 +51,12 @@ def get_tick_channels(session: Session, group_sample_id: UUID) -> dict[str, Mcap
             GroupComponentDefinitionTable,
             col(GroupComponentDefinitionTable.collection_id) == col(SampleTable.collection_id),
         )
+        .join(
+            McapGroupComponentDefinitionTable,
+            col(McapGroupComponentDefinitionTable.collection_id)
+            == col(GroupComponentDefinitionTable.collection_id),
+        )
         .where(col(SampleGroupLinkTable.parent_sample_id) == group_sample_id)
     )
     rows = session.exec(statement).all()
-    return dict(rows)
+    return {name: (mcap, McapDataType(data_type)) for name, mcap, data_type in rows}

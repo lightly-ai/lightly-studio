@@ -1,5 +1,6 @@
 dist
 build
+sourcemaps
 .venv
 *.egg-info
 __pycache__
@@ -17,6 +18,9 @@ dataset_examples
 
 # Generated API schema
 openapi.json
+
+# Cache file for make export-schema (skips re-export when Python sources unchanged)
+.schema-cache
 
 # Coverage artifacts from `make test-coverage`. `.coverage.*` are the per-worker
 # shards pytest-cov writes under `-n auto`; an interrupted run leaves them behind.

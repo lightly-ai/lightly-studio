@@ -8,13 +8,14 @@
         component: PointCloudLabelingWorkspace,
         tags: ['autodocs'],
         args: {
-            sampleId: 'sample-1234',
+            datasetId: 'dataset-1234',
+            annotationSourceCollectionId: 'group-collection-1234',
+            sequenceId: 'sequence-1234',
             sourcePath: [
                 { label: 'Home', href: '#' },
                 { label: 'City drive recordings', href: '#' },
                 { label: 'run-2026-04-18 · frame 128' }
             ],
-            onExit: fn(),
             onRetry: fn()
         }
     });

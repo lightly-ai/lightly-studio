@@ -2,7 +2,15 @@ import { Box3, BufferAttribute, Vector3 } from 'three';
 import { turboInto } from './colormap';
 
 /** Determines how points are colored. */
-export type ColorMode = 'none' | 'intensity' | 'height' | 'rgb';
+export type ColorMode =
+    | 'none'
+    | 'intensity'
+    | 'height'
+    | 'distance'
+    | 'density'
+    | 'height-distance'
+    | 'height-density'
+    | 'rgb';
 
 /** Neutral gray used as a fallback color for points without explicit data. */
 const NEUTRAL_GRAY = 0.5;
@@ -49,24 +57,72 @@ export function buildColorBuffer(params: BuildColorBufferParams): void {
         colors.fill(NEUTRAL_GRAY, 0, count * 3);
         return;
     }
-    fillGradient(params, colorMode === 'intensity');
+    fillGradient(params, getGradientMetrics(colorMode));
 }
 
-/** Color the buffer with a turbo gradient over intensity or height values. */
-function fillGradient(params: BuildColorBufferParams, useIntensity: boolean): void {
-    const { positions, intensities, count, colors, intensityRange } = params;
-    const valueAt = (i: number): number => (useIntensity ? intensities[i] : positions[i * 3 + 2]);
-    const [minVal, maxVal] =
-        useIntensity && intensityRange ? intensityRange : computeRange(valueAt, count);
-    const range = maxVal - minVal;
-    const invRange = range === 0 ? 0 : 1 / range;
+type GradientMetric = 'intensity' | 'height' | 'distance' | 'density';
 
+function getGradientMetrics(mode: ColorMode): GradientMetric[] {
+    if (mode === 'height-distance') return ['height', 'distance'];
+    if (mode === 'height-density') return ['height', 'density'];
+    if (mode === 'intensity') return ['intensity'];
+    if (mode === 'distance') return ['distance'];
+    if (mode === 'density') return ['density'];
+    return ['height'];
+}
+
+/** Color points by one or more normalized spatial metrics. */
+function fillGradient(params: BuildColorBufferParams, metrics: GradientMetric[]): void {
+    const { count, colors } = params;
+    const normalizedValues = metrics.map((metric) => {
+        const values = getMetricValues(params, metric);
+        const [minVal, maxVal] =
+            metric === 'intensity' && params.intensityRange
+                ? params.intensityRange
+                : computeRange((i) => values[i], count);
+        const invRange = maxVal === minVal ? 0 : 1 / (maxVal - minVal);
+        return values.map((value) => Math.max(0, Math.min(1, (value - minVal) * invRange)));
+    });
     for (let i = 0; i < count; i++) {
-        let t = (valueAt(i) - minVal) * invRange;
-        if (t < 0) t = 0;
-        else if (t > 1) t = 1;
-        turboInto(useIntensity ? Math.sqrt(t) : t, colors, i * 3);
+        const t = normalizedValues.reduce((sum, values) => sum + values[i], 0) / metrics.length;
+        turboInto(metrics[0] === 'intensity' ? Math.sqrt(t) : t, colors, i * 3);
     }
+}
+
+function getMetricValues(params: BuildColorBufferParams, metric: GradientMetric): Float32Array {
+    const { positions, count } = params;
+    if (metric === 'intensity') return params.intensities;
+    if (metric === 'height') {
+        return Float32Array.from({ length: count }, (_, i) => positions[i * 3 + 2]);
+    }
+    if (metric === 'distance') {
+        return Float32Array.from({ length: count }, (_, i) => {
+            const offset = i * 3;
+            return Math.hypot(positions[offset], positions[offset + 1], positions[offset + 2]);
+        });
+    }
+    return getDensityValues(params);
+}
+
+/** Return the number of points in each point's 0.5 m spatial cell. */
+function getDensityValues(params: BuildColorBufferParams): Float32Array {
+    const { positions, count } = params;
+    const cellSize = 0.5;
+    const cellFor = (coordinate: number) => Math.floor(coordinate / cellSize);
+    const cellKeyAt = (i: number) => {
+        const offset = i * 3;
+        return `${cellFor(positions[offset])},${cellFor(positions[offset + 1])},${cellFor(positions[offset + 2])}`;
+    };
+    const counts = new Map<string, number>();
+    for (let i = 0; i < count; i++) {
+        const key = cellKeyAt(i);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const values = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+        values[i] = Math.log1p(counts.get(cellKeyAt(i)) ?? 1);
+    }
+    return values;
 }
 
 /** Return the [min, max] of valueAt over the first count points. */

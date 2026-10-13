@@ -25,6 +25,7 @@ def test_get_settings_creates_default_settings(
     assert settings.show_sample_filenames is False
     assert settings.show_bounding_boxes_for_segmentation is True
     assert settings.enforce_coloring_by_class is False
+    assert settings.key_toolbar_slic == "a"
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
 
@@ -54,6 +55,7 @@ def test_set_settings_updates_grid_view_rendering(
         key_toolbar_drag="s",
         key_toolbar_bounding_box="m",
         key_toolbar_segmentation_mask="b",
+        key_toolbar_slic="f",
         key_toolbar_brush="r",
         key_toolbar_eraser="x",
     )
@@ -75,6 +77,7 @@ def test_set_settings_updates_grid_view_rendering(
     assert updated_settings.key_toolbar_drag == "s"
     assert updated_settings.key_toolbar_bounding_box == "m"
     assert updated_settings.key_toolbar_segmentation_mask == "b"
+    assert updated_settings.key_toolbar_slic == "f"
     assert updated_settings.key_toolbar_brush == "r"
     assert updated_settings.key_toolbar_eraser == "x"
 
@@ -87,5 +90,6 @@ def test_set_settings_updates_grid_view_rendering(
     assert settings.show_annotation_text_labels == current_settings.show_annotation_text_labels
     assert settings.show_bounding_boxes_for_segmentation is False
     assert settings.enforce_coloring_by_class is True
+    assert settings.key_toolbar_slic == "f"
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"

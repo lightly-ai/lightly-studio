@@ -206,6 +206,7 @@ class AnnotationView(BaseModel):
     temporal_span_details: Optional[TemporalSpanView] = None
     object_track_id: Optional[UUID] = None
     object_track_number: Optional[int] = None
+    parent_object_track_number: Optional[int] = None
 
     tags: list[AnnotationViewTag] = []
 
@@ -234,6 +235,9 @@ class AnnotationView(BaseModel):
             object_track_id=annotation.object_track_id,
             object_track_number=annotation.object_track.object_track_number
             if annotation.object_track
+            else None,
+            parent_object_track_number=annotation.object_track.parent_object_track.object_track_number
+            if annotation.object_track and annotation.object_track.parent_object_track
             else None,
             temporal_span_details=TemporalSpanView(
                 start_time_s=annotation.temporal_span_details.start_time_s,

@@ -15,3 +15,16 @@ required-version = "==0.12.6"
 # used for S3 mocking in tests). The lightly_train plugin's omegaconf/hydra require
 # antlr 4.9.* and crash on import with 4.13.x, so we pin it back to 4.9.3.
 constraint-dependencies = ["antlr4-python3-runtime==4.9.3"]
+# The `cpu` and `gpu` groups of lightly-studio select the torch build. They conflict, so
+# uv locks one resolution for each. See lightly_studio/pyproject.toml.
+conflicts = [
+    [
+        { package = "lightly-studio", group = "cpu" },
+        { package = "lightly-studio", group = "gpu" },
+    ],
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

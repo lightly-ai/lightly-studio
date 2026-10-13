@@ -8,11 +8,15 @@
         annotation: CuboidAnnotation;
         /** Resolved human-readable annotation class name. */
         annotationClassName: string;
+        /** Human-readable annotation source name, when available. */
+        annotationSourceName?: string;
     }
 
-    let { annotation, annotationClassName }: Props = $props();
+    let { annotation, annotationClassName, annotationSourceName }: Props = $props();
 
-    const tooltip = $derived(createCuboidTooltip({ annotation, annotationClassName }));
+    const tooltip = $derived(
+        createCuboidTooltip({ annotation, annotationClassName, annotationSourceName })
+    );
 </script>
 
 <div
@@ -35,14 +39,16 @@
             <dt class="font-medium text-muted-foreground">Rotation (rx / ry / rz)</dt>
             <dd>{tooltip.rotation}</dd>
         </div>
-        <div class="space-y-0.5">
-            <dt class="font-medium text-muted-foreground">Annotation source</dt>
-            <dd>{tooltip.annotationSourceId}</dd>
-        </div>
-        {#if tooltip.trackId}
+        {#if tooltip.annotationSourceName}
             <div class="space-y-0.5">
-                <dt class="font-medium text-muted-foreground">Track ID</dt>
-                <dd>{tooltip.trackId}</dd>
+                <dt class="font-medium text-muted-foreground">Annotation source</dt>
+                <dd>{tooltip.annotationSourceName}</dd>
+            </div>
+        {/if}
+        {#if tooltip.trackNumber !== null}
+            <div class="space-y-0.5">
+                <dt class="font-medium text-muted-foreground">Track number</dt>
+                <dd>{tooltip.trackNumber}</dd>
             </div>
         {/if}
     </dl>

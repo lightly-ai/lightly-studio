@@ -139,34 +139,31 @@ describe('routes', () => {
         });
 
         it('should generate correct point-cloud labeling route', () => {
-            const testSampleId = '456';
             const testSequenceId = 'seq-789';
             expect(
                 routeHelpers.toPointCloudLabeling({
-                    sampleId: testSampleId,
                     datasetId: testDatasetId,
+                    collectionType: testCollectionType,
                     collectionId: testCollectionId,
                     sequenceId: testSequenceId
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/point-clouds/${testCollectionId}/${testSampleId}?sequence_id=${testSequenceId}`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/point-clouds/${testSequenceId}`
             );
         });
 
-        it('should generate correct point-cloud labeling route with collection type and group id', () => {
-            const testSampleId = '456';
+        it('should generate correct point-cloud labeling route with group id', () => {
             const testSequenceId = 'seq-789';
             expect(
                 routeHelpers.toPointCloudLabeling({
-                    sampleId: testSampleId,
                     datasetId: testDatasetId,
+                    collectionType: testCollectionType,
                     collectionId: testCollectionId,
                     sequenceId: testSequenceId,
-                    collectionType: testCollectionType,
                     groupId: 'group-1'
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/point-clouds/${testCollectionId}/${testSampleId}?sequence_id=${testSequenceId}&collection_type=${testCollectionType}&group_id=group-1`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/point-clouds/${testSequenceId}?group_id=group-1`
             );
         });
     });

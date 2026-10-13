@@ -73,6 +73,7 @@ def test_get_summary(test_client: TestClient, db_session: Session) -> None:
     assert response.status_code == HTTP_STATUS_OK
     body = response.json()
     assert body["recording_id"] == str(fixture.recording_id)
+    assert body["file_name"] == "drive_001.mcap"
     assert body["format"] == "mcap"
     assert body["start_log_time_ns"] is None  # no ticks indexed in fixture
     assert [channel["group_component_name"] for channel in body["camera_channels"]] == ["front"]

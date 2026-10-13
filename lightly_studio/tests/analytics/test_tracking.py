@@ -1,4 +1,5 @@
 import atexit
+import logging
 import threading
 import time
 from collections.abc import Generator, Mapping
@@ -202,6 +203,21 @@ def test_create_tracker__when_analytics_are_disabled(mocker: MockerFixture) -> N
     mocker.patch.object(posthog_project, "get_project_key", return_value="phc_test")
 
     assert isinstance(tracking._create_tracker(), tracking.NoOpTracker)
+
+
+def test_create_tracker__when_init_raises(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A broken PostHog init must fall back to NoOpTracker and log a warning."""
+    mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
+    mocker.patch.object(posthog_project, "get_project_key", return_value="phc_test")
+    mocker.patch.object(tracking, "PostHogTracker", side_effect=RuntimeError("init failed"))
+
+    with caplog.at_level(logging.WARNING, logger="lightly_studio.analytics.tracking"):
+        result = tracking._create_tracker()
+
+    assert isinstance(result, tracking.NoOpTracker)
+    assert "Could not initialize the analytics tracker" in caplog.text
 
 
 def test_create_tracker__reports_to_the_project_for_the_cohort(mocker: MockerFixture) -> None:

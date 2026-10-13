@@ -14,11 +14,13 @@
         className: string;
         /** Whether this row's details are visible. */
         isSelected: boolean;
+        /** Human-readable annotation source name, when available. */
+        annotationSourceName?: string;
         /** Toggles the row's expanded state. */
         onToggle: (cuboidId: string) => void;
     }
 
-    let { cuboid, color, className, isSelected, onToggle }: Props = $props();
+    let { cuboid, color, className, isSelected, annotationSourceName, onToggle }: Props = $props();
 </script>
 
 <div
@@ -49,7 +51,7 @@
     </button>
     {#if isSelected}
         <div class="px-4 pb-4 pt-1">
-            <PointCloudAnnotationDetails annotation={cuboid} />
+            <PointCloudAnnotationDetails {annotationSourceName} annotation={cuboid} />
         </div>
     {/if}
 </div>

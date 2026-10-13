@@ -2,7 +2,10 @@
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
+    import { Select } from '$lib/components/Select';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
+    import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
@@ -30,7 +33,6 @@
     import PlotPanelLegend from './PlotPanelLegend.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
-    import { isEqual } from 'lodash-es';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import {
         EXCLUDED_BY_FILTERS_CATEGORY,
@@ -75,8 +77,6 @@
 
     const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
-    // Only videos still track their lasso selection as a resolved sample-id list; images and
-    // annotations send it to the backend as region geometry (see LIG-9903).
     const activeSampleIds = $derived(
         isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
     );
@@ -135,7 +135,16 @@
         annotationLabels
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
+    const PLOT_LAYOUT_ITEMS = [
+        { value: 'pacmap', label: 'PaCMAP' },
+        { value: 'text', label: 'Text' }
+    ];
+    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, commitTextAxes } = usePlotLayout(
+        untrack(() => collectionId)
+    );
+    const isAwaitingAxes = $derived($plotLayout === 'text' && $plotAxes === null);
+
+    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
     const {
         data: arrowData,
@@ -180,13 +189,16 @@
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
-    // Images and annotations commit the lasso as region geometry, not as sample ids. After the
+    // Videos, images and annotations commit the lasso as region geometry. After the
     // selection is committed the live rangeSelection is cleared, so the plot re-derives the
-    // highlight from the stored polygon to keep reflecting the actually selected points. Images
-    // keep the region on the image filter store; annotations in the shared plot region store.
+    // highlight from the stored polygon to keep reflecting the actually selected points. Videos
+    // and images keep the region on their filter stores; annotations use the shared plot store.
     const committedHighlightRegion = $derived(
-        isImages
-            ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null)
+        isImages || isVideos
+            ? ((isVideos
+                  ? $videoFilter?.sample_filter?.embedding_region
+                  : $imageFilter?.sample_filter?.embedding_region
+              )?.polygon ?? null)
             : isAnnotations
               ? ($annotationPlotRegion?.polygon ?? null)
               : null
@@ -223,20 +235,22 @@
     const legendEntries = $derived.by(() =>
         getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
     );
-    // Images and annotations send the lasso to the backend as region geometry rather than a
-    // resolved sample-id list (see LIG-9903); the sidebar chip reads the selected count from the
-    // plot-propagated count store, and clearing removes the region entirely. Images keep the
-    // region on the image filter store; annotations have no such store, so it lives in the
-    // shared annotation-plot region store instead.
+    // Videos, images and annotations send the lasso as region geometry rather than a resolved
+    // sample-id list. The sidebar chip reads the count from the plot-propagated store, and
+    // clearing removes the region entirely.
     const saveRegion = (region: EmbeddingRegion | null) => {
         if (isImages) {
             imageFilters.updateEmbeddingRegion(region);
+        } else if (isVideos) {
+            videoFilters.updateEmbeddingRegion(region);
         } else {
             saveAnnotationRegion(region);
         }
     };
+    // A region drawn on the plot carries the axes of the layout, so the server resolves the
+    // region in the same layout.
     const commitRegion = (polygon: Point[], count: number) => {
-        saveRegion({ polygon });
+        saveRegion($plotAxes ? { polygon, axes: $plotAxes } : { polygon });
         setPlotSelectionCount(collectionId, count);
     };
     const clearRegion = () => {
@@ -258,28 +272,6 @@
         // Selecting nothing, or every selectable point, is equivalent to no filter at all.
         const selectsNothingOrEverything =
             selectedCount === 0 || (selectableCount !== null && selectedCount === selectableCount);
-
-        // Videos still commit the resolved sample-id list; images and annotations send geometry.
-        if (isVideos) {
-            const currentSampleIds = $videoFilter?.sample_filter?.sample_ids ?? [];
-            if (selectsNothingOrEverything) {
-                if (currentSampleIds.length > 0) {
-                    videoFilters.updateSampleIds([]);
-                }
-            } else if (!isEqual($selectedSampleIds, currentSampleIds)) {
-                videoFilters.updateSampleIds($selectedSampleIds);
-                if (pendingSelectionType) {
-                    trackEvent('embedding_selection_made', {
-                        collection_id: collectionId,
-                        selection_type: pendingSelectionType,
-                        selected_count: selectedCount
-                    });
-                }
-            }
-            setRangeSelection(null);
-            pendingSelectionType = null;
-            return;
-        }
 
         if (selectsNothingOrEverything) {
             clearRegion();
@@ -373,17 +365,15 @@
 
     const clearSelection = () => {
         setRangeSelection(null);
-        if (isVideos) {
-            videoFilters.updateSampleIds([]);
-        } else {
-            clearRegion();
-        }
+        clearRegion();
     };
-    // Images and annotations track their committed selection as region geometry, not sample ids:
-    // images on the image filter store, annotations in the shared annotation-plot region store.
+    // Videos and images track their committed selection on their filter stores; annotations use
+    // the shared plot region store.
     const regionSelected = $derived(
-        isImages
-            ? ($imageFilter?.sample_filter?.embedding_region ?? null) !== null
+        isImages || isVideos
+            ? ((isVideos
+                  ? $videoFilter?.sample_filter?.embedding_region
+                  : $imageFilter?.sample_filter?.embedding_region) ?? null) !== null
             : isAnnotations
               ? $annotationPlotRegion !== null
               : false
@@ -426,6 +416,20 @@
     let viewportState: ViewportState | null = $state(null);
     const onViewportState = (state: ViewportState) => {
         viewportState = state;
+    };
+
+    // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
+    // region belongs to the layout it was drawn on.
+    const resetForNewLayout = () => {
+        viewportState = null;
+        if (hasActiveSelection) clearSelection();
+    };
+    const selectPlotLayout = (layout: PlotLayout) => {
+        plotLayout.set(layout);
+        resetForNewLayout();
+    };
+    const commitPlotAxes = async (textAxes: Parameters<typeof commitTextAxes>[0]) => {
+        if (await commitTextAxes(textAxes)) resetForNewLayout();
     };
 
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
@@ -480,7 +484,17 @@
 
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="text-lg font-semibold">Embedding Plot</div>
+        <div class="flex items-center gap-3">
+            <div class="text-lg font-semibold">Embedding Plot</div>
+            <Select
+                items={PLOT_LAYOUT_ITEMS}
+                value={$plotLayout}
+                onValueChange={(value) => selectPlotLayout(value as PlotLayout)}
+                size="xs"
+                class="w-28"
+                testId="plot-layout-select"
+            />
+        </div>
         <Button
             variant="ghost"
             buttonProps={{
@@ -493,13 +507,19 @@
             ✕
         </Button>
     </div>
-    <div class="flex min-h-0 flex-1 flex-col space-y-6">
-        {#if embeddingsData.isLoading}
-            <div class="flex items-center justify-center p-8">
+    <!-- Relative: the text-axis inputs overlay every state below, so the user can fix the texts
+         while the plot loads or shows an error. -->
+    <div class="relative flex min-h-0 flex-1 flex-col">
+        {#if isAwaitingAxes}
+            <div class="flex flex-1 items-center justify-center p-8 text-muted-foreground">
+                <div class="text-lg">Type the four axis texts and press Enter.</div>
+            </div>
+        {:else if embeddingsData.isLoading}
+            <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
         {:else if errorText}
-            <div class="flex items-center justify-center p-8 text-red-500">
+            <div class="flex flex-1 items-center justify-center p-8 text-red-500">
                 <div class="text-lg">Error loading embeddings: {errorText}</div>
             </div>
         {:else if isReady}
@@ -567,6 +587,13 @@
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">No data available</div>
             </div>
+        {/if}
+        {#if $plotLayout === 'text'}
+            <PlotTextAxesInputs
+                bind:draft={$textAxesDraft}
+                onCommit={commitPlotAxes}
+                isPending={$isEmbeddingAxes}
+            />
         {/if}
     </div>
     {#if isReady}

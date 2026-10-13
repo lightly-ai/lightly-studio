@@ -10,7 +10,7 @@ from pytest_mock import MockerFixture
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.mcap import add_mcaps, mcap_dataset
 from lightly_studio.core.mcap.component import McapComponentSpec
-from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.mcap_sample import McapSample
 from lightly_studio.core.mcap.reader import McapFileReader
@@ -149,13 +149,13 @@ def test_index_recording__pairs_the_closest_frame(
     ]
 
 
-def test_index_recording__drops_unpaired_ticks(
+def test_index_recording__keeps_ticks_without_a_paired_component(
     patch_collection: None,  # noqa: ARG001
     mcap_path: Path,
 ) -> None:
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
-    # No camera frame is within 1 ms of a sweep, so no group is complete.
+    # No camera frame is within 1 ms of a sweep, so the camera is left off every tick.
     sequence_sample_id = add_mcaps.index_recording(
         dataset=dataset,
         mcap_path=str(mcap_path),
@@ -164,8 +164,13 @@ def test_index_recording__drops_unpaired_ticks(
         max_pairing_diff_ns=1_000_000,
     )
 
-    assert _get_sample_links(sequence_sample_id=sequence_sample_id) == []
-    # The channel is a property of the topic, so it is filled even with no paired ticks.
+    links = _get_sample_links(sequence_sample_id=sequence_sample_id)
+    assert [link.timestamp_ns for link in links] == list(helpers.LIDAR_LOG_TIMES_NS)
+    for link in links:
+        group_sample = dataset.group_dataset.get_sample(sample_id=link.sample_id)
+        assert group_sample[VIDEO_COMPONENT] is None
+        assert isinstance(group_sample[POINT_CLOUD_COMPONENT], McapSample)
+    # The channel is a property of the topic, so it is filled even with no paired frames.
     front = dataset.group_dataset.get_component(name=VIDEO_COMPONENT)
     pcl_front = dataset.group_dataset.get_component(name=POINT_CLOUD_COMPONENT)
     assert front.channel_id is not None
@@ -439,6 +444,121 @@ def test_index_recordings__continues_after_a_broken_recording(
 
     assert len(sequence_sample_ids) == 1
     assert _get_sample_links(sequence_sample_id=sequence_sample_ids[0]) != []
+
+
+def test_index_recording__missing_topics_are_all_named(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+) -> None:
+    components = [
+        McapComponentSpec(
+            name="front",
+            mcap_data_type=McapDataType.VIDEO_FRAME,
+            topic="/cam/wrong",
+            camera_info_topic="/cam/wrong_info",
+        ),
+        McapComponentSpec(
+            name=POINT_CLOUD_COMPONENT,
+            mcap_data_type=McapDataType.POINT_CLOUD,
+            topic=helpers.LIDAR_POINTS_TOPIC,
+            frame_id=helpers.LIDAR_FRAME_ID,
+        ),
+    ]
+    dataset = McapDataset.create(components=components, name="perception")
+
+    with pytest.raises(TopicNotFoundError) as exc_info:
+        add_mcaps.index_recording(
+            dataset=dataset,
+            mcap_path=str(mcap_path),
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=components,
+        )
+
+    message = str(exc_info.value)
+    assert "'/cam/wrong' (component 'front')" in message
+    assert "'/cam/wrong_info' (camera info of component 'front')" in message
+    assert helpers.LIDAR_POINTS_TOPIC in message.split("Topics in the file:")[1]
+
+
+def test_index_recording__warns_when_no_component_pairs_to_sync(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+    sequence_sample_id = add_mcaps.index_recording(
+        dataset=dataset,
+        mcap_path=str(mcap_path),
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=1,
+    )
+
+    links = _get_sample_links(sequence_sample_id=sequence_sample_id)
+    assert [link.timestamp_ns for link in links] == list(helpers.LIDAR_LOG_TIMES_NS)
+    assert "No message of component(s) 'front'" in caplog.text
+    assert "within 1 ns" in caplog.text
+
+
+def test_index_recordings__logs_reason_of_not_an_mcap_file(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+    not_mcap = tmp_path / "text.mcap"
+    not_mcap.write_text("this is not an mcap file")
+
+    with pytest.raises(AllInputFilesFailedError):
+        add_mcaps.index_recordings(
+            dataset=dataset,
+            mcap_paths=[str(not_mcap)],
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+        )
+
+    assert f"Cannot index '{not_mcap}'" in caplog.text
+
+
+def test_index_recordings__missing_file_is_reported(
+    patch_collection: None,  # noqa: ARG001
+    mcap_path: Path,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+    missing = tmp_path / "missing.mcap"
+
+    sequence_sample_ids = add_mcaps.index_recordings(
+        dataset=dataset,
+        mcap_paths=[str(missing), str(mcap_path)],
+        sync_component=POINT_CLOUD_COMPONENT,
+        components=COMPONENTS,
+        max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+    )
+
+    assert len(sequence_sample_ids) == 1
+    assert f"Cannot index '{missing}': the file does not exist." in caplog.text
+
+
+def test_index_recordings__logs_missing_topics_of_broken_recording(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+    other_path = helpers.write_unchunked_mcap(tmp_path / "unchunked.mcap")
+
+    with pytest.raises(AllInputFilesFailedError):
+        add_mcaps.index_recordings(
+            dataset=dataset,
+            mcap_paths=[str(other_path)],
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+        )
+
+    assert helpers.CAMERA_VIDEO_TOPIC in caplog.text
 
 
 def test_index_recordings__repeated_reference_frame(

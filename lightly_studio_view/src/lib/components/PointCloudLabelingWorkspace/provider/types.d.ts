@@ -18,6 +18,14 @@ export interface PointCloudWorkspaceContext {
     readonly status: WorkspaceStatus;
     readonly lidarChannels: ChannelSummaryView[];
     readonly cameraChannels: ChannelSummaryView[];
+    /** Frames the scene can be shown in. Empty until the recording is indexed with some. */
+    readonly referenceFrames: readonly { readonly name: string }[];
+    /** Frame the point clouds are shown in. Empty when `referenceFrames` is empty. */
+    readonly referenceFrameId: string;
+    /** Whether the active tick is shown in the sensor frames, because it has no transform. */
+    readonly isShowingSensorFrames: boolean;
+    /** Shows the point clouds in another of `referenceFrames`. Ignores an unknown frame. */
+    selectReferenceFrame: (frameId: string) => void;
     /** Details for the active tick, used to resolve channel payloads. */
     readonly tickDetails: ReturnType<typeof useTickDetails>['tickDetails'];
     /** Combined point cloud for all lidar channels in the active tick. */

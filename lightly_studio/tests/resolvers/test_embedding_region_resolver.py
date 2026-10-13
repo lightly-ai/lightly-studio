@@ -8,6 +8,7 @@ import numpy as np
 from sqlmodel import Session
 
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
+from lightly_studio.models.projection_axes import ProjectionAxes
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import embedding_region_resolver, sample_embedding_resolver
 from tests import helpers_resolvers
@@ -42,6 +43,48 @@ def test_get_sample_ids_in_region__empty_region(db_session: Session) -> None:
     )
 
     assert selected == []
+
+
+def test_get_sample_ids_in_region__axes(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_dimension=3,
+        set_as_default=True,
+    )
+    image_a, image_b = helpers_resolvers.create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="a.png"), [2.0, 0.0, 0.0]),
+            (ImageStub(path="b.png"), [-2.0, 0.0, 0.0]),
+        ],
+    )
+    # In the PaCMAP layout, only sample b is inside the square.
+    _seed_2d_coordinates(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates={
+            image_a.sample_id: (100.0, 100.0),
+            image_b.sample_id: (2.0, 0.0),
+        },
+    )
+    region = EmbeddingRegion(
+        polygon=_square(x_min=1, y_min=-0.5, x_max=3, y_max=0.5).polygon,
+        axes=ProjectionAxes(x=[1.0, 0.0, 0.0], y=[0.0, 1.0, 0.0]),
+    )
+
+    selected = embedding_region_resolver.get_sample_ids_in_region(
+        session=db_session,
+        collection_id=collection.collection_id,
+        region=region,
+    )
+
+    # In the axes layout, only sample a, at (2, 0), is inside the square.
+    assert selected == [image_a.sample_id]
 
 
 def test_get_sample_ids_in_region__no_embedding_model(db_session: Session) -> None:

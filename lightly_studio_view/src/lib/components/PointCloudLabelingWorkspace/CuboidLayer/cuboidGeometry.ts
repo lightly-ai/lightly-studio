@@ -1,4 +1,5 @@
-import { BufferAttribute, BufferGeometry, Quaternion, Vector3 } from 'three';
+import { Quaternion, Vector3 } from 'three';
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import type { Quaternion as DomainQuaternion, Vector3 as DomainVector3 } from '../domain';
 
 // Vertices are ordered by x, then y, then z; each face perimeter is 0 → 1 → 3 → 2.
@@ -46,7 +47,7 @@ export function computeCuboidVertices(
  * @param size - Full local-axis extents in metres.
  * @returns Disposable Three.js line geometry centred at the origin.
  */
-export function createCuboidWireframeGeometry(size: DomainVector3): BufferGeometry {
+export function createCuboidWireframeGeometry(size: DomainVector3): LineSegmentsGeometry {
     const vertices = computeCuboidVertices([0, 0, 0], size, [0, 0, 0, 1]);
     const positions = new Float32Array(EDGE_INDICES.length * 3);
 
@@ -54,8 +55,7 @@ export function createCuboidWireframeGeometry(size: DomainVector3): BufferGeomet
         positions.set(vertices[vertexIndex].toArray(), index * 3);
     });
 
-    const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(positions, 3));
-    geometry.computeBoundingSphere();
+    const geometry = new LineSegmentsGeometry();
+    geometry.setPositions(positions);
     return geometry;
 }

@@ -12,7 +12,8 @@ const defaultProps = {
     datasetId: 'dataset-1',
     recordingId: 'recording-1',
     channelId: 3,
-    timestampNs: '2000',
+    keyframeTimestampNs: '1500',
+    logTimeNs: '2000',
     label: 'front'
 };
 
@@ -32,7 +33,7 @@ describe('CameraProjectionFrame', () => {
 
         expect(screen.getByRole('img', { name: 'front' })).toHaveAttribute(
             'src',
-            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=2000`
+            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=1500&log_time_ns=2000`
         );
         expect(screen.getByText('front')).toBeInTheDocument();
     });
@@ -45,5 +46,15 @@ describe('CameraProjectionFrame', () => {
 
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
         expect(screen.getByText('front')).toBeInTheDocument();
+    });
+
+    it('enlarges the frame in a dialog instead of opening a new tab', async () => {
+        render(CameraProjectionFrame, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
+
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: 'front enlarged' })).toBeInTheDocument();
+        expect(screen.queryByRole('link')).not.toBeInTheDocument();
     });
 });

@@ -14,6 +14,7 @@ export type ShortcutSettingKey =
     | 'keyToolbarDrag'
     | 'keyToolbarBoundingBox'
     | 'keyToolbarSegmentationMask'
+    | 'keyToolbarSlic'
     | 'keyToolbarBrush'
     | 'keyToolbarEraser';
 
@@ -46,6 +47,7 @@ export const shortcutSettings: readonly ShortcutSettingConfig[] = [
         label: 'Toolbar segmentation mask',
         key: 'keyToolbarSegmentationMask'
     },
+    { id: 'toolbar-slic', label: 'AI-Assisted labeling', key: 'keyToolbarSlic' },
     { id: 'toolbar-brush-mode', label: 'Toolbar brush mode', key: 'keyToolbarBrush' },
     { id: 'toolbar-eraser-mode', label: 'Toolbar eraser mode', key: 'keyToolbarEraser' }
 ] as const;

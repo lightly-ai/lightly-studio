@@ -1,3 +1,5 @@
+SCHEMA_CACHE_FILE := .schema-cache
+
 # Postgres E2E test configuration
 POSTGRES_CONTAINER_NAME := lightly-studio-postgres
 POSTGRES_PORT := 5433
@@ -21,8 +23,15 @@ FLOCI_MCAP_FILES ?= datasets/mcap/perception.mcap
 # S3 URI of the first uploaded file — shared by every MCAP example/demo target so
 # bucket, prefix, or file-selection changes stay consistent across all of them.
 FLOCI_MCAP_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/$(notdir $(firstword $(FLOCI_MCAP_FILES)))
-FLOCI_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
-	AWS_ENDPOINT_URL=http://localhost:$(FLOCI_PORT)
+# Local folder of MCAP recordings for the folder-indexing example (all *.mcap files inside are uploaded).
+FLOCI_MCAP_DIR ?= datasets/mcap/
+# S3 folder URI used as EXAMPLES_MCAP_PATH so the example reads the whole prefix.
+FLOCI_MCAP_DIR_S3_URI := s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
+FLOCI_ENV := AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 AWS_ENDPOINT_URL=http://localhost:$(FLOCI_PORT)
+
+# Real (remote) S3 URI for start-example-mcap-remote-s3 — no Floci needed.
+# Usage: make start-example-mcap-remote-s3 MCAP_REMOTE_S3_URI=s3://bucket/path/recording.mcap
+MCAP_REMOTE_S3_URI ?= s3://some-bucket/some-path/recording.mcap
 
 # Floci GCP (GCS emulator) development storage for MCAP recordings.
 FLOCI_GCP_CONTAINER_NAME := lightly-studio-floci-gcp
@@ -57,10 +66,11 @@ endif
 
 # Note: Install target with default dependencies is not necessary as uv will
 # install the default dependencies automatically on e.g. `uv run` etc.
+# Lists the groups and extras that are not installed by default. Add new ones here.
 .PHONY: install-optional-deps
 install-optional-deps:
 	@echo "Installing with optional dependencies..."
-	uv sync --all-groups --all-extras
+	uv sync --group docs --extra cloud-storage
 
 # `--out-dir dist` on every `uv build` below: in a uv workspace `uv build` defaults to the
 # workspace root, so without it the wheel would land in ../dist instead of lightly_studio/dist.
@@ -73,11 +83,22 @@ build: clean build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "$(MAKE) -C ../lightly_studio_view build"
+	@powershell -Command "New-Item -ItemType Directory -Path sourcemaps -Force | Out-Null; Copy-Item -Path ..\lightly_studio_view\build\* -Destination sourcemaps\ -Recurse -Force"
+	@powershell -Command "Get-ChildItem -Path ..\lightly_studio_view\build -Filter *.map -Recurse | Remove-Item -Force"
 	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
 	$(MAKE) -C ../lightly_studio_view build
+	@if [ -n "$(SOURCEMAP)" ] && [ -n "$(POSTHOG_CLI_VERSION)" ] && [ -n "$(RELEASE_VERSION)" ] && [ -n "$(POSTHOG_HOST)" ]; then \
+		npx --yes @posthog/cli@$(POSTHOG_CLI_VERSION) \
+			--host "$(POSTHOG_HOST)" \
+			sourcemap inject --directory ../lightly_studio_view/build \
+			--release-version "$(RELEASE_VERSION)" \
+		|| echo "::warning::PostHog sourcemap inject failed; release continues without injection."; \
+	fi
+	cp -r ../lightly_studio_view/build/ sourcemaps
+	find ../lightly_studio_view/build -name '*.map' -delete
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
 	cp ../lightly_studio_view/src/lib/version.json src/lightly_studio/dist_lightly_studio_view_app/version-info.json
 endif
@@ -208,7 +229,7 @@ start-floci:
 setup-floci: start-floci
 	@for file in $(FLOCI_MCAP_FILES); do \
 		key="$(FLOCI_S3_PREFIX)/$$(basename "$$file")"; \
-		echo "Uploading $$file to s3://$(FLOCI_S3_BUCKET)/$$key..."; \
+		echo "  $$file → s3://$(FLOCI_S3_BUCKET)/$$key"; \
 		$(FLOCI_ENV) aws s3 cp "$$file" "s3://$(FLOCI_S3_BUCKET)/$$key"; \
 	done
 	@echo "Available MCAP recordings:"
@@ -280,17 +301,30 @@ start-e2e-postgres-video-groups: build
 .PHONY: export-schema
 export-schema:
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "if (-not (Test-Path src\lightly_studio\dist_lightly_studio_view_app)) { New-Item -ItemType Directory -Path src\lightly_studio\dist_lightly_studio_view_app | Out-Null }"
-	@powershell -Command "New-Item -ItemType File -Path src\lightly_studio\dist_lightly_studio_view_app\index.html -Force | Out-Null"
-	@echo "Exporting schema for API..."
-	uv run src/lightly_studio/export_schema.py
-	@powershell -Command "Remove-Item -Path src\lightly_studio\dist_lightly_studio_view_app -Recurse -Force -ErrorAction SilentlyContinue"
+	@powershell -NoProfile -Command "& { \
+		$$currentHash = (python -c \"import hashlib,os; h=hashlib.md5(); [h.update(open(os.path.join(r,f),'rb').read()) for r,_,fs in sorted(os.walk('src/lightly_studio')) for f in sorted(fs) if f.endswith('.py')]; print(h.hexdigest())\"); \
+		$$cachedHash = if (Test-Path '$(SCHEMA_CACHE_FILE)') { (Get-Content '$(SCHEMA_CACHE_FILE)').Trim() } else { '' }; \
+		if ($$currentHash -eq $$cachedHash) { Write-Host 'Schema is up-to-date, skipping export.'; exit 0 }; \
+		if (-not (Test-Path 'src\lightly_studio\dist_lightly_studio_view_app')) { New-Item -ItemType Directory -Path 'src\lightly_studio\dist_lightly_studio_view_app' | Out-Null }; \
+		New-Item -ItemType File -Path 'src\lightly_studio\dist_lightly_studio_view_app\index.html' -Force | Out-Null; \
+		Write-Host 'Exporting schema for API...'; \
+		uv run src/lightly_studio/export_schema.py; \
+		Remove-Item -Path 'src\lightly_studio\dist_lightly_studio_view_app' -Recurse -Force -ErrorAction SilentlyContinue; \
+		Set-Content -Path '$(SCHEMA_CACHE_FILE)' -Value $$currentHash \
+	}"
 else
-	mkdir -p src/lightly_studio/dist_lightly_studio_view_app
-	touch src/lightly_studio/dist_lightly_studio_view_app/index.html
-	@echo "Exporting schema for API..."
-	uv run src/lightly_studio/export_schema.py
-	rm -rf src/lightly_studio/dist_lightly_studio_view_app
+	@CURRENT_HASH=$$(python3 -c "import hashlib,os; h=hashlib.md5(); [h.update(open(os.path.join(r,f),'rb').read()) for r,_,fs in sorted(os.walk('src/lightly_studio')) for f in sorted(fs) if f.endswith('.py')]; print(h.hexdigest())"); \
+	CACHED_HASH=$$(cat $(SCHEMA_CACHE_FILE) 2>/dev/null || echo ""); \
+	if [ "$$CURRENT_HASH" != "$$CACHED_HASH" ]; then \
+		mkdir -p src/lightly_studio/dist_lightly_studio_view_app; \
+		touch src/lightly_studio/dist_lightly_studio_view_app/index.html; \
+		echo "Exporting schema for API..."; \
+		uv run src/lightly_studio/export_schema.py; \
+		rm -rf src/lightly_studio/dist_lightly_studio_view_app; \
+		echo "$$CURRENT_HASH" > $(SCHEMA_CACHE_FILE); \
+	else \
+		echo "Schema is up-to-date, skipping export."; \
+	fi
 endif
 
 .PHONY: export-version
@@ -315,6 +349,44 @@ start-example:
 start-example-mcap-s3: setup-floci build
 	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
 	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+
+# Runs the MCAP sequence-indexing example against a real (remote) S3 URI without
+# starting the local Floci emulator.  AWS credentials must be available in the
+# environment (AWS_PROFILE, AWS_ACCESS_KEY_ID/SECRET, instance role, etc.).
+#
+# Usage:
+#   make start-example-mcap-remote-s3
+#   make start-example-mcap-remote-s3 MCAP_REMOTE_S3_URI=s3://other-bucket/path/file.mcap
+.PHONY: start-example-mcap-remote-s3
+start-example-mcap-remote-s3: build
+	@echo "Starting MCAP sequence example (from remote S3: $(MCAP_REMOTE_S3_URI))..."
+	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(MCAP_REMOTE_S3_URI) \
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+
+# Runs the MCAP sequence-indexing example from S3 for a folder of recordings: syncs all
+# *.mcap files in FLOCI_MCAP_DIR to the local Floci S3 emulator, then points the example
+# at the uploaded s3:// prefix so it indexes every recording in one pass.
+# Point FLOCI_MCAP_DIR at a folder of recordings whose topics match COMPONENTS in
+# example_mcap.py (edit that file for your own sensor topics).
+#
+# Usage:
+#   make start-example-mcap-folder-s3 FLOCI_MCAP_DIR=/path/to/mcap-folder/
+.PHONY: setup-floci-dir
+setup-floci-dir: start-floci
+	@echo "Uploading *.mcap files from $(FLOCI_MCAP_DIR) to s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/..."
+	@for file in "$(FLOCI_MCAP_DIR)"/*.mcap; do \
+		key="$(FLOCI_S3_PREFIX)/$$(basename "$$file")"; \
+		echo "  $$file → s3://$(FLOCI_S3_BUCKET)/$$key"; \
+		$(FLOCI_ENV) aws s3 cp "$$file" "s3://$(FLOCI_S3_BUCKET)/$$key"; \
+	done
+	@echo "Available MCAP recordings:"
+	@$(FLOCI_ENV) aws s3 ls s3://$(FLOCI_S3_BUCKET)/$(FLOCI_S3_PREFIX)/
+
+.PHONY: start-example-mcap-folder-s3
+start-example-mcap-folder-s3: setup-floci-dir build
+	@echo "Starting MCAP folder example (from S3: $(FLOCI_MCAP_DIR_S3_URI))..."
+	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_DIR_S3_URI) \
 		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Demo targets for the camera-frame endpoint.
@@ -442,6 +514,7 @@ else
 	rm -rf *.db
 	rm -rf *.db.wal
 	rm -rf dist/*
+	rm -rf sourcemaps
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -exec rm -rf {} +

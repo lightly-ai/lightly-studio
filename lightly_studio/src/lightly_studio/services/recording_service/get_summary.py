@@ -42,4 +42,11 @@ def get_mcap_sequence_summary(
     start_log_time_ns = mcap_resolver.get_start_log_time_ns(
         session=session, sequence_id=sequence_id
     )
-    return MCAPSequenceSummary.from_info(info=info, start_log_time_ns=start_log_time_ns)
+    channel_ids_by_component = mcap_resolver.get_channel_ids_by_component(
+        session=session, sequence_id=sequence_id
+    )
+    return MCAPSequenceSummary.from_info(
+        info=info,
+        start_log_time_ns=start_log_time_ns,
+        channel_ids_by_component=channel_ids_by_component,
+    )

@@ -22,14 +22,20 @@
                 if (active) slicAvailable = true;
             },
             // Unsupported or blocked WASM keeps the toolbar entry hidden.
-            () => {}
+            (error) => console.error('AI-assisted labeling initialization failed', error)
         );
         return () => {
             active = false;
         };
     });
 
-    const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
+    const {
+        showSegmentationTool = true,
+        isPending = false
+    }: {
+        showSegmentationTool?: boolean;
+        isPending?: boolean;
+    } = $props();
 
     const { settingsStore } = useSettings();
     let isSpacePressed = false;
@@ -60,6 +66,12 @@
             if (!showSegmentationTool) return;
             e.preventDefault();
             activateBrush();
+        } else if (key === ($settingsStore.key_toolbar_slic ?? 'a').toLowerCase()) {
+            if (!showSegmentationTool || !slicAvailable) return;
+            e.preventDefault();
+            if (e.repeat || annotationLabelContext.isDrawing || isPending) return;
+            onClickSlic();
+            if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
@@ -167,7 +179,7 @@
     const onClickBrush = () => activateBrush();
 
     const onClickSlic = () => {
-        if (!showSegmentationTool) return;
+        if (!showSegmentationTool || !slicAvailable) return;
 
         const shouldKeepSelectedAnnotation =
             annotationLabelContext.annotationId != null &&
@@ -224,8 +236,8 @@
         {#if showSegmentationTool && slicAvailable}
             <SampleDetailsToolbarTooltip
                 label="AI-Assisted labeling"
-                action="toggle superpixels"
-                hint="Computes SLIC superpixels for click-to-toggle mask edits"
+                shortcut={($settingsStore.key_toolbar_slic ?? 'a').toUpperCase()}
+                action="activate"
             >
                 <SlicToolbarButton
                     onclick={onClickSlic}

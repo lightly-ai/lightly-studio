@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
         },
 
         build: {
+            sourcemap: process.env.SOURCEMAP ? 'hidden' : false,
             rollupOptions: {
                 output: {
                     manualChunks(id) {

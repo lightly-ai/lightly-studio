@@ -37,3 +37,14 @@ unlabeled data to a trained and evaluated model.
 
     Explore Imagenette in the embedding plot, use the lasso and legend to inspect groups of similar images, and annotate them group by group.
 </div>
+
+## Video
+
+<div class="grid cards wide" markdown>
+
+-   **[QA Egocentric Video Data with Epic-Kitchens-100](epic-kitchens-100.md)**
+
+    [![QA Egocentric Video Data with Epic-Kitchens-100](https://storage.googleapis.com/lightly-public/studio/tutorials/epic-kitchen/epickitchen_overview.png)](epic-kitchens-100.md)
+
+    Do QA on 37000 egocentric kitchen clips: find near-duplicates, low-quality clips, and narrations that do not match the video.
+</div>

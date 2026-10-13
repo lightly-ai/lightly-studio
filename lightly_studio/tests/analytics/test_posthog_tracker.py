@@ -1,4 +1,6 @@
 import logging
+import sys
+import threading
 from collections.abc import Generator
 from importlib import metadata
 from uuid import UUID
@@ -82,6 +84,48 @@ def test_init__leaves_a_handler_the_caller_attached_working(mocker: MockerFixtur
     logging.getLogger("backoff").error("giving up on send_request")
 
     assert len(own.records) == 1
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "PostHog's thread_exception_handler never calls the original threading.excepthook, so "
+        "thread-crash tracebacks are silenced for anyone who imports lightly_studio with analytics "
+        "enabled."
+    ),
+)
+def test_init__does_not_replace_threading_excepthook(mocker: MockerFixture) -> None:
+    mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
+    original = threading.excepthook
+    tracker = None
+    try:
+        tracker = PostHogTracker(project_api_key="phc_test", host=POSTHOG_HOST)
+        assert threading.excepthook is original
+    finally:
+        threading.excepthook = original
+        if tracker is not None:
+            tracker.shutdown()
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "PostHog's exception autocapture installs a sys.excepthook that sends all unhandled "
+        "exceptions — including those from unrelated user code — to PostHog. A script raising "
+        "FileNotFoundError('/home/alice/secret.csv') would send that path to our servers."
+    ),
+)
+def test_init__does_not_replace_sys_excepthook(mocker: MockerFixture) -> None:
+    mocker.patch.object(install_id, "get_install_id", return_value=INSTALL_ID)
+    original = sys.excepthook
+    tracker = None
+    try:
+        tracker = PostHogTracker(project_api_key="phc_test", host=POSTHOG_HOST)
+        assert sys.excepthook is original
+    finally:
+        sys.excepthook = original
+        if tracker is not None:
+            tracker.shutdown()
 
 
 def test_identify(mocker: MockerFixture) -> None:

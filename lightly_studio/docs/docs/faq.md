@@ -103,7 +103,7 @@ reach the same model accuracy.
 
 ### Can I search my images by text or visual similarity?
 
-Yes. LightlyStudio computes [embeddings](core_concepts/embeddings.md) on ingest. You can run a text
+Yes. LightlyStudio computes [embeddings](workflows/embeddings.md) on ingest. You can run a text
 search, for example "coffee". You can run a visual [similarity search](workflows/search_and_filter.md)
 to find related samples. You can also explore clusters in the embedding plot.
 
@@ -116,7 +116,7 @@ help you find failure patterns in your dataset.
 ### Which embedding models does LightlyStudio use?
 
 By default, LightlyStudio embeds images with MobileCLIP and videos with Perception Encoder. You can
-also [use your own embeddings](core_concepts/embeddings.md#using-your-own-embeddings).
+also [use your own embeddings](workflows/embeddings.md#using-your-own-embeddings).
 
 ## Data and formats
 

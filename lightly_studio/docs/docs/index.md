@@ -1,13 +1,19 @@
 # Welcome to LightlyStudio!
 
-**[LightlyStudio](https://www.lightly.ai/lightly-studio)** is an open-source tool designed to unify
-your data workflows from curation, annotation and management. Built with Rust for speed and
-efficiency, it lets you work seamlessly with datasets like COCO and ImageNet, even on a MacBook Pro
-with an M1 chip and 16 GB of memory.
+One integrated computer vision platform for labeling, curation, QA, and dataset management. Open-source at its core, [LightlyStudio](https://www.lightly.ai/lightly-studio) is built for ML engineers and organizations scaling computer vision.
 
-Working in a team and looking for collaboration features, role-based access permissions, and
-centrally managed cloud credentials? Check out [LightlyStudio Enterprise](enterprise/index.md)
-and [start for free with your team](https://www.lightly.ai/studio-signup).
+<div class="grid cards" markdown>
+
+-   **[LightlyStudio Enterprise](enterprise/index.md)**
+
+    Working in a team and looking for collaboration features, role-based access permissions, and
+    centrally managed cloud credentials?
+
+    [Try LightlyStudio Enterprise →](https://studio.auth.lightly.ai/sign-up){ .md-button .md-button--primary }
+    [Book a Demo →](https://www.lightly.ai/demo){ .md-button }
+    { .ls-cta }
+
+</div>
 
 <p align="center">
   <video src="_static/hero_showcase.mp4" width="100%" autoplay loop muted playsinline></video>
@@ -16,15 +22,59 @@ and [start for free with your team](https://www.lightly.ai/studio-signup).
 <p align="center">The embedding plot shows how images relate to each other, with a preview on hover. A lasso selection filters the grid to one cluster. A search for "coffee" finds a match, and the annotation editor opens to label it.</p>
 <p align="center"><strong>⚡ Works smoothly with 2M+ images, embeddings included, on a single MacBook (M1, 16GB RAM).</strong></p>
 
-
-## Installation
-
-LightlyStudio works on Windows, Linux, and macOS with **Python 3.9 to 3.14**. We recommend
-**Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
-
 ```shell
 pip install lightly-studio
 ```
+
+!!! success "Try it in 60 seconds"
+
+    Want to try LightlyStudio instantly? Run:
+
+    ```shell
+    lightly-studio quickstart
+    ```
+
+    This downloads the COCO example dataset, loads it, and opens the GUI in your browser.
+
+## Overview
+
+<div class="grid cards small" markdown>
+
+-   **[Data Ingest](workflows/image_dataset.md)**
+
+    [![Image Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png)](workflows/image_dataset.md)
+
+-   **[Data Management](workflows/tags.md)**
+
+    [![Data Management](https://storage.googleapis.com/lightly-public/studio/docs_cards/tags.png)](workflows/tags.md)
+
+-   **[Curate](workflows/search_and_filter.md)**
+
+    [![Curate](https://storage.googleapis.com/lightly-public/studio/docs_cards/embeddings.png)](workflows/search_and_filter.md)
+
+-   **[Annotate](workflows/annotations.md)**
+
+    [![Annotate](https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png)](workflows/annotations.md)
+
+-   **[Evaluate](workflows/evaluation.md)**
+
+    [![Evaluate](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](workflows/evaluation.md)
+
+-   **[Export and Train](workflows/export.md)**
+
+    [![Export and Train](https://storage.googleapis.com/lightly-public/studio/docs_cards/export.png)](workflows/export.md)
+
+-   **[Plugins](ecosystem/plugins.md)**
+
+    [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](ecosystem/plugins.md)
+
+
+</div>
+
+## Quickstart
+
+LightlyStudio works on Windows, Linux, and macOS with **Python 3.9 to 3.14**. We recommend
+**Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
 
 ??? tip "Recommended: install into a virtual environment"
     A virtual environment keeps LightlyStudio and its dependencies separate from other
@@ -45,19 +95,6 @@ pip install lightly-studio
         .\venv\Scripts\activate
         pip install lightly-studio
         ```
-
-## Try it in 60 seconds
-
-Want to try LightlyStudio instantly? Run:
-
-```shell
-lightly-studio quickstart
-```
-
-This downloads the COCO example dataset, loads it, and opens the GUI in your browser. Run
-`lightly-studio quickstart --help` for the available options.
-
-## Quickstart
 
 The examples below use the same example dataset by default, downloaded on the first run. Point
 them at your own image, video, or YOLO/COCO dataset by changing the input path.
@@ -174,74 +211,6 @@ to explore embeddings, remove near-duplicates, auto-label, and train a model —
 -  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in
    your browser (by default `http://localhost:8001`).
 -  Images and videos are streamed from their original local folder or remote storage for display in the UI.
-
-## Feature Overview
-
-### Datasets
-
-<div class="grid cards small" markdown>
-
--   **[Image Dataset](workflows/image_dataset.md)**
-
-    [![Image Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png)](workflows/image_dataset.md)
-
--   **[Video Dataset](workflows/video_dataset.md)**
-
-    [![Video Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png)](workflows/video_dataset.md)
-
-</div>
-
-### Concepts
-
-<div class="grid cards small" markdown>
-
--   **[Annotations](workflows/annotations.md)**
-
-    [![Annotations](https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png)](workflows/annotations.md)
-
--   **[Tags](core_concepts/tags.md)**
-
-    [![Tags](https://storage.googleapis.com/lightly-public/studio/docs_cards/tags.png)](core_concepts/tags.md)
-
--   **[Captions](workflows/captions.md)**
-
-    [![Captions](https://storage.googleapis.com/lightly-public/studio/docs_cards/captions.png)](workflows/captions.md)
-
--   **[Metadata](core_concepts/metadata.md)**
-
-    [![Metadata](https://storage.googleapis.com/lightly-public/studio/docs_cards/metadata.png)](core_concepts/metadata.md)
-
--   **[Embeddings](core_concepts/embeddings.md)**
-
-    [![Embeddings](https://storage.googleapis.com/lightly-public/studio/docs_cards/embeddings.png)](core_concepts/embeddings.md)
-
-</div>
-
-### Tools
-
-<div class="grid cards small" markdown>
-
--   **[Search and Filter](workflows/search_and_filter.md)**
-
-    [![Search and Filter](https://storage.googleapis.com/lightly-public/studio/docs_cards/search_and_filter.png)](workflows/search_and_filter.md)
-
--   **[Export](workflows/export.md)**
-
-    [![Export](https://storage.googleapis.com/lightly-public/studio/docs_cards/export.png)](workflows/export.md)
-
--   **[Sampling](workflows/sampling.md)**
-
-    [![Sampling](https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png)](workflows/sampling.md)
-
--   **[Plugins](ecosystem/plugins.md)**
-
-    [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](ecosystem/plugins.md)
-
--   **[Model Evaluation](workflows/evaluation.md)**
-
-    [![Model Evaluation](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](workflows/evaluation.md)
-
-</div>
 
 ## Python API
 

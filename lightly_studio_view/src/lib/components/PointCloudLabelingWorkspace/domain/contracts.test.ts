@@ -120,6 +120,8 @@ describe('point-cloud domain contracts', () => {
             annotationClassId: 'car',
             annotationSourceId: 'gt',
             trackId: 'track-0',
+            trackNumber: 7,
+            parentTrackNumber: null,
             keyframeId: 'kf-0',
             center: [1, 0, 0],
             size: [2, 1, 1],

@@ -29,8 +29,12 @@ Claude Code gives you a reminder. A `PreToolUse` hook (`.claude/settings.json` a
 ```
 cd lightly_studio
 make static-checks
-make test
+uv run pytest <affected_tests>
 ```
+
+Run `uv run pytest -n 8` for the full testsuite, use sparingly. To also rebuild the
+frontend, run `make build-lightly_studio_view`. It takes several minutes, avoid if not needed.
+Avoid `make test`, it is for CI, it rebuilds the frontend and takes long.
 
 Read `lightly_studio/Makefile` for detailed commands.
 

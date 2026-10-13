@@ -20,6 +20,10 @@ format:
 # matter how many siblings there are.
 PYTHON_MEMBERS := lightly_studio lightly_studio_serve
 
+# Base ref used by the local Fast Track guardrail check. Override it for a
+# stacked branch, for example: make fasttrack-check BASE_REF=origin/my-branch.
+BASE_REF ?= origin/main
+
 .PHONY: static-checks
 static-checks:
 	for member in $(PYTHON_MEMBERS); do $(MAKE) -C $$member static-checks || exit 1; done
@@ -31,6 +35,32 @@ type-check:
 .PHONY: lint-fix
 lint-fix:
 	for member in $(PYTHON_MEMBERS); do $(MAKE) -C $$member lint-fix || exit 1; done
+
+# Run the same coverage reports and Fast Track guardrails used by CI. The
+# guardrails still run when a test suite fails so the final output explains
+# both failures; the target fails if any suite or guardrail fails.
+.PHONY: fasttrack-check
+fasttrack-check:
+	@backend_tests_passed=true; \
+	backend_serve_tests_passed=true; \
+	frontend_tests_passed=true; \
+	if ! $(MAKE) -C lightly_studio build-lightly_studio_view; then backend_tests_passed=false; fi; \
+	if [ "$$backend_tests_passed" = true ] && ! $(MAKE) -C lightly_studio test-coverage; then backend_tests_passed=false; fi; \
+	if ! $(MAKE) -C lightly_studio_serve test-coverage; then backend_serve_tests_passed=false; fi; \
+	if ! $(MAKE) -C lightly_studio_view test-coverage; then frontend_tests_passed=false; fi; \
+	BACKEND_COVERAGE_JSON="$(CURDIR)/lightly_studio/coverage.json" \
+	BACKEND_TESTS_PASSED=$$backend_tests_passed \
+	BACKEND_SERVE_COVERAGE_JSON="$(CURDIR)/lightly_studio_serve/coverage.json" \
+	BACKEND_SERVE_TESTS_PASSED=$$backend_serve_tests_passed \
+	FRONTEND_COVERAGE_JSON="$(CURDIR)/lightly_studio_view/coverage/coverage-final.json" \
+	FRONTEND_TESTS_PASSED=$$frontend_tests_passed \
+	BASE_REF="$(BASE_REF)" \
+	$(MAKE) -C fast_track run-guardrails; \
+	guardrails_status=$$?; \
+	if [ "$$backend_tests_passed" != true ] || \
+		[ "$$backend_serve_tests_passed" != true ] || \
+		[ "$$frontend_tests_passed" != true ] || \
+		[ $$guardrails_status -ne 0 ]; then exit 1; fi
 
 .PHONY: build
 build:

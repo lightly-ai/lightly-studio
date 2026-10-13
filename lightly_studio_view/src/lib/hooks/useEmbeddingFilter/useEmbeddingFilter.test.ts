@@ -133,6 +133,25 @@ describe('useEmbeddingFilterForImages', () => {
         expect(get(effectiveCount)).toBe(0);
         expect(setRangeSelection).toHaveBeenCalledWith('coll-1', null);
     });
+
+    it('does not clear another collection video region during a collection transition', () => {
+        const { updateFilterParams, updateEmbeddingRegion, videoFilter } = useVideoFilters();
+        updateFilterParams({ collection_id: 'coll-2', filters: {} });
+        updateEmbeddingRegion({ polygon: [{ x: 0, y: 0 }] });
+        setPlotSelectionCount('coll-1', 2);
+
+        const { clearFilter, effectiveCount } = useEmbeddingFilterForVideos(
+            collectionId,
+            setRangeSelection
+        );
+        clearFilter();
+
+        expect(get(videoFilter)?.sample_filter?.embedding_region).toEqual({
+            polygon: [{ x: 0, y: 0 }]
+        });
+        expect(get(effectiveCount)).toBe(0);
+        expect(setRangeSelection).toHaveBeenCalledWith('coll-1', null);
+    });
 });
 
 describe('useEmbeddingFilterForVideos', () => {
@@ -142,25 +161,14 @@ describe('useEmbeddingFilterForVideos', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         const { updateFilterParams } = useVideoFilters();
-        updateFilterParams(null as unknown as Parameters<typeof updateFilterParams>[0]);
-        const { clearHidden } = useHiddenFilters(collectionId);
-        clearHidden();
+        updateFilterParams({ collection_id: 'coll-1', filters: {} });
+        clearPlotSelectionCount('coll-1');
     });
 
-    it('isVisible is false when collection_id does not match', () => {
+    it('isVisible reflects the propagated plot selection count', () => {
         const { updateFilterParams } = useVideoFilters();
-        updateFilterParams({ collection_id: 'other-coll', filters: { sample_ids: ['id-1'] } });
-
-        const { isVisible } = useEmbeddingFilterForVideos(collectionId, setRangeSelection);
-        expect(get(isVisible)).toBe(false);
-    });
-
-    it('isVisible is true when collection matches and sample_ids are set', () => {
-        const { updateFilterParams } = useVideoFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            filters: { sample_ids: ['id-1', 'id-2'] }
-        });
+        updateFilterParams({ collection_id: 'coll-1', filters: {} });
+        setPlotSelectionCount('coll-1', 2);
 
         const { isVisible, effectiveCount } = useEmbeddingFilterForVideos(
             collectionId,
@@ -170,13 +178,11 @@ describe('useEmbeddingFilterForVideos', () => {
         expect(get(effectiveCount)).toBe(2);
     });
 
-    it('setVisibility(false) moves active IDs to hidden and clears the filter', () => {
-        const { updateFilterParams } = useVideoFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            filters: { sample_ids: ['id-1', 'id-2'] }
-        });
-
+    it('setVisibility(false) clears the region and selection count', () => {
+        const { updateFilterParams, updateEmbeddingRegion } = useVideoFilters();
+        updateFilterParams({ collection_id: 'coll-1', filters: {} });
+        updateEmbeddingRegion({ polygon: [{ x: 0, y: 0 }] });
+        setPlotSelectionCount('coll-1', 2);
         const { isVisible, effectiveCount, setVisibility } = useEmbeddingFilterForVideos(
             collectionId,
             setRangeSelection
@@ -184,45 +190,17 @@ describe('useEmbeddingFilterForVideos', () => {
         setVisibility(false);
 
         expect(get(isVisible)).toBe(false);
-        expect(get(effectiveCount)).toBe(2);
-    });
-
-    it('setVisibility(true) restores previously hidden IDs', () => {
-        const { updateFilterParams } = useVideoFilters();
-        updateFilterParams({
-            collection_id: 'coll-1',
-            filters: { sample_ids: ['id-1', 'id-2'] }
-        });
-
-        const { isVisible, effectiveCount, setVisibility } = useEmbeddingFilterForVideos(
-            collectionId,
-            setRangeSelection
-        );
-        setVisibility(false);
-        setVisibility(true);
-
-        expect(get(isVisible)).toBe(true);
-        expect(get(effectiveCount)).toBe(2);
-    });
-
-    it('setVisibility(false) does nothing when there are no active IDs', () => {
-        const { effectiveCount, setVisibility } = useEmbeddingFilterForVideos(
-            collectionId,
-            setRangeSelection
-        );
-        setVisibility(false);
         expect(get(effectiveCount)).toBe(0);
+        expect(get(useVideoFilters().videoFilter)?.sample_filter?.embedding_region).toBeUndefined();
+        expect(setRangeSelection).toHaveBeenCalledWith('coll-1', null);
     });
 
-    it('clearFilter clears both active and hidden IDs and calls setRangeSelection', () => {
-        const { updateFilterParams } = useVideoFilters();
-        updateFilterParams({ collection_id: 'coll-1', filters: { sample_ids: ['id-1'] } });
-
-        const { effectiveCount, setVisibility, clearFilter } = useEmbeddingFilterForVideos(
+    it('clearFilter clears the count and calls setRangeSelection', () => {
+        setPlotSelectionCount('coll-1', 3);
+        const { effectiveCount, clearFilter } = useEmbeddingFilterForVideos(
             collectionId,
             setRangeSelection
         );
-        setVisibility(false);
         clearFilter();
 
         expect(get(effectiveCount)).toBe(0);

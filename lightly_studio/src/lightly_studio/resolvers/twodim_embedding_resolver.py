@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from array import array
+from collections.abc import Sequence
 from uuid import UUID
 
 import numpy as np
@@ -86,6 +88,60 @@ def get_twodim_embeddings(
     session.commit()
 
     return x_values, y_values, sample_ids_of_samples_with_embeddings
+
+
+def get_twodim_embeddings_from_axes(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    direction_x: Sequence[float],
+    direction_y: Sequence[float],
+) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
+    """Return 2D embeddings that are projections onto two axis directions.
+
+    N is the number of samples with an embedding and D is the embedding dimension. The x and y
+    values of a sample are the dot products of its embedding with ``direction_x`` and
+    ``direction_y``. The values are not rescaled, so the spread of an axis shows how much the
+    samples vary along its direction.
+
+    The result is not stored in the database, because the directions change with each query.
+    The projection runs in the database, and nothing is kept between requests.
+
+    Args:
+        session: Database session.
+        collection_id: Collection identifier.
+        embedding_model_id: Embedding model identifier.
+        direction_x: The X axis direction of shape (D,).
+        direction_y: The Y axis direction of shape (D,).
+
+    Returns:
+        Tuple of (x coordinates of shape (N,), y coordinates of shape (N,), the N sample IDs
+        ordered by sample creation time).
+
+    Raises:
+        ValueError: If the embedding model does not exist, or if a direction does not have
+            the embedding dimension. The projection query raises these errors.
+    """
+    projections = sample_embedding_resolver.get_projections_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        direction_x=direction_x,
+        direction_y=direction_y,
+    )
+    # A float32 array stores 4 bytes for each value. A list of Python floats uses about 32.
+    x_values = array("f")
+    y_values = array("f")
+    sample_ids: list[UUID] = []
+    for sample_id, x, y in projections:
+        x_values.append(x)
+        y_values.append(y)
+        sample_ids.append(sample_id)
+    return (
+        np.frombuffer(x_values, dtype=np.float32),
+        np.frombuffer(y_values, dtype=np.float32),
+        sample_ids,
+    )
 
 
 def _calculate_2d_embeddings(

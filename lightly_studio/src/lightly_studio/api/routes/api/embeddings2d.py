@@ -16,6 +16,7 @@ from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_colo
 from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.projection_axes import ProjectionAxes
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
@@ -37,6 +38,10 @@ class GetEmbeddings2DRequest(BaseModel):
         description="Filter parameters identifying matching samples"
     )
     color_by: ColorBy | None = None
+    axes: ProjectionAxes | None = Field(
+        default=None,
+        description="Project the embeddings onto two axes instead of using PaCMAP",
+    )
 
 
 @embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
@@ -62,11 +67,22 @@ def get_2d_embeddings(
     if embedding_model_id is None:
         raise ValueError("No embedding model configured.")
 
-    x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
-        session=session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model_id,
-    )
+    # A region drawn on this plot carries the same axes, so that
+    # embedding_region_resolver.get_sample_ids_in_region computes the same layout.
+    if body.axes is None:
+        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+        )
+    else:
+        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            direction_x=body.axes.x,
+            direction_y=body.axes.y,
+        )
 
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None

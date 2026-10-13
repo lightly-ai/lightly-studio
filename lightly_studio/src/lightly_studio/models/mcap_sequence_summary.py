@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import posixpath
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -55,6 +56,9 @@ class MCAPSequenceSummary(BaseModel):
     """
 
     recording_id: UUID = Field(description="The MCAP sequence this summary describes.")
+    file_name: str = Field(
+        description="The recording's file name, e.g. `run-2026-04-18.mcap`, from its bag path."
+    )
     format: RecordingFormat = Field(description="The sequence's file format.")
     start_log_time_ns: int | None = Field(
         description="The earliest log_time_ns across all indexed ticks, in nanoseconds. "
@@ -73,7 +77,10 @@ class MCAPSequenceSummary(BaseModel):
 
     @classmethod
     def from_info(
-        cls, info: McapGroupSequenceInfoView, start_log_time_ns: int | None
+        cls,
+        info: McapGroupSequenceInfoView,
+        start_log_time_ns: int | None,
+        channel_ids_by_component: dict[str, int],
     ) -> MCAPSequenceSummary:
         """Builds the summary from a sequence's `McapGroupSequenceInfoView`.
 
@@ -82,12 +89,25 @@ class MCAPSequenceSummary(BaseModel):
                 `mcap_group_sequence_resolver.get_info`.
             start_log_time_ns: The earliest log time across all indexed ticks, or
                 `None` if no ticks have been indexed yet.
+            channel_ids_by_component: The channel id for each component, keyed by
+                component name, read from the sequence's indexed ticks. Overrides the
+                dataset-level schema channel ids, which may differ across files.
+                Falls back to the schema channel id for components not present here
+                (e.g. when no ticks have been indexed yet).
         """
         lidar_channels: list[ChannelSummaryView] = []
         camera_channels: list[ChannelSummaryView] = []
 
         for component in info.components:
-            channel = ChannelSummaryView.from_component(component)
+            channel_id = channel_ids_by_component.get(
+                component.group_component_name, component.channel_id
+            )
+            channel = ChannelSummaryView(
+                channel_id=channel_id,
+                group_component_name=component.group_component_name,
+                group_component_index=component.group_component_index,
+                frame_id=component.frame_id,
+            )
             if component.mcap_data_type is McapDataType.POINT_CLOUD:
                 lidar_channels.append(channel)
             elif component.mcap_data_type is McapDataType.VIDEO_FRAME:
@@ -95,6 +115,7 @@ class MCAPSequenceSummary(BaseModel):
 
         return cls(
             recording_id=info.recording.recording_id,
+            file_name=_file_name_from_uri(info.recording.uri),
             format=info.recording.format,
             start_log_time_ns=start_log_time_ns,
             lidar_channels=lidar_channels,
@@ -103,3 +124,18 @@ class MCAPSequenceSummary(BaseModel):
                 ReferenceFrameView(name=frame_id) for frame_id in info.reference_frame_ids
             ],
         )
+
+
+def _file_name_from_uri(uri: str) -> str:
+    r"""Gets the file name from a recording URI.
+
+    Normalizes Windows separators first, so a local Windows URI such as
+    `C:\bags\drive.mcap` yields `drive.mcap` instead of the whole path.
+
+    Args:
+        uri: The recording's URI.
+
+    Returns:
+        The final path component of the URI.
+    """
+    return posixpath.basename(uri.replace("\\", "/"))

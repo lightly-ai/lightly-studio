@@ -132,9 +132,21 @@ def _create_tracker() -> Tracker:
     if not LIGHTLY_STUDIO_ANALYTICS_ENABLED:
         return NoOpTracker()
 
-    project_api_key = posthog_project.get_project_key(cohort.get_cohort())
-    tracker = PostHogTracker(project_api_key=project_api_key, host=LIGHTLY_STUDIO_POSTHOG_HOST)
-    # PostHog delivers from a background thread and registers no exit hook of its own, so a
-    # short-lived process would drop the event without this.
-    atexit.register(shutdown)
-    return tracker
+    try:
+        project_api_key = posthog_project.get_project_key(cohort.get_cohort())
+        tracker = PostHogTracker(project_api_key=project_api_key, host=LIGHTLY_STUDIO_POSTHOG_HOST)
+        # PostHog delivers from a background thread and registers no exit hook of its own, so a
+        # short-lived process would drop the event without this.
+        atexit.register(shutdown)
+        return tracker
+    except Exception:
+        logger.warning(
+            "Could not initialize the analytics tracker. Tracking is disabled.", exc_info=True
+        )
+        return NoOpTracker()
+
+
+# The tracker initializes eagerly so all events fired before start_gui() reach PostHog.
+# When analytics is off (e.g. in the test suite), no PostHogTracker is built at import time.
+if LIGHTLY_STUDIO_ANALYTICS_ENABLED:
+    _get_tracker()

@@ -131,6 +131,36 @@ describe('buildColorBuffer', () => {
         expect(different).toBe(true);
     });
 
+    it('combines normalized height and distance values', () => {
+        const positions = new Float32Array([0, 0, 0, 0, 0, 10, 10, 0, 0]);
+        const colors = new Float32Array(9);
+
+        buildColorBuffer({
+            positions,
+            intensities: new Float32Array(3),
+            count: 3,
+            colorMode: 'height-distance',
+            colors
+        });
+
+        expect(Array.from(colors)).toEqual([...turboRgb(0), ...turboRgb(1), ...turboRgb(0.5)]);
+    });
+
+    it('combines normalized height and density values', () => {
+        const positions = new Float32Array([0, 0, 0, 0, 0, 0, 1, 0, 1]);
+        const colors = new Float32Array(9);
+
+        buildColorBuffer({
+            positions,
+            intensities: new Float32Array(3),
+            count: 3,
+            colorMode: 'height-density',
+            colors
+        });
+
+        expect(Array.from(colors)).toEqual([...turboRgb(0.5), ...turboRgb(0.5), ...turboRgb(0.5)]);
+    });
+
     it('fills missing rgb values with neutral gray instead of stale colors', () => {
         const positions = new Float32Array([0, 0, 0, 1, 1, 1]);
         const intensities = new Float32Array([10, 20]);

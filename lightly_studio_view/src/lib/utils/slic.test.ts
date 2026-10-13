@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { prepareImageForSlic } from './slic';
+import { getSlicComputeOptions, prepareImageForSlic } from './slic';
 
 describe('image preparation', () => {
     afterEach(() => {
@@ -43,4 +43,12 @@ describe('image preparation', () => {
         );
         await expect(prepareImageForSlic('/broken.png')).rejects.toThrow('Failed to decode image');
     });
+});
+
+it.each([
+    ['coarse', 80],
+    ['medium', 320],
+    ['fine', 640]
+] as const)('targets %s granularity', (level, count) => {
+    expect(getSlicComputeOptions(level).targetSegments).toBe(count);
 });

@@ -22,7 +22,7 @@ DYNAMIC_TRANSFORM_TOPIC = "/tf"
 
 # Dynamic transforms captured in this window before and after the requested time are
 # used. The window holds a message of every transform published at 10 Hz or faster.
-_DYNAMIC_TRANSFORM_WINDOW_NS = 300_000_000
+_DYNAMIC_TRANSFORM_WINDOW_NS = 100_000_000
 
 
 def dynamic_edges_until(

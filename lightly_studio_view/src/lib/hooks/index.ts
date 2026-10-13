@@ -8,7 +8,10 @@ export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
-export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+export {
+    createMetadataFilters,
+    useMetadataFilters
+} from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution';
 export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution';
 export { useMetadataDistributionsBySampleTags } from '$lib/hooks/useMetadataDistributionsBySampleTags';
@@ -51,6 +54,11 @@ export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSamplin
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { usePostHog } from '$lib/hooks/usePostHog';
+export {
+    useOnboarding,
+    TOUR_VERSION,
+    type OnboardingState
+} from '$lib/hooks/useOnboarding/useOnboarding';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
