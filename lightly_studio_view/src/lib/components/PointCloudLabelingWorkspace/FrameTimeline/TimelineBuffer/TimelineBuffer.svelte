@@ -18,7 +18,7 @@
     let { tickCount, bufferedRanges }: Props = $props();
 </script>
 
-<div class="pointer-events-none absolute inset-x-0 bottom-0 h-1" aria-label="Buffered frames">
+<div class="pointer-events-none absolute inset-x-0 bottom-0 h-1" aria-hidden="true">
     {#each bufferedRanges as range}
         <TimelineBufferedRange
             {tickCount}
