@@ -8,6 +8,7 @@ import pytest
 import sqlalchemy
 from duckdb_engine import Dialect
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Session
 
 from lightly_studio.database import db_json
 
@@ -140,6 +141,44 @@ def test_json_extract_as_float(dialect: Any) -> None:
     result = _compile(db_json.json_extract_as_float(column=_COLUMN, field="temperature"), dialect)
     assert str(result) == "CAST(data ->> %(param_1)s AS FLOAT)"
     assert result.params == {"param_1": "temperature"}
+
+
+@pytest.mark.parametrize(
+    "dialect",
+    [Dialect(paramstyle="qmark"), postgresql.dialect(paramstyle="qmark")],  # type: ignore[no-untyped-call]
+)
+def test_json_extract_scalar_type__positional_parameters(dialect: Any) -> None:
+    """Emit each bound path segment once with matching positional parameters."""
+    expression = db_json.json_extract_scalar_type(column=_COLUMN, field="nested.value")
+    result = _compile(expression=expression, dialect=dialect)
+
+    assert str(result).count("?") == 2
+    assert result.positiontup == ["param_1", "param_2"]
+    assert result.params == {"param_1": "nested", "param_2": "value"}
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (-7, "number"),
+        (7, "number"),
+        (1.5, "number"),
+        (True, "boolean"),
+        ("true", "string"),
+        (None, None),
+        ([], None),
+        ({}, None),
+    ],
+)
+def test_json_extract_scalar_type(db_session: Session, value: Any, expected: str | None) -> None:
+    """Normalize scalar types and exclude nulls, arrays, and objects on both backends."""
+    column = sqlalchemy.literal(
+        {"nested": {"value": value}},
+        type_=sqlalchemy.JSON().with_variant(postgresql.JSONB(), "postgresql"),
+    )
+    expression = db_json.json_extract_scalar_type(column=column, field="nested.value")
+
+    assert db_session.execute(sqlalchemy.select(expression)).scalar_one() == expected
 
 
 @pytest.mark.parametrize("dialect", _DIALECTS)
