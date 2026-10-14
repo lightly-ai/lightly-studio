@@ -5,14 +5,13 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Mapping, Sequence
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import IntEnum
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core.mcap import compressed_video
-from lightly_studio.core.mcap.compressed_video import VideoDecoder
 from lightly_studio.core.mcap.reader import McapFileReader, range_cache
 from lightly_studio.core.mcap.type_definitions import DecodedMessage, StaticTransform
 from lightly_studio.models.mcap import McapTable
@@ -24,10 +23,12 @@ from lightly_studio.services.recording_service import (
     load_static_transforms,
     reader_cache,
     resolve_tick,
-    video_decoder_cache,
 )
 
 logger = logging.getLogger(__name__)
+
+# One worker per camera, capped so a tick with many cameras does not start one thread each.
+_MAX_CAMERA_WORKERS = 8
 
 
 class TickPayloadKind(IntEnum):
@@ -67,10 +68,11 @@ def get_tick_data(  # noqa: PLR0913
     """Returns the point clouds and camera frames of one tick.
 
     All channels of the tick are read with one pass over the MCAP file. The window
-    spans the smallest to the largest log time of the tick's channels. It starts
-    earlier when a camera decoder must start at its keyframe. Each channel gives the
-    message at its locator log time. A point cloud is encoded as an Arrow IPC stream,
-    a camera frame as a JPEG.
+    starts at the earliest camera keyframe, so a decoder can restart, and ends at the
+    latest log time of the tick. The cameras of the tick are decoded together. Each
+    camera keeps one decoder, and every picture decoded on the way is cached, so
+    another tick that asks for it does not decode it again. A point cloud is encoded
+    as an Arrow IPC stream, a camera frame as a JPEG.
 
     Args:
         session: The database session.
@@ -110,35 +112,24 @@ def get_tick_data(  # noqa: PLR0913
         return []
 
     with reader_cache.borrow_reader(uri=recording.uri) as reader:
-        decoders = {
-            camera.channel_id: _take_decoder(uri=recording.uri, camera=camera) for camera in cameras
-        }
-        start_ns = min(
-            [mcap.log_time_ns for mcap in [*lidars, *cameras]]
-            + [get_camera_frame.feed_start_ns(decoder=decoder) for decoder in decoders.values()]
-        )
-        end_ns = max(mcap.log_time_ns for mcap in [*lidars, *cameras])
         range_cache.reset_read_account()
         read_started = time.perf_counter()
         messages = reader.get_decoded_messages_in_range(
             channel_ids=[mcap.channel_id for mcap in [*lidars, *cameras]],
-            start_time_ns=start_ns,
-            end_time_ns=end_ns,
+            start_time_ns=_window_start_ns(lidars=lidars, cameras=cameras),
+            end_time_ns=max(mcap.log_time_ns for mcap in [*lidars, *cameras]),
         )
         read_seconds = time.perf_counter() - read_started
         decode_started = time.perf_counter()
-        payloads = _point_cloud_payloads(
+        payloads = _decode_payloads(
             session=session,
             reader=reader,
             recording_id=tick.recording_id,
+            uri=recording.uri,
             lidars=lidars,
+            cameras=cameras,
             messages=messages,
             target_frame_id=target_frame_id,
-        ) + _camera_payloads(
-            uri=recording.uri,
-            cameras=cameras,
-            decoders=decoders,
-            messages=messages,
             camera_height=camera_height,
         )
         logger.info(
@@ -152,15 +143,66 @@ def get_tick_data(  # noqa: PLR0913
         return payloads
 
 
-def _take_decoder(uri: str, camera: McapTable) -> VideoDecoder:
-    """Returns the cached decoder of a camera if it can reach the tick's frame, else a new one."""
-    assert camera.keyframe_log_time_ns is not None
-    decoder = video_decoder_cache.take_decoder(uri=uri, channel_id=camera.channel_id)
-    if decoder is not None and decoder.can_continue_to(
-        keyframe_log_time_ns=camera.keyframe_log_time_ns, log_time_ns=camera.log_time_ns
-    ):
-        return decoder
-    return VideoDecoder(keyframe_log_time_ns=camera.keyframe_log_time_ns)
+def _window_start_ns(lidars: Sequence[McapTable], cameras: Sequence[McapTable]) -> int:
+    """Returns the first log time the tick must read, including camera keyframes."""
+    times = [lidar.log_time_ns for lidar in lidars]
+    for camera in cameras:
+        assert camera.keyframe_log_time_ns is not None
+        times.append(camera.keyframe_log_time_ns)
+    return min(times)
+
+
+def _decode_payloads(  # noqa: PLR0913
+    session: Session,
+    reader: McapFileReader,
+    recording_id: UUID,
+    uri: str,
+    lidars: Sequence[McapTable],
+    cameras: Sequence[McapTable],
+    messages: Mapping[int, Sequence[DecodedMessage]],
+    target_frame_id: str | None,
+    camera_height: int | None,
+) -> list[TickPayload]:
+    """Encodes the point clouds and, at the same time, the camera JPEGs of the tick."""
+    if not cameras:
+        return _point_cloud_payloads(
+            session=session,
+            reader=reader,
+            recording_id=recording_id,
+            lidars=lidars,
+            messages=messages,
+            target_frame_id=target_frame_id,
+        )
+    worker_count = min(_MAX_CAMERA_WORKERS, len(cameras))
+
+    def encode(camera: McapTable) -> TickPayload | None:
+        return _camera_payload(
+            uri=uri, camera=camera, messages=messages, camera_height=camera_height
+        )
+
+    with ThreadPoolExecutor(max_workers=worker_count) as pool:
+        futures = [pool.submit(encode, camera) for camera in cameras]
+        # Point clouds use the database session, so they stay on this thread while the
+        # cameras decode.
+        point_clouds = _point_cloud_payloads(
+            session=session,
+            reader=reader,
+            recording_id=recording_id,
+            lidars=lidars,
+            messages=messages,
+            target_frame_id=target_frame_id,
+        )
+        return point_clouds + _camera_results(futures=futures)
+
+
+def _camera_results(futures: Sequence[Future[TickPayload | None]]) -> list[TickPayload]:
+    """Returns the camera payloads in request order, leaving out channels with no frame."""
+    payloads = []
+    for future in futures:
+        payload = future.result()
+        if payload is not None:
+            payloads.append(payload)
+    return payloads
 
 
 def _point_cloud_payloads(  # noqa: PLR0913
@@ -203,39 +245,33 @@ def _point_cloud_payloads(  # noqa: PLR0913
     return payloads
 
 
-def _camera_payloads(
+def _camera_payload(
     uri: str,
-    cameras: Sequence[McapTable],
-    decoders: Mapping[int, VideoDecoder],
+    camera: McapTable,
     messages: Mapping[int, Sequence[DecodedMessage]],
     camera_height: int | None,
-) -> list[TickPayload]:
-    """Decodes the frame of each camera at its locator log time as JPEG."""
-    payloads = []
-    for camera in cameras:
-        decoder = decoders[camera.channel_id]
-        frame = get_camera_frame.decode_camera_frame(
-            decoder=decoder,
-            messages=messages[camera.channel_id],
-            channel_id=camera.channel_id,
-            target_time_ns=camera.log_time_ns,
+) -> TickPayload | None:
+    """Decodes the frame of one camera at its locator log time as JPEG."""
+    assert camera.keyframe_log_time_ns is not None
+    data = get_camera_frame.camera_jpeg(
+        uri=uri,
+        channel_id=camera.channel_id,
+        keyframe_log_time_ns=camera.keyframe_log_time_ns,
+        messages=messages[camera.channel_id],
+        target_time_ns=camera.log_time_ns,
+        height=camera_height,
+    )
+    if data is None:
+        logger.warning(
+            "Camera channel %s has no frame at %s.", camera.channel_id, camera.log_time_ns
         )
-        if frame is None:
-            logger.warning(
-                "Camera channel %s has no frame at %s.", camera.channel_id, camera.log_time_ns
-            )
-        else:
-            payloads.append(
-                TickPayload(
-                    channel_id=camera.channel_id,
-                    kind=TickPayloadKind.CAMERA_JPEG,
-                    log_time_ns=camera.log_time_ns,
-                    data=compressed_video.to_jpeg(frame=frame, height=camera_height),
-                )
-            )
-            decoder.release_frames_up_to(log_time_ns=camera.log_time_ns)
-        get_camera_frame.store_decoder(uri=uri, channel_id=camera.channel_id, decoder=decoder)
-    return payloads
+        return None
+    return TickPayload(
+        channel_id=camera.channel_id,
+        kind=TickPayloadKind.CAMERA_JPEG,
+        log_time_ns=camera.log_time_ns,
+        data=data,
+    )
 
 
 def _message_at(messages: Sequence[DecodedMessage], log_time_ns: int) -> DecodedMessage | None:

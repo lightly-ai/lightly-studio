@@ -6,19 +6,19 @@ a delta frame. A delta frame can only be decoded after the frames it depends on,
 `VideoDecoder` is fed every message from the preceding keyframe up to the target
 frame, e.g. as read by `McapFileReader.get_decoded_messages_in_range`.
 
-The frame is decoded with PyAV (libav) and re-encoded as JPEG so the result is
-directly servable from an HTTP endpoint without any further processing.
+The frame is decoded with PyAV (libav). The JPEG is scaled in YUV and encoded with
+libav, so a preview does not convert the full picture to RGB first.
 """
 
 from __future__ import annotations
 
-import io
 from typing import Any
 
 import av
 from av import CodecContext, VideoFrame
 from av.codec.context import ThreadType
-from PIL import Image
+from av.video.codeccontext import VideoCodecContext
+from av.video.reformatter import Interpolation
 
 from lightly_studio.core.mcap import _video_formats, message_fields
 from lightly_studio.core.mcap.errors import McapAccessError
@@ -232,6 +232,9 @@ def to_jpeg(
 ) -> bytes:
     """Encodes a decoded video frame as JPEG.
 
+    The picture is scaled in YUV, then encoded. An even output size uses 4:2:0.
+    An odd size uses 4:4:4, which can store it.
+
     Args:
         frame: The decoded frame, e.g. from `VideoDecoder.frame`.
         width: If set, resize the output to this width in pixels. Aspect ratio is
@@ -243,12 +246,17 @@ def to_jpeg(
     Returns:
         JPEG-encoded bytes of the frame.
     """
-    image = Image.fromarray(frame.to_ndarray(format="rgb24"))
-    if width is not None or height is not None:
-        image = _resize(image, width=width, height=height)
-    buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=quality, subsampling=2)
-    return buffer.getvalue()
+    picture = _scaled_jpeg_frame(frame=frame, width=width, height=height)
+    codec = av.CodecContext.create("mjpeg", "w")
+    assert isinstance(codec, VideoCodecContext)
+    codec.width = picture.width
+    codec.height = picture.height
+    codec.pix_fmt = picture.format.name
+    codec.qmin = _qscale(quality=quality)
+    codec.qmax = codec.qmin
+    packets = codec.encode(picture)
+    packets.extend(codec.encode(None))
+    return b"".join(bytes(packet) for packet in packets)
 
 
 def _open_decoder(codec_name: str) -> CodecContext:
@@ -315,12 +323,33 @@ def _codec_name(video_format: str) -> str:
     )
 
 
-def _resize(image: Image.Image, width: int | None, height: int | None) -> Image.Image:
-    """Resizes an image, preserving aspect ratio when only one dimension is given."""
-    orig_w, orig_h = image.size
+def _scaled_jpeg_frame(frame: VideoFrame, width: int | None, height: int | None) -> VideoFrame:
+    """Scales a frame in YUV to the size a JPEG encoder accepts."""
+    out_width, out_height = _output_size(frame=frame, width=width, height=height)
+    pix_fmt = "yuvj420p" if out_width % 2 == 0 and out_height % 2 == 0 else "yuvj444p"
+    interpolation = (
+        Interpolation.AREA
+        if out_width <= frame.width and out_height <= frame.height
+        else Interpolation.BILINEAR
+    )
+    return frame.reformat(
+        width=out_width, height=out_height, format=pix_fmt, interpolation=interpolation
+    )
+
+
+def _output_size(frame: VideoFrame, width: int | None, height: int | None) -> tuple[int, int]:
+    """Returns the output size, preserving aspect ratio when one side is omitted."""
+    if width is None and height is None:
+        return frame.width, frame.height
     if width is None:
         assert height is not None
-        width = max(1, round(orig_w * height / orig_h))
-    elif height is None:
-        height = max(1, round(orig_h * width / orig_w))
-    return image.resize((width, height), Image.Resampling.LANCZOS)
+        return max(1, round(frame.width * height / frame.height)), height
+    if height is None:
+        return width, max(1, round(frame.height * width / frame.width))
+    return width, height
+
+
+def _qscale(quality: int) -> int:
+    """Maps a JPEG quality (higher is better) to a libav qscale (lower is better)."""
+    clamped = min(95, max(1, quality))
+    return min(31, max(1, round((100 - clamped) * 31 / 100)))

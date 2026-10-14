@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +21,7 @@ from lightly_studio.resolvers import collection_resolver, recording_resolver
 from lightly_studio.services.recording_service import reader_cache, video_decoder_cache
 from lightly_studio.services.recording_service.get_camera_frame import (
     CameraFrame,
+    camera_jpeg,
     get_camera_frame,
 )
 from tests.core.mcap import helpers
@@ -118,11 +120,11 @@ def test_get_camera_frame__same_frame_again(
     decode_spy.reset_mock()
     second = _get_frame(session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS)
 
-    assert _decoded_log_times_ns(decode_spy=decode_spy) == [KEYFRAME_NS, GRAY_FRAME_NS]
+    assert _decoded_log_times_ns(decode_spy=decode_spy) == []
     assert second.data == first.data
 
 
-def test_get_camera_frame__earlier_frame_restarts_at_keyframe(
+def test_get_camera_frame__earlier_frame_comes_from_the_cache(
     db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
 ) -> None:
     decode_spy = mocker.spy(VideoDecoder, "decode")
@@ -133,8 +135,62 @@ def test_get_camera_frame__earlier_frame_restarts_at_keyframe(
         session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS
     )
 
-    assert _decoded_log_times_ns(decode_spy=decode_spy) == [KEYFRAME_NS, GRAY_FRAME_NS]
+    assert _decoded_log_times_ns(decode_spy=decode_spy) == []
     assert 96 < helpers.jpeg_mean_gray_level(gray_frame.data) < 160
+
+
+def test_camera_jpeg__concurrent_requests_decode_each_frame_once(
+    db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
+) -> None:
+    recording = recording_resolver.get_by_id(
+        session=db_session, recording_id=video_recording.recording_id
+    )
+    assert recording is not None
+    with McapFileReader(recording.uri) as reader:
+        messages = reader.get_decoded_messages_in_range(
+            channel_ids=[video_recording.channel_id],
+            start_time_ns=KEYFRAME_NS,
+            end_time_ns=WHITE_FRAME_NS,
+        )[video_recording.channel_id]
+    decode_spy = mocker.spy(VideoDecoder, "decode")
+    barrier = threading.Barrier(2)
+    results: dict[int, bytes | None] = {}
+    errors: list[BaseException] = []
+
+    def load(log_time_ns: int) -> None:
+        try:
+            barrier.wait(timeout=5)
+            results[log_time_ns] = camera_jpeg(
+                uri=recording.uri,
+                channel_id=video_recording.channel_id,
+                keyframe_log_time_ns=KEYFRAME_NS,
+                messages=messages,
+                target_time_ns=log_time_ns,
+            )
+        except Exception as exc:
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=load, args=(log_time_ns,))
+        for log_time_ns in (GRAY_FRAME_NS, WHITE_FRAME_NS)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+
+    assert errors == []
+    assert not any(thread.is_alive() for thread in threads)
+    decoded = _decoded_log_times_ns(decode_spy=decode_spy)
+    assert decoded.count(KEYFRAME_NS) == 1
+    assert decoded.count(GRAY_FRAME_NS) == 1
+    assert decoded.count(WHITE_FRAME_NS) == 1
+    gray = results[GRAY_FRAME_NS]
+    white = results[WHITE_FRAME_NS]
+    assert gray is not None
+    assert white is not None
+    assert 96 < helpers.jpeg_mean_gray_level(gray) < 160
+    assert helpers.jpeg_mean_gray_level(white) > 223
 
 
 def test_get_camera_frame__log_time_before_keyframe(db_session: Session) -> None:

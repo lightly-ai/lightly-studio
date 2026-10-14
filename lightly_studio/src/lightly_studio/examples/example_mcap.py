@@ -95,7 +95,7 @@ env.read_env()
 # Read as a string, not as a path, so that a URI such as `s3://my-bucket/bags/` survives
 # unchanged. Set `EXAMPLES_MCAP_PATH` to a folder of indexed `.mcap` files to run this.
 mcap_path = env.str(
-    "EXAMPLES_MCAP_PATH", r"s3://horatiu-mcap-test/full_size/rosbag2_2026_07_14-12_52_13_0.mcap"
+    "EXAMPLES_MCAP_PATH", r"s3://horatiu-mcap-test/full_size/rosbag2_2026_08_02-20_44_08_0.mcap"
 )
 
 db_manager.connect(cleanup_existing=False)

@@ -18,7 +18,7 @@ import fsspec.utils
 
 # One chunk is a few hundred kilobytes. Sixteen megabytes covers the chunks a
 # page reads at once, and drops them as the view moves on.
-_MAX_BYTES = 16 * 1024 * 1024
+_MAX_BYTES = 128 * 1024 * 1024
 # Chunk bodies are shared as one range. A chunk header is several reads of a few
 # bytes, so those reads share one block instead of downloading once per reader.
 _MIN_SHARED_BYTES = 4 * 1024
