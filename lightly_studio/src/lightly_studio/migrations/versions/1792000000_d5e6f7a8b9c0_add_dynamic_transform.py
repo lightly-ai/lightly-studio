@@ -4,7 +4,7 @@ Adds ``dynamic_transform`` (one row per ``/tf`` edge at one capture time, FK to
 ``recording.recording_id``). The same parent and child repeat as the pose changes.
 
 Revision ID: d5e6f7a8b9c0
-Revises: 94ca81e6b023
+Revises: 8cb37a9d104e
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "d5e6f7a8b9c0"
-down_revision: str | Sequence[str] | None = "94ca81e6b023"
+down_revision: str | Sequence[str] | None = "8cb37a9d104e"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
