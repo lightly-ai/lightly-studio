@@ -53,7 +53,12 @@ vi.mock('$lib/hooks', () => ({
     useCloudPointFrame: () => ({
         query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
     }),
-    useAnnotationCollections: () => ({ data: [] })
+    useAnnotationCollections: () => ({ data: [] }),
+    useMcapTickPrefetchScheduler: () => ({
+        bufferedRanges: [],
+        errors: new Map(),
+        cancel: vi.fn()
+    })
 }));
 
 const mockPageData = {

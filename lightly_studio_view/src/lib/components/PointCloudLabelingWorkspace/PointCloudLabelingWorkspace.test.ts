@@ -24,6 +24,14 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({ data: [] })
 }));
 
+vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte', () => ({
+    useMcapTickPrefetchScheduler: () => ({
+        bufferedRanges: [{ startIndex: 0, endIndex: 1 }],
+        errors: new Map(),
+        cancel: vi.fn()
+    })
+}));
+
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
         query: cloudQuery

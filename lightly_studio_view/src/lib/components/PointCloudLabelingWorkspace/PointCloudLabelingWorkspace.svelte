@@ -15,7 +15,9 @@
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
-    import { useAnnotationCollections } from '$lib/hooks';
+    import { useAnnotationCollections, useMcapTickPrefetchScheduler } from '$lib/hooks';
+    import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
+    import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
 
@@ -49,6 +51,8 @@
         sourcePath?: readonly WorkspaceCrumb[];
         /** Optional status override for tests and stories. */
         status?: 'unsupported' | 'empty' | 'error';
+        /** Number of ticks to prefetch from the active tick forward. */
+        prefetchTickCount?: number;
         onRetry?: () => void;
     }
 
@@ -62,10 +66,15 @@
         onNextSequence,
         sourcePath = [],
         status,
+        prefetchTickCount = 50,
         onRetry
     }: Props = $props();
 
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
+    const bufferEntireSequence = useSessionStorage<boolean>(
+        'lightlyStudio_pointCloudBufferEntireSequence',
+        false
+    );
 
     let workspace = $state<PointCloudWorkspaceContext>({} as PointCloudWorkspaceContext);
     const lidarSelection = useChannelSelection({
@@ -85,11 +94,42 @@
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
+    const tickPrefetch = useMcapTickPrefetchScheduler({
+        getDatasetId: () => datasetId,
+        getSequenceId: () => sequenceId,
+        getDisplayFrameId: () => workspace.referenceFrameId,
+        getTicks: () => workspace.ticks,
+        // Keep one buffer while playback advances. A new sequence gets a new buffer.
+        // Changing the mode creates a new session, which cancels the old queue. This is important
+        // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
+        getRequestId: () =>
+            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? 'entire' : 'window'}`,
+        getRanges: () => {
+            if ($bufferEntireSequence) {
+                return [{ startIndex: 0, endIndex: workspace.ticks.length - 1 }];
+            }
+
+            const activeIndex = workspace.ticks.findIndex(
+                (tick) => tick.seq_number === workspace.currentTick
+            );
+            return getMcapTickPrefetchRange({
+                activeIndex,
+                tickCount: workspace.ticks.length,
+                prefetchTickCount
+            });
+        }
+    });
+    const isTickBuffered = (index: number) =>
+        tickPrefetch.bufferedRanges.some(
+            ({ startIndex, endIndex }) => index >= startIndex && index <= endIndex
+        );
+
     const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
         usePointCloudTickNavigation({
             getWorkspace: () => workspace,
             getTickNumber: () => tickNumber,
-            getOnTickChange: () => onTickChange
+            getOnTickChange: () => onTickChange,
+            getIsTickBuffered: isTickBuffered
         });
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
@@ -288,6 +328,10 @@
                                 currentTick={workspace.currentTick}
                                 isPlaying={workspace.isPlaying}
                                 playbackIntervalMs={workspace.playbackIntervalMs}
+                                bufferEntireSequence={$bufferEntireSequence}
+                                onBufferEntireSequenceChange={(enabled) =>
+                                    bufferEntireSequence.set(enabled)}
+                                bufferedRanges={tickPrefetch.bufferedRanges}
                                 onPreviousFrame={goToPreviousFrame}
                                 onNextFrame={goToNextFrame}
                                 onPlayToggle={togglePlayback}
