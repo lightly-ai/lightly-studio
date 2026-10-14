@@ -81,40 +81,17 @@ def resolve_default_embedder(
         return embedder, default_model.embedding_model_id
 
     registry = embedder_registry.get_registry()
-    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
-    parent_model = _parent_default_model(session=session, collection=collection)
-    if (
-        collection is not None
-        and parent_model is not None
-        and not registry.has_registered_bootstrap(embedder_type=embedder_type)
-    ):
-        parent_embedder = _embedder_for_model(
-            default_model=parent_model, embedder_type=embedder_type
+    parent_embedder: _EmbedderT | NoEmbedderReason | None = None
+    if not registry.has_registered_bootstrap(embedder_type=embedder_type):
+        parent_embedder = _parent_space_embedder(
+            session=session, collection_id=collection_id, embedder_type=embedder_type
         )
-        if not isinstance(parent_embedder, NoEmbedderReason):
-            model_id = _register_default_model(
-                session=session, collection_id=collection_id, embedder=parent_embedder
-            )
-            return parent_embedder, model_id
-        if parent_embedder is NoEmbedderReason.UNAVAILABLE:
-            logger.warning(
-                "No embedder is available for the space %r of the parent collection. Skipping "
-                "embedding generation for the %s collection %r. A later run uses the parent's "
-                "space when its embedder is available.",
-                parent_model.name,
-                _collection_kind(collection=collection),
-                collection.name,
-            )
-            return None
-        logger.warning(
-            "The embedder of the parent collection's space %r cannot embed the %s collection "
-            "%r. Using the default embedder instead.",
-            parent_model.name,
-            _collection_kind(collection=collection),
-            collection.name,
-        )
-
-    embedder = registry.get_embedder(embedder_type=embedder_type)
+    if parent_embedder is NoEmbedderReason.UNAVAILABLE:
+        return None
+    if parent_embedder is None or isinstance(parent_embedder, NoEmbedderReason):
+        embedder = registry.get_embedder(embedder_type=embedder_type)
+    else:
+        embedder = parent_embedder
     if isinstance(embedder, NoEmbedderReason):
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return None
@@ -204,20 +181,46 @@ def _embedder_for_model(
     return embedder
 
 
-def _parent_default_model(
-    session: Session, collection: CollectionTable | None
-) -> EmbeddingModelTable | None:
-    """Get the default model of the parent collection.
+def _parent_space_embedder(
+    session: Session,
+    collection_id: UUID,
+    embedder_type: type[_EmbedderT],
+) -> _EmbedderT | NoEmbedderReason | None:
+    """Resolve the embedder of the parent collection's default space.
+
+    Logs a warning when the space has no usable embedder.
 
     Returns:
-        The default model of the parent, or None if the collection does not exist, has no
-        parent, or the parent has no default model.
+        The embedder of the parent's space, or why no source has a matching embedder. None if
+        the collection does not exist, has no parent, or the parent has no default model.
     """
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None or collection.parent_collection_id is None:
         return None
-    return collection_embedding_model_resolver.get_default_model_by_collection_id(
+    parent_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
         session=session, collection_id=collection.parent_collection_id
     )
+    if parent_model is None:
+        return None
+    embedder = _embedder_for_model(default_model=parent_model, embedder_type=embedder_type)
+    if embedder is NoEmbedderReason.UNAVAILABLE:
+        logger.warning(
+            "No embedder is available for the space %r of the parent collection. Skipping "
+            "embedding generation for the %s collection %r. A later run uses the parent's "
+            "space when its embedder is available.",
+            parent_model.name,
+            _collection_kind(collection=collection),
+            collection.name,
+        )
+    elif embedder is NoEmbedderReason.LACKS_CAPABILITY:
+        logger.warning(
+            "The embedder of the parent collection's space %r cannot embed the %s collection "
+            "%r. Using the default embedder instead.",
+            parent_model.name,
+            _collection_kind(collection=collection),
+            collection.name,
+        )
+    return embedder
 
 
 def _collection_kind(collection: CollectionTable) -> str:
