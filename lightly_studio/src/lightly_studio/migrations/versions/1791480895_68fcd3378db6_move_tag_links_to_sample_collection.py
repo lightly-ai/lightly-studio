@@ -35,6 +35,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Move each tag link to a tag in the collection of its sample."""
+    # Copy each link whose sample is not in the collection of its tag to a temporary table.
     op.execute(
         sa.text(
             """
@@ -51,6 +52,8 @@ def upgrade() -> None:
             """
         )
     )
+    # Create a tag with the same name in the collection of each such sample. Skip the
+    # tags that exist already.
     op.execute(
         sa.text(
             """
@@ -70,6 +73,7 @@ def upgrade() -> None:
             """
         )
     )
+    # Link each sample to the tag with the same name in its own collection.
     op.execute(
         sa.text(
             """
@@ -83,6 +87,7 @@ def upgrade() -> None:
             """
         )
     )
+    # Delete the old links. Each one now has a copy on the tag in the collection of its sample.
     op.execute(
         sa.text(
             """
@@ -92,6 +97,7 @@ def upgrade() -> None:
             """
         )
     )
+    # Delete the tags that have no links after the move.
     op.execute(
         sa.text(
             """
