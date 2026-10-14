@@ -117,7 +117,11 @@
     } = useCreateCuboidAnnotation({
         getCollectionId: () => annotationSourceCollectionId,
         getDatasetId: () => datasetId,
-        getTickSampleId: () => tick?.sampleId,
+        getTickSampleId: () => {
+            if (!tick || tick.isStale || sceneSnapshot?.tick !== workspace.currentTick)
+                return undefined;
+            return tick.sampleId;
+        },
         getSceneFrame: () =>
             sceneSnapshot?.frame
                 ? {
@@ -223,7 +227,7 @@
 
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
-            await workspace.tickDetails.refetch();
+            await workspace.tickDetails.refetch({ throwOnError: true });
             selectedCuboidId = annotationId;
             activeTool = 'select';
         });

@@ -50,7 +50,10 @@ vi.mock('svelte-sonner', () => ({
 
 describe('useCreateCuboidAnnotation', () => {
     const lastAnnotationLabel = writable<Record<string, string>>({});
-    const labels = { data: [] as { annotation_label_name: string; annotation_label_id: string }[] };
+    const labels = {
+        data: [] as { annotation_label_name: string; annotation_label_id: string }[],
+        refetch: vi.fn()
+    };
     const params: Params = {
         getCollectionId: () => 'collection-1',
         getDatasetId: () => 'dataset-1',
@@ -65,6 +68,7 @@ describe('useCreateCuboidAnnotation', () => {
         vi.clearAllMocks();
         lastAnnotationLabel.set({});
         labels.data = [];
+        labels.refetch = vi.fn().mockResolvedValue({ data: [] });
         createLabel.mockResolvedValue({ annotation_label_id: 'new-label' });
         createAnnotation.mockResolvedValue({ sample_id: 'annotation-1' });
         requestLabel.mockResolvedValue({ label: 'car' });
@@ -143,6 +147,38 @@ describe('useCreateCuboidAnnotation', () => {
         expect(createLabel).not.toHaveBeenCalled();
         expect(createAnnotation).not.toHaveBeenCalled();
         expect(updateLastAnnotationLabel).not.toHaveBeenCalled();
+    });
+
+    it('cancels creation when the tick changes while the class dialog is open', async () => {
+        let sampleId = 'sample-1';
+        requestLabel.mockImplementation(async () => {
+            sampleId = 'sample-2';
+            return { label: 'car' };
+        });
+
+        await useCreateCuboidAnnotation({
+            ...params,
+            getTickSampleId: () => sampleId
+        }).handleCreateCuboid([0, 0, 0], vi.fn());
+
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('waits for the labels query before deciding to create a new class', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        labels.data = undefined as unknown as typeof labels.data;
+        labels.refetch = vi.fn().mockResolvedValue({
+            data: [{ annotation_label_name: 'car', annotation_label_id: 'existing-label' }]
+        });
+        const onCreated = vi.fn();
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid([0, 0, 0], onCreated);
+
+        expect(labels.refetch).toHaveBeenCalledOnce();
+        expect(createLabel).not.toHaveBeenCalled();
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_label_id: 'existing-label' })
+        );
     });
 
     it('shows an error when creating the annotation class fails', async () => {

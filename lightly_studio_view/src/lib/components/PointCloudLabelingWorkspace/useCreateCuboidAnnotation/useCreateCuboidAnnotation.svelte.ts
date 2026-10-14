@@ -97,19 +97,23 @@ export function useCreateCuboidAnnotation({
     });
     const labels = useAnnotationLabels(() => ({ collectionId: getCollectionId() ?? '' }));
     const { lastAnnotationLabel, updateLastAnnotationLabel } = useGlobalStorage();
-    let annotationLabel = get(lastAnnotationLabel)[getCollectionId() ?? ''] ?? null;
 
     async function selectAnnotationLabel(collectionId: string): Promise<string | null> {
-        if (annotationLabel) return annotationLabel;
+        const stored = get(lastAnnotationLabel)[collectionId] ?? null;
+        if (stored) return stored;
         const selection = await requestLabel();
         if (!selection?.label) return null;
-        annotationLabel = selection.label;
-        updateLastAnnotationLabel(collectionId, annotationLabel);
-        return annotationLabel;
+        updateLastAnnotationLabel(collectionId, selection.label);
+        return selection.label;
     }
 
     async function findOrCreateLabelId(labelName: string): Promise<string | null> {
-        const existingLabel = labels.data?.find(
+        let currentData = labels.data;
+        if (currentData === undefined) {
+            const result = await labels.refetch();
+            currentData = result.data;
+        }
+        const existingLabel = currentData?.find(
             (label) => label.annotation_label_name === labelName
         );
         if (existingLabel?.annotation_label_id) return existingLabel.annotation_label_id;
@@ -118,6 +122,7 @@ export function useCreateCuboidAnnotation({
                 dataset_id: getDatasetId(),
                 annotation_label_name: labelName
             });
+            await labels.refetch();
             return label.annotation_label_id ?? null;
         } catch {
             toast.error('Failed to create annotation class. Please try again.');
@@ -128,14 +133,10 @@ export function useCreateCuboidAnnotation({
     async function saveCuboid(
         groundPosition: Vector3,
         sampleId: string,
-        labelId: string
+        labelId: string,
+        frame: SceneFrame | null
     ): Promise<string> {
-        const input = buildCuboidInput({
-            frame: getSceneFrame(),
-            groundPosition,
-            labelId,
-            sampleId
-        });
+        const input = buildCuboidInput({ frame, groundPosition, labelId, sampleId });
         const annotation = await createAnnotation(input);
         toast.success('Annotation created successfully');
         return annotation.sample_id;
@@ -147,14 +148,17 @@ export function useCreateCuboidAnnotation({
     ): Promise<void> {
         const collectionId = getCollectionId();
         const sampleId = getTickSampleId();
+        const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
         const labelName = await selectAnnotationLabel(collectionId);
         if (!labelName) return;
+        // Cancel if the active tick changed while the class dialog was open.
+        if (getTickSampleId() !== sampleId) return;
         const labelId = await findOrCreateLabelId(labelName);
         if (!labelId) return;
         let annotationId: string;
         try {
-            annotationId = await saveCuboid(groundPosition, sampleId, labelId);
+            annotationId = await saveCuboid(groundPosition, sampleId, labelId, capturedFrame);
         } catch {
             toast.error('Failed to create annotation. Please try again.');
             return;

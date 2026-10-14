@@ -2,24 +2,14 @@
     import { T, useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import { GroundPlaneClickTarget } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
     import CuboidGizmo from './CuboidGizmo.svelte';
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
     import { addCuboidSelectionListeners, pickSmallestFromIntersections } from './cuboidSelection';
-    import { computeGroundPlaneLayout } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
 
     type CuboidIntersection = Parameters<typeof pickSmallestFromIntersections>[0][number];
-
-    interface GroundPlaneClickPoint {
-        x: number;
-        y: number;
-        z: number;
-    }
-
-    interface GroundPlaneClickEvent {
-        point: GroundPlaneClickPoint;
-    }
 
     interactivity();
 
@@ -35,8 +25,8 @@
         hoveredAnnotationId?: string | null;
         /** Tool that determines whether cuboids can be selected. */
         activeTool?: Domain.WorkspaceTool;
-        /** Bounds of the point cloud containing the cuboids. */
-        pointCloudBounds: Domain.Bounds3;
+        /** Retained bounds that keep the click plane aligned with the visible ground plane. */
+        groundPlaneBounds: Domain.Bounds3;
         /** Fires when the user selects or deselects a cuboid. */
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
@@ -51,7 +41,7 @@
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
-        pointCloudBounds,
+        groundPlaneBounds,
         onselect,
         onhover,
         onCreateCuboid
@@ -68,17 +58,6 @@
     // Currently-hovered cuboids: annotationId → volume. Maintained across pointer-enter/leave
     // events so that the smallest overlapping cuboid is always highlighted.
     let hoveredCuboids = new Map<string, number>();
-
-    const GROUND_PLANE_SIZE_FACTOR = 10;
-    const groundPlaneLayout = $derived(computeGroundPlaneLayout(pointCloudBounds));
-    const groundPlaneSize = $derived(
-        groundPlaneLayout
-            ? Math.max(
-                  pointCloudBounds.max[0] - pointCloudBounds.min[0],
-                  pointCloudBounds.max[1] - pointCloudBounds.min[1]
-              ) * GROUND_PLANE_SIZE_FACTOR
-            : 0
-    );
 
     function onCuboidHit(annotationId: string, volume: number): void {
         if (activeTool !== 'select') return;
@@ -112,11 +91,6 @@
         onhover?.(pickSmallestFromIntersections(hoveredAsIntersections()), null);
     }
 
-    function handleGroundPlaneClick(event: GroundPlaneClickEvent): void {
-        if (activeTool !== 'create-cuboid') return;
-        onCreateCuboid?.([event.point.x, event.point.y, event.point.z]);
-    }
-
     $effect(() => {
         hoveredCuboids.clear();
         onhover?.(null, null);
@@ -140,11 +114,11 @@
     });
 </script>
 
-{#if groundPlaneLayout}
-    <T.Mesh position={[...groundPlaneLayout.center]} visible={false} onclick={handleGroundPlaneClick}>
-        <T.PlaneGeometry args={[groundPlaneSize, groundPlaneSize]} />
-        <T.MeshBasicMaterial />
-    </T.Mesh>
+{#if activeTool === 'create-cuboid'}
+    <GroundPlaneClickTarget
+        bounds={groundPlaneBounds}
+        onclick={(position) => onCreateCuboid?.(position)}
+    />
 {/if}
 
 {#each renderCuboids as item (item.annotation.id)}
