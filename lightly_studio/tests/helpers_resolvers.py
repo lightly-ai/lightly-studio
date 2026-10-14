@@ -12,6 +12,7 @@ from uuid import UUID
 import numpy as np
 from sqlmodel import Session
 
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
@@ -163,6 +164,29 @@ def create_image(
     image = image_resolver.get_by_id(session=session, sample_id=sample_ids[0])
     assert image is not None
     return image
+
+
+def create_image_with_metadata(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    metadata: dict[str, Any],
+    file_path_abs: str = "/path/to/sample1.png",
+    width: int = 1920,
+    height: int = 1080,
+) -> ImageSample:
+    """Create an image sample and set its metadata."""
+    sample = ImageSample(
+        inner=create_image(
+            session=session,
+            collection_id=collection_id,
+            file_path_abs=file_path_abs,
+            width=width,
+            height=height,
+        )
+    )
+    for key, value in metadata.items():
+        sample.metadata[key] = value
+    return sample
 
 
 def create_mcap(  # noqa: PLR0913
