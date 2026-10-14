@@ -14,6 +14,7 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_toggle_edit_mode: 'e',
         grid_view_sample_rendering: 'contain',
         grid_view_thumbnail_quality: 'raw',
+        image_interpolation: true,
         show_annotation_text_labels: false,
         show_sample_filenames: true,
         show_bounding_boxes_for_segmentation: true,
@@ -138,6 +139,22 @@ describe('SettingsDialog', () => {
         );
     });
 
+    it('should disable image interpolation and save the setting', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const toggle = screen.getByRole('switch', { name: 'Image Interpolation' });
+        expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+        await fireEvent.click(toggle);
+        await fireEvent.click(screen.getByText('Save Changes'));
+
+        const { saveSettings } = useSettings();
+        expect(saveSettings).toHaveBeenCalledWith(
+            expect.objectContaining({ image_interpolation: false })
+        );
+    });
+
     it('should save all initial settings unchanged when no edits are made', async () => {
         render(SettingsDialog);
         await openDialog();
@@ -151,6 +168,7 @@ describe('SettingsDialog', () => {
             key_toggle_edit_mode: 'e',
             grid_view_sample_rendering: 'contain',
             grid_view_thumbnail_quality: 'raw',
+            image_interpolation: true,
             show_annotation_text_labels: false,
             show_sample_filenames: true,
             show_bounding_boxes_for_segmentation: true,

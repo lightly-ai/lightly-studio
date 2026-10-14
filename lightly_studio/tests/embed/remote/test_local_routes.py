@@ -7,6 +7,7 @@ from lightly_studio_serve.embedder import (
     ImageBytesEmbedder,
     ImageCropPathEmbedder,
     ImagePathEmbedder,
+    ImagePILEmbedder,
 )
 from lightly_studio_serve.protocol import ServerLimits
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
@@ -42,6 +43,7 @@ def test_with_local_routes(remote: RemoteEmbedder) -> None:
 
     assert isinstance(embedder, ImagePathEmbedder)
     assert isinstance(embedder, ImageCropPathEmbedder)
+    assert isinstance(embedder, ImagePILEmbedder)
     assert isinstance(embedder, ImageBytesEmbedder)
     assert embedder.embedding_space_spec() == remote.embedding_space_spec()
     assert isinstance(embedder, RemoteEmbedder)

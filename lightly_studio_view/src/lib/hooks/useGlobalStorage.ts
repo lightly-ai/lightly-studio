@@ -398,6 +398,7 @@ export const useGlobalStorage = () => {
 
         // Left filter panel collapse state
         filterPanelCollapsed,
+        openFilterPanel: () => filterPanelCollapsed.set(false),
         toggleFilterPanelCollapsed: () => {
             filterPanelCollapsed.update((collapsed) => !collapsed);
         },

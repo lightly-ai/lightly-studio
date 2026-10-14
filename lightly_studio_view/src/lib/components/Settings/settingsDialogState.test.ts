@@ -13,6 +13,7 @@ const TEST_SETTINGS: SettingView = {
     setting_id: '00000000-0000-0000-0000-000000000000',
     grid_view_sample_rendering: 'contain',
     grid_view_thumbnail_quality: 'raw',
+    image_interpolation: true,
     key_hide_annotations: 'v',
     key_go_back: 'Escape',
     key_toggle_edit_mode: 'e',
@@ -47,6 +48,7 @@ describe('createSettingsDialogFormState', () => {
             },
             gridViewRendering: 'contain',
             gridViewThumbnailQuality: 'raw',
+            imageInterpolation: true,
             showAnnotationTextLabels: false,
             showSampleFilenames: false,
             showBoundingBoxesForSegmentation: true,
@@ -73,6 +75,7 @@ describe('createSettingsSavePayload', () => {
                 },
                 gridViewRendering: 'cover',
                 gridViewThumbnailQuality: 'high',
+                imageInterpolation: false,
                 showAnnotationTextLabels: true,
                 showSampleFilenames: true,
                 showBoundingBoxesForSegmentation: false,
@@ -84,6 +87,7 @@ describe('createSettingsSavePayload', () => {
             key_toggle_edit_mode: 't',
             grid_view_sample_rendering: 'cover',
             grid_view_thumbnail_quality: 'high',
+            image_interpolation: false,
             show_annotation_text_labels: true,
             show_sample_filenames: true,
             show_bounding_boxes_for_segmentation: false,
@@ -123,6 +127,7 @@ describe('SettingsDialogState', () => {
         const customSettings: SettingView = {
             ...TEST_SETTINGS,
             key_hide_annotations: 'h',
+            image_interpolation: false,
             grid_view_sample_rendering: 'cover',
             show_annotation_text_labels: true,
             enforce_coloring_by_class: true
@@ -131,6 +136,7 @@ describe('SettingsDialogState', () => {
         state.hydrate(customSettings);
 
         expect(state.shortcuts.hideAnnotations).toBe('h');
+        expect(state.imageInterpolation).toBe(false);
         expect(state.gridViewRendering).toBe('cover');
         expect(state.showAnnotationTextLabels).toBe(true);
         expect(state.enforceColoringByClass).toBe(true);
@@ -179,6 +185,7 @@ describe('SettingsDialogState', () => {
         state.hydrate(TEST_SETTINGS);
         state.shortcuts.hideAnnotations = 'z';
         state.showSampleFilenames = true;
+        state.imageInterpolation = false;
         state.enforceColoringByClass = true;
 
         const payload = state.getSavePayload();
@@ -187,6 +194,7 @@ describe('SettingsDialogState', () => {
             expect.objectContaining({
                 key_hide_annotations: 'z',
                 show_sample_filenames: true,
+                image_interpolation: false,
                 enforce_coloring_by_class: true,
                 key_go_back: 'Escape',
                 grid_view_sample_rendering: 'contain'
