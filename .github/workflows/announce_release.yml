@@ -1,6 +1,6 @@
 name: Announce Release
 
-# Posts a released changelog section to the Slack channel sales reads.
+# Posts a released changelog section to the #releases Slack channel.
 on:
   workflow_call:
     inputs:
@@ -32,7 +32,7 @@ on:
 permissions: {}
 
 env:
-  SLACK_CHANNEL: studio-issues-and-feedback
+  SLACK_CHANNEL: releases
 
 jobs:
   announce:

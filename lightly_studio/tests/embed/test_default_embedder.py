@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from lightly_studio_serve import server
-from lightly_studio_serve.embedder import TextEmbedder
+from lightly_studio_serve.embedder import ImagePathEmbedder, TextEmbedder
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -61,7 +61,7 @@ def test_resolve_default_embedder__uses_existing_default(
     result = default_embedder.resolve_default_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        embedder_type=ImagePathEmbedder,
     )
 
     assert result == (embedder, model.embedding_model_id)
@@ -84,7 +84,7 @@ def test_resolve_default_embedder__registers_bootstrap_when_no_default(
     result = default_embedder.resolve_default_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        embedder_type=ImagePathEmbedder,
     )
 
     assert result is not None
@@ -123,7 +123,7 @@ def test_resolve_default_embedder__default_dimension_mismatch_raises(
         default_embedder.resolve_default_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+            embedder_type=ImagePathEmbedder,
         )
 
 
@@ -148,7 +148,7 @@ def test_resolve_default_embedder__bootstrap_dimension_mismatch_raises(
         default_embedder.resolve_default_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+            embedder_type=ImagePathEmbedder,
         )
 
 
@@ -164,7 +164,7 @@ def test_resolve_default_embedder__none_when_no_embedder(
         result = default_embedder.resolve_default_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_text_embedder,
+            embedder_type=TextEmbedder,
         )
 
     assert result is None
@@ -182,7 +182,7 @@ def test_resolve_default_embedder__missing_collection_raises(
         default_embedder.resolve_default_embedder(
             session=db_session,
             collection_id=uuid.uuid4(),
-            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+            embedder_type=ImagePathEmbedder,
         )
 
 
@@ -206,8 +206,7 @@ def test_resolve_query_embedder__uses_existing_default(
     result = default_embedder.resolve_query_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-        query_kind="images",
+        embedder_type=ImagePathEmbedder,
     )
 
     assert result is embedder
@@ -230,8 +229,7 @@ def test_resolve_query_embedder__no_default_model_raises(
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-            query_kind="images",
+            embedder_type=ImagePathEmbedder,
         )
     # The query path never bootstraps a default model.
     linked = collection_embedding_model_resolver.get_all_by_collection_id(
@@ -257,13 +255,12 @@ def test_resolve_query_embedder__no_embedder_for_space_raises(
 
     with pytest.raises(
         MissingCapabilityError,
-        match=r"The embedding space 'random_model' of this collection cannot embed images.",
+        match=r"The embedding space 'random_model' has no ImagePathEmbedder.",
     ):
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-            query_kind="images",
+            embedder_type=ImagePathEmbedder,
         )
 
 
@@ -281,8 +278,7 @@ def test_resolve_query_embedder__remote_space_without_capability_raises(
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-            query_kind="images",
+            embedder_type=ImagePathEmbedder,
         )
 
 
@@ -300,8 +296,7 @@ def test_resolve_query_embedder__unusable_remote_raises(
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_text_embedder,
-            query_kind="text",
+            embedder_type=TextEmbedder,
         )
 
 
@@ -325,8 +320,7 @@ def test_resolve_query_embedder__dimension_mismatch_raises(
         default_embedder.resolve_query_embedder(
             session=db_session,
             collection_id=collection.collection_id,
-            get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
-            query_kind="images",
+            embedder_type=ImagePathEmbedder,
         )
 
 
@@ -343,8 +337,7 @@ def test_resolve_query_embedder__builds_remote_from_stored_config(
     embedder = default_embedder.resolve_query_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_text_embedder,
-        query_kind="text",
+        embedder_type=TextEmbedder,
     )
 
     assert embedder.embed_text(texts=["a query"]).embeddings.shape == (1, 2)

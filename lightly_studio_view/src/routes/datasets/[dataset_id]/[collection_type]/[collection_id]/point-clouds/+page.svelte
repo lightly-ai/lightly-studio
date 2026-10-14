@@ -19,6 +19,7 @@
     const sequences = $derived(
         $data.map((sequence) => ({
             sampleId: sequence.sample_id,
+            fileName: sequence.file_name,
             sampleCount: sequence.sample_count,
             sequenceFrame: sequence.sequence_frame ?? null
         }))

@@ -47,4 +47,14 @@ describe('CameraProjectionFrame', () => {
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
         expect(screen.getByText('front')).toBeInTheDocument();
     });
+
+    it('enlarges the frame in a dialog instead of opening a new tab', async () => {
+        render(CameraProjectionFrame, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
+
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: 'front enlarged' })).toBeInTheDocument();
+        expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    });
 });
