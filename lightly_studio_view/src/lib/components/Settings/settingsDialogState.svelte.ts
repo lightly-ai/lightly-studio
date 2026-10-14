@@ -25,6 +25,7 @@ interface SettingsDialogFormState {
     shortcutSettings: SettingsDialogShortcutState;
     gridViewRendering: RenderingMode;
     gridViewThumbnailQuality: ThumbnailQualityMode;
+    imageInterpolation: boolean;
     showAnnotationTextLabels: boolean;
     showSampleFilenames: boolean;
     showBoundingBoxesForSegmentation: boolean;
@@ -52,6 +53,7 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
         },
         gridViewRendering: settings.grid_view_sample_rendering,
         gridViewThumbnailQuality: settings.grid_view_thumbnail_quality,
+        imageInterpolation: settings.image_interpolation,
         showAnnotationTextLabels: settings.show_annotation_text_labels,
         showSampleFilenames: settings.show_sample_filenames,
         showBoundingBoxesForSegmentation: settings.show_bounding_boxes_for_segmentation,
@@ -68,6 +70,7 @@ export function createSettingsSavePayload(
         key_toggle_edit_mode: formState.shortcutSettings.toggleEditMode,
         grid_view_sample_rendering: formState.gridViewRendering,
         grid_view_thumbnail_quality: formState.gridViewThumbnailQuality,
+        image_interpolation: formState.imageInterpolation,
         show_annotation_text_labels: formState.showAnnotationTextLabels,
         show_sample_filenames: formState.showSampleFilenames,
         show_bounding_boxes_for_segmentation: formState.showBoundingBoxesForSegmentation,
@@ -119,6 +122,7 @@ export class SettingsDialogState {
     });
     gridViewRendering: RenderingMode = $state('contain');
     gridViewThumbnailQuality: ThumbnailQualityMode = $state('raw');
+    imageInterpolation = $state(true);
     showAnnotationTextLabels = $state(false);
     showSampleFilenames = $state(false);
     showBoundingBoxesForSegmentation = $state(true);
@@ -132,6 +136,7 @@ export class SettingsDialogState {
         this.shortcuts = formState.shortcutSettings;
         this.gridViewRendering = formState.gridViewRendering;
         this.gridViewThumbnailQuality = formState.gridViewThumbnailQuality;
+        this.imageInterpolation = formState.imageInterpolation;
         this.showAnnotationTextLabels = formState.showAnnotationTextLabels;
         this.showSampleFilenames = formState.showSampleFilenames;
         this.showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
@@ -161,6 +166,7 @@ export class SettingsDialogState {
             shortcutSettings: this.shortcuts,
             gridViewRendering: this.gridViewRendering,
             gridViewThumbnailQuality: this.gridViewThumbnailQuality,
+            imageInterpolation: this.imageInterpolation,
             showAnnotationTextLabels: this.showAnnotationTextLabels,
             showSampleFilenames: this.showSampleFilenames,
             showBoundingBoxesForSegmentation: this.showBoundingBoxesForSegmentation,
