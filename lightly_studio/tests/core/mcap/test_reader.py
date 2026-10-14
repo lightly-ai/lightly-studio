@@ -600,10 +600,10 @@ class TestMcapFileReader:
             )
 
             result = reader.get_decoded_messages_in_range(
-                channel_id=channel_id,
+                channel_ids=[channel_id],
                 start_time_ns=helpers.IMAGE_LOG_TIMES_NS[0],
                 end_time_ns=helpers.IMAGE_LOG_TIMES_NS[1],
-            )
+            )[channel_id]
 
         assert [message.log_time_ns for message in result] == [
             helpers.IMAGE_LOG_TIMES_NS[0],
@@ -624,12 +624,12 @@ class TestMcapFileReader:
             )
 
             result = reader.get_decoded_messages_in_range(
-                channel_id=channel_id,
+                channel_ids=[channel_id],
                 start_time_ns=helpers.IMAGE_LOG_TIMES_NS[0] + 1,
                 end_time_ns=helpers.IMAGE_LOG_TIMES_NS[1] - 1,
             )
 
-        assert result == []
+        assert result == {channel_id: []}
 
     def test_get_decoded_messages_in_range__skips_other_channels_of_topic(
         self, tmp_path: Path
@@ -642,8 +642,8 @@ class TestMcapFileReader:
             second_channel_id = max(topic.channel_id for topic in reader.get_topics())
 
             result = reader.get_decoded_messages_in_range(
-                channel_id=second_channel_id, start_time_ns=1_000, end_time_ns=2_000
-            )
+                channel_ids=[second_channel_id], start_time_ns=1_000, end_time_ns=2_000
+            )[second_channel_id]
 
         assert [message.log_time_ns for message in result] == [1_000, 2_000]
         assert all(message.channel_id == second_channel_id for message in result)
@@ -651,6 +651,29 @@ class TestMcapFileReader:
             {"channel": 1},
             {"channel": 1},
         ]
+
+    def test_get_decoded_messages_in_range__several_channels(self, tmp_path: Path) -> None:
+        path = helpers.write_json_mcap_with_two_channels(
+            path=tmp_path / "two_channels.mcap", topic="/shared", log_times_ns=[1_000, 2_000]
+        )
+        with McapFileReader(path) as reader:
+            first_channel_id, second_channel_id = sorted(
+                topic.channel_id for topic in reader.get_topics()
+            )
+
+            result = reader.get_decoded_messages_in_range(
+                channel_ids=[first_channel_id, second_channel_id],
+                start_time_ns=1_000,
+                end_time_ns=2_000,
+            )
+
+        assert {
+            channel_id: [(message.log_time_ns, message.decoded_message) for message in messages]
+            for channel_id, messages in result.items()
+        } == {
+            first_channel_id: [(1_000, {"channel": 0}), (2_000, {"channel": 0})],
+            second_channel_id: [(1_000, {"channel": 1}), (2_000, {"channel": 1})],
+        }
 
     def test_get_decoded_message_at__unknown_channel(self, reader: McapFileReader) -> None:
         with pytest.raises(ChannelNotFoundError):

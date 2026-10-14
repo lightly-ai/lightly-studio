@@ -20,6 +20,10 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails })
 }));
 
+vi.mock('$lib/hooks/useTickData/useTickCameraFrames.svelte', () => ({
+    useTickCameraFrames: () => ({ query: { data: undefined } })
+}));
+
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({ data: [] })
 }));

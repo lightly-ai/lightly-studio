@@ -7,12 +7,10 @@ This folder contains the building blocks for buffering MCAP sequence ticks.
 `prefetchMcapTick` loads the data required by one tick:
 
 - tick details, including annotations;
-- point-cloud frames;
-- camera frames.
+- tick data: the point clouds and camera frames of every channel, from one request.
 
-The results are stored in the same caches used by the visible workspace. Tick details and point
-clouds use TanStack Query. Camera frames are requested with the same URL used by the camera image,
-so the browser can reuse the response from its HTTP cache.
+The results are stored in the TanStack Query caches used by the visible workspace, so the
+point-cloud view and the camera strip read a prefetched tick without another request.
 
 `useMcapTickDetailsPrefetch` is the low-level range executor. It owns request concurrency and
 reports completed ranges, but it does not decide when or why a range should be loaded.

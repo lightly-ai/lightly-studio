@@ -1,6 +1,6 @@
 <script lang="ts">
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
-    import { useTickDetails } from '$lib/hooks';
+    import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
 
     /**
@@ -39,6 +39,13 @@
         getDisplayFrameId: () => displayFrameId || undefined
     });
     const recordingId = $derived(tickDetails.data?.recording_id);
+    // Same tick-data query as the point-cloud view, so the images come with the tick's one request.
+    const { query: cameraFrames } = useTickCameraFrames(() => ({
+        datasetId,
+        sequenceId,
+        seqNumber,
+        displayFrameId: displayFrameId || undefined
+    }));
 </script>
 
 <div
@@ -55,6 +62,7 @@
                 channelId={summaryChannel.channel_id}
                 keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
                 logTimeNs={channel?.log_time_ns}
+                blob={cameraFrames.data?.[summaryChannel.channel_id]}
                 label={summaryChannel.group_component_name}
             />
         {/each}

@@ -434,51 +434,57 @@ class McapFileReader:
                 their encoding has no matching decoder factory.
         """
         messages = self.get_decoded_messages_in_range(
-            channel_id=channel_id, start_time_ns=timestamp_ns, end_time_ns=timestamp_ns
-        )
+            channel_ids=[channel_id], start_time_ns=timestamp_ns, end_time_ns=timestamp_ns
+        )[channel_id]
         return messages[0] if messages else None
 
     def get_decoded_messages_in_range(
         self,
-        channel_id: int,
+        channel_ids: Sequence[int],
         start_time_ns: int,
         end_time_ns: int,
-    ) -> list[DecodedMessage]:
-        """Returns the decoded messages of a channel in a log time range, in log time order.
+    ) -> dict[int, list[DecodedMessage]]:
+        """Returns the decoded messages of several channels in a log time range.
 
-        Like `get_decoded_message_at`, does not require pre-loading the topic with
-        `load_data_for_topics`, and only reads the chunks that overlap the range. Use
-        this to read a video frame together with the frames it depends on, from the
-        preceding keyframe up to the frame.
+        Like `get_decoded_message_at`, does not require pre-loading the topics with
+        `load_data_for_topics`. Reads the chunks that overlap the range once for all
+        channels. Use this to read the messages of one tick together, or a video frame
+        together with the frames it depends on, from the preceding keyframe up to the
+        frame.
 
         Args:
-            channel_id: The channel to read, e.g. a camera channel located through
+            channel_ids: The channels to read, e.g. channels located through
                 `get_topics`.
             start_time_ns: The first log time to include, in nanoseconds.
             end_time_ns: The last log time to include, in nanoseconds.
 
         Returns:
-            The messages with `start_time_ns <= log_time <= end_time_ns`. Empty if
-            the range holds no message.
+            The messages with `start_time_ns <= log_time <= end_time_ns` of each
+            channel, keyed by channel id, in log time order. A channel without a
+            message in the range maps to an empty list.
 
         Raises:
-            ChannelNotFoundError: If the channel id is not in the file.
-            McapAccessError: If the channel's messages cannot be decoded, e.g. because
-                their encoding has no matching decoder factory.
+            ChannelNotFoundError: If a channel id is not in the file.
+            McapAccessError: If the messages of a channel cannot be decoded, e.g.
+                because their encoding has no matching decoder factory.
         """
-        topic_info = self._topic_index.require_channel_info(channel_id)
-        messages: list[DecodedMessage] = []
+        topic_infos = {
+            channel_id: self._topic_index.require_channel_info(channel_id)
+            for channel_id in channel_ids
+        }
+        messages: dict[int, list[DecodedMessage]] = {channel_id: [] for channel_id in topic_infos}
         try:
             for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
-                topics=[topic_info.name],
+                topics=sorted({topic_info.name for topic_info in topic_infos.values()}),
                 start_time=start_time_ns,
                 end_time=end_time_ns + 1,
             ):
-                if channel.id != channel_id:
+                topic_info = topic_infos.get(channel.id)
+                if topic_info is None:
                     continue
-                messages.append(
+                messages[channel.id].append(
                     DecodedMessage(
-                        channel_id=channel_id,
+                        channel_id=channel.id,
                         topic=topic_info.name,
                         log_time_ns=message.log_time,
                         schema_name=topic_info.schema_name,
@@ -487,7 +493,8 @@ class McapFileReader:
                 )
         except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
             raise McapAccessError(
-                f"Cannot decode the messages of channel {channel_id} in '{self.path}': {exc}"
+                f"Cannot decode the messages of channels {sorted(topic_infos)} in "
+                f"'{self.path}': {exc}"
             ) from exc
         return messages
 
