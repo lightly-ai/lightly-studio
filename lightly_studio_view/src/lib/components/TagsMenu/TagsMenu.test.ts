@@ -76,7 +76,6 @@ vi.mock('$lib/hooks/useAuth/useAuth', () => ({
 const sampleTag: TagView = {
     tag_id: 'tag-1',
     name: 'Vehicle',
-    kind: 'sample',
     created_at: new Date('2024-01-01T00:00:00.000Z'),
     updated_at: new Date('2024-01-01T00:00:00.000Z')
 };
@@ -114,7 +113,6 @@ describe('TagsMenu', () => {
             data: {
                 tag_id: 'created-tag-id',
                 name: 'Created Tag',
-                kind: 'sample',
                 created_at: new Date('2024-01-03T00:00:00.000Z'),
                 updated_at: new Date('2024-01-03T00:00:00.000Z')
             },
@@ -212,7 +210,7 @@ describe('TagsMenu', () => {
     });
 
     it('tags by the annotation filter when the annotation select-all is unmodified', async () => {
-        mocks.tags = [{ ...sampleTag, kind: 'annotation' }];
+        mocks.tags = [sampleTag];
         mocks.selectedSampleAnnotationCropIds = {
             'collection-1': new Set(['annotation-1', 'annotation-2'])
         };
@@ -300,8 +298,7 @@ describe('TagsMenu', () => {
                     collection_id: 'collection-1'
                 },
                 body: {
-                    name: 'New Annotation Tag',
-                    kind: 'annotation'
+                    name: 'New Annotation Tag'
                 }
             });
         });

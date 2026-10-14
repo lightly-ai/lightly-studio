@@ -18,7 +18,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
-from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable, Cuboid3DCreate
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
@@ -29,6 +29,7 @@ def update_annotation_object(
     session: Session,
     annotation: AnnotationBaseTable,
     fields_to_update: dict[str, object] | None,
+    cuboid_3d: Cuboid3DCreate | None = None,
 ) -> AnnotationBaseTable:
     """Update an annotation's field using delete-and-reinsert.
 
@@ -36,6 +37,8 @@ def update_annotation_object(
         session: Database session for executing the operation.
         annotation: The annotation to update.
         fields_to_update: Dictionary of field names and values to update.
+        cuboid_3d: New cuboid geometry to use when reinserting the cuboid row.
+            If None, the existing cuboid geometry is preserved.
 
     Returns:
         A copy of the annotation with the updated fields.
@@ -73,25 +76,25 @@ def update_annotation_object(
     )
 
     cuboid_details = annotation_copy.cuboid_3d_details
-    cuboid = (
-        Cuboid3DAnnotationTable(
+    if annotation_type == AnnotationType.CUBOID_3D and cuboid_details:
+        source = cuboid_3d if cuboid_3d is not None else cuboid_details
+        cuboid = Cuboid3DAnnotationTable(
             sample_id=annotation_copy.sample_id,
-            frame_id=cuboid_details.frame_id,
-            px=cuboid_details.px,
-            py=cuboid_details.py,
-            pz=cuboid_details.pz,
-            qx=cuboid_details.qx,
-            qy=cuboid_details.qy,
-            qz=cuboid_details.qz,
-            qw=cuboid_details.qw,
-            sx=cuboid_details.sx,
-            sy=cuboid_details.sy,
-            sz=cuboid_details.sz,
-            interpolated=cuboid_details.interpolated,
+            frame_id=source.frame_id,
+            px=source.px,
+            py=source.py,
+            pz=source.pz,
+            qx=source.qx,
+            qy=source.qy,
+            qz=source.qz,
+            qw=source.qw,
+            sx=source.sx,
+            sy=source.sy,
+            sz=source.sz,
+            interpolated=source.interpolated,
         )
-        if annotation_type == AnnotationType.CUBOID_3D and cuboid_details
-        else None
-    )
+    else:
+        cuboid = None
 
     temporal_span_row = annotation_copy.temporal_span_details
     temporal_span = (

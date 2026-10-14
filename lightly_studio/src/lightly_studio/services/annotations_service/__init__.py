@@ -15,6 +15,9 @@ from lightly_studio.services.annotations_service.update_annotation import (
 from lightly_studio.services.annotations_service.update_annotation_bounding_box import (
     update_annotation_bounding_box,
 )
+from lightly_studio.services.annotations_service.update_annotation_cuboid_3d import (
+    update_annotation_cuboid_3d,
+)
 from lightly_studio.services.annotations_service.update_annotation_label import (
     update_annotation_label,
 )
@@ -34,6 +37,7 @@ __all__ = [
     "get_annotation_by_id",
     "update_annotation",
     "update_annotation_bounding_box",
+    "update_annotation_cuboid_3d",
     "update_annotation_label",
     "update_annotations",
     "update_segmentation_mask",

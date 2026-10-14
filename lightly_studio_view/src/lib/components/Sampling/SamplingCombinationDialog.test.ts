@@ -6,7 +6,6 @@ import SamplingCombinationDialog from './SamplingCombinationDialog.svelte';
 type MockTag = {
     tag_id: string;
     name: string;
-    kind: 'sample';
 };
 
 const pageMock = vi.hoisted(() => ({
@@ -126,7 +125,7 @@ describe('SamplingCombinationDialog', () => {
         metadataInfoStore = readable([]);
         isSubmittingStore = writable(false);
         loadingMessageStore = writable('');
-        tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag', kind: 'sample' as const }]);
+        tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag' }]);
         annotationLabelsData = [];
         annotationCollectionsData = [];
         categoricalMetadataData = undefined;

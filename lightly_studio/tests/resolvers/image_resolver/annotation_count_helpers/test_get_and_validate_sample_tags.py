@@ -26,25 +26,11 @@ def test_get_and_validate_sample_tags__raises_for_missing_id(db_session: Session
     collection = create_collection(session=db_session)
     missing_id = uuid4()
 
-    with pytest.raises(ValueError, match="must be sample tags belonging to collection"):
+    with pytest.raises(ValueError, match="must belong to collection"):
         annotation_count_helpers.get_and_validate_sample_tags(
             session=db_session,
             collection_id=collection.collection_id,
             sample_tag_ids=[missing_id],
-        )
-
-
-def test_get_and_validate_sample_tags__raises_for_annotation_tag(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    annotation_tag = create_tag(
-        session=db_session, collection_id=collection.collection_id, kind="annotation"
-    )
-
-    with pytest.raises(ValueError, match="must be sample tags belonging to collection"):
-        annotation_count_helpers.get_and_validate_sample_tags(
-            session=db_session,
-            collection_id=collection.collection_id,
-            sample_tag_ids=[annotation_tag.tag_id],
         )
 
 
@@ -55,7 +41,7 @@ def test_get_and_validate_sample_tags__raises_for_foreign_collection_tag(
     other_collection = create_collection(session=db_session)
     foreign_tag = create_tag(session=db_session, collection_id=other_collection.collection_id)
 
-    with pytest.raises(ValueError, match="must be sample tags belonging to collection"):
+    with pytest.raises(ValueError, match="must belong to collection"):
         annotation_count_helpers.get_and_validate_sample_tags(
             session=db_session,
             collection_id=collection.collection_id,

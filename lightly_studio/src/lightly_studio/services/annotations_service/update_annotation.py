@@ -10,6 +10,7 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.services import annotations_service
 
@@ -24,6 +25,7 @@ class AnnotationUpdate(BaseModel):
     segmentation_mask: list[int] | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
+    cuboid_3d: Cuboid3DCreate | None = None
 
 
 def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> AnnotationBaseTable:
@@ -65,6 +67,13 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
             annotation_id=annotation_update.annotation_id,
             start_time_s=annotation_update.start_time_s,
             end_time_s=annotation_update.end_time_s,
+        )
+
+    if annotation_update.cuboid_3d is not None:
+        result = annotations_service.update_annotation_cuboid_3d(
+            session=session,
+            annotation_id=annotation_update.annotation_id,
+            cuboid_3d=annotation_update.cuboid_3d,
         )
 
     if result is None:
