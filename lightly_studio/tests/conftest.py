@@ -47,6 +47,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from tests.helpers_resolvers import (
     ImageStub,
     create_images,
+    create_tag,
 )
 
 
@@ -499,13 +500,11 @@ def annotation_tags_assigned(
     ).annotations
 
     tags = [
-        tag_resolver.create(
+        create_tag(
             session=db_session,
-            tag=TagCreate(
-                collection_id=annotation_collection_id,
-                name=f"Test Annotation Tag {i}",
-                kind="annotation",
-            ),
+            collection_id=annotation_collection_id,
+            tag_name=f"Test Annotation Tag {i}",
+            kind="annotation",
         )
         for i in range(2)
     ]
