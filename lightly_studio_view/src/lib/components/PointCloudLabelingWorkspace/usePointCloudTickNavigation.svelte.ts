@@ -65,7 +65,7 @@ export function usePointCloudTickNavigation({
             workspace.tickDetails.isFetching ||
             workspace.cloudPointFrame.isFetching ||
             workspace.tickDetails.isPlaceholderData ||
-            workspace.cloudPointFrame.isPlaceholderData
+            (workspace.cloudPointFrame.isPlaceholderData && workspace.cloudPointFrame.isEnabled)
         ) {
             return;
         }
