@@ -1,0 +1,186 @@
+name: Release Documentation
+
+# Builds the docs at a tag and uploads them to docs-proxy, the VM behind
+# https://docs.lightly.ai/studio.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag, branch or commit SHA to checkout, e.g. v0.0.0'
+        required: true
+        type: string
+      allow_version_mismatch:
+        description: 'Required when tag is a branch or commit SHA rather than a vX.Y.Z tag: explicitly skip the version assert instead of failing.'
+        required: false
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  # Runs the ref's code, so it gets no secrets.
+  build:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      ALLOW_VERSION_MISMATCH: ${{ inputs.allow_version_mismatch }}
+      VERSION_TAG_PATTERN: '^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$'
+    steps:
+      # A tag wins over a branch of the same name.
+      - name: Resolve the ref
+        id: ref
+        run: |
+          set +e
+          git ls-remote --exit-code --tags "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "refs/tags/$RELEASE_TAG" > /dev/null
+          status=$?
+          set -e
+          case $status in
+            0) echo "ref=refs/tags/$RELEASE_TAG" >> "$GITHUB_OUTPUT" ;;
+            2) echo "ref=$RELEASE_TAG" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$status" ;;
+          esac
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.ref.outputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Assert Version in Code Matches Release Tag
+        run: |
+          VERSION_FROM_TOML=$(grep -oP '^\s*version\s*=\s*"\K[^"]+' lightly_studio/pyproject.toml)
+          VERSION_FROM_TOML="v$VERSION_FROM_TOML"
+          if [[ ! "$RELEASE_TAG" =~ $VERSION_TAG_PATTERN ]]; then
+            if [ "$ALLOW_VERSION_MISMATCH" != "true" ]; then
+              echo "::error::'$RELEASE_TAG' is not a vX.Y.Z tag, so it cannot be checked against the version in pyproject.toml ($VERSION_FROM_TOML). This is expected when releasing docs from a branch or a fix commit; if that's the case here, re-run this workflow with allow_version_mismatch=true."
+              exit 1
+            fi
+            echo "::warning::Skipping version assert: '$RELEASE_TAG' is not a vX.Y.Z tag and allow_version_mismatch=true was set explicitly. Version in pyproject.toml is $VERSION_FROM_TOML; it was NOT checked against '$RELEASE_TAG'."
+          elif [ "$VERSION_FROM_TOML" != "$RELEASE_TAG" ]; then
+            echo "Version mismatch: Tag is $RELEASE_TAG, but version in pyproject.toml is $VERSION_FROM_TOML"
+            exit 1
+          else
+            echo "version from pyproject.toml $VERSION_FROM_TOML matches tag $RELEASE_TAG"
+          fi
+      # No cache: the ref's code could poison it for main.
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.6"
+          enable-cache: false
+      - name: Set Up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: |
+          cd lightly_studio/docs && make docs
+      - name: Upload the Site
+        uses: actions/upload-artifact@v7
+        with:
+          name: site
+          path: lightly_studio/docs/site
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: true
+
+  # The `if` only prevents mistakes; it is not a security gate.
+  release-documentation:
+    name: Release documentation
+    needs: build
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: docs
+    permissions: {}
+    # One deploy at a time, never cancelled mid-copy.
+    concurrency:
+      group: ${{ github.workflow }}-deploy
+      cancel-in-progress: false
+    steps:
+      # Pinned by digest: this job gets the GCP key.
+      - name: Download the Site
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: site
+          path: site
+      - id: 'auth'
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      - name: Set up gcloud sdk
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: "421.0.0"
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      - name: Clean up stale OS Login SSH keys
+        run: |
+          echo "=== Fingerprints found ==="
+          gcloud compute os-login ssh-keys list --format="value(fingerprint)"
+
+          echo ""
+          echo "=== Attempting removal (continue on error) ==="
+          set +e
+          gcloud compute os-login ssh-keys list --format="value(fingerprint)" | while read -r fp; do
+            echo "--- Removing $fp ---"
+            gcloud compute os-login ssh-keys remove --key "$fp"
+            echo "exit code: $?"
+          done
+          set -e
+
+          echo ""
+          echo "=== Keys remaining ==="
+          gcloud compute os-login ssh-keys list --format="value(fingerprint)" | wc -l
+      # --quiet: no prompt for the new SSH key.
+      - name: Release
+        env:
+          DOCS_INSTANCE_ZONE: ${{ secrets.DOCS_INSTANCE_ZONE }}
+          DOCS_INSTANCE_ID: ${{ secrets.DOCS_INSTANCE_ID }}
+          DOCS_INSTANCE_DIR: ${{ secrets.DOCS_INSTANCE_DIR }}
+        run: |
+          gcloud compute scp --quiet \
+            --zone "$DOCS_INSTANCE_ZONE" \
+            --recurse ./site "$DOCS_INSTANCE_ID:$DOCS_INSTANCE_DIR/lightly-studio/docs/"
+
+  slack-notification:
+    name: Send Slack Notification
+    needs:
+      - build
+      - release-documentation
+    # Also on a failed build, but not for a branch dispatch.
+    if: always() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Meant to hold SLACK_ACTION_BOT_TOKEN, as in announce_release.yml.
+    environment: slack
+    permissions: {}
+    steps:
+      - name: Write the Message
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          RELEASE_RESULT: ${{ needs.release-documentation.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          run_link="<$RUN_URL|View workflow run>"
+          if [ "$RELEASE_RESULT" = success ]; then
+            text=$(printf ':white_check_mark: LightlyStudio documentation release succeeded.\nhttps://docs.lightly.ai/studio\n%s' "$run_link")
+          elif [ "$BUILD_RESULT" = cancelled ] || [ "$RELEASE_RESULT" = cancelled ]; then
+            text=":warning: LightlyStudio documentation release was cancelled; it may not have started, or the site may be partly updated. $run_link"
+          elif [ "$BUILD_RESULT" != success ]; then
+            text=":x: LightlyStudio documentation build failed, nothing was deployed. Please check the logs and take necessary action. $run_link"
+          else
+            text=":x: LightlyStudio documentation release failed. Please check the logs and take necessary action. $run_link"
+          fi
+          jq -n --arg text "$text" '{channel: "releases", text: $text}' > "$RUNNER_TEMP/slack-payload.json"
+      - name: Send Slack Notification
+        # Go to https://api.slack.com/apps/ to configure the Action Bot
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_ACTION_BOT_TOKEN }}
+          payload-file-path: ${{ runner.temp }}/slack-payload.json
+          errors: true
