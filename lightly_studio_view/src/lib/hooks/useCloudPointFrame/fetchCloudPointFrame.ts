@@ -3,11 +3,15 @@ import { parseCloudPointFrame } from './parseCloudPointFrame';
 import type { CloudPointChannelLocator, CloudPointFrame } from './types';
 
 interface FetchCloudPointFrameParams {
+    /** Dataset that owns the recording. */
     datasetId: string;
+    /** Recording containing the requested point-cloud frame. */
     recordingId: string;
+    /** Channel and timestamp identifying the requested point-cloud frame. */
     channel: CloudPointChannelLocator;
     /** Frame to express the points in. Omit to keep the sensor frame. */
     displayFrameId?: string;
+    /** Abort signal for the point-cloud request. */
     signal?: AbortSignal;
 }
 
