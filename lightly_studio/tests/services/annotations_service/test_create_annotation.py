@@ -12,6 +12,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
@@ -113,6 +114,46 @@ def test_create_annotation_classification(
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.segmentation_details is None
     assert result.object_detection_details is None
+
+
+def test_create_annotation_cuboid_3d(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Test to create a cuboid_3d annotation."""
+    annotation = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.CUBOID_3D,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        cuboid_3d=Cuboid3DCreate(
+            frame_id="odom",
+            px=1.0,
+            py=0.0,
+            pz=0.5,
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            sx=2.0,
+            sy=1.0,
+            sz=1.5,
+        ),
+    )
+    result = create_annotation(session=db_session, annotation=annotation)
+
+    assert result.annotation_type == AnnotationType.CUBOID_3D
+    assert result.annotation_label_id == annotation.annotation_label_id
+    assert result.parent_sample_id == annotation.parent_sample_id
+    assert result.cuboid_3d_details is not None
+    assert result.cuboid_3d_details.frame_id == "odom"
+    assert result.cuboid_3d_details.px == 1.0
+    assert result.cuboid_3d_details.sx == 2.0
+    assert result.cuboid_3d_details.interpolated is False
+    assert result.object_detection_details is None
+    assert result.segmentation_details is None
 
 
 def test_create_annotation_failure(

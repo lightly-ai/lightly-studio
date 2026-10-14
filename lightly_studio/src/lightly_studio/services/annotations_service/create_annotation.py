@@ -12,6 +12,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
 
 
@@ -36,6 +37,7 @@ class AnnotationCreateParams(BaseModel):
 
     start_time_s: float | None = None
     end_time_s: float | None = None
+    cuboid_3d: Cuboid3DCreate | None = None
 
 
 def create_annotation(session: Session, annotation: AnnotationCreateParams) -> AnnotationBaseTable:

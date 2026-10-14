@@ -22,6 +22,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
 from lightly_studio.models.embedding_region import EmbeddingRegion
@@ -242,6 +243,7 @@ class AnnotationUpdateInput(BaseModel):
     segmentation_mask: list[int] | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
+    cuboid_3d: Cuboid3DCreate | None = None
 
 
 @annotations_router.put(
@@ -267,6 +269,7 @@ def update_annotations(
                 segmentation_mask=annotation_update_input.segmentation_mask,
                 start_time_s=annotation_update_input.start_time_s,
                 end_time_s=annotation_update_input.end_time_s,
+                cuboid_3d=annotation_update_input.cuboid_3d,
             )
             for annotation_update_input in annotation_update_inputs
         ],
