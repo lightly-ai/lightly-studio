@@ -1,6 +1,7 @@
 <script lang="ts">
     import { T, useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
+    import type { Object3D } from 'three';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidGizmo from './CuboidGizmo.svelte';
     import CuboidVisual from './CuboidVisual.svelte';
@@ -8,6 +9,7 @@
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
     import { addCuboidSelectionListeners, pickSmallestFromIntersections } from './cuboidSelection';
     import { computeGroundPlaneLayout } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
+    import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
 
     type CuboidIntersection = Parameters<typeof pickSmallestFromIntersections>[0][number];
 
@@ -43,6 +45,8 @@
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
         /** Fires when the user clicks the ground plane in create-cuboid mode. */
         onCreateCuboid?: (position: Domain.Vector3) => void;
+        /** Fires when the user finishes transforming a cuboid via the gizmo. */
+        onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
     }
 
     let {
@@ -54,7 +58,8 @@
         pointCloudBounds,
         onselect,
         onhover,
-        onCreateCuboid
+        onCreateCuboid,
+        onCuboidTransform
     }: Props = $props();
 
     const { renderer } = useThrelte();
@@ -112,6 +117,31 @@
         onhover?.(pickSmallestFromIntersections(hoveredAsIntersections()), null);
     }
 
+    const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'rotate' | 'scale'>> = {
+        translate: 'translate',
+        rotate: 'rotate',
+        resize: 'scale'
+    };
+
+    function handleTransformEnd(annotation: Domain.CuboidAnnotation, obj: Object3D): void {
+        const center: Domain.Vector3 = [obj.position.x, obj.position.y, obj.position.z];
+        const q = obj.quaternion;
+        const rotation: Domain.Quaternion = [q.x, q.y, q.z, q.w];
+        const size: Domain.Vector3 = [
+            annotation.size[0] * obj.scale.x,
+            annotation.size[1] * obj.scale.y,
+            annotation.size[2] * obj.scale.z
+        ];
+        obj.scale.set(1, 1, 1);
+        void onCuboidTransform?.({
+            annotationId: annotation.id,
+            frameId: annotation.frameId,
+            center,
+            rotation,
+            size
+        });
+    }
+
     function handleGroundPlaneClick(event: GroundPlaneClickEvent): void {
         if (activeTool !== 'create-cuboid') return;
         onCreateCuboid?.([event.point.x, event.point.y, event.point.z]);
@@ -141,7 +171,11 @@
 </script>
 
 {#if groundPlaneLayout}
-    <T.Mesh position={[...groundPlaneLayout.center]} visible={false} onclick={handleGroundPlaneClick}>
+    <T.Mesh
+        position={[...groundPlaneLayout.center]}
+        visible={false}
+        onclick={handleGroundPlaneClick}
+    >
         <T.PlaneGeometry args={[groundPlaneSize, groundPlaneSize]} />
         <T.MeshBasicMaterial />
     </T.Mesh>
@@ -164,7 +198,14 @@
             onhoverleave={onCuboidHoverLeave}
         />
         {#if isSelected}
-            <CuboidGizmo />
+            {@const gizmoMode = GIZMO_MODES[activeTool]}
+            {#if gizmoMode}
+                <CuboidGizmo
+                    mode={gizmoMode}
+                    onTransformEnd={(obj) => handleTransformEnd(item.annotation, obj)}
+                    onInteractionStart={() => (cuboidClicked = true)}
+                />
+            {/if}
         {/if}
     </T.Group>
 {/each}
