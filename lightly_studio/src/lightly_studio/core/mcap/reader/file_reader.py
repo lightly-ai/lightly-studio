@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from types import TracebackType
 from typing import Any, overload
 
@@ -12,12 +12,13 @@ from numpy.typing import NDArray
 
 from lightly_studio.core.mcap.errors import DataNotLoadedError, McapAccessError
 from lightly_studio.core.mcap.matching import MatchFunction
-from lightly_studio.core.mcap.reader import calibration, frame_scan, session
+from lightly_studio.core.mcap.reader import calibration, frame_scan, range_cache, session
 from lightly_studio.core.mcap.reader.calibration import (
     DYNAMIC_TRANSFORM_TOPIC,
     STATIC_TRANSFORM_TOPIC,
 )
 from lightly_studio.core.mcap.reader.frame_scan import FrameScanner, TopicScanRequest
+from lightly_studio.core.mcap.reader.range_cache import ByteRange
 from lightly_studio.core.mcap.reader.session import ReadPattern, TopicIndex
 from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.transforms import TransformTree
@@ -472,10 +473,17 @@ class McapFileReader:
             channel_id: self._topic_index.require_channel_info(channel_id)
             for channel_id in channel_ids
         }
+        topics = sorted({topic_info.name for topic_info in topic_infos.values()})
+        range_cache.fetch(
+            stream=self._stream,
+            ranges=self._chunk_ranges(
+                topics=topics, start_time_ns=start_time_ns, end_time_ns=end_time_ns
+            ),
+        )
         messages: dict[int, list[DecodedMessage]] = {channel_id: [] for channel_id in topic_infos}
         try:
             for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
-                topics=sorted({topic_info.name for topic_info in topic_infos.values()}),
+                topics=topics,
                 start_time=start_time_ns,
                 end_time=end_time_ns + 1,
             ):
@@ -497,6 +505,36 @@ class McapFileReader:
                 f"'{self.path}': {exc}"
             ) from exc
         return messages
+
+    def read_ahead(
+        self,
+        channel_ids: Sequence[int],
+        start_time_ns: int,
+        end_time_ns: int,
+    ) -> None:
+        """Starts to download the chunks of a later read, and returns at once.
+
+        The chunks of the channels in the log time range are downloaded in the
+        background, so that a later `get_decoded_messages_in_range` finds them in
+        memory. A local file is not read.
+
+        Args:
+            channel_ids: The channels the later read asks for.
+            start_time_ns: The first log time of the later read, in nanoseconds.
+            end_time_ns: The last log time of the later read, in nanoseconds.
+
+        Raises:
+            ChannelNotFoundError: If a channel id is not in the file.
+        """
+        topics = {
+            self._topic_index.require_channel_info(channel_id).name for channel_id in channel_ids
+        }
+        range_cache.fetch_in_background(
+            stream=self._stream,
+            ranges=self._chunk_ranges(
+                topics=topics, start_time_ns=start_time_ns, end_time_ns=end_time_ns
+            ),
+        )
 
     def iter_decoded_messages(self, topic: str) -> Iterator[tuple[int, Any]]:
         """Yields the log time and the payload of every decoded message on a topic.
@@ -520,6 +558,17 @@ class McapFileReader:
         requests (local disk, S3, GCS, or plain HTTP) is summarized cheaply.
         """
         return self._topic_index.topics()
+
+    def _chunk_ranges(
+        self, topics: Collection[str], start_time_ns: int, end_time_ns: int
+    ) -> list[ByteRange]:
+        """Returns the byte ranges of the chunks a read of topics in a time range needs."""
+        return session.chunk_ranges(
+            summary=self._reader.get_summary(),
+            topics=topics,
+            start_time_ns=start_time_ns,
+            end_time_ns=end_time_ns,
+        )
 
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.

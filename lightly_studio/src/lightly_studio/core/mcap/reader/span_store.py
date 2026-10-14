@@ -56,6 +56,10 @@ class SpanStore:
             return data
         return data[local_start : local_start + length]
 
+    def contains(self, uri: str, offset: int, length: int) -> bool:
+        """Returns whether a stored span contains a range."""
+        return self._containing_bounds(uri=uri, offset=offset, end=offset + length) is not None
+
     def put(self, uri: str, offset: int, data: bytes) -> None:
         """Stores a span and drops the least recently used spans past the bound.
 

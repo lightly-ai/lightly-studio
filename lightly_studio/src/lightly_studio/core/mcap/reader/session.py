@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from enum import Enum
 from typing import IO, Any
 
@@ -12,7 +12,7 @@ from mcap import reader as mcap_reader
 from mcap.decoder import DecoderFactory
 from mcap.exceptions import DecoderNotFoundError
 from mcap.reader import McapReader
-from mcap.records import Channel, Message, Schema
+from mcap.records import Channel, ChunkIndex, Message, Schema
 from mcap.summary import Summary
 
 from lightly_studio.core.mcap import decoding, topic_kind
@@ -22,6 +22,7 @@ from lightly_studio.core.mcap.errors import (
     TopicNotFoundError,
 )
 from lightly_studio.core.mcap.reader import range_cache, summary_cache
+from lightly_studio.core.mcap.reader.range_cache import ByteRange
 from lightly_studio.core.mcap.type_definitions import TopicInfo
 
 logger = logging.getLogger(__name__)
@@ -245,7 +246,13 @@ def open_reader(
                 "seekable files can be read, so a remote file needs a filesystem "
                 "that supports range requests."
             )
-        stream = range_cache.share_remote_reads(stream=stream, uri=path)
+        stream = range_cache.share_remote_reads(
+            stream=stream,
+            uri=path,
+            load_ranges=lambda ranges: _load_ranges(
+                filesystem=filesystem, path_in_filesystem=path_in_filesystem, ranges=ranges
+            ),
+        )
         # Kept, so that a single message can be decoded without a second pass.
         factories = decoding.decoder_factories()
         decoder = ChannelDecoder(path=path, factories=factories)
@@ -255,6 +262,37 @@ def open_reader(
         stream.close()
         raise
     return stream, reader, decoder
+
+
+def chunk_ranges(
+    summary: Summary | None,
+    topics: Collection[str],
+    start_time_ns: int,
+    end_time_ns: int,
+) -> list[ByteRange]:
+    """Returns the byte ranges of the chunks a read of topics in a log time range needs.
+
+    These are the chunks `McapReader.iter_messages` reads for the same arguments.
+
+    Args:
+        summary: The summary section of the file. `None` gives no ranges.
+        topics: The topics to read.
+        start_time_ns: The first log time to read, in nanoseconds.
+        end_time_ns: The last log time to read, in nanoseconds.
+
+    Returns:
+        The range of each chunk record, in file order.
+    """
+    if summary is None:
+        return []
+    channel_ids = {channel.id for channel in summary.channels.values() if channel.topic in topics}
+    return [
+        ByteRange(offset=chunk_index.chunk_start_offset, length=chunk_index.chunk_length)
+        for chunk_index in summary.chunk_indexes
+        if chunk_index.message_start_time <= end_time_ns
+        and chunk_index.message_end_time >= start_time_ns
+        and _chunk_may_hold(chunk_index=chunk_index, channel_ids=channel_ids)
+    ]
 
 
 def iter_decoded_messages(
@@ -278,6 +316,32 @@ def iter_decoded_messages(
         raise McapAccessError(
             f"Cannot decode a message of topic '{topic}' in '{path}': {error}"
         ) from error
+
+
+def _load_ranges(
+    filesystem: fsspec.AbstractFileSystem, path_in_filesystem: str, ranges: Sequence[ByteRange]
+) -> list[bytes]:
+    """Downloads several byte ranges of a file. An async filesystem does it concurrently."""
+    results = filesystem.cat_ranges(
+        paths=[path_in_filesystem] * len(ranges),
+        starts=[byte_range.offset for byte_range in ranges],
+        ends=[byte_range.offset + byte_range.length for byte_range in ranges],
+    )
+    # An async filesystem returns the error of a range in place of its bytes.
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
+    return list(results)
+
+
+def _chunk_may_hold(chunk_index: ChunkIndex, channel_ids: Collection[int]) -> bool:
+    """Returns whether a chunk can hold messages of the channels.
+
+    A chunk without message indexes can hold any channel.
+    """
+    if not chunk_index.message_index_offsets:
+        return True
+    return any(channel_id in channel_ids for channel_id in chunk_index.message_index_offsets)
 
 
 def _read_cache_options(read_pattern: ReadPattern) -> dict[str, Any]:

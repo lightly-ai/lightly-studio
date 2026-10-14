@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +22,9 @@ from lightly_studio.core.mcap.errors import (
     TopicNotFoundError,
     TransformNotFoundError,
 )
-from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern, summary_cache
+from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern, range_cache, summary_cache
 from lightly_studio.core.mcap.reader import session as session_module
+from lightly_studio.core.mcap.reader.range_cache import SharedRangeStream
 from lightly_studio.core.mcap.type_definitions import StaticTransform
 from tests.core.mcap import helpers
 
@@ -801,6 +803,58 @@ def test_mcap_file_reader__s3_reuses_cached_summary(
     assert [topic.name for topic in second_topics] == [topic.name for topic in first_topics]
 
 
+def test_mcap_file_reader__s3_reads_messages_from_fetched_chunks(
+    s3_mcap_uri: str, s3_storage_options: dict[str, Any], mocker: MockerFixture
+) -> None:
+    """The chunks of a range are downloaded together before the messages are read."""
+    range_cache.clear()
+    # A small block keeps the reads of the file header from downloading the chunks.
+    mocker.patch.object(range_cache, "_SHARED_BLOCK_BYTES", 16)
+    with McapFileReader(
+        s3_mcap_uri, storage_options=s3_storage_options, read_pattern=ReadPattern.RANDOM
+    ) as reader:
+        channel_id = _channel_id(reader=reader, topic=helpers.CAMERA_VIDEO_TOPIC)
+        raw_reads = mocker.spy(SharedRangeStream, "_read_raw")
+        messages = reader.get_decoded_messages_in_range(
+            channel_ids=[channel_id],
+            start_time_ns=helpers.VIDEO_LOG_TIMES_NS[0],
+            end_time_ns=helpers.VIDEO_LOG_TIMES_NS[-1],
+        )[channel_id]
+
+    assert [message.log_time_ns for message in messages] == list(helpers.VIDEO_LOG_TIMES_NS)
+    assert raw_reads.call_count == 0
+
+
+def test_mcap_file_reader__s3_read_ahead(
+    s3_mcap_uri: str, s3_storage_options: dict[str, Any], mocker: MockerFixture
+) -> None:
+    """A read after a read ahead of the same range downloads nothing."""
+    range_cache.clear()
+    # A small block keeps the reads of the file header from downloading the chunks.
+    mocker.patch.object(range_cache, "_SHARED_BLOCK_BYTES", 16)
+    read_ahead_pool = ThreadPoolExecutor(max_workers=1)
+    mocker.patch.object(range_cache, "_read_ahead_pool", read_ahead_pool)
+    load_ranges = mocker.spy(session_module, "_load_ranges")
+    with McapFileReader(
+        s3_mcap_uri, storage_options=s3_storage_options, read_pattern=ReadPattern.RANDOM
+    ) as reader:
+        channel_id = _channel_id(reader=reader, topic=helpers.CAMERA_VIDEO_TOPIC)
+        reader.read_ahead(
+            channel_ids=[channel_id],
+            start_time_ns=helpers.VIDEO_LOG_TIMES_NS[0],
+            end_time_ns=helpers.VIDEO_LOG_TIMES_NS[-1],
+        )
+        read_ahead_pool.shutdown(wait=True)
+        messages = reader.get_decoded_messages_in_range(
+            channel_ids=[channel_id],
+            start_time_ns=helpers.VIDEO_LOG_TIMES_NS[0],
+            end_time_ns=helpers.VIDEO_LOG_TIMES_NS[-1],
+        )[channel_id]
+
+    assert [message.log_time_ns for message in messages] == list(helpers.VIDEO_LOG_TIMES_NS)
+    assert load_ranges.call_count == 1
+
+
 def test_mcap_file_reader__s3_uri_cached(
     s3_mcap_uri: str, s3_storage_options: dict[str, Any], tmp_path: Path
 ) -> None:
@@ -850,3 +904,8 @@ def test_read_cache_options__random() -> None:
 
     assert options["cache_type"] == "readahead"
     assert 0 < options["block_size"] <= 4 * 1024 * 1024
+
+
+def _channel_id(reader: McapFileReader, topic: str) -> int:
+    """Returns the channel id of a topic."""
+    return next(info.channel_id for info in reader.get_topics() if info.name == topic)

@@ -14,7 +14,7 @@ from sqlmodel import Session
 from lightly_studio.core.mcap import compressed_video
 from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY, VideoDecoder
 from lightly_studio.core.mcap.errors import McapAccessError
-from lightly_studio.core.mcap.reader import range_cache
+from lightly_studio.core.mcap.reader import read_account
 from lightly_studio.core.mcap.type_definitions import DecodedMessage
 from lightly_studio.resolvers import recording_resolver
 from lightly_studio.services.recording_service import (
@@ -122,7 +122,7 @@ def get_camera_frame(  # noqa: PLR0913
         return CameraFrame(data=cached, media_type="image/jpeg", log_time_ns=target_time_ns)
 
     with reader_cache.borrow_reader(uri=recording.uri) as reader:
-        range_cache.reset_read_account()
+        read_account.reset()
         read_started = time.perf_counter()
         messages = reader.get_decoded_messages_in_range(
             channel_ids=[channel_id],
@@ -144,7 +144,7 @@ def get_camera_frame(  # noqa: PLR0913
         _log_camera_frame(
             channel_id=channel_id,
             read_seconds=read_seconds,
-            read_detail=range_cache.describe_reads(),
+            read_detail=read_account.describe(),
             decode_seconds=time.perf_counter() - decode_started,
         )
     if data is None:

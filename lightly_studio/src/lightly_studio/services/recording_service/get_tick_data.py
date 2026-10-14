@@ -12,7 +12,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.reader import McapFileReader, range_cache
+from lightly_studio.core.mcap.reader import McapFileReader, read_account
 from lightly_studio.core.mcap.type_definitions import DecodedMessage, StaticTransform
 from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.mcap_group_component_definition import McapDataType
@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 # One worker per camera, capped so a tick with many cameras does not start one thread each.
 _MAX_CAMERA_WORKERS = 8
+# The recording time after a tick whose chunks are downloaded in the background, so
+# that the next ticks of a playback find them in memory.
+_READ_AHEAD_NS = 2_000_000_000
 
 
 class TickPayloadKind(IntEnum):
@@ -111,15 +114,22 @@ def get_tick_data(  # noqa: PLR0913
     if not lidars and not cameras:
         return []
 
+    channel_ids = [mcap.channel_id for mcap in [*lidars, *cameras]]
+    end_time_ns = max(mcap.log_time_ns for mcap in [*lidars, *cameras])
     with reader_cache.borrow_reader(uri=recording.uri) as reader:
-        range_cache.reset_read_account()
+        read_account.reset()
         read_started = time.perf_counter()
         messages = reader.get_decoded_messages_in_range(
-            channel_ids=[mcap.channel_id for mcap in [*lidars, *cameras]],
+            channel_ids=channel_ids,
             start_time_ns=_window_start_ns(lidars=lidars, cameras=cameras),
-            end_time_ns=max(mcap.log_time_ns for mcap in [*lidars, *cameras]),
+            end_time_ns=end_time_ns,
         )
         read_seconds = time.perf_counter() - read_started
+        reader.read_ahead(
+            channel_ids=channel_ids,
+            start_time_ns=end_time_ns + 1,
+            end_time_ns=end_time_ns + _READ_AHEAD_NS,
+        )
         decode_started = time.perf_counter()
         payloads = _decode_payloads(
             session=session,
@@ -137,7 +147,7 @@ def get_tick_data(  # noqa: PLR0913
             seq_number,
             len(payloads),
             read_seconds * 1000,
-            range_cache.describe_reads(),
+            read_account.describe(),
             (time.perf_counter() - decode_started) * 1000,
         )
         return payloads
