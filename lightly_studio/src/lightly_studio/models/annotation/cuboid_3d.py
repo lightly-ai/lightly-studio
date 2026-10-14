@@ -4,9 +4,11 @@ A cuboid is a 9-DoF box (centre, size, quaternion) expressed in a named
 coordinate frame. It is parented to a tick group, not to a single sensor.
 """
 
+import math
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+import pydantic
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -16,6 +18,8 @@ if TYPE_CHECKING:
     )
 else:
     AnnotationBaseTable = object
+
+_QUATERNION_UNIT_TOLERANCE = 1e-6
 
 
 class Cuboid3DCreate(SQLModel):
@@ -33,6 +37,29 @@ class Cuboid3DCreate(SQLModel):
     sy: float
     sz: float
     interpolated: bool = False
+
+    @pydantic.model_validator(mode="after")
+    def _validate(self) -> "Cuboid3DCreate":  # noqa: N804
+        floats = (
+            self.px,
+            self.py,
+            self.pz,
+            self.qx,
+            self.qy,
+            self.qz,
+            self.qw,
+            self.sx,
+            self.sy,
+            self.sz,
+        )
+        if not all(math.isfinite(v) for v in floats):
+            raise ValueError("All cuboid float fields must be finite.")
+        if self.sx <= 0 or self.sy <= 0 or self.sz <= 0:
+            raise ValueError("Cuboid size dimensions sx, sy, sz must each be positive.")
+        norm = math.hypot(self.qx, self.qy, self.qz, self.qw)
+        if abs(norm - 1.0) > _QUATERNION_UNIT_TOLERANCE:
+            raise ValueError("Cuboid quaternion must be a unit quaternion.")
+        return self
 
 
 class Cuboid3DAnnotationTable(SQLModel, table=True):

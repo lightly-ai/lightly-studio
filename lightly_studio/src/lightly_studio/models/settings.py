@@ -32,6 +32,9 @@ class SettingBase(SQLModel):
     grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
         description="Controls thumbnail quality for grid-like preview views",
     )
+    image_interpolation: bool = Field(
+        description="Controls whether images use browser interpolation or nearest-neighbor scaling",
+    )
 
     # Keyboard shortcuts.
     key_hide_annotations: str = Field(
@@ -93,6 +96,7 @@ class SettingDefaults(SettingBase):
     grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
         default=GridViewThumbnailQualityType.RAW,
     )
+    image_interpolation: bool = Field(default=True)
     key_hide_annotations: str = Field(
         default="v",
     )
