@@ -19,12 +19,14 @@
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
     import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
     import {
+        applySourceVisibility,
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
         groupAnnotationsBySource,
         isSourceGroupInitiallyOpen,
         toggleSourceVisibility
     } from './SampleDetailsAnnotationSegment.helpers';
+    import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
 
     type SampleDetailsAnnotationSegmentProps = {
         annotationsIdsToHide: Set<string>;
@@ -64,6 +66,7 @@
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { isSourceVisible } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
+    const { sourceGroupStates, setSourceGroupState } = useAnnotationSourceGroupState();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -86,8 +89,12 @@
     );
 
     // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
-    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
-    const seededHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, $isSourceVisible));
+    // the effect-written `annotationsIdsToHide`); drives the initial collapse.
+    const gridHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, $isSourceVisible));
+    // The seed also applies the source visibility the user set on earlier samples.
+    const seededHiddenIds = $derived(
+        applySourceVisibility(annotationsSort, gridHiddenIds, $sourceGroupStates)
+    );
 
     // Keep source markers and row layout stable when annotations are hidden, matching
     // the details canvas. The explicit class-color preference still takes priority.
@@ -179,8 +186,11 @@
         );
     };
 
-    const onToggleSourceVisibility = (sourceAnnotations: AnnotationView[]) => {
+    const onToggleSourceVisibility = (sourceId: string, sourceAnnotations: AnnotationView[]) => {
         annotationsIdsToHide = toggleSourceVisibility(sourceAnnotations, annotationsIdsToHide);
+        setSourceGroupState(sourceId, {
+            hidden: areAllAnnotationsHidden(sourceAnnotations, annotationsIdsToHide)
+        });
     };
 </script>
 
@@ -244,15 +254,17 @@
                     {sampleId}
                     initiallyOpen={isSourceGroupInitiallyOpen(
                         group.annotations,
-                        seededHiddenIds,
-                        annotationLabelContext.lastCreatedAnnotationId
+                        gridHiddenIds,
+                        annotationLabelContext.lastCreatedAnnotationId,
+                        $sourceGroupStates[group.id]?.open
                     )}
                     showColorMarker={colorBySource}
                     allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
                     onToggleVisibility={(e) => {
                         e.stopPropagation();
-                        onToggleSourceVisibility(group.annotations);
+                        onToggleSourceVisibility(group.id, group.annotations);
                     }}
+                    onOpenChange={(open) => setSourceGroupState(group.id, { open })}
                 >
                     <div class="flex flex-col gap-2">
                         {#each group.annotations as annotation (annotation.sample_id)}
