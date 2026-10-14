@@ -1,4 +1,6 @@
 <script lang="ts">
+    import TimelineBufferedRange from './TimelineBufferedRange/TimelineBufferedRange.svelte';
+
     interface BufferRange {
         /** Inclusive zero-based index of the first buffered tick. */
         startIndex: number;
@@ -18,13 +20,10 @@
 
 <div class="pointer-events-none absolute inset-x-0 bottom-0 h-1" aria-label="Buffered frames">
     {#each bufferedRanges as range}
-        <div
-            class="absolute inset-y-0 rounded bg-primary/30"
-            style:left={tickCount > 0 ? `${(range.startIndex / tickCount) * 100}%` : '0%'}
-            style:width={tickCount > 0
-                ? `${((range.endIndex - range.startIndex + 1) / tickCount) * 100}%`
-                : '0%'}
-            data-testid="timeline-buffered-range"
-        ></div>
+        <TimelineBufferedRange
+            {tickCount}
+            startIndex={range.startIndex}
+            endIndex={range.endIndex}
+        />
     {/each}
 </div>
