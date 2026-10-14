@@ -4,7 +4,8 @@ How a merged pull request becomes a published release.
 
 The repository is a [uv workspace](../CONTRIBUTING.md#the-uv-workspace) with two packages,
 `lightly-studio` and `lightly-studio-serve`, and each releases on its own: releasing one does not
-release the other. Both go through the same three actions.
+release the other. Both go through the same three actions, and `lightly-studio` then releases its
+docs.
 
 | Package | Tag |
 | --- | --- |
@@ -65,9 +66,22 @@ it to PyPI and un-drafts the GitHub release, in that order.
 - `target: testpypi` rehearses the same path unattended and leaves the GitHub release a draft, so
   the same tag can then be dispatched again with `target: pypi`.
 
+### 5. Run Release Documentation (`lightly-studio` only)
+
+Dispatch [Release Documentation](https://github.com/lightly-ai/lightly-studio/actions/workflows/release_docs.yml) from `main` with the same tag. It builds
+the docs at the tag and deploys them to https://docs.lightly.ai/studio, then posts the result to
+`#releases`.
+
+- Dispatch it from `main` - a run from any other branch only builds the docs and deploys nothing.
+- The tag must match the version in `lightly_studio/pyproject.toml`.
+
+To fix the docs between releases, dispatch it with a branch or a commit SHA as `tag` and set
+`allow_version_mismatch`. The next release overwrites that fix unless it is merged to `main`.
+
 Done. Check that the release is on PyPI:
 [lightly-studio](https://pypi.org/project/lightly-studio/),
-[lightly-studio-serve](https://pypi.org/project/lightly-studio-serve/).
+[lightly-studio-serve](https://pypi.org/project/lightly-studio-serve/). For `lightly-studio`, also
+check that https://docs.lightly.ai/studio shows the new version.
 
 > **Release `lightly-studio-serve` before raising LightlyStudio's floor on it.**
 > `lightly_studio/pyproject.toml` depends on it, and the workspace source is stripped when the
