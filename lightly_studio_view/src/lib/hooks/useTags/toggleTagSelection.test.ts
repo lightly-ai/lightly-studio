@@ -6,14 +6,12 @@ const tags: Tag[] = [
     {
         tag_id: 't1',
         name: 'Blurry',
-        kind: 'sample',
         created_at: new Date(0),
         updated_at: new Date(0)
     },
     {
         tag_id: 't2',
         name: 'Overexposed',
-        kind: 'sample',
         created_at: new Date(0),
         updated_at: new Date(0)
     }

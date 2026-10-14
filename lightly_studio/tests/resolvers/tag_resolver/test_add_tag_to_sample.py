@@ -8,7 +8,7 @@ from tests.helpers_resolvers import create_collection, create_image, create_tag
 def test_add_tag_to_sample(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     image = create_image(session=db_session, collection_id=collection_id)
 
     # add sample to tag
