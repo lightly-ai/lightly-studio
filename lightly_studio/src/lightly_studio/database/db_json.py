@@ -175,7 +175,7 @@ def _compile_json_scalar_type_postgresql(
     """Compile a PostgreSQL JSON type lookup for supported scalar types."""
     value = compiler.process(next(iter(element.clauses)), **kw)
     return (
-        f"CASE jsonb_typeof(CAST({value} AS JSONB)) "
+        f"CASE json_typeof(CAST({value} AS JSON)) "
         "WHEN 'number' THEN 'number' WHEN 'string' THEN 'string' "
         "WHEN 'boolean' THEN 'boolean' END"
     )

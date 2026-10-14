@@ -193,6 +193,18 @@ def test_json_extract_scalar_type__plain_postgresql_json(db_session: Session) ->
     assert db_session.execute(sqlalchemy.select(expression)).scalar_one() == "string"
 
 
+@pytest.mark.postgres_only
+def test_json_extract_scalar_type__large_number_in_plain_postgresql_json(
+    db_session: Session,
+) -> None:
+    """Classify a JSON number beyond PostgreSQL numeric range without converting it."""
+    raw_json = sqlalchemy.literal('{"nested":{"value":1e100000}}', type_=sqlalchemy.Text())
+    column = sqlalchemy.cast(raw_json, sqlalchemy.JSON())
+    expression = db_json.json_extract_scalar_type(column=column, field="nested.value")
+
+    assert db_session.execute(sqlalchemy.select(expression)).scalar_one() == "number"
+
+
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract_as_text(dialect: Any) -> None:
     result = _compile(db_json.json_extract_as_text(column=_COLUMN, field="temperature"), dialect)
