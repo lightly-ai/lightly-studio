@@ -12,6 +12,8 @@
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { toast } from 'svelte-sonner';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
@@ -43,6 +45,8 @@
     }: SampleDetailsAnnotationSegmentProps = $props();
 
     const { addReversibleAction, updateLastAnnotationLabel, isEditingMode } = useGlobalStorage();
+    const { user } = useAuth();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const {
         context: annotationLabelContext,
@@ -224,11 +228,13 @@
 
 <Segment title="Annotations">
     {#if annotationsSort.length === 0}
-        <p class="text-sm text-muted-foreground">
+        <p class="text-sm text-muted-foreground" data-testid="empty-state-message">
             {#if $isEditingMode}
                 No annotations. Use the toolbar to add one.
-            {:else}
+            {:else if canEdit}
                 No annotations. Click <strong>Edit annotations</strong> and use the toolbar.
+            {:else}
+                No annotations.
             {/if}
         </p>
     {:else if isGrouped}
