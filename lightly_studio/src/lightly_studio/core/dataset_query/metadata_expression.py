@@ -26,7 +26,14 @@ class MetadataAccessor:
     """
 
     def __getitem__(self, path: str) -> MetadataField:
-        """Return a metadata field for the given path."""
+        """Return a metadata field for the given path.
+
+        Args:
+            path: Dot-separated metadata path, with optional array indices.
+
+        Returns:
+            A field reference for the requested metadata path.
+        """
         return MetadataField(path=path)
 
 
