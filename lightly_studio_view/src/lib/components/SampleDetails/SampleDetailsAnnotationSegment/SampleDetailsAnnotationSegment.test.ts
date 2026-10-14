@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
     lastCreatedAnnotationId: null as string | null,
-    enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void }
+    enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
+    isEditingMode: undefined as unknown as { set: (value: boolean) => void },
+    userRole: 'labeler' as string | undefined
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -37,12 +39,22 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
     };
 });
 
-vi.mock('$lib/hooks/useGlobalStorage', () => ({
-    useGlobalStorage: vi.fn(() => ({
-        addReversibleAction: vi.fn(),
-        updateLastAnnotationLabel: vi.fn()
-    }))
+vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+    default: () => ({ user: mocks.userRole ? { role: mocks.userRole } : undefined })
 }));
+
+vi.mock('$lib/hooks/useGlobalStorage', async () => {
+    const { writable } = await import('svelte/store');
+    const isEditingMode = writable(false);
+    mocks.isEditingMode = isEditingMode;
+    return {
+        useGlobalStorage: vi.fn(() => ({
+            addReversibleAction: vi.fn(),
+            updateLastAnnotationLabel: vi.fn(),
+            isEditingMode
+        }))
+    };
+});
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     useAnnotationLabelContext: vi.fn(() => ({
@@ -124,6 +136,8 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.selectedCollectionIds = [];
         mocks.lastCreatedAnnotationId = null;
         mocks.enforceColoringByClassStore.set(false);
+        mocks.isEditingMode.set(false);
+        mocks.userRole = 'labeler';
     });
 
     it('renders a flat list without source groups when there is a single source', () => {
@@ -402,6 +416,33 @@ describe('SampleDetailsAnnotationSegment', () => {
             // Rows receive class-based coloring (colorBySource = false).
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'false');
             expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'false');
+        });
+    });
+
+    describe('empty state copy', () => {
+        it('shows toolbar guidance when in editing mode and there are no annotations', () => {
+            mocks.isEditingMode.set(true);
+            render(SampleDetailsAnnotationSegment, { props: defaultProps });
+
+            expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
+                'No annotations. Use the toolbar to add one.'
+            );
+        });
+
+        it('shows edit guidance for users who can edit when there are no annotations', () => {
+            mocks.userRole = 'labeler';
+            render(SampleDetailsAnnotationSegment, { props: defaultProps });
+
+            expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
+                'No annotations. Click Edit annotations and use the toolbar.'
+            );
+        });
+
+        it('shows plain "No annotations." without edit guidance for viewer role', () => {
+            mocks.userRole = 'viewer';
+            render(SampleDetailsAnnotationSegment, { props: defaultProps });
+
+            expect(screen.getByTestId('empty-state-message')).toHaveTextContent('No annotations.');
         });
     });
 });
