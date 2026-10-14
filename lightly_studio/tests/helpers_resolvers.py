@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -169,7 +169,7 @@ def create_image(
 def create_image_with_metadata(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
-    metadata: dict[str, Any],
+    metadata: Mapping[str, Any],
     file_path_abs: str = "/path/to/sample1.png",
     width: int = 1920,
     height: int = 1080,
@@ -184,8 +184,7 @@ def create_image_with_metadata(  # noqa: PLR0913
             height=height,
         )
     )
-    for key, value in metadata.items():
-        sample.metadata[key] = value
+    sample.metadata.update(metadata)
     return sample
 
 

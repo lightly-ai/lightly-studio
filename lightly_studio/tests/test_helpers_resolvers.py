@@ -1,28 +1,33 @@
 """Tests for shared resolver test helpers."""
 
+from types import MappingProxyType
+
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.resolvers import image_resolver
-from tests.helpers_resolvers import create_collection, create_image_with_metadata
+from tests import helpers_resolvers
 
 
 def test_create_image_with_metadata(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
+    """Create an image and persist mixed metadata from a read-only mapping."""
+    collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
-    sample = create_image_with_metadata(
+    sample = helpers_resolvers.create_image_with_metadata(
         session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/front.png",
         width=640,
         height=480,
-        metadata={
-            "camera": "front",
-            "score": 15,
-            "reviewed": True,
-            "odometry": {"acc": [20, 10]},
-            "missing": None,
-        },
+        metadata=MappingProxyType(
+            {
+                "camera": "front",
+                "score": 15,
+                "reviewed": True,
+                "odometry": {"acc": [20, 10]},
+                "missing": None,
+            }
+        ),
     )
 
     assert isinstance(sample, ImageSample)
