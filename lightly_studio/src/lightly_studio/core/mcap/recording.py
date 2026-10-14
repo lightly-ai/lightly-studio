@@ -9,10 +9,15 @@ from sqlmodel import Session
 
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.type_definitions import StaticTransform
+from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.recording import RecordingFormat, RecordingTable
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
 from lightly_studio.models.static_transform import StaticTransformCreate
-from lightly_studio.resolvers import sensor_calibration_resolver, static_transform_resolver
+from lightly_studio.resolvers import (
+    dynamic_transform_resolver,
+    sensor_calibration_resolver,
+    static_transform_resolver,
+)
 
 
 class Recording:
@@ -107,6 +112,29 @@ class Recording:
             ],
         )
 
+    def add_dynamic_transforms(self, transforms: Sequence[StaticTransform]) -> list[UUID]:
+        """Add the dynamic transforms between the coordinate frames of the recording.
+
+        Every edge is stored with its capture time. The same child frame may appear
+        many times.
+
+        Args:
+            transforms: The dynamic transforms to add.
+
+        Returns:
+            The IDs of the added transforms, in the order of `transforms`.
+
+        Raises:
+            ValueError: If `transforms` is empty, or a frame id is empty.
+        """
+        return dynamic_transform_resolver.create_many(
+            session=self._session,
+            rows=[
+                _dynamic_transform_create(recording_id=self.recording_id, transform=transform)
+                for transform in transforms
+            ],
+        )
+
     def set_reference_frame_ids(self, frame_ids: Sequence[str]) -> None:
         """Store the frames the scene of this recording can be shown in.
 
@@ -131,6 +159,27 @@ def _static_transform_create(
         recording_id=recording_id,
         parent=transform.parent_frame_id,
         child=transform.child_frame_id,
+        qx=qx,
+        qy=qy,
+        qz=qz,
+        qw=qw,
+        tx=tx,
+        ty=ty,
+        tz=tz,
+    )
+
+
+def _dynamic_transform_create(
+    recording_id: UUID, transform: StaticTransform
+) -> DynamicTransformCreate:
+    """Build the row of one dynamic transform edge."""
+    qx, qy, qz, qw = transform.rotation
+    tx, ty, tz = transform.translation
+    return DynamicTransformCreate(
+        recording_id=recording_id,
+        parent=transform.parent_frame_id,
+        child=transform.child_frame_id,
+        timestamp_ns=transform.timestamp_ns,
         qx=qx,
         qy=qy,
         qz=qz,

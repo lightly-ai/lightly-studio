@@ -25,6 +25,7 @@ from lightly_studio.resolvers import (
     sequence_resolver,
 )
 from lightly_studio.services.recording_service import (
+    load_dynamic_transforms,
     load_static_transforms,
     reader_cache,
     transform_to_target_frame,
@@ -150,28 +151,32 @@ def _cuboids_in_frame(
     recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
     if recording is None:
         raise McapAccessError(f"Recording {recording_id} was not found.")
-    reader = reader_cache.get_cached_reader(uri=recording.uri)
-    static_transforms = load_static_transforms.load_static_transforms(
-        session=session, recording_id=recording_id
-    )
-    matrix_by_frame_id = {
-        frame_id: transform_to_target_frame.transform_to_target_frame(
-            reader=reader,
-            source_frame_id=frame_id,
-            target_frame_id=target_frame_id,
-            timestamp_ns=timestamp_ns,
-            static_transforms=static_transforms,
+    with reader_cache.borrow_reader(uri=recording.uri) as reader:
+        static_transforms = load_static_transforms.load_static_transforms(
+            session=session, recording_id=recording_id
         )
-        for frame_id in source_frame_ids
-    }
-    return [
-        _cuboid_in_frame(
-            annotation=annotation,
-            matrix_by_frame_id=matrix_by_frame_id,
-            target_frame_id=target_frame_id,
+        dynamic_transforms = load_dynamic_transforms.load_dynamic_transforms_near(
+            session=session, recording_id=recording_id, timestamp_ns=timestamp_ns
         )
-        for annotation in annotations
-    ]
+        matrix_by_frame_id = {
+            frame_id: transform_to_target_frame.transform_to_target_frame(
+                reader=reader,
+                source_frame_id=frame_id,
+                target_frame_id=target_frame_id,
+                timestamp_ns=timestamp_ns,
+                static_transforms=static_transforms,
+                dynamic_transforms=dynamic_transforms,
+            )
+            for frame_id in source_frame_ids
+        }
+        return [
+            _cuboid_in_frame(
+                annotation=annotation,
+                matrix_by_frame_id=matrix_by_frame_id,
+                target_frame_id=target_frame_id,
+            )
+            for annotation in annotations
+        ]
 
 
 def _cuboid_in_frame(

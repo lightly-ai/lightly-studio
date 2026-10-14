@@ -9,6 +9,7 @@ import fsspec
 import numpy as np
 import pytest
 from mcap.exceptions import InvalidMagic
+from mcap.reader import SeekingReader
 from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
@@ -20,8 +21,9 @@ from lightly_studio.core.mcap.errors import (
     TopicNotFoundError,
     TransformNotFoundError,
 )
-from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
+from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern, summary_cache
 from lightly_studio.core.mcap.reader import session as session_module
+from lightly_studio.core.mcap.type_definitions import StaticTransform
 from tests.core.mcap import helpers
 
 # The bucket and key the recording is uploaded to, to read it back over S3.
@@ -369,6 +371,51 @@ class TestMcapFileReader:
         ]
         assert len(reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)) == 2
 
+    def test_get_dynamic_transforms__read_in_the_same_pass(
+        self, tmp_path: Path, mocker: MockerFixture
+    ) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))],
+        )
+        with McapFileReader(path) as reader:
+            iter_messages = mocker.spy(reader._reader, "iter_messages")
+            reader.load_data_for_topics(
+                [helpers.LIDAR_POINTS_TOPIC],
+                static_transform_topic="/tf_static",
+                dynamic_transform_topic="/tf",
+            )
+            dynamic_transforms = reader.get_dynamic_transforms()
+
+        assert iter_messages.call_count == 1
+        assert [
+            (transform.parent_frame_id, transform.child_frame_id, transform.translation)
+            for transform in dynamic_transforms
+        ] == [("map", helpers.BASE_FRAME_ID, (10.0, 0.0, 0.0))]
+
+    def test_get_transform_at__uses_stored_dynamic_transforms(
+        self, reader: McapFileReader, mocker: MockerFixture
+    ) -> None:
+        near = mocker.patch("lightly_studio.core.mcap.reader.calibration.dynamic_transforms_near")
+        matrix = reader.get_transform_at(
+            parent_frame_id="map",
+            child_frame_id=helpers.LIDAR_FRAME_ID,
+            timestamp_ns=1_000_000_000,
+            static_transforms=reader.get_static_transforms(),
+            dynamic_transforms=[
+                StaticTransform(
+                    parent_frame_id="map",
+                    child_frame_id=helpers.BASE_FRAME_ID,
+                    translation=(10.0, 0.0, 0.0),
+                    rotation=(0.0, 0.0, 0.0, 1.0),
+                    timestamp_ns=1_000_000_000,
+                )
+            ],
+        )
+
+        near.assert_not_called()
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [10.0, 1.0, 2.0, 1.0])
+
     def test_get_static_transforms__skips_bad_message(self, tmp_path: Path) -> None:
         path = helpers.write_json_mcap(
             path=tmp_path / "bad_tf_static.mcap",
@@ -704,6 +751,31 @@ def test_mcap_file_reader__s3_uri(s3_mcap_uri: str, s3_storage_options: dict[str
     ]
     assert intrinsics.width == helpers.IMAGE_WIDTH
     assert intrinsics.camera_matrix == helpers.CAMERA_MATRIX
+
+
+def test_mcap_file_reader__s3_reuses_cached_summary(
+    s3_mcap_uri: str, s3_storage_options: dict[str, Any], mocker: MockerFixture
+) -> None:
+    """A second reader of the same object does not download the summary again."""
+    summary_cache.clear()
+    summary_reads = 0
+    original_get_summary = SeekingReader.get_summary
+
+    def get_summary(self: SeekingReader) -> Any:
+        nonlocal summary_reads
+        if self._summary is not None:
+            return self._summary
+        summary_reads += 1
+        return original_get_summary(self)
+
+    mocker.patch.object(SeekingReader, "get_summary", get_summary)
+    with McapFileReader(s3_mcap_uri, storage_options=s3_storage_options) as first:
+        first_topics = first.get_topics()
+    with McapFileReader(s3_mcap_uri, storage_options=s3_storage_options) as second:
+        second_topics = second.get_topics()
+
+    assert summary_reads == 1
+    assert [topic.name for topic in second_topics] == [topic.name for topic in first_topics]
 
 
 def test_mcap_file_reader__s3_uri_cached(
