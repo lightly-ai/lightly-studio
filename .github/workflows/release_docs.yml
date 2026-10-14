@@ -120,12 +120,12 @@ jobs:
       - name: Clean up stale OS Login SSH keys
         run: |
           echo "=== Fingerprints found ==="
-          gcloud compute os-login ssh-keys list --format="value(fingerprint)"
+          gcloud compute os-login ssh-keys list --format="value(key)"
 
           echo ""
           echo "=== Attempting removal (continue on error) ==="
           set +e
-          gcloud compute os-login ssh-keys list --format="value(fingerprint)" | while read -r fp; do
+          gcloud compute os-login ssh-keys list --format="value(key)" | while read -r fp; do
             echo "--- Removing $fp ---"
             gcloud compute os-login ssh-keys remove --key "$fp"
             echo "exit code: $?"
@@ -134,7 +134,7 @@ jobs:
 
           echo ""
           echo "=== Keys remaining ==="
-          gcloud compute os-login ssh-keys list --format="value(fingerprint)" | wc -l
+          gcloud compute os-login ssh-keys list --format="value(key)" | wc -l
       # --quiet: no prompt for the new SSH key.
       - name: Release
         env:
