@@ -3,10 +3,10 @@
 Thin wrappers over SQLAlchemy's JSON indexing, which compiles to the right operator
 chain for DuckDB and PostgreSQL and binds every key as a parameter.
 
-Every function reads the value as text or as a float, never as raw ``json``: neither
-database compares ``json`` against a plain value, PostgreSQL can neither order nor cast
-it, and only the text form turns a stored JSON ``null`` into SQL NULL, which is what a
-presence test needs.
+Extraction helpers read values as text or floats because neither database compares raw
+JSON against plain values, and PostgreSQL cannot order or cast it directly. The scalar
+type helper inspects raw JSON to distinguish numbers, strings, and booleans. Text
+extraction also turns stored JSON ``null`` into SQL NULL, which presence checks need.
 """
 
 from __future__ import annotations
@@ -19,6 +19,9 @@ from typing import Any, cast
 import sqlalchemy
 from sqlalchemy import ColumnElement, Text
 from sqlalchemy.engine.interfaces import Dialect
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.compiler import SQLCompiler
+from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator
 
 _DUCKDB_DIALECT = "duckdb"
@@ -61,6 +64,22 @@ def json_extract_as_float(column: Any, field: str) -> ColumnElement[float]:
         The extracted value as a float.
     """
     return cast(ColumnElement[float], _json_extract(column=column, field=field).as_float())
+
+
+def json_extract_scalar_type(column: Any, field: str) -> ColumnElement[str]:
+    """Return ``number``, ``string``, or ``boolean`` for a JSON scalar at a path.
+
+    Other JSON values and missing paths return SQL NULL. The path uses the same
+    bound-key indexing as the extraction helpers.
+
+    Args:
+        column: The JSON column expression.
+        field: Dot-separated path into the JSON object, as in :func:`_json_extract`.
+
+    Returns:
+        An expression for the normalized JSON scalar type, or SQL NULL.
+    """
+    return _JsonScalarType(_json_extract(column=column, field=field))
 
 
 def json_extract_key_as_text(column: Any, key: str) -> ColumnElement[str]:
@@ -126,6 +145,40 @@ class _JsonKeyType(TypeDecorator[str]):
             return value
         escaped = value.replace("~", "~0").replace("/", "~1")
         return f"/{escaped}"
+
+
+class _JsonScalarType(GenericFunction[str]):
+    """Normalize DuckDB and PostgreSQL JSON scalar type names."""
+
+    type = Text()
+    inherit_cache = True
+
+
+@compiles(_JsonScalarType, "duckdb")
+def _compile_json_scalar_type_duckdb(
+    element: _JsonScalarType, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """Compile a DuckDB JSON type lookup with normalized scalar type names."""
+    value = compiler.process(next(iter(element.clauses)), **kw)
+    return (
+        f"CASE json_type({value}) "
+        "WHEN 'BIGINT' THEN 'number' WHEN 'UBIGINT' THEN 'number' "
+        "WHEN 'DOUBLE' THEN 'number' WHEN 'VARCHAR' THEN 'string' "
+        "WHEN 'BOOLEAN' THEN 'boolean' END"
+    )
+
+
+@compiles(_JsonScalarType, "postgresql")
+def _compile_json_scalar_type_postgresql(
+    element: _JsonScalarType, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """Compile a PostgreSQL JSON type lookup for supported scalar types."""
+    value = compiler.process(next(iter(element.clauses)), **kw)
+    return (
+        f"CASE json_typeof(CAST({value} AS JSON)) "
+        "WHEN 'number' THEN 'number' WHEN 'string' THEN 'string' "
+        "WHEN 'boolean' THEN 'boolean' END"
+    )
 
 
 def _json_extract(column: Any, field: str) -> ColumnElement[Any]:
