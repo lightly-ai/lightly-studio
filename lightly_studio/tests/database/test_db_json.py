@@ -181,6 +181,18 @@ def test_json_extract_scalar_type(db_session: Session, value: Any, expected: str
     assert db_session.execute(sqlalchemy.select(expression)).scalar_one() == expected
 
 
+@pytest.mark.postgres_only
+def test_json_extract_scalar_type__plain_postgresql_json(db_session: Session) -> None:
+    """Classify a value extracted from a plain PostgreSQL JSON expression."""
+    column = sqlalchemy.literal(
+        {"nested": {"value": "front"}},
+        type_=sqlalchemy.JSON(),
+    )
+    expression = db_json.json_extract_scalar_type(column=column, field="nested.value")
+
+    assert db_session.execute(sqlalchemy.select(expression)).scalar_one() == "string"
+
+
 @pytest.mark.parametrize("dialect", _DIALECTS)
 def test_json_extract_as_text(dialect: Any) -> None:
     result = _compile(db_json.json_extract_as_text(column=_COLUMN, field="temperature"), dialect)

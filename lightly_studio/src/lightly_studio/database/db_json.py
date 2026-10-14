@@ -3,10 +3,10 @@
 Thin wrappers over SQLAlchemy's JSON indexing, which compiles to the right operator
 chain for DuckDB and PostgreSQL and binds every key as a parameter.
 
-Every function reads the value as text or as a float, never as raw ``json``: neither
-database compares ``json`` against a plain value, PostgreSQL can neither order nor cast
-it, and only the text form turns a stored JSON ``null`` into SQL NULL, which is what a
-presence test needs.
+Extraction helpers read values as text or floats because neither database compares raw
+JSON against plain values, and PostgreSQL cannot order or cast it directly. The scalar
+type helper inspects raw JSON to distinguish numbers, strings, and booleans. Text
+extraction also turns stored JSON ``null`` into SQL NULL, which presence checks need.
 """
 
 from __future__ import annotations
@@ -175,7 +175,7 @@ def _compile_json_scalar_type_postgresql(
     """Compile a PostgreSQL JSON type lookup for supported scalar types."""
     value = compiler.process(next(iter(element.clauses)), **kw)
     return (
-        f"CASE jsonb_typeof({value}) "
+        f"CASE jsonb_typeof(CAST({value} AS JSONB)) "
         "WHEN 'number' THEN 'number' WHEN 'string' THEN 'string' "
         "WHEN 'boolean' THEN 'boolean' END"
     )
