@@ -164,6 +164,37 @@ describe('useCreateCuboidAnnotation', () => {
         expect(createAnnotation).not.toHaveBeenCalled();
     });
 
+    it('cancels creation when the labels refetch fails', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        labels.data = undefined as unknown as typeof labels.data;
+        labels.refetch = vi.fn().mockResolvedValue({ isError: true, data: undefined });
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid([0, 0, 0], vi.fn());
+
+        expect(labels.refetch).toHaveBeenCalledOnce();
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('cancels creation when the tick or collection changes during label lookup', async () => {
+        let sampleId = 'sample-1';
+        let collectionId = 'collection-1';
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        labels.data = undefined as unknown as typeof labels.data;
+        labels.refetch = vi.fn().mockImplementation(async () => {
+            sampleId = 'sample-2';
+            collectionId = 'collection-2';
+            return { data: [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }] };
+        });
+
+        await useCreateCuboidAnnotation({
+            ...params,
+            getTickSampleId: () => sampleId,
+            getCollectionId: () => collectionId
+        }).handleCreateCuboid([0, 0, 0], vi.fn());
+
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
     it('waits for the labels query before deciding to create a new class', async () => {
         lastAnnotationLabel.set({ 'collection-1': 'car' });
         labels.data = undefined as unknown as typeof labels.data;

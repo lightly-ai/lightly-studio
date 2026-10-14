@@ -111,6 +111,7 @@ export function useCreateCuboidAnnotation({
         let currentData = labels.data;
         if (currentData === undefined) {
             const result = await labels.refetch();
+            if (result.isError || result.data === undefined) return null;
             currentData = result.data;
         }
         const existingLabel = currentData?.find(
@@ -156,6 +157,8 @@ export function useCreateCuboidAnnotation({
         if (getTickSampleId() !== sampleId) return;
         const labelId = await findOrCreateLabelId(labelName);
         if (!labelId) return;
+        // Cancel if the active sample or collection changed while finding/creating the label.
+        if (getTickSampleId() !== sampleId || getCollectionId() !== collectionId) return;
         let annotationId: string;
         try {
             annotationId = await saveCuboid(groundPosition, sampleId, labelId, capturedFrame);
