@@ -114,11 +114,17 @@ describe('PointCloudWorkspace', () => {
         cloudState.data = undefined;
     });
 
-    it('defaults to the first reference frame, or none without frames', () => {
+    it('defaults to CABIN, then the first reference frame, or none without frames', () => {
         expect(createWorkspace().referenceFrameId).toBe('');
 
         summaryState.data = summaryWithFrames;
-        expect(createWorkspace().referenceFrameId).toBe('map');
+        expect(createWorkspace().referenceFrameId).toBe('CABIN');
+
+        summaryState.data = {
+            ...summaryWithFrames,
+            reference_frames: [{ name: 'odom' }, { name: 'map' }]
+        };
+        expect(createWorkspace().referenceFrameId).toBe('odom');
     });
 
     it('selects a known reference frame and ignores an unknown one', () => {
@@ -138,7 +144,7 @@ describe('PointCloudWorkspace', () => {
 
         summaryState.data = summaryWithFrames;
         const workspace = createWorkspace();
-        expect(tickDetailsParams.getDisplayFrameId?.()).toBe('map');
+        expect(tickDetailsParams.getDisplayFrameId?.()).toBe('CABIN');
 
         workspace.selectReferenceFrame('CABIN');
         expect(tickDetailsParams.getDisplayFrameId?.()).toBe('CABIN');
@@ -152,7 +158,7 @@ describe('PointCloudWorkspace', () => {
 
         sequenceId = 'seq-2';
 
-        expect(workspace.referenceFrameId).toBe('map');
+        expect(workspace.referenceFrameId).toBe('CABIN');
     });
 
     it.each<[Array<{ frameId: string }>, boolean]>([
