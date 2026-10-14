@@ -1,3 +1,4 @@
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers import tag_resolver
@@ -14,3 +15,17 @@ def test_add_tag_to_sample(db_session: Session) -> None:
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image.sample)
 
     assert image.sample.tags.index(tag) == 0
+
+
+def test_add_tag_to_sample__sample_of_other_collection(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    other_collection = create_collection(session=db_session)
+    tag = create_tag(session=db_session, collection_id=collection.collection_id)
+    other_image = create_image(session=db_session, collection_id=other_collection.collection_id)
+
+    with pytest.raises(ValueError, match="belong to the collection of tag"):
+        tag_resolver.add_tag_to_sample(
+            session=db_session, tag_id=tag.tag_id, sample=other_image.sample
+        )
+
+    assert other_image.sample.tags == []

@@ -1,3 +1,6 @@
+from uuid import uuid4
+
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers import tag_resolver
@@ -126,3 +129,55 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
 
     # ensure all samples were removed again
     assert len(tag_1.samples) == 0
+
+
+def test_add_sample_ids_to_tag_id__sample_of_other_collection(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    other_collection = create_collection(session=db_session)
+    tag = create_tag(session=db_session, collection_id=collection.collection_id)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    other_image = create_image(session=db_session, collection_id=other_collection.collection_id)
+
+    with pytest.raises(ValueError, match="do not belong to the collection of tag"):
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=db_session,
+            tag_id=tag.tag_id,
+            sample_ids=[image.sample_id, other_image.sample_id],
+        )
+
+    assert tag.samples == []
+
+
+def test_add_sample_ids_to_tag_id__duplicate_sample_ids(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    tag = create_tag(session=db_session, collection_id=collection.collection_id)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag.tag_id,
+        sample_ids=[image.sample_id, image.sample_id],
+    )
+
+    assert tag.samples == [image.sample]
+
+
+def test_add_sample_ids_to_tag_id__unknown_sample(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    tag = create_tag(session=db_session, collection_id=collection.collection_id)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    with pytest.raises(ValueError, match="do not exist or do not belong to the collection of tag"):
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=db_session,
+            tag_id=tag.tag_id,
+            sample_ids=[image.sample_id, uuid4()],
+        )
+
+    assert tag.samples == []
