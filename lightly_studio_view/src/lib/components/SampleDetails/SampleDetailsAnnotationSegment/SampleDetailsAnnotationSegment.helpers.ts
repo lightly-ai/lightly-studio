@@ -68,13 +68,15 @@ export const areAllAnnotationsHidden = (
  * its annotations visible, or when it holds the annotation the user just created. The latter
  * keeps a brand-new source (absent from the grid selection, so seeded hidden) from appearing
  * collapsed right after adding the first annotation to it.
+ * A collapse the user set on an earlier sample replaces the grid filter default.
  */
 export const isSourceGroupInitiallyOpen = (
     annotations: AnnotationView[],
     seededHiddenIds: Set<string>,
-    lastCreatedAnnotationId: string | null | undefined
+    lastCreatedAnnotationId: string | null | undefined,
+    storedOpen?: boolean
 ): boolean =>
-    !areAllAnnotationsHidden(annotations, seededHiddenIds) ||
+    (storedOpen ?? !areAllAnnotationsHidden(annotations, seededHiddenIds)) ||
     (lastCreatedAnnotationId != null &&
         annotations.some((annotation) => annotation.sample_id === lastCreatedAnnotationId));
 
@@ -116,3 +118,24 @@ export const computeSeededHiddenIds = (
             .filter((annotation) => !isSourceVisible(annotation.annotation_collection_id))
             .map((annotation) => annotation.sample_id)
     );
+
+/**
+ * Applies the visibility the user set per source on earlier samples to the seeded hidden set.
+ * Sources without a stored choice keep their seeded visibility. The given set is not mutated.
+ */
+export const applySourceVisibility = (
+    annotations: AnnotationView[],
+    seededHiddenIds: Set<string>,
+    hiddenBySourceId: Record<string, { hidden?: boolean }>
+): Set<string> => {
+    const next = new Set(seededHiddenIds);
+    for (const annotation of annotations) {
+        const hidden = hiddenBySourceId[annotation.annotation_collection_id]?.hidden;
+        if (hidden === true) {
+            next.add(annotation.sample_id);
+        } else if (hidden === false) {
+            next.delete(annotation.sample_id);
+        }
+    }
+    return next;
+};
