@@ -8,8 +8,13 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from lightly_studio_serve import server
-from lightly_studio_serve.embedder import ImagePathEmbedder, TextEmbedder
-from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from lightly_studio_serve.embedder import (
+    Capability,
+    ImageCropPathEmbedder,
+    ImagePathEmbedder,
+    TextEmbedder,
+)
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -23,6 +28,7 @@ from lightly_studio.embed.errors import (
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.errors import RemoteEmbedderUnreachableError
+from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     embedding_model_resolver,
@@ -39,6 +45,24 @@ class _ServerTextEmbedder(TextEmbedder):
             embeddings=np.zeros((len(texts), 2), dtype=np.float32),
             kept_indices=list(range(len(texts))),
         )
+
+
+class _PathEmbedder(ImagePathEmbedder):
+    """Embeds image paths, but not crops."""
+
+    def __init__(self, space_key: str, dimension: int) -> None:
+        self._spec = EmbeddingSpaceSpec(space_key=space_key, dimension=dimension)
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return self._spec
+
+    def embed_images(self, paths: list[str]) -> EmbeddingResult:
+        return _zeros(count=len(paths), dimension=self._spec.dimension)
+
+
+class _CropEmbedder(_PathEmbedder, ImageCropPathEmbedder):
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
+        return _zeros(count=len(crops), dimension=self._spec.dimension)
 
 
 def test_resolve_default_embedder__uses_existing_default(
@@ -184,6 +208,192 @@ def test_resolve_default_embedder__missing_collection_raises(
             collection_id=uuid.uuid4(),
             embedder_type=ImagePathEmbedder,
         )
+
+
+def test_resolve_default_embedder__uses_parent_space(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    parent = create_collection(session=db_session)
+    child = create_collection(session=db_session, parent_collection_id=parent.collection_id)
+    parent_embedder = _CropEmbedder(space_key="parent_model", dimension=2)
+    registry = EmbedderRegistry()
+    # The parent's embedder is available, but it is not a bootstrap
+    registry.register(embedder=parent_embedder, bootstrap_for=set())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    _patch_builtin(mocker=mocker, embedder=_CropEmbedder(space_key="mobileclip_s0", dimension=4))
+    parent_model = create_embedding_model(
+        session=db_session,
+        collection_id=parent.collection_id,
+        embedding_model_name="parent_model",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+
+    result = default_embedder.resolve_default_embedder(
+        session=db_session,
+        collection_id=child.collection_id,
+        embedder_type=ImageCropPathEmbedder,
+    )
+
+    assert result == (parent_embedder, parent_model.embedding_model_id)
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=child.collection_id
+        )
+        == parent_model.embedding_model_id
+    )
+
+
+def test_resolve_default_embedder__parent_space_unavailable_skips(
+    db_session: Session, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    parent = create_collection(session=db_session)
+    child = create_collection(
+        session=db_session,
+        collection_name="boxes",
+        parent_collection_id=parent.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    # No embedder serves the space of the parent
+    registry = EmbedderRegistry()
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    _patch_builtin(mocker=mocker, embedder=_CropEmbedder(space_key="mobileclip_s0", dimension=4))
+    parent_model = create_embedding_model(
+        session=db_session,
+        collection_id=parent.collection_id,
+        embedding_model_name="parent_model",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+
+    with caplog.at_level(logging.WARNING):
+        result = default_embedder.resolve_default_embedder(
+            session=db_session,
+            collection_id=child.collection_id,
+            embedder_type=ImageCropPathEmbedder,
+        )
+
+    assert result is None
+    assert "parent_model" in caplog.text
+    assert "annotation collection 'boxes'" in caplog.text
+    assert (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=db_session, collection_id=child.collection_id
+        )
+        is None
+    )
+
+    # A later call uses the space of the parent when its embedder is available
+    parent_embedder = _CropEmbedder(space_key="parent_model", dimension=2)
+    registry.register(embedder=parent_embedder, bootstrap_for=set())
+
+    result = default_embedder.resolve_default_embedder(
+        session=db_session,
+        collection_id=child.collection_id,
+        embedder_type=ImageCropPathEmbedder,
+    )
+
+    assert result == (parent_embedder, parent_model.embedding_model_id)
+
+
+def test_resolve_default_embedder__parent_space_lacks_capability_uses_bootstrap(
+    db_session: Session, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    parent = create_collection(session=db_session)
+    child = create_collection(
+        session=db_session,
+        collection_name="boxes",
+        parent_collection_id=parent.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    registry = EmbedderRegistry()
+    # The parent's embedder embeds image paths, but not crops
+    registry.register(
+        embedder=_PathEmbedder(space_key="parent_model", dimension=2), bootstrap_for=set()
+    )
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    builtin = _CropEmbedder(space_key="mobileclip_s0", dimension=4)
+    _patch_builtin(mocker=mocker, embedder=builtin)
+    create_embedding_model(
+        session=db_session,
+        collection_id=parent.collection_id,
+        embedding_model_name="parent_model",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+
+    with caplog.at_level(logging.WARNING):
+        result = default_embedder.resolve_default_embedder(
+            session=db_session,
+            collection_id=child.collection_id,
+            embedder_type=ImageCropPathEmbedder,
+        )
+
+    assert result is not None
+    returned_embedder, model_id = result
+    assert returned_embedder is builtin
+    assert "parent_model" in caplog.text
+    assert "annotation collection 'boxes'" in caplog.text
+    registered = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=model_id)
+    assert registered is not None
+    assert registered.name == "mobileclip_s0"
+
+
+def test_resolve_default_embedder__parent_without_default_uses_bootstrap(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    parent = create_collection(session=db_session)
+    child = create_collection(session=db_session, parent_collection_id=parent.collection_id)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    builtin = _CropEmbedder(space_key="mobileclip_s0", dimension=4)
+    _patch_builtin(mocker=mocker, embedder=builtin)
+
+    result = default_embedder.resolve_default_embedder(
+        session=db_session,
+        collection_id=child.collection_id,
+        embedder_type=ImageCropPathEmbedder,
+    )
+
+    assert result is not None
+    returned_embedder, model_id = result
+    assert returned_embedder is builtin
+    registered = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=model_id)
+    assert registered is not None
+    assert registered.name == "mobileclip_s0"
+
+
+def test_resolve_default_embedder__registered_bootstrap_wins_over_parent_space(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    parent = create_collection(session=db_session)
+    child = create_collection(session=db_session, parent_collection_id=parent.collection_id)
+    registry = EmbedderRegistry()
+    registry.register(
+        embedder=_CropEmbedder(space_key="parent_model", dimension=2), bootstrap_for=set()
+    )
+    bootstrap = RandomEmbedder(dimension=3)
+    registry.register(embedder=bootstrap, bootstrap_for={Capability.IMAGE_CROP_PATH})
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    create_embedding_model(
+        session=db_session,
+        collection_id=parent.collection_id,
+        embedding_model_name="parent_model",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+
+    result = default_embedder.resolve_default_embedder(
+        session=db_session,
+        collection_id=child.collection_id,
+        embedder_type=ImageCropPathEmbedder,
+    )
+
+    assert result is not None
+    returned_embedder, model_id = result
+    assert returned_embedder is bootstrap
+    registered = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=model_id)
+    assert registered is not None
+    assert registered.name == "random_model"
 
 
 def test_resolve_query_embedder__uses_existing_default(
@@ -354,3 +564,20 @@ def _create_remote_default_model(session: Session, collection_id: UUID) -> None:
     model.remote_embedder_url = "http://embedder.test"
     session.add(model)
     session.commit()
+
+
+def _patch_builtin(mocker: MockerFixture, embedder: _CropEmbedder) -> None:
+    """Make the embedder the built-in of its own space, and load no other built-in."""
+    own_space_key = embedder.embedding_space_spec().space_key
+    mocker.patch.object(
+        embedder_registry,
+        "_load_builtin_embedder",
+        side_effect=lambda space_key: embedder if space_key == own_space_key else None,
+    )
+
+
+def _zeros(count: int, dimension: int) -> EmbeddingResult:
+    return EmbeddingResult(
+        embeddings=np.zeros((count, dimension), dtype=np.float32),
+        kept_indices=list(range(count)),
+    )

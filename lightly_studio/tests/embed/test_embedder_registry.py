@@ -664,6 +664,26 @@ class TestEmbedderRegistry:
         )
         build_remote.assert_called_once()
 
+    def test_has_registered_bootstrap(self) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeImageEmbedder(space_key="image_model"))
+
+        assert registry.has_registered_bootstrap(embedder_type=ImagePathEmbedder)
+        # The built-in bootstrap of crops is not a registration
+        assert not registry.has_registered_bootstrap(embedder_type=ImageCropPathEmbedder)
+
+    def test_has_registered_bootstrap__empty_bootstrap_set(self) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeImageEmbedder(space_key="image_model"), bootstrap_for=set())
+
+        assert not registry.has_registered_bootstrap(embedder_type=ImagePathEmbedder)
+
+    def test_has_registered_bootstrap__not_a_capability_type(self) -> None:
+        registry = EmbedderRegistry()
+
+        with pytest.raises(ValueError, match=r"not an embedder capability type"):
+            registry.has_registered_bootstrap(embedder_type=Embedder)
+
     def test_preload_builtin_embedders__loads_each_builtin_once(
         self, mocker: MockerFixture
     ) -> None:
