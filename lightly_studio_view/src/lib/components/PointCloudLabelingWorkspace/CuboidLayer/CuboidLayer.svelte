@@ -114,7 +114,8 @@
         {#if isSelected && gizmoMode}
             <CuboidGizmo
                 mode={gizmoMode}
-                onTransformEnd={(obj, snapshot) => handleTransformEnd(item.annotation, obj, snapshot)}
+                onTransformEnd={(obj, snapshot) =>
+                    handleTransformEnd(item.annotation, obj, snapshot)}
                 onInteractionStart={() => hoverTracker.markClicked()}
             />
         {/if}
