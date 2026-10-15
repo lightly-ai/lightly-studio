@@ -53,6 +53,7 @@ vi.mock('$lib/hooks', () => ({
     useCloudPointFrame: () => ({
         query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
     }),
+    useTickCameraFrames: () => ({ query: { data: undefined } }),
     useAnnotationCollections: () => ({ data: [] }),
     useMcapTickPrefetchScheduler: () => ({
         bufferedRanges: [],

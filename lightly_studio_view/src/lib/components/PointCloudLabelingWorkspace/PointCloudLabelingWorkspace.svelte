@@ -261,7 +261,7 @@
                 <Pane defaultSize={78} minSize={50} class="flex min-h-0 flex-col">
                     <PaneGroup direction="vertical" class="min-h-0 flex-1">
                         <!-- The point cloud dominates: full width of the working column. -->
-                        <Pane defaultSize={62} minSize={30} class="relative min-h-0">
+                        <Pane defaultSize={74} minSize={30} class="relative min-h-0">
                             <ToolRail />
                             {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
@@ -301,7 +301,7 @@
                             </div>
                         </PaneResizer>
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
-                        <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
+                        <Pane defaultSize={26} minSize={12} maxSize={45} class="min-h-0">
                             <CameraProjectionStrip
                                 {datasetId}
                                 {sequenceId}
@@ -311,37 +311,27 @@
                                 selectedChannelIds={cameraSelection.selectedChannelIds}
                             />
                         </Pane>
-                        <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
-                        >
-                            <div
-                                class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                            >
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                            </div>
-                        </PaneResizer>
-                        <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline
-                                ticks={workspace.ticks}
-                                currentTick={workspace.currentTick}
-                                isPlaying={workspace.isPlaying}
-                                playbackIntervalMs={workspace.playbackIntervalMs}
-                                bufferEntireSequence={$bufferEntireSequence}
-                                onBufferEntireSequenceChange={(enabled) =>
-                                    bufferEntireSequence.set(enabled)}
-                                bufferedRanges={tickPrefetch.bufferedRanges}
-                                onPreviousFrame={goToPreviousFrame}
-                                onNextFrame={goToNextFrame}
-                                onPlayToggle={togglePlayback}
-                                onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
-                                onSelectTick={goToFrame}
-                                {onPreviousSequence}
-                                {onNextSequence}
-                            />
-                        </Pane>
                     </PaneGroup>
+                    <!-- Fixed-height footer: the timeline only takes the space its controls need. -->
+                    <div class="flex-none">
+                        <FrameTimeline
+                            ticks={workspace.ticks}
+                            currentTick={workspace.currentTick}
+                            isPlaying={workspace.isPlaying}
+                            playbackIntervalMs={workspace.playbackIntervalMs}
+                            bufferEntireSequence={$bufferEntireSequence}
+                            onBufferEntireSequenceChange={(enabled) =>
+                                bufferEntireSequence.set(enabled)}
+                            bufferedRanges={tickPrefetch.bufferedRanges}
+                            onPreviousFrame={goToPreviousFrame}
+                            onNextFrame={goToNextFrame}
+                            onPlayToggle={togglePlayback}
+                            onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
+                            onSelectTick={goToFrame}
+                            {onPreviousSequence}
+                            {onNextSequence}
+                        />
+                    </div>
                 </Pane>
                 <PaneResizer
                     class="group relative flex w-2 cursor-col-resize items-center justify-center bg-card transition-colors hover:bg-card"
