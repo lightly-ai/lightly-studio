@@ -44,11 +44,17 @@
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
     const pendingSizes = createPendingSizesTracker();
     const hoverTracker = createCuboidHoverTracker((id, handle) => onhover?.(id, handle));
+    const transformVersions = new Map<string, number>();
 
-    function handleTransformEnd(ann: Domain.CuboidAnnotation, obj: Object3D): void {
+    async function handleTransformEnd(ann: Domain.CuboidAnnotation, obj: Object3D): Promise<void> {
         const payload = buildCuboidTransformPayload(ann, obj, pendingSizes.get(ann.id));
         pendingSizes.set(ann.id, payload.size);
-        void onCuboidTransform?.(payload);
+        const version = (transformVersions.get(ann.id) ?? 0) + 1;
+        transformVersions.set(ann.id, version);
+        const success = await onCuboidTransform?.(payload);
+        if (success === false && transformVersions.get(ann.id) === version) {
+            pendingSizes.delete(ann.id);
+        }
     }
 
     $effect(() => {

@@ -16,7 +16,7 @@ interface CuboidTransform extends Pick<
 }
 
 interface UseUpdateCuboidAnnotationReturn {
-    handleCuboidTransform: (transform: CuboidTransform) => Promise<void>;
+    handleCuboidTransform: (transform: CuboidTransform) => Promise<boolean>;
 }
 
 function buildCuboidInput({
@@ -41,7 +41,7 @@ export function useUpdateCuboidAnnotation({
     });
 
     // Serializes saves per cuboid so that rapid successive drags cannot persist out of order.
-    const saves = new Map<string, Promise<void>>();
+    const saves = new Map<string, Promise<unknown>>();
 
     async function refreshAnnotations(): Promise<void> {
         try {
@@ -53,9 +53,9 @@ export function useUpdateCuboidAnnotation({
         }
     }
 
-    async function doSave(transform: CuboidTransform): Promise<void> {
+    async function doSave(transform: CuboidTransform): Promise<boolean> {
         const collectionId = getCollectionId();
-        if (!collectionId) return;
+        if (!collectionId) return false;
         const input: AnnotationUpdateInput = {
             annotation_id: transform.annotationId,
             collection_id: collectionId,
@@ -67,17 +67,18 @@ export function useUpdateCuboidAnnotation({
             toast.error('Failed to update annotation. Please try again.');
             // Refetch so the viewport reverts to the last persisted geometry.
             await refreshAnnotations();
-            return;
+            return false;
         }
         await refreshAnnotations();
+        return true;
     }
 
-    async function handleCuboidTransform(transform: CuboidTransform): Promise<void> {
+    async function handleCuboidTransform(transform: CuboidTransform): Promise<boolean> {
         const prev = saves.get(transform.annotationId) ?? Promise.resolve();
         // Chain after previous save; absorb its error so this save always runs.
         const thisCall = prev.catch(() => {}).then(() => doSave(transform));
         saves.set(transform.annotationId, thisCall);
-        await thisCall;
+        return thisCall;
     }
 
     return { handleCuboidTransform };

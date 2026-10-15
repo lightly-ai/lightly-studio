@@ -61,7 +61,7 @@ describe('useUpdateCuboidAnnotation', () => {
         ]);
         expect(onUpdated).not.toHaveBeenCalled();
         finishSave();
-        await pending;
+        expect(await pending).toBe(true);
         expect(onUpdated).toHaveBeenCalledOnce();
         expect(toast.error).not.toHaveBeenCalled();
     });
@@ -82,11 +82,12 @@ describe('useUpdateCuboidAnnotation', () => {
     });
 
     it('does not save or refresh without an annotation source', async () => {
-        await useUpdateCuboidAnnotation({
+        const result = await useUpdateCuboidAnnotation({
             ...defaultParams,
             getCollectionId: () => undefined
         }).handleCuboidTransform(transform);
 
+        expect(result).toBe(false);
         expect(updateAnnotations).not.toHaveBeenCalled();
         expect(onUpdated).not.toHaveBeenCalled();
         expect(toast.error).not.toHaveBeenCalled();
@@ -95,8 +96,10 @@ describe('useUpdateCuboidAnnotation', () => {
     it('reports a failed save and refetches to restore the cuboid', async () => {
         updateAnnotations.mockRejectedValue(new Error('save failed'));
 
-        await useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
+        const result =
+            await useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
 
+        expect(result).toBe(false);
         expect(toast.error).toHaveBeenCalledWith('Failed to update annotation. Please try again.');
         // Refetch is triggered even on failure so the viewport reverts to persisted geometry.
         expect(onUpdated).toHaveBeenCalledOnce();
@@ -130,11 +133,13 @@ describe('useUpdateCuboidAnnotation', () => {
         expect(order).toEqual(['start-1', 'start-2']);
     });
 
-    it('distinguishes a refresh failure from a failed save', async () => {
+    it('returns true even when the refresh fails after a successful save', async () => {
         onUpdated.mockRejectedValue(new Error('refresh failed'));
 
-        await useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
+        const result =
+            await useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
 
+        expect(result).toBe(true);
         expect(updateAnnotations).toHaveBeenCalledOnce();
         expect(toast.error).toHaveBeenCalledExactlyOnceWith(
             'Annotation updated, but the workspace could not refresh. Please try again.'

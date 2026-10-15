@@ -36,6 +36,15 @@ describe('createPendingSizesTracker', () => {
         expect(tracker.get('ann-1')).toEqual([10, 20, 30]);
     });
 
+    it('deletes a pending size by id', () => {
+        const tracker = createPendingSizesTracker();
+        tracker.set('ann-1', [10, 20, 30]);
+
+        tracker.delete('ann-1');
+
+        expect(tracker.get('ann-1')).toBeUndefined();
+    });
+
     it('removes an entry when the server cuboid matches the pending size', () => {
         const tracker = createPendingSizesTracker();
         tracker.set('ann-1', [2, 3, 4]);

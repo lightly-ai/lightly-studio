@@ -3,6 +3,7 @@ import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain
 interface PendingSizesTracker {
     get(id: string): Domain.Vector3 | undefined;
     set(id: string, size: Domain.Vector3): void;
+    delete(id: string): void;
     reconcile(cuboids: readonly Domain.CuboidAnnotation[]): void;
 }
 
@@ -19,6 +20,7 @@ export function createPendingSizesTracker(): PendingSizesTracker {
     return {
         get: (id) => pending.get(id),
         set: (id, size) => pending.set(id, size),
+        delete: (id) => pending.delete(id),
         reconcile(cuboids) {
             for (const [id, size] of pending) {
                 const cuboid = cuboids.find((c) => c.id === id);
