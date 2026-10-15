@@ -10,10 +10,14 @@ from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.core.mcap import transforms
-from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.mcap_group_component_definition import McapDataType
-from lightly_studio.models.mcap_sequence_ticks import TickChannelView, TickDetailView
+from lightly_studio.models.mcap_sequence_ticks import (
+    CameraProjectionView,
+    TickChannelView,
+    TickDetailView,
+)
 from lightly_studio.models.tag import TagView
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -22,6 +26,7 @@ from lightly_studio.resolvers import (
     mcap_resolver,
     recording_resolver,
     sample_resolver,
+    sensor_calibration_resolver,
     sequence_resolver,
 )
 from lightly_studio.services.recording_service import (
@@ -80,6 +85,13 @@ def get_tick_details(
         return None
 
     channel_mcaps = mcap_resolver.get_tick_channels(session=session, group_sample_id=link.sample_id)
+    projections = _camera_projections(
+        session=session,
+        sequence_id=sequence_id,
+        recording_id=mcap_sequence.recording_id,
+        target_frame_id=target_frame_id,
+        timestamp_ns=link.timestamp_ns,
+    )
     camera_channels: dict[str, TickChannelView] = {}
     lidar_channels: dict[str, TickChannelView] = {}
     for name, (mcap, data_type) in channel_mcaps.items():
@@ -87,7 +99,7 @@ def get_tick_details(
         if data_type is McapDataType.POINT_CLOUD:
             lidar_channels[name] = channel
         elif data_type is McapDataType.VIDEO_FRAME:
-            camera_channels[name] = channel
+            camera_channels[name] = channel.model_copy(update={"projection": projections.get(name)})
     annotations = [
         AnnotationView.from_annotation_table(annotation=annotation)
         for annotation in annotation_resolver.get_all_by_parent_sample_ids(
@@ -115,6 +127,72 @@ def get_tick_details(
         annotations=annotations,
         tags=[TagView.model_validate(tag) for tag in tick_sample.tags],
     )
+
+
+def _camera_projections(
+    session: Session,
+    sequence_id: UUID,
+    recording_id: UUID,
+    target_frame_id: str | None,
+    timestamp_ns: int | None,
+) -> dict[str, CameraProjectionView]:
+    """Build projection metadata for cameras in the requested scene frame."""
+    if target_frame_id is None or timestamp_ns is None:
+        return {}
+
+    info = mcap_group_sequence_resolver.get_info(session=session, sample_id=sequence_id)
+    if info is None:
+        return {}
+    calibrations = {
+        calibration.collection_id: calibration
+        for calibration in sensor_calibration_resolver.get_all_by_recording_id(
+            session=session, recording_id=recording_id
+        )
+    }
+    components = [
+        component
+        for component in info.components
+        if component.mcap_data_type is McapDataType.VIDEO_FRAME
+        and component.frame_id is not None
+        and component.collection_id in calibrations
+    ]
+    if not components:
+        return {}
+    recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
+    if recording is None:
+        return {}
+    reader = reader_cache.get_cached_reader(uri=recording.uri)
+    static_transforms = load_static_transforms.load_static_transforms(
+        session=session, recording_id=recording_id
+    )
+    projections: dict[str, CameraProjectionView] = {}
+    for component in components:
+        calibration = calibrations.get(component.collection_id)
+        if calibration is None or component.frame_id is None:
+            continue
+        try:
+            matrix = (
+                np.eye(4, dtype=np.float64)
+                if component.frame_id == target_frame_id
+                else transform_to_target_frame.transform_to_target_frame(
+                    reader=reader,
+                    source_frame_id=target_frame_id,
+                    target_frame_id=component.frame_id,
+                    timestamp_ns=timestamp_ns,
+                    static_transforms=static_transforms,
+                )
+            )
+        except (McapAccessError, TransformNotFoundError):
+            continue
+        if matrix is None:
+            continue
+        projections[component.group_component_name] = CameraProjectionView(
+            width=calibration.width,
+            height=calibration.height,
+            camera_matrix=calibration.k,
+            scene_to_camera=[float(value) for value in matrix.reshape(-1)],
+        )
+    return projections
 
 
 def _cuboids_in_frame(
