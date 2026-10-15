@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added an image interpolation setting to show sharp pixel edges when zooming in.
+- The text axes layout of the embedding plot shows the lines x = 0 and y = 0. They split the plot into four parts, one for each pair of axis texts.
 - Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
 
 ### Changed

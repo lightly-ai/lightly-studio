@@ -5,6 +5,7 @@
     import { Select } from '$lib/components/Select';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
+    import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
@@ -546,6 +547,12 @@
                             rangeSelection={$rangeSelection}
                         />
                     </div>
+
+                    <!-- Only the Text layout has a meaningful origin: x = 0 is where a sample is
+                         as close to X− as to X+. -->
+                    {#if $plotAxes && overlayProxy}
+                        <PlotAxisLines proxy={overlayProxy} />
+                    {/if}
 
                     {#if hoverPreview}
                         <div
