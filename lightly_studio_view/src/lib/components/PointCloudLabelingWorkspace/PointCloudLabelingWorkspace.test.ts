@@ -35,6 +35,18 @@ vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svel
         cancel: vi.fn()
     })
 }));
+vi.mock('./useCreateCuboidAnnotation', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useCreateCuboidAnnotation: () => ({
+            handleCreateCuboid: vi.fn(),
+            showSelectClassDialog: writable(false),
+            handleClassSelected: vi.fn(),
+            handleClassDialogCancel: vi.fn(),
+            labels: { data: [] }
+        })
+    };
+});
 
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
