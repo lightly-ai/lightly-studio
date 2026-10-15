@@ -16,7 +16,7 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
+    import { Filter, GripVertical, PanelLeftClose } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';
@@ -70,6 +70,7 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
+    import ClearAllFiltersButton from '$lib/components/ClearAllFiltersButton';
     import {
         useSelectionSummary,
         useImageAnnotationCounts,
@@ -603,22 +604,30 @@
                                 class="flex items-center justify-between py-2 text-lg font-semibold"
                             >
                                 <span class="flex items-center space-x-2">
-                                    <SlidersHorizontal class="size-5" />
+                                    <Filter class="size-5" />
                                     <span>Filters</span>
                                 </span>
-                                <Tooltip content="Hide filters" position="bottom" class="w-max">
-                                    <Button
-                                        variant="ghost"
-                                        icon={PanelLeftClose}
-                                        ariaLabel="Hide filters"
-                                        buttonProps={{
-                                            onclick: toggleFilterPanelCollapsed,
-                                            'aria-expanded': true,
-                                            'data-testid': 'filter-panel-collapse',
-                                            class: 'size-6 p-0'
-                                        }}
+                                <span class="flex items-center gap-1">
+                                    <ClearAllFiltersButton
+                                        {collectionId}
+                                        {isImages}
+                                        {isVideos}
+                                        {isVideoFrames}
                                     />
-                                </Tooltip>
+                                    <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                        <Button
+                                            variant="ghost"
+                                            icon={PanelLeftClose}
+                                            ariaLabel="Hide filters"
+                                            buttonProps={{
+                                                onclick: toggleFilterPanelCollapsed,
+                                                'aria-expanded': true,
+                                                'data-testid': 'filter-panel-collapse',
+                                                class: 'size-6 p-0'
+                                            }}
+                                        />
+                                    </Tooltip>
+                                </span>
                             </h2>
 
                             {#if isImages}

@@ -18,6 +18,7 @@ from lightly_studio_serve.embedder import (
     VideoPathEmbedder,
 )
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from PIL.Image import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio.embed import embedder_config, embedder_registry
@@ -88,6 +89,14 @@ class _FakeVideoImageEmbedder(VideoPathEmbedder, ImagePathEmbedder):
 
     def embed_images(self, paths: list[str]) -> EmbeddingResult:
         return self.embed_videos(paths=paths)
+
+
+class _FakeVideoFrameEmbedder(_FakeVideoImageEmbedder, ImagePILEmbedder):
+    def embed_images_pil(self, images: list[Image]) -> EmbeddingResult:
+        return EmbeddingResult(
+            embeddings=np.zeros((len(images), 2), dtype=np.float32),
+            kept_indices=list(range(len(images))),
+        )
 
 
 class TestEmbedderRegistry:
@@ -617,6 +626,17 @@ class TestEmbedderRegistry:
         assert load_builtin.call_count == 2
         load_builtin.assert_any_call(space_key="PE-Core-T16-384")
         load_builtin.assert_any_call(space_key="mobileclip_s0")
+
+    def test_get_embedder__frames_share_the_video_builtin(self, mocker: MockerFixture) -> None:
+        registry = EmbedderRegistry()
+        pe = _FakeVideoFrameEmbedder(space_key="PE-Core-T16-384")
+        load_builtin = mocker.patch.object(
+            embedder_registry, "_load_builtin_embedder", return_value=pe
+        )
+
+        assert registry.get_embedder(embedder_type=ImagePILEmbedder) is pe
+        assert registry.get_embedder(embedder_type=VideoPathEmbedder) is pe
+        load_builtin.assert_called_once_with(space_key="PE-Core-T16-384")
 
     def test_lazy_loading_preserves_custom_bootstrap_space(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()

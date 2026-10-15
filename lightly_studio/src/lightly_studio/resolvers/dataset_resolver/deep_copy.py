@@ -46,6 +46,7 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.dynamic_transform import DynamicTransformTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricTable,
@@ -165,6 +166,7 @@ def deep_copy(
     _copy_mcap_group_component_definitions(session=session)
     _copy_sensor_calibrations(session=session)
     _copy_static_transforms(session=session)
+    _copy_dynamic_transforms(session=session)
 
     # Commit so the ON COMMIT DROP map tables are released and a subsequent deep_copy in
     # the same session can recreate them.
@@ -1008,6 +1010,24 @@ def _copy_static_transforms(session: Session) -> None:
     _copy_table(
         session=session,
         target=StaticTransformTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_dynamic_transforms(session: Session) -> None:
+    """Copy dynamic transforms, remapping recording_id and generating a new PK."""
+    src = _table(DynamicTransformTable).alias("src")
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"])
+    overrides = {
+        "dynamic_transform_id": func.gen_random_uuid(),
+        "recording_id": map_recording.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=DynamicTransformTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

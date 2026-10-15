@@ -68,22 +68,20 @@
                     onRefetch={onUpdate}
                 />
             {/key}
-            {#if sample.annotations}
-                <SampleDetailsAnnotationSegment
-                    bind:annotationsIdsToHide
-                    {collectionId}
-                    {isPanModeEnabled}
-                    refetch={onUpdate}
-                    annotations={sample.annotations}
-                    sampleId={sample.sample_id}
-                />
-                <SampleDetailsClassificationSegment
-                    {collectionId}
-                    refetch={onUpdate}
-                    annotations={sample.annotations}
-                    sampleId={sample.sample_id}
-                />
-            {/if}
+            <SampleDetailsAnnotationSegment
+                bind:annotationsIdsToHide
+                {collectionId}
+                {isPanModeEnabled}
+                refetch={onUpdate}
+                annotations={sample.annotations ?? []}
+                sampleId={sample.sample_id}
+            />
+            <SampleDetailsClassificationSegment
+                {collectionId}
+                refetch={onUpdate}
+                annotations={sample.annotations ?? []}
+                sampleId={sample.sample_id}
+            />
 
             <SampleDetailsCaptionSegment
                 refetch={onUpdate}

@@ -17,11 +17,16 @@ const mocks = vi.hoisted(() => ({
     refetchRootCollection: vi.fn(),
     addReversibleAction: vi.fn(),
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
-    enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void }
+    enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
+    userRole: 'labeler' as string | undefined
 }));
 
 vi.mock('$app/state', () => ({
     page: { params: { dataset_id: 'dataset-1' } }
+}));
+
+vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+    default: () => ({ user: mocks.userRole ? { role: mocks.userRole } : undefined })
 }));
 
 // The classification segment imports useAnnotationCollections through the `$lib/hooks`
@@ -162,6 +167,7 @@ describe('SampleDetailsClassificationSegment', () => {
         mocks.addReversibleAction.mockReset();
         mocks.isEditingMode.set(false);
         mocks.enforceColoringByClassStore.set(false);
+        mocks.userRole = 'labeler';
         // The component logs the caught error alongside the toast on every failure path.
         vi.spyOn(console, 'error').mockImplementation(() => {});
     });
@@ -527,6 +533,26 @@ describe('SampleDetailsClassificationSegment', () => {
             await user.click(screen.getByRole('option', { name: 'dog' }));
 
             await waitFor(() => expect(toast.error).toHaveBeenCalled());
+        });
+    });
+
+    describe('empty state copy', () => {
+        it('shows edit guidance for users who can edit when there are no classifications', () => {
+            mocks.userRole = 'labeler';
+            render(SampleDetailsClassificationSegment, { props: defaultProps });
+
+            expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
+                'No classifications. Click Edit annotations to add one.'
+            );
+        });
+
+        it('shows plain "No classifications." without edit guidance for viewer role', () => {
+            mocks.userRole = 'viewer';
+            render(SampleDetailsClassificationSegment, { props: defaultProps });
+
+            expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
+                'No classifications.'
+            );
         });
     });
 });
