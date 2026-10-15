@@ -56,6 +56,10 @@
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
     let cuboidClicked = false;
 
+    // Tracks the most recently computed size per cuboid so successive resize drags
+    // accumulate correctly before the refreshed annotation data arrives from the server.
+    const pendingSizes = new Map<string, Domain.Vector3>();
+
     // Pending hits from the current click event — all overlapping cuboids report here.
     let pendingHits: CuboidIntersection[] = [];
     let hitScheduled = false;
@@ -98,6 +102,7 @@
 
     $effect(() => {
         hoveredCuboids.clear();
+        pendingSizes.clear();
         onhover?.(null, null);
         const next = createCuboidRenderItems(cuboids);
         renderCuboids = next;
@@ -147,8 +152,15 @@
             {#if gizmoMode}
                 <CuboidGizmo
                     mode={gizmoMode}
-                    onTransformEnd={(obj) =>
-                        void onCuboidTransform?.(buildCuboidTransformPayload(item.annotation, obj))}
+                    onTransformEnd={(obj) => {
+                        const payload = buildCuboidTransformPayload(
+                            item.annotation,
+                            obj,
+                            pendingSizes.get(item.annotation.id)
+                        );
+                        pendingSizes.set(item.annotation.id, payload.size);
+                        void onCuboidTransform?.(payload);
+                    }}
                     onInteractionStart={() => (cuboidClicked = true)}
                 />
             {/if}
