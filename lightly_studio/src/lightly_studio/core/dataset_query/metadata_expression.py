@@ -81,13 +81,13 @@ class MetadataComparisonExpression(MatchExpression):
 
     def get(self) -> ColumnElement[bool]:
         """Build a predicate without adding a join to the outer query."""
-        is_boolean = isinstance(self.value, bool)
+        expected_type = "boolean" if isinstance(self.value, bool) else "string"
+        # metadata_schema records only top-level types; nested leaf types come from data.
         scalar_type = db_json.json_extract_scalar_type(
             column=SampleMetadataTable.data, field=self.path
         )
         extracted = db_json.json_extract_as_text(column=SampleMetadataTable.data, field=self.path)
-        expected_type = "boolean" if is_boolean else "string"
-        value = str(self.value).lower() if is_boolean else self.value
+        value = str(self.value).lower() if expected_type == "boolean" else self.value
         operations = {"==": operator.eq, "!=": operator.ne}
         condition = and_(
             scalar_type == expected_type,
