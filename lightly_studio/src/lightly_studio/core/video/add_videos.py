@@ -31,6 +31,7 @@ from labelformat.model.object_detection_track import (
     SingleObjectDetectionTrack,
     VideoObjectDetectionTrack,
 )
+from lightly_studio_serve.embedder import VideoPathEmbedder
 from PIL import Image
 from sqlmodel import Session
 from tqdm import tqdm
@@ -44,7 +45,7 @@ from lightly_studio.core.file_outcome_report import (
     MissingInputFileError,
 )
 from lightly_studio.dataset import remote_storage
-from lightly_studio.embed import embed_samples
+from lightly_studio.embed import default_embedder, embed_samples
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
@@ -171,6 +172,11 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
+    if embed_frames:
+        # The videos get their default model first, so that the frames take its space
+        default_embedder.resolve_default_embedder(
+            session=session, collection_id=collection_id, embedder_type=VideoPathEmbedder
+        )
     effective_embed_frames = embed_frames and embed_samples.has_frame_embedder(
         session=session, collection_id=video_frames_collection_id
     )

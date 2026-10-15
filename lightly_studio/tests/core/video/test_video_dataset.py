@@ -141,6 +141,38 @@ class TestDataset:
             == expected_frame_embeddings
         )
 
+    def test_dataset_add_videos_from_path__frames_use_the_video_space(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+        mocker: MockerFixture,
+    ) -> None:
+        registry = EmbedderRegistry()
+        # A registration sets the video bootstrap only. The frames have the built-in bootstrap.
+        registry.register(
+            embedder=RandomEmbedder(dimension=3), bootstrap_for={Capability.VIDEO_PATH}
+        )
+        mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+        # No built-in model loads in this test
+        mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=None)
+        create_video_file(output_path=tmp_path / "a.mp4", width=16, height=16, num_frames=3, fps=1)
+        dataset = VideoDataset.create(name="test_dataset")
+
+        dataset.add_videos_from_path(path=tmp_path, embed=True, embed_frames=True)
+
+        # The frames take the space of the videos on the first ingest
+        frames_collection_id = collection_resolver.get_or_create_child_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_type=SampleType.VIDEO_FRAME,
+        )
+        frame_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+            session=dataset.session, collection_id=frames_collection_id
+        )
+        assert frame_model is not None
+        assert frame_model.name == "random_model"
+        assert _count_sample_embeddings(dataset=dataset, collection_id=frames_collection_id) == 3
+
     def test_dataset_add_videos_from_path__frames_added_later_use_the_video_space(
         self,
         patch_collection: None,  # noqa: ARG002
