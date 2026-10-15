@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildCuboidTransformPayload } from './cuboidTransform';
+import { Object3D } from 'three';
+import {
+    buildCuboidTransformPayload,
+    captureTransformSnapshot,
+    restoreTransformSnapshot
+} from './cuboidTransform';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 function fakeObj(
@@ -78,5 +83,55 @@ describe('buildCuboidTransformPayload', () => {
             first.size
         );
         expect(second.size).toEqual([6, 3, 4]);
+    });
+});
+
+describe('captureTransformSnapshot', () => {
+    it('clones position, quaternion, and scale from the object', () => {
+        const obj = new Object3D();
+        obj.position.set(1, 2, 3);
+        obj.quaternion.set(0.1, 0.2, 0.3, 0.9);
+        obj.scale.set(1.5, 2, 0.5);
+
+        const snapshot = captureTransformSnapshot(obj);
+
+        expect(snapshot.position.toArray()).toEqual([1, 2, 3]);
+        expect(snapshot.quaternion.toArray()).toEqual([0.1, 0.2, 0.3, 0.9]);
+        expect(snapshot.scale.toArray()).toEqual([1.5, 2, 0.5]);
+    });
+
+    it('returns independent clones that are not affected by later mutations', () => {
+        const obj = new Object3D();
+        obj.position.set(1, 2, 3);
+        obj.quaternion.set(0, 0, 0, 1);
+        obj.scale.set(1, 1, 1);
+
+        const snapshot = captureTransformSnapshot(obj);
+        obj.position.set(10, 20, 30);
+        obj.quaternion.set(0.5, 0.5, 0.5, 0.5);
+        obj.scale.set(3, 3, 3);
+
+        expect(snapshot.position.toArray()).toEqual([1, 2, 3]);
+        expect(snapshot.quaternion.toArray()).toEqual([0, 0, 0, 1]);
+        expect(snapshot.scale.toArray()).toEqual([1, 1, 1]);
+    });
+});
+
+describe('restoreTransformSnapshot', () => {
+    it('restores position, quaternion, and scale on the object', () => {
+        const obj = new Object3D();
+        obj.position.set(1, 2, 3);
+        obj.quaternion.set(0, 0, 0, 1);
+        obj.scale.set(1.5, 2, 0.5);
+        const snapshot = captureTransformSnapshot(obj);
+
+        obj.position.set(10, 20, 30);
+        obj.quaternion.set(0.5, 0.5, 0.5, 0.5);
+        obj.scale.set(3, 3, 3);
+        restoreTransformSnapshot(obj, snapshot);
+
+        expect(obj.position.toArray()).toEqual([1, 2, 3]);
+        expect(obj.quaternion.toArray()).toEqual([0, 0, 0, 1]);
+        expect(obj.scale.toArray()).toEqual([1.5, 2, 0.5]);
     });
 });

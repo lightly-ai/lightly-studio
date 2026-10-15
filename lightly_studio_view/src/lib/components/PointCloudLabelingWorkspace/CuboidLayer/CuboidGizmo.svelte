@@ -3,12 +3,16 @@
     import { TransformControls } from '@threlte/extras';
     import type { TransformControls as ThreeTransformControls } from 'three/examples/jsm/controls/TransformControls.js';
     import type { Object3D } from 'three';
+    import { captureTransformSnapshot } from './cuboidTransform';
 
     interface Props {
         mode: 'translate' | 'rotate' | 'scale';
         enabled?: boolean;
-        /** Called when the user finishes a drag; receives the mutated parent Object3D. */
-        onTransformEnd?: (object: Object3D) => void;
+        /** Called when the user finishes a drag; receives the mutated parent Object3D and a snapshot of its pre-drag transform. */
+        onTransformEnd?: (
+            object: Object3D,
+            snapshot: ReturnType<typeof captureTransformSnapshot>
+        ) => void;
         /** Called when the user starts interacting with the gizmo (mousedown on a handle). */
         onInteractionStart?: () => void;
     }
@@ -23,9 +27,12 @@
         if (!controls) return;
 
         let changed = false;
+        let snapshot: ReturnType<typeof captureTransformSnapshot> | null = null;
 
         function onMouseDown(): void {
             changed = false;
+            const obj = parentObject3D.current;
+            snapshot = obj ? captureTransformSnapshot(obj) : null;
             onInteractionStart?.();
         }
 
@@ -36,7 +43,8 @@
         function onMouseUp(): void {
             if (!changed) return;
             const obj = parentObject3D.current;
-            if (obj) onTransformEnd?.(obj);
+            if (obj && snapshot) onTransformEnd?.(obj, snapshot);
+            snapshot = null;
         }
 
         controls.addEventListener('mouseDown', onMouseDown);

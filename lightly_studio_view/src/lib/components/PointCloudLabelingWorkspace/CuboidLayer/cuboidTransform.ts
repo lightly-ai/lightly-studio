@@ -2,6 +2,23 @@ import type { Object3D } from 'three';
 import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
 import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
 
+export function captureTransformSnapshot(obj: Object3D) {
+    return {
+        position: obj.position.clone(),
+        quaternion: obj.quaternion.clone(),
+        scale: obj.scale.clone()
+    };
+}
+
+export function restoreTransformSnapshot(
+    obj: Object3D,
+    snapshot: ReturnType<typeof captureTransformSnapshot>
+): void {
+    obj.position.copy(snapshot.position);
+    obj.quaternion.copy(snapshot.quaternion);
+    obj.scale.copy(snapshot.scale);
+}
+
 export const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'rotate' | 'scale'>> =
     {
         translate: 'translate',

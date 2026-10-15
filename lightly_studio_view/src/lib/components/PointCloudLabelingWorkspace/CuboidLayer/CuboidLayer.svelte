@@ -11,7 +11,12 @@
     import { createPendingSizesTracker } from './cuboidPendingSizes';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
     import { addCuboidSelectionListeners } from './cuboidSelection';
-    import { GIZMO_MODES, buildCuboidTransformPayload } from './cuboidTransform';
+    import {
+        GIZMO_MODES,
+        buildCuboidTransformPayload,
+        captureTransformSnapshot,
+        restoreTransformSnapshot
+    } from './cuboidTransform';
     import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
 
     interactivity();
@@ -46,7 +51,11 @@
     const hoverTracker = createCuboidHoverTracker((id, handle) => onhover?.(id, handle));
     const transformVersions = new Map<string, number>();
 
-    async function handleTransformEnd(ann: Domain.CuboidAnnotation, obj: Object3D): Promise<void> {
+    async function handleTransformEnd(
+        ann: Domain.CuboidAnnotation,
+        obj: Object3D,
+        snapshot: ReturnType<typeof captureTransformSnapshot>
+    ): Promise<void> {
         const payload = buildCuboidTransformPayload(ann, obj, pendingSizes.get(ann.id));
         pendingSizes.set(ann.id, payload.size);
         const version = (transformVersions.get(ann.id) ?? 0) + 1;
@@ -54,6 +63,7 @@
         const success = await onCuboidTransform?.(payload);
         if (success === false && transformVersions.get(ann.id) === version) {
             pendingSizes.delete(ann.id);
+            restoreTransformSnapshot(obj, snapshot);
         }
     }
 
@@ -104,7 +114,7 @@
         {#if isSelected && gizmoMode}
             <CuboidGizmo
                 mode={gizmoMode}
-                onTransformEnd={(obj) => handleTransformEnd(item.annotation, obj)}
+                onTransformEnd={(obj, snapshot) => handleTransformEnd(item.annotation, obj, snapshot)}
                 onInteractionStart={() => hoverTracker.markClicked()}
             />
         {/if}
