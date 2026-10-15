@@ -8,6 +8,7 @@
     import PointCloudRightSidePanel from './PointCloudRightSidePanel';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
+    import { SelectClassDialog } from '$lib/components';
     import type { WorkspaceCrumb } from './types';
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
     import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
@@ -18,6 +19,8 @@
     import { useAnnotationCollections } from '$lib/hooks';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
+    import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
+    import type { Vector3, WorkspaceTool } from './domain';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -66,6 +69,7 @@
     }: Props = $props();
 
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
+    let activeTool = $state<WorkspaceTool>('select');
 
     let workspace = $state<PointCloudWorkspaceContext>({} as PointCloudWorkspaceContext);
     const lidarSelection = useChannelSelection({
@@ -104,6 +108,32 @@
         }))
     );
 
+    const {
+        handleCreateCuboid: createCuboidAnnotation,
+        showSelectClassDialog,
+        handleClassSelected,
+        handleClassDialogCancel,
+        labels
+    } = useCreateCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        getDatasetId: () => datasetId,
+        getTickSampleId: () => {
+            if (!tick || tick.isStale || sceneSnapshot?.tick !== workspace.currentTick)
+                return undefined;
+            return tick.sampleId;
+        },
+        getSceneFrame: () =>
+            sceneSnapshot?.frame
+                ? {
+                      bounds: sceneSnapshot.frame.bounds,
+                      // Use the first channel's frameId — the top-level frameId on a merged
+                      // frame is a comma-joined composite ("odom,odom") that does not match
+                      // the per-channel frameIds used by the scene filter.
+                      frameId: sceneSnapshot.frame.channels[0]?.frameId ?? ''
+                  }
+                : null
+    });
+
     // Synchronized snapshot: the cloud frame and its corresponding annotations
     // advance together.
     // The fit key is captured with the snapshot, so the camera is re-centered once the points of
@@ -112,6 +142,7 @@
         frame: NonNullable<(typeof workspace.cloudPointFrame)['data']>;
         annotations: Parameters<typeof tickAnnotationsToCuboids>[0];
         fitKey: string;
+        tick: number;
     } | null>(null);
 
     $effect(() => {
@@ -123,12 +154,21 @@
             sceneSnapshot = {
                 frame: workspace.cloudPointFrame.data,
                 annotations: workspace.tickDetails.data?.annotations ?? [],
-                fitKey: `${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`
+                fitKey: `${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`,
+                tick: workspace.currentTick
             };
         }
     });
 
-    const cuboids = $derived(tickAnnotationsToCuboids(sceneSnapshot?.annotations ?? []));
+    // Annotations belong to a specific tick. While the new tick's data is loading (both queries
+    // show placeholder data from the previous tick), we keep the previous point cloud visible for
+    // a smooth transition but immediately clear the annotations so they don't bleed into frames
+    // where they do not belong.
+    const snapshotAnnotations = $derived(
+        sceneSnapshot?.tick === workspace.currentTick ? sceneSnapshot.annotations : []
+    );
+
+    const cuboids = $derived(tickAnnotationsToCuboids(snapshotAnnotations));
 
     const annotationClasses = $derived.by(() => {
         void $customLabelColorsStore;
@@ -184,6 +224,14 @@
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     });
+
+    async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
+        await createCuboidAnnotation(groundPosition, async (annotationId) => {
+            await workspace.tickDetails.refetch({ throwOnError: true });
+            selectedCuboidId = annotationId;
+            activeTool = 'select';
+        });
+    }
 </script>
 
 <div
@@ -222,7 +270,7 @@
                     <PaneGroup direction="vertical" class="min-h-0 flex-1">
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
-                            <ToolRail />
+                            <ToolRail {activeTool} onToolChange={(tool) => (activeTool = tool)} />
                             {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
@@ -238,8 +286,10 @@
                                     {annotationSources}
                                     selectedAnnotationId={selectedCuboidId}
                                     hoveredAnnotationId={hoveredCuboidId}
+                                    {activeTool}
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
+                                    onCreateCuboid={handleCreateCuboid}
                                     onPreviousTick={goToPreviousFrame}
                                     onNextTick={goToNextFrame}
                                 />
@@ -324,3 +374,10 @@
         {/if}
     </div>
 </div>
+
+<SelectClassDialog
+    bind:open={$showSelectClassDialog}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
+/>

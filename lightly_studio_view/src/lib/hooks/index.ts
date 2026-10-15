@@ -51,6 +51,8 @@ export { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
 export { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
 export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
+export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
+export { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { usePostHog } from '$lib/hooks/usePostHog';

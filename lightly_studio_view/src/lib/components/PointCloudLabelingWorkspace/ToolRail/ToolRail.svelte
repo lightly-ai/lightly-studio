@@ -5,8 +5,14 @@
     import { Button } from '$lib/components';
     import type { WorkspaceTool } from '../domain';
 
-    /** Placeholder tool rail; tool activation lands with the interaction state machine. */
-    const { activeTool = 'select' }: { activeTool?: WorkspaceTool } = $props();
+    interface Props {
+        activeTool?: WorkspaceTool;
+        onToolChange?: (tool: WorkspaceTool) => void;
+    }
+
+    const { activeTool = 'select', onToolChange }: Props = $props();
+
+    const ENABLED_TOOLS = new Set<WorkspaceTool>(['select', 'create-cuboid']);
 
     const tools: { tool: WorkspaceTool; label: string; icon: Component<IconProps> }[] = [
         { tool: 'select', label: 'Select', icon: MousePointer2 },
@@ -26,15 +32,17 @@
         aria-label="Labeling tools"
     >
         {#each tools as { tool, label, icon } (tool)}
+            {@const enabled = ENABLED_TOOLS.has(tool)}
             <Button
                 variant={tool === activeTool ? 'secondary' : 'ghost'}
                 {icon}
                 ariaLabel={label}
                 buttonProps={{
-                    disabled: true,
+                    disabled: !enabled,
                     size: 'sm',
                     class: 'h-8 w-8 p-0',
-                    title: `${label} (coming soon)`
+                    title: enabled ? label : `${label} (coming soon)`,
+                    onclick: enabled ? () => onToolChange?.(tool) : undefined
                 }}
             />
         {/each}
