@@ -68,21 +68,21 @@ def test_count_image_annotations_by_sample_tags(
     ]
 
 
-def test_count_image_annotations_by_sample_tags__rejects_annotation_tag(
+def test_count_image_annotations_by_sample_tags__rejects_foreign_collection_tag(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
-    annotation_tag = create_tag(
+    other_collection = create_collection(session=db_session)
+    foreign_tag = create_tag(
         session=db_session,
-        collection_id=collection.collection_id,
-        kind="annotation",
+        collection_id=other_collection.collection_id,
     )
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/images/annotations/count-by-sample-tags",
-        json={"sample_tag_ids": [str(annotation_tag.tag_id)]},
+        json={"sample_tag_ids": [str(foreign_tag.tag_id)]},
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
-    assert "must be sample tags belonging to collection" in response.json()["error"]
+    assert "must belong to collection" in response.json()["error"]

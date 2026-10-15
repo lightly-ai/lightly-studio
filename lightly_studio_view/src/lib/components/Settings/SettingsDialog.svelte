@@ -95,6 +95,13 @@
                     <!-- Grid View Settings -->
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-foreground">Display Settings</h3>
+                        <SettingsFieldRow id="image-interpolation" label="Image Interpolation">
+                            <Switch
+                                id="image-interpolation"
+                                bind:checked={dialogState.imageInterpolation}
+                                disabled={dialogState.isSaving}
+                            />
+                        </SettingsFieldRow>
                         <SettingsFieldRow id="grid-view-rendering" label="Grid View Rendering">
                             <Select
                                 items={[

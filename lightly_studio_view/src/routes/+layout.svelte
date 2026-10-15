@@ -43,17 +43,32 @@
     onMount(() => {
         if (browser) {
             useSettings().initSettings();
-            void usePostHog().init();
+            usePostHog();
         }
     });
 
     let { children } = $props();
+    const { settingsStore } = useSettings();
 </script>
 
 <QueryClientProvider client={queryClient}>
-    <div class="flex h-full w-full flex-col">
+    <div
+        class="flex h-full w-full flex-col"
+        class:nearest-neighbor={$settingsStore.image_interpolation === false}
+    >
         {@render children()}
         <Toaster richColors />
         <PluginExecutingOverlay />
     </div>
 </QueryClientProvider>
+
+<style>
+    .nearest-neighbor {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+    }
+
+    .nearest-neighbor :global(canvas) {
+        image-rendering: auto;
+    }
+</style>

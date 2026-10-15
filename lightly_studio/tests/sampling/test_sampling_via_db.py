@@ -205,7 +205,6 @@ def test_sampling_via_database__embedding_diversity__sample_filter_tags(
         tag=TagCreate(
             collection_id=collection_id,
             name="samples_5_through_14",
-            kind="sample",
             description="A test tag",
         ),
     )
@@ -443,7 +442,6 @@ def test_sampling_via_database__zero_input_samples_available(
         tag=TagCreate(
             collection_id=collection_id,
             name="empty_tag",
-            kind="sample",
             description="A tag with no samples",
         ),
     )
@@ -687,7 +685,7 @@ def test_sampling_via_database__preselected_sample_id_not_in_input(
     sample_id = _all_sample_ids(db_session, collection_id)[0]
     preselected_tag = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="preselected", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="preselected"),
     )
     tag_resolver.add_sample_ids_to_tag_id(
         session=db_session,

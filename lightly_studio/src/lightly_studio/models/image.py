@@ -1,7 +1,7 @@
 """This module defines the User model for the application."""
 
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -53,12 +53,6 @@ class ImageTable(ImageBase, table=True):
     sample: Mapped["SampleTable"] = Relationship()
 
 
-TagKind = Literal[
-    "sample",
-    "annotation",
-]
-
-
 class ImageView(BaseModel):
     """Image class when retrieving."""
 
@@ -67,7 +61,6 @@ class ImageView(BaseModel):
 
         tag_id: UUID
         name: str
-        kind: TagKind
         created_at: datetime
         updated_at: datetime
 
@@ -116,7 +109,6 @@ class ImageView(BaseModel):
                 ImageView.ImageViewTag(
                     tag_id=tag.tag_id,
                     name=tag.name,
-                    kind=tag.kind,
                     created_at=tag.created_at,
                     updated_at=tag.updated_at,
                 )

@@ -5,17 +5,13 @@
 
     import { page } from '$app/state';
 
-    const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
 
     const { lastGridType, sampleSize } = useGlobalStorage();
 
-    // Use root collection ID for tags - tags should always use root collection, not child collections
-    const tagsCollectionId = $derived(datasetId ?? collectionId);
-
     const { clearTagsSelected } = $derived(
         useTags({
-            collection_id: tagsCollectionId
+            collection_id: collectionId
         })
     );
 

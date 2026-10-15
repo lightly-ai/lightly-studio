@@ -21,6 +21,8 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSettings } from '$lib/hooks';
@@ -40,6 +42,8 @@
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
     const { enforceColoringByClassStore } = useSettings();
+    const { user } = useAuth();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
@@ -305,7 +309,15 @@
 <Segment title="Classification">
     <div class="flex flex-col gap-3 space-y-4">
         <div class="flex flex-col gap-2">
-            {#if isGrouped}
+            {#if classificationAnnotations.length === 0 && !$isEditingMode}
+                <p class="text-sm text-muted-foreground" data-testid="empty-state-message">
+                    {#if canEdit}
+                        No classifications. Click <strong>Edit annotations</strong> to add one.
+                    {:else}
+                        No classifications.
+                    {/if}
+                </p>
+            {:else if isGrouped}
                 <div class="flex flex-col gap-3">
                     {#each sourceGroups as group (group.id)}
                         <SampleDetailsAnnotationSourceGroup

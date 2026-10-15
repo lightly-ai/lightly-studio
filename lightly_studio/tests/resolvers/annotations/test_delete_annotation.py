@@ -80,7 +80,6 @@ def test_delete_annotation__deletes_sample_tag_links(
         session=db_session,
         collection_id=annotation_collection_id,
         tag_name="annotation-tag",
-        kind="annotation",
     )
     annotation.sample.tags.append(tag)
     db_session.add(annotation.sample)

@@ -8,6 +8,7 @@
         Footer,
         LabelsMenu,
         MetadataFilterChips,
+        Onboarding,
         SelectionPill,
         ShowFiltersButton,
         TagsMenu
@@ -15,7 +16,7 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { GripVertical, PanelLeftClose, SlidersHorizontal } from '@lucide/svelte';
+    import { Filter, GripVertical, PanelLeftClose } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';
@@ -69,10 +70,12 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
+    import ClearAllFiltersButton from '$lib/components/ClearAllFiltersButton';
     import {
         useSelectionSummary,
         useImageAnnotationCounts,
         usePostHog,
+        useFeatureFlags,
         useSeedAnnotationSourceFilter
     } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
@@ -86,6 +89,8 @@
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
+    import { useOnboarding } from '$lib/hooks';
+    import { getLightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
     const { data, children } = $props();
     const {
         collection,
@@ -93,6 +98,14 @@
     } = $derived(data);
 
     const { trackEvent } = usePostHog();
+    const { featureFlags, ready: featureFlagsReady } = useFeatureFlags();
+    let featuresLoaded = $state(false);
+    const onboardingEnabled = $derived(
+        featuresLoaded &&
+            $featureFlags.includes('onboarding') &&
+            collection.sample_type === 'image' &&
+            !getLightlyEnterpriseSession()
+    );
     const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
     const { isRefineClassifiersPanelOpen } = useRefineClassifiersPanel();
 
@@ -243,6 +256,9 @@
 
     // Setup event handlers for keyboard shortcuts
     onMount(() => {
+        void featureFlagsReady.then(() => {
+            featuresLoaded = true;
+        });
         if (browser) {
             window.addEventListener('keydown', handleKeyEvent);
             window.addEventListener('keyup', handleKeyEvent);
@@ -546,11 +562,24 @@
 </script>
 
 <div class="flex-none">
-    <Header {collection} />
+    <Header
+        {collection}
+        showTour={onboardingEnabled}
+        onShowTour={() => useOnboarding().requestReplay()}
+    />
     <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
+    <Onboarding
+        enabled={onboardingEnabled}
+        {isImages}
+        {isSampleDetails}
+        {collectionId}
+        collectionType={page.params.collection_type!}
+        {datasetId}
+        sampleCount={collection.total_sample_count}
+    />
     {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails || isPointCloudLabeling}
         {@render children()}
     {:else}
@@ -564,6 +593,7 @@
                 <div
                     class="h-full min-h-0 w-80 flex-col {$filterPanelCollapsed ? 'hidden' : 'flex'}"
                     data-testid="filter-panel-body"
+                    data-onboarding-filter-panel
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
@@ -574,22 +604,30 @@
                                 class="flex items-center justify-between py-2 text-lg font-semibold"
                             >
                                 <span class="flex items-center space-x-2">
-                                    <SlidersHorizontal class="size-5" />
+                                    <Filter class="size-5" />
                                     <span>Filters</span>
                                 </span>
-                                <Tooltip content="Hide filters" position="bottom" class="w-max">
-                                    <Button
-                                        variant="ghost"
-                                        icon={PanelLeftClose}
-                                        ariaLabel="Hide filters"
-                                        buttonProps={{
-                                            onclick: toggleFilterPanelCollapsed,
-                                            'aria-expanded': true,
-                                            'data-testid': 'filter-panel-collapse',
-                                            class: 'size-6 p-0'
-                                        }}
+                                <span class="flex items-center gap-1">
+                                    <ClearAllFiltersButton
+                                        {collectionId}
+                                        {isImages}
+                                        {isVideos}
+                                        {isVideoFrames}
                                     />
-                                </Tooltip>
+                                    <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                        <Button
+                                            variant="ghost"
+                                            icon={PanelLeftClose}
+                                            ariaLabel="Hide filters"
+                                            buttonProps={{
+                                                onclick: toggleFilterPanelCollapsed,
+                                                'aria-expanded': true,
+                                                'data-testid': 'filter-panel-collapse',
+                                                class: 'size-6 p-0'
+                                            }}
+                                        />
+                                    </Tooltip>
+                                </span>
                             </h2>
 
                             {#if isImages}

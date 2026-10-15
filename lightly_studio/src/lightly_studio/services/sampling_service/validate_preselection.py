@@ -27,7 +27,7 @@ def validate_preselection(
         return None
 
     tag = tag_resolver.get_by_id(session=session, tag_id=preselected_tag_id)
-    if tag is None or tag.collection_id != collection_id or tag.kind != "sample":
+    if tag is None or tag.collection_id != collection_id:
         raise ValueError("Invalid preselected sample tag.")
 
     preselected_sample_ids = tag_resolver.get_sample_ids_by_tag_id(

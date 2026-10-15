@@ -29,7 +29,11 @@ from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
-from lightly_studio.core.mcap.reader import STATIC_TRANSFORM_TOPIC, McapFileReader
+from lightly_studio.core.mcap.reader import (
+    DYNAMIC_TRANSFORM_TOPIC,
+    STATIC_TRANSFORM_TOPIC,
+    McapFileReader,
+)
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequenceEntry
 from lightly_studio.core.mcap.type_definitions import (
@@ -219,6 +223,7 @@ def index_recording(  # noqa: PLR0913
         loaded=loaded,
     )
     _add_static_transforms(recording=recording, static_transforms=loaded.static_transforms)
+    _add_dynamic_transforms(recording=recording, dynamic_transforms=loaded.dynamic_transforms)
     recording.set_reference_frame_ids(frame_ids=frame_ids)
     _fill_mcap_definitions(components=components, mcap_components=mcap_components, loaded=loaded)
 
@@ -240,7 +245,7 @@ def index_recording(  # noqa: PLR0913
 
 
 class _LoadedRecording(NamedTuple):
-    """Locators paired to the sync component, plus camera intrinsics and static transforms.
+    """Locators paired to the sync component, plus camera intrinsics and transforms.
 
     `channel_ids` comes from the file summary, so a component still has a channel even
     when pairing finds no tick for it.
@@ -250,6 +255,7 @@ class _LoadedRecording(NamedTuple):
     intrinsics: dict[str, CameraIntrinsics]
     channel_ids: dict[str, int]
     static_transforms: list[StaticTransform]
+    dynamic_transforms: list[StaticTransform]
     dynamic_edges: list[tuple[str, str]]
 
 
@@ -281,16 +287,16 @@ def _read_recording(
     """Pair every component to the sync_component, and read intrinsics and transforms.
 
     Pairing uses capture timestamps first, then log times when the capture clocks do
-    not overlap. The topics, including `/tf_static`, are read in a single pass, because
-    a chunk holds the messages of every topic in a time span and reading them one at a
-    time fetches the shared chunks again for each of them. `/tf` is read only when
-    reference frames are requested, and only until those frames have been seen.
+    not overlap. The topics, including `/tf_static` and `/tf`, are read in a single
+    pass, because a chunk holds the messages of every topic in a time span and reading
+    them one at a time fetches the shared chunks again for each of them.
     """
     with McapFileReader(mcap_path) as reader:
         _check_topics_present(reader=reader, components=components)
         reader.load_data_for_topics(
             _topics_to_load(components=components),
             static_transform_topic=STATIC_TRANSFORM_TOPIC,
+            dynamic_transform_topic=DYNAMIC_TRANSFORM_TOPIC,
         )
         sync_locators = reader.get_frame_locators(sync_component.topic)
 
@@ -311,11 +317,14 @@ def _read_recording(
             if component.camera_info_topic is not None
         }
         channel_ids = _channel_ids_by_component(reader=reader, components=components)
-        static_transforms = _named_static_transforms(
-            static_transforms=reader.get_static_transforms(), mcap_path=mcap_path
+        static_transforms = _named_transforms(
+            transforms=reader.get_static_transforms(), mcap_path=mcap_path, kind="static"
+        )
+        dynamic_transforms = _named_transforms(
+            transforms=reader.get_dynamic_transforms(), mcap_path=mcap_path, kind="dynamic"
         )
         dynamic_edges = _dynamic_edges(
-            reader=reader,
+            dynamic_transforms=dynamic_transforms,
             static_transforms=static_transforms,
             reference_frame_ids=reference_frame_ids,
         )
@@ -324,6 +333,7 @@ def _read_recording(
         intrinsics=intrinsics,
         channel_ids=channel_ids,
         static_transforms=static_transforms,
+        dynamic_transforms=dynamic_transforms,
         dynamic_edges=dynamic_edges,
     )
 
@@ -463,15 +473,27 @@ def _add_static_transforms(
         recording.add_static_transforms(transforms=edges)
 
 
+def _add_dynamic_transforms(
+    recording: Recording, dynamic_transforms: Sequence[StaticTransform]
+) -> None:
+    """Store every dynamic transform of the recording, if it has any.
+
+    Each edge keeps its capture time, so a later lookup can pick the pose closest to
+    a timestamp.
+    """
+    if dynamic_transforms:
+        recording.add_dynamic_transforms(transforms=dynamic_transforms)
+
+
 def _dynamic_edges(
-    reader: McapFileReader,
+    dynamic_transforms: Sequence[StaticTransform],
     static_transforms: Sequence[StaticTransform],
     reference_frame_ids: Sequence[str] | None,
 ) -> list[tuple[str, str]]:
-    """Return dynamic edges that cover the requested frames missing from the static tree.
+    """Return each distinct dynamic edge once, if a requested frame is not in the static tree.
 
-    No `/tf` messages are read when no frames are requested, or when every requested
-    frame is already a parent or a child of a static transform.
+    No edges are returned when no frames are requested, or when every requested frame
+    is already a parent or a child of a static transform.
     """
     if not reference_frame_ids:
         return []
@@ -480,10 +502,14 @@ def _dynamic_edges(
         for transform in static_transforms
         for frame_id in (transform.parent_frame_id, transform.child_frame_id)
     }
-    missing = [frame_id for frame_id in reference_frame_ids if frame_id not in known]
-    if not missing:
+    if all(frame_id in known for frame_id in reference_frame_ids):
         return []
-    return reader.read_dynamic_edges_until(frame_ids=missing)
+    return list(
+        dict.fromkeys(
+            (transform.parent_frame_id, transform.child_frame_id)
+            for transform in dynamic_transforms
+        )
+    )
 
 
 def _reference_frame_ids(
@@ -516,8 +542,8 @@ def _latest_static_transform_per_child(
     return list(latest_by_child.values())
 
 
-def _named_static_transforms(
-    static_transforms: Sequence[StaticTransform], mcap_path: str
+def _named_transforms(
+    transforms: Sequence[StaticTransform], mcap_path: str, kind: str
 ) -> list[StaticTransform]:
     """Drop the transforms that have an empty parent or child frame id.
 
@@ -526,13 +552,14 @@ def _named_static_transforms(
     """
     named = [
         transform
-        for transform in static_transforms
+        for transform in transforms
         if transform.parent_frame_id.strip() and transform.child_frame_id.strip()
     ]
-    if len(named) < len(static_transforms):
+    if len(named) < len(transforms):
         logger.warning(
-            "Skipping %d static transforms without a frame id in '%s'.",
-            len(static_transforms) - len(named),
+            "Skipping %d %s transforms without a frame id in '%s'.",
+            len(transforms) - len(named),
+            kind,
             mcap_path,
         )
     return named

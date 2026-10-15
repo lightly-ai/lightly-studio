@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from lightly_studio_serve.embedder import ImageBytesEmbedder
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -183,9 +184,9 @@ def test_embed_image_from_file__model_override_not_supported(test_client: TestCl
     ("error", "status_code", "message"),
     [
         (
-            MissingCapabilityError(space_key="my-space", query_kind="images"),
+            MissingCapabilityError(space_key="my-space", embedder_type=ImageBytesEmbedder),
             HTTP_STATUS_CONFLICT,
-            "The embedding space 'my-space' of this collection cannot embed images.",
+            "The embedding space 'my-space' has no ImageBytesEmbedder.",
         ),
         (
             NoDefaultEmbeddingModelError("No default model."),
