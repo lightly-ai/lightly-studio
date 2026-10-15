@@ -22,19 +22,29 @@
         const controls = controlsRef;
         if (!controls) return;
 
-        function onMouseDown() {
+        let changed = false;
+
+        function onMouseDown(): void {
+            changed = false;
             onInteractionStart?.();
         }
 
-        function onMouseUp() {
+        function onObjectChange(): void {
+            changed = true;
+        }
+
+        function onMouseUp(): void {
+            if (!changed) return;
             const obj = parentObject3D.current;
             if (obj) onTransformEnd?.(obj);
         }
 
         controls.addEventListener('mouseDown', onMouseDown);
+        controls.addEventListener('objectChange', onObjectChange);
         controls.addEventListener('mouseUp', onMouseUp);
         return () => {
             controls.removeEventListener('mouseDown', onMouseDown);
+            controls.removeEventListener('objectChange', onObjectChange);
             controls.removeEventListener('mouseUp', onMouseUp);
         };
     });
