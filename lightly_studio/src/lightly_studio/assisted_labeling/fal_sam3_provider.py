@@ -45,6 +45,8 @@ class FalSam3Provider:
 
     provider_id = "fal_sam3"
     display_name = "fal.ai SAM 3"
+    vendor = "fal"
+    model = ENDPOINT
     sends_data_to_third_party = True
 
     def __init__(

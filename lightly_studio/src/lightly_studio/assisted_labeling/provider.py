@@ -126,6 +126,16 @@ class AssistedLabelingProvider(Protocol):
         ...
 
     @property
+    def vendor(self) -> str:
+        """Who bills the calls, for example `fal`. Used for usage reports."""
+        ...
+
+    @property
+    def model(self) -> str:
+        """The model or vendor endpoint, for example `fal-ai/sam-3/image-rle`."""
+        ...
+
+    @property
     def sends_data_to_third_party(self) -> bool:
         """True if the provider sends image data to a third party."""
         ...
