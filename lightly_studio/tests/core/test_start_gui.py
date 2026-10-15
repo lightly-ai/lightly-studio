@@ -108,18 +108,12 @@ def test_start_gui__with_explicit_host_port(
     mock_server.assert_called_once_with(host="0.0.0.0", port=9999)
 
 
-@pytest.mark.parametrize(
-    "use_default",
-    [True, False],
-    ids=["default", "explicit"],
-)
-def test_start_gui__opens_browser_when_ready(
+def test_start_gui__opens_browser_by_default(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
-    use_default: bool,
 ) -> None:
-    """Test browser opening by default and when explicitly enabled, once ready."""
+    """Test that the browser opens when start_gui is called without arguments."""
     image_path = tmp_path / "sample.jpg"
     Image.new("RGB", (10, 10)).save(image_path)
 
@@ -134,10 +128,7 @@ def test_start_gui__opens_browser_when_ready(
     mock_open = mocker.patch.object(webbrowser, "open")
 
     threading.Timer(interval=0.3, function=stop_event.set).start()
-    if use_default:
-        start_gui_module.start_gui()
-    else:
-        start_gui_module.start_gui(open_browser=True)
+    start_gui_module.start_gui()
 
     mock_open.assert_called_once_with("http://127.0.0.1:8001")
 

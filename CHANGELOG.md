@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Python SDK: `start_gui()` now opens the browser by default (`open_browser=True`). Pass `open_browser=False` to suppress. The `lightly-studio gui` CLI command accepts `--no-browser` to opt out.
 - Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
 
 ### Deprecated
