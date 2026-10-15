@@ -102,8 +102,22 @@
 
     $effect(() => {
         hoveredCuboids.clear();
-        pendingSizes.clear();
         onhover?.(null, null);
+
+        // Remove only entries whose save is reflected in the latest cuboids data.
+        // Cuboids not present (e.g. frame switch) are also removed.
+        for (const [id, pending] of pendingSizes) {
+            const cuboid = cuboids.find((c) => c.id === id);
+            if (
+                !cuboid ||
+                (cuboid.size[0] === pending[0] &&
+                    cuboid.size[1] === pending[1] &&
+                    cuboid.size[2] === pending[2])
+            ) {
+                pendingSizes.delete(id);
+            }
+        }
+
         const next = createCuboidRenderItems(cuboids);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
