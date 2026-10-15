@@ -55,7 +55,6 @@ _INITIAL_BOOTSTRAP_SPACES = {
     Capability.IMAGE_PATH: _MOBILECLIP_SPACE_KEY,
     Capability.IMAGE_CROP_PATH: _MOBILECLIP_SPACE_KEY,
     Capability.VIDEO_PATH: _PERCEPTION_ENCODER_SPACE_KEY,
-    # Video frames use the space of the videos
     Capability.IMAGE_PIL: _PERCEPTION_ENCODER_SPACE_KEY,
     Capability.IMAGE_BYTES: _MOBILECLIP_SPACE_KEY,
 }
