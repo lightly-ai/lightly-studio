@@ -16,8 +16,8 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import evaluation_sample_metric_resolver, image_resolver
+from lightly_studio.utils import batching
 
-METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.create_many
 _MIOU_METRIC_NAME = "miou"
 
 
@@ -40,43 +40,43 @@ def create_and_persist_semantic_segmentation_metrics_per_sample(
     )
     image_by_sample_id = {image.sample_id: image for image in images}
 
-    # Score all samples before persisting, since each commit expires the loaded annotations
-    metrics_to_persist: list[EvaluationSampleMetricCreate] = []
-    for sample_id in data.selected_sample_ids:
-        image = image_by_sample_id.get(sample_id)
-        if image is None:
-            raise ValueError(
-                f"Semantic segmentation evaluation expected image dimensions for "
-                f"sample {sample_id}, but no image was found."
+    # Score a whole batch before persisting it, because each commit expires the loaded annotations
+    for sample_id_batch in batching.batched(items=data.selected_sample_ids):
+        metrics_to_persist: list[EvaluationSampleMetricCreate] = []
+        for sample_id in sample_id_batch:
+            image = image_by_sample_id.get(sample_id)
+            if image is None:
+                raise ValueError(
+                    f"Semantic segmentation evaluation expected image dimensions for "
+                    f"sample {sample_id}, but no image was found."
+                )
+
+            gt_masks = _class_masks_from_annotations(
+                annotations=data.gt_per_sample.get(sample_id, []),
+                image=image,
+            )
+            pred_masks = _class_masks_from_annotations(
+                annotations=data.pred_per_sample.get(sample_id, []),
+                image=image,
+            )
+            class_ious = compute_class_ious(gt_masks=gt_masks, pred_masks=pred_masks)
+            if not class_ious:
+                raise ValueError(
+                    f"Semantic segmentation evaluation expected at least one class mask "
+                    f"for sample {sample_id}, but none were found."
+                )
+
+            metrics_to_persist.append(
+                _sample_metric_record(
+                    evaluation_run_id=data.evaluation_run_id,
+                    sample_id=sample_id,
+                    class_ious=class_ious,
+                )
             )
 
-        gt_masks = _class_masks_from_annotations(
-            annotations=data.gt_per_sample.get(sample_id, []),
-            image=image,
-        )
-        pred_masks = _class_masks_from_annotations(
-            annotations=data.pred_per_sample.get(sample_id, []),
-            image=image,
-        )
-        class_ious = compute_class_ious(gt_masks=gt_masks, pred_masks=pred_masks)
-        if not class_ious:
-            raise ValueError(
-                f"Semantic segmentation evaluation expected at least one class mask "
-                f"for sample {sample_id}, but none were found."
-            )
-
-        metrics_to_persist.append(
-            _sample_metric_record(
-                evaluation_run_id=data.evaluation_run_id,
-                sample_id=sample_id,
-                class_ious=class_ious,
-            )
-        )
-
-    for batch_start in range(0, len(metrics_to_persist), METRIC_BATCH_SIZE):
         evaluation_sample_metric_resolver.create_many(
             session=session,
-            records=metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
+            records=metrics_to_persist,
         )
 
 

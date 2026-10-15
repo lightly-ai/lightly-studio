@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The GUI footer no longer shows a dev commit hash for released versions.
 - The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.
-- Python SDK: Fix `dataset.evaluate()` and evaluation recompute loading each annotation again with its own database query, which made evaluation up to 2.7x slower on large datasets.
+- Python SDK: Fix `dataset.evaluate()` and evaluation recompute loading each annotation again with its own database query, which made evaluation slow on large datasets.
 
 ### Security
 

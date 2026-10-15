@@ -19,8 +19,7 @@ from lightly_studio.resolvers import (
     evaluation_annotation_metric_resolver,
     evaluation_sample_metric_resolver,
 )
-
-METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.create_many
+from lightly_studio.utils import batching
 
 
 class Matchable(Protocol):
@@ -207,37 +206,35 @@ def create_and_persist_metrics_per_sample(
         data: Prepared evaluation data (selected samples and per-sample annotations).
         match_sample: Returns the matching result for one sample, given its id.
     """
-    # Match all samples before persisting, since each commit expires the loaded annotations
-    sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
-    annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
+    # Match a whole batch before persisting it, because each commit expires the loaded annotations
+    for sample_id_batch in batching.batched(items=data.selected_sample_ids):
+        sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
+        annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
+        for sample_id in sample_id_batch:
+            matching_result = match_sample(sample_id)
 
-    for sample_id in data.selected_sample_ids:
-        matching_result = match_sample(sample_id)
-
-        sample_metrics_to_persist.extend(
-            get_sample_metric_records(
-                evaluation_run_id=data.evaluation_run_id,
-                sample_id=sample_id,
-                matching_result=matching_result,
+            sample_metrics_to_persist.extend(
+                get_sample_metric_records(
+                    evaluation_run_id=data.evaluation_run_id,
+                    sample_id=sample_id,
+                    matching_result=matching_result,
+                )
             )
-        )
-        annotation_metrics_to_persist.extend(
-            get_annotation_metric_records(
-                evaluation_run_id=data.evaluation_run_id,
-                sample_id=sample_id,
-                matching_result=matching_result,
+            annotation_metrics_to_persist.extend(
+                get_annotation_metric_records(
+                    evaluation_run_id=data.evaluation_run_id,
+                    sample_id=sample_id,
+                    matching_result=matching_result,
+                )
             )
-        )
 
-    for batch_start in range(0, len(sample_metrics_to_persist), METRIC_BATCH_SIZE):
         evaluation_sample_metric_resolver.create_many(
             session=session,
-            records=sample_metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
+            records=sample_metrics_to_persist,
         )
-    for batch_start in range(0, len(annotation_metrics_to_persist), METRIC_BATCH_SIZE):
         evaluation_annotation_metric_resolver.create_many(
             session=session,
-            records=annotation_metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
+            records=annotation_metrics_to_persist,
         )
 
 
