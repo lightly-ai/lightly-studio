@@ -608,7 +608,12 @@
                                     <span>Filters</span>
                                 </span>
                                 <span class="flex items-center gap-1">
-                                    <ClearAllFiltersButton {collectionId} />
+                                    <ClearAllFiltersButton
+                                        {collectionId}
+                                        {isImages}
+                                        {isVideos}
+                                        {isVideoFrames}
+                                    />
                                     <Tooltip content="Hide filters" position="bottom" class="w-max">
                                         <Button
                                             variant="ghost"

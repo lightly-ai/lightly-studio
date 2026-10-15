@@ -1,6 +1,7 @@
 import { derived, get, readable, type Readable } from 'svelte/store';
 import {
     useAnnotationCollectionsFilter,
+    useFiltersClearedSignal,
     useGlobalStorage,
     useImageFilters,
     useTags,
@@ -22,127 +23,173 @@ interface FilterGroup {
     clear: () => void;
 }
 
+interface UseClearAllFiltersParams {
+    collectionId: string;
+    isImages: boolean;
+    isVideos: boolean;
+    isVideoFrames: boolean;
+}
+
 interface UseClearAllFiltersReturn {
     hasActiveFilters: Readable<boolean>;
     clearAllFilters: () => void;
 }
 
 /**
- * Tracks whether any sidebar filter is active and resets all of them at once.
+ * Tracks whether any sidebar filter of the current grid is active and resets all of
+ * them at once.
  *
  * Covers tags, annotation classes and sources, numeric and categorical metadata,
  * dimensions, video and frame bounds, the embedding plot region, the confusion cell
- * and the query filter. The sample selection is kept.
+ * and the query filter, as far as the grid shows them. The sample selection is kept.
  */
-export function useClearAllFilters(collectionId: string): UseClearAllFiltersReturn {
-    const groups = [
-        useRangeFilters(),
-        useSelectionFilters(collectionId),
-        useImageFilterParams(collectionId)
-    ];
+export function useClearAllFilters(params: UseClearAllFiltersParams): UseClearAllFiltersReturn {
+    const groups = useFilterGroups(params);
+    const { signalFiltersCleared } = useFiltersClearedSignal();
     return {
         hasActiveFilters: derived(
             groups.map((group) => group.isActive),
             (active) => active.some(Boolean)
         ),
-        clearAllFilters: () => groups.forEach((group) => group.clear())
+        clearAllFilters: () => {
+            groups.forEach((group) => group.clear());
+            signalFiltersCleared();
+        }
     };
 }
 
-// Range sliders: numeric metadata, image dimensions, video and frame bounds.
-function useRangeFilters(): FilterGroup {
-    const { metadataBounds, metadataValues, updateMetadataValues } = useGlobalStorage();
-    const dimensions = useDimensions();
-    const video = useVideoBounds();
-    const frames = useVideoFramesBounds();
-
-    const isActive = derived(
-        [
-            metadataBounds,
-            metadataValues,
-            video.videoBounds,
-            video.videoBoundsValues,
-            frames.videoFramesBounds,
-            frames.videoFramesBoundsValues,
-            dimensions.dimensionsBounds,
-            dimensions.dimensionsValues
-        ],
-        ([$metadataB, $metadataV, $videoB, $videoV, $framesB, $framesV, $dimB, $dimV]) =>
-            isAnyRangeNarrowed($metadataB, $metadataV) ||
-            isAnyRangeNarrowed($videoB, $videoV) ||
-            isAnyRangeNarrowed($framesB, $framesV) ||
-            !isSameDimensions($dimB, $dimV)
-    );
-
-    const clear = () => {
-        resetToBounds(metadataBounds, updateMetadataValues);
-        resetToBounds(dimensions.dimensionsBounds, dimensions.updateDimensionsValues);
-        resetToBounds(video.videoBounds, video.updateVideoBoundsValues);
-        resetToBounds(frames.videoFramesBounds, frames.updateVideoFramesBoundsValues);
-    };
-
-    return { isActive, clear };
+// Only the filters that the sidebar of the current grid shows.
+function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
+    const { collectionId, isImages, isVideos, isVideoFrames } = params;
+    const groups = [useTagAndLabelFilters(collectionId), useEmbeddingPlotFilter(collectionId)];
+    if (isImages || isVideos || isVideoFrames) groups.push(useMetadataFilterGroup());
+    if (isImages) {
+        groups.push(useDimensionsFilter(), useAnnotationSourcesFilter());
+        groups.push(useConfusionCellAndQueryFilter(collectionId));
+    }
+    if (isVideos) {
+        const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds();
+        groups.push(rangeFilter(videoBounds, videoBoundsValues, updateVideoBoundsValues));
+    }
+    if (isVideoFrames) {
+        const frames = useVideoFramesBounds();
+        groups.push(
+            rangeFilter(
+                frames.videoFramesBounds,
+                frames.videoFramesBoundsValues,
+                frames.updateVideoFramesBoundsValues
+            )
+        );
+    }
+    return groups;
 }
 
-// Checkbox lists: tags, annotation classes, annotation sources, categorical metadata.
-function useSelectionFilters(collectionId: string): FilterGroup {
+function useTagAndLabelFilters(collectionId: string): FilterGroup {
     const storage = useGlobalStorage();
-    const { tagsSelected, clearTagsSelected } = useTags({ collection_id: collectionId });
-    const sources = useAnnotationCollectionsFilter();
-
-    const isActive = derived(
-        [
-            tagsSelected,
-            storage.selectedAnnotationFilterIds,
-            storage.categoricalMetadataValues,
-            sources.selectedCollectionIds,
-            sources.collectionIdToName
-        ],
-        ([$tags, $labels, $categorical, $sourceIds, $sourceNames]) =>
-            $tags.size > 0 ||
-            $labels.size > 0 ||
-            Object.values($categorical).some((values) => values.length > 0) ||
-            Object.keys($sourceNames).some((id) => !$sourceIds.includes(id))
-    );
-
-    const clear = () => {
-        clearTagsSelected();
-        storage.clearSelectedAnnotationFilterIds();
-        storage.updateCategoricalMetadataValues({});
-        sources.setSelectedCollectionIds(Object.keys(get(sources.collectionIdToName)));
+    const { tagsSelected, clearTagsSelected } = useTags({
+        collection_id: collectionId,
+        autoLoad: false
+    });
+    return {
+        isActive: derived(
+            [tagsSelected, storage.selectedAnnotationFilterIds],
+            ([$tags, $labels]) => $tags.size > 0 || $labels.size > 0
+        ),
+        clear: () => {
+            clearTagsSelected();
+            storage.clearSelectedAnnotationFilterIds();
+        }
     };
-
-    return { isActive, clear };
 }
 
-// Chips: embedding plot region, confusion cell and query filter.
-function useImageFilterParams(collectionId: string): FilterGroup {
+function useMetadataFilterGroup(): FilterGroup {
+    const storage = useGlobalStorage();
+    const numeric = rangeFilter(
+        storage.metadataBounds,
+        storage.metadataValues,
+        storage.updateMetadataValues
+    );
+    return {
+        isActive: derived(
+            [numeric.isActive, storage.categoricalMetadataValues],
+            ([$numericActive, $categorical]) =>
+                $numericActive || Object.values($categorical).some((values) => values.length > 0)
+        ),
+        clear: () => {
+            numeric.clear();
+            storage.updateCategoricalMetadataValues({});
+        }
+    };
+}
+
+function useDimensionsFilter(): FilterGroup {
+    const { dimensionsBounds, dimensionsValues, updateDimensionsValues } = useDimensions();
+    return {
+        isActive: derived(
+            [dimensionsBounds, dimensionsValues],
+            ([$bounds, $values]) => !isSameDimensions($bounds, $values)
+        ),
+        clear: () => resetToBounds(dimensionsBounds, updateDimensionsValues)
+    };
+}
+
+function useAnnotationSourcesFilter(): FilterGroup {
+    const { selectedCollectionIds, collectionIdToName, setSelectedCollectionIds } =
+        useAnnotationCollectionsFilter();
+    return {
+        isActive: derived([selectedCollectionIds, collectionIdToName], ([$selectedIds, $names]) =>
+            Object.keys($names).some((id) => !$selectedIds.includes(id))
+        ),
+        clear: () => setSelectedCollectionIds(Object.keys(get(collectionIdToName)))
+    };
+}
+
+function useEmbeddingPlotFilter(collectionId: string): FilterGroup {
     const { setRangeSelectionForCollection } = useGlobalStorage();
-    const { filterParams, imageQueryExpression, updateConfusionCell, updateQueryExpr } =
-        useImageFilters();
     const collectionIdStore = readable(collectionId);
     const embeddingFilters = [
         useEmbeddingFilterForImages(collectionIdStore, setRangeSelectionForCollection),
         useEmbeddingFilterForVideos(collectionIdStore, setRangeSelectionForCollection),
         useEmbeddingFilterForAnnotations(collectionIdStore, setRangeSelectionForCollection)
     ];
-
-    const isActive = derived(
-        [getPlotSelectionCount(collectionIdStore), filterParams, imageQueryExpression],
-        ([$plotCount, $filterParams, $query]) =>
-            $plotCount > 0 ||
-            ($filterParams?.mode === 'normal' && !!$filterParams.filters?.confusion_cell) ||
-            !!$query?.query_expr_str
-    );
-
-    const clear = () => {
-        embeddingFilters.forEach((filter) => filter.clearFilter());
-        updateConfusionCell(null);
-        updateQueryExpr(undefined);
+    return {
+        isActive: derived(getPlotSelectionCount(collectionIdStore), ($count) => $count > 0),
+        clear: () => embeddingFilters.forEach((filter) => filter.clearFilter())
     };
-
-    return { isActive, clear };
 }
+
+function useConfusionCellAndQueryFilter(collectionId: string): FilterGroup {
+    const { filterParams, imageQueryExpression, updateConfusionCell, updateQueryExpr } =
+        useImageFilters();
+    const hasConfusionCell = derived(
+        filterParams,
+        ($params) =>
+            $params?.collection_id === collectionId &&
+            $params.mode === 'normal' &&
+            !!$params.filters?.confusion_cell
+    );
+    return {
+        isActive: derived(
+            [hasConfusionCell, imageQueryExpression],
+            ([$hasConfusionCell, $query]) => $hasConfusionCell || !!$query?.query_expr_str
+        ),
+        clear: () => {
+            if (get(hasConfusionCell)) updateConfusionCell(null);
+            updateQueryExpr(undefined);
+        }
+    };
+}
+
+const rangeFilter = <T extends RangeMap>(
+    bounds: Readable<T | null>,
+    values: Readable<T | null>,
+    update: (value: T) => void
+): FilterGroup => ({
+    isActive: derived([bounds, values], ([$bounds, $values]) =>
+        isAnyRangeNarrowed($bounds, $values)
+    ),
+    clear: () => resetToBounds(bounds, update)
+});
 
 const isAnyRangeNarrowed = (bounds: RangeMap | null, values: RangeMap | null) =>
     !!bounds &&

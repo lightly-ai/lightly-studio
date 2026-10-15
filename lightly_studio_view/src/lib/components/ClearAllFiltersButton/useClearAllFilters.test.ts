@@ -11,6 +11,9 @@ import { useClearAllFilters } from './useClearAllFilters';
 
 describe('useClearAllFilters', () => {
     const collectionId = 'collection-1';
+    const imagesGrid = { collectionId, isImages: true, isVideos: false, isVideoFrames: false };
+    const videosGrid = { collectionId, isImages: false, isVideos: true, isVideoFrames: false };
+    const framesGrid = { collectionId, isImages: false, isVideos: false, isVideoFrames: true };
     let storage: ReturnType<typeof useGlobalStorage>;
     const videoBounds = useVideoBounds();
     const framesBounds = useVideoFramesBounds();
@@ -39,7 +42,7 @@ describe('useClearAllFilters', () => {
     });
 
     it('reports no active filters by default', () => {
-        const { hasActiveFilters } = useClearAllFilters(collectionId);
+        const { hasActiveFilters } = useClearAllFilters(imagesGrid);
         expect(get(hasActiveFilters)).toBe(false);
     });
 
@@ -50,7 +53,7 @@ describe('useClearAllFilters', () => {
         storage.updateCategoricalMetadataValues({ weather: ['sunny'] });
         storage.toggleSampleSelection('sample-1', collectionId);
 
-        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(collectionId);
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(imagesGrid);
         expect(get(hasActiveFilters)).toBe(true);
 
         clearAllFilters();
@@ -60,24 +63,49 @@ describe('useClearAllFilters', () => {
         expect(get(storage.getSelectedSampleIds(collectionId)).has('sample-1')).toBe(true);
     });
 
-    it('detects and clears video and frame bounds filters', () => {
+    it('detects and clears video bounds on the videos grid', () => {
         videoBounds.updateVideoBoundsValues({ ...fullVideoBounds, fps: { min: 30, max: 60 } });
-        framesBounds.updateVideoFramesBoundsValues({ frame_number: { min: 10, max: 100 } });
 
-        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(collectionId);
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(videosGrid);
         expect(get(hasActiveFilters)).toBe(true);
 
         clearAllFilters();
 
         expect(get(hasActiveFilters)).toBe(false);
         expect(get(videoBounds.videoBoundsValues)).toEqual(fullVideoBounds);
+    });
+
+    it('detects and clears frame bounds on the frames grid', () => {
+        framesBounds.updateVideoFramesBoundsValues({ frame_number: { min: 10, max: 100 } });
+
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(framesGrid);
+        expect(get(hasActiveFilters)).toBe(true);
+
+        clearAllFilters();
+
+        expect(get(hasActiveFilters)).toBe(false);
         expect(get(framesBounds.videoFramesBoundsValues)).toEqual(fullFramesBounds);
+    });
+
+    it('ignores filters that the current grid does not show', () => {
+        framesBounds.updateVideoFramesBoundsValues({ frame_number: { min: 10, max: 100 } });
+        sources.setSelectedCollectionIds(['source-1']);
+
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(videosGrid);
+        expect(get(hasActiveFilters)).toBe(false);
+
+        clearAllFilters();
+
+        expect(get(framesBounds.videoFramesBoundsValues)).toEqual({
+            frame_number: { min: 10, max: 100 }
+        });
+        expect(get(sources.selectedCollectionIds)).toEqual(['source-1']);
     });
 
     it('detects and re-checks unchecked annotation sources', () => {
         sources.setSelectedCollectionIds(['source-1']);
 
-        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(collectionId);
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(imagesGrid);
         expect(get(hasActiveFilters)).toBe(true);
 
         clearAllFilters();
