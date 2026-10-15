@@ -15,10 +15,18 @@ def add_tag_to_sample(
     tag_id: UUID,
     sample: SampleTable,
 ) -> SampleTable | None:
-    """Add a tag to a sample."""
+    """Add a tag to a sample.
+
+    Raises:
+        ValueError: If the sample is not in the collection of the tag.
+    """
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
+    if sample.collection_id != tag.collection_id:
+        raise ValueError(
+            f"Sample {sample.sample_id} does not belong to the collection of tag '{tag.name}'."
+        )
 
     sample.tags.append(tag)
     session.add(sample)

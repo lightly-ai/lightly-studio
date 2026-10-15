@@ -7,6 +7,7 @@ export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinit
 export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
+export { useFiltersClearedSignal } from '$lib/hooks/useFiltersClearedSignal/useFiltersClearedSignal';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export {
     createMetadataFilters,
@@ -57,6 +58,11 @@ export { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { usePostHog } from '$lib/hooks/usePostHog';
+export {
+    useOnboarding,
+    TOUR_VERSION,
+    type OnboardingState
+} from '$lib/hooks/useOnboarding/useOnboarding';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
@@ -90,3 +96,6 @@ export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMca
 export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
 export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
+export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.svelte';
+export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';
+export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';

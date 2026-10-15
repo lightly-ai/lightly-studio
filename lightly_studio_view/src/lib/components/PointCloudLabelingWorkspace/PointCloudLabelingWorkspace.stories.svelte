@@ -11,6 +11,7 @@
             datasetId: 'dataset-1234',
             annotationSourceCollectionId: 'group-collection-1234',
             sequenceId: 'sequence-1234',
+            prefetchTickCount: 50,
             sourcePath: [
                 { label: 'Home', href: '#' },
                 { label: 'City drive recordings', href: '#' },

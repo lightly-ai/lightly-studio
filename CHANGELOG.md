@@ -9,9 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Buffer upcoming MCAP point-cloud ticks in the GUI, show buffered ticks on the timeline, and optionally buffer the entire sequence. Playback waits for unbuffered ticks, and the grid preloads the first 50 ticks of the first 10 sequences.
+- Added an image interpolation setting to show sharp pixel edges when zooming in.
+- Added a "Clear all filters" button to the filter sidebar.
+- Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
+
 ### Changed
 
+- Make embedding plot points excluded by filters or without a category easier to see on dark backgrounds.
 - Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
+- BREAKING: A tag now holds only samples of its own collection. For example, an image tag holds only images. Tags no longer have a `kind` field. The API returns 400 when a request adds a sample of another collection, or a sample that does not exist, to a tag. The PostgreSQL migration is automatic. It moves each sample that has a tag of another collection to a tag with the same name in the collection of the sample. DuckDB users must re-index their data before they can create tags.
+- Speed up adding many samples to a tag.
 
 ### Deprecated
 
@@ -20,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - The GUI footer no longer shows a dev commit hash for released versions.
+- The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.
 
 ### Security
 
@@ -34,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add AI-Assisted labeling with adjustable superpixels for creating and editing instance segmentation masks in WASM-capable browsers.
 - Python SDK: Enable metric recomputing for instance-segmentation.
 - Show the distribution panel on the videos grid in the GUI, with annotation class and metadata distributions.
+- Lay out the embedding plot along two text axes in the GUI, for example from "young" to "old" and from "sad" to "happy". Rectangle and lasso selection work on this layout.
 - Python SDK: Embed images that are added after `register_remote_embedder` on the remote embedding server, if the server embeds image bytes.
 - Python SDK: Store the URL and API key of a remote embedder that `register_default_embedder` registered before an import, so that a later process, such as `lightly-studio gui`, searches on the server with no new registration.
 - Python SDK: Embed annotation crops on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.

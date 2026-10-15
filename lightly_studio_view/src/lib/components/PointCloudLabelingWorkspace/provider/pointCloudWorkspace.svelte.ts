@@ -4,7 +4,7 @@ import {
     useMcapSequenceTicks,
     useTickDetails
 } from '$lib/hooks';
-import type { ChannelSummaryView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 import type { PointCloudWorkspaceContext, WorkspaceStatus } from './types';
 
 export type GetInputs = () => {
@@ -18,7 +18,6 @@ export type GetInputs = () => {
     statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error';
 };
 
-type SequenceSummary = ReturnType<typeof useMcapSequenceSummary>['summary'];
 type SequenceTicks = ReturnType<typeof useMcapSequenceTicks>['ticks'];
 type TickDetails = ReturnType<typeof useTickDetails>['tickDetails'];
 type CloudPointQuery = ReturnType<typeof useCloudPointFrame>['query'];
@@ -38,40 +37,17 @@ function createTickDetails(
     }).tickDetails;
 }
 
-function getChannelLocators(
-    lidarChannels: ChannelSummaryView[],
-    details: TickDetails['data'],
-    selectedChannels?: number[]
-) {
-    if (!details) return [];
-    return lidarChannels
-        .filter(
-            (channel) =>
-                selectedChannels === undefined || selectedChannels.includes(channel.channel_id)
-        )
-        .flatMap((channel) => {
-            const locator = details.lidar_channels[channel.group_component_name];
-            return locator
-                ? [{ channelId: locator.channel_id, timestampNs: locator.log_time_ns }]
-                : [];
-        });
-}
-
 function createCloudPointFrameParamsGetter(
     getInputs: GetInputs,
-    tickDetails: TickDetails,
-    summary: SequenceSummary,
+    getCurrentTick: () => number,
     getDisplayFrameId: () => string
 ): () => CloudPointFrameParams {
     return () => ({
         datasetId: getInputs().datasetId,
-        recordingId: tickDetails.data?.recording_id ?? '',
-        channels: getChannelLocators(
-            summary.data?.lidar_channels ?? [],
-            tickDetails.data,
-            getInputs().selectedLidarChannels
-        ),
-        displayFrameId: getDisplayFrameId() || undefined
+        sequenceId: getInputs().sequenceId,
+        seqNumber: getCurrentTick(),
+        displayFrameId: getDisplayFrameId() || undefined,
+        selectedChannelIds: getInputs().selectedLidarChannels
     });
 }
 
@@ -86,8 +62,10 @@ function createRetryHandler(
         void refetchSummary();
         void refetchTicks();
         void tickDetails.refetch();
-        const { datasetId, recordingId, channels } = getCloudPointFrameParams();
-        if (datasetId && recordingId && channels.length > 0) void cloudPointFrame.refetch();
+        const { datasetId, sequenceId, selectedChannelIds } = getCloudPointFrameParams();
+        if (datasetId && sequenceId && (selectedChannelIds?.length ?? 1) > 0) {
+            void cloudPointFrame.refetch();
+        }
     };
 }
 
@@ -109,8 +87,8 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     readonly #getInputs: GetInputs;
     readonly #summary: ReturnType<typeof useMcapSequenceSummary>['summary'];
     readonly #sequenceTicks: SequenceTicks;
-    readonly tickDetails: ReturnType<typeof useTickDetails>['tickDetails'];
-    readonly cloudPointFrame: ReturnType<typeof useCloudPointFrame>['query'];
+    readonly tickDetails: TickDetails;
+    readonly cloudPointFrame: CloudPointQuery;
     readonly retry: () => void;
 
     // `$derived` is lazy, so referencing `this.#summary` here is safe — the body runs only when
@@ -140,14 +118,16 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         ) {
             return picked.frameId;
         }
-        return frames[0]?.name ?? '';
+        return frames.find((frame) => frame.name === 'CABIN')?.name ?? frames[0]?.name ?? '';
     });
-    // True when the frame could not be loaded in the reference frame, so the hook loaded
-    // it in the sensor frames instead.
+    // True when a point cloud could not be expressed in the reference frame and stays in its
+    // sensor frame.
     readonly isShowingSensorFrames = $derived.by(() => {
-        const frameId = this.referenceFrameId;
+        const frames = this.referenceFrames;
+        if (frames.length === 0) return false;
+        const knownFrameNames = new Set(frames.map((f) => f.name));
         const channels = this.cloudPointFrame.data?.channels ?? [];
-        return frameId !== '' && channels.some((channel) => channel.frameId !== frameId);
+        return channels.some((channel) => !knownFrameNames.has(channel.frameId));
     });
     readonly ticks: TickView[] = $derived.by(() => this.#sequenceTicks.data?.ticks ?? []);
 
@@ -172,8 +152,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         );
         const getCloudPointFrameParams = createCloudPointFrameParamsGetter(
             getInputs,
-            tickDetails,
-            summary,
+            () => this.currentTick,
             () => this.referenceFrameId
         );
         const cloudPointFrame = useCloudPointFrame(getCloudPointFrameParams).query;

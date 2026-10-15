@@ -40,6 +40,7 @@ vi.mock('$lib/hooks/useSettings', async () => {
         setting_id: '00000000-0000-0000-0000-000000000000',
         grid_view_sample_rendering: 'contain',
         grid_view_thumbnail_quality: 'raw',
+        image_interpolation: true,
         key_hide_annotations: 'v',
         key_go_back: 'Escape',
         key_toggle_edit_mode: 'e',

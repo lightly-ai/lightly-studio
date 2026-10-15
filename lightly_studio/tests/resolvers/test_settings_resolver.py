@@ -21,6 +21,7 @@ def test_get_settings_creates_default_settings(
     assert settings is not None
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
     assert settings.grid_view_thumbnail_quality == GridViewThumbnailQualityType.RAW
+    assert settings.image_interpolation is True
     assert settings.show_annotation_text_labels is False
     assert settings.show_sample_filenames is False
     assert settings.show_bounding_boxes_for_segmentation is True
@@ -42,6 +43,7 @@ def test_set_settings_updates_grid_view_rendering(
         setting_id=current_settings.setting_id,
         grid_view_sample_rendering=GridViewSampleRenderingType.CONTAIN,
         grid_view_thumbnail_quality=GridViewThumbnailQualityType.HIGH,
+        image_interpolation=False,
         created_at=current_settings.created_at,
         updated_at=current_settings.updated_at,
         key_hide_annotations=current_settings.key_hide_annotations,
@@ -65,6 +67,7 @@ def test_set_settings_updates_grid_view_rendering(
     assert updated_settings is not None
     assert updated_settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
     assert updated_settings.grid_view_thumbnail_quality == GridViewThumbnailQualityType.HIGH
+    assert updated_settings.image_interpolation is False
     assert updated_settings.show_sample_filenames is False
     assert updated_settings.key_hide_annotations == current_settings.key_hide_annotations
     assert updated_settings.key_go_back == current_settings.key_go_back
@@ -84,6 +87,7 @@ def test_set_settings_updates_grid_view_rendering(
     settings = settings_resolver.get_settings(session=db_session)
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
     assert settings.grid_view_thumbnail_quality == GridViewThumbnailQualityType.HIGH
+    assert settings.image_interpolation is False
     assert settings.show_sample_filenames is False
     assert settings.key_hide_annotations == current_settings.key_hide_annotations
     assert settings.key_go_back == current_settings.key_go_back

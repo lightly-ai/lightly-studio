@@ -16,7 +16,9 @@
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
-    import { useAnnotationCollections } from '$lib/hooks';
+    import { useAnnotationCollections, useMcapTickPrefetchScheduler } from '$lib/hooks';
+    import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
+    import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
@@ -53,6 +55,8 @@
         sourcePath?: readonly WorkspaceCrumb[];
         /** Optional status override for tests and stories. */
         status?: 'unsupported' | 'empty' | 'error';
+        /** Number of ticks to prefetch from the active tick forward. */
+        prefetchTickCount?: number;
         onRetry?: () => void;
     }
 
@@ -66,10 +70,15 @@
         onNextSequence,
         sourcePath = [],
         status,
+        prefetchTickCount = 50,
         onRetry
     }: Props = $props();
 
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
+    const bufferEntireSequence = useSessionStorage<boolean>(
+        'lightlyStudio_pointCloudBufferEntireSequence',
+        false
+    );
     let activeTool = $state<WorkspaceTool>('select');
 
     let workspace = $state<PointCloudWorkspaceContext>({} as PointCloudWorkspaceContext);
@@ -90,11 +99,42 @@
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
+    const tickPrefetch = useMcapTickPrefetchScheduler({
+        getDatasetId: () => datasetId,
+        getSequenceId: () => sequenceId,
+        getDisplayFrameId: () => workspace.referenceFrameId,
+        getTicks: () => workspace.ticks,
+        // Keep one buffer while playback advances. A new sequence gets a new buffer.
+        // Changing the mode creates a new session, which cancels the old queue. This is important
+        // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
+        getRequestId: () =>
+            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? 'entire' : 'window'}`,
+        getRanges: () => {
+            if ($bufferEntireSequence) {
+                return [{ startIndex: 0, endIndex: workspace.ticks.length - 1 }];
+            }
+
+            const activeIndex = workspace.ticks.findIndex(
+                (tick) => tick.seq_number === workspace.currentTick
+            );
+            return getMcapTickPrefetchRange({
+                activeIndex,
+                tickCount: workspace.ticks.length,
+                prefetchTickCount
+            });
+        }
+    });
+    const isTickBuffered = (index: number) =>
+        tickPrefetch.bufferedRanges.some(
+            ({ startIndex, endIndex }) => index >= startIndex && index <= endIndex
+        );
+
     const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
         usePointCloudTickNavigation({
             getWorkspace: () => workspace,
             getTickNumber: () => tickNumber,
-            getOnTickChange: () => onTickChange
+            getOnTickChange: () => onTickChange,
+            getIsTickBuffered: isTickBuffered
         });
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
@@ -118,7 +158,11 @@
     } = useCreateCuboidAnnotation({
         getCollectionId: () => annotationSourceCollectionId,
         getDatasetId: () => datasetId,
-        getTickSampleId: () => tick?.sampleId,
+        getTickSampleId: () => {
+            if (!tick || tick.isStale || sceneSnapshot?.tick !== workspace.currentTick)
+                return undefined;
+            return tick.sampleId;
+        },
         getSceneFrame: () =>
             sceneSnapshot?.frame
                 ? {
@@ -229,7 +273,7 @@
 
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
-            await workspace.tickDetails.refetch();
+            await workspace.tickDetails.refetch({ throwOnError: true });
             selectedCuboidId = annotationId;
             activeTool = 'select';
         });
@@ -314,7 +358,7 @@
                             </div>
                         </PaneResizer>
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
-                        <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
+                        <Pane defaultSize={26} minSize={12} maxSize={45} class="min-h-0">
                             <CameraProjectionStrip
                                 {datasetId}
                                 {sequenceId}
@@ -324,33 +368,27 @@
                                 selectedChannelIds={cameraSelection.selectedChannelIds}
                             />
                         </Pane>
-                        <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
-                        >
-                            <div
-                                class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                            >
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                            </div>
-                        </PaneResizer>
-                        <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline
-                                ticks={workspace.ticks}
-                                currentTick={workspace.currentTick}
-                                isPlaying={workspace.isPlaying}
-                                playbackIntervalMs={workspace.playbackIntervalMs}
-                                onPreviousFrame={goToPreviousFrame}
-                                onNextFrame={goToNextFrame}
-                                onPlayToggle={togglePlayback}
-                                onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
-                                onSelectTick={goToFrame}
-                                {onPreviousSequence}
-                                {onNextSequence}
-                            />
-                        </Pane>
                     </PaneGroup>
+                    <!-- Fixed-height footer: the timeline only takes the space its controls need. -->
+                    <div class="flex-none">
+                        <FrameTimeline
+                            ticks={workspace.ticks}
+                            currentTick={workspace.currentTick}
+                            isPlaying={workspace.isPlaying}
+                            playbackIntervalMs={workspace.playbackIntervalMs}
+                            bufferEntireSequence={$bufferEntireSequence}
+                            onBufferEntireSequenceChange={(enabled) =>
+                                bufferEntireSequence.set(enabled)}
+                            bufferedRanges={tickPrefetch.bufferedRanges}
+                            onPreviousFrame={goToPreviousFrame}
+                            onNextFrame={goToNextFrame}
+                            onPlayToggle={togglePlayback}
+                            onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
+                            onSelectTick={goToFrame}
+                            {onPreviousSequence}
+                            {onNextSequence}
+                        />
+                    </div>
                 </Pane>
                 <PaneResizer
                     class="group relative flex w-2 cursor-col-resize items-center justify-center bg-card transition-colors hover:bg-card"

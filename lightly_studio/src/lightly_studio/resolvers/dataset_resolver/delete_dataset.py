@@ -40,6 +40,7 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.dynamic_transform import DynamicTransformTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
@@ -132,9 +133,10 @@ def delete_dataset(
     _delete_groups(session=session, dataset_id=dataset_id)
     # Must precede recordings and mcap_group_component_definitions, both deleted in step 5
     # (sensor_calibration FKs to recording_id and to mcap_group_component_definition.collection_id;
-    # static_transform FKs to recording_id only).
+    # static_transform and dynamic_transform FK to recording_id only).
     _delete_sensor_calibrations(session=session, dataset_id=dataset_id)
     _delete_static_transforms(session=session, dataset_id=dataset_id)
+    _delete_dynamic_transforms(session=session, dataset_id=dataset_id)
     # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable) and
     # recordings, deleted in step 5 (McapGroupSequenceTable.recording_id -> RecordingTable).
     _delete_mcap_group_sequences(session=session, dataset_id=dataset_id)
@@ -361,6 +363,16 @@ def _delete_static_transforms(session: Session, dataset_id: UUID) -> None:
     session.exec(
         delete(StaticTransformTable).where(
             col(StaticTransformTable.recording_id).in_(_recording_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_dynamic_transforms(session: Session, dataset_id: UUID) -> None:
+    """Delete dynamic transform rows for the dataset's recordings."""
+    session.exec(
+        delete(DynamicTransformTable).where(
+            col(DynamicTransformTable.recording_id).in_(_recording_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )

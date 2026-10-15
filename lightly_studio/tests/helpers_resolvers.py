@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,6 +12,7 @@ from uuid import UUID
 import numpy as np
 from sqlmodel import Session
 
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
@@ -34,7 +35,7 @@ from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
 )
-from lightly_studio.models.tag import TagCreate, TagKind, TagTable
+from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -126,7 +127,6 @@ def create_tag(
     session: Session,
     collection_id: UUID,
     tag_name: str = "example_tag",
-    kind: TagKind = "sample",
 ) -> TagTable:
     """Helper function to create a tag."""
     return tag_resolver.create(
@@ -134,7 +134,6 @@ def create_tag(
         tag=TagCreate(
             collection_id=collection_id,
             name=tag_name,
-            kind=kind,
             description="example description",
         ),
     )
@@ -163,6 +162,28 @@ def create_image(
     image = image_resolver.get_by_id(session=session, sample_id=sample_ids[0])
     assert image is not None
     return image
+
+
+def create_image_with_metadata(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    metadata: Mapping[str, Any],
+    file_path_abs: str = "/path/to/sample1.png",
+    width: int = 1920,
+    height: int = 1080,
+) -> ImageSample:
+    """Create an image sample and set its metadata."""
+    sample = ImageSample(
+        inner=create_image(
+            session=session,
+            collection_id=collection_id,
+            file_path_abs=file_path_abs,
+            width=width,
+            height=height,
+        )
+    )
+    sample.metadata.update(metadata)
+    return sample
 
 
 def create_mcap(  # noqa: PLR0913

@@ -148,7 +148,7 @@
         <CuboidLayer
             {cuboids}
             {annotationClasses}
-            {pointCloudBounds}
+            {groundPlaneBounds}
             {selectedAnnotationId}
             {hoveredAnnotationId}
             {activeTool}
