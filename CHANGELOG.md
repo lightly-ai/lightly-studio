@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
 - BREAKING: A tag now holds only samples of its own collection. For example, an image tag holds only images. Tags no longer have a `kind` field. The API returns 400 when a request adds a sample of another collection, or a sample that does not exist, to a tag. The PostgreSQL migration is automatic. It moves each sample that has a tag of another collection to a tag with the same name in the collection of the sample. DuckDB users must re-index their data before they can create tags.
 - Speed up adding many samples to a tag.
+- The text axes layout of the embedding plot scales each text embedding to norm 1. Before, with an embedding model such as MobileCLIP, the text with the larger norm got a larger part of the plot.
+- The text axes layout of the embedding plot starts on a fixed range of -0.2 to 0.2 on both axes and no longer fits the view to the data. Axes along which the images vary strongly now look wide, and axes from texts that do not match the images look small.
 
 ### Deprecated
 

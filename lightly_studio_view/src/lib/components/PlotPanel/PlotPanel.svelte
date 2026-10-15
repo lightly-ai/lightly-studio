@@ -7,6 +7,7 @@
     import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
+    import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
@@ -336,7 +337,7 @@
     });
 
     const reset = () => {
-        viewportState = null;
+        viewportState = getDefaultViewport(get(plotAxes));
     };
 
     const isReady = true;
@@ -412,7 +413,7 @@
         setRangeSelection(normalizedSelection);
     };
 
-    let viewportState: ViewportState | null = $state(null);
+    let viewportState: ViewportState | null = $state(getDefaultViewport(get(plotAxes)));
     const onViewportState = (state: ViewportState) => {
         viewportState = state;
     };
@@ -420,7 +421,7 @@
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
     // region belongs to the layout it was drawn on.
     const resetForNewLayout = () => {
-        viewportState = null;
+        viewportState = getDefaultViewport(get(plotAxes));
         if (hasActiveSelection) clearSelection();
     };
     const selectPlotLayout = (layout: PlotLayout) => {
