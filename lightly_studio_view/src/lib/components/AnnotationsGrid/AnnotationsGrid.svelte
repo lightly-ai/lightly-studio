@@ -38,8 +38,7 @@
     // Use the collection_id for tags - tags should use the specific collection, not root
     const { tagsSelected } = $derived(
         useTags({
-            collection_id: collection_id,
-            kind: ['annotation']
+            collection_id: collection_id
         })
     );
 
