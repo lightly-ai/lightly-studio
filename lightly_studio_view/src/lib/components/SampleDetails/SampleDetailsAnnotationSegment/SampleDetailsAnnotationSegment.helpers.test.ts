@@ -2,6 +2,7 @@ import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { describe, expect, it } from 'vitest';
 import {
     UNKNOWN_SOURCE_NAME,
+    applySourceVisibility,
     areAllAnnotationsHidden,
     computeSeededHiddenIds,
     groupAnnotationsBySource,
@@ -224,5 +225,33 @@ describe('isSourceGroupInitiallyOpen', () => {
         expect(isSourceGroupInitiallyOpen(annotations, new Set(['a1', 'a2']), 'other-1')).toBe(
             false
         );
+    });
+
+    it('follows a stored collapse, but stays open for the just-created annotation', () => {
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(), null, false)).toBe(false);
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(['a1', 'a2']), null, true)).toBe(
+            true
+        );
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(), 'a2', false)).toBe(true);
+    });
+});
+
+describe('applySourceVisibility', () => {
+    const annotations = [
+        createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
+        createAnnotation('pred-1', predictionsSource.collection_id, 'cat'),
+        createAnnotation('other-1', 'source-other', 'cat')
+    ];
+
+    it('hides and shows sources with a stored choice and keeps the rest seeded', () => {
+        const seededHiddenIds = new Set(['gt-1', 'other-1']);
+
+        const next = applySourceVisibility(annotations, seededHiddenIds, {
+            [groundTruthSource.collection_id]: { hidden: false },
+            [predictionsSource.collection_id]: { hidden: true }
+        });
+
+        expect(next).toEqual(new Set(['pred-1', 'other-1']));
+        expect(seededHiddenIds).toEqual(new Set(['gt-1', 'other-1']));
     });
 });
