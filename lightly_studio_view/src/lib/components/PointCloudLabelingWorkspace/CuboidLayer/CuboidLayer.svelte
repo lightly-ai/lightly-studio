@@ -4,6 +4,7 @@
     import type { Object3D } from 'three';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidGizmo from './CuboidGizmo.svelte';
+    import { CuboidFaceResize } from './CuboidFaceResize';
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
@@ -119,8 +120,7 @@
 
     const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'rotate' | 'scale'>> = {
         translate: 'translate',
-        rotate: 'rotate',
-        resize: 'scale'
+        rotate: 'rotate'
     };
 
     function handleTransformEnd(annotation: Domain.CuboidAnnotation, obj: Object3D): void {
@@ -204,6 +204,14 @@
                     mode={gizmoMode}
                     onTransformEnd={(obj) => handleTransformEnd(item.annotation, obj)}
                     onInteractionStart={() => (cuboidClicked = true)}
+                />
+            {/if}
+            {#if activeTool === 'resize'}
+                <CuboidFaceResize
+                    annotation={item.annotation}
+                    baseColor={base}
+                    onResizeStart={() => (cuboidClicked = true)}
+                    onResizeEnd={(payload) => void onCuboidTransform?.(payload)}
                 />
             {/if}
         {/if}

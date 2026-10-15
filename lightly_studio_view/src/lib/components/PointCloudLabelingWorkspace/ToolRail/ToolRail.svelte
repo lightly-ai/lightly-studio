@@ -16,7 +16,8 @@
         'select',
         'create-cuboid',
         'translate',
-        'rotate'
+        'rotate',
+        'resize'
     ]);
 
     const tools: { tool: WorkspaceTool; label: string; icon: Component<IconProps> }[] = [
