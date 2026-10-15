@@ -17,16 +17,14 @@ from lightly_studio.models.mcap_sequence_ticks import TickChannelView, TickDetai
 from lightly_studio.models.tag import TagView
 from lightly_studio.resolvers import (
     annotation_resolver,
-    collection_resolver,
-    mcap_group_sequence_resolver,
-    mcap_resolver,
     recording_resolver,
     sample_resolver,
-    sequence_resolver,
 )
 from lightly_studio.services.recording_service import (
+    load_dynamic_transforms,
     load_static_transforms,
     reader_cache,
+    resolve_tick,
     transform_to_target_frame,
 )
 
@@ -63,26 +61,16 @@ def get_tick_details(
         McapAccessError: If a cuboid must be mapped to `target_frame_id` but the tick
             has no timestamp, or no chain of transforms connects the frames.
     """
-    mcap_sequence = mcap_group_sequence_resolver.get_by_id(session=session, sample_id=sequence_id)
-    if mcap_sequence is None:
-        return None
-    sample = sample_resolver.get_by_id(session=session, sample_id=sequence_id)
-    if sample is None:
-        return None
-    collection = collection_resolver.get_by_id(session=session, collection_id=sample.collection_id)
-    if collection is None or collection.dataset_id != dataset_id:
-        return None
-
-    link = sequence_resolver.get_sample_link(
-        session=session, sequence_sample_id=sequence_id, seq_number=seq_number
+    tick = resolve_tick.resolve_tick(
+        session=session, dataset_id=dataset_id, sequence_id=sequence_id, seq_number=seq_number
     )
-    if link is None:
+    if tick is None:
         return None
+    link = tick.link
 
-    channel_mcaps = mcap_resolver.get_tick_channels(session=session, group_sample_id=link.sample_id)
     camera_channels: dict[str, TickChannelView] = {}
     lidar_channels: dict[str, TickChannelView] = {}
-    for name, (mcap, data_type) in channel_mcaps.items():
+    for name, (mcap, data_type) in tick.channels.items():
         channel = TickChannelView.from_mcap_table(mcap=mcap, group_component_name=name)
         if data_type is McapDataType.POINT_CLOUD:
             lidar_channels[name] = channel
@@ -97,7 +85,7 @@ def get_tick_details(
     if target_frame_id is not None:
         annotations = _cuboids_in_frame(
             session=session,
-            recording_id=mcap_sequence.recording_id,
+            recording_id=tick.recording_id,
             annotations=annotations,
             target_frame_id=target_frame_id,
             timestamp_ns=link.timestamp_ns,
@@ -107,7 +95,7 @@ def get_tick_details(
     return TickDetailView(
         sample_id=link.sample_id,
         collection_id=tick_sample.collection_id,
-        recording_id=mcap_sequence.recording_id,
+        recording_id=tick.recording_id,
         seq_number=link.seq_number,
         timestamp_ns=link.timestamp_ns,
         camera_channels=camera_channels,
@@ -150,20 +138,24 @@ def _cuboids_in_frame(
     recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
     if recording is None:
         raise McapAccessError(f"Recording {recording_id} was not found.")
-    reader = reader_cache.get_cached_reader(uri=recording.uri)
     static_transforms = load_static_transforms.load_static_transforms(
         session=session, recording_id=recording_id
     )
-    matrix_by_frame_id = {
-        frame_id: transform_to_target_frame.transform_to_target_frame(
-            reader=reader,
-            source_frame_id=frame_id,
-            target_frame_id=target_frame_id,
-            timestamp_ns=timestamp_ns,
-            static_transforms=static_transforms,
-        )
-        for frame_id in source_frame_ids
-    }
+    dynamic_transforms = load_dynamic_transforms.load_dynamic_transforms_near(
+        session=session, recording_id=recording_id, timestamp_ns=timestamp_ns
+    )
+    with reader_cache.borrow_reader(uri=recording.uri) as reader:
+        matrix_by_frame_id = {
+            frame_id: transform_to_target_frame.transform_to_target_frame(
+                reader=reader,
+                source_frame_id=frame_id,
+                target_frame_id=target_frame_id,
+                timestamp_ns=timestamp_ns,
+                static_transforms=static_transforms,
+                dynamic_transforms=dynamic_transforms,
+            )
+            for frame_id in source_frame_ids
+        }
     return [
         _cuboid_in_frame(
             annotation=annotation,

@@ -608,14 +608,14 @@ def test_postgres_tag_name_uniqueness__consolidates_cross_kind_duplicates(
 
         with engine.connect() as connection:
             tags = connection.execute(
-                statement=text("SELECT tag_id, kind FROM tag WHERE name = 'duplicate'")
+                statement=text("SELECT tag_id FROM tag WHERE name = 'duplicate'")
             ).all()
             links = connection.execute(
                 statement=text(
                     "SELECT sample_id, tag_id FROM sampletaglinktable ORDER BY sample_id"
                 )
             ).all()
-        assert [(str(tag_id), kind) for tag_id, kind in tags] == [(sample_tag_id, "sample")]
+        assert [str(tag_id) for (tag_id,) in tags] == [sample_tag_id]
         assert [(str(sample_id), str(tag_id)) for sample_id, tag_id in links] == [
             (first_sample_id, sample_tag_id),
             (second_sample_id, sample_tag_id),
@@ -623,6 +623,293 @@ def test_postgres_tag_name_uniqueness__consolidates_cross_kind_duplicates(
 
         config.attributes.pop("connection", None)
         command.check(config)
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
+def test_postgres_tag_links__moved_to_sample_collection(
+    postgres_url: str | None,
+) -> None:
+    """A tag link whose sample is in another collection moves to a tag in that collection."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    image_collection_id = "00000000-0000-0000-0000-000000000002"
+    gt_collection_id = "00000000-0000-0000-0000-000000000003"
+    pred_collection_id = "00000000-0000-0000-0000-000000000004"
+    image_id = "00000000-0000-0000-0000-000000000005"
+    gt_annotation_id = "00000000-0000-0000-0000-000000000006"
+    pred_annotation_id = "00000000-0000-0000-0000-000000000007"
+    review_tag_id = "00000000-0000-0000-0000-000000000008"
+    qa_tag_id = "00000000-0000-0000-0000-000000000009"
+    empty_tag_id = "00000000-0000-0000-0000-000000000010"
+    pred_review_tag_id = "00000000-0000-0000-0000-000000000011"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="8cb37a9d104e",
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, parent_collection_id, dataset_id,
+                        created_at, updated_at
+                    ) VALUES
+                        ('images', 'IMAGE', :image_collection_id, NULL, :dataset_id,
+                         NOW(), NOW()),
+                        ('ground_truth', 'ANNOTATION', :gt_collection_id, :image_collection_id,
+                         :dataset_id, NOW(), NOW()),
+                        ('predictions', 'ANNOTATION', :pred_collection_id, :image_collection_id,
+                         :dataset_id, NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "dataset_id": dataset_id,
+                    "image_collection_id": image_collection_id,
+                    "gt_collection_id": gt_collection_id,
+                    "pred_collection_id": pred_collection_id,
+                },
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sample (sample_id, collection_id, created_at, updated_at)
+                    VALUES
+                        (:image_id, :image_collection_id, NOW(), NOW()),
+                        (:gt_annotation_id, :gt_collection_id, NOW(), NOW()),
+                        (:pred_annotation_id, :pred_collection_id, NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "image_id": image_id,
+                    "gt_annotation_id": gt_annotation_id,
+                    "pred_annotation_id": pred_annotation_id,
+                    "image_collection_id": image_collection_id,
+                    "gt_collection_id": gt_collection_id,
+                    "pred_collection_id": pred_collection_id,
+                },
+            )
+            # "review" holds annotations of both sources. "qa" holds the image and a ground
+            # truth annotation. The predictions collection already has a "review" tag.
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO tag (name, kind, tag_id, collection_id, created_at, updated_at)
+                    VALUES
+                        ('review', 'annotation', :review_tag_id, :image_collection_id,
+                         NOW(), NOW()),
+                        ('qa', 'sample', :qa_tag_id, :image_collection_id, NOW(), NOW()),
+                        ('empty', 'sample', :empty_tag_id, :image_collection_id, NOW(), NOW()),
+                        ('review', 'annotation', :pred_review_tag_id, :pred_collection_id,
+                         NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "review_tag_id": review_tag_id,
+                    "qa_tag_id": qa_tag_id,
+                    "empty_tag_id": empty_tag_id,
+                    "pred_review_tag_id": pred_review_tag_id,
+                    "image_collection_id": image_collection_id,
+                    "pred_collection_id": pred_collection_id,
+                },
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sampletaglinktable (sample_id, tag_id)
+                    VALUES
+                        (:gt_annotation_id, :review_tag_id),
+                        (:pred_annotation_id, :review_tag_id),
+                        (:image_id, :qa_tag_id),
+                        (:gt_annotation_id, :qa_tag_id)
+                    """
+                ),
+                parameters={
+                    "image_id": image_id,
+                    "gt_annotation_id": gt_annotation_id,
+                    "pred_annotation_id": pred_annotation_id,
+                    "review_tag_id": review_tag_id,
+                    "qa_tag_id": qa_tag_id,
+                },
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="68fcd3378db6"
+        )
+
+        with engine.connect() as connection:
+            tags = connection.execute(
+                statement=text(
+                    "SELECT collection_id, name, kind FROM tag ORDER BY collection_id, name"
+                )
+            ).all()
+            links = connection.execute(
+                statement=text(
+                    """
+                    SELECT link.sample_id, tag.collection_id, tag.name
+                    FROM sampletaglinktable AS link
+                    JOIN tag ON tag.tag_id = link.tag_id
+                    ORDER BY link.sample_id, tag.name
+                    """
+                )
+            ).all()
+            pred_review_tag_ids = connection.execute(
+                statement=text("SELECT tag_id FROM tag WHERE collection_id = :pred_collection_id"),
+                parameters={"pred_collection_id": pred_collection_id},
+            ).all()
+        assert [(str(collection_id), name, kind) for collection_id, name, kind in tags] == [
+            (image_collection_id, "empty", "sample"),
+            (image_collection_id, "qa", "sample"),
+            (gt_collection_id, "qa", "annotation"),
+            (gt_collection_id, "review", "annotation"),
+            (pred_collection_id, "review", "annotation"),
+        ]
+        assert [
+            (str(sample_id), str(collection_id), name) for sample_id, collection_id, name in links
+        ] == [
+            (image_id, image_collection_id, "qa"),
+            (gt_annotation_id, gt_collection_id, "qa"),
+            (gt_annotation_id, gt_collection_id, "review"),
+            (pred_annotation_id, pred_collection_id, "review"),
+        ]
+        assert [str(tag_id) for (tag_id,) in pred_review_tag_ids] == [pred_review_tag_id]
+
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        config.attributes.pop("connection", None)
+        command.check(config)
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
+def test_postgres_tag_kind__dropped_and_restored(
+    postgres_url: str | None,
+) -> None:
+    """The migration drops the tag kind and the downgrade restores it from the collection."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    image_collection_id = "00000000-0000-0000-0000-000000000002"
+    gt_collection_id = "00000000-0000-0000-0000-000000000003"
+    image_tag_id = "00000000-0000-0000-0000-000000000004"
+    gt_tag_id = "00000000-0000-0000-0000-000000000005"
+    orphan_tag_id = "00000000-0000-0000-0000-000000000006"
+    deleted_collection_id = "00000000-0000-0000-0000-000000000007"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision="68fcd3378db6",
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, parent_collection_id, dataset_id,
+                        created_at, updated_at
+                    ) VALUES
+                        ('images', 'IMAGE', :image_collection_id, NULL, :dataset_id,
+                         NOW(), NOW()),
+                        ('ground_truth', 'ANNOTATION', :gt_collection_id, :image_collection_id,
+                         :dataset_id, NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "dataset_id": dataset_id,
+                    "image_collection_id": image_collection_id,
+                    "gt_collection_id": gt_collection_id,
+                },
+            )
+            # The ground truth tag has no samples, so only its collection gives its kind.
+            # The collection of the orphaned tag was deleted.
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO tag (name, kind, tag_id, collection_id, created_at, updated_at)
+                    VALUES
+                        ('selected', 'sample', :image_tag_id, :image_collection_id,
+                         NOW(), NOW()),
+                        ('reviewed', 'annotation', :gt_tag_id, :gt_collection_id,
+                         NOW(), NOW()),
+                        ('orphaned', 'annotation', :orphan_tag_id, :deleted_collection_id,
+                         NOW(), NOW())
+                    """
+                ),
+                parameters={
+                    "image_tag_id": image_tag_id,
+                    "gt_tag_id": gt_tag_id,
+                    "orphan_tag_id": orphan_tag_id,
+                    "image_collection_id": image_collection_id,
+                    "gt_collection_id": gt_collection_id,
+                    "deleted_collection_id": deleted_collection_id,
+                },
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        columns = db_migrations._get_inspector(engine=engine).get_columns(table_name="tag")
+        assert "kind" not in {column["name"] for column in columns}
+        with engine.connect() as connection:
+            tag_ids = connection.execute(
+                statement=text("SELECT tag_id FROM tag ORDER BY tag_id")
+            ).all()
+        assert [str(tag_id) for (tag_id,) in tag_ids] == [
+            image_tag_id,
+            gt_tag_id,
+            orphan_tag_id,
+        ]
+
+        config.attributes.pop("connection", None)
+        command.check(config)
+
+        db_migrations._run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.downgrade,
+            revision="68fcd3378db6",
+        )
+        columns = db_migrations._get_inspector(engine=engine).get_columns(table_name="tag")
+        kind_column = next(column for column in columns if column["name"] == "kind")
+        assert kind_column["nullable"] is False
+        with engine.connect() as connection:
+            tags = connection.execute(
+                statement=text("SELECT tag_id, kind FROM tag ORDER BY tag_id")
+            ).all()
+        assert [(str(tag_id), kind) for tag_id, kind in tags] == [
+            (image_tag_id, "sample"),
+            (gt_tag_id, "annotation"),
+            (orphan_tag_id, "sample"),
+        ]
     finally:
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()

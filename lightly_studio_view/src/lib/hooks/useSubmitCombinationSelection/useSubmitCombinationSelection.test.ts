@@ -186,7 +186,6 @@ describe('useSubmitCombinationSelection', () => {
             {
                 tag_id: 'tag-abc',
                 name: 'new-tag',
-                kind: 'sample' as const,
                 created_at: new Date(),
                 updated_at: new Date()
             }

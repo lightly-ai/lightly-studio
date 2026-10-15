@@ -147,12 +147,13 @@ float64 w
 )
 
 
-def write_mcap(
+def write_mcap(  # noqa: PLR0913
     path: Path,
     lidar_stamp_offset_ns: int = 0,
     video_stamp_offset_ns: int = 0,
     base_link_poses: Sequence[tuple[int, tuple[float, float, float]]] = (),
     tf_stamp_offset_ns: int = 0,
+    video_access_units: Sequence[bytes] | None = None,
 ) -> Path:
     """Writes an indexed MCAP file with a camera, a lidar, and static transforms.
 
@@ -167,6 +168,9 @@ def write_mcap(
             frame, without rotation. Empty writes no `/tf` topic.
         tf_stamp_offset_ns: Added to each `/tf` log time to form `header.stamp`.
             Zero keeps the stamp equal to the log time.
+        video_access_units: One decodable H.264 access unit per `VIDEO_LOG_TIMES_NS`
+            entry, e.g. from `h264_access_units`. `None` writes H.265 placeholders
+            that cannot be decoded.
 
     Returns:
         The path of the written file.
@@ -214,13 +218,16 @@ def write_mcap(
         message=_camera_info_message(),
         log_time=CAMERA_INFO_LOG_TIME_NS,
     )
-    for log_time_ns in VIDEO_LOG_TIMES_NS:
+    for index, log_time_ns in enumerate(VIDEO_LOG_TIMES_NS):
+        message = _compressed_video_message(
+            log_time_ns=log_time_ns, stamp_ns=log_time_ns + video_stamp_offset_ns
+        )
+        if video_access_units is not None:
+            message = {**message, "data": video_access_units[index], "format": "h264"}
         writer.write_message(
             topic=CAMERA_VIDEO_TOPIC,
             schema=video_schema,
-            message=_compressed_video_message(
-                log_time_ns=log_time_ns, stamp_ns=log_time_ns + video_stamp_offset_ns
-            ),
+            message=message,
             log_time=log_time_ns,
         )
     for log_time_ns in LIDAR_LOG_TIMES_NS:

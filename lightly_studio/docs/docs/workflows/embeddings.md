@@ -57,9 +57,9 @@ Object embeddings are on by default; the `add_annotations_from_*` methods accept
 
 LightlyStudio ships with two embedding models:
 
-- **MobileCLIP** (`mobileclip_s0`, 512 dimensions) embeds anything treated as an
-  image: images, video frames, and object crops.
-- **Perception Encoder** (`PE-Core-T16-384`) embeds videos.
+- **MobileCLIP** (`mobileclip_s0`, 512 dimensions) embeds images and object crops.
+- **Perception Encoder** (`PE-Core-T16-384`) embeds videos and video frames, so the
+  frames of a video dataset share the space of its videos.
 
 ## The Embedding Plot (GUI)
 

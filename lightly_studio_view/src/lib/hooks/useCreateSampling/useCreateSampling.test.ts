@@ -36,7 +36,6 @@ describe('useCreateSampling', () => {
             {
                 tag_id: 'tag-1',
                 name: 'my-tag',
-                kind: 'sample' as const,
                 created_at: new Date(),
                 updated_at: new Date()
             }

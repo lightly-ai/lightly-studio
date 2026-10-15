@@ -109,7 +109,6 @@ def test_get_all__with_filters(db_session: Session) -> None:
         session=db_session,
         collection_id=group_col.collection_id,
         tag_name="test_tag",
-        kind="sample",
     )
 
     front_images = create_images(

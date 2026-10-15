@@ -206,19 +206,18 @@ def test_count_image_annotations_by_sample_tags__annotation_source_and_type_scop
     assert [(row.label_name, row.count) for row in result[0].counts] == [("scene", 1)]
 
 
-@pytest.mark.parametrize("invalid_tag_kind", ["missing", "foreign", "annotation"])
+@pytest.mark.parametrize("invalid_tag_case", ["missing", "foreign"])
 def test_count_image_annotations_by_sample_tags__rejects_invalid_tags(
     db_session: Session,
-    invalid_tag_kind: str,
+    invalid_tag_case: str,
 ) -> None:
     collection = create_collection(session=db_session)
     invalid_tag_id = _create_invalid_tag_id(
         session=db_session,
-        collection_id=collection.collection_id,
-        invalid_tag_kind=invalid_tag_kind,
+        invalid_tag_case=invalid_tag_case,
     )
 
-    with pytest.raises(ValueError, match="must be sample tags belonging to collection"):
+    with pytest.raises(ValueError, match="must belong to collection"):
         image_resolver.count_image_annotations_by_sample_tags(
             session=db_session,
             collection_id=collection.collection_id,
@@ -240,16 +239,9 @@ def test_count_image_annotations_by_sample_tags__empty_selection(db_session: Ses
 
 def _create_invalid_tag_id(
     session: Session,
-    collection_id: UUID,
-    invalid_tag_kind: str,
+    invalid_tag_case: str,
 ) -> UUID:
-    if invalid_tag_kind == "missing":
+    if invalid_tag_case == "missing":
         return uuid.uuid4()
-    if invalid_tag_kind == "annotation":
-        return create_tag(
-            session=session,
-            collection_id=collection_id,
-            kind="annotation",
-        ).tag_id
     foreign_collection = create_collection(session=session)
     return create_tag(session=session, collection_id=foreign_collection.collection_id).tag_id
