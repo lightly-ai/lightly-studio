@@ -345,13 +345,22 @@ class EmbedderRegistry:
         capabilities: set[Capability],
         bootstrap_for: Set[Capability] | None,
     ) -> None:
-        """Set the space as the bootstrap default for requested capabilities it supports."""
+        """Set the space as the bootstrap default for requested capabilities it supports.
+
+        A capability whose bootstrap space now has an embedder without it is no longer a
+        registered bootstrap.
+        """
         defaults = (
             capabilities if bootstrap_for is None else capabilities.intersection(bootstrap_for)
         )
         for capability in defaults:
             self._bootstrap_spaces[capability] = space_key
         self._registered_bootstraps.update(defaults)
+        self._registered_bootstraps -= {
+            capability
+            for capability in self._registered_bootstraps - capabilities
+            if self._bootstrap_spaces.get(capability) == space_key
+        }
 
 
 _registry = EmbedderRegistry()

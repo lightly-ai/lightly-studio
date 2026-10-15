@@ -678,6 +678,16 @@ class TestEmbedderRegistry:
 
         assert not registry.has_registered_bootstrap(embedder_type=ImagePathEmbedder)
 
+    def test_has_registered_bootstrap__replacement_lacks_capability(self) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeTextImageEmbedder(space_key="space-a"))
+
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"), bootstrap_for=set())
+
+        # The replacement keeps the image bootstrap, but it cannot serve the text bootstrap
+        assert registry.has_registered_bootstrap(embedder_type=ImagePathEmbedder)
+        assert not registry.has_registered_bootstrap(embedder_type=TextEmbedder)
+
     def test_has_registered_bootstrap__not_a_capability_type(self) -> None:
         registry = EmbedderRegistry()
 
