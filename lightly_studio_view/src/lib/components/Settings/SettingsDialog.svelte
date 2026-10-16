@@ -9,6 +9,7 @@
     import { shortcutSettings, staticShortcuts } from './settingsDialogConfig';
     import { ShortcutSettingRow } from './ShortcutSettingRow';
     import { SettingsFieldRow } from './SettingsFieldRow';
+    import { AssistedLabelingProviderRow } from './AssistedLabelingProviderRow';
 
     const { settingsStore, saveSettings } = useSettings();
     const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
@@ -174,6 +175,11 @@
                                 disabled={dialogState.isSaving}
                             />
                         </SettingsFieldRow>
+                        <AssistedLabelingProviderRow
+                            value={dialogState.assistedLabelingProvider}
+                            disabled={dialogState.isSaving}
+                            onValueChange={(v) => (dialogState.assistedLabelingProvider = v)}
+                        />
                     </div>
                 </div>
 
