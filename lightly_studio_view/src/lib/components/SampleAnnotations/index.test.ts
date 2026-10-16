@@ -55,7 +55,8 @@ vi.mock('$lib/hooks/useSettings', async () => {
         key_toolbar_bounding_box: 'b',
         key_toolbar_segmentation_mask: 'm',
         key_toolbar_brush: 'r',
-        key_toolbar_eraser: 'x'
+        key_toolbar_eraser: 'x',
+        assisted_labeling_provider: 'fake'
     });
     const showBoundingBoxesForSegmentationStore =
         writable<ShowBoundingBoxesForSegmentationValue>(true);

@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 
 import pytest
 from alembic import command
 from alembic.config import Config
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
 from pytest_mock import MockerFixture
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlmodel import SQLModel
 
+from lightly_studio.assisted_labeling import provider_ids
 from lightly_studio.database import db_migrations, db_url
 from lightly_studio.database.db_manager import DatabaseEngine
 
@@ -927,3 +931,23 @@ def _metadata_column_data_type(engine: Engine, column_name: str) -> str:
         ).scalar_one()
     assert isinstance(data_type, str)
     return data_type
+
+
+def test_assisted_labeling_provider_setting__default_matches_provider_ids(
+    engine: Engine,
+) -> None:
+    """The migration default is frozen to the current default provider ID."""
+    migration = importlib.import_module(
+        "lightly_studio.migrations.versions.1792164301_77ea5e7e119d_add_assisted_labeling_provider_setting"
+    )
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE setting (setting_id INTEGER PRIMARY KEY)"))
+        connection.execute(text("INSERT INTO setting (setting_id) VALUES (1)"))
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.upgrade()
+
+        provider = connection.execute(
+            text("SELECT assisted_labeling_provider FROM setting")
+        ).scalar_one()
+
+    assert provider == provider_ids.DEFAULT_PROVIDER_ID
