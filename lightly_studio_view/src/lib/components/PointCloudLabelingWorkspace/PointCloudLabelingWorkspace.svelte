@@ -151,6 +151,18 @@
         bufferingSeekVersion += 1;
         goToFrame(seqNumber);
     };
+    const handleWindowKeydown = (event: KeyboardEvent) => {
+        if (event.code !== 'Space' || event.repeat) return;
+        const target = event.target;
+        if (
+            target instanceof HTMLElement &&
+            (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))
+        ) {
+            return;
+        }
+        event.preventDefault();
+        togglePlayback();
+    };
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -294,6 +306,8 @@
         });
     }
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <div
     bind:this={containerEl}

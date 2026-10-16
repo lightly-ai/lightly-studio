@@ -166,6 +166,30 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.queryByTestId('workspace-scene-viewport')).not.toBeInTheDocument();
     });
 
+    it('toggles playback with the window Space shortcut', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+        expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ', repeat: true });
+        expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
+    });
+
+    it('does not use the Space shortcut from form controls', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.keyDown(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }), {
+            code: 'Space',
+            key: ' '
+        });
+
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
+    });
+
     it('shows loading when no cloud frame is available', () => {
         tickDetails.isLoading = true;
         render(PointCloudLabelingWorkspace, { props: defaultProps });
