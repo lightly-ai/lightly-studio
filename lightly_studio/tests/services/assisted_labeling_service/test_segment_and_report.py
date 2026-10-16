@@ -11,6 +11,7 @@ from lightly_studio.assisted_labeling.provider import (
     BoxPrompt,
     ProviderError,
     ProviderImage,
+    ProviderNotCalledError,
     SegmentationPrompt,
 )
 from lightly_studio.services.assisted_labeling_service import segment_and_report
@@ -93,6 +94,26 @@ def test_segment_and_report__reports_a_failed_call_and_reraises(mocker: MockerFi
     assert event.details is not None
     assert event.details["num_predictions"] == 0
     assert event.user_email is None
+
+
+def test_segment_and_report__does_not_report_a_call_that_never_reached_the_vendor(
+    mocker: MockerFixture,
+) -> None:
+    reported = _capture_reports(mocker=mocker)
+    provider = FakeProvider()
+    mocker.patch.object(provider, "segment", side_effect=ProviderNotCalledError("no key"))
+
+    with pytest.raises(ProviderNotCalledError, match="no key"):
+        segment_and_report.segment_and_report(
+            provider=provider,
+            image=IMAGE,
+            prompt=TWO_BOXES,
+            operation=segment_and_report.OPERATION_INTERACTIVE,
+            collection_id=COLLECTION_ID,
+            user_email=None,
+        )
+
+    assert reported == []
 
 
 def test_segment_and_report__uses_a_new_event_id_per_call(mocker: MockerFixture) -> None:

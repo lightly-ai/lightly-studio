@@ -19,6 +19,7 @@ from lightly_studio.assisted_labeling.provider import (
     ProviderCapabilities,
     ProviderError,
     ProviderImage,
+    ProviderNotCalledError,
     SegmentationPrompt,
 )
 
@@ -89,8 +90,11 @@ class FalSam3Provider:
 
     def segment(self, image: ProviderImage, prompt: SegmentationPrompt) -> list[Prediction]:
         """Runs SAM 3 on fal.ai and returns the predicted masks."""
-        fal_key = _get_fal_key()
-        image_url = self._get_image_url(image=image, fal_key=fal_key)
+        try:
+            fal_key = _get_fal_key()
+            image_url = self._get_image_url(image=image, fal_key=fal_key)
+        except ProviderError as error:
+            raise ProviderNotCalledError(str(error)) from error
         output = fal_http.run_queue_request(
             session=self._session,
             fal_key=fal_key,

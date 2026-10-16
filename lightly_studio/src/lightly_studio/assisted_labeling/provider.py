@@ -16,6 +16,10 @@ class ProviderError(Exception):
     """Raised when a provider cannot compute a segmentation."""
 
 
+class ProviderNotCalledError(ProviderError):
+    """Raised when a provider fails before it calls the vendor, so the vendor bills nothing."""
+
+
 class ProviderUnavailableError(Exception):
     """Raised when the active provider is not usable, for example without an API key."""
 

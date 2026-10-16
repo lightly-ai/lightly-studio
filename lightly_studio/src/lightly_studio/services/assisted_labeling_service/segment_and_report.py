@@ -10,6 +10,7 @@ from lightly_studio.assisted_labeling.provider import (
     AssistedLabelingProvider,
     Prediction,
     ProviderImage,
+    ProviderNotCalledError,
     SegmentationPrompt,
 )
 from lightly_studio.usage import usage_reporter
@@ -29,7 +30,7 @@ def segment_and_report(  # noqa: PLR0913
     """Calls the provider, reports the usage, and returns the predictions and latency in ms.
 
     The usage is reported whether the call succeeds or fails, because the vendor can bill
-    a failed call too.
+    a failed call too. A call that fails before it reaches the vendor is not reported.
 
     Args:
         provider: The provider to call.
@@ -51,6 +52,8 @@ def segment_and_report(  # noqa: PLR0913
     error: Exception | None = None
     try:
         predictions = provider.segment(image=image, prompt=prompt)
+    except ProviderNotCalledError:
+        raise
     except Exception as e:
         error = e
     latency_ms = (time.perf_counter() - start) * 1000
