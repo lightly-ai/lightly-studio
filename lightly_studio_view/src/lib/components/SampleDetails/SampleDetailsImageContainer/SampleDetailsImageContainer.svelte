@@ -29,6 +29,8 @@
     import { usePendingState } from '../usePendingState';
     import SmartSelectPopUp from '$lib/components/SampleDetails/SmartSelectPopUp/SmartSelectPopUp.svelte';
     import SmartSelectOverlay from '$lib/components/SampleDetails/SmartSelectOverlay/SmartSelectOverlay.svelte';
+    import FindInstancesPopUp from '$lib/components/SampleDetails/FindInstancesPopUp/FindInstancesPopUp.svelte';
+    import FindInstancesOverlay from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.svelte';
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
     import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
 
@@ -172,6 +174,9 @@
     const smartSelectClass = $derived(
         toolState.smartSelectClass ?? annotationLabelContext.annotationLabel
     );
+    const instancesClass = $derived(
+        toolState.instancesClass ?? annotationLabelContext.annotationLabel
+    );
     const annotationTypeInCurrentView = $derived(
         annotationLabelContext.isOnAnnotationDetailsView
             ? sample.annotations[0]?.annotation_type
@@ -232,7 +237,8 @@
         isEditingMode: $isEditingMode,
         isDrawing: annotationLabelContext.isDrawing,
         isErasing: annotationLabelContext.isErasing,
-        status: sampleDetailsToolbarContext.status
+        status: sampleDetailsToolbarContext.status,
+        isDrawingInstancesBox: toolState.isDrawingInstancesBox
     })}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
@@ -274,6 +280,30 @@
                 canSave={toolState.smartSelect.canSave}
                 onSave={toolState.smartSelect.save}
                 onClear={toolState.smartSelect.clear}
+            />
+        {/if}
+        {#if $isEditingMode && assistedLabeling.activeTool === 'find-instances'}
+            <FindInstancesPopUp
+                {collectionId}
+                prompt={toolState.instancesPrompt}
+                onPromptChange={(value) => (toolState.instancesPrompt = value)}
+                maxInstances={assistedLabeling.selectedMaxInstances}
+                maxInstancesLimit={assistedLabeling.tools.maxInstances}
+                onMaxInstancesChange={(value) => (toolState.maxInstances = value)}
+                annotationClass={instancesClass}
+                onAnnotationClassChange={(value) => (toolState.instancesClass = value)}
+                saveAs={toolState.saveAs}
+                onSaveAsChange={(value) => (toolState.saveAs = value)}
+                canDrawBoxes={assistedLabeling.tools.boxes}
+                isDrawingBox={toolState.isDrawingInstancesBox}
+                onDrawBoxChange={(value) => (toolState.isDrawingInstancesBox = value)}
+                boxCount={toolState.instances.boxCount}
+                isGenerating={toolState.instances.isGenerating}
+                resultCount={toolState.instances.resultCount}
+                canSave={toolState.instances.canSave}
+                onGenerate={toolState.instances.generate}
+                onSave={toolState.instances.save}
+                onClear={toolState.instances.clear}
             />
         {/if}
     {/snippet}
@@ -411,6 +441,25 @@
                         negativePoints={assistedLabeling.tools.negativePoints}
                         boxes={assistedLabeling.tools.boxes}
                         onActionsChange={(actions) => (toolState.smartSelect = actions)}
+                    />
+                {/key}
+            {:else if assistedLabeling.activeTool === 'find-instances'}
+                {#key sampleId}
+                    <FindInstancesOverlay
+                        bind:interactionRect
+                        {collectionId}
+                        {sampleId}
+                        {sample}
+                        {refetch}
+                        prompt={toolState.instancesPrompt}
+                        onPromptChange={(value) => (toolState.instancesPrompt = value)}
+                        maxInstances={assistedLabeling.selectedMaxInstances}
+                        saveAs={toolState.saveAs}
+                        annotationClass={instancesClass}
+                        annotationSource={annotationLabelContext.annotationSource}
+                        isDrawingBox={toolState.isDrawingInstancesBox}
+                        onBoxDrawn={() => (toolState.isDrawingInstancesBox = false)}
+                        onStateChange={(state) => (toolState.instances = state)}
                     />
                 {/key}
             {/if}

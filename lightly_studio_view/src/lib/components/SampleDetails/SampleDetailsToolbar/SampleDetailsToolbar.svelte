@@ -149,7 +149,10 @@
         if (sampleDetailsToolbarContext.status === 'drag') {
             setAnnotationType(null);
         }
-        if (sampleDetailsToolbarContext.status === 'smart-select') {
+        if (
+            sampleDetailsToolbarContext.status === 'smart-select' ||
+            sampleDetailsToolbarContext.status === 'find-instances'
+        ) {
             setAnnotationType(null);
             setLastCreatedAnnotationId(null);
             setIsDrawing(false);

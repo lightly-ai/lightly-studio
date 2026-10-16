@@ -43,7 +43,10 @@ vi.mock('$lib/hooks/useSettings', () => ({
     })
 }));
 
-const assistedLabelingTools = { smartSelectDisabledReason: null as string | null };
+const assistedLabelingTools = {
+    smartSelectDisabledReason: null as string | null,
+    instancesDisabledReason: null as string | null
+};
 
 vi.mock('$lib/hooks/useAssistedLabelingProvider', () => ({
     useAssistedLabelingProvider: () => ({ tools: assistedLabelingTools })
@@ -98,6 +101,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isErasing = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
         assistedLabelingTools.smartSelectDisabledReason = null;
+        assistedLabelingTools.instancesDisabledReason = null;
     });
 
     it('starts in cursor mode and resets annotation state on mount', () => {
@@ -212,6 +216,27 @@ describe('SampleDetailsToolbar', () => {
         await fireEvent.click(getByLabelText('Smart select'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('smart-select');
+    });
+
+    it('activates the find all instances tool', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Find all instances'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('find-instances');
+    });
+
+    it('keeps find all instances inactive and shows why without text prompts', async () => {
+        assistedLabelingTools.instancesDisabledReason = 'Fake does not support text prompts.';
+        const view = render(SampleDetailsToolbar);
+
+        const button = view.getByLabelText('Find all instances');
+        await fireEvent.pointerEnter(button.parentElement!);
+        await fireEvent.click(button);
+
+        expect(view.getByRole('tooltip')).toHaveTextContent('Fake does not support text prompts.');
+        expect(button).toHaveAttribute('aria-disabled', 'true');
+        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
     });
 
     it('resets the annotation type of the previous tool in smart select', () => {
