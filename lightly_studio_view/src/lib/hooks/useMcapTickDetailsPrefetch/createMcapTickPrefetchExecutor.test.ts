@@ -70,4 +70,21 @@ describe('createMcapTickPrefetchExecutor', () => {
         executor.cancel();
         expect(onStateChange).toHaveBeenLastCalledWith(new Set(), new Map());
     });
+
+    it('keeps completed ticks when switching buffering sessions', async () => {
+        prefetchMock.mockResolvedValue(undefined);
+        const onStateChange = vi.fn();
+        const executor = createExecutor(onStateChange);
+
+        await executor.prefetchRanges({
+            requestId: 'old',
+            ranges: [{ startIndex: 0, endIndex: 1 }]
+        });
+        await executor.prefetchRanges({
+            requestId: 'new',
+            ranges: [{ startIndex: 2, endIndex: 3 }]
+        });
+
+        expect(onStateChange).toHaveBeenLastCalledWith(new Set([0, 1, 2, 3]), new Map());
+    });
 });

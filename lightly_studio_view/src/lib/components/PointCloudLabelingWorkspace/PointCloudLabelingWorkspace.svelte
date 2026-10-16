@@ -22,6 +22,7 @@
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
+    import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
     import type { Vector3, WorkspaceTool } from './domain';
 
     /**
@@ -107,15 +108,16 @@
         // Changing the mode creates a new session, which cancels the old queue. This is important
         // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
         getRequestId: () =>
-            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? 'entire' : 'window'}`,
+            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? `entire/${workspace.currentTick}` : 'window'}`,
         getRanges: () => {
-            if ($bufferEntireSequence) {
-                return [{ startIndex: 0, endIndex: workspace.ticks.length - 1 }];
-            }
-
             const activeIndex = workspace.ticks.findIndex(
                 (tick) => tick.seq_number === workspace.currentTick
             );
+
+            if ($bufferEntireSequence) {
+                return [{ startIndex: activeIndex, endIndex: workspace.ticks.length - 1 }];
+            }
+
             return getMcapTickPrefetchRange({
                 activeIndex,
                 tickCount: workspace.ticks.length,
@@ -265,6 +267,11 @@
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     });
 
+    const { handleCuboidTransform } = useUpdateCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
+    });
+
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
             await workspace.tickDetails.refetch({ throwOnError: true });
@@ -330,6 +337,7 @@
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
                                     onCreateCuboid={handleCreateCuboid}
+                                    onCuboidTransform={handleCuboidTransform}
                                     onPreviousTick={goToPreviousFrame}
                                     onNextTick={goToNextFrame}
                                 />

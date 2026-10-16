@@ -12,7 +12,12 @@
 
     const { activeTool = 'select', onToolChange }: Props = $props();
 
-    const ENABLED_TOOLS = new Set<WorkspaceTool>(['select', 'create-cuboid']);
+    const ENABLED_TOOLS = new Set<WorkspaceTool>([
+        'select',
+        'create-cuboid',
+        'translate',
+        'rotate'
+    ]);
 
     const tools: { tool: WorkspaceTool; label: string; icon: Component<IconProps> }[] = [
         { tool: 'select', label: 'Select', icon: MousePointer2 },
