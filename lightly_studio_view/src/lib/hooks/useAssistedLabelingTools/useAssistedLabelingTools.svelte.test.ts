@@ -32,8 +32,8 @@ vi.mock('$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte'
 
 let cleanup = () => {};
 
-const setup = () => {
-    const context = $state<typeof mocks.context>({ status: 'smart-select', panFrom: undefined });
+const setup = (initialStatus = 'smart-select') => {
+    const context = $state<typeof mocks.context>({ status: initialStatus, panFrom: undefined });
     const status = $state<typeof mocks.status>({ disabledReason: null });
     mocks.context = context;
     mocks.status = status;
@@ -89,5 +89,17 @@ describe('useAssistedLabelingTools', () => {
         status.disabledReason = 'missing key';
         flushSync();
         expect(context.status).toBe('cursor');
+    });
+
+    it('ends box drawing when the find all instances tool is left', () => {
+        const { context, tools } = setup('find-instances');
+        tools.state.isDrawingInstancesBox = true;
+        flushSync();
+        expect(tools.state.isDrawingInstancesBox).toBe(true);
+
+        context.status = 'cursor';
+        flushSync();
+
+        expect(tools.state.isDrawingInstancesBox).toBe(false);
     });
 });
