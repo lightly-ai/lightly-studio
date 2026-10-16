@@ -24,6 +24,7 @@
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import {
         createSampleDetailsToolbarContext,
+        isAssistedLabelingStatus,
         useSampleDetailsToolbarContext,
         type ToolbarStatus
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
@@ -111,7 +112,10 @@
             // Check for escape key
             case get(settingsStore).key_go_back:
                 if ($isEditingMode) {
-                    if (annotationLabelContext.annotationType) {
+                    if (
+                        annotationLabelContext.annotationType ||
+                        isAssistedLabelingStatus(sampleDetailsToolbarContext.status)
+                    ) {
                         setStatus('cursor');
                     }
                 } else {
