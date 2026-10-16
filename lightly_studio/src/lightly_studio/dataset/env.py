@@ -31,6 +31,16 @@ LIGHTLY_STUDIO_ANALYTICS_ENABLED: bool = env.bool("LIGHTLY_STUDIO_ANALYTICS_ENAB
 # installation, see lightly_studio/analytics/posthog_project.py.
 LIGHTLY_STUDIO_POSTHOG_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_POSTHOG_KEY", default=None)
 
+# Reporting of paid service usage (AI-assisted labeling, embedding) to a central service.
+# Reports are sent only when both are set. See lightly_studio/usage/usage_reporter.py.
+LIGHTLY_STUDIO_USAGE_REPORT_URL: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_USAGE_REPORT_URL", default=None
+)
+# The token this installation presents to the central service, for every call it makes there.
+LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", default=None
+)
+
 # Gates the browser-side point-cloud labeling workspace (LIG-10657). Off by default while the
 # workspace is still being built out across several issues; see lightly_studio/api/features.py.
 LIGHTLY_STUDIO_POINT_CLOUD_ENABLED: bool = env.bool("LIGHTLY_STUDIO_POINT_CLOUD_ENABLED", False)
