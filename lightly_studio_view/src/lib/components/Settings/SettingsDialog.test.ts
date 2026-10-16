@@ -1,8 +1,30 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { writable } from 'svelte/store';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsDialog from './SettingsDialog.svelte';
 import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+
+vi.mock('$lib/hooks/useAssistedLabelingProviders', () => ({
+    useAssistedLabelingProviders: () => ({
+        query: {
+            data: [
+                {
+                    provider_id: 'fake',
+                    display_name: 'Fake (offline)',
+                    sends_data_to_third_party: false,
+                    unavailable_reason: null
+                },
+                {
+                    provider_id: 'fal',
+                    display_name: 'fal.ai',
+                    sends_data_to_third_party: true,
+                    unavailable_reason: 'Set FAL_KEY to use this provider.'
+                }
+            ]
+        }
+    })
+}));
 
 // Mock the useSettings hook
 vi.mock('$lib/hooks/useSettings', () => {
@@ -51,6 +73,13 @@ async function openDialog() {
 }
 
 describe('SettingsDialog', () => {
+    beforeAll(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+    });
+
     beforeEach(() => {
         vi.resetAllMocks();
         const { saveSettings } = useSettings();
@@ -227,6 +256,35 @@ describe('SettingsDialog', () => {
 
         const { saveSettings } = useSettings();
         expect(saveSettings).not.toHaveBeenCalled();
+    });
+
+    it('should save the chosen assisted labeling provider', async () => {
+        const user = userEvent.setup();
+        render(SettingsDialog);
+        await openDialog();
+
+        await user.click(screen.getByLabelText('Assisted Labeling Provider'));
+        await user.click(await screen.findByRole('option', { name: 'fal.ai' }));
+        await fireEvent.click(screen.getByText('Save Changes'));
+
+        const { saveSettings } = useSettings();
+        expect(saveSettings).toHaveBeenCalledWith(
+            expect.objectContaining({ assisted_labeling_provider: 'fal' })
+        );
+    });
+
+    it('should show the unavailable reason and data note for a third-party provider', async () => {
+        const user = userEvent.setup();
+        render(SettingsDialog);
+        await openDialog();
+
+        expect(screen.queryByText(/Images are sent to/)).not.toBeInTheDocument();
+
+        await user.click(screen.getByLabelText('Assisted Labeling Provider'));
+        await user.click(await screen.findByRole('option', { name: 'fal.ai' }));
+
+        expect(screen.getByText('Set FAL_KEY to use this provider.')).toBeInTheDocument();
+        expect(screen.getByText('Images are sent to fal.ai for processing.')).toBeInTheDocument();
     });
 
     it('should have unique IDs for all shortcut controls', async () => {
