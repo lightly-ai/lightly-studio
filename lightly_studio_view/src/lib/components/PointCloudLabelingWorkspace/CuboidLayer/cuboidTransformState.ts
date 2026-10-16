@@ -96,8 +96,7 @@ export function createCuboidTransformState({ onTransform }: Params): CuboidTrans
             working.set(annotation.id, entry);
             publish();
             try {
-                entry.status =
-                    (await onTransform(transform)) === false ? 'failed' : 'saved';
+                entry.status = (await onTransform(transform)) === false ? 'failed' : 'saved';
             } catch {
                 entry.status = 'failed';
             }

@@ -46,7 +46,8 @@ export function computeDragPlane({
     const perpendicular = cameraDirection
         .clone()
         .addScaledVector(faceNormal, -cameraDirection.dot(faceNormal));
-    const planeNormal = perpendicular.lengthSq() > 0.01 ? perpendicular.normalize() : cameraDirection;
+    const planeNormal =
+        perpendicular.lengthSq() > 0.01 ? perpendicular.normalize() : cameraDirection;
     return new Plane().setFromNormalAndCoplanarPoint(planeNormal, startPoint);
 }
 
