@@ -10,7 +10,7 @@ We offer it in two deployment variants:
 
 Contact [sales@lightly.ai](mailto:sales@lightly.ai) to find the right option for your team.
 
-Not registered yet? [Start for free](https://studio.auth.lightly.ai/sign-up) to get access.
+To get access, book a call on the [product page](https://www.lightly.ai/lightly-studio).
 
 ## A Look Inside
 

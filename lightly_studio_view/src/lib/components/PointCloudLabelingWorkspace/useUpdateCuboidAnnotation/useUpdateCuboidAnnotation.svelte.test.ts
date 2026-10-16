@@ -39,6 +39,7 @@ describe('useUpdateCuboidAnnotation', () => {
         updateAnnotations.mockReturnValue(new Promise<void>((resolve) => (finishSave = resolve)));
         const pending = useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
 
+        await Promise.resolve(); // let the serialization chain start the save
         expect(updateAnnotations).toHaveBeenCalledWith([
             {
                 annotation_id: 'annotation-1',
@@ -60,7 +61,7 @@ describe('useUpdateCuboidAnnotation', () => {
         ]);
         expect(onUpdated).not.toHaveBeenCalled();
         finishSave();
-        await pending;
+        expect(await pending).toBe(true);
         expect(onUpdated).toHaveBeenCalledOnce();
         expect(toast.error).not.toHaveBeenCalled();
     });
@@ -81,30 +82,64 @@ describe('useUpdateCuboidAnnotation', () => {
     });
 
     it('does not save or refresh without an annotation source', async () => {
-        await useUpdateCuboidAnnotation({
+        const result = await useUpdateCuboidAnnotation({
             ...defaultParams,
             getCollectionId: () => undefined
         }).handleCuboidTransform(transform);
 
+        expect(result).toBe(false);
         expect(updateAnnotations).not.toHaveBeenCalled();
         expect(onUpdated).not.toHaveBeenCalled();
         expect(toast.error).not.toHaveBeenCalled();
     });
 
-    it('reports a failed save without refreshing annotations', async () => {
+    it('reports a failed save and refetches to restore the cuboid', async () => {
         updateAnnotations.mockRejectedValue(new Error('save failed'));
 
-        await useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
+        const result =
+            await useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
 
+        expect(result).toBe(false);
         expect(toast.error).toHaveBeenCalledWith('Failed to update annotation. Please try again.');
-        expect(onUpdated).not.toHaveBeenCalled();
+        // Refetch is triggered even on failure so the viewport reverts to persisted geometry.
+        expect(onUpdated).toHaveBeenCalledOnce();
+        expect(toast.error).toHaveBeenCalledOnce();
     });
 
-    it('distinguishes a refresh failure from a failed save', async () => {
+    it('serializes concurrent saves for the same cuboid', async () => {
+        let finishFirstSave!: () => void;
+        const order: string[] = [];
+
+        updateAnnotations
+            .mockImplementationOnce(() => {
+                order.push('start-1');
+                return new Promise<void>((resolve) => (finishFirstSave = resolve));
+            })
+            .mockImplementation(() => {
+                order.push('start-2');
+                return Promise.resolve();
+            });
+
+        const { handleCuboidTransform } = useUpdateCuboidAnnotation(defaultParams);
+        const first = handleCuboidTransform(transform);
+        const second = handleCuboidTransform(transform);
+
+        await Promise.resolve(); // let the first save start
+        expect(order).toEqual(['start-1']);
+
+        finishFirstSave();
+        await Promise.all([first, second]);
+
+        expect(order).toEqual(['start-1', 'start-2']);
+    });
+
+    it('returns true even when the refresh fails after a successful save', async () => {
         onUpdated.mockRejectedValue(new Error('refresh failed'));
 
-        await useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
+        const result =
+            await useUpdateCuboidAnnotation(defaultParams).handleCuboidTransform(transform);
 
+        expect(result).toBe(true);
         expect(updateAnnotations).toHaveBeenCalledOnce();
         expect(toast.error).toHaveBeenCalledExactlyOnceWith(
             'Annotation updated, but the workspace could not refresh. Please try again.'

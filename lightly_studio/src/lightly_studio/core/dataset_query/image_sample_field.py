@@ -9,6 +9,7 @@ from lightly_studio.core.dataset_query.field import (
     DatetimeField,
     NumericalField,
 )
+from lightly_studio.core.dataset_query.metadata_expression import MetadataAccessor
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
 from lightly_studio.models.image import ImageTable
 
@@ -35,3 +36,4 @@ class ImageSampleField:
     file_path_abs = ComparableField(col(ImageTable.file_path_abs))
     created_at = DatetimeField(col(ImageTable.created_at))
     tags = TagsAccessor()
+    metadata = MetadataAccessor()
