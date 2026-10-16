@@ -37,6 +37,8 @@ export const addAnnotationDeleteToUndoStack = ({
         (source) => source.collection_id === annotation.annotation_collection_id
     )?.name;
 
+    const cuboid3d = annotation.cuboid_3d_details;
+
     const annotationInput: AnnotationCreateInput = {
         parent_sample_id: annotation.parent_sample_id,
         annotation_type: annotation.annotation_type,
@@ -47,7 +49,22 @@ export const addAnnotationDeleteToUndoStack = ({
         width: annotation.object_detection_details?.width ?? annotation.segmentation_details?.width,
         height:
             annotation.object_detection_details?.height ?? annotation.segmentation_details?.height,
-        segmentation_mask: annotation.segmentation_details?.segmentation_mask
+        segmentation_mask: annotation.segmentation_details?.segmentation_mask,
+        cuboid_3d: cuboid3d
+            ? {
+                  frame_id: cuboid3d.frame_id,
+                  px: cuboid3d.px,
+                  py: cuboid3d.py,
+                  pz: cuboid3d.pz,
+                  qx: cuboid3d.qx,
+                  qy: cuboid3d.qy,
+                  qz: cuboid3d.qz,
+                  qw: cuboid3d.qw,
+                  sx: cuboid3d.sx,
+                  sy: cuboid3d.sy,
+                  sz: cuboid3d.sz
+              }
+            : undefined
     };
 
     const execute = async () => {

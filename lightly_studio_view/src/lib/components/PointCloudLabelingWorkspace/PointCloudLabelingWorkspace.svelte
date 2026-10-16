@@ -22,6 +22,7 @@
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
+    import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation/useDeleteCuboidAnnotation.svelte';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
     import type { Vector3, WorkspaceTool } from './domain';
 
@@ -272,6 +273,20 @@
         onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
     });
 
+    const { handleDeleteCuboid: deleteCuboidAnnotation } = useDeleteCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        getAnnotations: () => sceneSnapshot?.annotations ?? []
+    });
+
+    async function handleDeleteCuboid(cuboidId: string): Promise<void> {
+        const deleted = await deleteCuboidAnnotation(cuboidId);
+        if (!deleted) return;
+        await workspace.tickDetails.refetch();
+        if (selectedCuboidId === cuboidId) {
+            selectedCuboidId = null;
+        }
+    }
+
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
             await workspace.tickDetails.refetch({ throwOnError: true });
@@ -410,6 +425,7 @@
                         bind:selectedCuboidId
                         {tick}
                         onTagsChange={() => void workspace.tickDetails.refetch()}
+                        onDeleteCuboid={handleDeleteCuboid}
                     />
                 </Pane>
             </PaneGroup>
