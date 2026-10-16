@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -53,14 +55,46 @@ def test_report__does_nothing_without_config(
 
 
 def test_report__sends_with_config(mocker: MockerFixture) -> None:
+    executor = ThreadPoolExecutor(max_workers=1)
+    mocker.patch.object(usage_reporter, "_executor", executor)
     session = mocker.patch.object(usage_reporter, "_session")
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
     mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
 
     usage_reporter.report(events=[EVENT])
+    executor.shutdown(wait=True)
 
     session.post.assert_called_once()
     assert session.post.call_args.args == (URL,)
+
+
+def test_report__sends_from_another_thread(mocker: MockerFixture) -> None:
+    executor = ThreadPoolExecutor(max_workers=1)
+    mocker.patch.object(usage_reporter, "_executor", executor)
+    posting_threads: list[threading.Thread] = []
+    session = mocker.patch.object(usage_reporter, "_session")
+    session.post.side_effect = lambda *_args, **_kwargs: posting_threads.append(
+        threading.current_thread()
+    )
+    mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
+    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+
+    usage_reporter.report(events=[EVENT])
+    executor.shutdown(wait=True)
+
+    # The caller never waits for the receiver.
+    assert posting_threads != [threading.current_thread()]
+    assert len(posting_threads) == 1
+
+
+def test_report__never_raises_when_it_cannot_queue(mocker: MockerFixture) -> None:
+    executor = ThreadPoolExecutor(max_workers=1)
+    executor.shutdown()
+    mocker.patch.object(usage_reporter, "_executor", executor)
+    mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
+    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+
+    usage_reporter.report(events=[EVENT])
 
 
 def test_send__posts_the_events_with_the_token(mocker: MockerFixture) -> None:
