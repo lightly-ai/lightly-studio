@@ -54,6 +54,15 @@ vi.mock('./useCreateCuboidAnnotation', async () => {
     };
 });
 
+vi.mock('$lib/hooks/useGlobalStorage', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useGlobalStorage: () => ({
+            isEditingMode: writable(true)
+        })
+    };
+});
+
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
         query: cloudQuery

@@ -16,7 +16,11 @@
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
-    import { useAnnotationCollections, useMcapTickPrefetchScheduler } from '$lib/hooks';
+    import {
+        useAnnotationCollections,
+        useGlobalStorage,
+        useMcapTickPrefetchScheduler
+    } from '$lib/hooks';
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
     import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
@@ -74,6 +78,7 @@
         onRetry
     }: Props = $props();
 
+    const { isEditingMode } = useGlobalStorage();
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
     const bufferEntireSequence = useSessionStorage<boolean>(
         'lightlyStudio_pointCloudBufferEntireSequence',
@@ -316,7 +321,12 @@
                     <PaneGroup direction="vertical" class="min-h-0 flex-1">
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
-                            <ToolRail {activeTool} onToolChange={(tool) => (activeTool = tool)} />
+                            {#if $isEditingMode}
+                                <ToolRail
+                                    {activeTool}
+                                    onToolChange={(tool) => (activeTool = tool)}
+                                />
+                            {/if}
                             {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
