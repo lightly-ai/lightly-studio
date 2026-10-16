@@ -25,19 +25,49 @@ interface FaceDrag {
     pointerId: number;
 }
 
+/**
+ * Choose a drag plane that preserves the resize axis. The plane normal is the
+ * component of {@link cameraDirection} perpendicular to {@link faceNormal}, so
+ * the plane contains the face-normal direction and pointer movement maps to a
+ * nonzero resize delta. When the camera looks along the face normal (within
+ * ~6°), the perpendicular component vanishes; we fall back to the camera-facing
+ * plane where resize simply becomes insensitive rather than numerically
+ * unstable.
+ */
+export function computeDragPlane({
+    cameraDirection,
+    faceNormal,
+    startPoint
+}: {
+    cameraDirection: Vector3;
+    faceNormal: Vector3;
+    startPoint: Vector3;
+}): Plane {
+    const perpendicular = cameraDirection
+        .clone()
+        .addScaledVector(faceNormal, -cameraDirection.dot(faceNormal));
+    const planeNormal = perpendicular.lengthSq() > 0.01 ? perpendicular.normalize() : cameraDirection;
+    return new Plane().setFromNormalAndCoplanarPoint(planeNormal, startPoint);
+}
+
 export function createFaceDrag({ event, face, annotation, camera }: FaceDragParams): FaceDrag {
     const startPoint = new Vector3(event.point.x, event.point.y, event.point.z);
     const cameraDirection = camera.getWorldDirection(new Vector3());
+    const faceNormalWorld = computeFaceNormalWorld({
+        axis: face.axis,
+        sign: face.sign,
+        rotation: annotation.rotation
+    });
     return {
         face,
-        faceNormalWorld: computeFaceNormalWorld({
-            axis: face.axis,
-            sign: face.sign,
-            rotation: annotation.rotation
-        }),
+        faceNormalWorld,
         originalCenter: annotation.center,
         originalSize: annotation.size,
-        dragPlane: new Plane().setFromNormalAndCoplanarPoint(cameraDirection, startPoint),
+        dragPlane: computeDragPlane({
+            cameraDirection,
+            faceNormal: new Vector3(...faceNormalWorld),
+            startPoint
+        }),
         startPoint,
         pointerId: event.nativeEvent.pointerId
     };
