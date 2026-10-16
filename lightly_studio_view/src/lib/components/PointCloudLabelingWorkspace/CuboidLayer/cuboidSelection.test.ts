@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { pickSmallestFromIntersections } from './cuboidSelection';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { addCuboidSelectionListeners, pickSmallestFromIntersections } from './cuboidSelection';
 
 describe('pickSmallestFromIntersections', () => {
     it('returns null when there are no intersections', () => {
@@ -28,5 +28,69 @@ describe('pickSmallestFromIntersections', () => {
                 { annotationId: 'outer', volume: 100 }
             ])
         ).toBe('inner');
+    });
+});
+
+describe('addCuboidSelectionListeners', () => {
+    const canvas = document.createElement('canvas');
+    const onselect = vi.fn();
+    let cuboidClicked = false;
+    let cleanup = () => {};
+    const defaultParams: Parameters<typeof addCuboidSelectionListeners>[0] = {
+        canvas,
+        activeTool: 'select',
+        onselect,
+        isCuboidClicked: () => cuboidClicked,
+        resetCuboidClicked: () => (cuboidClicked = false)
+    };
+    const transformTools: (typeof defaultParams.activeTool)[] = ['translate', 'rotate'];
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        cuboidClicked = false;
+    });
+    afterEach(() => cleanup());
+
+    it.each(transformTools)(
+        'deselects on Escape and empty canvas clicks in %s mode',
+        async (activeTool) => {
+            cleanup = addCuboidSelectionListeners({ ...defaultParams, activeTool });
+
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            expect(onselect).toHaveBeenCalledWith(null);
+            onselect.mockClear();
+            canvas.click();
+            await Promise.resolve();
+            expect(onselect).toHaveBeenCalledExactlyOnceWith(null);
+        }
+    );
+
+    it('preserves selection on a gizmo click, then allows an empty canvas click to clear it', async () => {
+        cleanup = addCuboidSelectionListeners({ ...defaultParams, activeTool: 'translate' });
+        cuboidClicked = true;
+
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).not.toHaveBeenCalled();
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).toHaveBeenCalledExactlyOnceWith(null);
+    });
+
+    it('leaves selection unchanged while creating cuboids', async () => {
+        cleanup = addCuboidSelectionListeners({ ...defaultParams, activeTool: 'create-cuboid' });
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).not.toHaveBeenCalled();
+    });
+
+    it('removes the listeners when the layer is disposed', async () => {
+        cleanup = addCuboidSelectionListeners({ ...defaultParams, activeTool: 'rotate' });
+        cleanup();
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).not.toHaveBeenCalled();
     });
 });

@@ -22,6 +22,7 @@
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
+    import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
     import type { Vector3, WorkspaceTool } from './domain';
 
     /**
@@ -266,6 +267,11 @@
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     });
 
+    const { handleCuboidTransform } = useUpdateCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
+    });
+
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
             await workspace.tickDetails.refetch({ throwOnError: true });
@@ -331,6 +337,7 @@
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
                                     onCreateCuboid={handleCreateCuboid}
+                                    onCuboidTransform={handleCuboidTransform}
                                     onPreviousTick={goToPreviousFrame}
                                     onNextTick={goToNextFrame}
                                 />
