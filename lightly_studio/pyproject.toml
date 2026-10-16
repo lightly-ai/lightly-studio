@@ -90,6 +90,9 @@ cloud-storage = [
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
 ]
+fal = [
+    "fal-client>=1.0.3",
+]
 
 [dependency-groups]
 dev = [
