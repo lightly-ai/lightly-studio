@@ -10,7 +10,7 @@ from uuid import UUID
 import pyarrow as pa
 from fastapi import APIRouter, HTTPException, Path, Response
 from pyarrow import ipc
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, FiniteFloat
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
@@ -41,6 +41,13 @@ class GetEmbeddings2DRequest(BaseModel):
     axes: ProjectionAxes | None = Field(
         default=None,
         description="Project the embeddings onto two axes instead of using PaCMAP",
+    )
+    marker_embeddings: list[list[FiniteFloat]] | None = Field(
+        default=None,
+        description=(
+            "Embeddings to place as markers on the plot. The response metadata"
+            " 'marker_positions' has their positions in the same order."
+        ),
     )
 
 
@@ -84,6 +91,16 @@ def get_2d_embeddings(
             direction_y=body.axes.y,
         )
 
+    marker_positions = twodim_embedding_resolver.get_marker_positions(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        marker_embeddings=body.marker_embeddings or [],
+        sample_ids=sample_ids,
+        x_values=x_array,
+        y_values=y_array,
+    )
+
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
     if filters:
@@ -117,6 +134,7 @@ def get_2d_embeddings(
         ],
         metadata={
             "color_legend": json.dumps({str(k): v for k, v in color_legend.items()}),
+            "marker_positions": json.dumps(marker_positions),
         },
     )
     table = pa.table(
