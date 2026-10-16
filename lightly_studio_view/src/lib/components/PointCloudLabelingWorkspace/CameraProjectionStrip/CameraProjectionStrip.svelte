@@ -2,6 +2,8 @@
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
     import { useTickDetails } from '$lib/hooks';
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { PointBatch } from '$lib/components/PointCloudViewer/types';
 
     /**
      * Horizontal strip of camera tiles for the active point-cloud tick. Each
@@ -21,6 +23,9 @@
         cameraChannels: ChannelSummaryView[];
         /** Camera channel IDs currently shown in the projection strip. */
         selectedChannelIds: number[];
+        batch?: PointBatch;
+        annotations?: readonly AnnotationView[];
+        canProject?: boolean;
     }
 
     let {
@@ -29,7 +34,10 @@
         seqNumber,
         displayFrameId,
         cameraChannels: summaryCameraChannels,
-        selectedChannelIds
+        selectedChannelIds,
+        batch,
+        annotations = [],
+        canProject = true
     }: Props = $props();
 
     const { tickDetails } = useTickDetails({
@@ -56,6 +64,9 @@
                 keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
                 logTimeNs={channel?.log_time_ns}
                 label={summaryChannel.group_component_name}
+                {batch}
+                {annotations}
+                projection={canProject ? (channel?.projection ?? undefined) : undefined}
             />
         {/each}
     </div>

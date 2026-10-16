@@ -38,6 +38,22 @@ describe('CameraProjectionFrame', () => {
         expect(screen.getByText('front')).toBeInTheDocument();
     });
 
+    it('renders the projection overlay when projection metadata is available', () => {
+        render(CameraProjectionFrame, {
+            props: {
+                ...defaultProps,
+                projection: {
+                    width: 640,
+                    height: 480,
+                    camera_matrix: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+                    scene_to_camera: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+                }
+            }
+        });
+
+        expect(document.querySelector('canvas')).toBeInTheDocument();
+    });
+
     it('falls back to the placeholder when the frame image fails to load', async () => {
         render(CameraProjectionFrame, { props: defaultProps });
 

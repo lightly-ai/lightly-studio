@@ -2,6 +2,12 @@
     import { Camera } from '@lucide/svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import { getCameraFrameUrl } from '../getCameraFrameUrl/getCameraFrameUrl';
+    import ProjectionOverlay from '../ProjectionOverlay.svelte';
+    import type {
+        AnnotationView,
+        CameraProjectionView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import type { PointBatch } from '$lib/components/PointCloudViewer/types';
 
     /**
      * A single camera tile in the projection strip. Renders the channel's frame
@@ -22,10 +28,22 @@
         logTimeNs?: string;
         /** Studio slot name shown as the caption, e.g. `front`. */
         label: string;
+        batch?: PointBatch;
+        annotations?: readonly AnnotationView[];
+        projection?: CameraProjectionView;
     }
 
-    let { datasetId, recordingId, channelId, keyframeTimestampNs, logTimeNs, label }: Props =
-        $props();
+    let {
+        datasetId,
+        recordingId,
+        channelId,
+        keyframeTimestampNs,
+        logTimeNs,
+        label,
+        batch,
+        annotations = [],
+        projection
+    }: Props = $props();
 
     const frameUrl = $derived(
         recordingId && keyframeTimestampNs && logTimeNs
@@ -59,30 +77,38 @@
     {#if frameUrl && frameUrl !== failedFrameUrl}
         <button
             type="button"
-            class="block min-h-0 flex-1 cursor-zoom-in"
+            class="flex min-h-0 flex-1 cursor-zoom-in flex-col"
             aria-label={`Enlarge ${label}`}
             onclick={() => (isEnlarged = true)}
         >
-            <img
-                src={frameUrl}
-                alt={label}
-                class="h-full w-full object-contain"
-                onload={(event) => {
-                    const { naturalWidth, naturalHeight } = event.currentTarget as HTMLImageElement;
-                    if (naturalWidth && naturalHeight) aspectRatio = naturalWidth / naturalHeight;
-                }}
-                onerror={() => (failedFrameUrl = frameUrl)}
-            />
+            <div class="relative min-h-0 flex-1">
+                <img
+                    src={frameUrl}
+                    alt={label}
+                    class="h-full w-full object-contain"
+                    onload={(event) => {
+                        const { naturalWidth, naturalHeight } =
+                            event.currentTarget as HTMLImageElement;
+                        if (naturalWidth && naturalHeight)
+                            aspectRatio = naturalWidth / naturalHeight;
+                    }}
+                    onerror={() => (failedFrameUrl = frameUrl)}
+                />
+                <ProjectionOverlay {batch} {annotations} {projection} />
+            </div>
         </button>
         <Dialog.Root bind:open={isEnlarged}>
             <Dialog.Content class="max-w-[90vw] gap-2 p-3 sm:max-w-[90vw]">
                 <Dialog.Title class="text-sm font-medium">{label}</Dialog.Title>
                 <Dialog.Description class="sr-only">Enlarged camera frame</Dialog.Description>
-                <img
-                    src={frameUrl}
-                    alt={`${label} enlarged`}
-                    class="max-h-[80vh] w-full rounded-md object-contain"
-                />
+                <div class="relative">
+                    <img
+                        src={frameUrl}
+                        alt={`${label} enlarged`}
+                        class="max-h-[80vh] w-full rounded-md object-contain"
+                    />
+                    <ProjectionOverlay {batch} {annotations} {projection} />
+                </div>
             </Dialog.Content>
         </Dialog.Root>
     {:else}
