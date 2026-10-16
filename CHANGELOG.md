@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Buffer upcoming MCAP point-cloud ticks in the GUI, show buffered ticks on the timeline, and optionally buffer the entire sequence. Playback waits for unbuffered ticks, and the grid preloads the first 50 ticks of the first 10 sequences.
 - Added an image interpolation setting to show sharp pixel edges when zooming in.
+- The text axes layout of the embedding plot shows the lines x = 0 and y = 0. They split the plot into four parts, one for each pair of axis texts.
 - Added a "Clear all filters" button to the filter sidebar.
 - Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
 
@@ -20,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
 - BREAKING: A tag now holds only samples of its own collection. For example, an image tag holds only images. Tags no longer have a `kind` field. The API returns 400 when a request adds a sample of another collection, or a sample that does not exist, to a tag. The PostgreSQL migration is automatic. It moves each sample that has a tag of another collection to a tag with the same name in the collection of the sample. DuckDB users must re-index their data before they can create tags.
 - Speed up adding many samples to a tag.
+- The text axes layout of the embedding plot scales each text embedding to norm 1, so x = 0 is exactly where a sample is as similar to X− as to X+. The same is true for y. Before, with an embedding model such as MobileCLIP, the text with the larger norm got a larger part of the plot.
+- The text axes layout of the embedding plot starts on a fixed range of -0.2 to 0.2 on both axes and no longer fits the view to the data. Axes along which the images vary strongly now look wide, and axes from texts that do not match the images look small.
 - Python SDK: New video datasets embed their video frames with Perception Encoder (`PE-Core-T16-384`), the model of the videos, instead of MobileCLIP. Existing datasets keep the model of their frames.
 
 ### Deprecated

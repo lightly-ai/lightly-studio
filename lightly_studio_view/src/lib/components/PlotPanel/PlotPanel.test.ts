@@ -31,6 +31,7 @@ let actualVideoFilters: ReturnType<typeof useVideoFilters> | null = null;
 const originalClientConfig = client.getConfig();
 const originalAbortController = globalThis.AbortController;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
+let plotDataStore: Writable<{ x: Float32Array; y: Float32Array; category: Uint8Array } | undefined>;
 let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
 
@@ -75,8 +76,8 @@ vi.mock('$app/state', () => ({
 }));
 
 // Mock dependencies
-vi.mock('embedding-atlas/svelte', () => ({
-    EmbeddingView: class MockEmbeddingView {}
+vi.mock('embedding-atlas/svelte', async () => ({
+    EmbeddingView: (await import('./EmbeddingViewStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 const mockEmbedTextAxes = vi.hoisted(() => vi.fn());
@@ -101,7 +102,7 @@ vi.mock('./usePlotData/usePlotData', () => ({
     usePlotData: (args: unknown) => {
         usePlotDataSpy(args);
         return {
-            data: writable(undefined),
+            data: plotDataStore,
             selectedSampleIds: selectedSampleIdsStore,
             error: writable(undefined)
         };
@@ -192,6 +193,7 @@ describe('PlotPanel.svelte', () => {
     afterEach(() => {
         client.setConfig({ ...originalClientConfig, fetch: originalClientConfig.fetch });
         vi.stubGlobal('AbortController', originalAbortController);
+        vi.restoreAllMocks();
     });
 
     beforeAll(() => {
@@ -222,6 +224,7 @@ describe('PlotPanel.svelte', () => {
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
         videoFilterStore = writable(null);
         arrowDataStore = writable(undefined);
+        plotDataStore = writable(undefined);
         colorLegendStore = writable(new Map());
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
         tagsStore.set([
@@ -632,6 +635,31 @@ describe('PlotPanel.svelte', () => {
             polygon: SQUARE_POLYGON,
             axes: TEXT_LAYOUT_AXES
         });
+    });
+
+    it('uses the text-axis viewport after resetting a user pan', async () => {
+        const user = userEvent.setup();
+        const viewport = () => screen.getByTestId('plot-viewport');
+        const defaultViewport = JSON.stringify({ x: 0, y: 0, scale: 5 });
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+            () => new DOMRect(0, 0, 400, 400)
+        );
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        // PaCMAP has no default viewport: Embedding Atlas fits the view to the data.
+        expect(await screen.findByTestId('plot-viewport')).toHaveTextContent('null');
+
+        await commitTextAxes(user);
+        expect(viewport()).toHaveTextContent(defaultViewport);
+
+        await user.click(screen.getByRole('button', { name: 'Pan plot' }));
+        expect(viewport()).toHaveTextContent(JSON.stringify({ x: 1, y: 1, scale: 3 }));
+
+        await user.click(screen.getByTestId('plot-reset-zoom-button'));
+        expect(viewport()).toHaveTextContent(defaultViewport);
     });
 
     it('clears the region and shows a hint when the Text layout is selected', async () => {
