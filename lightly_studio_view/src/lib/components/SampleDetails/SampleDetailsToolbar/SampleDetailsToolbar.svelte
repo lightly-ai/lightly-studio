@@ -11,6 +11,9 @@
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import SlicToolbarButton from '../SlicToolbarButton/SlicToolbarButton.svelte';
+    import AssistedLabelingToolbarButtons from '$lib/components/SampleDetails/AssistedLabelingToolbarButtons/AssistedLabelingToolbarButtons.svelte';
+    import { isFrameDetailsRoute } from '$lib/routes';
+    import { page } from '$app/state';
 
     import { getSlicEngine } from '@lightly-ai/slic';
 
@@ -146,6 +149,12 @@
         if (sampleDetailsToolbarContext.status === 'drag') {
             setAnnotationType(null);
         }
+        if (sampleDetailsToolbarContext.status === 'smart-select') {
+            setAnnotationType(null);
+            setLastCreatedAnnotationId(null);
+            setIsDrawing(false);
+            setIsErasing(false);
+        }
     });
 
     const activateBoundingBox = () => {
@@ -244,6 +253,13 @@
                     isActive={sampleDetailsToolbarContext.status === 'slic'}
                 />
             </SampleDetailsToolbarTooltip>
+        {/if}
+        <!-- Assisted labeling supports images only, not video frames. -->
+        {#if !annotationLabelContext.isOnAnnotationDetailsView && !isFrameDetailsRoute(page.route.id)}
+            <AssistedLabelingToolbarButtons
+                status={sampleDetailsToolbarContext.status}
+                onActivate={setStatus}
+            />
         {/if}
         {#if showSegmentationTool}
             <SampleDetailsToolbarTooltip

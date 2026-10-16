@@ -27,6 +27,10 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
+    import SmartSelectPopUp from '$lib/components/SampleDetails/SmartSelectPopUp/SmartSelectPopUp.svelte';
+    import SmartSelectOverlay from '$lib/components/SampleDetails/SmartSelectOverlay/SmartSelectOverlay.svelte';
+    import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
+    import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -74,6 +78,8 @@
     const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
+    const assistedLabeling = useAssistedLabelingTools();
+    const toolState = assistedLabeling.state;
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
@@ -163,6 +169,9 @@
         setIsDrawing
     } = useAnnotationLabelContext();
     const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
+    const smartSelectClass = $derived(
+        toolState.smartSelectClass ?? annotationLabelContext.annotationLabel
+    );
     const annotationTypeInCurrentView = $derived(
         annotationLabelContext.isOnAnnotationDetailsView
             ? sample.annotations[0]?.annotation_type
@@ -219,7 +228,12 @@
 <ZoomableContainer
     width={sample.width}
     height={sample.height}
-    panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
+    panEnabled={isPanEnabled({
+        isEditingMode: $isEditingMode,
+        isDrawing: annotationLabelContext.isDrawing,
+        isErasing: annotationLabelContext.isErasing,
+        status: sampleDetailsToolbarContext.status
+    })}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
     autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
@@ -246,6 +260,21 @@
         {/if}
         {#if shouldShowSlicToolPopup}
             <SlicToolPopUp isPending={$isPending} />
+        {/if}
+        {#if $isEditingMode && assistedLabeling.activeTool === 'smart-select'}
+            <SmartSelectPopUp
+                {collectionId}
+                saveAs={toolState.saveAs}
+                onSaveAsChange={(value) => (toolState.saveAs = value)}
+                annotationClass={smartSelectClass}
+                onAnnotationClassChange={(value) => (toolState.smartSelectClass = value)}
+                positivePoints={assistedLabeling.tools.positivePoints}
+                negativePoints={assistedLabeling.tools.negativePoints}
+                boxes={assistedLabeling.tools.boxes}
+                canSave={toolState.smartSelect.canSave}
+                onSave={toolState.smartSelect.save}
+                onClear={toolState.smartSelect.clear}
+            />
         {/if}
     {/snippet}
     {#snippet zoomPanelRightContent()}
@@ -366,6 +395,24 @@
                     {refetch}
                     onCreateBoundingBoxPendingChange={handlePendingChange}
                 />
+            {:else if assistedLabeling.activeTool === 'smart-select'}
+                <!-- Keyed by sample, so points and previews of the previous sample are dropped. -->
+                {#key sampleId}
+                    <SmartSelectOverlay
+                        bind:interactionRect
+                        {collectionId}
+                        {sampleId}
+                        {sample}
+                        {refetch}
+                        saveAs={toolState.saveAs}
+                        annotationClass={smartSelectClass}
+                        annotationSource={annotationLabelContext.annotationSource}
+                        positivePoints={assistedLabeling.tools.positivePoints}
+                        negativePoints={assistedLabeling.tools.negativePoints}
+                        boxes={assistedLabeling.tools.boxes}
+                        onActionsChange={(actions) => (toolState.smartSelect = actions)}
+                    />
+                {/key}
             {/if}
         {/if}
     {/snippet}
