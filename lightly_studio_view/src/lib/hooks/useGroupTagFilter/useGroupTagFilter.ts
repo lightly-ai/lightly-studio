@@ -3,6 +3,7 @@ import { useTags } from '$lib/hooks';
 import { useTagExclusions } from '$lib/hooks/useTagExclusions';
 import type { GroupFilter } from '$lib/api/lightly_studio_local';
 
+/** Builds a reactive group filter, giving exclusions priority over included tags. */
 export function useGroupTagFilter(collectionId: string) {
     const { tags, tagsSelected } = useTags({ collection_id: collectionId });
     const { excludedTagIds } = useTagExclusions(collectionId);
