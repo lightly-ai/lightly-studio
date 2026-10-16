@@ -20,9 +20,33 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails })
 }));
 
+vi.mock('$lib/hooks/useTickData/useTickCameraFrames.svelte', () => ({
+    useTickCameraFrames: () => ({ query: { data: undefined } })
+}));
+
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({ data: [] })
 }));
+
+vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte', () => ({
+    useMcapTickPrefetchScheduler: () => ({
+        bufferedRanges: [{ startIndex: 0, endIndex: 1 }],
+        errors: new Map(),
+        cancel: vi.fn()
+    })
+}));
+vi.mock('./useCreateCuboidAnnotation', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useCreateCuboidAnnotation: () => ({
+            handleCreateCuboid: vi.fn(),
+            showSelectClassDialog: writable(false),
+            handleClassSelected: vi.fn(),
+            handleClassDialogCancel: vi.fn(),
+            labels: { data: [] }
+        })
+    };
+});
 
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({

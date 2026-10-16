@@ -3,24 +3,18 @@ import type { PointBatch } from '$lib/components/PointCloudViewer/types';
 /** A 3D vector as an `[x, y, z]` tuple. */
 export type Vec3 = [number, number, number];
 
-/** Locates a single point-cloud frame within a channel. */
-export interface CloudPointChannelLocator {
-    /** Identifier of the channel to load the frame from. */
-    channelId: number;
-    /** Capture time of the frame, in nanoseconds (string to preserve precision). */
-    timestampNs: string;
-}
-
-/** Parameters for loading and merging point-cloud frames across channels. */
+/** Parameters for loading a tick and merging the point clouds of its lidar channels. */
 export interface CloudPointFrameParams {
-    /** Identifier of the dataset the recording belongs to. */
+    /** Identifier of the dataset the sequence belongs to. */
     datasetId: string;
-    /** Identifier of the recording to load frames from. */
-    recordingId: string;
-    /** The channels to load and merge into a single frame. */
-    channels: CloudPointChannelLocator[];
+    /** Identifier of the MCAP sequence that holds the tick. */
+    sequenceId: string;
+    /** Zero-based tick position in the sequence. */
+    seqNumber: number;
     /** Frame to express the points in. Omit to keep each sensor frame. */
     displayFrameId?: string;
+    /** Lidar channels to merge. Omit to merge every lidar channel of the tick. */
+    selectedChannelIds?: number[];
 }
 
 /** A parsed point-cloud frame with its batch data, metadata, and source channels. */

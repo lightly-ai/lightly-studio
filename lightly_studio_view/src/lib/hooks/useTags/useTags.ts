@@ -7,6 +7,8 @@ import { toggleTagSelection } from './toggleTagSelection';
 
 interface UseTagsOptions {
     collection_id: string;
+    /** Whether to load the tags of the collection when the hook is created. */
+    autoLoad?: boolean;
 }
 
 interface UseTagsReturn {
@@ -24,7 +26,7 @@ interface UseTagsReturn {
 const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 
 export function useTags(options: UseTagsOptions): UseTagsReturn {
-    const { collection_id } = options;
+    const { collection_id, autoLoad = true } = options;
     const { tags: tagsData } = useGlobalStorage();
     const { trackEvent } = usePostHog();
     const isLoaded = writable(false);
@@ -80,7 +82,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
     };
 
     // Auto-load tags when hook is initialized
-    if (!get(isLoaded) && collection_id) {
+    if (autoLoad && !get(isLoaded) && collection_id) {
         void loadTags();
         isLoaded.set(true);
     }

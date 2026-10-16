@@ -1,7 +1,7 @@
 import { fromStore } from 'svelte/store';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { formatFloat, formatInteger } from '$lib/utils';
-import { usePostHog } from '$lib/hooks';
+import { useFiltersClearedSignal, usePostHog } from '$lib/hooks';
 import type { CategoricalMetadataValue } from '$lib/services/types';
 
 type Range = { min: number; max: number };
@@ -24,6 +24,7 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         updateCategoricalMetadataValues
     } = useMetadataFilters(collectionId);
     const { trackEvent } = usePostHog();
+    const filtersCleared = fromStore(useFiltersClearedSignal().filtersCleared);
 
     const boundsStore = fromStore(metadataBounds);
     const valuesStore = fromStore(metadataValues);
@@ -31,6 +32,13 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
 
     let lastRanges = $state<BoundsMap>({});
     let lastCategoricalValues = $state<Record<string, CategoricalMetadataValue[]>>({});
+
+    // Forget all remembered filters when all filters are cleared at once.
+    $effect(() => {
+        void filtersCleared.current;
+        lastRanges = {};
+        lastCategoricalValues = {};
+    });
 
     const isNarrowed = (key: string): boolean => {
         const bound = boundsStore.current[key];

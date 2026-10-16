@@ -2,6 +2,7 @@
     import { T, useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import { GroundPlaneClickTarget } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
     import CuboidGizmo from './CuboidGizmo.svelte';
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
@@ -24,12 +25,14 @@
         hoveredAnnotationId?: string | null;
         /** Tool that determines whether cuboids can be selected. */
         activeTool?: Domain.WorkspaceTool;
-        /** Bounds of the point cloud containing the cuboids. */
-        pointCloudBounds: Domain.Bounds3;
+        /** Retained bounds that keep the click plane aligned with the visible ground plane. */
+        groundPlaneBounds: Domain.Bounds3;
         /** Fires when the user selects or deselects a cuboid. */
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
+        /** Fires when the user clicks the ground plane in create-cuboid mode. */
+        onCreateCuboid?: (position: Domain.Vector3) => void;
     }
 
     let {
@@ -38,8 +41,10 @@
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
+        groundPlaneBounds,
         onselect,
-        onhover
+        onhover,
+        onCreateCuboid
     }: Props = $props();
 
     const { renderer } = useThrelte();
@@ -108,6 +113,13 @@
         });
     });
 </script>
+
+{#if activeTool === 'create-cuboid'}
+    <GroundPlaneClickTarget
+        bounds={groundPlaneBounds}
+        onclick={(position) => onCreateCuboid?.(position)}
+    />
+{/if}
 
 {#each renderCuboids as item (item.annotation.id)}
     {@const base = resolveCuboidColor(annotationClasses, item.annotation.annotationClassId)}

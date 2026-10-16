@@ -5,7 +5,7 @@
 ## Learn More
 
 - [Homepage](https://www.lightly.ai)
-- [LightlyStudio Product Page](https://www.lightly.ai/studio-signup)
+- [LightlyStudio Product Page](https://www.lightly.ai/lightly-studio)
 - [Lightly Solution Documentation](https://docs.lightly.ai/)
 - [Contact Us](https://www.lightly.ai/contact)
 

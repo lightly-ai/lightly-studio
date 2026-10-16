@@ -9,10 +9,11 @@ import fsspec
 import numpy as np
 import pytest
 from mcap.exceptions import InvalidMagic
+from mcap.reader import SeekingReader
 from moto.server import ThreadedMotoServer
 from pytest_mock import MockerFixture
 
-from lightly_studio.core.mcap import matching, transforms
+from lightly_studio.core.mcap import matching
 from lightly_studio.core.mcap.errors import (
     ChannelNotFoundError,
     DataNotLoadedError,
@@ -20,8 +21,14 @@ from lightly_studio.core.mcap.errors import (
     TopicNotFoundError,
     TransformNotFoundError,
 )
-from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
+from lightly_studio.core.mcap.reader import (
+    McapFileReader,
+    ReadPattern,
+    calibration,
+    summary_cache,
+)
 from lightly_studio.core.mcap.reader import session as session_module
+from lightly_studio.core.mcap.type_definitions import StaticTransform
 from tests.core.mcap import helpers
 
 # The bucket and key the recording is uploaded to, to read it back over S3.
@@ -369,6 +376,51 @@ class TestMcapFileReader:
         ]
         assert len(reader.get_frame_locators(helpers.LIDAR_POINTS_TOPIC)) == 2
 
+    def test_get_dynamic_transforms__read_in_the_same_pass(
+        self, tmp_path: Path, mocker: MockerFixture
+    ) -> None:
+        path = helpers.write_mcap(
+            tmp_path / "with_tf.mcap",
+            base_link_poses=[(1_000_000_000, (10.0, 0.0, 0.0))],
+        )
+        with McapFileReader(path) as reader:
+            iter_messages = mocker.spy(reader._reader, "iter_messages")
+            reader.load_data_for_topics(
+                [helpers.LIDAR_POINTS_TOPIC],
+                static_transform_topic="/tf_static",
+                dynamic_transform_topic="/tf",
+            )
+            dynamic_transforms = reader.get_dynamic_transforms()
+
+        assert iter_messages.call_count == 1
+        assert [
+            (transform.parent_frame_id, transform.child_frame_id, transform.translation)
+            for transform in dynamic_transforms
+        ] == [("map", helpers.BASE_FRAME_ID, (10.0, 0.0, 0.0))]
+
+    def test_get_transform_at__uses_stored_dynamic_transforms(
+        self, reader: McapFileReader, mocker: MockerFixture
+    ) -> None:
+        near = mocker.patch.object(calibration, "dynamic_transforms_near")
+        matrix = reader.get_transform_at(
+            parent_frame_id="map",
+            child_frame_id=helpers.LIDAR_FRAME_ID,
+            timestamp_ns=1_000_000_000,
+            static_transforms=reader.get_static_transforms(),
+            dynamic_transforms=[
+                StaticTransform(
+                    parent_frame_id="map",
+                    child_frame_id=helpers.BASE_FRAME_ID,
+                    translation=(10.0, 0.0, 0.0),
+                    rotation=(0.0, 0.0, 0.0, 1.0),
+                    timestamp_ns=1_000_000_000,
+                )
+            ],
+        )
+
+        near.assert_not_called()
+        assert np.allclose(matrix @ [0.0, 0.0, 0.0, 1.0], [10.0, 1.0, 2.0, 1.0])
+
     def test_get_static_transforms__skips_bad_message(self, tmp_path: Path) -> None:
         path = helpers.write_json_mcap(
             path=tmp_path / "bad_tf_static.mcap",
@@ -553,10 +605,10 @@ class TestMcapFileReader:
             )
 
             result = reader.get_decoded_messages_in_range(
-                channel_id=channel_id,
+                channel_ids=[channel_id],
                 start_time_ns=helpers.IMAGE_LOG_TIMES_NS[0],
                 end_time_ns=helpers.IMAGE_LOG_TIMES_NS[1],
-            )
+            )[channel_id]
 
         assert [message.log_time_ns for message in result] == [
             helpers.IMAGE_LOG_TIMES_NS[0],
@@ -577,12 +629,12 @@ class TestMcapFileReader:
             )
 
             result = reader.get_decoded_messages_in_range(
-                channel_id=channel_id,
+                channel_ids=[channel_id],
                 start_time_ns=helpers.IMAGE_LOG_TIMES_NS[0] + 1,
                 end_time_ns=helpers.IMAGE_LOG_TIMES_NS[1] - 1,
             )
 
-        assert result == []
+        assert result == {channel_id: []}
 
     def test_get_decoded_messages_in_range__skips_other_channels_of_topic(
         self, tmp_path: Path
@@ -595,8 +647,8 @@ class TestMcapFileReader:
             second_channel_id = max(topic.channel_id for topic in reader.get_topics())
 
             result = reader.get_decoded_messages_in_range(
-                channel_id=second_channel_id, start_time_ns=1_000, end_time_ns=2_000
-            )
+                channel_ids=[second_channel_id], start_time_ns=1_000, end_time_ns=2_000
+            )[second_channel_id]
 
         assert [message.log_time_ns for message in result] == [1_000, 2_000]
         assert all(message.channel_id == second_channel_id for message in result)
@@ -604,6 +656,65 @@ class TestMcapFileReader:
             {"channel": 1},
             {"channel": 1},
         ]
+
+    def test_get_decoded_messages_in_range__several_channels(self, tmp_path: Path) -> None:
+        path = helpers.write_json_mcap_with_two_channels(
+            path=tmp_path / "two_channels.mcap", topic="/shared", log_times_ns=[1_000, 2_000]
+        )
+        with McapFileReader(path) as reader:
+            first_channel_id, second_channel_id = sorted(
+                topic.channel_id for topic in reader.get_topics()
+            )
+
+            result = reader.get_decoded_messages_in_range(
+                channel_ids=[first_channel_id, second_channel_id],
+                start_time_ns=1_000,
+                end_time_ns=2_000,
+            )
+
+        assert {
+            channel_id: [(message.log_time_ns, message.decoded_message) for message in messages]
+            for channel_id, messages in result.items()
+        } == {
+            first_channel_id: [(1_000, {"channel": 0}), (2_000, {"channel": 0})],
+            second_channel_id: [(1_000, {"channel": 1}), (2_000, {"channel": 1})],
+        }
+
+    def test_get_decoded_messages_in_windows(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        path = helpers.write_json_mcap_with_two_channels(
+            path=tmp_path / "two_channels.mcap",
+            topic="/shared",
+            log_times_ns=[1_000, 2_000, 3_000],
+        )
+        with McapFileReader(path) as reader:
+            first_channel_id, second_channel_id = sorted(
+                topic.channel_id for topic in reader.get_topics()
+            )
+            decode_spy = mocker.spy(session_module.ChannelDecoder, "required_payload")
+
+            result = reader.get_decoded_messages_in_windows(
+                windows_ns={first_channel_id: (2_000, 3_000), second_channel_id: (1_000, 1_000)}
+            )
+
+        assert {
+            channel_id: [message.log_time_ns for message in messages]
+            for channel_id, messages in result.items()
+        } == {first_channel_id: [2_000, 3_000], second_channel_id: [1_000]}
+        # Messages outside the window of their channel are not decoded.
+        assert decode_spy.call_count == 3
+
+    def test_get_decoded_messages_in_windows__no_channel(self, reader: McapFileReader) -> None:
+        assert reader.get_decoded_messages_in_windows(windows_ns={}) == {}
+
+    def test_get_decoded_messages_in_windows__undecodable_channel(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_undecodable_video(tmp_path / "undecodable.mcap")
+        with McapFileReader(path) as reader:
+            channel_id = next(topic.channel_id for topic in reader.get_topics())
+
+            with pytest.raises(McapAccessError, match="Cannot decode"):
+                reader.get_decoded_messages_in_windows(
+                    windows_ns={channel_id: (0, helpers.VIDEO_LOG_TIMES_NS[-1])}
+                )
 
     def test_get_decoded_message_at__unknown_channel(self, reader: McapFileReader) -> None:
         with pytest.raises(ChannelNotFoundError):
@@ -623,27 +734,6 @@ class TestMcapFileReader:
                     channel_id=channel_id,
                     timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
                 )
-
-    def test_read_dynamic_edges_until__stops_when_the_frames_are_seen(
-        self, tmp_path: Path, mocker: MockerFixture
-    ) -> None:
-        path = helpers.write_mcap(
-            tmp_path / "with_tf.mcap",
-            base_link_poses=[
-                (1_000_000_000, (10.0, 0.0, 0.0)),
-                (1_100_000_000, (20.0, 0.0, 0.0)),
-            ],
-        )
-
-        with McapFileReader(path) as reader:
-            frame_edges = mocker.spy(transforms, "frame_edges")
-            edges = reader.read_dynamic_edges_until(frame_ids=["map"])
-
-        assert edges == [("map", "base_link")]
-        assert frame_edges.call_count == 1
-
-    def test_read_dynamic_edges_until__missing_topic(self, reader: McapFileReader) -> None:
-        assert reader.read_dynamic_edges_until(frame_ids=["map"]) == []
 
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
@@ -704,6 +794,31 @@ def test_mcap_file_reader__s3_uri(s3_mcap_uri: str, s3_storage_options: dict[str
     ]
     assert intrinsics.width == helpers.IMAGE_WIDTH
     assert intrinsics.camera_matrix == helpers.CAMERA_MATRIX
+
+
+def test_mcap_file_reader__s3_reuses_cached_summary(
+    s3_mcap_uri: str, s3_storage_options: dict[str, Any], mocker: MockerFixture
+) -> None:
+    """A second reader of the same object does not download the summary again."""
+    summary_cache.clear()
+    summary_reads = 0
+    original_get_summary = SeekingReader.get_summary
+
+    def get_summary(self: SeekingReader) -> Any:
+        nonlocal summary_reads
+        if self._summary is not None:
+            return self._summary
+        summary_reads += 1
+        return original_get_summary(self)
+
+    mocker.patch.object(SeekingReader, "get_summary", get_summary)
+    with McapFileReader(s3_mcap_uri, storage_options=s3_storage_options) as first:
+        first_topics = first.get_topics()
+    with McapFileReader(s3_mcap_uri, storage_options=s3_storage_options) as second:
+        second_topics = second.get_topics()
+
+    assert summary_reads == 1
+    assert [topic.name for topic in second_topics] == [topic.name for topic in first_topics]
 
 
 def test_mcap_file_reader__s3_uri_cached(
