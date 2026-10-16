@@ -9,7 +9,7 @@ const { initializeSlic } = vi.hoisted(() => ({ initializeSlic: vi.fn(async () =>
 vi.mock('@lightly-ai/slic', () => ({ getSlicEngine: initializeSlic }));
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'slic',
+    status: 'cursor' as ToolbarStatus,
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
     },
@@ -41,6 +41,12 @@ vi.mock('$lib/hooks/useSettings', () => ({
     useSettings: () => ({
         settingsStore
     })
+}));
+
+const assistedLabelingTools = { smartSelectDisabledReason: null as string | null };
+
+vi.mock('$lib/hooks/useAssistedLabelingProvider', () => ({
+    useAssistedLabelingProvider: () => ({ tools: assistedLabelingTools })
 }));
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
@@ -91,6 +97,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.isErasing = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
+        assistedLabelingTools.smartSelectDisabledReason = null;
     });
 
     it('starts in cursor mode and resets annotation state on mount', () => {
@@ -197,6 +204,36 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
         expect(mockSampleDetailsToolbarContext.status).toBe('slic');
         settingsStore.update((settings) => ({ ...settings, key_toolbar_slic: 'a' }));
+    });
+
+    it('activates the smart select tool', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Smart select'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('smart-select');
+    });
+
+    it('resets the annotation type of the previous tool in smart select', () => {
+        mockSampleDetailsToolbarContext.status = 'smart-select';
+        mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBeNull();
+    });
+
+    it('keeps smart select inactive and shows why while the provider is unavailable', async () => {
+        assistedLabelingTools.smartSelectDisabledReason = 'FAL_KEY is not set.';
+        const view = render(SampleDetailsToolbar);
+
+        const button = view.getByLabelText('Smart select');
+        await fireEvent.pointerEnter(button.parentElement!);
+        await fireEvent.click(button);
+
+        expect(view.getByRole('tooltip')).toHaveTextContent('FAL_KEY is not set.');
+        expect(button).toHaveAttribute('aria-disabled', 'true');
+        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
     });
 
     it('activates drag tool', async () => {

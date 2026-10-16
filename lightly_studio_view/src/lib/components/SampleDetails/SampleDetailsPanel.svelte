@@ -111,7 +111,8 @@
             // Check for escape key
             case get(settingsStore).key_go_back:
                 if ($isEditingMode) {
-                    if (annotationLabelContext.annotationType) {
+                    const isSmartSelect = sampleDetailsToolbarContext.status === 'smart-select';
+                    if (annotationLabelContext.annotationType || isSmartSelect) {
                         setStatus('cursor');
                     }
                 } else {
