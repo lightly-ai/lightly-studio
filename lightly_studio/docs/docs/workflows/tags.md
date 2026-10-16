@@ -9,6 +9,12 @@ for export. Tags can be created manually in the GUI or programmatically through 
 The left sidebar lists all tags in the current view. Select one or more to show samples matching
 any of them.
 
+In the **Groups** view, click a tag checkbox to cycle through three states: unchecked (no filter),
+checked (include), and a red minus (exclude). Pressing `Space` on a focused checkbox does the same.
+Included tags match any of the selected tags. A group with any excluded tag is hidden, even if it
+also has an included tag. These filters use tags on the group itself, not its component images.
+Use **Clear all filters** to reset both included and excluded tags.
+
 To assign tags, first select samples in the grid view. Then, in the left sidebar, create a new tag
 or assign an existing one. Tags can be removed in sample details view.
 

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added three-state tag checkboxes to the group grid: unchecked, included, or excluded (red minus).
+
 - Buffer upcoming MCAP point-cloud ticks in the GUI, show buffered ticks on the timeline, and optionally buffer the entire sequence. Playback waits for unbuffered ticks, and the grid preloads the first 50 ticks of the first 10 sequences.
 - Added an image interpolation setting to show sharp pixel edges when zooming in.
 - Added a "Clear all filters" button to the filter sidebar.

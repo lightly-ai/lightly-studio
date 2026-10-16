@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { TagFilterCheckbox } from './TagFilterCheckbox';
+    import { useTagExclusions } from '$lib/hooks/useTagExclusions';
     import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { Checkbox } from '$lib/components';
@@ -29,6 +31,15 @@
     const { tags, tagsSelected, tagSelectionToggle, loadTags, clearTagSelected } = $derived(
         useTags({ collection_id })
     );
+
+    const { excludedTagIds, setExcluded } = $derived(useTagExclusions(collection_id));
+    function cycleTagFilter(tagId: string) {
+        if ($excludedTagIds.has(tagId)) setExcluded(tagId, false);
+        else if ($tagsSelected.has(tagId)) {
+            clearTagSelected(tagId);
+            setExcluded(tagId, true);
+        } else tagSelectionToggle(tagId);
+    }
 
     const {
         getSelectedSampleIds,
@@ -153,6 +164,7 @@
             }
 
             clearTagSelected(tag.tag_id);
+            setExcluded(tag.tag_id, false);
             loadTags();
             toast.success('Tag deleted successfully');
         } catch {
@@ -200,6 +212,11 @@
 </script>
 
 <Segment title="Tags">
+    {#if gridType === 'groups'}
+        <p class="mb-2 text-xs text-muted-foreground">
+            Click to cycle: unchecked → include ✓ → exclude red −.
+        </p>
+    {/if}
     <div class="mb-3 w-full space-y-1">
         <div class="space-y-1">
             {#each $tags as tag (tag.tag_id)}
@@ -217,6 +234,13 @@
                                 onTagSelectionToggle={tagSelectionToggle}
                                 onSave={handleRename}
                                 onCancel={cancelRename}
+                            />
+                        {:else if gridType === 'groups'}
+                            <TagFilterCheckbox
+                                label={tag.name}
+                                included={$tagsSelected.has(tag.tag_id)}
+                                excluded={$excludedTagIds.has(tag.tag_id)}
+                                onclick={() => cycleTagFilter(tag.tag_id)}
                             />
                         {:else}
                             <Checkbox
