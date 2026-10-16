@@ -4,7 +4,8 @@ import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
 const params = {
     isDrawing: false,
     isErasing: false,
-    status: 'cursor' as const
+    status: 'cursor' as const,
+    isDrawingInstancesBox: false
 };
 
 describe('isPanEnabled', () => {
@@ -17,7 +18,14 @@ describe('isPanEnabled', () => {
         expect(isPanEnabled({ ...params, isErasing: true })).toBe(false);
     });
 
-    it('disables panning for assisted labeling tools', () => {
+    it('disables panning for smart select', () => {
         expect(isPanEnabled({ ...params, status: 'smart-select' })).toBe(false);
+    });
+
+    it('disables panning while drawing a find instances box', () => {
+        expect(isPanEnabled({ ...params, status: 'find-instances' })).toBe(true);
+        expect(
+            isPanEnabled({ ...params, status: 'find-instances', isDrawingInstancesBox: true })
+        ).toBe(false);
     });
 });
