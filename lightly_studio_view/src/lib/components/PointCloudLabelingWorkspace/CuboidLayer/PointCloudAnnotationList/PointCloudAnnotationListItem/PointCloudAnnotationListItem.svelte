@@ -4,6 +4,7 @@
     import { Typography } from '$lib/components/Typography';
     import { ChevronDown, Trash2 } from '@lucide/svelte';
     import { cn } from '$lib/utils';
+    import { Button } from '$lib/components/ui/button';
     import { Tooltip } from '$lib/components/ui/tooltip';
 
     interface Props {
@@ -33,37 +34,42 @@
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50'
     )}
 >
-    <button
-        type="button"
-        class="flex w-full items-center gap-2 px-4 py-3 text-left"
-        onclick={() => onToggle(cuboid.id)}
-        aria-expanded={isSelected}
-        data-testid="point-cloud-annotation-list-row"
-    >
-        <span
-            class="size-3 shrink-0 rounded-sm"
-            style="background-color: {color}"
-            aria-hidden="true"
-        ></span>
-        <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
+    <div class="flex w-full items-center">
+        <button
+            type="button"
+            class="flex flex-1 items-center gap-2 px-4 py-3 text-left"
+            onclick={() => onToggle(cuboid.id)}
+            aria-expanded={isSelected}
+            data-testid="point-cloud-annotation-list-row"
+        >
+            <span
+                class="size-3 shrink-0 rounded-sm"
+                style="background-color: {color}"
+                aria-hidden="true"
+            ></span>
+            <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
+            <ChevronDown
+                class={cn(
+                    'size-4 shrink-0 text-muted-foreground transition-transform',
+                    isSelected && 'rotate-180'
+                )}
+            />
+        </button>
         {#if onDelete}
             <Tooltip content="Delete annotation">
-                <Trash2
-                    class="size-4 shrink-0 text-muted-foreground hover:text-destructive"
-                    onclick={(e: MouseEvent) => {
-                        e.stopPropagation();
-                        onDelete(cuboid.id);
-                    }}
-                />
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    class="shrink-0 text-muted-foreground hover:text-destructive"
+                    aria-label="Delete annotation"
+                    onclick={() => onDelete(cuboid.id)}
+                    data-testid="point-cloud-annotation-delete-button"
+                >
+                    <Trash2 class="size-4" />
+                </Button>
             </Tooltip>
         {/if}
-        <ChevronDown
-            class={cn(
-                'size-4 shrink-0 text-muted-foreground transition-transform',
-                isSelected && 'rotate-180'
-            )}
-        />
-    </button>
+    </div>
     {#if isSelected}
         <div class="px-4 pb-4 pt-1">
             <PointCloudAnnotationDetails {annotationSourceName} annotation={cuboid} />

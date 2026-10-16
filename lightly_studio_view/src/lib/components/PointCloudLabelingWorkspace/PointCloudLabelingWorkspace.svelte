@@ -16,21 +16,13 @@
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
-    import {
-        useAnnotationCollections,
-        useAnnotationLabels,
-        useCreateAnnotation,
-        useDeleteAnnotation,
-        useGlobalStorage,
-        useMcapTickPrefetchScheduler
-    } from '$lib/hooks';
-    import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
-    import { toast } from 'svelte-sonner';
+    import { useAnnotationCollections, useMcapTickPrefetchScheduler } from '$lib/hooks';
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
     import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
+    import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation/useDeleteCuboidAnnotation.svelte';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
     import type { Vector3, WorkspaceTool } from './domain';
 
@@ -281,39 +273,17 @@
         onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
     });
 
-    const annotationLabels = useAnnotationLabels(() => ({
-        collectionId: annotationSourceCollectionId ?? ''
-    }));
-    const { deleteAnnotation } = useDeleteAnnotation({
-        getCollectionId: () => annotationSourceCollectionId ?? ''
+    const { handleDeleteCuboid: deleteCuboidAnnotation } = useDeleteCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        getAnnotations: () => sceneSnapshot?.annotations ?? []
     });
-    const { createAnnotation } = useCreateAnnotation({
-        getCollectionId: () => annotationSourceCollectionId ?? ''
-    });
-    const { addReversibleAction } = useGlobalStorage();
 
     async function handleDeleteCuboid(cuboidId: string): Promise<void> {
-        const annotation = sceneSnapshot?.annotations.find((a) => a.sample_id === cuboidId);
-        if (!annotation) return;
-
-        addAnnotationDeleteToUndoStack({
-            annotation,
-            labels: annotationLabels.data ?? [],
-            sources: annotationCollectionsQuery.data ?? [],
-            addReversibleAction,
-            createAnnotation,
-            refetch: () => void workspace.tickDetails.refetch()
-        });
-
-        try {
-            await deleteAnnotation(cuboidId, annotation.annotation_type);
-            toast.success('Annotation deleted successfully');
-            await workspace.tickDetails.refetch();
-            if (selectedCuboidId === cuboidId) {
-                selectedCuboidId = null;
-            }
-        } catch {
-            toast.error('Failed to delete annotation. Please try again.');
+        const deleted = await deleteCuboidAnnotation(cuboidId);
+        if (!deleted) return;
+        await workspace.tickDetails.refetch();
+        if (selectedCuboidId === cuboidId) {
+            selectedCuboidId = null;
         }
     }
 
