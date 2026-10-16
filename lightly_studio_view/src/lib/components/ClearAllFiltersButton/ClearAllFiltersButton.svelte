@@ -9,12 +9,13 @@
         isImages: boolean;
         isVideos: boolean;
         isVideoFrames: boolean;
+        isGroups: boolean;
     }
 
-    let { collectionId, isImages, isVideos, isVideoFrames }: Props = $props();
+    let { collectionId, isImages, isVideos, isVideoFrames, isGroups }: Props = $props();
 
     const { hasActiveFilters, clearAllFilters } = $derived(
-        useClearAllFilters({ collectionId, isImages, isVideos, isVideoFrames })
+        useClearAllFilters({ collectionId, isImages, isVideos, isVideoFrames, isGroups })
     );
 </script>
 
