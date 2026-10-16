@@ -113,9 +113,10 @@ export function useCuboidFaceResize({
 
     function finishDrag(): void {
         if (!activeDrag) return;
-        canvas.releasePointerCapture(activeDrag.pointerId);
-        if (orbitControls.current) orbitControls.current.enabled = true;
+        const { pointerId } = activeDrag;
         activeDrag = null;
+        if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+        if (orbitControls.current) orbitControls.current.enabled = true;
         canvas.style.cursor = get(hoveredFace) ? 'grab' : '';
     }
 
@@ -136,8 +137,9 @@ export function useCuboidFaceResize({
     }
 
     function cancelDrag(): void {
+        if (!activeDrag) return;
         const object = parentObject.current;
-        if (activeDrag && object) {
+        if (object) {
             object.position.set(...activeDrag.originalCenter);
             object.scale.set(1, 1, 1);
             invalidate();
