@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from uuid import UUID
 
 import pytest
@@ -32,6 +33,23 @@ def test_segment__without_key_does_not_call_fal(
 
     with pytest.raises(ProviderNotCalledError, match="FAL_KEY"):
         FalSam3Provider(session=mocker.MagicMock()).segment(image=IMAGE, prompt=TEXT_PROMPT)
+
+    run_queue_request.assert_not_called()
+
+
+def test_segment__unreadable_image_does_not_call_fal(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAL_KEY", "k3y")
+    run_queue_request = mocker.patch.object(fal_http, "run_queue_request")
+
+    def _read_bytes() -> bytes:
+        raise FileNotFoundError("missing image")
+
+    image = dataclasses.replace(IMAGE, read_bytes=_read_bytes)
+
+    with pytest.raises(ProviderNotCalledError, match="missing image"):
+        FalSam3Provider(session=mocker.MagicMock()).segment(image=image, prompt=TEXT_PROMPT)
 
     run_queue_request.assert_not_called()
 

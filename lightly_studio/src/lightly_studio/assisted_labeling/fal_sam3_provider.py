@@ -93,7 +93,8 @@ class FalSam3Provider:
         try:
             fal_key = _get_fal_key()
             image_url = self._get_image_url(image=image, fal_key=fal_key)
-        except ProviderError as error:
+        except (ProviderError, OSError) as error:
+            # OSError: the image file cannot be read.
             raise ProviderNotCalledError(str(error)) from error
         output = fal_http.run_queue_request(
             session=self._session,
