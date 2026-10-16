@@ -138,6 +138,7 @@ class SampleViewsWithCount(BaseModel):
 
     samples: list[SampleView] = PydanticField(..., alias="data")
     total_count: int
+    total_caption_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
 
 
