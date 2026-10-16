@@ -26,16 +26,28 @@ describe('computeDragPlane', () => {
         expect(plane.normal.z).toBeCloseTo(cameraDirection.z);
     });
 
-    it('falls back to camera-facing plane when camera looks along the face normal', () => {
-        const cameraDirection = new Vector3(0, 0, -1);
+    it('uses a tangent perpendicular to face normal when camera looks along the face normal', () => {
         const plane = computeDragPlane({
-            cameraDirection,
+            cameraDirection: new Vector3(0, 0, -1),
             faceNormal: new Vector3(0, 0, 1),
             startPoint
         });
-        expect(plane.normal.x).toBeCloseTo(cameraDirection.x);
-        expect(plane.normal.y).toBeCloseTo(cameraDirection.y);
-        expect(plane.normal.z).toBeCloseTo(cameraDirection.z);
+        // cross(faceNormal(0,0,1), up(0,1,0)) = (-1,0,0)
+        expect(plane.normal.x).toBeCloseTo(-1);
+        expect(plane.normal.y).toBeCloseTo(0);
+        expect(plane.normal.z).toBeCloseTo(0);
+    });
+
+    it('uses world-right fallback when face normal is world-up', () => {
+        const plane = computeDragPlane({
+            cameraDirection: new Vector3(0, -1, 0),
+            faceNormal: new Vector3(0, 1, 0),
+            startPoint
+        });
+        // cross(faceNormal(0,1,0), up(0,1,0)) ≈ 0 → cross(faceNormal, right(1,0,0)) = (0,0,-1)
+        expect(plane.normal.x).toBeCloseTo(0);
+        expect(plane.normal.y).toBeCloseTo(0);
+        expect(plane.normal.z).toBeCloseTo(-1);
     });
 
     it('passes through the start point', () => {

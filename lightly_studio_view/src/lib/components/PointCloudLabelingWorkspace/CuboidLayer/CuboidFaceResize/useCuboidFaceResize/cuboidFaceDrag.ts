@@ -30,9 +30,9 @@ interface FaceDrag {
  * component of {@link cameraDirection} perpendicular to {@link faceNormal}, so
  * the plane contains the face-normal direction and pointer movement maps to a
  * nonzero resize delta. When the camera looks along the face normal (within
- * ~6°), the perpendicular component vanishes; we fall back to the camera-facing
- * plane where resize simply becomes insensitive rather than numerically
- * unstable.
+ * ~6°), the perpendicular component vanishes; we fall back to a plane whose
+ * normal is a stable tangent (cross product with world-up, or world-right when
+ * the face normal is vertical) so the drag plane still contains the resize axis.
  */
 export function computeDragPlane({
     cameraDirection,
@@ -43,11 +43,21 @@ export function computeDragPlane({
     faceNormal: Vector3;
     startPoint: Vector3;
 }): Plane {
+    const NEAR_ZERO = 0.01;
     const perpendicular = cameraDirection
         .clone()
         .addScaledVector(faceNormal, -cameraDirection.dot(faceNormal));
-    const planeNormal =
-        perpendicular.lengthSq() > 0.01 ? perpendicular.normalize() : cameraDirection;
+    let planeNormal: Vector3;
+    if (perpendicular.lengthSq() > NEAR_ZERO) {
+        planeNormal = perpendicular.normalize();
+    } else {
+        const up = new Vector3(0, 1, 0);
+        const tangent = new Vector3().crossVectors(faceNormal, up);
+        if (tangent.lengthSq() < NEAR_ZERO) {
+            tangent.crossVectors(faceNormal, new Vector3(1, 0, 0));
+        }
+        planeNormal = tangent.normalize();
+    }
     return new Plane().setFromNormalAndCoplanarPoint(planeNormal, startPoint);
 }
 
