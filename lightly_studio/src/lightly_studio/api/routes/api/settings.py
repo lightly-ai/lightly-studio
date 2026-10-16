@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from lightly_studio.assisted_labeling import registry
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.settings import SettingView
 from lightly_studio.resolvers import settings_resolver
@@ -37,5 +38,9 @@ def set_settings(
 
     Returns:
         Updated settings.
+
+    Raises:
+        ValueError: If the assisted labeling provider is unknown.
     """
+    registry.get_provider(provider_id=settings.assisted_labeling_provider)
     return settings_resolver.set_settings(session=session, settings=settings)

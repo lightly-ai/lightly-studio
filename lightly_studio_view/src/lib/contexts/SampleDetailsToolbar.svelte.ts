@@ -3,7 +3,15 @@ import { getContext, setContext } from 'svelte';
 export type BrushMode = 'brush' | 'eraser';
 export type SlicLevel = 'coarse' | 'medium' | 'fine';
 export type SlicStatus = 'idle' | 'computing' | 'ready' | 'error';
-export type ToolbarStatus = 'bounding-box' | 'brush' | 'eraser' | 'drag' | 'cursor' | 'slic';
+export type ToolbarStatus =
+    | 'bounding-box'
+    | 'brush'
+    | 'eraser'
+    | 'drag'
+    | 'cursor'
+    | 'slic'
+    | 'wand'
+    | 'instances';
 
 export type SampleDetailsToolbarContext = {
     status: ToolbarStatus;
