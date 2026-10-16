@@ -9,6 +9,5 @@
     let { viewportState, onViewportState }: Props = $props();
 </script>
 
-<output data-testid="plot-viewport">{viewportState ? JSON.stringify(viewportState) : 'auto'}</output
->
+<output data-testid="plot-viewport">{JSON.stringify(viewportState)}</output>
 <button onclick={() => onViewportState({ x: 1, y: 1, scale: 3 })}>Pan plot</button>

@@ -3,7 +3,7 @@ import type { ViewportState } from 'embedding-atlas/svelte';
 // Half the visible range of each text axis, in difference of cosine similarity. Real axes on a
 // celebrity dataset reach about ±0.15 and nonsense texts about ±0.05. A fixed range, the same on
 // both axes, shows how strongly the images vary along each axis, which fitting to the data hides.
-export const TEXT_AXES_HALF_RANGE = 0.2;
+const TEXT_AXES_HALF_RANGE = 0.2;
 
 interface GetDefaultViewportParams {
     hasTextAxes: boolean;

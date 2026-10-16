@@ -7,11 +7,8 @@ describe('getDefaultViewport', () => {
     });
 
     it('shows -0.2 to 0.2 on the shorter side of the plot, centered on the origin', () => {
-        expect(getDefaultViewport({ hasTextAxes: true, width: 400, height: 400 })).toEqual({
-            x: 0,
-            y: 0,
-            scale: 5
-        });
+        const square = getDefaultViewport({ hasTextAxes: true, width: 400, height: 400 });
+        expect(square).toEqual({ x: 0, y: 0, scale: 5 });
         expect(getDefaultViewport({ hasTextAxes: true, width: 800, height: 400 })?.scale).toBe(2.5);
         expect(getDefaultViewport({ hasTextAxes: true, width: 400, height: 800 })?.scale).toBe(2.5);
     });

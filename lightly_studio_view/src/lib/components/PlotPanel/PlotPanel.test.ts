@@ -77,7 +77,7 @@ vi.mock('$app/state', () => ({
 
 // Mock dependencies
 vi.mock('embedding-atlas/svelte', async () => ({
-    EmbeddingView: (await import('./PlotPanelEmbeddingView.test.svelte')).default
+    EmbeddingView: (await import('./EmbeddingViewStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 const mockEmbedTextAxes = vi.hoisted(() => vi.fn());
@@ -639,33 +639,27 @@ describe('PlotPanel.svelte', () => {
 
     it('uses the text-axis viewport after resetting a user pan', async () => {
         const user = userEvent.setup();
+        const viewport = () => screen.getByTestId('plot-viewport');
+        const defaultViewport = JSON.stringify({ x: 0, y: 0, scale: 5 });
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
             () => new DOMRect(0, 0, 400, 400)
         );
-        plotDataStore.set({
-            x: new Float32Array([0]),
-            y: new Float32Array([0]),
-            category: new Uint8Array([0])
-        });
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
         mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
 
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
-        expect(await screen.findByTestId('plot-viewport')).toHaveTextContent('auto');
+        // PaCMAP has no default viewport: Embedding Atlas fits the view to the data.
+        expect(await screen.findByTestId('plot-viewport')).toHaveTextContent('null');
 
         await commitTextAxes(user);
-        expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
-            JSON.stringify({ x: 0, y: 0, scale: 5 })
-        );
+        expect(viewport()).toHaveTextContent(defaultViewport);
 
         await user.click(screen.getByRole('button', { name: 'Pan plot' }));
-        expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
-            JSON.stringify({ x: 1, y: 1, scale: 3 })
-        );
+        expect(viewport()).toHaveTextContent(JSON.stringify({ x: 1, y: 1, scale: 3 }));
 
         await user.click(screen.getByTestId('plot-reset-zoom-button'));
-        expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
-            JSON.stringify({ x: 0, y: 0, scale: 5 })
-        );
+        expect(viewport()).toHaveTextContent(defaultViewport);
     });
 
     it('clears the region and shows a hint when the Text layout is selected', async () => {

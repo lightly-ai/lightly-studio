@@ -14,11 +14,9 @@ export const embedTextAxes = async (
     // for each other and only add load.
     const embeddings: number[][] = [];
     for (const text of [x.negative, x.positive, y.negative, y.positive]) {
-        // The norm is required for the axes to make sense. With unit vectors p and n, the
-        // midpoint (p + n) / 2 projects to (|p|² - |n|²) / 2 = 0 on the axis p - n. So x = 0 is
-        // exactly where a sample is as similar to n as to p, and x > 0 where it is more similar
-        // to p. Without it, a text with a larger norm (for example with MobileCLIP) moves x = 0
-        // away from the midpoint.
+        // With unit vectors p and n, the midpoint (p + n) / 2 projects to (|p|² - |n|²) / 2 = 0
+        // on the axis p - n, so x = 0 is where a sample is as similar to n as to p. With other
+        // norms (for example from MobileCLIP), x = 0 moves away from the midpoint.
         embeddings.push(normalize(await embed(collectionId, text)));
     }
     const [xNegative, xPositive, yNegative, yPositive] = embeddings;
