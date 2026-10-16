@@ -7,6 +7,9 @@ import {
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useSmartSelect } from '$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte';
+import { DEFAULT_MAX_INSTANCES } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
+
+const noop = (): void => undefined;
 
 interface UseAssistedLabelingToolsParams {
     collectionId: string;
@@ -18,9 +21,22 @@ interface UseAssistedLabelingToolsParams {
 class AssistedLabelingToolState {
     saveAs = $state<'mask' | 'box'>('mask');
     smartSelectClass = $state<string | null>(null);
+    instancesClass = $state<string | null>(null);
+    instancesPrompt = $state('');
+    maxInstances = $state(DEFAULT_MAX_INSTANCES);
+    isDrawingInstancesBox = $state(false);
+    instances = $state({
+        boxCount: 0,
+        isGenerating: false,
+        resultCount: 0,
+        canSave: false,
+        generate: noop,
+        save: noop,
+        clear: noop
+    });
 }
 
-// Shares the tool state between the pop-up and the overlay, and falls back to the cursor
+// Shares the tool state between the pop-ups and the overlays, and falls back to the cursor
 // tool when edit mode ends or assisted labeling becomes unusable.
 export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToolsParams) => {
     const assistedLabelingStatus = useAssistedLabelingStatus();
@@ -36,6 +52,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const smartSelectClass = $derived(
         state.smartSelectClass ?? annotationLabelContext.annotationLabel
     );
+    const instancesClass = $derived(state.instancesClass ?? annotationLabelContext.annotationLabel);
     const smartSelect = useSmartSelect(() => {
         const { collectionId, sampleId, refetch } = getParams();
         return {
@@ -61,6 +78,11 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         if (activeTool !== 'smart-select') smartSelect.clear();
     });
 
+    // Leaving the tool, e.g. by a tool switch or Escape, ends box drawing.
+    $effect(() => {
+        if (activeTool !== 'find-instances') state.isDrawingInstancesBox = false;
+    });
+
     return {
         state,
         smartSelect,
@@ -72,6 +94,9 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         },
         get smartSelectClass() {
             return smartSelectClass;
+        },
+        get instancesClass() {
+            return instancesClass;
         }
     };
 };

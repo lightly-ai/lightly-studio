@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import SmartSelectOverlay from '$lib/components/SampleDetails/SmartSelectOverlay/SmartSelectOverlay.svelte';
+    import FindInstancesOverlay from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.svelte';
     import type { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
 
     interface Props {
@@ -31,6 +32,23 @@
             isPanning={assistedLabeling.isPanning}
             saveAs={assistedLabeling.state.saveAs}
             smartSelect={assistedLabeling.smartSelect}
+        />
+    {:else if assistedLabeling.activeTool === 'find-instances'}
+        <FindInstancesOverlay
+            bind:interactionRect
+            {collectionId}
+            sampleId={sample.sampleId}
+            {sample}
+            {refetch}
+            prompt={toolState.instancesPrompt}
+            onPromptChange={(value) => (toolState.instancesPrompt = value)}
+            maxInstances={toolState.maxInstances}
+            saveAs={toolState.saveAs}
+            annotationClass={assistedLabeling.instancesClass}
+            annotationSource={annotationLabelContext.annotationSource}
+            isDrawingBox={toolState.isDrawingInstancesBox}
+            onBoxDrawn={() => (toolState.isDrawingInstancesBox = false)}
+            onStateChange={(state) => (toolState.instances = state)}
         />
     {/if}
 {/key}
