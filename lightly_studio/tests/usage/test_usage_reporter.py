@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import dataclasses
+import queue
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from unittest.mock import Mock
 from uuid import UUID
 
 import pytest
@@ -45,65 +46,61 @@ URL = "https://cp.example/usage-events"
 def test_report__does_nothing_without_config(
     mocker: MockerFixture, url: str | None, token: str | None
 ) -> None:
-    session = mocker.patch.object(usage_reporter, "_session")
+    event_queue = _patch_queue(mocker=mocker)
+    start_worker = mocker.patch.object(usage_reporter, "_start_worker")
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", url)
     mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", token)
 
     usage_reporter.report(events=[EVENT])
 
-    session.post.assert_not_called()
+    assert event_queue.empty()
+    start_worker.assert_not_called()
 
 
-def test_report__sends_with_config(mocker: MockerFixture) -> None:
-    executor = ThreadPoolExecutor(max_workers=1)
-    mocker.patch.object(usage_reporter, "_executor", executor)
-    session = mocker.patch.object(usage_reporter, "_session")
+def test_report__sends_from_a_worker_thread(mocker: MockerFixture) -> None:
+    _patch_queue(mocker=mocker)
+    mocker.patch.object(usage_reporter, "_worker_started", threading.Event())
+    sent = threading.Event()
+    sending_threads: list[threading.Thread] = []
+
+    def _send(**_kwargs: object) -> None:
+        sending_threads.append(threading.current_thread())
+        sent.set()
+
+    send = mocker.patch.object(usage_reporter, "send", side_effect=_send)
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
     mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
 
     usage_reporter.report(events=[EVENT])
-    executor.shutdown(wait=True)
 
-    session.post.assert_called_once()
-    assert session.post.call_args.args == (URL,)
-
-
-def test_report__sends_from_another_thread(mocker: MockerFixture) -> None:
-    executor = ThreadPoolExecutor(max_workers=1)
-    mocker.patch.object(usage_reporter, "_executor", executor)
-    posting_threads: list[threading.Thread] = []
-    session = mocker.patch.object(usage_reporter, "_session")
-    session.post.side_effect = lambda *_args, **_kwargs: posting_threads.append(
-        threading.current_thread()
-    )
-    mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
-    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
-
-    usage_reporter.report(events=[EVENT])
-    executor.shutdown(wait=True)
-
+    assert sent.wait(timeout=5)
+    assert send.call_args.kwargs["events"] == [EVENT]
+    assert send.call_args.kwargs["url"] == URL
+    assert send.call_args.kwargs["token"] == "t0k"
     # The caller never waits for the receiver.
-    assert posting_threads != [threading.current_thread()]
-    assert len(posting_threads) == 1
+    assert sending_threads[0] is not threading.current_thread()
 
 
-def test_report__never_raises_when_it_cannot_queue(mocker: MockerFixture) -> None:
-    executor = ThreadPoolExecutor(max_workers=1)
-    executor.shutdown()
-    mocker.patch.object(usage_reporter, "_executor", executor)
+def test_report__drops_events_when_the_queue_is_full(mocker: MockerFixture) -> None:
+    event_queue = _patch_queue(mocker=mocker, maxsize=1)
+    mocker.patch.object(usage_reporter, "_start_worker")
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
     mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+    second = dataclasses.replace(EVENT, event_id=UUID("00000000-0000-0000-0000-0000000000ab"))
 
-    usage_reporter.report(events=[EVENT])
+    usage_reporter.report(events=[EVENT, second])
+
+    assert event_queue.get_nowait() == EVENT
+    assert event_queue.empty()
 
 
 def test_send__posts_the_events_with_the_token(mocker: MockerFixture) -> None:
-    session = mocker.Mock()
+    session = _session_answering(mocker=mocker, status_codes=[204])
 
     usage_reporter.send(events=[EVENT], url=URL, token="t0k", session=session)
 
     session.post.assert_called_once_with(
-        URL,
+        url=URL,
         json={
             "events": [
                 {
@@ -134,7 +131,7 @@ def test_send__posts_the_events_with_the_token(mocker: MockerFixture) -> None:
 
 
 def test_send__serializes_a_batch_event(mocker: MockerFixture) -> None:
-    session = mocker.Mock()
+    session = _session_answering(mocker=mocker, status_codes=[204])
     batch_event = dataclasses.replace(
         EVENT,
         service=usage_reporter.UsageService.EMBEDDING,
@@ -160,18 +157,65 @@ def test_send__serializes_a_batch_event(mocker: MockerFixture) -> None:
     assert sent["details"] is None
 
 
-@pytest.mark.parametrize(
-    "error",
-    [
-        pytest.param(requests.ConnectionError("down"), id="connection-error"),
-        pytest.param(requests.HTTPError("500", response=requests.Response()), id="error-status"),
-        pytest.param(ValueError("boom"), id="non-requests-error"),
-    ],
-)
-def test_send__never_raises(mocker: MockerFixture, error: Exception) -> None:
+def test_send__retries_transient_failures(mocker: MockerFixture) -> None:
+    session = _session_answering(mocker=mocker, status_codes=[503, 204])
+    session.post.side_effect = [requests.ConnectionError("down"), *session.post.side_effect]
+    sleep = mocker.Mock()
+
+    usage_reporter.send(events=[EVENT], url=URL, token="t0k", session=session, sleep=sleep)
+
+    assert session.post.call_count == 3
+    assert sleep.call_args_list == [mocker.call(1.0), mocker.call(5.0)]
+
+
+def test_send__gives_up_after_three_attempts(mocker: MockerFixture) -> None:
+    session = _session_answering(mocker=mocker, status_codes=[500, 502, 503, 204])
+    sleep = mocker.Mock()
+
+    usage_reporter.send(events=[EVENT], url=URL, token="t0k", session=session, sleep=sleep)
+
+    assert session.post.call_count == 3
+
+
+@pytest.mark.parametrize("status_code", [401, 422])
+def test_send__does_not_retry_a_rejected_report(mocker: MockerFixture, status_code: int) -> None:
+    session = _session_answering(mocker=mocker, status_codes=[status_code, 204])
+    sleep = mocker.Mock()
+
+    usage_reporter.send(events=[EVENT], url=URL, token="t0k", session=session, sleep=sleep)
+
+    session.post.assert_called_once()
+    sleep.assert_not_called()
+
+
+def test_send__never_raises(mocker: MockerFixture) -> None:
     session = mocker.Mock()
-    session.post.return_value.raise_for_status.side_effect = error
+    session.post.side_effect = ValueError("boom")
 
     usage_reporter.send(events=[EVENT], url=URL, token="t0k", session=session)
 
     session.post.assert_called_once()
+
+
+def test_take_events__returns_at_most_one_batch() -> None:
+    event_queue: queue.Queue[usage_reporter.UsageEvent] = queue.Queue()
+    for _ in range(usage_reporter.MAX_EVENTS_PER_REPORT + 1):
+        event_queue.put(EVENT)
+
+    first = usage_reporter._take_events(event_queue=event_queue)
+    second = usage_reporter._take_events(event_queue=event_queue)
+
+    assert len(first) == usage_reporter.MAX_EVENTS_PER_REPORT
+    assert len(second) == 1
+
+
+def _patch_queue(mocker: MockerFixture, maxsize: int = 0) -> queue.Queue[usage_reporter.UsageEvent]:
+    event_queue: queue.Queue[usage_reporter.UsageEvent] = queue.Queue(maxsize=maxsize)
+    mocker.patch.object(usage_reporter, "_queue", event_queue)
+    return event_queue
+
+
+def _session_answering(mocker: MockerFixture, status_codes: list[int]) -> Mock:
+    session: Mock = mocker.Mock()
+    session.post.side_effect = [mocker.Mock(status_code=code) for code in status_codes]
+    return session
