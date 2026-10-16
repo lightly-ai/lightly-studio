@@ -66,13 +66,13 @@ def run_queue_request(
     _wait_for_completion(
         session=session,
         headers=headers,
-        status_url=_get_str(output=submitted, key="status_url"),
+        status_url=get_str(output=submitted, key="status_url"),
         polling=polling,
     )
     return request_json(
         session=session,
         method="GET",
-        url=_get_str(output=submitted, key="response_url"),
+        url=get_str(output=submitted, key="response_url"),
         headers=headers,
     )
 
@@ -163,7 +163,12 @@ def _wait_for_completion(
         time.sleep(polling.interval_s)
 
 
-def _get_str(output: dict[str, Any], key: str) -> str:
+def get_str(output: dict[str, Any], key: str) -> str:
+    """Returns the non-empty string at the key.
+
+    Raises:
+        ProviderError: If the key is missing or not a non-empty string.
+    """
     value = output.get(key)
     if not isinstance(value, str) or not value:
         raise ProviderError(f"fal.ai response has no '{key}': {output!r}")
