@@ -1,3 +1,4 @@
+import { useTagExclusions } from '$lib/hooks/useTagExclusions';
 import { derived, get, readable, type Readable } from 'svelte/store';
 import {
     useAnnotationCollectionsFilter,
@@ -91,17 +92,20 @@ function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
 
 function useTagAndLabelFilters(collectionId: string, includeLabels = true): FilterGroup {
     const storage = useGlobalStorage();
+    const { excludedTagIds, clearExclusions } = useTagExclusions(collectionId);
     const { tagsSelected, clearTagsSelected } = useTags({
         collection_id: collectionId,
         autoLoad: false
     });
     return {
         isActive: derived(
-            [tagsSelected, storage.selectedAnnotationFilterIds],
-            ([$tags, $labels]) => $tags.size > 0 || (includeLabels && $labels.size > 0)
+            [tagsSelected, excludedTagIds, storage.selectedAnnotationFilterIds],
+            ([$tags, $excluded, $labels]) =>
+                $tags.size > 0 || $excluded.size > 0 || (includeLabels && $labels.size > 0)
         ),
         clear: () => {
             clearTagsSelected();
+            clearExclusions();
             if (includeLabels) storage.clearSelectedAnnotationFilterIds();
         }
     };

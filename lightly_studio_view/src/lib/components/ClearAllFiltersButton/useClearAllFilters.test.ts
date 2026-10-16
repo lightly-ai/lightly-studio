@@ -1,3 +1,4 @@
+import { useTagExclusions } from '$lib/hooks/useTagExclusions';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -39,6 +40,21 @@ describe('useClearAllFilters', () => {
         framesBounds.updateVideoFramesBoundsValues(fullFramesBounds);
         sources.setCollectionIdToName({ 'source-1': 'GT', 'source-2': 'Predictions' });
         sources.setSelectedCollectionIds(['source-1', 'source-2']);
+    });
+
+    it('clears group tag exclusions even without included tags', () => {
+        const { excludedTagIds, setExcluded } = useTagExclusions(collectionId);
+        setExcluded('reviewed', true);
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters({
+            collectionId,
+            isImages: false,
+            isVideos: false,
+            isVideoFrames: false
+        });
+        expect(get(hasActiveFilters)).toBe(true);
+        clearAllFilters();
+        expect(get(excludedTagIds).size).toBe(0);
+        expect(get(hasActiveFilters)).toBe(false);
     });
 
     it('reports no active filters by default', () => {
