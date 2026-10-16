@@ -5,19 +5,28 @@ real-time call is one event. A background job reports one event per processed ch
 with the job ID and the chunk size as quantity.
 
 Reports are sent only when both `LIGHTLY_STUDIO_USAGE_REPORT_URL` and
-`LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN` are set. They are sent from a background thread, so
-a slow or unreachable receiver never delays the service that reports. Reporting is best
-effort: it never raises, so a failed report cannot break the service that reports.
+`LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN` are set. A background thread sends them in batches
+of up to 500 events, so a slow or unreachable receiver never delays the service that
+reports. A batch that fails for a reason that can be transient is retried twice; the
+receiver ignores repeated event IDs, so a retry cannot count an event twice.
+
+Reporting is best effort: it never raises, so a failed report cannot break the service
+that reports. Events are dropped when the queue is full, when all attempts fail, and when
+the process exits before they are sent.
 """
 
 from __future__ import annotations
 
 import logging
+import queue
+import threading
+import time
 from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from http import HTTPStatus
+from typing import Callable
 from uuid import UUID
 
 import requests
@@ -27,9 +36,15 @@ from lightly_studio.dataset import env
 logger = logging.getLogger(__name__)
 
 REPORT_TIMEOUT_S = 2.0
+MAX_EVENTS_PER_REPORT = 500
+MAX_QUEUED_EVENTS = 10_000
+RETRY_DELAYS_S = (1.0, 5.0)
+"""Pauses before the second and the third attempt to send a batch."""
 
-# One worker sends the reports in order; it is also the only user of the session.
-_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="usage-report")
+_queue: queue.Queue[UsageEvent] = queue.Queue(maxsize=MAX_QUEUED_EVENTS)
+_worker_started = threading.Event()
+_worker_lock = threading.Lock()
+# Only the worker thread uses the session.
 _session = requests.Session()
 
 
@@ -121,29 +136,90 @@ def report(events: Sequence[UsageEvent]) -> None:
     token = env.LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN
     if not url or not token:
         return
-    try:
-        _executor.submit(send, events=events, url=url, token=token, session=_session)
-    except Exception:
-        # The executor refuses work once the interpreter is shutting down.
-        logger.warning("Could not queue a usage report of %d events.", len(events), exc_info=True)
+    _start_worker(url=url, token=token)
+    for index, event in enumerate(events):
+        try:
+            _queue.put_nowait(event)
+        except queue.Full:
+            logger.warning(
+                "The usage report queue is full. Dropped %d events.", len(events) - index
+            )
+            return
 
 
-def send(events: Sequence[UsageEvent], url: str, token: str, session: requests.Session) -> None:
+def send(
+    events: Sequence[UsageEvent],
+    url: str,
+    token: str,
+    session: requests.Session,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
     """Posts the events to the URL with the token as bearer token. Never raises.
+
+    Retries twice after a connection error, a timeout, status 429 or a 5xx status.
 
     Args:
         events: The events to send, at most 500.
         url: URL of the usage endpoint.
         token: Token that identifies this deployment to the endpoint.
         session: HTTP session for the request.
+        sleep: Waits the given number of seconds between attempts.
     """
-    try:
-        response = session.post(
-            url,
-            json={"events": [event.to_json() for event in events]},
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=REPORT_TIMEOUT_S,
-        )
-        response.raise_for_status()
-    except Exception:
-        logger.warning("Could not report usage of %d events.", len(events), exc_info=True)
+    payload = {"events": [event.to_json() for event in events]}
+    for retry_delay_s in (*RETRY_DELAYS_S, None):
+        try:
+            response = session.post(
+                url=url,
+                json=payload,
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=REPORT_TIMEOUT_S,
+            )
+        except requests.RequestException as error:
+            failure = str(error)
+            transient = True
+        except Exception:
+            logger.warning("Could not report usage of %d events.", len(events), exc_info=True)
+            return
+        else:
+            if response.status_code < HTTPStatus.BAD_REQUEST:
+                return
+            failure = f"status {response.status_code}"
+            transient = (
+                response.status_code == HTTPStatus.TOO_MANY_REQUESTS
+                or response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
+            )
+        if not transient or retry_delay_s is None:
+            logger.warning("Could not report usage of %d events: %s", len(events), failure)
+            return
+        sleep(retry_delay_s)
+
+
+def _start_worker(url: str, token: str) -> None:
+    with _worker_lock:
+        if _worker_started.is_set():
+            return
+        # A daemon thread does not delay the exit of the process.
+        threading.Thread(
+            target=_run_worker,
+            kwargs={"url": url, "token": token},
+            name="usage-report",
+            daemon=True,
+        ).start()
+        _worker_started.set()
+
+
+def _run_worker(url: str, token: str) -> None:
+    while True:
+        events = _take_events(event_queue=_queue)
+        send(events=events, url=url, token=token, session=_session)
+
+
+def _take_events(event_queue: queue.Queue[UsageEvent]) -> list[UsageEvent]:
+    """Waits for an event, then returns it with the queued events up to the batch size."""
+    events = [event_queue.get()]
+    while len(events) < MAX_EVENTS_PER_REPORT:
+        try:
+            events.append(event_queue.get_nowait())
+        except queue.Empty:
+            break
+    return events
