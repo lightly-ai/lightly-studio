@@ -10,7 +10,8 @@ export type ToolbarStatus =
     | 'drag'
     | 'cursor'
     | 'slic'
-    | 'smart-select';
+    | 'smart-select'
+    | 'find-instances';
 
 export type SampleDetailsToolbarContext = {
     status: ToolbarStatus;
