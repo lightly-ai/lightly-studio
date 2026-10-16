@@ -1,7 +1,7 @@
 import { getAllGroupsInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { writable } from 'svelte/store';
-import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
+import type { GroupFilter, GroupView } from '$lib/api/lightly_studio_local/types.gen';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 
 /**
@@ -19,12 +19,15 @@ import { GRID_PAGE_SIZE } from '$lib/constants';
  * - `loadMore`: Function to load the next page of results
  * - `refresh`: Function to invalidate and refetch all data
  */
-export const useGroupsInfinite = (getCollectionId: () => string) => {
+export const useGroupsInfinite = (
+    getCollectionId: () => string,
+    getFilter: () => GroupFilter | undefined = () => undefined
+) => {
     const query = createInfiniteQuery(() => ({
         ...getAllGroupsInfiniteOptions({
             path: { collection_id: getCollectionId() },
             query: { limit: GRID_PAGE_SIZE },
-            body: {}
+            body: { filter: getFilter() }
         }),
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
     }));
@@ -34,7 +37,7 @@ export const useGroupsInfinite = (getCollectionId: () => string) => {
         const options = getAllGroupsInfiniteOptions({
             path: { collection_id: getCollectionId() },
             query: { limit: GRID_PAGE_SIZE },
-            body: {}
+            body: { filter: getFilter() }
         });
         client.invalidateQueries({ queryKey: options.queryKey });
     };
@@ -47,6 +50,9 @@ export const useGroupsInfinite = (getCollectionId: () => string) => {
             const groups = query.data.pages.flatMap((page) => page.data);
             data.set(groups);
             totalCount.set(query.data.pages[0].total_count);
+        } else if (query.isPending) {
+            data.set([]);
+            totalCount.set(0);
         }
     });
 

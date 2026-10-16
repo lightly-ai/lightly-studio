@@ -614,6 +614,7 @@
                                         {isImages}
                                         {isVideos}
                                         {isVideoFrames}
+                                        {isGroups}
                                     />
                                     <Tooltip content="Hide filters" position="bottom" class="w-max">
                                         <Button

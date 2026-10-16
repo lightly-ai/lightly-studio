@@ -1,3 +1,4 @@
+import { useTagExclusions } from '$lib/hooks/useTagExclusions';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -11,9 +12,27 @@ import { useClearAllFilters } from './useClearAllFilters';
 
 describe('useClearAllFilters', () => {
     const collectionId = 'collection-1';
-    const imagesGrid = { collectionId, isImages: true, isVideos: false, isVideoFrames: false };
-    const videosGrid = { collectionId, isImages: false, isVideos: true, isVideoFrames: false };
-    const framesGrid = { collectionId, isImages: false, isVideos: false, isVideoFrames: true };
+    const imagesGrid = {
+        collectionId,
+        isImages: true,
+        isVideos: false,
+        isVideoFrames: false,
+        isGroups: false
+    };
+    const videosGrid = {
+        collectionId,
+        isImages: false,
+        isVideos: true,
+        isVideoFrames: false,
+        isGroups: false
+    };
+    const framesGrid = {
+        collectionId,
+        isImages: false,
+        isVideos: false,
+        isVideoFrames: true,
+        isGroups: false
+    };
     let storage: ReturnType<typeof useGlobalStorage>;
     const videoBounds = useVideoBounds();
     const framesBounds = useVideoFramesBounds();
@@ -27,6 +46,7 @@ describe('useClearAllFilters', () => {
     const fullFramesBounds = { frame_number: { min: 0, max: 100 } };
 
     beforeEach(() => {
+        useTagExclusions(collectionId).clearExclusions();
         storage = useGlobalStorage();
         storage.clearSelectedAnnotationFilterIds();
         storage.updateMetadataBounds({ score: { min: 0, max: 1 } });
@@ -39,6 +59,43 @@ describe('useClearAllFilters', () => {
         framesBounds.updateVideoFramesBoundsValues(fullFramesBounds);
         sources.setCollectionIdToName({ 'source-1': 'GT', 'source-2': 'Predictions' });
         sources.setSelectedCollectionIds(['source-1', 'source-2']);
+    });
+
+    it('clears group tag exclusions even without included tags', () => {
+        const { excludedTagIds, setExcluded } = useTagExclusions(collectionId);
+        setExcluded('reviewed', true);
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters({
+            collectionId,
+            isImages: false,
+            isVideos: false,
+            isVideoFrames: false,
+            isGroups: true
+        });
+        expect(get(hasActiveFilters)).toBe(true);
+        clearAllFilters();
+        expect(get(excludedTagIds).size).toBe(0);
+        expect(get(hasActiveFilters)).toBe(false);
+    });
+
+    it.each([
+        ['images', imagesGrid],
+        ['videos', videosGrid],
+        ['frames', framesGrid],
+        ['annotations', { ...imagesGrid, isImages: false }]
+    ])('ignores and preserves group exclusions in the %s grid', (_, grid) => {
+        const { excludedTagIds, setExcluded } = useTagExclusions(collectionId);
+        setExcluded('reviewed', true);
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(grid);
+        expect(get(hasActiveFilters)).toBe(false);
+
+        const { setTagSelected, tagsSelected } = useTags({ collection_id: collectionId });
+        setTagSelected('tag-1', true);
+        expect(get(hasActiveFilters)).toBe(true);
+        clearAllFilters();
+
+        expect(get(tagsSelected).size).toBe(0);
+        expect(get(hasActiveFilters)).toBe(false);
+        expect(get(excludedTagIds)).toEqual(new Set(['reviewed']));
     });
 
     it('reports no active filters by default', () => {
