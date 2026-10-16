@@ -152,6 +152,26 @@ describe('usePointCloudTickNavigation', () => {
         expect(workspace.goToNextFrame).toHaveBeenCalledOnce();
     });
 
+    it('restarts playback timing from a newly selected frame', async () => {
+        vi.useFakeTimers();
+        const workspace = createWorkspace();
+        const view = render(Harness, {
+            workspace,
+            tickNumber: 1,
+            onReady: () => undefined
+        });
+        flushSync();
+
+        await vi.advanceTimersByTimeAsync(60);
+        await view.rerender({ workspace: { ...workspace, currentTick: 1 } });
+        flushSync();
+        await vi.advanceTimersByTimeAsync(40);
+        expect(workspace.goToNextFrame).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(60);
+        expect(workspace.goToNextFrame).toHaveBeenCalledOnce();
+    });
+
     it('resumes when the next tick finishes buffering and clears the timer on unmount', async () => {
         vi.useFakeTimers();
         const workspace = createWorkspace();

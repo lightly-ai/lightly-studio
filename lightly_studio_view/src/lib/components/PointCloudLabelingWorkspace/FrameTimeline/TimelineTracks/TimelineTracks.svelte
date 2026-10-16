@@ -14,13 +14,29 @@
         ticks: TickView[];
         /** Seq number of the active tick; highlighted on the ruler. */
         currentTick: number;
+        /** Whether playback was active when slider interaction began. */
+        isPlaying: boolean;
         /** Inclusive tick-index ranges whose data is ready for playback. */
         bufferedRanges: readonly BufferRange[];
         /** Select a tick from the overlaid ruler slider. */
         onSelectTick: (seqNumber: number) => void;
+        /** Called when the user starts dragging the slider. */
+        onSeekStart?: () => void;
+        /** Called when the user releases the slider. */
+        onSeekEnd?: () => void;
     }
 
-    let { ticks, currentTick, bufferedRanges, onSelectTick }: Props = $props();
+    let {
+        ticks,
+        currentTick,
+        isPlaying,
+        bufferedRanges,
+        onSelectTick,
+        onSeekStart,
+        onSeekEnd
+    }: Props = $props();
+    let isDragging = false;
+    let commitOnRelease = false;
 
     const NANOS_PER_SECOND = 1_000_000_000;
 
@@ -47,7 +63,7 @@
     };
 </script>
 
-<div class="flex flex-none flex-col gap-1 overflow-hidden px-2 py-1">
+<div class="flex flex-none select-none flex-col gap-1 overflow-hidden px-2 py-1">
     <div class="relative flex h-4 shrink-0 items-end gap-px">
         {#each visibleMarks as mark (mark.tick.seq_number)}
             <span
@@ -73,7 +89,22 @@
                 ticks.findIndex((tick) => tick.seq_number === currentTick)
             )}
             disabled={ticks.length === 0}
+            onpointerdown={() => {
+                isDragging = true;
+                commitOnRelease = isPlaying;
+                onSeekStart?.();
+            }}
+            onpointerup={() => {
+                isDragging = false;
+                commitOnRelease = false;
+                onSeekEnd?.();
+            }}
             oninput={(event) => {
+                if (!isDragging || commitOnRelease) return;
+                const tick = ticks[Number(event.currentTarget.value)];
+                if (tick) onSelectTick(tick.seq_number);
+            }}
+            onchange={(event) => {
                 const tick = ticks[Number(event.currentTarget.value)];
                 if (tick) onSelectTick(tick.seq_number);
             }}

@@ -331,15 +331,19 @@ describe('PointCloudLabelingWorkspace', () => {
         render(PointCloudLabelingWorkspace, { props: defaultProps });
 
         await user.click(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }));
+        await user.click(screen.getByRole('button', { name: 'Play frames' }));
 
         expect(schedulerParams.current?.getRequestId()).toBe(
             'dataset-1/sequence-1/playback/entire/0'
         );
         expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 0, endIndex: 1 }]);
 
-        await fireEvent.change(screen.getByRole('slider', { name: 'Frame position' }), {
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.change(slider, {
             target: { value: '1' }
         });
+        await fireEvent.pointerUp(slider);
 
         expect(schedulerParams.current?.getRequestId()).toBe(
             'dataset-1/sequence-1/playback/entire/1'
