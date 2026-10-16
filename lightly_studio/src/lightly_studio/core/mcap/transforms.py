@@ -142,28 +142,6 @@ class TransformTree:
         return None
 
 
-def frame_edges(decoded_message: Any) -> list[tuple[str, str]]:
-    """Returns the parent and child frame of each edge in a transform message.
-
-    Does not read the translation, the rotation, or the stamp. `from_decoded_message`
-    reads those when a pose is needed.
-
-    Args:
-        decoded_message: A decoded transform message, holding either a single transform
-            or a list of them.
-
-    Returns:
-        The parent frame id and the child frame id of each edge.
-
-    Raises:
-        McapAccessError: If an entry does not name a parent and a child frame.
-    """
-    entries = message_fields.get_field(decoded_message, _TRANSFORMS_FIELDS)
-    if entries is None:
-        return [_frame_edge(decoded_message)]
-    return [_frame_edge(entry) for entry in entries]
-
-
 def from_decoded_message(decoded_message: Any, log_time_ns: int) -> list[StaticTransform]:
     """Extracts the transforms from a decoded transform message.
 
@@ -285,12 +263,6 @@ def _transform(decoded_transform: Any, log_time_ns: int) -> StaticTransform:
         rotation=rotation,
         timestamp_ns=timestamp_ns if timestamp_ns != 0 else log_time_ns,
     )
-
-
-def _frame_edge(decoded_transform: Any) -> tuple[str, str]:
-    """Returns the parent and child frame of one decoded transform."""
-    child_frame_id = message_fields.require_field(decoded_transform, _CHILD_FRAME_ID_FIELDS)
-    return (_parent_frame_id(decoded_transform), str(child_frame_id))
 
 
 def _parent_frame_id(decoded_transform: Any) -> str:

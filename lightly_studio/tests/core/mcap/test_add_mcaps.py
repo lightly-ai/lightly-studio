@@ -19,6 +19,7 @@ from lightly_studio.database import db_manager
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import (
+    dynamic_transform_resolver,
     recording_resolver,
     sensor_calibration_resolver,
     sequence_resolver,
@@ -281,6 +282,15 @@ def test_index_recording__accepts_a_reference_frame_from_tf(
     )
     # `map` is a parent only on `/tf`, so the check also reads the dynamic edges.
     assert recordings[0].reference_frame_ids == ["map", "base_link"]
+    rows = dynamic_transform_resolver.get_near(
+        session=session,
+        recording_id=recordings[0].recording_id,
+        start_ns=0,
+        end_ns=2_000_000_000,
+    )
+    assert [(row.parent, row.child, row.timestamp_ns, row.tx) for row in rows] == [
+        ("map", "base_link", 1_000_000_000, 10.0)
+    ]
 
 
 def test_index_recording__stores_configured_reference_frames(

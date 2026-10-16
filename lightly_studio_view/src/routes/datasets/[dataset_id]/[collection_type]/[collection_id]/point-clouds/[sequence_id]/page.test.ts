@@ -31,8 +31,22 @@ vi.mock('$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences', () => ({
     useAdjacentMcapSequences: () => ({ query: adjacentSequences, refetch: vi.fn() })
 }));
 
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useCreateCuboidAnnotation: () => ({
+            handleCreateCuboid: vi.fn(),
+            showSelectClassDialog: writable(false),
+            handleClassSelected: vi.fn(),
+            handleClassDialogCancel: vi.fn(),
+            labels: { data: [] }
+        })
+    };
+});
+
 vi.mock('$lib/hooks', () => ({
     useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
     // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
     useMcapSequenceSummary: () => ({
         summary: { data: summaryData, isLoading: false, isError: false },
@@ -53,7 +67,13 @@ vi.mock('$lib/hooks', () => ({
     useCloudPointFrame: () => ({
         query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
     }),
-    useAnnotationCollections: () => ({ data: [] })
+    useTickCameraFrames: () => ({ query: { data: undefined } }),
+    useAnnotationCollections: () => ({ data: [] }),
+    useMcapTickPrefetchScheduler: () => ({
+        bufferedRanges: [],
+        errors: new Map(),
+        cancel: vi.fn()
+    })
 }));
 
 const mockPageData = {

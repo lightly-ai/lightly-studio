@@ -1,11 +1,13 @@
 const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
-vi.mock('$lib/hooks', () => ({
+vi.mock('$lib/hooks', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks')>()),
     usePostHog: () => ({ trackEvent })
 }));
 
 import { render, screen, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useFiltersClearedSignal } from '$lib/hooks';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import MetadataFilterChips from './MetadataFilterChips.svelte';
 
@@ -87,6 +89,21 @@ describe('useMetadataFilterChips', () => {
         await waitFor(() =>
             expect(get(storage.metadataValues).confidence).toEqual({ min: 0, max: 1 })
         );
+        await waitFor(() =>
+            expect(screen.queryByTestId('metadata-filter-chip-confidence')).not.toBeInTheDocument()
+        );
+    });
+
+    it('removes remembered chips when all filters are cleared', async () => {
+        seed({ narrowed: true });
+        render(MetadataFilterChips);
+
+        storage.updateMetadataValues({
+            confidence: { min: 0, max: 1 },
+            temperature: { min: 10, max: 40 }
+        });
+        useFiltersClearedSignal().signalFiltersCleared();
+
         await waitFor(() =>
             expect(screen.queryByTestId('metadata-filter-chip-confidence')).not.toBeInTheDocument()
         );

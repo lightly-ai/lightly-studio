@@ -8,6 +8,7 @@
     import PointCloudRightSidePanel from './PointCloudRightSidePanel';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
+    import { SelectClassDialog } from '$lib/components';
     import type { WorkspaceCrumb } from './types';
     import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
     import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
@@ -15,9 +16,14 @@
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
-    import { useAnnotationCollections } from '$lib/hooks';
+    import { useAnnotationCollections, useMcapTickPrefetchScheduler } from '$lib/hooks';
+    import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
+    import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
+    import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
+    import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
+    import type { Vector3, WorkspaceTool } from './domain';
 
     /**
      * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
@@ -49,6 +55,8 @@
         sourcePath?: readonly WorkspaceCrumb[];
         /** Optional status override for tests and stories. */
         status?: 'unsupported' | 'empty' | 'error';
+        /** Number of ticks to prefetch from the active tick forward. */
+        prefetchTickCount?: number;
         onRetry?: () => void;
     }
 
@@ -62,10 +70,16 @@
         onNextSequence,
         sourcePath = [],
         status,
+        prefetchTickCount = 50,
         onRetry
     }: Props = $props();
 
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
+    const bufferEntireSequence = useSessionStorage<boolean>(
+        'lightlyStudio_pointCloudBufferEntireSequence',
+        false
+    );
+    let activeTool = $state<WorkspaceTool>('select');
 
     let workspace = $state<PointCloudWorkspaceContext>({} as PointCloudWorkspaceContext);
     const lidarSelection = useChannelSelection({
@@ -85,11 +99,43 @@
         initialTick: tickNumber - 1,
         statusOverride: status
     }));
+    const tickPrefetch = useMcapTickPrefetchScheduler({
+        getDatasetId: () => datasetId,
+        getSequenceId: () => sequenceId,
+        getDisplayFrameId: () => workspace.referenceFrameId,
+        getTicks: () => workspace.ticks,
+        // Keep one buffer while playback advances. A new sequence gets a new buffer.
+        // Changing the mode creates a new session, which cancels the old queue. This is important
+        // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
+        getRequestId: () =>
+            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? `entire/${workspace.currentTick}` : 'window'}`,
+        getRanges: () => {
+            const activeIndex = workspace.ticks.findIndex(
+                (tick) => tick.seq_number === workspace.currentTick
+            );
+
+            if ($bufferEntireSequence) {
+                return [{ startIndex: activeIndex, endIndex: workspace.ticks.length - 1 }];
+            }
+
+            return getMcapTickPrefetchRange({
+                activeIndex,
+                tickCount: workspace.ticks.length,
+                prefetchTickCount
+            });
+        }
+    });
+    const isTickBuffered = (index: number) =>
+        tickPrefetch.bufferedRanges.some(
+            ({ startIndex, endIndex }) => index >= startIndex && index <= endIndex
+        );
+
     const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
         usePointCloudTickNavigation({
             getWorkspace: () => workspace,
             getTickNumber: () => tickNumber,
-            getOnTickChange: () => onTickChange
+            getOnTickChange: () => onTickChange,
+            getIsTickBuffered: isTickBuffered
         });
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
@@ -104,6 +150,32 @@
         }))
     );
 
+    const {
+        handleCreateCuboid: createCuboidAnnotation,
+        showSelectClassDialog,
+        handleClassSelected,
+        handleClassDialogCancel,
+        labels
+    } = useCreateCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        getDatasetId: () => datasetId,
+        getTickSampleId: () => {
+            if (!tick || tick.isStale || sceneSnapshot?.tick !== workspace.currentTick)
+                return undefined;
+            return tick.sampleId;
+        },
+        getSceneFrame: () =>
+            sceneSnapshot?.frame
+                ? {
+                      bounds: sceneSnapshot.frame.bounds,
+                      // Use the first channel's frameId — the top-level frameId on a merged
+                      // frame is a comma-joined composite ("odom,odom") that does not match
+                      // the per-channel frameIds used by the scene filter.
+                      frameId: sceneSnapshot.frame.channels[0]?.frameId ?? ''
+                  }
+                : null
+    });
+
     // Synchronized snapshot: the cloud frame and its corresponding annotations
     // advance together.
     // The fit key is captured with the snapshot, so the camera is re-centered once the points of
@@ -112,6 +184,7 @@
         frame: NonNullable<(typeof workspace.cloudPointFrame)['data']>;
         annotations: Parameters<typeof tickAnnotationsToCuboids>[0];
         fitKey: string;
+        tick: number;
     } | null>(null);
 
     $effect(() => {
@@ -123,12 +196,21 @@
             sceneSnapshot = {
                 frame: workspace.cloudPointFrame.data,
                 annotations: workspace.tickDetails.data?.annotations ?? [],
-                fitKey: `${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`
+                fitKey: `${sequenceId}/${workspace.referenceFrameId}/${workspace.isShowingSensorFrames}`,
+                tick: workspace.currentTick
             };
         }
     });
 
-    const cuboids = $derived(tickAnnotationsToCuboids(sceneSnapshot?.annotations ?? []));
+    // Annotations belong to a specific tick. While the new tick's data is loading (both queries
+    // show placeholder data from the previous tick), we keep the previous point cloud visible for
+    // a smooth transition but immediately clear the annotations so they don't bleed into frames
+    // where they do not belong.
+    const snapshotAnnotations = $derived(
+        sceneSnapshot?.tick === workspace.currentTick ? sceneSnapshot.annotations : []
+    );
+
+    const cuboids = $derived(tickAnnotationsToCuboids(snapshotAnnotations));
 
     const annotationClasses = $derived.by(() => {
         void $customLabelColorsStore;
@@ -184,6 +266,19 @@
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     });
+
+    const { handleCuboidTransform } = useUpdateCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
+    });
+
+    async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
+        await createCuboidAnnotation(groundPosition, async (annotationId) => {
+            await workspace.tickDetails.refetch({ throwOnError: true });
+            selectedCuboidId = annotationId;
+            activeTool = 'select';
+        });
+    }
 </script>
 
 <div
@@ -222,7 +317,7 @@
                     <PaneGroup direction="vertical" class="min-h-0 flex-1">
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
-                            <ToolRail />
+                            <ToolRail {activeTool} onToolChange={(tool) => (activeTool = tool)} />
                             {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
@@ -238,8 +333,11 @@
                                     {annotationSources}
                                     selectedAnnotationId={selectedCuboidId}
                                     hoveredAnnotationId={hoveredCuboidId}
+                                    {activeTool}
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
+                                    onCreateCuboid={handleCreateCuboid}
+                                    onCuboidTransform={handleCuboidTransform}
                                     onPreviousTick={goToPreviousFrame}
                                     onNextTick={goToNextFrame}
                                 />
@@ -261,7 +359,7 @@
                             </div>
                         </PaneResizer>
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
-                        <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
+                        <Pane defaultSize={26} minSize={12} maxSize={45} class="min-h-0">
                             <CameraProjectionStrip
                                 {datasetId}
                                 {sequenceId}
@@ -271,33 +369,27 @@
                                 selectedChannelIds={cameraSelection.selectedChannelIds}
                             />
                         </Pane>
-                        <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
-                        >
-                            <div
-                                class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                            >
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                            </div>
-                        </PaneResizer>
-                        <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline
-                                ticks={workspace.ticks}
-                                currentTick={workspace.currentTick}
-                                isPlaying={workspace.isPlaying}
-                                playbackIntervalMs={workspace.playbackIntervalMs}
-                                onPreviousFrame={goToPreviousFrame}
-                                onNextFrame={goToNextFrame}
-                                onPlayToggle={togglePlayback}
-                                onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
-                                onSelectTick={goToFrame}
-                                {onPreviousSequence}
-                                {onNextSequence}
-                            />
-                        </Pane>
                     </PaneGroup>
+                    <!-- Fixed-height footer: the timeline only takes the space its controls need. -->
+                    <div class="flex-none">
+                        <FrameTimeline
+                            ticks={workspace.ticks}
+                            currentTick={workspace.currentTick}
+                            isPlaying={workspace.isPlaying}
+                            playbackIntervalMs={workspace.playbackIntervalMs}
+                            bufferEntireSequence={$bufferEntireSequence}
+                            onBufferEntireSequenceChange={(enabled) =>
+                                bufferEntireSequence.set(enabled)}
+                            bufferedRanges={tickPrefetch.bufferedRanges}
+                            onPreviousFrame={goToPreviousFrame}
+                            onNextFrame={goToNextFrame}
+                            onPlayToggle={togglePlayback}
+                            onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
+                            onSelectTick={goToFrame}
+                            {onPreviousSequence}
+                            {onNextSequence}
+                        />
+                    </div>
                 </Pane>
                 <PaneResizer
                     class="group relative flex w-2 cursor-col-resize items-center justify-center bg-card transition-colors hover:bg-card"
@@ -324,3 +416,10 @@
         {/if}
     </div>
 </div>
+
+<SelectClassDialog
+    bind:open={$showSelectClassDialog}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
+/>

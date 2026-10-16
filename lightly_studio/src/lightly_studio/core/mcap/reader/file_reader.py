@@ -83,6 +83,7 @@ class McapFileReader:
         self._intrinsics_by_topic: dict[str, CameraIntrinsics] = {}
         self._transform_tree_by_topic: dict[str, TransformTree] = {}
         self._static_transforms_by_topic: dict[str, list[StaticTransform]] = {}
+        self._dynamic_transforms_by_topic: dict[str, list[StaticTransform]] = {}
 
     def close(self) -> None:
         """Closes the MCAP file."""
@@ -107,6 +108,7 @@ class McapFileReader:
         start_time_ns: int | None = None,
         end_time_ns: int | None = None,
         static_transform_topic: str | None = None,
+        dynamic_transform_topic: str | None = None,
     ) -> None:
         """Reads several topics in a single pass and caches their frame locators.
 
@@ -127,6 +129,8 @@ class McapFileReader:
                 the same pass and cached for `get_static_transforms`. Only the
                 transforms logged in the time range are read. A topic that is not in
                 the file caches no transforms.
+            dynamic_transform_topic: Like `static_transform_topic`, but cached for
+                `get_dynamic_transforms`.
 
         Raises:
             TopicNotFoundError: If one of the topics is not in the file.
@@ -148,11 +152,14 @@ class McapFileReader:
                 start_time_ns=start_time_ns,
                 end_time_ns=end_time_ns,
                 static_transform_topic=static_transform_topic,
+                dynamic_transform_topic=dynamic_transform_topic,
             )
         )
         self._locators_by_topic.update(scan.locators_by_topic)
         if static_transform_topic:
             self._static_transforms_by_topic[static_transform_topic] = scan.static_transforms
+        if dynamic_transform_topic:
+            self._dynamic_transforms_by_topic[dynamic_transform_topic] = scan.dynamic_transforms
 
     @overload
     def get_frame_locators(
@@ -290,40 +297,28 @@ class McapFileReader:
         """
         return list(self._cached_static_transforms(topic=topic))
 
-    def read_dynamic_edges_until(
-        self,
-        frame_ids: Sequence[str],
-        topic: str = DYNAMIC_TRANSFORM_TOPIC,
-    ) -> list[tuple[str, str]]:
-        """Returns dynamic edges read from the start of a topic until frames are seen.
+    def get_dynamic_transforms(self, topic: str = DYNAMIC_TRANSFORM_TOPIC) -> list[StaticTransform]:
+        """Returns the dynamic transforms cached by `load_data_for_topics`.
 
-        Reading stops once every frame id has appeared as a parent or a child. The pose
-        and the stamp are not read. An edge with a blank frame name is skipped. A topic
-        that is not in the file, or an empty `frame_ids`, returns no edges. If the
-        topic ends first, the edges seen so far are returned.
+        A topic that was not loaded, or that is not in the file, returns no transforms.
 
         Args:
-            frame_ids: The coordinate frames to find.
             topic: The topic the dynamic transforms are published on.
 
         Returns:
-            The parent and child frame id of each edge seen, in order, once each.
-
-        Raises:
-            McapAccessError: If a message on the topic cannot be decoded.
+            One transform per edge, in log time order. A later edge of the same child
+            frame is its own entry. A message that cannot be decoded, or holds no
+            transform, is skipped.
         """
-        if not frame_ids or not self._topic_index.has_topic(topic):
-            return []
-        return calibration.dynamic_edges_until(
-            mcap_reader=self._reader, path=self.path, topic=topic, frame_ids=frame_ids
-        )
+        return list(self._dynamic_transforms_by_topic.get(topic, []))
 
-    def get_transform_at(
+    def get_transform_at(  # noqa: PLR0913
         self,
         parent_frame_id: str,
         child_frame_id: str,
         timestamp_ns: int,
         static_transforms: Sequence[StaticTransform],
+        dynamic_transforms: Sequence[StaticTransform] | None = None,
         dynamic_topic: str = DYNAMIC_TRANSFORM_TOPIC,
     ) -> NDArray[np.float64]:
         """Returns the transform between two coordinate frames at a point in time.
@@ -332,7 +327,7 @@ class McapFileReader:
         moving vehicle in the world frame. The static transforms are the edges stored
         for the recording. For each child frame, the dynamic transform whose capture
         time, from `header.stamp` or `timestamp`, is closest to `timestamp_ns` is used.
-        Only the dynamic transforms captured within `_DYNAMIC_TRANSFORM_WINDOW_NS` of
+        Only the dynamic transforms captured within `DYNAMIC_TRANSFORM_WINDOW_NS` of
         `timestamp_ns` are used. A topic that is not in the file counts as a topic
         without transforms.
 
@@ -345,7 +340,10 @@ class McapFileReader:
                 delay of the sensor.
             static_transforms: The static edges to compose, e.g. the edges stored for
                 the recording when it was indexed.
-            dynamic_topic: The topic the dynamic transforms are published on.
+            dynamic_transforms: The dynamic edges to compose, e.g. the edges stored for
+                the recording near `timestamp_ns`. `None` reads them from the file.
+            dynamic_topic: The topic the dynamic transforms are published on. Used only
+                when `dynamic_transforms` is `None`.
 
         Returns:
             The 4x4 homogeneous transform that maps points from the child frame to the
@@ -355,18 +353,19 @@ class McapFileReader:
             TransformNotFoundError: If no chain of transforms connects the two frames.
             McapAccessError: If a message on the dynamic topic cannot be decoded.
         """
-        tree = TransformTree(
-            [
-                *static_transforms,
-                *calibration.dynamic_transforms_near(
-                    mcap_reader=self._reader,
-                    path=self.path,
-                    topic=dynamic_topic,
-                    timestamp_ns=timestamp_ns,
-                    topic_in_file=self._topic_index.has_topic(dynamic_topic),
-                ),
-            ]
-        )
+        if dynamic_transforms is None:
+            closest_dynamic = calibration.dynamic_transforms_near(
+                mcap_reader=self._reader,
+                path=self.path,
+                topic=dynamic_topic,
+                timestamp_ns=timestamp_ns,
+                topic_in_file=self._topic_index.has_topic(dynamic_topic),
+            )
+        else:
+            closest_dynamic = calibration.closest_dynamic_transforms(
+                edges=dynamic_transforms, timestamp_ns=timestamp_ns
+            )
+        tree = TransformTree([*static_transforms, *closest_dynamic])
         return tree.lookup(target_frame_id=parent_frame_id, source_frame_id=child_frame_id)
 
     def get_decoded_message_at(
@@ -397,60 +396,99 @@ class McapFileReader:
                 their encoding has no matching decoder factory.
         """
         messages = self.get_decoded_messages_in_range(
-            channel_id=channel_id, start_time_ns=timestamp_ns, end_time_ns=timestamp_ns
-        )
+            channel_ids=[channel_id], start_time_ns=timestamp_ns, end_time_ns=timestamp_ns
+        )[channel_id]
         return messages[0] if messages else None
 
     def get_decoded_messages_in_range(
         self,
-        channel_id: int,
+        channel_ids: Sequence[int],
         start_time_ns: int,
         end_time_ns: int,
-    ) -> list[DecodedMessage]:
-        """Returns the decoded messages of a channel in a log time range, in log time order.
+    ) -> dict[int, list[DecodedMessage]]:
+        """Returns the decoded messages of several channels in a log time range.
 
-        Like `get_decoded_message_at`, does not require pre-loading the topic with
-        `load_data_for_topics`, and only reads the chunks that overlap the range. Use
-        this to read a video frame together with the frames it depends on, from the
-        preceding keyframe up to the frame.
+        Like `get_decoded_message_at`, does not require pre-loading the topics with
+        `load_data_for_topics`. Reads the chunks that overlap the range once for all
+        channels. Use this to read a video frame together with the frames it depends
+        on, from the preceding keyframe up to the frame.
 
         Args:
-            channel_id: The channel to read, e.g. a camera channel located through
+            channel_ids: The channels to read, e.g. channels located through
                 `get_topics`.
             start_time_ns: The first log time to include, in nanoseconds.
             end_time_ns: The last log time to include, in nanoseconds.
 
         Returns:
-            The messages with `start_time_ns <= log_time <= end_time_ns`. Empty if
-            the range holds no message.
+            The messages with `start_time_ns <= log_time <= end_time_ns` of each
+            channel, keyed by channel id, in log time order. A channel without a
+            message in the range maps to an empty list.
 
         Raises:
-            ChannelNotFoundError: If the channel id is not in the file.
-            McapAccessError: If the channel's messages cannot be decoded, e.g. because
-                their encoding has no matching decoder factory.
+            ChannelNotFoundError: If a channel id is not in the file.
+            McapAccessError: If the messages of a channel cannot be decoded, e.g.
+                because their encoding has no matching decoder factory.
         """
-        topic_info = self._topic_index.require_channel_info(channel_id)
-        messages: list[DecodedMessage] = []
+        return self.get_decoded_messages_in_windows(
+            windows_ns=dict.fromkeys(channel_ids, (start_time_ns, end_time_ns))
+        )
+
+    def get_decoded_messages_in_windows(
+        self, windows_ns: Mapping[int, tuple[int, int]]
+    ) -> dict[int, list[DecodedMessage]]:
+        """Returns the decoded messages of several channels, each in its own log time window.
+
+        Reads the chunks from the earliest start to the latest end once for all
+        channels. Only the messages inside the window of their channel are decoded.
+        Use this to read the messages of one tick, where each sensor needs a different
+        window.
+
+        Args:
+            windows_ns: The first and the last log time to include per channel id, in
+                nanoseconds.
+
+        Returns:
+            The messages with `start <= log_time <= end` of each channel, keyed by
+            channel id, in log time order. A channel without a message in its window
+            maps to an empty list.
+
+        Raises:
+            ChannelNotFoundError: If a channel id is not in the file.
+            McapAccessError: If the messages of a channel cannot be decoded, e.g.
+                because their encoding has no matching decoder factory.
+        """
+        topic_infos = {
+            channel_id: self._topic_index.require_channel_info(channel_id)
+            for channel_id in windows_ns
+        }
+        messages: dict[int, list[DecodedMessage]] = {channel_id: [] for channel_id in topic_infos}
+        if not windows_ns:
+            return messages
         try:
-            for _, channel, message, decoded_message in self._reader.iter_decoded_messages(
-                topics=[topic_info.name],
-                start_time=start_time_ns,
-                end_time=end_time_ns + 1,
+            for schema, channel, message in self._reader.iter_messages(
+                topics=sorted({topic_info.name for topic_info in topic_infos.values()}),
+                start_time=min(start for start, _ in windows_ns.values()),
+                end_time=max(end for _, end in windows_ns.values()) + 1,
             ):
-                if channel.id != channel_id:
+                window = windows_ns.get(channel.id)
+                if window is None or not window[0] <= message.log_time <= window[1]:
                     continue
-                messages.append(
+                topic_info = topic_infos[channel.id]
+                messages[channel.id].append(
                     DecodedMessage(
-                        channel_id=channel_id,
+                        channel_id=channel.id,
                         topic=topic_info.name,
                         log_time_ns=message.log_time,
                         schema_name=topic_info.schema_name,
-                        decoded_message=decoded_message,
+                        decoded_message=self._decoder.required_payload(
+                            schema=schema, channel=channel, message=message
+                        ),
                     )
                 )
         except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
             raise McapAccessError(
-                f"Cannot decode the messages of channel {channel_id} in '{self.path}': {exc}"
+                f"Cannot decode the messages of channels {sorted(topic_infos)} in "
+                f"'{self.path}': {exc}"
             ) from exc
         return messages
 

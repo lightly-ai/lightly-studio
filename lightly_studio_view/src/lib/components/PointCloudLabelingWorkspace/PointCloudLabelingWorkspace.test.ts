@@ -4,10 +4,15 @@ import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
-const { cloudQuery, tickDetails, summaryState } = vi.hoisted(() => ({
+const { cloudQuery, tickDetails, summaryState, updateAnnotations } = vi.hoisted(() => ({
     cloudQuery: { data: undefined as unknown, isLoading: false, isError: false, refetch: vi.fn() },
-    tickDetails: { data: undefined, isLoading: false },
-    summaryState: { isLoading: false }
+    tickDetails: { data: undefined, isLoading: false, refetch: vi.fn() },
+    summaryState: { isLoading: false },
+    updateAnnotations: vi.fn()
+}));
+
+vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations })
 }));
 
 vi.mock('./SceneViewport/SceneViewport.svelte', async () => ({
@@ -20,9 +25,34 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails })
 }));
 
+vi.mock('$lib/hooks/useTickData/useTickCameraFrames.svelte', () => ({
+    useTickCameraFrames: () => ({ query: { data: undefined } })
+}));
+
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({ data: [] })
 }));
+
+vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte', () => ({
+    useMcapTickPrefetchScheduler: () => ({
+        bufferedRanges: [{ startIndex: 0, endIndex: 1 }],
+        errors: new Map(),
+        cancel: vi.fn()
+    })
+}));
+
+vi.mock('./useCreateCuboidAnnotation', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useCreateCuboidAnnotation: () => ({
+            handleCreateCuboid: vi.fn(),
+            showSelectClassDialog: writable(false),
+            handleClassSelected: vi.fn(),
+            handleClassDialogCancel: vi.fn(),
+            labels: { data: [] }
+        })
+    };
+});
 
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
@@ -85,6 +115,7 @@ const defaultProps = {
 
 describe('PointCloudLabelingWorkspace', () => {
     afterEach(() => {
+        vi.clearAllMocks();
         vi.useRealTimers();
         cloudQuery.data = undefined;
         cloudQuery.isLoading = false;
@@ -123,6 +154,25 @@ describe('PointCloudLabelingWorkspace', () => {
             'data-status',
             'loading'
         );
+    });
+
+    it('saves a cuboid transform from the viewport and refreshes the workspace', async () => {
+        cloudQuery.data = {
+            batch: { positions: new Float32Array(3), intensities: new Float32Array(1), count: 1 },
+            channels: []
+        };
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Transform cuboid' }));
+
+        await waitFor(() => expect(tickDetails.refetch).toHaveBeenCalledOnce());
+        expect(updateAnnotations).toHaveBeenCalledWith([
+            expect.objectContaining({
+                annotation_id: 'annotation-1',
+                collection_id: 'group-collection-1',
+                cuboid_3d: expect.objectContaining({ px: 2, py: 3, pz: 4 })
+            })
+        ]);
     });
 
     it.each(['summary', 'tick', 'cloud'])(

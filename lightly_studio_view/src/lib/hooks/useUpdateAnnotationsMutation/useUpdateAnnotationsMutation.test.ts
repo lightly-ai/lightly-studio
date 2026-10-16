@@ -33,9 +33,7 @@ describe('useUpdateAnnotationsMutation', () => {
 
     it('invalidates annotation-bearing grids and evaluation runs after a successful update', async () => {
         vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
+            mutateAsync: vi.fn().mockResolvedValue(undefined)
         } as unknown as ReturnType<typeof createMutation>);
 
         const { updateAnnotations } = useUpdateAnnotationsMutation({
@@ -54,9 +52,7 @@ describe('useUpdateAnnotationsMutation', () => {
 
     it('fires annotation_label_updated when a single update with label_name succeeds', async () => {
         vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
+            mutateAsync: vi.fn().mockResolvedValue(undefined)
         } as unknown as ReturnType<typeof createMutation>);
 
         const { updateAnnotations } = useUpdateAnnotationsMutation({
@@ -75,9 +71,7 @@ describe('useUpdateAnnotationsMutation', () => {
 
     it('fires annotations_bulk_labeled for multiple updates with label_names', async () => {
         vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
+            mutateAsync: vi.fn().mockResolvedValue(undefined)
         } as unknown as ReturnType<typeof createMutation>);
 
         const { updateAnnotations } = useUpdateAnnotationsMutation({
@@ -97,9 +91,7 @@ describe('useUpdateAnnotationsMutation', () => {
 
     it('fires annotation_label_updated with label_name undefined when a single update has no label_name', async () => {
         vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
+            mutateAsync: vi.fn().mockResolvedValue(undefined)
         } as unknown as ReturnType<typeof createMutation>);
 
         const { updateAnnotations } = useUpdateAnnotationsMutation({
