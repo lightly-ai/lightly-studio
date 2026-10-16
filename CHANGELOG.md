@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The text axes layout of the embedding plot shows the lines x = 0 and y = 0. They split the plot into four parts, one for each pair of axis texts.
 - Added a "Clear all filters" button to the filter sidebar.
 - Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
+- Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The fal.ai SAM 3 provider, chosen in the settings, needs the `FAL_KEY` environment variable and sends images to fal.ai.
 
 ### Changed
 
