@@ -12,7 +12,9 @@ def test_list_providers(test_client: TestClient) -> None:
 
     assert response.status_code == HTTP_STATUS_OK
     providers = response.json()
-    assert len(providers) == 1
-    assert providers[0]["provider_id"] == provider_ids.FAKE_PROVIDER_ID
-    assert providers[0]["capabilities"] == FakeProvider().capabilities().model_dump()
-    assert providers[0]["unavailable_reason"] is None
+    by_id = {provider["provider_id"]: provider for provider in providers}
+    assert provider_ids.FAKE_PROVIDER_ID in by_id
+    assert provider_ids.FAL_SAM3_PROVIDER_ID in by_id
+    fake = by_id[provider_ids.FAKE_PROVIDER_ID]
+    assert fake["capabilities"] == FakeProvider().capabilities().model_dump()
+    assert fake["unavailable_reason"] is None

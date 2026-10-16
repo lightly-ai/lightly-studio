@@ -27,7 +27,7 @@ def test_get_provider__lazy(mocker: MockerFixture) -> None:
 
 
 def test_get_provider__unknown_id() -> None:
-    with pytest.raises(ValueError, match="Available providers: fake"):
+    with pytest.raises(ValueError, match=r"Available providers: .*fake"):
         registry.get_provider("unknown")
 
 

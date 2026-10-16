@@ -7,10 +7,12 @@ from collections.abc import Callable
 
 from lightly_studio.assisted_labeling import provider_ids
 from lightly_studio.assisted_labeling.fake_provider import FakeProvider
+from lightly_studio.assisted_labeling.fal_sam3_provider import FalSam3Provider
 from lightly_studio.assisted_labeling.provider import AssistedLabelingProvider
 
 _FACTORIES: dict[str, Callable[[], AssistedLabelingProvider]] = {
     provider_ids.FAKE_PROVIDER_ID: FakeProvider,
+    provider_ids.FAL_SAM3_PROVIDER_ID: FalSam3Provider,
 }
 
 _lock = threading.Lock()
