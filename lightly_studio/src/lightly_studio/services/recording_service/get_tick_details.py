@@ -85,12 +85,17 @@ def get_tick_details(
         return None
 
     channel_mcaps = mcap_resolver.get_tick_channels(session=session, group_sample_id=link.sample_id)
+    camera_timestamps = {
+        name: mcap.log_time_ns
+        for name, (mcap, data_type) in channel_mcaps.items()
+        if data_type is McapDataType.VIDEO_FRAME
+    }
     projections = _camera_projections(
         session=session,
         sequence_id=sequence_id,
         recording_id=mcap_sequence.recording_id,
         target_frame_id=target_frame_id,
-        timestamp_ns=link.timestamp_ns,
+        camera_timestamps=camera_timestamps,
     )
     camera_channels: dict[str, TickChannelView] = {}
     lidar_channels: dict[str, TickChannelView] = {}
@@ -134,10 +139,10 @@ def _camera_projections(
     sequence_id: UUID,
     recording_id: UUID,
     target_frame_id: str | None,
-    timestamp_ns: int | None,
+    camera_timestamps: Mapping[str, int],
 ) -> dict[str, CameraProjectionView]:
     """Build projection metadata for cameras in the requested scene frame."""
-    if target_frame_id is None or timestamp_ns is None:
+    if target_frame_id is None or not camera_timestamps:
         return {}
 
     info = mcap_group_sequence_resolver.get_info(session=session, sample_id=sequence_id)
@@ -170,6 +175,9 @@ def _camera_projections(
         calibration = calibrations.get(component.collection_id)
         if calibration is None or component.frame_id is None:
             continue
+        projection_timestamp_ns = camera_timestamps.get(component.group_component_name)
+        if projection_timestamp_ns is None:
+            continue
         try:
             matrix = (
                 np.eye(4, dtype=np.float64)
@@ -178,7 +186,7 @@ def _camera_projections(
                     reader=reader,
                     source_frame_id=target_frame_id,
                     target_frame_id=component.frame_id,
-                    timestamp_ns=timestamp_ns,
+                    timestamp_ns=projection_timestamp_ns,
                     static_transforms=static_transforms,
                 )
             )
