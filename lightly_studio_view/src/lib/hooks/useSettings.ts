@@ -4,6 +4,8 @@ import { getSettings, setSettings } from '$lib/api/lightly_studio_local';
 
 type UpdateSettingsResult = { success: boolean; error?: string };
 
+const DEFAULT_ASSISTED_LABELING_PROVIDER_ID = 'fal_sam3';
+
 // Default settings values
 const DEFAULT_SETTINGS: SettingView = {
     setting_id: '00000000-0000-0000-0000-000000000000',
@@ -25,7 +27,8 @@ const DEFAULT_SETTINGS: SettingView = {
     key_toolbar_segmentation_mask: 'm',
     key_toolbar_slic: 'a',
     key_toolbar_brush: 'r',
-    key_toolbar_eraser: 'x'
+    key_toolbar_eraser: 'x',
+    assisted_labeling_provider: DEFAULT_ASSISTED_LABELING_PROVIDER_ID
 };
 
 // Create stores for settings state

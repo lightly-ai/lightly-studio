@@ -59,6 +59,8 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
     current_settings.key_toolbar_brush = settings.key_toolbar_brush
     current_settings.key_toolbar_eraser = settings.key_toolbar_eraser
 
+    current_settings.assisted_labeling_provider = settings.assisted_labeling_provider
+
     # Update show annotation text labels
     current_settings.show_annotation_text_labels = settings.show_annotation_text_labels
 

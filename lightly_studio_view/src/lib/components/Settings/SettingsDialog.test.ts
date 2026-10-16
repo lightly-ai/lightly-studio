@@ -25,7 +25,8 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_toolbar_segmentation_mask: 'm',
         key_toolbar_slic: 'a',
         key_toolbar_brush: 'r',
-        key_toolbar_eraser: 'x'
+        key_toolbar_eraser: 'x',
+        assisted_labeling_provider: 'fake'
     });
     const isLoadedStore = writable(true);
 
@@ -179,7 +180,8 @@ describe('SettingsDialog', () => {
             key_toolbar_segmentation_mask: 'm',
             key_toolbar_slic: 'a',
             key_toolbar_brush: 'r',
-            key_toolbar_eraser: 'x'
+            key_toolbar_eraser: 'x',
+            assisted_labeling_provider: 'fake'
         });
     });
 
