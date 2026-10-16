@@ -173,6 +173,7 @@ const SQUARE_POLYGON = [
     { x: 0, y: 1 }
 ];
 const TEXT_LAYOUT_AXES = { x: [1, 0, 0], y: [0, 1, 0] };
+const TEXT_LAYOUT_MARKER_EMBEDDING = [0, 0, 1];
 
 const selectTextLayout = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByTestId('plot-layout-select'));
@@ -571,6 +572,7 @@ describe('PlotPanel.svelte', () => {
             'test-collection-id',
             expect.anything(),
             null,
+            null,
             null
         );
 
@@ -582,6 +584,7 @@ describe('PlotPanel.svelte', () => {
             'test-collection-id',
             expect.anything(),
             { type: 'metadata_field', key: 'split' },
+            null,
             null
         );
     });
@@ -599,13 +602,17 @@ describe('PlotPanel.svelte', () => {
             'test-collection-id',
             expect.anything(),
             { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
+            null,
             null
         );
     });
 
     it('lays the plot out on the committed text axes and saves them with the lasso region', async () => {
         const user = userEvent.setup();
-        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        mockEmbedTextAxes.mockResolvedValue({
+            axes: TEXT_LAYOUT_AXES,
+            markers: [{ label: 'young sad', embedding: TEXT_LAYOUT_MARKER_EMBEDDING }]
+        });
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
         await commitTextAxes(user);
@@ -619,7 +626,8 @@ describe('PlotPanel.svelte', () => {
                 'test-collection-id',
                 expect.anything(),
                 null,
-                TEXT_LAYOUT_AXES
+                TEXT_LAYOUT_AXES,
+                [TEXT_LAYOUT_MARKER_EMBEDDING]
             )
         );
 

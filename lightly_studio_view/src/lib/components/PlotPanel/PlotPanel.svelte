@@ -5,6 +5,7 @@
     import { Select } from '$lib/components/Select';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
+    import PlotMarkers from './PlotMarkers/PlotMarkers.svelte';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
@@ -137,16 +138,21 @@
         { value: 'pacmap', label: 'PaCMAP' },
         { value: 'text', label: 'Text' }
     ];
-    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, commitTextAxes } = usePlotLayout(
-        untrack(() => collectionId)
-    );
+    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, plotMarkers, commitTextAxes } =
+        usePlotLayout(untrack(() => collectionId));
     const isAwaitingAxes = $derived($plotLayout === 'text' && $plotAxes === null);
+    const markerEmbeddings = $derived(
+        $plotMarkers.length > 0 ? $plotMarkers.map((marker) => marker.embedding) : null
+    );
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
+    const embeddingsData = $derived(
+        useEmbeddings(collectionId, filter, $colorBy, $plotAxes, markerEmbeddings)
+    );
 
     const {
         data: arrowData,
         colorLegend,
+        markerPositions,
         error: arrowError
     } = $derived(
         useArrowData({
@@ -469,6 +475,14 @@
         })
     );
 
+    // The response has the marker positions in the order of the marker embeddings of the request.
+    const markers = $derived(
+        $plotMarkers.flatMap((marker, index) => {
+            const position = $markerPositions[index];
+            return position ? [{ label: marker.label, x: position[0], y: position[1] }] : [];
+        })
+    );
+
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
             return embeddingsData.error?.message ?? 'Unknown error';
@@ -546,6 +560,10 @@
                             rangeSelection={$rangeSelection}
                         />
                     </div>
+
+                    {#if overlayProxy && markers.length > 0}
+                        <PlotMarkers {markers} proxy={overlayProxy} />
+                    {/if}
 
                     {#if hoverPreview}
                         <div
