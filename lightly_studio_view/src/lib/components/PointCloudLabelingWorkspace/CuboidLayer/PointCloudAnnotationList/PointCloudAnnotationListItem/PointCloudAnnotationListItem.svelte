@@ -2,8 +2,9 @@
     import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import PointCloudAnnotationDetails from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails';
     import { Typography } from '$lib/components/Typography';
-    import { ChevronDown } from '@lucide/svelte';
+    import { ChevronDown, Trash2 } from '@lucide/svelte';
     import { cn } from '$lib/utils';
+    import { Tooltip } from '$lib/components/ui/tooltip';
 
     interface Props {
         /** Cuboid displayed by this row. */
@@ -18,9 +19,12 @@
         annotationSourceName?: string;
         /** Toggles the row's expanded state. */
         onToggle: (cuboidId: string) => void;
+        /** Deletes this cuboid annotation. */
+        onDelete?: (cuboidId: string) => void;
     }
 
-    let { cuboid, color, className, isSelected, annotationSourceName, onToggle }: Props = $props();
+    let { cuboid, color, className, isSelected, annotationSourceName, onToggle, onDelete }: Props =
+        $props();
 </script>
 
 <div
@@ -42,6 +46,17 @@
             aria-hidden="true"
         ></span>
         <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
+        {#if onDelete}
+            <Tooltip content="Delete annotation">
+                <Trash2
+                    class="size-4 shrink-0 text-muted-foreground hover:text-destructive"
+                    onclick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        onDelete(cuboid.id);
+                    }}
+                />
+            </Tooltip>
+        {/if}
         <ChevronDown
             class={cn(
                 'size-4 shrink-0 text-muted-foreground transition-transform',
