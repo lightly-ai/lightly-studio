@@ -108,15 +108,16 @@
         // Changing the mode creates a new session, which cancels the old queue. This is important
         // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
         getRequestId: () =>
-            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? 'entire' : 'window'}`,
+            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? `entire/${workspace.currentTick}` : 'window'}`,
         getRanges: () => {
-            if ($bufferEntireSequence) {
-                return [{ startIndex: 0, endIndex: workspace.ticks.length - 1 }];
-            }
-
             const activeIndex = workspace.ticks.findIndex(
                 (tick) => tick.seq_number === workspace.currentTick
             );
+
+            if ($bufferEntireSequence) {
+                return [{ startIndex: activeIndex, endIndex: workspace.ticks.length - 1 }];
+            }
+
             return getMcapTickPrefetchRange({
                 activeIndex,
                 tickCount: workspace.ticks.length,
