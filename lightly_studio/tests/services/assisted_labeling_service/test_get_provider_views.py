@@ -9,9 +9,10 @@ def test_list_provider_views() -> None:
     views = assisted_labeling_service.list_provider_views()
 
     fake = FakeProvider()
-    assert len(views) == 1
-    assert views[0].provider_id == provider_ids.FAKE_PROVIDER_ID
-    assert views[0].display_name == fake.display_name
-    assert views[0].sends_data_to_third_party is False
-    assert views[0].capabilities == fake.capabilities()
-    assert views[0].unavailable_reason is None
+    by_id = {view.provider_id: view for view in views}
+    assert provider_ids.FAL_SAM3_PROVIDER_ID in by_id
+    view = by_id[provider_ids.FAKE_PROVIDER_ID]
+    assert view.display_name == fake.display_name
+    assert view.sends_data_to_third_party is False
+    assert view.capabilities == fake.capabilities()
+    assert view.unavailable_reason is None
