@@ -5,14 +5,16 @@ real-time call is one event. A background job reports one event per processed ch
 with the job ID and the chunk size as quantity.
 
 Reports are sent only when both `LIGHTLY_STUDIO_USAGE_REPORT_URL` and
-`LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN` are set. Reporting is best effort: it never raises,
-so a failed report cannot break the service that reports.
+`LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN` are set. They are sent from a background thread, so
+a slow or unreachable receiver never delays the service that reports. Reporting is best
+effort: it never raises, so a failed report cannot break the service that reports.
 """
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -26,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 REPORT_TIMEOUT_S = 2.0
 
+# One worker sends the reports in order; it is also the only user of the session.
+_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="usage-report")
 _session = requests.Session()
 
 
@@ -112,12 +116,16 @@ class UsageEvent:
 
 
 def report(events: Sequence[UsageEvent]) -> None:
-    """Reports the events if reporting is configured. Never raises."""
+    """Queues the events for sending if reporting is configured. Never raises or blocks."""
     url = env.LIGHTLY_STUDIO_USAGE_REPORT_URL
     token = env.LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN
     if not url or not token:
         return
-    send(events=events, url=url, token=token, session=_session)
+    try:
+        _executor.submit(send, events=events, url=url, token=token, session=_session)
+    except Exception:
+        # The executor refuses work once the interpreter is shutting down.
+        logger.warning("Could not queue a usage report of %d events.", len(events), exc_info=True)
 
 
 def send(events: Sequence[UsageEvent], url: str, token: str, session: requests.Session) -> None:
