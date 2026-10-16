@@ -417,7 +417,7 @@
     // because the size is 0 when the panel mounts and the default scale depends on it.
     let userViewportState: ViewportState | null = $state(null);
     const viewportState = $derived(
-        userViewportState ?? getDefaultViewport({ plotAxes: $plotAxes, width, height })
+        userViewportState ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
     );
     const onViewportState = (state: ViewportState) => {
         userViewportState = state;
