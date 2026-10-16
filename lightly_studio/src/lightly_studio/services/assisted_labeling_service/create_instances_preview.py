@@ -13,17 +13,22 @@ from lightly_studio.services.assisted_labeling_service import (
     convert_prompts,
     get_active_provider,
     load_provider_image,
-    segment_timed,
+    segment_and_report,
     to_annotation_preview,
 )
 
 
 def create_instances_preview(
-    session: Session, request: InstancesAnnotationRequest
+    session: Session, request: InstancesAnnotationRequest, user_email: str | None
 ) -> InstancesAnnotationResponse:
     """Returns the previews of all matching instances sorted by score. Saves nothing.
 
     The number of instances is limited by `request.max_instances` and by the provider.
+
+    Args:
+        session: Database session.
+        request: The preview request.
+        user_email: Email of the user who triggered the call, if known.
 
     Raises:
         NotFoundError: If the collection has no image with the sample ID.
@@ -45,8 +50,13 @@ def create_instances_preview(
         max_masks=max_masks,
         output_type=request.output_type,
     )
-    predictions, latency_ms = segment_timed.segment_timed(
-        provider=provider, image=image, prompt=prompt
+    predictions, latency_ms = segment_and_report.segment_and_report(
+        provider=provider,
+        image=image,
+        prompt=prompt,
+        operation=segment_and_report.OPERATION_INSTANCES,
+        collection_id=request.collection_id,
+        user_email=user_email,
     )
     previews = to_annotation_preview.to_sorted_annotation_previews(
         predictions=predictions, width=image.width, height=image.height

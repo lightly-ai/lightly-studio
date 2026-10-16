@@ -19,6 +19,7 @@ from lightly_studio.assisted_labeling.provider import (
     ProviderCapabilities,
     ProviderError,
     ProviderImage,
+    ProviderNotCalledError,
     SegmentationPrompt,
 )
 
@@ -45,6 +46,8 @@ class FalSam3Provider:
 
     provider_id = "fal_sam3"
     display_name = "fal.ai SAM 3"
+    vendor = "fal"
+    model = ENDPOINT
     sends_data_to_third_party = True
 
     def __init__(
@@ -87,8 +90,12 @@ class FalSam3Provider:
 
     def segment(self, image: ProviderImage, prompt: SegmentationPrompt) -> list[Prediction]:
         """Runs SAM 3 on fal.ai and returns the predicted masks."""
-        fal_key = _get_fal_key()
-        image_url = self._get_image_url(image=image, fal_key=fal_key)
+        try:
+            fal_key = _get_fal_key()
+            image_url = self._get_image_url(image=image, fal_key=fal_key)
+        except (ProviderError, OSError) as error:
+            # OSError: the image file cannot be read.
+            raise ProviderNotCalledError(str(error)) from error
         output = fal_http.run_queue_request(
             session=self._session,
             fal_key=fal_key,

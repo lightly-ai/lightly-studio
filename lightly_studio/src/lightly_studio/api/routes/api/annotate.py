@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from typing import Annotated, Optional
+
+from fastapi import APIRouter, Header
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NO_CONTENT
 from lightly_studio.database.db_manager import SessionDep
@@ -39,15 +41,38 @@ def prepare_annotation_image(session: SessionDep, request: PrepareAnnotationRequ
 
 @annotate_router.post("/interactive")
 def create_interactive_annotation_preview(
-    session: SessionDep, request: InteractiveAnnotationRequest
+    session: SessionDep,
+    request: InteractiveAnnotationRequest,
+    x_user_email: Annotated[Optional[str], Header()] = None,  # noqa: UP045
 ) -> InteractiveAnnotationResponse:
-    """Returns a single-object preview from points or boxes. Saves nothing."""
-    return assisted_labeling_service.create_interactive_preview(session=session, request=request)
+    """Returns a single-object preview from points or boxes. Saves nothing.
+
+    `X-User-Email` is set by the auth proxy of a hosted deployment and attributes the
+    usage to the user.
+    """
+    return assisted_labeling_service.create_interactive_preview(
+        session=session, request=request, user_email=_to_user_email(x_user_email=x_user_email)
+    )
 
 
 @annotate_router.post("/instances")
 def create_instances_annotation_preview(
-    session: SessionDep, request: InstancesAnnotationRequest
+    session: SessionDep,
+    request: InstancesAnnotationRequest,
+    x_user_email: Annotated[Optional[str], Header()] = None,  # noqa: UP045
 ) -> InstancesAnnotationResponse:
-    """Returns previews of all instances that match a text prompt or boxes. Saves nothing."""
-    return assisted_labeling_service.create_instances_preview(session=session, request=request)
+    """Returns previews of all instances that match a text prompt or boxes. Saves nothing.
+
+    `X-User-Email` is set by the auth proxy of a hosted deployment and attributes the
+    usage to the user.
+    """
+    return assisted_labeling_service.create_instances_preview(
+        session=session, request=request, user_email=_to_user_email(x_user_email=x_user_email)
+    )
+
+
+def _to_user_email(x_user_email: str | None) -> str | None:
+    """Returns the forwarded user email, or None if the header is missing or blank."""
+    if x_user_email is None:
+        return None
+    return x_user_email.strip() or None

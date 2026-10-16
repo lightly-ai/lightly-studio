@@ -30,6 +30,8 @@ class FakeProvider:
 
     provider_id = "fake"
     display_name = "Fake (offline)"
+    vendor = "fake"
+    model = "fake"
     sends_data_to_third_party = False
 
     def capabilities(self) -> ProviderCapabilities:
