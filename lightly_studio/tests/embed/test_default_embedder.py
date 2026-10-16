@@ -275,7 +275,7 @@ def test_resolve_default_embedder__parent_space_unavailable_skips(
 
     assert result is None
     assert "parent_model" in caplog.text
-    assert "annotation collection 'boxes'" in caplog.text
+    assert "annotation source 'boxes'" in caplog.text
     assert (
         collection_embedding_model_resolver.get_default_by_collection_id(
             session=db_session, collection_id=child.collection_id
@@ -333,7 +333,7 @@ def test_resolve_default_embedder__parent_space_lacks_capability_uses_bootstrap(
     returned_embedder, model_id = result
     assert returned_embedder is builtin
     assert "parent_model" in caplog.text
-    assert "annotation collection 'boxes'" in caplog.text
+    assert "annotation source 'boxes'" in caplog.text
     registered = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=model_id)
     assert registered is not None
     assert registered.name == "mobileclip_s0"

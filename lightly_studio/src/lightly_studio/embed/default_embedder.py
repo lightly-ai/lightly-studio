@@ -17,7 +17,7 @@ from lightly_studio.embed.errors import (
     RemoteEmbedderUnavailableError,
 )
 from lightly_studio.embed.remote.endpoint import PersistableEmbedder
-from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -206,26 +206,28 @@ def _parent_space_embedder(
     if embedder is NoEmbedderReason.UNAVAILABLE:
         logger.warning(
             "No embedder is available for the space %r of the parent collection. Skipping "
-            "embedding generation for the %s collection %r. A later run uses the parent's "
+            "embedding generation for the %s %r. A later run uses the parent's "
             "space when its embedder is available.",
             parent_model.name,
-            _collection_kind(collection=collection),
+            _collection_kind(sample_type=collection.sample_type),
             collection.name,
         )
     elif embedder is NoEmbedderReason.LACKS_CAPABILITY:
         logger.warning(
-            "The embedder of the parent collection's space %r cannot embed the %s collection "
-            "%r. Using the default embedder instead.",
+            "The embedder of the parent collection's space %r cannot embed the %s %r. Using "
+            "the default embedder instead.",
             parent_model.name,
-            _collection_kind(collection=collection),
+            _collection_kind(sample_type=collection.sample_type),
             collection.name,
         )
     return embedder
 
 
-def _collection_kind(collection: CollectionTable) -> str:
-    """Get the kind of the collection for a message, such as "video frame"."""
-    return collection.sample_type.value.replace("_", " ")
+def _collection_kind(sample_type: SampleType) -> str:
+    """Get how a message names a collection of the sample type, such as "video frame collection"."""
+    if sample_type == SampleType.ANNOTATION:
+        return "annotation source"
+    return f"{sample_type.value.replace('_', ' ')} collection"
 
 
 def _register_default_model(session: Session, collection_id: UUID, embedder: Embedder) -> UUID:
