@@ -15,6 +15,7 @@ type ResizePayload = Parameters<
 interface Params {
     getAnnotation: () => Pick<CuboidAnnotation, 'id' | 'frameId' | 'center' | 'rotation' | 'size'>;
     onResizeStart?: () => void;
+    onResizeCancel?: () => void;
     onResizeEnd?: (payload: ResizePayload) => void;
 }
 
@@ -30,6 +31,7 @@ interface FaceResizeReturn {
 export function useCuboidFaceResize({
     getAnnotation,
     onResizeStart,
+    onResizeCancel,
     onResizeEnd
 }: Params): FaceResizeReturn {
     const { camera, renderer, invalidate } = useThrelte();
@@ -53,6 +55,7 @@ export function useCuboidFaceResize({
     }
 
     const onFacePointerDown: FaceResizeReturn['onFacePointerDown'] = ({ event, face }) => {
+        if (event.nativeEvent.button !== 0 || !parentObject.current) return;
         onResizeStart?.();
         activeDrag = createFaceDrag({
             event,
@@ -60,6 +63,7 @@ export function useCuboidFaceResize({
             annotation: getAnnotation(),
             camera: camera.current
         });
+        event.stopPropagation();
         canvas.setPointerCapture(event.nativeEvent.pointerId);
         canvas.style.cursor = 'grabbing';
         if (orbitControls.current) orbitControls.current.enabled = false;
@@ -97,7 +101,14 @@ export function useCuboidFaceResize({
     }
 
     function onPointerUp(event: PointerEvent): void {
-        if (event.pointerId === activeDrag?.pointerId) finalizeDrag();
+        if (event.pointerId === activeDrag?.pointerId) {
+            updateDrag(event);
+            finalizeDrag();
+        }
+    }
+
+    function onPointerCancel(event: PointerEvent): void {
+        if (event.pointerId === activeDrag?.pointerId) cancelDrag();
     }
 
     function finishDrag(): void {
@@ -118,6 +129,8 @@ export function useCuboidFaceResize({
             const { id, frameId, rotation } = getAnnotation();
             object.scale.set(1, 1, 1);
             onResizeEnd?.({ annotationId: id, frameId, center, rotation, size });
+        } else {
+            onResizeCancel?.();
         }
         finishDrag();
     }
@@ -130,6 +143,7 @@ export function useCuboidFaceResize({
             invalidate();
         }
         hoveredFace.set(null);
+        onResizeCancel?.();
         finishDrag();
     }
 
@@ -140,10 +154,14 @@ export function useCuboidFaceResize({
     onMount(() => {
         canvas.addEventListener('pointermove', onPointerMove, { capture: true });
         canvas.addEventListener('pointerup', onPointerUp, { capture: true });
+        canvas.addEventListener('pointercancel', onPointerCancel, { capture: true });
+        canvas.addEventListener('lostpointercapture', onPointerCancel, { capture: true });
         window.addEventListener('keydown', onKeyDown);
         return () => {
             canvas.removeEventListener('pointermove', onPointerMove, { capture: true });
             canvas.removeEventListener('pointerup', onPointerUp, { capture: true });
+            canvas.removeEventListener('pointercancel', onPointerCancel, { capture: true });
+            canvas.removeEventListener('lostpointercapture', onPointerCancel, { capture: true });
             window.removeEventListener('keydown', onKeyDown);
             cancelDrag();
             canvas.style.cursor = '';

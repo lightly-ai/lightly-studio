@@ -1,7 +1,6 @@
 <script lang="ts">
     import { T, useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
-    import type { Object3D } from 'three';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
     import { GroundPlaneClickTarget } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
     import CuboidGizmo from './CuboidGizmo.svelte';
@@ -9,19 +8,13 @@
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidHoverTracker } from './cuboidHoverTracker';
-    import { createPendingSizesTracker } from './cuboidPendingSizes';
+    import { createCuboidTransformState } from './cuboidTransformState';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
     import { addCuboidSelectionListeners } from './cuboidSelection';
-    import {
-        GIZMO_MODES,
-        buildCuboidTransformPayload,
-        captureTransformSnapshot,
-        restoreTransformSnapshot
-    } from './cuboidTransform';
+    import { GIZMO_MODES, buildCuboidTransformPayload } from './cuboidTransform';
     import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
 
     interactivity();
-
 
     let {
         cuboids,
@@ -49,33 +42,20 @@
 
     const { renderer } = useThrelte();
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
-    const pendingSizes = createPendingSizesTracker();
+    const transforms = createCuboidTransformState({
+        onTransform: (payload) => onCuboidTransform?.(payload)
+    });
+    const { annotations } = transforms;
     const hoverTracker = createCuboidHoverTracker((id, handle) => onhover?.(id, handle));
-    const transformVersions = new Map<string, number>();
-
-    async function handleTransformEnd(
-        ann: Domain.CuboidAnnotation,
-        obj: Object3D,
-        snapshot: ReturnType<typeof captureTransformSnapshot>
-    ): Promise<void> {
-        const payload = buildCuboidTransformPayload(ann, obj, pendingSizes.get(ann.id));
-        pendingSizes.set(ann.id, payload.size);
-        const version = (transformVersions.get(ann.id) ?? 0) + 1;
-        transformVersions.set(ann.id, version);
-        const success = await onCuboidTransform?.(payload);
-        if (success === false && transformVersions.get(ann.id) === version) {
-            pendingSizes.delete(ann.id);
-            restoreTransformSnapshot(obj, snapshot);
-        }
-    }
-
-
 
     $effect(() => {
         hoverTracker.clear();
         onhover?.(null, null);
-        pendingSizes.reconcile(cuboids);
-        const next = createCuboidRenderItems(cuboids);
+        transforms.reconcile(cuboids);
+    });
+
+    $effect(() => {
+        const next = createCuboidRenderItems($annotations);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
     });
@@ -101,7 +81,15 @@
     {@const isSelected = selectedAnnotationId === item.annotation.id}
     {@const isHovered = hoveredAnnotationId === item.annotation.id}
     {@const gizmoMode = GIZMO_MODES[activeTool]}
-    <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
+    <T.Group
+        position.x={item.annotation.center[0]}
+        position.y={item.annotation.center[1]}
+        position.z={item.annotation.center[2]}
+        quaternion.x={item.annotation.rotation[0]}
+        quaternion.y={item.annotation.rotation[1]}
+        quaternion.z={item.annotation.rotation[2]}
+        quaternion.w={item.annotation.rotation[3]}
+    >
         <CuboidVisual
             {item}
             baseColor={base}
@@ -119,17 +107,25 @@
             {#if gizmoMode}
                 <CuboidGizmo
                     mode={gizmoMode}
-                    onTransformEnd={(obj, snapshot) =>
-                        handleTransformEnd(item.annotation, obj, snapshot)}
-                    onInteractionStart={() => hoverTracker.markClicked()}
+                    onTransformEnd={(obj) =>
+                        void transforms.commit(buildCuboidTransformPayload(item.annotation, obj))}
+                    onInteractionStart={() => {
+                        hoverTracker.markClicked();
+                        transforms.begin(item.annotation);
+                    }}
+                    onInteractionCancel={() => transforms.cancel(item.annotation.id)}
                 />
             {/if}
             {#if activeTool === 'resize'}
                 <CuboidFaceResize
                     annotation={item.annotation}
                     baseColor={base}
-                    onResizeStart={() => hoverTracker.markClicked()}
-                    onResizeEnd={(payload) => void onCuboidTransform?.(payload)}
+                    onResizeStart={() => {
+                        hoverTracker.markClicked();
+                        transforms.begin(item.annotation);
+                    }}
+                    onResizeCancel={() => transforms.cancel(item.annotation.id)}
+                    onResizeEnd={(payload) => void transforms.commit(payload)}
                 />
             {/if}
         {/if}
