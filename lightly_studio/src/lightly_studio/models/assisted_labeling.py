@@ -31,6 +31,8 @@ class AssistedLabelingProviderView(BaseModel):
 
 NormalizedCoordinate = Annotated[float, Field(ge=0, le=1, allow_inf_nan=False)]
 NORMALIZED_BOUND_TOLERANCE = 1.000001
+DEFAULT_MAX_INSTANCES = 16
+MAX_INSTANCES_LIMIT = 32
 
 # The validators raise `PydanticCustomError` instead of `ValueError`, because the error
 # context of a `ValueError` is not JSON serializable in the 422 response.
@@ -115,3 +117,26 @@ class InteractiveAnnotationResponse(BaseModel):
     """Single-object preview, or None if the provider finds no object."""
 
     prediction: AnnotationPreview | None
+
+
+class InstancesAnnotationRequest(BaseModel):
+    """Request for previews of all instances that match a text prompt or boxes."""
+
+    collection_id: UUID
+    sample_id: UUID
+    prompt: str | None = Field(default=None, min_length=1)
+    boxes: list[AnnotationBox] | None = Field(default=None, min_length=1)
+    max_instances: int = Field(default=DEFAULT_MAX_INSTANCES, ge=1, le=MAX_INSTANCES_LIMIT)
+
+    @model_validator(mode="after")
+    def validate_prompts(self) -> InstancesAnnotationRequest:  # noqa: N804
+        """Requires a non-blank text prompt, boxes, or both."""
+        if (self.prompt is None or not self.prompt.strip()) and not self.boxes:
+            raise PydanticCustomError("invalid_prompts", "Provide a text prompt, boxes, or both.")
+        return self
+
+
+class InstancesAnnotationResponse(BaseModel):
+    """Instance previews sorted by descending score."""
+
+    predictions: list[AnnotationPreview]
