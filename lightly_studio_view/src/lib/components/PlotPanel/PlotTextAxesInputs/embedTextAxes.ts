@@ -41,6 +41,9 @@ const embed = async (collectionId: string, text: string): Promise<number[]> => {
 
 const normalize = (vector: number[]): number[] => {
     const norm = Math.hypot(...vector);
+    if (norm === 0) {
+        throw new Error('Cannot normalize a zero-norm embedding.');
+    }
     return vector.map((value) => value / norm);
 };
 

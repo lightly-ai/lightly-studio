@@ -1,12 +1,15 @@
 import type { OverlayProxy } from 'embedding-atlas/svelte';
 
+interface AxisLinePositions {
+    x: number | null;
+    y: number | null;
+}
+
 /**
  * Returns the pixel position of the line x = 0 (a vertical line) and of the line y = 0 (a
  * horizontal line). A line outside the visible plot is null.
  */
-export const getAxisLinePositions = (
-    proxy: OverlayProxy
-): { x: number | null; y: number | null } => {
+export const getAxisLinePositions = (proxy: OverlayProxy): AxisLinePositions => {
     const origin = proxy.location(0, 0);
     return {
         x: isInRange(origin.x, proxy.width) ? origin.x : null,

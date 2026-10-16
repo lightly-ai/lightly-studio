@@ -337,7 +337,7 @@
     });
 
     const reset = () => {
-        viewportState = getDefaultViewport(get(plotAxes));
+        userViewportState = null;
     };
 
     const isReady = true;
@@ -413,15 +413,20 @@
         setRangeSelection(normalizedSelection);
     };
 
-    let viewportState: ViewportState | null = $state(getDefaultViewport(get(plotAxes)));
+    // The viewport after the user pans or zooms. Until then, the default follows the plot size,
+    // because the size is 0 when the panel mounts and the default scale depends on it.
+    let userViewportState: ViewportState | null = $state(null);
+    const viewportState = $derived(
+        userViewportState ?? getDefaultViewport({ plotAxes: $plotAxes, width, height })
+    );
     const onViewportState = (state: ViewportState) => {
-        viewportState = state;
+        userViewportState = state;
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
     // region belongs to the layout it was drawn on.
     const resetForNewLayout = () => {
-        viewportState = getDefaultViewport(get(plotAxes));
+        userViewportState = null;
         if (hasActiveSelection) clearSelection();
     };
     const selectPlotLayout = (layout: PlotLayout) => {

@@ -52,4 +52,12 @@ describe('embedTextAxes', () => {
             'The embedding space cannot embed text.'
         );
     });
+
+    it('throws an Error instead of returning NaN axes for a zero embedding', async () => {
+        mocks.embedText.mockResolvedValue({ data: [0, 0, 0], error: undefined });
+
+        await expect(embedTextAxes('collection-id', TEXT_AXES)).rejects.toThrow(
+            'Cannot normalize a zero-norm embedding.'
+        );
+    });
 });
