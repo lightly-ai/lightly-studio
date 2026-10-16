@@ -11,6 +11,9 @@ const defaultProps = {
     currentTick: 0,
     isPlaying: false,
     playbackIntervalMs: 100,
+    bufferEntireSequence: false,
+    onBufferEntireSequenceChange: vi.fn(),
+    bufferedRanges: [],
     onPreviousFrame: vi.fn(),
     onNextFrame: vi.fn(),
     onPlayToggle: vi.fn(),
@@ -19,6 +22,20 @@ const defaultProps = {
 };
 
 describe('FrameTimeline', () => {
+    it('colors tick marks that are included in buffered ranges', () => {
+        render(FrameTimeline, {
+            props: {
+                ...defaultProps,
+                bufferedRanges: [{ startIndex: 1, endIndex: 2 }]
+            }
+        });
+
+        const marks = screen.getAllByTestId('timeline-tick-mark');
+        expect(marks[0]).toHaveClass('bg-border');
+        expect(marks[1]).toHaveClass('bg-primary');
+        expect(marks[2]).toHaveClass('bg-primary');
+    });
+
     it.each([
         { currentTick: 0, label: 'Frame 1 / 3' },
         { currentTick: 1, label: 'Frame 2 / 3' }
@@ -35,6 +52,17 @@ describe('FrameTimeline', () => {
         render(FrameTimeline, { props: { ...defaultProps, ticks: [] } });
 
         expect(screen.getByText('Frame — / —')).toBeInTheDocument();
+    });
+
+    it('toggles complete-sequence buffering from the transport', async () => {
+        const onBufferEntireSequenceChange = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onBufferEntireSequenceChange }
+        });
+
+        await fireEvent.click(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }));
+
+        expect(onBufferEntireSequenceChange).toHaveBeenCalledWith(true);
     });
 
     it('selects ticks with the timeline slider and exposes the playback interval control', async () => {

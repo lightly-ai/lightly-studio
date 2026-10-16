@@ -3,6 +3,13 @@
     import TimelineTransport from './TimelineTransport/TimelineTransport.svelte';
     import TimelineTracks from './TimelineTracks/TimelineTracks.svelte';
 
+    interface BufferRange {
+        /** Inclusive zero-based index of the first buffered tick. */
+        startIndex: number;
+        /** Inclusive zero-based index of the last buffered tick. */
+        endIndex: number;
+    }
+
     /**
      * Frame navigation for the active recording with a tick ruler; stepping controls disable at
      * the ends of the sequence.
@@ -15,6 +22,12 @@
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
         playbackIntervalMs: number;
+        /** Whether the complete sequence should be prefetched. */
+        bufferEntireSequence: boolean;
+        /** Called when the complete-sequence buffering option changes. */
+        onBufferEntireSequenceChange: (enabled: boolean) => void;
+        /** Inclusive tick-index ranges whose data is ready for playback. */
+        bufferedRanges: readonly BufferRange[];
         /** Step to the previous frame. */
         onPreviousFrame: () => void;
         /** Step to the next frame. */
@@ -34,6 +47,9 @@
         currentTick,
         isPlaying,
         playbackIntervalMs,
+        bufferEntireSequence,
+        onBufferEntireSequenceChange,
+        bufferedRanges,
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
@@ -55,12 +71,11 @@
     );
 </script>
 
-<div
-    class="flex h-full min-h-0 flex-col border-t bg-background"
-    data-testid="workspace-frame-timeline"
->
+<div class="flex min-h-0 flex-col border-t bg-background" data-testid="workspace-frame-timeline">
     <TimelineTransport
         {frameLabel}
+        {bufferEntireSequence}
+        {onBufferEntireSequenceChange}
         {isPlaying}
         {playbackIntervalMs}
         hasTicks={ticks.length > 0}
@@ -73,5 +88,7 @@
         {onPreviousSequence}
         {onNextSequence}
     />
-    <TimelineTracks {ticks} {currentTick} {onSelectTick} />
+    <div class="relative flex-none">
+        <TimelineTracks {ticks} {currentTick} {bufferedRanges} {onSelectTick} />
+    </div>
 </div>

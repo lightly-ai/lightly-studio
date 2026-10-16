@@ -86,6 +86,9 @@ vi.mock(
     '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte',
     async () => ({ default: (await import('./LayoutStub.test.svelte')).default })
 );
+vi.mock('$lib/components/ClearAllFiltersButton', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
+}));
 vi.mock('$lib/components/ConfusionCellFilterItem', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));

@@ -4,10 +4,9 @@
     import { getCameraFrameUrl } from '../getCameraFrameUrl/getCameraFrameUrl';
 
     /**
-     * A single camera tile in the projection strip. Renders the channel's frame
-     * for the active tick, falling back to a placeholder camera icon when the
-     * image fails to load. Clicking the frame enlarges it in a dialog over the
-     * workspace; the enlarged frame follows the active tick.
+     * A single camera tile in the projection strip, with a placeholder icon when the
+     * image is missing or fails to load. Clicking the tile enlarges the frame at full
+     * resolution in a dialog that follows the active tick.
      */
     interface Props {
         /** Dataset the recording belongs to. */
@@ -20,14 +19,16 @@
         keyframeTimestampNs?: string;
         /** Frame to show, in nanoseconds, as a string to preserve full precision. */
         logTimeNs?: string;
+        /** Tile-size JPEG of the frame, from the tick data. */
+        blob?: Blob;
         /** Studio slot name shown as the caption, e.g. `front`. */
         label: string;
     }
 
-    let { datasetId, recordingId, channelId, keyframeTimestampNs, logTimeNs, label }: Props =
+    let { datasetId, recordingId, channelId, keyframeTimestampNs, logTimeNs, blob, label }: Props =
         $props();
 
-    const frameUrl = $derived(
+    const fullFrameUrl = $derived(
         recordingId && keyframeTimestampNs && logTimeNs
             ? getCameraFrameUrl({
                   datasetId,
@@ -38,6 +39,17 @@
               })
             : null
     );
+
+    let frameUrl = $state<string | null>(null);
+    $effect(() => {
+        if (!blob) {
+            frameUrl = null;
+            return;
+        }
+        const url = URL.createObjectURL(blob);
+        frameUrl = url;
+        return () => URL.revokeObjectURL(url);
+    });
 
     let failedFrameUrl = $state<string | null>(null);
     let isEnlarged = $state(false);
@@ -78,8 +90,9 @@
             <Dialog.Content class="max-w-[90vw] gap-2 p-3 sm:max-w-[90vw]">
                 <Dialog.Title class="text-sm font-medium">{label}</Dialog.Title>
                 <Dialog.Description class="sr-only">Enlarged camera frame</Dialog.Description>
+                <!-- Renders only while open, so the full frame loads on demand. -->
                 <img
-                    src={frameUrl}
+                    src={fullFrameUrl ?? frameUrl}
                     alt={`${label} enlarged`}
                     class="max-h-[80vh] w-full rounded-md object-contain"
                 />

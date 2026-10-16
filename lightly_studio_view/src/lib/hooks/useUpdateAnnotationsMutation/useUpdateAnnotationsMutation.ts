@@ -27,41 +27,30 @@ export const useUpdateAnnotationsMutation = ({
         invalidateEvaluationRunsQueries();
     };
 
-    const updateAnnotations = (inputs: AnnotationUpdateInput[]) =>
-        new Promise<void>((resolve, reject) => {
-            const collectionId = getCollectionId();
-            mutation.mutate(
-                {
-                    path: {
-                        collection_id: collectionId
-                    },
-                    body: inputs
-                },
-                {
-                    onSuccess: () => {
-                        refetch(collectionId);
-                        const labelInputs = inputs.filter((input) => input.label_name != null);
-                        if (inputs.length === 1) {
-                            trackEvent('annotation_label_updated', {
-                                collection_id: collectionId,
-                                annotation_id: inputs[0].annotation_id,
-                                label_name: labelInputs[0]?.label_name
-                            });
-                        } else if (inputs.length > 1) {
-                            trackEvent('annotations_bulk_labeled', {
-                                collection_id: collectionId,
-                                annotation_ids: inputs.map((input) => input.annotation_id),
-                                annotation_count: inputs.length
-                            });
-                        }
-                        resolve();
-                    },
-                    onError: (error) => {
-                        reject(error);
-                    }
-                }
-            );
+    const updateAnnotations = async (inputs: AnnotationUpdateInput[]) => {
+        const collectionId = getCollectionId();
+        await mutation.mutateAsync({
+            path: {
+                collection_id: collectionId
+            },
+            body: inputs
         });
+        refetch(collectionId);
+        const labelInputs = inputs.filter((input) => input.label_name != null);
+        if (inputs.length === 1) {
+            trackEvent('annotation_label_updated', {
+                collection_id: collectionId,
+                annotation_id: inputs[0].annotation_id,
+                label_name: labelInputs[0]?.label_name
+            });
+        } else if (inputs.length > 1) {
+            trackEvent('annotations_bulk_labeled', {
+                collection_id: collectionId,
+                annotation_ids: inputs.map((input) => input.annotation_id),
+                annotation_count: inputs.length
+            });
+        }
+    };
 
     return {
         updateAnnotations

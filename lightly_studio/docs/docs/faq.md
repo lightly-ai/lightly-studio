@@ -32,8 +32,8 @@ managed cloud credentials.
 
 LightlyStudio is free and open source. You can install it and use every open-source feature on your own
 machine at no cost. [LightlyStudio Enterprise](enterprise/index.md) is a separate paid product for teams. It
-adds collaboration, role-based access, and central credential management. Your team can
-[start with it for free](https://app.studio.lightly.ai/auth/signup).
+adds collaboration, role-based access, and central credential management. To get access, book a call on the
+[product page](https://www.lightly.ai/lightly-studio).
 
 ### Is LightlyStudio open source, and what license does it use?
 
@@ -62,7 +62,7 @@ app at `http://localhost:8001`. For a complete example, see the [quickstart](ind
 
 ### Can I try LightlyStudio without installing anything?
 
-Yes. You can [start a free trial](https://app.studio.lightly.ai/auth/signup) of the fully hosted service.
+Yes. For the fully hosted service, book a call on the [product page](https://www.lightly.ai/lightly-studio).
 You can also run LightlyStudio in a hosted notebook such as Google Colab. See
 [Run LightlyStudio from a Notebook](get_started/notebooks.md). For a local install, run
 `lightly-studio quickstart`. This command downloads an example dataset and opens the app.

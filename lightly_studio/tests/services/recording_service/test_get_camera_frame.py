@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
+import threading
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -19,7 +18,13 @@ from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import collection_resolver, recording_resolver
-from lightly_studio.services.recording_service import reader_cache, video_decoder_cache
+from lightly_studio.services.recording_service import (
+    get_camera_frame as get_camera_frame_module,
+)
+from lightly_studio.services.recording_service import (
+    reader_cache,
+    video_decoder_cache,
+)
 from lightly_studio.services.recording_service.get_camera_frame import (
     CameraFrame,
     get_camera_frame,
@@ -42,21 +47,10 @@ class RecordingFixture:
 
 @pytest.fixture(autouse=True)
 def clear_caches() -> Iterator[None]:
-    cache = cast(
-        "OrderedDict[str, McapFileReader] | None",
-        getattr(reader_cache._thread_local, "reader_cache", None),
-    )
-    if cache is None:
-        cache = OrderedDict()
-        reader_cache._thread_local.reader_cache = cache
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
     video_decoder_cache.clear()
     yield
-    for reader in cache.values():
-        reader.close()
-    cache.clear()
+    reader_cache.clear()
     video_decoder_cache.clear()
 
 
@@ -122,6 +116,83 @@ def test_get_camera_frame__continues_cached_decoder(
     assert helpers.jpeg_mean_gray_level(white_frame.data) > 223
 
 
+def test_get_camera_frame__reads_after_the_decoder_position(
+    db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
+) -> None:
+    read_spy = mocker.spy(McapFileReader, "get_decoded_messages_in_range")
+
+    _get_frame(session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS)
+    _get_frame(session=db_session, recording=video_recording, log_time_ns=WHITE_FRAME_NS)
+
+    assert [call.kwargs["start_time_ns"] for call in read_spy.call_args_list] == [
+        KEYFRAME_NS,
+        GRAY_FRAME_NS + 1,
+    ]
+
+
+def test_get_camera_frame__decoder_moved_on_reads_from_the_keyframe(
+    db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
+) -> None:
+    # The hint skips the keyframe, but the channel has no decoder to continue.
+    mocker.patch.object(
+        get_camera_frame_module, "camera_read_start_ns", return_value=WHITE_FRAME_NS
+    )
+    read_spy = mocker.spy(McapFileReader, "get_decoded_messages_in_range")
+
+    white_frame = _get_frame(
+        session=db_session, recording=video_recording, log_time_ns=WHITE_FRAME_NS
+    )
+
+    assert [call.kwargs["start_time_ns"] for call in read_spy.call_args_list] == [
+        WHITE_FRAME_NS,
+        KEYFRAME_NS,
+    ]
+    assert helpers.jpeg_mean_gray_level(white_frame.data) > 223
+
+
+def test_get_camera_frame__two_gops_keep_their_decoders(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    # Two GOPs of two frames each: black then gray, and white then gray.
+    first_gop = helpers.h264_access_units(gray_levels=(0, 128))
+    second_gop = helpers.h264_access_units(gray_levels=(255, 128))
+    mcap_path = helpers.write_mcap_with_video(
+        tmp_path / "two_gops.mcap",
+        frames=[
+            (1_000_000_000, first_gop[0]),
+            (1_100_000_000, first_gop[1]),
+            (1_200_000_000, second_gop[0]),
+            (1_300_000_000, second_gop[1]),
+        ],
+    )
+    recording = _create_recording(session=db_session, mcap_path=mcap_path)
+    decode_spy = mocker.spy(VideoDecoder, "decode")
+
+    for keyframe_ns, log_time_ns in [
+        (1_000_000_000, 1_000_000_000),
+        (1_200_000_000, 1_200_000_000),
+        (1_000_000_000, 1_100_000_000),
+        (1_200_000_000, 1_300_000_000),
+    ]:
+        frame = get_camera_frame(
+            session=db_session,
+            dataset_id=recording.dataset_id,
+            recording_id=recording.recording_id,
+            channel_id=recording.channel_id,
+            keyframe_timestamp_ns=keyframe_ns,
+            log_time_ns=log_time_ns,
+        )
+        assert frame is not None
+
+    # Each GOP continues its own decoder, so no keyframe is decoded twice.
+    assert _decoded_log_times_ns(decode_spy=decode_spy) == [
+        1_000_000_000,
+        1_200_000_000,
+        1_100_000_000,
+        1_300_000_000,
+    ]
+
+
 def test_get_camera_frame__same_frame_again(
     db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
 ) -> None:
@@ -131,11 +202,11 @@ def test_get_camera_frame__same_frame_again(
     decode_spy.reset_mock()
     second = _get_frame(session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS)
 
-    assert _decoded_log_times_ns(decode_spy=decode_spy) == [KEYFRAME_NS, GRAY_FRAME_NS]
+    assert _decoded_log_times_ns(decode_spy=decode_spy) == []
     assert second.data == first.data
 
 
-def test_get_camera_frame__earlier_frame_restarts_at_keyframe(
+def test_get_camera_frame__earlier_frame_comes_from_the_cache(
     db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
 ) -> None:
     decode_spy = mocker.spy(VideoDecoder, "decode")
@@ -146,7 +217,7 @@ def test_get_camera_frame__earlier_frame_restarts_at_keyframe(
         session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS
     )
 
-    assert _decoded_log_times_ns(decode_spy=decode_spy) == [KEYFRAME_NS, GRAY_FRAME_NS]
+    assert _decoded_log_times_ns(decode_spy=decode_spy) == []
     assert 96 < helpers.jpeg_mean_gray_level(gray_frame.data) < 160
 
 
@@ -213,6 +284,123 @@ def test_get_camera_frame__unknown_channel(
         )
 
 
+def test_camera_jpeg__concurrent_requests_decode_each_frame_once(
+    db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
+) -> None:
+    recording = recording_resolver.get_by_id(
+        session=db_session, recording_id=video_recording.recording_id
+    )
+    assert recording is not None
+    with McapFileReader(recording.uri) as reader:
+        messages = reader.get_decoded_messages_in_range(
+            channel_ids=[video_recording.channel_id],
+            start_time_ns=KEYFRAME_NS,
+            end_time_ns=WHITE_FRAME_NS,
+        )[video_recording.channel_id]
+    decode_spy = mocker.spy(VideoDecoder, "decode")
+    barrier = threading.Barrier(2)
+    results: dict[int, bytes | None] = {}
+    errors: list[BaseException] = []
+
+    def load(log_time_ns: int) -> None:
+        try:
+            barrier.wait(timeout=5)
+            results[log_time_ns] = get_camera_frame_module.camera_jpeg(
+                uri=recording.uri,
+                channel_id=video_recording.channel_id,
+                keyframe_log_time_ns=KEYFRAME_NS,
+                messages=messages,
+                target_time_ns=log_time_ns,
+            )
+        except Exception as exc:
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=load, args=(log_time_ns,))
+        for log_time_ns in (GRAY_FRAME_NS, WHITE_FRAME_NS)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+
+    assert errors == []
+    assert not any(thread.is_alive() for thread in threads)
+    decoded = _decoded_log_times_ns(decode_spy=decode_spy)
+    assert decoded.count(KEYFRAME_NS) == 1
+    assert decoded.count(GRAY_FRAME_NS) == 1
+    assert decoded.count(WHITE_FRAME_NS) == 1
+    gray = results[GRAY_FRAME_NS]
+    white = results[WHITE_FRAME_NS]
+    assert gray is not None
+    assert white is not None
+    assert 96 < helpers.jpeg_mean_gray_level(gray) < 160
+    assert helpers.jpeg_mean_gray_level(white) > 223
+
+
+def test_camera_read_start_ns__no_decoder(video_recording: RecordingFixture) -> None:
+    assert (
+        get_camera_frame_module.camera_read_start_ns(
+            uri="recording.mcap",
+            channel_id=video_recording.channel_id,
+            keyframe_log_time_ns=KEYFRAME_NS,
+            target_time_ns=WHITE_FRAME_NS,
+        )
+        == KEYFRAME_NS
+    )
+
+
+def test_camera_read_start_ns__continues_after_the_last_message(
+    db_session: Session, video_recording: RecordingFixture
+) -> None:
+    _get_frame(session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS)
+    uri = _recording_uri(session=db_session, recording=video_recording)
+
+    assert (
+        get_camera_frame_module.camera_read_start_ns(
+            uri=uri,
+            channel_id=video_recording.channel_id,
+            keyframe_log_time_ns=KEYFRAME_NS,
+            target_time_ns=WHITE_FRAME_NS,
+        )
+        == GRAY_FRAME_NS + 1
+    )
+
+
+def test_camera_read_start_ns__other_keyframe(
+    db_session: Session, video_recording: RecordingFixture
+) -> None:
+    _get_frame(session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS)
+    uri = _recording_uri(session=db_session, recording=video_recording)
+
+    assert (
+        get_camera_frame_module.camera_read_start_ns(
+            uri=uri,
+            channel_id=video_recording.channel_id,
+            keyframe_log_time_ns=WHITE_FRAME_NS,
+            target_time_ns=WHITE_FRAME_NS,
+        )
+        == WHITE_FRAME_NS
+    )
+
+
+def test_camera_read_start_ns__cached_jpeg(
+    db_session: Session, video_recording: RecordingFixture
+) -> None:
+    _get_frame(session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS)
+    uri = _recording_uri(session=db_session, recording=video_recording)
+
+    assert (
+        get_camera_frame_module.camera_read_start_ns(
+            uri=uri,
+            channel_id=video_recording.channel_id,
+            keyframe_log_time_ns=KEYFRAME_NS,
+            target_time_ns=GRAY_FRAME_NS,
+        )
+        is None
+    )
+
+
 def _create_recording(session: Session, mcap_path: Path) -> RecordingFixture:
     collection = collection_resolver.create(
         session, CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
@@ -245,6 +433,12 @@ def _get_frame(session: Session, recording: RecordingFixture, log_time_ns: int) 
     )
     assert frame is not None
     return frame
+
+
+def _recording_uri(session: Session, recording: RecordingFixture) -> str:
+    table = recording_resolver.get_by_id(session=session, recording_id=recording.recording_id)
+    assert table is not None
+    return table.uri
 
 
 def _decoded_log_times_ns(decode_spy: MockType) -> list[int]:
