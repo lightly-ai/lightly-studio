@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from lightly_studio.models.assisted_labeling import (
     AnnotationBox,
     AnnotationPoint,
+    InstancesAnnotationRequest,
     InteractiveAnnotationRequest,
 )
 
@@ -76,4 +77,12 @@ class TestInteractiveAnnotationRequest:
         with pytest.raises(ValidationError, match="at most 1 item"):
             InteractiveAnnotationRequest(
                 collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), boxes=[box, box]
+            )
+
+
+class TestInstancesAnnotationRequest:
+    def test_validate_prompts__blank_text_without_boxes(self) -> None:
+        with pytest.raises(ValidationError, match=r"Provide a text prompt, boxes, or both\."):
+            InstancesAnnotationRequest(
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), prompt="   "
             )
