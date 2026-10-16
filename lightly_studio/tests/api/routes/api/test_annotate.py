@@ -209,3 +209,65 @@ def test_create_interactive_annotation_preview__unavailable(
     assert response.json() == {
         "error": "The provider 'Fake (offline)' is not available: Set the API key."
     }
+
+
+def test_create_instances_annotation_preview(
+    db_session: Session, media_test_client: TestClient
+) -> None:
+    helpers.select_provider(session=db_session, provider_id=provider_ids.FAKE_PROVIDER_ID)
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session, collection_id=collection.collection_id, width=100, height=50
+    )
+
+    response = media_test_client.post(
+        "/api/annotate/instances",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "prompt": "dog",
+            "max_instances": 2,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    predictions = response.json()["predictions"]
+    assert [prediction["bbox"]["x"] for prediction in predictions] == [20, 45]
+    assert [prediction["class_name"] for prediction in predictions] == ["dog", "dog"]
+
+
+def test_create_instances_annotation_preview__blank_prompt(
+    db_session: Session, media_test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/instances",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "prompt": "  ",
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_create_instances_annotation_preview__too_many_instances(
+    db_session: Session, media_test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/instances",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "prompt": "dog",
+            "max_instances": 33,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
