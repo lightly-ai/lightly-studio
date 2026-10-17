@@ -27,6 +27,10 @@ export function usePointCloudTickNavigation({
     };
     const goToFrame = (seqNumber: number) => {
         const workspace = getWorkspace();
+        // A seek while playing must restart the interval from the selected frame instead of
+        // allowing the timer created for the previous frame to fire.
+        clearPlaybackTimer();
+        scheduledTick = undefined;
         workspace.goToFrame(seqNumber);
         getOnTickChange()(seqNumber + 1);
     };

@@ -79,12 +79,47 @@ describe('FrameTimeline', () => {
             }
         });
 
-        await fireEvent.input(screen.getByRole('slider', { name: 'Frame position' }), {
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.input(slider, { target: { value: '1' } });
+        expect(onSelectTick).toHaveBeenCalledWith(4);
+
+        await fireEvent.change(slider, {
             target: { value: '2' }
         });
         expect(screen.getByLabelText('Playback speed')).toHaveTextContent('1×');
         expect(screen.getByRole('slider', { name: 'Frame position' })).toHaveAttribute('max', '2');
         expect(onSelectTick).toHaveBeenCalledWith(8);
+    });
+
+    it('reports the start and end of slider seeking', async () => {
+        const onSeekStart = vi.fn();
+        const onSeekEnd = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onSeekStart, onSeekEnd }
+        });
+
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.pointerUp(slider);
+
+        expect(onSeekStart).toHaveBeenCalledOnce();
+        expect(onSeekEnd).toHaveBeenCalledOnce();
+    });
+
+    it('commits the final slider position when playback is active', async () => {
+        const onSelectTick = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, isPlaying: true, onSelectTick }
+        });
+
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.input(slider, { target: { value: '1' } });
+        expect(onSelectTick).not.toHaveBeenCalled();
+
+        await fireEvent.change(slider, { target: { value: '2' } });
+        expect(onSelectTick).toHaveBeenCalledWith(2);
     });
 
     it('labels ruler ticks with their timestamp relative to the first tick', () => {

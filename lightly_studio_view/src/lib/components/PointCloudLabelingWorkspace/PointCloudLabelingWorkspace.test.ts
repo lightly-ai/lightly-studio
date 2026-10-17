@@ -4,12 +4,27 @@ import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
-const { cloudQuery, tickDetails, summaryState, updateAnnotations } = vi.hoisted(() => ({
-    cloudQuery: { data: undefined as unknown, isLoading: false, isError: false, refetch: vi.fn() },
-    tickDetails: { data: undefined, isLoading: false, refetch: vi.fn() },
-    summaryState: { isLoading: false },
-    updateAnnotations: vi.fn()
-}));
+const { cloudQuery, tickDetails, summaryState, schedulerParams, updateAnnotations } = vi.hoisted(
+    () => ({
+        cloudQuery: {
+            data: undefined as unknown,
+            isLoading: false,
+            isError: false,
+            refetch: vi.fn()
+        },
+        tickDetails: { data: undefined, isLoading: false, refetch: vi.fn() },
+        summaryState: { isLoading: false },
+        schedulerParams: {
+            current: undefined as
+                | {
+                      getRequestId: () => string;
+                      getRanges: () => readonly { startIndex: number; endIndex: number }[];
+                  }
+                | undefined
+        },
+        updateAnnotations: vi.fn()
+    })
+);
 
 vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
     useUpdateAnnotationsMutation: () => ({ updateAnnotations })
@@ -34,11 +49,14 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
 }));
 
 vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte', () => ({
-    useMcapTickPrefetchScheduler: () => ({
-        bufferedRanges: [{ startIndex: 0, endIndex: 1 }],
-        errors: new Map(),
-        cancel: vi.fn()
-    })
+    useMcapTickPrefetchScheduler: (params: typeof schedulerParams.current) => {
+        schedulerParams.current = params ?? undefined;
+        return {
+            bufferedRanges: [{ startIndex: 0, endIndex: 1 }],
+            errors: new Map(),
+            cancel: vi.fn()
+        };
+    }
 }));
 
 vi.mock('./useCreateCuboidAnnotation', async () => {
@@ -121,6 +139,8 @@ describe('PointCloudLabelingWorkspace', () => {
         cloudQuery.isLoading = false;
         tickDetails.isLoading = false;
         summaryState.isLoading = false;
+        schedulerParams.current = undefined;
+        sessionStorage.removeItem('lightlyStudio_pointCloudBufferEntireSequence');
     });
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
@@ -144,6 +164,30 @@ describe('PointCloudLabelingWorkspace', () => {
             'empty'
         );
         expect(screen.queryByTestId('workspace-scene-viewport')).not.toBeInTheDocument();
+    });
+
+    it('toggles playback with the window Space shortcut', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+        expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ', repeat: true });
+        expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
+    });
+
+    it('does not use the Space shortcut from form controls', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.keyDown(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }), {
+            code: 'Space',
+            key: ' '
+        });
+
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
     });
 
     it('shows loading when no cloud frame is available', () => {
@@ -304,6 +348,31 @@ describe('PointCloudLabelingWorkspace', () => {
         await rerender({ ...props, tickNumber: 2 });
 
         expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
+    });
+
+    it('starts whole-sequence buffering at the selected tick', async () => {
+        const user = userEvent.setup();
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await user.click(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }));
+        await user.click(screen.getByRole('button', { name: 'Play frames' }));
+
+        expect(schedulerParams.current?.getRequestId()).toBe(
+            'dataset-1/sequence-1/playback/entire/0'
+        );
+        expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 0, endIndex: 1 }]);
+
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.change(slider, {
+            target: { value: '1' }
+        });
+        await fireEvent.pointerUp(slider);
+
+        expect(schedulerParams.current?.getRequestId()).toBe(
+            'dataset-1/sequence-1/playback/entire/1'
+        );
+        expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 1, endIndex: 1 }]);
     });
 
     it.each([
