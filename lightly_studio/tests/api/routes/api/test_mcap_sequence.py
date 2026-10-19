@@ -1,5 +1,7 @@
 """Tests for the MCAP sequence list endpoint."""
 
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -104,3 +106,43 @@ def test_list_mcap_sequences__pagination(test_client: TestClient, db_session: Se
     assert result["total_count"] == 3
     assert len(result["data"]) == 1
     assert result["nextCursor"] is None
+
+
+def test_list_mcap_sequences__filter(test_client: TestClient, db_session: Session) -> None:
+    """Returns only the MCAP sequences that match the filter."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(
+        session=db_session, collection_id=seq_col.collection_id, dataset_id=seq_col.dataset_id
+    )
+
+    response = test_client.post(
+        f"/api/collections/{seq_col.collection_id}/mcap-sequences/list",
+        params={"cursor": 0, "limit": 10},
+        json={
+            "filter": {
+                "filter_type": "mcap_sequence",
+                "sample_filter": {"sample_ids": [str(seq_ids[1])]},
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 1
+    assert [sequence["sample_id"] for sequence in result["data"]] == [str(seq_ids[1])]
+
+
+def _create_sequences(session: Session, collection_id: UUID, dataset_id: UUID) -> list[UUID]:
+    """Create two MCAP sequences of one recording."""
+    recording_id = recording_resolver.create(
+        session=session,
+        dataset_id=dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    return [
+        mcap_group_sequence_resolver.create(
+            session=session, collection_id=collection_id, recording_id=recording_id
+        )
+        for _ in range(2)
+    ]
