@@ -32,16 +32,17 @@ it('creates a source without other destinations, validates names, and keeps the 
     await user.click(
         screen.getByRole('button', { name: 'Duplicate to another annotation source' })
     );
-    expect(screen.queryByRole('button', { name: 'Model' })).not.toBeInTheDocument();
-    const input = screen.getByRole('textbox', { name: 'New annotation source' });
+    expect(screen.queryByRole('option', { name: 'Model' })).not.toBeInTheDocument();
+    const input = screen.getByRole('combobox', { name: 'Annotation source' });
     await user.type(input, '{Enter} {Enter}');
     expect(mocks.copy).not.toHaveBeenCalled();
     await user.type(input, ' Model {Enter}');
-    expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByText('This annotation source already exists.')).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
     expect(mocks.copy).not.toHaveBeenCalled();
     await user.clear(input);
-    await user.type(input, ' Human {Enter}');
+    await user.type(input, ' Human ');
+    expect(screen.getByRole('option', { name: 'Create: Human' })).toBeInTheDocument();
+    await user.keyboard('{Enter}');
     expect(mocks.copy).toHaveBeenLastCalledWith('Human');
     expect(input).toHaveValue(' Human ');
     pending.set(true);
@@ -49,5 +50,16 @@ it('creates a source without other destinations, validates names, and keeps the 
     pending.set(false);
     await waitFor(() => expect(input).toBeEnabled());
     await user.type(input, '{Enter}');
-    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('combobox')).not.toBeInTheDocument());
+});
+
+it('filters and duplicates into an existing source', async () => {
+    mocks.sources.push({ collection_id: 'human', name: 'Human' });
+    mocks.copy.mockResolvedValueOnce(true);
+    render(CopyAnnotationToSource, { props: defaultProps });
+    await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
+    await userEvent.type(screen.getByRole('combobox'), 'Human');
+    expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('option', { name: 'Human' }));
+    expect(mocks.copy).toHaveBeenLastCalledWith('Human');
 });

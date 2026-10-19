@@ -223,7 +223,7 @@ describe('SampleDetailsClassificationSegment', () => {
             onDeleteAnnotation: vi.fn()
         });
         await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
-        expect(screen.getByRole('textbox', { name: 'New annotation source' })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: 'Annotation source' })).toBeInTheDocument();
         expect(onClick).not.toHaveBeenCalled();
     });
 
