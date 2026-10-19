@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.database.db_manager import DatabaseEngine
 from lightly_studio.evaluation import object_detection_metric
 from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
@@ -201,10 +205,14 @@ def test_recompute_evaluation_run__instance_segmentation(db_session: Session) ->
     }
 
 
-@pytest.mark.parametrize("replace_settings", [False, True])
+@pytest.mark.parametrize("rollback_fails", [False, True])
 @pytest.mark.parametrize("after_persist", [False, True])
 def test_recompute_evaluation_run__failure_restores_results(
-    db_session: Session, mocker: MockerFixture, replace_settings: bool, after_persist: bool
+    db_session: Session,
+    mocker: MockerFixture,
+    rollback_fails: bool,
+    after_persist: bool,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     root = helpers.create_dataset_with_annotations(db_session)
     result = evaluation_service.run_evaluation(
@@ -247,11 +255,18 @@ def test_recompute_evaluation_run__failure_restores_results(
         "create_and_persist_object_detection_metrics_per_sample",
         side_effect=fail,
     )
-    replacement = run.model_copy(update={"name": "updated"}) if replace_settings else None
+    if rollback_fails:
+        rollback = db_session.rollback
+
+        def fail_rollback() -> None:
+            rollback()
+            raise RuntimeError("Rollback failed")
+
+        mocker.patch.object(db_session, "rollback", side_effect=fail_rollback)
     with pytest.raises(ValueError, match="Evaluation failed"):
-        evaluation_service.recompute_evaluation_run(
-            session=db_session, run=run, replacement=replacement
-        )
+        evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+    if rollback_fails:
+        assert "Rollback failed after evaluation rerun error" in caplog.text
     db_session.refresh(run)
     assert run.model_dump() == before
     for resolver, expected in zip(resolvers, old_metrics):
@@ -263,27 +278,84 @@ def test_recompute_evaluation_run__failure_restores_results(
         ] == expected
 
 
-def test_recompute_evaluation_run__replaces_settings(db_session: Session) -> None:
-    root = helpers.create_dataset_with_annotations(db_session)
-    result = evaluation_service.run_evaluation(
-        session=db_session,
-        collection=root,
-        task_type=EvaluationTaskType.OBJECT_DETECTION,
-        gt_annotation_source="gt",
-        pred_annotation_source="pred",
-        config=ObjectDetectionEvaluationConfig(),
-        name="original",
+def test_recompute_evaluation_run__process_exit_preserves_results(tmp_path: Path) -> None:
+    engine_url = f"duckdb:///{tmp_path / 'evaluation.duckdb'}"
+    engine = DatabaseEngine(engine_url=engine_url, single_threaded=True)
+    resolvers = (evaluation_sample_metric_resolver, evaluation_annotation_metric_resolver)
+    with engine.session() as session:
+        root = helpers.create_dataset_with_annotations(session)
+        result = evaluation_service.run_evaluation(
+            session=session,
+            collection=root,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+            config=ObjectDetectionEvaluationConfig(),
+            name="original",
+        )
+        run = evaluation_run_resolver.get_by_id(
+            session=session, evaluation_id=result.evaluation_run_id
+        )
+        assert run is not None
+        before = run.model_dump()
+        old_metrics = [
+            [
+                row.model_dump()
+                for row in resolver.get_all_by_evaluation_run_id(
+                    session=session, evaluation_run_id=run.id
+                )
+            ]
+            for resolver in resolvers
+        ]
+    engine.close()
+    # Exit after batch writers commit, bypassing all Python cleanup and error recovery.
+    crashed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import os
+import sys
+from uuid import UUID
+from lightly_studio.database.db_manager import DatabaseEngine
+from lightly_studio.evaluation import object_detection_metric
+from lightly_studio.resolvers import evaluation_run_resolver
+from lightly_studio.services import evaluation_service
+persist = object_detection_metric.create_and_persist_object_detection_metrics_per_sample
+
+def crash(**kwargs):
+    persist(**kwargs)
+    os._exit(23)
+
+object_detection_metric.create_and_persist_object_detection_metrics_per_sample = crash
+engine = DatabaseEngine(engine_url=sys.argv[1], single_threaded=True)
+with engine.session() as session:
+    run = evaluation_run_resolver.get_by_id(session=session, evaluation_id=UUID(sys.argv[2]))
+    evaluation_service.recompute_evaluation_run(session=session, run=run)
+""",
+            engine_url,
+            str(result.evaluation_run_id),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
-    run = evaluation_run_resolver.get_by_id(
-        session=db_session, evaluation_id=result.evaluation_run_id
-    )
-    assert run is not None
-    replacement = run.model_copy(update={"name": "updated", "config_json": {"iou_threshold": 0.75}})
-    actual = evaluation_service.recompute_evaluation_run(
-        session=db_session, run=run, replacement=replacement
-    )
-    db_session.refresh(run)
-    assert actual == result
-    assert run.name == "updated"
-    assert run.config_json == {"iou_threshold": 0.75}
-    assert run.created_at == replacement.created_at
+    assert crashed.returncode == 23, crashed.stderr
+    engine = DatabaseEngine(engine_url=engine_url, single_threaded=True)
+    try:
+        with engine.session() as session:
+            run = evaluation_run_resolver.get_by_id(
+                session=session, evaluation_id=result.evaluation_run_id
+            )
+            assert run is not None
+            assert run.model_dump() == before
+            for resolver, expected in zip(resolvers, old_metrics):
+                assert [
+                    row.model_dump()
+                    for row in resolver.get_all_by_evaluation_run_id(
+                        session=session, evaluation_run_id=run.id
+                    )
+                ] == expected
+    finally:
+        engine.close()
