@@ -22,6 +22,7 @@ from lightly_studio.models.collection import SampleType
         ("gcs://bucket/images", "gcs"),
         ("az://container/images", "az"),
         ("hf://datasets/acme/traffic_cams", "hf"),
+        ("hf://datasets/lightly-ai/coco_subset_128_images_private/images", "hf"),
         ("https://example.com/images", "https"),
     ],
 )
@@ -61,6 +62,7 @@ def test_get_source__local(path: str | Path) -> None:
         Path("/home/user/dataset_examples/road_signs_yolo/data.yaml"),
         # The path that `quickstart_enterprise` ingests.
         "hf://datasets/lightly-ai/coco_subset_128_images/images",
+        "hf://datasets/lightly-ai/coco_subset_128_images",
     ],
 )
 def test_get_source__example(path: str | Path) -> None:

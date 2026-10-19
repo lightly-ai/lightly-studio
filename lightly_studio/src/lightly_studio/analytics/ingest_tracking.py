@@ -74,7 +74,8 @@ def get_source(path: PathLike) -> IngestSource:
     """
     try:
         raw = str(path)
-        if raw.startswith(download.EXAMPLE_DATASET_HF_URI):
+        example_uri = download.EXAMPLE_DATASET_HF_URI
+        if raw == example_uri or raw.startswith(f"{example_uri}/"):
             return IngestSource(kind=IngestSourceKind.EXAMPLE)
         if remote_storage.is_remote(raw):
             return IngestSource(
