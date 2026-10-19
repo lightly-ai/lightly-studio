@@ -96,7 +96,7 @@ describe('useMcapTickPrefetchScheduler', () => {
         });
     });
 
-    it('cancels the old queue when the buffering session changes', async () => {
+    it('switches buffering sessions without clearing completed ranges', async () => {
         const view = render(Harness, {
             props: { ticks, ranges: [{ startIndex: 0, endIndex: 4 }], onReady: () => undefined }
         });
@@ -111,7 +111,7 @@ describe('useMcapTickPrefetchScheduler', () => {
         });
         flushSync();
 
-        expect(cancel).toHaveBeenCalledOnce();
+        expect(cancel).not.toHaveBeenCalled();
         expect(prefetchRanges).toHaveBeenLastCalledWith({
             requestId: 'window',
             ranges: [{ startIndex: 0, endIndex: 1 }]

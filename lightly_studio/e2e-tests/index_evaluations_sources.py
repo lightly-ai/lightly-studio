@@ -204,7 +204,7 @@ def main() -> None:
         f"Created dataset '{DATASET_NAME}' with {len(samples)} images and gt/pred sources for "
         "object detection, classification, and semantic segmentation."
     )
-    ls.start_gui()
+    ls.start_gui(open_browser=False)
 
 
 if __name__ == "__main__":

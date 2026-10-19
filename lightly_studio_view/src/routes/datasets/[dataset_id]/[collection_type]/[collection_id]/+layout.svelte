@@ -127,6 +127,7 @@
         filterPanelCollapsed,
         toggleFilterPanelCollapsed,
         filteredSampleCount,
+        filteredCaptionCount,
         filteredAnnotationCount,
         // Sourced from the stable singleton (not `$derived(data)`) so `search`, created once below,
         // captures a store reference that never goes stale.
@@ -841,7 +842,7 @@
         </div>
         <Footer
             totalSamples={collection?.total_sample_count}
-            filteredSamples={$filteredSampleCount}
+            filteredSamples={isCaptions ? $filteredCaptionCount : $filteredSampleCount}
             {totalAnnotations}
             filteredAnnotations={$filteredAnnotationCount}
         />
