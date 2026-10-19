@@ -25,7 +25,7 @@
 <section>
     <div class="mb-2 flex items-center justify-between gap-2">
         <Typography variant="subtitle2" component="h3">Matching settings</Typography>
-        {#if onEdit}
+        {#if onEdit && configuration !== null}
             <Button icon={Pencil} buttonProps={{ size: 'xs', onclick: onEdit }}>Edit</Button>
         {/if}
     </div>
