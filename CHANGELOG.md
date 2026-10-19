@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Crops and frames get embedded with a remote embedder automatically when a compatible remote embedder was used previously.
 - The text axes layout of the embedding plot scales each text embedding to norm 1, so x = 0 is exactly where a sample is as similar to X− as to X+. The same is true for y. Before, with an embedding model such as MobileCLIP, the text with the larger norm got a larger part of the plot.
 - The text axes layout of the embedding plot starts on a fixed range of -0.2 to 0.2 on both axes and no longer fits the view to the data. Axes along which the images vary strongly now look wide, and axes from texts that do not match the images look small.
+- The embedding plot has a "Define axes" button instead of the PaCMAP/Text select. The button opens a popover for the four axis texts. "Reset axes" goes back to the PaCMAP layout.
 - Python SDK: New video datasets embed their video frames with Perception Encoder (`PE-Core-T16-384`), the model of the videos, instead of MobileCLIP. Existing datasets keep the model of their frames.
 
 ### Deprecated
