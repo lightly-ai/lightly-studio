@@ -726,23 +726,15 @@ describe('PlotPanel.svelte', () => {
             expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
             expect(screen.getByTestId('plot-viewport')).toHaveTextContent('null');
             expect(mockClearPlotSelectionCount).toHaveBeenCalled();
-            expect(useEmbeddings).toHaveBeenLastCalledWith(
-                'test-collection-id',
-                expect.anything(),
-                null,
-                null
-            );
-            await openAxesEditor(user);
+            // Back on PaCMAP, the button reads "Define axes" again.
+            await user.click(screen.getByRole('button', { name: 'Define axes' }));
             expect(screen.getByLabelText('Left')).toHaveValue('night');
             expect(screen.getByLabelText('Right')).toHaveValue('old');
             expect(screen.getByLabelText('Bottom')).toHaveValue('sad');
             expect(screen.getByLabelText('Top')).toHaveValue('happy');
             await user.click(screen.getByRole('button', { name: 'Apply axes' }));
-            expect(useEmbeddings).toHaveBeenLastCalledWith(
-                'test-collection-id',
-                expect.anything(),
-                null,
-                TEXT_LAYOUT_AXES
+            expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
+                JSON.stringify({ x: 0, y: 0, scale: 5 })
             );
         }
     );
