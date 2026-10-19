@@ -58,6 +58,8 @@ export interface McapTickPrefetchExecutorParams extends McapTickDetailsPrefetchP
 }
 
 export interface McapTickPrefetchSchedulerParams extends McapTickDetailsPrefetchParams {
+    /** Reactive flag controlling whether background buffering may start. */
+    getEnabled?: () => boolean;
     /** Reactive identifier of the current buffering plan. */
     getRequestId: () => string;
     /** Reactive ranges to load in order. */
