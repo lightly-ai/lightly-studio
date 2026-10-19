@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
-    import { Button, Typography } from '$lib/components';
+    import { Typography } from '$lib/components';
     import { formatDate } from '$lib/utils';
     import { ChevronDown, TriangleAlert } from '@lucide/svelte';
     import EvaluationRunSummary from './EvaluationRunSummary/EvaluationRunSummary.svelte';
@@ -81,12 +81,10 @@
                 <EvaluationRunStaleSection />
             {/if}
 
-            {#if datasetId}
-                <Button variant="outline" buttonProps={{ onclick: () => (editing = true) }}>
-                    Edit and rerun
-                </Button>
-            {/if}
-            <EvaluationRunConfiguration configuration={run.evaluation_run_configuration} />
+            <EvaluationRunConfiguration
+                configuration={run.evaluation_run_configuration}
+                onEdit={datasetId ? () => (editing = true) : undefined}
+            />
 
             <EvaluationRunConfusionMatrixSection
                 datasetId={datasetId ?? ''}

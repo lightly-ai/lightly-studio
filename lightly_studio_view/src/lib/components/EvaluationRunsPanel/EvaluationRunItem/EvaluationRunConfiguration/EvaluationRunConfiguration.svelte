@@ -1,10 +1,12 @@
 <script lang="ts">
-    import { Typography } from '$lib/components';
+    import { Button, Typography } from '$lib/components';
+    import { Pencil } from '@lucide/svelte';
 
     interface Props {
         configuration: Record<string, unknown> | null;
+        onEdit?: () => void;
     }
-    let { configuration }: Props = $props();
+    let { configuration, onEdit }: Props = $props();
     const entries = $derived(Object.entries(configuration ?? {}));
     const labels: Record<string, string> = {
         iou_threshold: 'Minimum overlap (IoU)',
@@ -21,7 +23,12 @@
 </script>
 
 <section>
-    <Typography variant="subtitle2" component="h3" className="mb-2">Matching settings</Typography>
+    <div class="mb-2 flex items-center justify-between gap-2">
+        <Typography variant="subtitle2" component="h3">Matching settings</Typography>
+        {#if onEdit}
+            <Button icon={Pencil} buttonProps={{ size: 'xs', onclick: onEdit }}>Edit</Button>
+        {/if}
+    </div>
     {#if entries.length === 0}
         <Typography variant="body2" className="text-muted-foreground"
             >No configuration recorded.</Typography
