@@ -50,7 +50,11 @@ def start_gui(
             name="lightly-studio-browser-opener",
         ).start()
 
-    _run_uvicorn_server(uvicorn_server)
+    try:
+        _run_uvicorn_server(uvicorn_server)
+    except KeyboardInterrupt:
+        # Uvicorn shuts down gracefully on Ctrl+C and then raises the captured SIGINT again
+        logger.info("LightlyStudio GUI stopped.")
     return server
 
 
