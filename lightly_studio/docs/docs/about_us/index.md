@@ -21,8 +21,7 @@ Stay updated with the latest developments, tips, and tutorials by following us:
 
 LightlyStudio reports anonymous usage data: an ID generated on first run, how the app was started,
 whether the installation is a released package, a build from source, a CI run or a Lightly machine,
-the LightlyStudio, Python and OS versions, and how you load data: the dataset format and whether it
-comes from the example dataset, a local folder or remote storage. No image data, file paths or
+the LightlyStudio, Python and OS versions, and how you load data. No image data, file paths or
 annotations leave your machine.
 
 Turn it off with:
