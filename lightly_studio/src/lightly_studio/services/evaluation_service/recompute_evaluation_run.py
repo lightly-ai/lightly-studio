@@ -22,7 +22,9 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
     SemanticSegmentationEvaluationConfig,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable, EvaluationTaskType
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
@@ -54,31 +56,9 @@ def recompute_evaluation_run(
     Returns:
         Summary of the recomputed run, including its ID and input counts.
     """
-    # DuckDB requires committed child-row deletion before indexed run fields can
-    # change. Preserve copies so an exception can restore the previous results.
-    cleanup_commit = replacement is not None and session.get_bind().dialect.name == "duckdb"
-    old_rows = (
-        [
-            type(row).model_validate(row.model_dump())
-            for resolver in (
-                evaluation_annotation_metric_resolver,
-                evaluation_sample_metric_resolver,
-            )
-            for row in resolver.get_all_by_evaluation_run_id(
-                session=session, evaluation_run_id=run.id
-            )
-        ]
-        if cleanup_commit
-        else []
+    old_metrics = _remove_metrics_for_settings_update(
+        session=session, run=run, replacement=replacement
     )
-    if cleanup_commit:
-        evaluation_annotation_metric_resolver.delete_by_evaluation_run_id(
-            session=session, evaluation_run_id=run.id
-        )
-        evaluation_sample_metric_resolver.delete_by_evaluation_run_id(
-            session=session, evaluation_run_id=run.id
-        )
-        session.commit()
     try:
         # Batch writers may commit. This session only flushes their changes into
         # the outer transaction, allowing rollback after a later batch fails.
@@ -88,11 +68,29 @@ def recompute_evaluation_run(
         session.commit()
     except Exception:
         session.rollback()
-        if cleanup_commit:
-            session.add_all(old_rows)
+        if old_metrics:
+            session.add_all(old_metrics)
             session.commit()
         raise
     return result
+
+
+def _remove_metrics_for_settings_update(
+    session: Session, run: EvaluationRunTable, replacement: EvaluationRunTable | None
+) -> list[EvaluationAnnotationMetricTable | EvaluationSampleMetricTable]:
+    """Back up and remove metrics when DuckDB requires it to update run settings."""
+    if replacement is None or session.get_bind().dialect.name != "duckdb":
+        return []
+
+    # DuckDB rejects indexed run-field updates while metrics reference the run,
+    # even after uncommitted deletes. Keep copies to restore if the rerun fails.
+    old_metrics: list[EvaluationAnnotationMetricTable | EvaluationSampleMetricTable] = []
+    for resolver in (evaluation_annotation_metric_resolver, evaluation_sample_metric_resolver):
+        rows = resolver.get_all_by_evaluation_run_id(session=session, evaluation_run_id=run.id)
+        old_metrics.extend(type(row).model_validate(row.model_dump()) for row in rows)
+        resolver.delete_by_evaluation_run_id(session=session, evaluation_run_id=run.id)
+    session.commit()
+    return old_metrics
 
 
 def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> EvaluationResult:
