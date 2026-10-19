@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
@@ -39,6 +40,7 @@ def recompute_evaluation_run(
     session: Session,
     *,
     run: EvaluationRunTable,
+    config_json: dict[str, Any] | None = None,
 ) -> EvaluationResult:
     """Re-run an evaluation in-place, replacing its metrics.
 
@@ -51,6 +53,7 @@ def recompute_evaluation_run(
     Args:
         session: Database session.
         run: The evaluation run to recompute.
+        config_json: Optional replacement parameters, saved only if the rerun succeeds.
 
     Returns:
         Summary of the recomputed run, including its ID and input counts.
@@ -59,7 +62,12 @@ def recompute_evaluation_run(
         # Batch writers may commit. This session only flushes their changes into
         # the outer transaction, allowing rollback after a later batch fails.
         with Session(bind=session.connection(), join_transaction_mode="rollback_only") as work:
-            target = work.merge(run)
+            # Load current state so an older caller cannot overwrite a newer stale marker.
+            target = work.get(EvaluationRunTable, run.id)
+            if target is None:
+                raise ValueError("Evaluation run no longer exists.")
+            if config_json is not None:
+                target.config_json = config_json
             result = _recompute_evaluation_run(session=work, run=target)
         session.commit()
     except Exception:
