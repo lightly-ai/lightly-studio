@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { Input } from '$lib/components/ui/input';
+    import * as Command from '$lib/components/ui/command';
     import * as Popover from '$lib/components/ui/popover';
     import { useAnnotationCollections } from '$lib/hooks';
     import { CopyPlus } from '@lucide/svelte';
@@ -23,6 +23,14 @@
     let name = $state('');
     const trimmedName = $derived(name.trim());
     const exists = $derived(sources.data?.some((source) => source.name === trimmedName));
+
+    async function duplicate(sourceName: string) {
+        if ($pending || !sourceName) return;
+        if (await copy(sourceName)) {
+            name = '';
+            open = false;
+        }
+    }
 </script>
 
 <Popover.Root bind:open>
@@ -35,48 +43,40 @@
             ><CopyPlus class="size-4" /></Popover.Trigger
         >
     </Tooltip>
-    <Popover.Content class="w-64 p-1" align="end">
-        <div class="space-y-1 p-2">
-            <p class="text-sm font-medium">Duplicate annotation</p>
-            <p class="text-xs text-muted-foreground">
-                Choose an annotation source or enter a new name.
-            </p>
-        </div>
-        {#each destinations as destination (destination.collection_id)}
-            <button
-                type="button"
-                class="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-                disabled={$pending}
-                onclick={async () => {
-                    if (await copy(destination.name)) open = false;
-                }}>{destination.name}</button
-            >
-        {/each}
-        <form
-            class="space-y-2 border-t p-2"
-            onsubmit={async (event) => {
-                event.preventDefault();
-                if (!trimmedName || exists || $pending) return;
-                if (await copy(trimmedName)) {
-                    name = '';
-                    open = false;
-                }
-            }}
-        >
-            <Input
-                aria-label="New annotation source"
-                placeholder="New annotation source"
+    <Popover.Content class="w-64 p-0" align="end">
+        <Command.Root label="Annotation source">
+            <Command.Input
+                placeholder="Search or create a source…"
                 bind:value={name}
                 disabled={$pending}
-                aria-invalid={exists}
             />
-            <p class="text-xs text-muted-foreground" aria-live="polite">
-                {exists
-                    ? 'This annotation source already exists.'
-                    : $pending
-                      ? 'Duplicating…'
-                      : 'Press Enter to create the source and duplicate.'}
-            </p>
-        </form>
+            <Command.List>
+                <Command.Group heading="Duplicate to">
+                    {#each destinations as destination (destination.collection_id)}
+                        <Command.Item
+                            value={destination.name}
+                            disabled={$pending}
+                            onSelect={() => duplicate(destination.name)}
+                        >
+                            {destination.name}
+                        </Command.Item>
+                    {/each}
+                </Command.Group>
+                {#if trimmedName && !exists}
+                    <div class="border-t">
+                        <Command.Item
+                            value="__create__"
+                            disabled={$pending}
+                            onSelect={() => duplicate(trimmedName)}
+                            forceMount
+                            keywords={[]}
+                        >
+                            <span class="opacity-50">Create:</span>
+                            <span class="min-w-0 truncate font-semibold">{trimmedName}</span>
+                        </Command.Item>
+                    </div>
+                {/if}
+            </Command.List>
+        </Command.Root>
     </Popover.Content>
 </Popover.Root>
