@@ -1,6 +1,6 @@
 ---
 title: Understand Image and Video Embeddings in LightlyStudio
-description: Embeddings power search, the embedding plot, and sampling in LightlyStudio. They are computed automatically when you add data, and you can supply your own.
+description: Embeddings power search, the embedding plot, text axes, and sampling in LightlyStudio. They are computed automatically when you add data, and you can supply your own.
 ---
 
 # Embeddings
@@ -64,11 +64,16 @@ LightlyStudio ships with two embedding models:
 ## The Embedding Plot (GUI)
 
 Click the `Embed` button in the top right of the GUI to open the embedding plot. It
-shows your samples as points in a 2D projection of embedding space (projected with PaCMAP).
+shows your samples as points in 2D. The plot has two layouts:
+
+- **Default layout.** PaCMAP projects embedding space to 2D. Similar samples are near
+  each other. The axes have no meaning; only the distance between points does.
+- **Text axes.** You describe each end of the two axes in natural language. The position of a
+  sample shows how well it matches each description. See [Text axes](#text-axes).
 
 ![Embedding plot](https://storage.googleapis.com/lightly-public/studio/docs/embedding_plot_v1.0.4.png){ width="100%" }
 
-You can:
+In both layouts you can:
 
 - **Color the points** by tag, annotation class, or metadata (text and true/false
   fields) using the `Color by` popover.
@@ -78,10 +83,61 @@ You can:
 - **Double-click a legend entry** to isolate that category, so only its points
   stay visible. Single-click to toggle a category visibility.
 
+### Text axes
+
+With text axes, you describe each end of the two axes in natural language, and the plot
+sorts your samples by those concepts. For example, put
+`night` and `day` on the horizontal axis and `indoors` and `outdoors` on the vertical
+axis. Night photos then move to the left, and outdoor photos move to the top.
+
+<!-- TODO: Add a screenshot of the text axes layout with the axis lines and edge labels. -->
+
+To set the axes:
+
+1. In the embedding plot, click `Define axes`.
+2. Under `Horizontal`, type a description in `Left` and in `Right`.
+3. Under `Vertical`, type a description in `Bottom` and in `Top`.
+4. Click `Apply axes`, or press Enter.
+
+You must type all four descriptions. The plot then shows each description at its edge
+of the plot. If a description is too long to show, hover it to see the full text.
+
+Two lines through the center of the plot show where each axis is zero. A sample on the
+vertical line is as similar to `Left` as to `Right`. The farther right a sample is, the
+more it matches `Right` compared to `Left`. The vertical axis works the same way.
+
+To change the descriptions, click `Edit axes`. To go back to the default layout, click
+`Reset axes`. LightlyStudio keeps your descriptions, so you can apply them again later.
+
+!!! note "A new layout clears the selection"
+    When you apply new axes or reset them, the plot resets the zoom and clears your
+    lasso selection. A selected region belongs to the layout you drew it on.
+
+!!! tip "Write good descriptions"
+    - Describe content that you can see in the image, such as `a photo at night`.
+    - Use two opposite descriptions for each axis.
+    - Try more than one wording. Small changes in the text can move the points.
+
+#### How text axes work
+
+LightlyStudio embeds the four descriptions with the text encoder of the collection's
+embedding model, and scales each one to length 1. The horizontal direction is
+`Right − Left`, and the vertical direction is `Top − Bottom`. The x value of a sample is
+the dot product of its embedding with the horizontal direction. The y value is the same
+for the vertical direction.
+
+LightlyStudio does not rescale the values. If the points spread little along an axis,
+your samples differ little in that concept. The positions are calculated for each
+request and are not stored.
+
+Text axes need a text encoder that shares the embedding space of your samples. The
+built-in models have one. If you [use your own embedder](#using-your-own-embeddings),
+implement `TextEmbedder`.
 
 ## What Embeddings Power
 
 - **Similarity search** by text or image. See [Search and Filter](search_and_filter.md).
+- **Text axes** on the embedding plot. See [Text axes](#text-axes).
 - **Sampling** strategies such as diverse, deduplication, similarity, and
   typicality/outliers. See [Sampling](sampling.md).
 
@@ -120,13 +176,13 @@ query. The [API reference](../api/embeddings.md) gives the full method signature
 | `ImageCropPathEmbedder` | `embed_image_crops` | Annotation crops | Ingest |
 | `ImagePILEmbedder` | `embed_images_pil` | In-memory images, such as video frames | Ingest |
 | `VideoPathEmbedder` | `embed_videos` | Whole videos by path | Ingest |
-| `TextEmbedder` | `embed_text` | Text queries | GUI (text search) |
+| `TextEmbedder` | `embed_text` | Text queries and axis descriptions | GUI (text search, text axes) |
 
 Examples below show how an embedder is built from the image interfaces.
 
 !!! warning "A capability you skip disables its feature"
     A capability you do not subclass, such as `TextEmbedder`, leaves its feature
-    unavailable — text search, in that case.
+    unavailable — text search and text axes, in that case.
 
 ### Loading precomputed embeddings
 
