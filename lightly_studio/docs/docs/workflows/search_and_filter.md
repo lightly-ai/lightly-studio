@@ -199,10 +199,14 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     #### Metadata queries
 
-    Use `ImageSampleField.metadata["<path>"]` to filter image samples by metadata, or
-    `VideoSampleField.metadata["<path>"]` for video samples.
-    Paths use dots for nested dictionary fields and brackets for array indices, starting at zero.
-    For example, `"odometry.acc[1]"` selects the second element of the `acc` array inside `odometry`.
+    Filter samples by comparing a metadata value with a string, boolean, or number.
+    Use `ImageSampleField.metadata["camera"]` for images or
+    `VideoSampleField.metadata["camera"]` for videos, replacing `"camera"` with your metadata key.
+
+    To access nested values, use dots between dictionary keys and brackets for array indices.
+    For example, `"odometry.speed"` selects the `speed` value inside `odometry`, and
+    `"odometry.acc[1]"` selects the second element of its `acc` array. Array indices start at zero;
+    negative indices count from the end, so `"odometry.acc[-1]"` selects the last element.
 
     ```py
     from lightly_studio.core.dataset_query import AND, ImageSampleField
@@ -230,7 +234,8 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     samples = query.to_list()
     ```
 
-    The comparison value determines which stored JSON types can match:
+    Metadata values must have the same type as the value you compare them with.
+    The supported comparisons are:
 
     | Comparison value | Operators | Matching stored type |
     | --- | --- | --- |
@@ -238,20 +243,43 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     | `bool` | `==`, `!=` | Boolean |
     | `int` or `float` | `==`, `!=`, `<`, `<=`, `>`, `>=` | Number (integer or float) |
 
-    Integers and floats compare numerically: `3` and `3.0` match the same numeric values.
-    Strings and booleans are separate types: `"3"` and `True` do not match numeric comparisons.
-    Missing paths, JSON `null`, arrays, objects, and values of a different type are excluded
-    from every comparison, including `!=`. For example, `metadata["camera"] != "front"`
-    matches only samples whose `camera` is a string other than `"front"`.
+    Integers and floats are treated as one numeric type: comparing with `3` or `3.0` gives
+    the same results. Values are not converted between types: the string `"3"` and the
+    boolean `True` do not match numeric comparisons.
 
     You can combine metadata expressions with `AND`, `OR`, and `NOT` as shown in
-    [Boolean operators](#boolean-operators). Negation includes samples excluded by the original
-    expression: `NOT(ImageSampleField.metadata["camera"] == "front")` also matches missing,
-    null, and non-string `camera` values, unlike `ImageSampleField.metadata["camera"] != "front"`.
+    [Boolean operators](#boolean-operators).
 
-    Comparing with `None`, lists, dictionaries, or datetime objects raises `TypeError`.
-    Ordering comparisons require a number; strings and booleans raise `TypeError`.
-    Comparing with `float("nan")` raises `ValueError`.
+    !!! note "Choosing between `!=` and `NOT(...)`"
+
+        Every metadata comparison, including `!=`, excludes samples where the selected value
+        is missing, JSON `null`, an array, an object, or a different type from the comparison value.
+        `NOT(...)` selects all samples that the expression inside it excludes.
+
+        For example, these two filters answer different questions:
+
+        ```py
+        from lightly_studio.core.dataset_query import NOT, ImageSampleField
+
+        # Select samples whose camera is a string other than "front".
+        query = dataset.match(ImageSampleField.metadata["camera"] != "front")
+
+        # Select all samples except those whose camera is the string "front".
+        query = dataset.match(NOT(ImageSampleField.metadata["camera"] == "front"))
+        ```
+
+        | Stored `camera` value | `camera != "front"` | `NOT(camera == "front")` |
+        | --- | --- | --- |
+        | `"front"` | Excluded | Excluded |
+        | `"rear"` | Included | Included |
+        | JSON `null` | Excluded | Included |
+        | Key missing | Excluded | Included |
+
+    !!! note "Unsupported comparison values"
+
+        Comparing with `None`, lists, dictionaries, or datetime objects raises `TypeError`.
+        Ordering comparisons require a number; strings and booleans raise `TypeError`.
+        Comparing with `float("nan")` raises `ValueError`.
 
     See [Metadata](metadata.md#metadata-in-python) for adding or updating metadata and the
     [metadata API reference](../api/dataset_query.md#metadataaccessor) for field access.
