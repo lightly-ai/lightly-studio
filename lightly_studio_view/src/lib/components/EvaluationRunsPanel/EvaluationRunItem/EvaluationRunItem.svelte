@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
-    import { Typography } from '$lib/components';
+    import { Button, Typography } from '$lib/components';
     import { formatDate } from '$lib/utils';
     import { ChevronDown, TriangleAlert } from '@lucide/svelte';
     import EvaluationRunSummary from './EvaluationRunSummary/EvaluationRunSummary.svelte';
@@ -8,7 +8,9 @@
     import { slide } from 'svelte/transition';
     import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte';
     import EvaluationRunStaleSection from './EvaluationRunStaleSection/EvaluationRunStaleSection.svelte';
+    import EditEvaluationDialog from '../EditEvaluationDialog/EditEvaluationDialog.svelte';
 
+    let editing = $state(false);
     const duration = 300; // in ms
 
     interface Props {
@@ -76,9 +78,14 @@
             transition:slide={{ duration }}
         >
             {#if run.stale_since !== null && datasetId}
-                <EvaluationRunStaleSection {datasetId} runId={run.id} />
+                <EvaluationRunStaleSection />
             {/if}
 
+            {#if datasetId}
+                <Button variant="outline" buttonProps={{ onclick: () => (editing = true) }}>
+                    Edit and rerun
+                </Button>
+            {/if}
             <EvaluationRunConfiguration configuration={run.evaluation_run_configuration} />
 
             <EvaluationRunConfusionMatrixSection
@@ -88,3 +95,7 @@
         </div>
     {/if}
 </li>
+
+{#if editing && datasetId}
+    <EditEvaluationDialog {datasetId} {run} onClose={() => (editing = false)} />
+{/if}
