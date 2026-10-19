@@ -37,7 +37,7 @@ vi.mock('$lib/hooks/useAuth/useAuth', () => ({
 // The classification segment imports useAnnotationCollections through the `$lib/hooks`
 // barrel; mocking the underlying module replaces the barrel re-export too.
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
-    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
+    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections, isSuccess: true }))
 }));
 
 // Drives the grid-filter seeded collapse: sources missing from the selection start collapsed.
@@ -211,17 +211,20 @@ describe('SampleDetailsClassificationSegment', () => {
 
     const deleteButton = () => screen.getByRole('button', { name: 'Delete classification' });
 
-    it('shows the sidebar copy control when editing', () => {
+    it('opens sidebar copying without selecting the annotation when editing', async () => {
         mocks.isEditingMode.set(true);
+        const onClick = vi.fn();
         render(SampleDetailsSidePanelAnnotation, {
             annotation: createClassification('c1', groundTruthSource.collection_id, 'cat'),
             isSelected: false,
-            onClick: vi.fn(),
+            onClick,
             onUpdate: vi.fn(),
             onToggleShowAnnotation: vi.fn(),
             onDeleteAnnotation: vi.fn()
         });
-        expect(screen.getByLabelText('Duplicate to another annotation source')).toBeInTheDocument();
+        await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
+        expect(screen.getByRole('textbox', { name: 'New annotation source' })).toBeInTheDocument();
+        expect(onClick).not.toHaveBeenCalled();
     });
 
     it('renders a flat list without source groups for a single source', () => {
