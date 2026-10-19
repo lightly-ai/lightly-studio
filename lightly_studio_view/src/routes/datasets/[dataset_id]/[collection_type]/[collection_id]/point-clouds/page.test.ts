@@ -25,12 +25,21 @@ vi.mock('$app/state', () => ({
 
 const { toggleSampleSelection } = vi.hoisted(() => ({ toggleSampleSelection: vi.fn() }));
 
+vi.mock('$lib/hooks/useTags/useTags', () => ({
+    useTags: () => ({ tagsSelected: writable(new Set<string>()) })
+}));
+
 vi.mock('$lib/hooks', () => ({
     useGlobalStorage: () => ({
         setfilteredSampleCount: vi.fn(),
         sampleSize: writable({ width: 6, height: 200 }),
         getSelectedSampleIds: () => writable(new Set<string>()),
         toggleSampleSelection
+    }),
+    useMcapSequenceFilters: () => ({
+        mcapSequenceFilter: writable({ filter_type: 'mcap_sequence' }),
+        setCollectionId: vi.fn(),
+        updateTagIds: vi.fn()
     }),
     useMcapSequencesInfinite: () => ({
         data: writable(

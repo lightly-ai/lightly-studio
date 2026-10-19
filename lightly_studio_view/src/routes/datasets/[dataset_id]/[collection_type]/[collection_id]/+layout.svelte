@@ -500,7 +500,7 @@
     const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups || isPointClouds
     );
-    const hasFilterPanel = $derived((isCollectionGrid || isCaptions) && !isPointClouds);
+    const hasFilterPanel = $derived(isCollectionGrid || isCaptions);
 
     const panelIsVisible = $derived(
         isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
@@ -666,7 +666,8 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            {#if !isCaptions}
+                            <!-- Captions and MCAP sequences support only the tag filter. -->
+                            {#if !isCaptions && !isPointClouds}
                                 <LabelsMenu
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>

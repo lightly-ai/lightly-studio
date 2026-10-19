@@ -22,6 +22,7 @@
         isError: boolean;
         hasNextPage: boolean;
         isFetchingNextPage: boolean;
+        scrollResetKey?: string;
         onLoadMore: () => void;
         /** Click toggles the selection of a sequence. */
         onSequenceSelect?: (sampleId: string, index: number, shiftKey: boolean) => void;
@@ -37,6 +38,7 @@
         isError,
         hasNextPage,
         isFetchingNextPage,
+        scrollResetKey,
         onLoadMore,
         onSequenceSelect,
         onSequenceOpen
@@ -73,6 +75,7 @@
             <Grid
                 itemCount={sequences.length}
                 {columnCount}
+                {scrollResetKey}
                 viewportProps={{ 'data-testid': 'mcap-sequences-grid-viewport' }}
                 gridProps={{
                     'data-testid': 'mcap-sequences-grid',
