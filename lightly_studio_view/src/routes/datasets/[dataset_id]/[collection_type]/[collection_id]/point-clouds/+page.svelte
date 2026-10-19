@@ -16,7 +16,7 @@
     const collectionId = $derived(page.params.collection_id!);
     const collectionType = $derived(page.params.collection_type!);
 
-    const { getSelectedSampleIds, toggleSampleSelection, setfilteredSampleCount } =
+    const { textEmbedding, getSelectedSampleIds, toggleSampleSelection, setfilteredSampleCount } =
         useGlobalStorage();
     const { mcapSequenceFilter, setCollectionId, updateTagIds } = useMcapSequenceFilters();
     const { tagsSelected } = $derived.by(() => useTags({ collection_id: collectionId }));
@@ -33,7 +33,8 @@
         totalCount
     } = useMcapSequencesInfinite(() => ({
         collection_id: collectionId,
-        filter: $mcapSequenceFilter
+        filter: $mcapSequenceFilter,
+        text_embedding: $textEmbedding?.embedding
     }));
 
     $effect(() => {
@@ -45,7 +46,8 @@
             sampleId: sequence.sample_id,
             fileName: sequence.file_name,
             sampleCount: sequence.sample_count,
-            sequenceFrame: sequence.sequence_frame ?? null
+            sequenceFrame: sequence.sequence_frame ?? null,
+            similarityScore: sequence.similarity_score ?? null
         }))
     );
     const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
@@ -92,7 +94,7 @@
     {isError}
     {hasNextPage}
     {isFetchingNextPage}
-    scrollResetKey={JSON.stringify($mcapSequenceFilter)}
+    scrollResetKey={JSON.stringify($mcapSequenceFilter) + ($textEmbedding?.queryText ?? '')}
     onLoadMore={loadMore}
     onSequenceSelect={handleSequenceSelect}
     onSequenceOpen={handleSequenceOpen}

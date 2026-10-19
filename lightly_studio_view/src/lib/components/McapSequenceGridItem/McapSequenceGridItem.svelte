@@ -3,6 +3,7 @@
     import { BoxIcon } from '@lucide/svelte';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
 
     interface Props {
         sampleCount: number;
@@ -10,9 +11,18 @@
         height: number;
         sequenceFrame: McapSequenceFrame | null | undefined;
         displayTextOnImage?: string;
+        /** Similarity to the search query, when search is active. */
+        similarityScore?: number | null;
     }
 
-    let { sampleCount, width, height, sequenceFrame, displayTextOnImage }: Props = $props();
+    let {
+        sampleCount,
+        width,
+        height,
+        sequenceFrame,
+        displayTextOnImage,
+        similarityScore = null
+    }: Props = $props();
 
     const frameUrl = $derived(
         sequenceFrame
@@ -86,4 +96,12 @@
             +{sampleCount - 1}
         </div>
     {/if}
+    <!-- Lifted above the file name and the frame count, which take the same corner. -->
+    <div
+        class="pointer-events-none absolute inset-x-0 top-0 {displayTextOnImage
+            ? 'bottom-7'
+            : 'bottom-0'}"
+    >
+        <SampleValueBadge {similarityScore} hasBottomOverlay={sampleCount > 1} />
+    </div>
 </div>

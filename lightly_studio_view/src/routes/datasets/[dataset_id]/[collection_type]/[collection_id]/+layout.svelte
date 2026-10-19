@@ -318,7 +318,7 @@
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
     const hasMediaWithEmbeddings = $derived(
-        (isImages || isVideos || isAnnotations) && hasEmbeddings
+        (isImages || isVideos || isAnnotations || isPointClouds) && hasEmbeddings
     );
     const collectionSearchPlaceholder = $derived(
         isAnnotations

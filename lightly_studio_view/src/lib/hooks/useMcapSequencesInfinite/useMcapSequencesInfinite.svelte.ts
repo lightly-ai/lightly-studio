@@ -7,6 +7,7 @@ import { GRID_PAGE_SIZE } from '$lib/constants';
 interface UseMcapSequencesInfiniteParams {
     collection_id: string;
     filter?: McapSequenceFilter | null;
+    text_embedding?: number[];
 }
 
 interface UseMcapSequencesInfiniteReturn {
@@ -17,11 +18,11 @@ interface UseMcapSequencesInfiniteReturn {
     totalCount: Writable<number>;
 }
 
-const buildOptions = ({ collection_id, filter }: UseMcapSequencesInfiniteParams) =>
+const buildOptions = ({ collection_id, filter, text_embedding }: UseMcapSequencesInfiniteParams) =>
     listMcapSequencesInfiniteOptions({
         path: { collection_id },
         query: { limit: GRID_PAGE_SIZE },
-        body: { filter: filter ?? undefined }
+        body: { filter: filter ?? undefined, text_embedding }
     });
 
 export const useMcapSequencesInfinite = (

@@ -12,6 +12,7 @@
         fileName: string;
         sampleCount: number;
         sequenceFrame: McapSequenceFrame | null | undefined;
+        similarityScore?: number | null;
     }
 
     interface Props {
@@ -108,6 +109,7 @@
                                 displayTextOnImage={$showSampleFilenamesStore
                                     ? sequences[index].fileName
                                     : undefined}
+                                similarityScore={sequences[index].similarityScore}
                                 {width}
                                 {height}
                             />
