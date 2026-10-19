@@ -1156,6 +1156,74 @@ def test_create_combination_sampling__sequence_collection(
     assert selected == {sequence_ids[0], sequence_ids[1]}
 
 
+def test_create_combination_sampling__sequence_collection_similarity(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Similarity sampling selects the MCAP sequences most similar to a tagged sequence."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.SEQUENCE
+    )
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="test_embedding_model",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sequence_ids = []
+    for embedding in ([1.0, 0.0], [0.9, 0.1], [0.0, 1.0]):
+        sequence_id = mcap_group_sequence_resolver.create(
+            session=db_session, collection_id=collection.collection_id, recording_id=recording_id
+        )
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=sequence_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+        sequence_ids.append(sequence_id)
+    query_tag = helpers_resolvers.create_tag(
+        session=db_session, collection_id=collection.collection_id, tag_name="query_tag"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=query_tag.tag_id, sample_ids=[sequence_ids[0]]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/sampling",
+        json={
+            "n_samples_to_select": 2,
+            "sampling_result_tag_name": "similarity_sampling",
+            "strategies": [
+                {
+                    "strategy_name": "similarity",
+                    "query_tag_name": "query_tag",
+                    "embedding_model_name": "test_embedding_model",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 204
+    created_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="similarity_sampling", collection_id=collection.collection_id
+    )
+    assert created_tag is not None
+    selected = mcap_group_sequence_resolver.get_sample_ids(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=McapSequenceFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id])),
+    )
+    # The first two sequences point in the direction of the tagged sequence.
+    assert selected == {sequence_ids[0], sequence_ids[1]}
+
+
 def test_create_combination_sampling__sequence_collection_rejects_image_filter(
     test_client: TestClient, db_session: Session
 ) -> None:

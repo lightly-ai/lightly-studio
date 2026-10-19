@@ -572,7 +572,7 @@
         showTour={onboardingEnabled}
         onShowTour={() => useOnboarding().requestReplay()}
     />
-    <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isImages} {isVideos} {isPointClouds} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">

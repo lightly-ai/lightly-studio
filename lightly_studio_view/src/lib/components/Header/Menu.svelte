@@ -27,6 +27,7 @@
     interface Props {
         isImages?: boolean;
         isVideos?: boolean;
+        isPointClouds?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
         user?: LightlyEnterpriseSession['user'];
@@ -37,6 +38,7 @@
     let {
         isImages = false,
         isVideos = false,
+        isPointClouds = false,
         hasEmbeddings = false,
         collection,
         user,
@@ -59,7 +61,7 @@
     };
 
     const hasClassifier = $derived(isImages && hasEmbeddings);
-    const hasSampling = $derived(isImages || isVideos);
+    const hasSampling = $derived(isImages || isVideos || isPointClouds);
     const hasExport = $derived(
         collection.sample_type == 'image' ||
             collection.sample_type == 'video' ||
