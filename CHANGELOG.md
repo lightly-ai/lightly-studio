@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Clarify image-grid evaluation sorting and show highest counts first.
 - Clarify evaluation settings and annotation sources in the evaluation panel.
 - Keep annotation cards aligned and confidence visible when switching between viewing and editing.
 - Python SDK: `start_gui()` now opens the browser by default (`open_browser=True`). Pass `open_browser=False` to suppress. The `lightly-studio gui` CLI command accepts `--no-browser` to opt out.

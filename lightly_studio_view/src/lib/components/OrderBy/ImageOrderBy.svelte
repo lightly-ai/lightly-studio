@@ -2,6 +2,7 @@
     import { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
     import { useGlobalStorage, usePostHog } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
+    import { getEvaluationMetricDisplay } from '$lib/utils/evaluationMetricDisplay';
     import OrderByControl from './OrderByControl.svelte';
 
     interface Props {
@@ -54,6 +55,18 @@
         const field = $allSortFields[Number(value)];
         if (field) handleFieldClick(field);
     };
+    const selectedField = $derived($allSortFields.find((field) => $isFieldSelected(field)));
+    const isEvaluationSort = $derived(selectedField?.source === 'evaluation_metric');
+    const metricDescription = $derived(
+        selectedField?.source === 'evaluation_metric'
+            ? getEvaluationMetricDisplay(selectedField.metric_name)?.description
+            : undefined
+    );
+    const sortDescription = $derived(
+        isEvaluationSort
+            ? `${$selectedLabel}. ${metricDescription ?? ''} ${$selectedDirection === 'desc' ? 'Highest' : 'Lowest'} values first. Image badges show the value for each image.`
+            : undefined
+    );
 </script>
 
 <OrderByControl
@@ -61,6 +74,8 @@
     selectedValue={selectValue}
     triggerLabel={$selectedLabel ?? undefined}
     direction={$selectedDirection}
+    {sortDescription}
+    {isEvaluationSort}
     disabled={isSimilaritySearchActive}
     allowDeselect
     onValueChange={handleValueChange}
