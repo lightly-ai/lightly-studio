@@ -63,18 +63,14 @@ it.each(['classification', 'object_detection', 'segmentation_mask'] as const)(
 );
 
 it('blocks repeated requests, reports failure, and allows retry', async () => {
-    vi.clearAllMocks();
-    let rejectCopy!: (error: Error) => void;
-    mocks.create.mockReturnValueOnce(
-        new Promise((_, reject) => {
-            rejectCopy = reject;
-        })
-    );
+    vi.resetAllMocks();
+    mocks.create
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({ ...annotation, sample_id: 'copy' });
     const action = useCopyAnnotationToSource(params);
     const request = action.copy('human');
     expect(await action.copy('human')).toBe(false);
     expect(mocks.create).toHaveBeenCalledOnce();
-    rejectCopy(new Error('offline'));
     expect(await request).toBe(false);
     expect(mocks.error).toHaveBeenCalled();
     expect(mocks.undo).not.toHaveBeenCalled();
