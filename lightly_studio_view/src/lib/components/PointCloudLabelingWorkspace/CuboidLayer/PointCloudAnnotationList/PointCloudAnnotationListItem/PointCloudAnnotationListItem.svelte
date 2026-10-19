@@ -4,7 +4,6 @@
     import { Typography } from '$lib/components/Typography';
     import { ChevronDown, Trash2 } from '@lucide/svelte';
     import { cn } from '$lib/utils';
-    import { Button } from '$lib/components/ui/button';
     import { Tooltip } from '$lib/components/ui/tooltip';
 
     interface Props {
@@ -48,6 +47,18 @@
                 aria-hidden="true"
             ></span>
             <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
+            {#if onDelete}
+                <Tooltip content="Delete annotation">
+                    <Trash2
+                        class="size-4 shrink-0 text-muted-foreground hover:text-destructive"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            onDelete(cuboid.id);
+                        }}
+                        data-testid="point-cloud-annotation-delete-button"
+                    />
+                </Tooltip>
+            {/if}
             <ChevronDown
                 class={cn(
                     'size-4 shrink-0 text-muted-foreground transition-transform',
@@ -55,20 +66,6 @@
                 )}
             />
         </button>
-        {#if onDelete}
-            <Tooltip content="Delete annotation">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    class="shrink-0 text-muted-foreground hover:text-destructive"
-                    aria-label="Delete annotation"
-                    onclick={() => onDelete(cuboid.id)}
-                    data-testid="point-cloud-annotation-delete-button"
-                >
-                    <Trash2 class="size-4" />
-                </Button>
-            </Tooltip>
-        {/if}
     </div>
     {#if isSelected}
         <div class="px-4 pb-4 pt-1">

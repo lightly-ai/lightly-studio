@@ -24,6 +24,7 @@
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
     import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation/useDeleteCuboidAnnotation.svelte';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { Vector3, WorkspaceTool } from './domain';
 
     /**
@@ -74,6 +75,8 @@
         prefetchTickCount = 50,
         onRetry
     }: Props = $props();
+
+    const { isEditingMode } = useGlobalStorage();
 
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
     const bufferEntireSequence = useSessionStorage<boolean>(
@@ -425,7 +428,7 @@
                         bind:selectedCuboidId
                         {tick}
                         onTagsChange={() => void workspace.tickDetails.refetch()}
-                        onDeleteCuboid={handleDeleteCuboid}
+                        onDeleteCuboid={$isEditingMode ? handleDeleteCuboid : undefined}
                     />
                 </Pane>
             </PaneGroup>
