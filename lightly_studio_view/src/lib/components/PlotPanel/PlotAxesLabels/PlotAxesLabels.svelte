@@ -7,9 +7,10 @@
     let { axes }: Props = $props();
 </script>
 
+<!-- Only the labels take the pointer, so a hover shows the full text and the plot stays usable. -->
 {#snippet label(text: string, position: string)}
     <span
-        class="absolute max-w-[35%] truncate rounded bg-background/90 px-2 py-1 text-xs text-foreground shadow-sm {position}"
+        class="pointer-events-auto absolute max-w-[35%] truncate rounded bg-background/90 px-2 py-1 text-xs text-foreground shadow-sm {position}"
         title={text}
     >
         {text}
