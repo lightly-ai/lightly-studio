@@ -82,11 +82,16 @@
                 onSeekStart?.();
             }}
             onpointerup={() => {
-                onSeekEnd?.();
+                // Range inputs dispatch `change` after `pointerup`; defer the fallback so a
+                // changed position is applied before playback resumes.
+                setTimeout(() => onSeekEnd?.(), 0);
             }}
             onchange={(event) => {
                 const tick = ticks[Number(event.currentTarget.value)];
-                if (tick) onSelectTick(tick.seq_number);
+                if (tick) {
+                    onSelectTick(tick.seq_number);
+                    onSeekEnd?.();
+                }
             }}
         />
     </div>

@@ -102,6 +102,7 @@ describe('FrameTimeline', () => {
         const slider = screen.getByRole('slider', { name: 'Frame position' });
         await fireEvent.pointerDown(slider);
         await fireEvent.pointerUp(slider);
+        await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(onSeekStart).toHaveBeenCalledOnce();
         expect(onSeekEnd).toHaveBeenCalledOnce();
