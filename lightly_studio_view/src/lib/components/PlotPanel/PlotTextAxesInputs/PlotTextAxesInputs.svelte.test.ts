@@ -11,16 +11,16 @@ describe('PlotTextAxesInputs', () => {
         const draft = $state(createEmptyTextAxesDraft());
         render(PlotTextAxesInputs, { draft, onCommit });
 
-        await user.type(screen.getByLabelText('X axis start'), 'young');
-        await user.type(screen.getByLabelText('X axis end'), 'old');
-        await user.type(screen.getByLabelText('Y axis start'), 'sad{Enter}');
+        await user.type(screen.getByLabelText('Left'), 'young');
+        await user.type(screen.getByLabelText('Right'), 'old');
+        await user.type(screen.getByLabelText('Bottom'), 'sad{Enter}');
 
         // A missing text marks its input and blocks the commit.
         expect(onCommit).not.toHaveBeenCalled();
-        expect(screen.getByLabelText('Y axis end')).toHaveAttribute('aria-invalid', 'true');
-        expect(screen.getByLabelText('Y axis start')).toHaveAttribute('aria-invalid', 'false');
+        expect(screen.getByLabelText('Top')).toHaveAttribute('aria-invalid', 'true');
+        expect(screen.getByLabelText('Bottom')).toHaveAttribute('aria-invalid', 'false');
 
-        await user.type(screen.getByLabelText('Y axis end'), ' happy {Enter}');
+        await user.type(screen.getByLabelText('Top'), ' happy {Enter}');
 
         // The parent owns the draft, so it keeps the texts when the plot unmounts.
         expect(draft.yPositive).toBe(' happy ');
