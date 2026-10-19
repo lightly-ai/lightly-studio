@@ -7,7 +7,11 @@ interface Params {
     getAnnotations: () => readonly AnnotationView[];
 }
 
-export function useDeleteCuboidAnnotation({ getCollectionId, getAnnotations }: Params) {
+interface UseDeleteCuboidAnnotationReturn {
+    handleDeleteCuboid: (cuboidId: string) => Promise<boolean>;
+}
+
+export function useDeleteCuboidAnnotation({ getCollectionId, getAnnotations }: Params): UseDeleteCuboidAnnotationReturn {
     const { deleteAnnotation } = useDeleteAnnotation({
         getCollectionId: () => getCollectionId() ?? ''
     });
