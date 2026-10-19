@@ -98,7 +98,6 @@
         <TimelineTracks
             {ticks}
             {currentTick}
-            {isPlaying}
             {bufferedRanges}
             {onSelectTick}
             {onSeekStart}

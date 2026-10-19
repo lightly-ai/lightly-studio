@@ -82,7 +82,7 @@ describe('FrameTimeline', () => {
         const slider = screen.getByRole('slider', { name: 'Frame position' });
         await fireEvent.pointerDown(slider);
         await fireEvent.input(slider, { target: { value: '1' } });
-        expect(onSelectTick).toHaveBeenCalledWith(4);
+        expect(onSelectTick).not.toHaveBeenCalled();
 
         await fireEvent.change(slider, {
             target: { value: '2' }
@@ -107,10 +107,10 @@ describe('FrameTimeline', () => {
         expect(onSeekEnd).toHaveBeenCalledOnce();
     });
 
-    it('commits the final slider position when playback is active', async () => {
+    it('commits the final slider position after dragging', async () => {
         const onSelectTick = vi.fn();
         render(FrameTimeline, {
-            props: { ...defaultProps, isPlaying: true, onSelectTick }
+            props: { ...defaultProps, onSelectTick }
         });
 
         const slider = screen.getByRole('slider', { name: 'Frame position' });

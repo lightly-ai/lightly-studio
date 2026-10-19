@@ -14,8 +14,6 @@
         ticks: TickView[];
         /** Seq number of the active tick; highlighted on the ruler. */
         currentTick: number;
-        /** Whether playback was active when slider interaction began. */
-        isPlaying: boolean;
         /** Inclusive tick-index ranges whose data is ready for playback. */
         bufferedRanges: readonly BufferRange[];
         /** Select a tick from the overlaid ruler slider. */
@@ -26,17 +24,8 @@
         onSeekEnd?: () => void;
     }
 
-    let {
-        ticks,
-        currentTick,
-        isPlaying,
-        bufferedRanges,
-        onSelectTick,
-        onSeekStart,
-        onSeekEnd
-    }: Props = $props();
-    let isDragging = false;
-    let commitOnRelease = false;
+    let { ticks, currentTick, bufferedRanges, onSelectTick, onSeekStart, onSeekEnd }: Props =
+        $props();
 
     const NANOS_PER_SECOND = 1_000_000_000;
 
@@ -90,19 +79,10 @@
             )}
             disabled={ticks.length === 0}
             onpointerdown={() => {
-                isDragging = true;
-                commitOnRelease = isPlaying;
                 onSeekStart?.();
             }}
             onpointerup={() => {
-                isDragging = false;
-                commitOnRelease = false;
                 onSeekEnd?.();
-            }}
-            oninput={(event) => {
-                if (!isDragging || commitOnRelease) return;
-                const tick = ticks[Number(event.currentTarget.value)];
-                if (tick) onSelectTick(tick.seq_number);
             }}
             onchange={(event) => {
                 const tick = ticks[Number(event.currentTarget.value)];
