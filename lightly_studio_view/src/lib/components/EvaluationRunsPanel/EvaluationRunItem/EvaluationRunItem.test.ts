@@ -84,16 +84,16 @@ describe('EvaluationRunItem', () => {
         expect(details).toHaveTextContent('Class matching');
         expect(details).toHaveTextContent('Same class only');
         expect(screen.getByTestId(baseRunItemTestId)).toHaveAttribute('aria-expanded', 'true');
-        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
         expect(screen.getByRole('dialog')).toHaveTextContent(baseRun.name);
         await fireEvent.click(screen.getByRole('switch'));
         await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         expect(state.recompute).not.toHaveBeenCalled();
-        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
         expect(screen.getByRole('switch')).toBeChecked();
     });
 
-    it('shows a placeholder when configuration is empty', () => {
+    it('shows a placeholder and allows rerunning without adjustable parameters', async () => {
         const run: EvaluationRunView = { ...baseRun, evaluation_run_configuration: {} };
         render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
 
@@ -101,6 +101,10 @@ describe('EvaluationRunItem', () => {
         expect(screen.getByTestId('evaluation-run-details')).toHaveTextContent(
             'No configuration recorded.'
         );
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+        expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Save and rerun' }));
+        expect(state.params().config).toEqual({});
     });
 
     it('serializes nested config values as JSON', () => {
@@ -175,9 +179,9 @@ describe('EvaluationRunItem', () => {
 
         const staleSection = screen.getByTestId('evaluation-run-stale-section');
         expect(staleSection).toHaveTextContent(
-            'Annotations changed. Edit and rerun to update these results.'
+            'Annotations changed. Edit the settings and rerun to update these results.'
         );
-        expect(screen.getByRole('button', { name: 'Edit and rerun' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
     });
 
     it('does not show the recompute button when datasetId is not provided', () => {
@@ -193,7 +197,7 @@ describe('EvaluationRunItem', () => {
     });
     it('loads saved values, submits changes to the same run, and closes only after success', async () => {
         render(EvaluationRunItem, { ...defaultProps, expanded: true });
-        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
         await fireEvent.click(screen.getByRole('switch'));
         await fireEvent.click(screen.getByRole('button', { name: 'Save and rerun' }));
         expect(state.recompute).toHaveBeenCalledOnce();
@@ -207,22 +211,10 @@ describe('EvaluationRunItem', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     });
 
-    it('allows rerunning evaluations without adjustable parameters', async () => {
-        render(EvaluationRunItem, {
-            ...defaultProps,
-            expanded: true,
-            run: { ...baseRun, evaluation_run_configuration: {} }
-        });
-        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
-        expect(screen.queryByRole('slider')).not.toBeInTheDocument();
-        await fireEvent.click(screen.getByRole('button', { name: 'Save and rerun' }));
-        expect(state.params().config).toEqual({});
-    });
-
     it('blocks cancellation and repeated submissions while rerunning', async () => {
         state.pending = true;
         render(EvaluationRunItem, { ...defaultProps, expanded: true });
-        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
         expect(screen.getByRole('button', { name: 'Evaluating…' })).toBeDisabled();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
         await fireEvent.keyDown(document, { key: 'Escape' });
