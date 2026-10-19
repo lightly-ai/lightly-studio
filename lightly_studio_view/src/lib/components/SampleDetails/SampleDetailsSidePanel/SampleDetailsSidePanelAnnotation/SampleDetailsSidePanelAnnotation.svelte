@@ -214,7 +214,7 @@
                 <div
                     class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-1"
                 >
-                    <div class="flex shrink-0 gap-3">
+                    <div class="flex shrink-0 items-center gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
                                 <Tooltip
@@ -256,6 +256,11 @@
                         {/if}
 
                         {#if $isEditingMode}
+                            <CopyAnnotationToSource
+                                {collectionId}
+                                {annotation}
+                                onCopied={onUpdate}
+                            />
                             <Tooltip content="Delete annotation">
                                 <Trash2
                                     class="size-4"
@@ -291,7 +296,4 @@
             </div>
         </div>
     </button>
-    {#if $isEditingMode}
-        <CopyAnnotationToSource {collectionId} {annotation} onCopied={onUpdate} />
-    {/if}
 </div>

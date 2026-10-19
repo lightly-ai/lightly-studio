@@ -27,11 +27,12 @@
 </script>
 
 <Popover.Root bind:open>
-    <Tooltip content="Duplicate to another annotation source">
+    <Tooltip content="Duplicate to another annotation source" triggerClass="flex">
         <Popover.Trigger
             class="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent disabled:opacity-50"
             disabled={$pending || !sources.isSuccess}
             aria-label="Duplicate to another annotation source"
+            onclick={(event) => event.stopPropagation()}
             ><CopyPlus class="size-4" /></Popover.Trigger
         >
     </Tooltip>
